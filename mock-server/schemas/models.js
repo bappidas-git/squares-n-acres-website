@@ -236,7 +236,11 @@ const leads = {
   fields: {
     ...id,
     ...leadWritable,
-    property: embed({ id: { type: 'int', required: true }, title: str(200), slug: { type: 'slug' } }),
+    property: embed({
+      id: { type: 'int', required: true },
+      title: str(200),
+      slug: { type: 'slug' },
+    }),
     status: { type: 'enum', enum: LEAD_STATUS.values, required: true, default: 'new' },
     priority: { type: 'enum', enum: LEAD_PRIORITY.values, required: true, default: 'medium' },
     assignedTo: { type: 'int', nullable: true, default: null },
@@ -278,8 +282,20 @@ const leads = {
       required: true,
       default: 'contact-page',
     },
-    ipAddress: { type: 'string', nullable: true, maxLength: 45, default: null, serverManaged: true },
-    userAgent: { type: 'string', nullable: true, maxLength: 500, default: null, serverManaged: true },
+    ipAddress: {
+      type: 'string',
+      nullable: true,
+      maxLength: 45,
+      default: null,
+      serverManaged: true,
+    },
+    userAgent: {
+      type: 'string',
+      nullable: true,
+      maxLength: 500,
+      default: null,
+      serverManaged: true,
+    },
     ...timestamps,
   },
 };

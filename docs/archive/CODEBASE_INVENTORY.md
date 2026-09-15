@@ -21,7 +21,7 @@ Measured totals (`git ls-files src`):
 | Lines under `src/`                                     | 47 834                                         |
 | Hex literals in `src/**/*.{js,jsx}` outside `theme.js` | 1 206                                          |
 | Hex literals in `src/**/*.css` outside `global.css`    | 290 (307 including `global.css`)               |
-| `db.json` collections                                  | 8 (7 arrays + 1 object)                        |
+| `db.json` collections                                  | 8 (7 arrays + 1 object) — **replaced in prompt 06** |
 | Routes registered in `src/routes/index.js`             | 24 public + 16 admin (+ catch-all 404)         |
 
 ---
@@ -375,6 +375,12 @@ un-nests `item.property`), `mapFrontendToBackend(seoData)` (camelCase → `meta_
 ---
 
 ## (f) `db.json` collections
+
+> **Replaced in prompt 06.** The file below no longer exists in this shape. Prompt 06 rewrote
+> `db.json` as the starter seed of `00_MASTER_CONTEXT.md` §6 — 28 collections, integer ids,
+> ISO timestamps — and built the mock API that serves it (`mock-server/`, `npm run mock`).
+> The HOM → SNA field mapping is in `docs/DATA_MODEL.md` §6.15 and the seed's own rules are in
+> `docs/SEED_GUIDE.md`. What follows is kept as the record of what was converted from.
 
 Root-level `db.json` (133 KB) has no server: JSON Server is **not** a dependency and no script
 serves it.
