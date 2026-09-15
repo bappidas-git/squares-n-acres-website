@@ -270,7 +270,8 @@ All receive `formData` plus the `updateField` / `updateListItem` / `addListItem`
 
 ### `src/services/api.js` (819 lines after the prompt-01 clean-up, 832 before)
 
-Axios instance: `baseURL = process.env.REACT_APP_API_URL || 'https://phplaravel-780646-6246811.cloudwaysapps.com/api'`,
+Axios instance: `baseURL = process.env.REACT_APP_API_URL` — until prompt 02 it fell back to the
+boilerplate's hosted staging API (the URL is gone from the repository),
 `Content-Type: application/json`, `timeout: 15000`. Request interceptor attaches
 `Authorization: Bearer <localStorage.authToken>`. Response interceptor: on **401** clears
 `authToken`/`adminUser`/`tokenExpiry` from localStorage + sessionStorage and does

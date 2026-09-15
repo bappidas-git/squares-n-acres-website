@@ -1,6 +1,7 @@
 {
-  "name": "hom-real-eastate-website",
-  "version": "0.1.0",
+  "name": "squares-n-acres-website",
+  "description": "Squares N Acres — Bengaluru real-estate portal (public website + admin panel)",
+  "version": "0.2.0",
   "private": true,
   "engines": {
     "node": ">=18.18",
@@ -49,6 +50,7 @@
     "format:check": "prettier --check \"src/**/*.{js,jsx,css,json}\" \"scripts/**/*.js\"",
     "check:traces": "node scripts/check-traces.js",
     "check:traces:report": "node scripts/check-traces.js --report",
+    "generate:brand-assets": "node scripts/fetch-brand-assets.js",
     "check:all": "npm run lint && npm run test:ci && npm run build:ci && npm run check:traces"
   },
   "eslintConfig": {

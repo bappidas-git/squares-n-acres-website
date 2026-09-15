@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Drawer, IconButton } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import logo from '../../assets/images/logo.png';
+import { BRAND } from '../../config/site';
 import styles from './Header.module.css';
 
 const navItems = [
@@ -113,7 +113,7 @@ const Header = () => {
       <div className={styles.headerInner}>
         {/* Logo */}
         <Link to="/" className={styles.logo}>
-          <img src={logo} alt="H.O.M Advisory" />
+          <img src={BRAND.logoUrl} alt={BRAND.name} width="112" height="48" />
         </Link>
 
         {/* Navigation */}
@@ -202,7 +202,7 @@ const Header = () => {
       >
         <div className={styles.drawerHeader}>
           <Link to="/" onClick={() => setDrawerOpen(false)}>
-            <img src={logo} alt="H.O.M Advisory" />
+            <img src={BRAND.logoUrl} alt={BRAND.name} width="94" height="40" />
           </Link>
           <IconButton onClick={() => setDrawerOpen(false)} aria-label="Close menu">
             <Icon icon="mdi:close" width={24} />

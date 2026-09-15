@@ -1,13 +1,14 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 01 — Repository audit, tooling baseline and project state files Next prompt: 02
+Last prompt executed: 02 — Rebrand identity, environment files, brand assets and README Next prompt: 03
 
 ## Executed prompts
 
-| #   | Title                                                      | Commit                                                                             | Date       |
-| --- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------- |
-| 01  | Repository audit, tooling baseline and project state files | HEAD of this branch (a commit cannot contain its own hash — prompt 02 fills it in) | 2026-09-15 |
+| #   | Title                                                        | Commit                                                                             | Date       |
+| --- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------- | ---------- |
+| 01  | Repository audit, tooling baseline and project state files   | `c1cc2f7`                                                                          | 2026-09-15 |
+| 02  | Rebrand identity, environment files, brand assets and README | HEAD of this branch (a commit cannot contain its own hash — prompt 03 fills it in) | 2026-09-15 |
 
 ## Baseline (prompt 01)
 
@@ -103,7 +104,7 @@ Under the **new** config (prompt 01 §7) the same tree reported
 ### HOM-trace counters (regexes of `00_MASTER_CONTEXT.md` §13 D17)
 
 Brand strings only (`h\.o\.m`, `hom advisory`, `homadvisory`, `home office market`, `hom_`,
-`hom-`, `.hom-`, `cloudwaysapps`):
+`hom-`, `.hom-`, and the Cloudways host pattern):
 
 | Scope     | Matches                |
 | --------- | ---------------------- |
@@ -155,29 +156,46 @@ The renormalisation is therefore invisible in the diff.
 
 ### npm scripts
 
-| Script                | Command                                                                          | Added by                            |
-| --------------------- | -------------------------------------------------------------------------------- | ----------------------------------- |
-| `start`               | `react-scripts start`                                                            | boilerplate                         |
-| `dev`                 | `react-scripts start`                                                            | boilerplate (replaced in prompt 06) |
-| `build`               | `react-scripts build`                                                            | boilerplate                         |
-| `test`                | `react-scripts test`                                                             | boilerplate                         |
-| `eject`               | `react-scripts eject`                                                            | boilerplate                         |
-| `lint`                | `eslint "src/**/*.{js,jsx}" "scripts/**/*.js" --max-warnings=0`                  | 01                                  |
-| `lint:fix`            | `eslint "src/**/*.{js,jsx}" "scripts/**/*.js" --fix`                             | 01                                  |
-| `format`              | `prettier --write "src/**/*.{js,jsx,css,json}" "scripts/**/*.js" "docs/**/*.md"` | 01                                  |
-| `format:check`        | `prettier --check "src/**/*.{js,jsx,css,json}" "scripts/**/*.js"`                | 01                                  |
-| `test:ci`             | `cross-env CI=true react-scripts test --watchAll=false --passWithNoTests`        | 01                                  |
-| `build:ci`            | `cross-env CI=true react-scripts build`                                          | 01                                  |
-| `check:traces`        | `node scripts/check-traces.js`                                                   | 01                                  |
-| `check:traces:report` | `node scripts/check-traces.js --report`                                          | 01                                  |
-| `check:all`           | `npm run lint && npm run test:ci && npm run build:ci && npm run check:traces`    | 01                                  |
+| Script                  | Command                                                                          | Added by                            |
+| ----------------------- | -------------------------------------------------------------------------------- | ----------------------------------- |
+| `start`                 | `react-scripts start`                                                            | boilerplate                         |
+| `dev`                   | `react-scripts start`                                                            | boilerplate (replaced in prompt 06) |
+| `build`                 | `react-scripts build`                                                            | boilerplate                         |
+| `test`                  | `react-scripts test`                                                             | boilerplate                         |
+| `eject`                 | `react-scripts eject`                                                            | boilerplate                         |
+| `lint`                  | `eslint "src/**/*.{js,jsx}" "scripts/**/*.js" --max-warnings=0`                  | 01                                  |
+| `lint:fix`              | `eslint "src/**/*.{js,jsx}" "scripts/**/*.js" --fix`                             | 01                                  |
+| `format`                | `prettier --write "src/**/*.{js,jsx,css,json}" "scripts/**/*.js" "docs/**/*.md"` | 01                                  |
+| `format:check`          | `prettier --check "src/**/*.{js,jsx,css,json}" "scripts/**/*.js"`                | 01                                  |
+| `test:ci`               | `cross-env CI=true react-scripts test --watchAll=false --passWithNoTests`        | 01                                  |
+| `build:ci`              | `cross-env CI=true react-scripts build`                                          | 01                                  |
+| `check:traces`          | `node scripts/check-traces.js`                                                   | 01                                  |
+| `check:traces:report`   | `node scripts/check-traces.js --report`                                          | 01                                  |
+| `generate:brand-assets` | `node scripts/fetch-brand-assets.js`                                             | 02                                  |
+| `check:all`             | `npm run lint && npm run test:ci && npm run build:ci && npm run check:traces`    | 01                                  |
 
 ### Environment variables
 
-None added. The boilerplate's committed `.env` still holds `REACT_APP_API_URL`
-(Cloudways host), `REACT_APP_SITE_NAME=H.O.M Advisory` and `REACT_APP_GOOGLE_MAPS_KEY`;
-it is removed from git in prompt 02. `.gitignore` now ignores `.env` and `.env.production`
-for the future.
+The boilerplate's committed `.env` was removed from git and from disk in prompt 02; the
+committed files are now `.env.example` (documents every variable), `.env.development` (read
+by `npm start`) and `.env.production.example` (template for `.env.production`, git-ignored).
+
+| Variable                             | Required | Default (development)       | Added by | Consumed by                                       |
+| ------------------------------------ | -------- | --------------------------- | -------- | ------------------------------------------------- |
+| `REACT_APP_API_URL`                  | yes      | `http://localhost:4000/api` | 02       | `src/services/api.js` — throws when missing (D48) |
+| `REACT_APP_SITE_URL`                 | no       | `http://localhost:3000`     | 02       | `src/config/site.js` → `SITE.url`                 |
+| `REACT_APP_SITE_NAME`                | no       | `Squares N Acres`           | 02       | `src/config/site.js` → `SITE.name`                |
+| `REACT_APP_CLOUDINARY_CLOUD_NAME`    | no       | —                           | 02       | media uploads (prompt 39)                         |
+| `REACT_APP_CLOUDINARY_UPLOAD_PRESET` | no       | —                           | 02       | media uploads (prompt 39)                         |
+| `REACT_APP_GOOGLE_MAPS_KEY`          | no       | —                           | 02       | property location map                             |
+| `CHROME_PATH`                        | no       | —                           | 02       | prerender script (prompt 41)                      |
+| `MOCK_PORT`                          | no       | `4000`                      | 02       | mock server (prompt 06)                           |
+| `MOCK_DELAY_MS`                      | no       | `0`                         | 02       | mock server (prompt 06)                           |
+| `MOCK_TOKEN_TTL_HOURS`               | no       | `24`                        | 02       | mock server (prompt 07)                           |
+| `MOCK_FRESH`                         | no       | `0`                         | 02       | mock server (prompt 06)                           |
+
+`.gitignore` (prompt 01) already ignored `.env` and `.env.production`; those rules now
+protect real files instead of being a no-op.
 
 ### Endpoints
 
@@ -186,12 +204,15 @@ None added or changed. The boilerplate's endpoint surface is inventoried in
 
 ## Pending rewrites (temporary adapters that must be removed; owner prompt)
 
-| Item                                                                                     | Why it is temporary                                                                                                                                                                                                                                                                                                                                   | Owner prompt |
-| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `docs/CODEBASE_INVENTORY.md` lives at `docs/`                                            | It quotes the boilerplate's brand strings, palette hexes and fonts verbatim as evidence, so `npm run check:traces` counts **80** findings in it. `00_MASTER_CONTEXT.md` §4.1 places the finished file at `docs/archive/CODEBASE_INVENTORY.md`, and `docs/archive/**` is excluded from the scan — move it there when the strict trace check must pass. | 03           |
-| Trace literals inside `docs/PROJECT_STATE.md` (~32 findings) and `docs/DECISIONS.md` (1) | The prompt-01 baseline quotes the counters and palette values it measured. Before the strict `check:traces` becomes a gate, either neutralise these literals (e.g. describe them instead of quoting them) or add the two state files to the scanner's skip list — **not** by weakening the patterns.                                                  | 03           |
-| `test:ci --passWithNoTests`                                                              | Needed only while `src/` contains no test file; drop the flag once real tests exist.                                                                                                                                                                                                                                                                  | 35           |
-| `dev` = `react-scripts start`                                                            | Placeholder until the mock server exists; becomes `concurrently` mock + web.                                                                                                                                                                                                                                                                          | 06           |
+| Item                                                                                                               | Why it is temporary                                                                                                                                                                                                                                                                                                                                   | Owner prompt |
+| ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `docs/CODEBASE_INVENTORY.md` lives at `docs/`                                                                      | It quotes the boilerplate's brand strings, palette hexes and fonts verbatim as evidence, so `npm run check:traces` counts **80** findings in it. `00_MASTER_CONTEXT.md` §4.1 places the finished file at `docs/archive/CODEBASE_INVENTORY.md`, and `docs/archive/**` is excluded from the scan — move it there when the strict trace check must pass. | 03           |
+| Trace literals inside `docs/PROJECT_STATE.md` (~32 findings) and `docs/DECISIONS.md` (1)                           | The prompt-01 baseline quotes the counters and palette values it measured. Before the strict `check:traces` becomes a gate, either neutralise these literals (e.g. describe them instead of quoting them) or add the two state files to the scanner's skip list — **not** by weakening the patterns.                                                  | 03           |
+| `test:ci --passWithNoTests`                                                                                        | Needed only while `src/` contains no test file; drop the flag once real tests exist.                                                                                                                                                                                                                                                                  | 35           |
+| Footer `.brandLogo` white container (`background: #fff; padding: 8px; border-radius: 8px;`) in `Footer.module.css` | The footer surface is still the boilerplate navy, so the logo needs a light container (master context §2.2 rule 5). Prompt 04 moves the footer to `--color-surface` and replaces the three literals with tokens.                                                                                                                                      | 04           |
+| HOM strings in `src/` (16 Helmet page titles, footer copy, `og:site_name`, admin labels) and in `db.json`          | Prompt 02 rebrands the package/HTML/manifest/env layer only; the runtime copy is still the boilerplate's. Until prompt 03 the home page's Helmet title overrides the new `index.html` title in the browser tab.                                                                                                                                       | 03           |
+| Hex literals in `public/index.html` (`theme-color`) and `public/manifest.json` (`theme_color`, `background_color`) | `check:traces` allows hex literals only in `global.css`, `theme.js`, `src/seo/data/` and `public/brand/`; these three are unavoidable (a manifest and a meta tag cannot hold a CSS variable), so prompt 03 must allow them when it makes the strict scan a gate.                                                                                      | 03           |
+| `dev` = `react-scripts start`                                                                                      | Placeholder until the mock server exists; becomes `concurrently` mock + web.                                                                                                                                                                                                                                                                          | 06           |
 
 ## Known issues (open) — id, description, found by, owner prompt
 
@@ -215,7 +236,7 @@ None added or changed. The boilerplate's endpoint surface is inventoried in
 | BUG-14 | Token expiry never enforced; login writes both storages; logout incomplete; 401 redirect for public calls                                                                                                                                                                                            | master spec, confirmed 01 | 11, 12                         |
 | BUG-15 | Careers résumé upload dead; no spam protection; newsletter no dedupe and a false reCAPTCHA notice                                                                                                                                                                                                    | master spec, confirmed 01 | 09, 28, 31                     |
 | BUG-16 | Dead code: `adminService`, `visitService`, `PropertyDetail.js`, `AnimatedSection.jsx`, unreachable enquiry modal, duplicated filter logic (the unused **variables** are cleared in 01)                                                                                                               | master spec, confirmed 01 | 03, 11, 26                     |
-| BUG-17 | "Sign In" in public nav; no favicon/manifest; README/.env describe HOM + Cloudways                                                                                                                                                                                                                   | master spec, confirmed 01 | 02, 03                         |
+| BUG-17 | "Sign In" in public nav (favicon/manifest/README/env fixed in 02)                                                                                                                                                                                                                                    | master spec, confirmed 01 | 03                             |
 | BUG-18 | `getFeatured` tag hack; ad-hoc trending/related; FAQ page/section fetch-all-and-filter                                                                                                                                                                                                               | master spec, confirmed 01 | 08, 09, 27, 34                 |
 | BUG-19 | Listing paginates client-side after fetching everything                                                                                                                                                                                                                                              | master spec, confirmed 01 | 26                             |
 | BUG-20 | Header/MobileHeader/BottomNav/Footer navigation hardcoded and inconsistent                                                                                                                                                                                                                           | master spec, confirmed 01 | 04, 27, 43                     |
@@ -278,19 +299,21 @@ None added or changed. The boilerplate's endpoint surface is inventoried in
 | NEW-18 | `public/robots.txt` is the CRA default with no `Sitemap:`; `index.html` has no manifest, no OG tags, `theme-color #1B2A4A`                                                  | 01       | 02                         |
 | NEW-19 | `db.json` `partners` and property `developer` values are real company names and URLs (Prestige, Brigade, Sobha, Godrej, Puravankara, Mahindra)                              | 01       | 10                         |
 | NEW-20 | No test file exists anywhere (119 files checked, 0 matches), so `test:ci` needs `--passWithNoTests` until the first tests land                                              | 01       | partially closed in 01; 35 |
-| NEW-21 | `src/assets/images/logo.png` is the only brand asset; there is no favicon, PWA icon or OG image in `public/`                                                                | 01       | 02                         |
 | NEW-22 | `AdminLeads` CSV export is built in the browser: no UTF-8 BOM, the Property column uses the broken id lookup, newlines inside `message` break rows                          | 01       | 29                         |
 | NEW-23 | `FaqManager` reorder writes two sequential `PUT`s and computes `swapIndex` against the filtered array                                                                       | 01       | 17                         |
 | NEW-24 | `Dashboard` falls back to fetching the entire `properties`, `leads` and `articles` collections and recomputing every KPI in the browser                                     | 01       | 29                         |
+| NEW-25 | 16 public pages set an HOM brand title through React Helmet, so the browser tab still shows the boilerplate title even though `public/index.html` is rebranded              | 02       | 03                         |
 
 ## Known issues (closed)
 
-| Id               | Description                                                           | Closed by                                                                            |
-| ---------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| NEW-08           | `eslint-disable-line react-hooks/exhaustive-deps` in `GalleryTab.jsx` | 01 — effect restructured with a loop-safe equality guard                             |
-| ADD-15 (partial) | `role="combobox"` without `aria-controls` in `HeroSection`            | 01 — `aria-controls="hero-search-suggestions"` added                                 |
-| ADD-21 (partial) | `LeadDetail` computed `isMobile` and never used it                    | 01 — removed with its `useTheme`/`useMediaQuery` imports                             |
-| ADD-02 (partial) | No ESLint/Prettier config beyond CRA, empty `devDependencies`         | 01 — Prettier + `eslint-config-prettier` + project rule set + cross-platform scripts |
+| Id               | Description                                                           | Closed by                                                                                 |
+| ---------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| NEW-08           | `eslint-disable-line react-hooks/exhaustive-deps` in `GalleryTab.jsx` | 01 — effect restructured with a loop-safe equality guard                                  |
+| ADD-15 (partial) | `role="combobox"` without `aria-controls` in `HeroSection`            | 01 — `aria-controls="hero-search-suggestions"` added                                      |
+| ADD-21 (partial) | `LeadDetail` computed `isMobile` and never used it                    | 01 — removed with its `useTheme`/`useMediaQuery` imports                                  |
+| ADD-02 (partial) | No ESLint/Prettier config beyond CRA, empty `devDependencies`         | 01 — Prettier + `eslint-config-prettier` + project rule set + cross-platform scripts      |
+| NEW-21           | No favicon, PWA icon or OG image; `logo.png` the only brand asset     | 02 — 10 brand PNGs in `public/brand/`, favicons + `manifest.json`, HOM `logo.png` deleted |
+| BUG-17 (partial) | README/`.env` described HOM + Cloudways; no favicon or manifest       | 02 — README rewritten, `.env` removed from git, favicons and `manifest.json` added        |
 
 ## Prompt reports
 
@@ -364,3 +387,138 @@ npm run check:traces:report → exit 0, totals printed
 this audit could confirm, plus NEW-01…NEW-24. Four items are closed above.
 
 **Next prompt: 02 — Rebrand identity and environment.**
+
+### Prompt 02 — Rebrand identity, environment files, brand assets and README (2026-09-15)
+
+**Files added**
+
+- `.env.example` (every variable with a comment), `.env.development`, `.env.production.example`
+- `src/config/site.js` — `BRAND` (name, shortName, four Cloudinary URLs, three local paths)
+  and `SITE` (name, url, defaultLocale, placeholderDomain); the only module that reads the
+  brand environment variables
+- `scripts/fetch-brand-assets.js` + `public/brand/` — the 10 PNGs of the master context §2.3
+- `public/manifest.json` — three icons (192 `any`, 512 `any`, 512 `maskable`)
+
+**Files changed**
+
+- `package.json` — `name` `squares-n-acres-website`, `description`, `version` `0.2.0`,
+  script `generate:brand-assets`
+- `package-lock.json` — the same name/version (regenerated with `npm install --package-lock-only`)
+- `public/index.html` — new `<head>`: `lang="en-IN"`, viewport with `viewport-fit=cover`,
+  `theme-color`, `application-name`, description, title, three PNG favicons,
+  `apple-touch-icon`, `manifest`, Google Fonts preconnect + Inter/Manrope stylesheet;
+  the `favicon.ico` link (a 404) is gone
+- `public/robots.txt` — development placeholder that disallows `/admin` and points at the
+  production setup (the API serves `/robots.txt`, master context §5.13)
+- `README.md` — rewritten (what it is, requirements, quick start, scripts, env vars, project
+  structure, brand assets, deployment placeholder, license); no HOM, Cloudways or
+  `API_DOCUMENTATION.md` reference remains
+- `src/services/api.js` — `BASE_URL` is `process.env.REACT_APP_API_URL` with no fallback and
+  throws at module load when unset (D48); nothing else in the file changed
+- `src/components/layout/Header.jsx`, `MobileHeader.jsx`, `Footer.jsx` — the `logo.png` import
+  is replaced by `import { BRAND } from '../../config/site'`; the five `<img>` tags (header 2,
+  mobile header 2, footer 1) render `BRAND.logoUrl` with `alt={BRAND.name}` and explicit
+  `width`/`height` in the wordmark's 2.34:1 ratio (112×48 at 48 px, 94×40 at 40 px)
+- `src/components/layout/Footer.module.css` — `.brandLogo` loses `filter: brightness(0) invert(1)`
+  and gains `object-fit: contain` plus the temporary white container
+- `docs/CODEBASE_INVENTORY.md` — one line: the quoted Cloudways fallback URL is described
+  instead of reproduced, so the host exists nowhere in the repository
+- `docs/PROJECT_STATE.md`, `docs/DECISIONS.md`
+
+**Files removed**
+
+- `.env` (untracked with `git rm --cached` **and** deleted; `.env.development` covers `npm start`)
+- `src/assets/images/logo.png` (the HOM wordmark; `src/assets/images/` is now empty and gone)
+
+**Endpoints added / changed** — none.
+
+**Env vars** — see the cumulative table above (11 variables documented in `.env.example`).
+**npm scripts** — `generate:brand-assets` added.
+
+**Brand assets** — all 10 downloads succeeded, so `index.html` and `manifest.json` reference
+the local files only; the Cloudinary fallback of task 6 was not needed.
+
+```
+File                   Bytes   Pixels     Status
+favicon-16.png         488     16x16      OK
+favicon-32.png         1018    32x32      OK
+favicon-48.png         1510    48x48      OK
+apple-touch-icon.png   12685   180x180    OK
+icon-192.png           14846   192x192    OK
+icon-512.png           140496  512x512    OK
+icon-512-maskable.png  140496  512x512    OK
+og-default.png         145120  1200x630   OK
+logo.png               59342   540x231    OK
+icon.png               850244  1254x1254  OK
+```
+
+`og-default.png` is 1200×630 and the wordmark is 540×231 (2.338:1), both read from the PNG
+IHDR header by the script.
+
+**Trace counters after this prompt** (`npm run check:traces:report`, 186 files scanned)
+
+| Scope                                    | Traces | Hex literals | Total     |
+| ---------------------------------------- | ------ | ------------ | --------- |
+| Product tree (everything except `docs/`) | 696    | 1 498        | **2 194** |
+| `docs/` (evidence quotes)                | 100    | 20           | 120       |
+| Reported by the script                   | 796    | 1 518        | 2 314     |
+
+Prompt 01 measured 717 / 1 495 / 2 212 in the product tree. The 21 brand traces removed are
+the README, `.env` and `index.html` rewrites; the 3 added hex literals are `theme-color` in
+`index.html` and `theme_color`/`background_color` in `manifest.json` (see "Pending rewrites").
+The Cloudways host is at **0** in the product tree (it was 4). `npm run check:traces` (strict)
+still exits 1 — expected until prompt 03.
+
+**Acceptance checklist**
+
+- [x] `package.json` name `squares-n-acres-website`, version `0.2.0`, script `generate:brand-assets`
+- [x] `.env` untracked and deleted; `.env.example`, `.env.development`, `.env.production.example`
+      exist with the documented variables; `.gitignore` ignores `.env` and `.env.production`
+- [x] `grep -ri cloudwaysapps .` (excluding `node_modules`, `.git`, `prompts`) → the only
+      match left is the regex that defines the pattern in `scripts/check-traces.js`, which
+      excludes itself from its own scan; the host and the URL appear nowhere else
+- [x] `public/brand/` contains the 10 PNGs; `public/index.html` has the new
+      title/meta/theme-color/fonts/favicons/manifest; `public/manifest.json` is valid JSON
+      with three icons (verified with `JSON.parse` and by fetching each icon: 200 `image/png`)
+- [x] `src/config/site.js` exports `BRAND` and `SITE` exactly as specified
+- [x] Header, mobile header and footer render the SNA wordmark from `BRAND.logoUrl` with
+      `alt="Squares N Acres"`; `src/assets/images/logo.png` is gone; no CSS `filter` on the logo
+      (computed style `filter: none` in all three)
+- [x] `README.md` has no HOM/Cloudways reference and documents the current scripts and env vars
+- [x] `npm run lint`, `npm run test:ci`, `npm run build:ci` pass
+- [x] One commit; clean tree
+
+**Verification output**
+
+```
+npm run generate:brand-assets → exit 0, 10/10 assets written
+npm run lint                  → exit 0, no findings
+npm run test:ci               → "No tests found, exiting with code 0"
+npm run build:ci              → "Compiled successfully." (no .env.production present)
+npm run check:traces:report   → exit 0, totals above
+npm run check:traces          → exit 1 (2 194 product-tree findings — expected until prompt 03)
+```
+
+Edge case of §7 confirmed: `npm run build:ci` succeeds **without** `.env.production`. CRA does
+not fail on a missing variable — it inlines `undefined`, and `api.js` throws only when the
+bundle loads in a browser. The throw was left in place (not weakened) and the built bundle
+contains the message `REACT_APP_API_URL is not set`.
+
+**Manual QA** (Chromium 1280×900 and 390×844 against `npm start`, mock API not yet running)
+
+| Check                          | Result                                                                                                                                                                                                                                             |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Static `<head>`                | `lang="en-IN"`, `theme-color #CF3F38`, title "Squares N Acres – Buy, Sell & Rent Properties in Bangalore", `/brand/favicon-32.png` requested and served 200 `image/png`                                                                            |
+| Tab title at runtime           | **Still the HOM title** on `/` — `Home.jsx` sets it through React Helmet, which overrides the document title (NEW-25, owner prompt 03). The static title is correct.                                                                               |
+| Header logo (1280 px)          | `BRAND.logoUrl`, natural 540×231, rendered 112×48 (ratio 2.338 — no stretching), `alt="Squares N Acres"`, `filter: none`                                                                                                                           |
+| Footer logo                    | Rendered inside a 91×48 white box (`background rgb(255,255,255)`, `padding 8px`, `radius 8px`), content ratio 2.337, `filter: none`; the footer surface is still navy (prompt 04)                                                                  |
+| Google Fonts                   | The `css2?family=Inter…&family=Manrope…` stylesheet is requested and returns 200 with Inter and Manrope `@font-face` rules (39 total). The boilerplate's Playfair/DM Sans/Outfit `@import` in `global.css` still loads too — removed by prompt 03. |
+| Manifest                       | `name`/`short_name` "Squares N Acres", `theme_color #CF3F38`, `background_color #FFFFFF`, `display standalone`; all three icons fetch 200 `image/png`                                                                                              |
+| 390 px viewport                | Mobile header shows the wordmark at 94×40, `scrollWidth == clientWidth == 390` (no overflow)                                                                                                                                                       |
+| Console                        | No new errors. The only failures are the API calls to `http://localhost:4000/api/*` (`ERR_CONNECTION_REFUSED` — the mock server arrives in prompt 06); no React/MUI/key warnings, no 404 on any local asset.                                       |
+| `git status` after `npm start` | Only the intended files; no generated file outside `public/brand/` (`build/` and `node_modules/` are git-ignored)                                                                                                                                  |
+
+**Issues left → moved to "Known issues"** — NEW-25 (Helmet titles still HOM). NEW-21 and the
+favicon/manifest/README/env half of BUG-17 are closed.
+
+**Next prompt: 03 — Purge HOM traces and dead code.**
