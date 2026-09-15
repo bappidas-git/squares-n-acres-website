@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { useInView } from 'react-intersection-observer';
+import useInView from '../../../hooks/useInView';
 import styles from './WhyChoose.module.css';
 import { BRAND } from '../../../config/site';
 

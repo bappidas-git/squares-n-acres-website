@@ -1,0 +1,68 @@
+.section {
+  width: 100%;
+}
+
+/* `none` leaves the background to the page's own class. */
+.none {
+  background: none;
+}
+
+.bg {
+  background: var(--color-bg);
+}
+
+.surface {
+  background: var(--color-surface);
+}
+
+.charcoal {
+  background: var(--color-charcoal);
+  color: var(--color-text-inverse);
+}
+
+.spacing-none {
+  padding: 0;
+}
+
+.spacing-sm {
+  padding: var(--space-8) 0;
+}
+
+.spacing-md {
+  padding: var(--space-12) 0;
+}
+
+.spacing-lg {
+  padding: var(--space-16) 0;
+}
+
+@media (max-width: 899.98px) {
+  .spacing-lg {
+    padding: var(--space-12) 0;
+  }
+
+  .spacing-md {
+    padding: var(--space-10) 0;
+  }
+}
+
+.fade {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity var(--transition-slow),
+    transform var(--transition-slow);
+}
+
+.fadeIn {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

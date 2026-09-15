@@ -308,14 +308,14 @@ const IconPicker = ({ open, onClose, onSelect, currentIcon = '' }) => {
           justifyContent: 'space-between',
           alignItems: 'center',
           pb: 1,
-          borderBottom: '1px solid #E5E7EB',
+          borderBottom: '1px solid var(--color-border)',
         }}
       >
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: 'var(--color-charcoal)' }}>
             Select Icon
           </Typography>
-          <Typography variant="caption" sx={{ color: '#6B7280' }}>
+          <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
             Choose from library or enter a custom Iconify name
           </Typography>
         </Box>
@@ -341,13 +341,16 @@ const IconPicker = ({ open, onClose, onSelect, currentIcon = '' }) => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Icon icon="mdi:magnify" style={{ color: '#9CA3AF' }} />
+                  <Icon icon="mdi:magnify" style={{ color: 'var(--color-text-muted)' }} />
                 </InputAdornment>
               ),
               endAdornment: search && (
                 <InputAdornment position="end">
                   <IconButton size="small" onClick={() => setSearch('')}>
-                    <Icon icon="mdi:close-circle" style={{ fontSize: 18, color: '#9CA3AF' }} />
+                    <Icon
+                      icon="mdi:close-circle"
+                      style={{ fontSize: 18, color: 'var(--color-text-muted)' }}
+                    />
                   </IconButton>
                 </InputAdornment>
               ),
@@ -371,7 +374,10 @@ const IconPicker = ({ open, onClose, onSelect, currentIcon = '' }) => {
               InputProps={{
                 startAdornment: customIcon && (
                   <InputAdornment position="start">
-                    <Icon icon={customIcon} style={{ fontSize: 20, color: '#1B2A4A' }} />
+                    <Icon
+                      icon={customIcon}
+                      style={{ fontSize: 20, color: 'var(--color-charcoal)' }}
+                    />
                   </InputAdornment>
                 ),
               }}
@@ -381,9 +387,11 @@ const IconPicker = ({ open, onClose, onSelect, currentIcon = '' }) => {
               onClick={handleCustomSubmit}
               disabled={!customIcon.trim()}
               sx={{
-                bgcolor: customIcon.trim() ? '#1B2A4A' : '#F3F4F6',
-                color: customIcon.trim() ? '#fff' : '#9CA3AF',
-                '&:hover': { bgcolor: customIcon.trim() ? '#2D4470' : '#E5E7EB' },
+                bgcolor: customIcon.trim() ? 'var(--color-charcoal)' : 'var(--color-surface)',
+                color: customIcon.trim() ? 'var(--color-text-inverse)' : 'var(--color-text-muted)',
+                '&:hover': {
+                  bgcolor: customIcon.trim() ? 'var(--color-charcoal)' : 'var(--color-surface-2)',
+                },
               }}
             >
               <Icon icon="mdi:check" />
@@ -400,9 +408,9 @@ const IconPicker = ({ open, onClose, onSelect, currentIcon = '' }) => {
             gap: 0.5,
             flexWrap: 'nowrap',
             overflowX: 'auto',
-            borderBottom: '1px solid #F3F4F6',
+            borderBottom: '1px solid var(--color-surface)',
             '&::-webkit-scrollbar': { height: 4 },
-            '&::-webkit-scrollbar-thumb': { bgcolor: '#D1D5DB', borderRadius: 2 },
+            '&::-webkit-scrollbar-thumb': { bgcolor: 'var(--color-surface-2)', borderRadius: 2 },
           }}
         >
           {categories.map((cat) => (
@@ -420,10 +428,12 @@ const IconPicker = ({ open, onClose, onSelect, currentIcon = '' }) => {
                 flexShrink: 0,
                 fontWeight: 500,
                 fontSize: '0.75rem',
-                bgcolor: activeCategory === cat ? '#1B2A4A' : '#F3F4F6',
-                color: activeCategory === cat ? '#fff' : '#6B7280',
+                bgcolor: activeCategory === cat ? 'var(--color-charcoal)' : 'var(--color-surface)',
+                color:
+                  activeCategory === cat ? 'var(--color-text-inverse)' : 'var(--color-text-muted)',
                 '&:hover': {
-                  bgcolor: activeCategory === cat ? '#2D4470' : '#E5E7EB',
+                  bgcolor:
+                    activeCategory === cat ? 'var(--color-charcoal)' : 'var(--color-surface-2)',
                 },
               }}
             />
@@ -443,8 +453,11 @@ const IconPicker = ({ open, onClose, onSelect, currentIcon = '' }) => {
         >
           {visibleIcons.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 6 }}>
-              <Icon icon="mdi:magnify-close" style={{ fontSize: 48, color: '#D1D5DB' }} />
-              <Typography variant="body2" sx={{ color: '#9CA3AF', mt: 1 }}>
+              <Icon
+                icon="mdi:magnify-close"
+                style={{ fontSize: 48, color: 'var(--color-text-muted)' }}
+              />
+              <Typography variant="body2" sx={{ color: 'var(--color-text-muted)', mt: 1 }}>
                 No icons found. Try a different search or use the custom input above.
               </Typography>
             </Box>
@@ -470,21 +483,23 @@ const IconPicker = ({ open, onClose, onSelect, currentIcon = '' }) => {
                     borderRadius: 2,
                     cursor: 'pointer',
                     border:
-                      currentIcon === iconName ? '2px solid #C9A86C' : '1px solid transparent',
-                    bgcolor: currentIcon === iconName ? '#FEF8F0' : 'transparent',
+                      currentIcon === iconName
+                        ? '2px solid var(--color-primary)'
+                        : '1px solid transparent',
+                    bgcolor: currentIcon === iconName ? 'var(--color-warning-bg)' : 'transparent',
                     transition: 'all 0.15s',
                     '&:hover': {
-                      bgcolor: '#F3F4F6',
-                      border: '1px solid #E5E7EB',
+                      bgcolor: 'var(--color-surface)',
+                      border: '1px solid var(--color-border)',
                     },
                   }}
                 >
-                  <Icon icon={iconName} style={{ fontSize: 28, color: '#1B2A4A' }} />
+                  <Icon icon={iconName} style={{ fontSize: 28, color: 'var(--color-charcoal)' }} />
                   <Typography
                     variant="caption"
                     sx={{
                       fontSize: '0.6rem',
-                      color: '#9CA3AF',
+                      color: 'var(--color-text-muted)',
                       textAlign: 'center',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -501,7 +516,7 @@ const IconPicker = ({ open, onClose, onSelect, currentIcon = '' }) => {
 
           {visibleCount < filteredIcons.length && (
             <Box sx={{ textAlign: 'center', py: 2 }}>
-              <CircularProgress size={24} sx={{ color: '#C9A86C' }} />
+              <CircularProgress size={24} sx={{ color: 'var(--color-primary-dark)' }} />
             </Box>
           )}
         </Box>
@@ -511,22 +526,28 @@ const IconPicker = ({ open, onClose, onSelect, currentIcon = '' }) => {
           sx={{
             px: 3,
             py: 1,
-            borderTop: '1px solid #E5E7EB',
+            borderTop: '1px solid var(--color-border)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}
         >
-          <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
+          <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
             {filteredIcons.length} icons available
           </Typography>
           {currentIcon && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="caption" sx={{ color: '#6B7280' }}>
+              <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
                 Current:
               </Typography>
-              <Icon icon={currentIcon} style={{ fontSize: 20, color: '#C9A86C' }} />
-              <Typography variant="caption" sx={{ color: '#1B2A4A', fontWeight: 600 }}>
+              <Icon
+                icon={currentIcon}
+                style={{ fontSize: 20, color: 'var(--color-primary-dark)' }}
+              />
+              <Typography
+                variant="caption"
+                sx={{ color: 'var(--color-charcoal)', fontWeight: 600 }}
+              >
                 {currentIcon}
               </Typography>
             </Box>

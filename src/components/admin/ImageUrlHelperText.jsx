@@ -15,7 +15,7 @@ const ImageUrlHelperText = ({ fieldType }) => {
         display: 'flex',
         alignItems: 'center',
         gap: 0.5,
-        color: '#9CA3AF',
+        color: 'var(--color-text-muted)',
         fontSize: '0.65rem',
         mt: 0.25,
       }}

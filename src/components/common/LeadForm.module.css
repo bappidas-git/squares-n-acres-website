@@ -1,28 +1,28 @@
 .wrapper {
-  background: var(--color-bg-default);
+  background: var(--color-bg);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-xl);
+  padding: var(--space-8);
   box-shadow: var(--shadow-lg);
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--space-4);
 }
 
 .formTitle {
   font-family: var(--font-heading);
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   margin-bottom: 0;
 }
 
 .formSubtitle {
   font-family: var(--font-body);
   font-size: 0.9rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   line-height: 1.5;
   margin-top: -4px;
 }
@@ -30,7 +30,7 @@
 .fields {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--space-2);
 }
 
 .field {
@@ -48,8 +48,8 @@
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: 0.9rem;
-  color: var(--color-text-primary);
-  background: var(--color-bg-default);
+  color: var(--color-text);
+  background: var(--color-bg);
   transition:
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
@@ -59,22 +59,22 @@
 .input:focus,
 .textarea:focus,
 .select:focus {
-  border-color: var(--color-secondary);
-  box-shadow: 0 0 0 3px rgba(201, 168, 108, 0.12);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-ring);
 }
 
 .input::placeholder,
 .textarea::placeholder {
-  color: var(--color-text-light);
+  color: var(--color-text-muted);
 }
 
 .inputError {
-  border-color: #dc2626;
+  border-color: var(--color-error);
 }
 
 .inputError:focus {
-  border-color: #dc2626;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 3px var(--color-error-bg);
 }
 
 .textarea {
@@ -85,17 +85,23 @@
 .select {
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236B7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+    linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
   background-repeat: no-repeat;
-  background-position: right 14px center;
-  background-size: 18px;
+  background-position:
+    calc(100% - 19px) center,
+    calc(100% - 14px) center;
+  background-size:
+    5px 5px,
+    5px 5px;
   padding-right: 36px;
 }
 
 .errorText {
   font-family: var(--font-body);
   font-size: 0.75rem;
-  color: #dc2626;
+  color: var(--color-error-dark);
 }
 
 .submitErrorText {
@@ -104,18 +110,18 @@
   gap: 6px;
   font-family: var(--font-body);
   font-size: 0.85rem;
-  color: #dc2626;
+  color: var(--color-error-dark);
 }
 
 .submitBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-sm);
+  gap: var(--space-2);
   width: 100%;
   padding: 14px;
-  background: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
@@ -125,11 +131,11 @@
   transition:
     background var(--transition-fast),
     transform var(--transition-fast);
-  margin-top: var(--spacing-sm);
+  margin-top: var(--space-2);
 }
 
 .submitBtn:hover {
-  background: var(--color-secondary-dark);
+  background: var(--color-primary-dark);
   transform: translateY(-1px);
 }
 
@@ -142,8 +148,8 @@
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2.5px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
+  border: 2.5px solid var(--color-on-dark-border);
+  border-top-color: var(--color-text-inverse);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
@@ -157,36 +163,36 @@
 /* Success State */
 .success {
   text-align: center;
-  padding: var(--spacing-xl) var(--spacing-md);
+  padding: var(--space-8) var(--space-4);
 }
 
 .checkCircle {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--space-4);
 }
 
 .successIcon {
   font-size: 3.5rem;
-  color: #16a34a;
+  color: var(--color-success-dark);
 }
 
 .successTitle {
   font-family: var(--font-heading);
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-sm);
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
 }
 
 .successText {
   font-family: var(--font-body);
   font-size: 0.9rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   line-height: 1.6;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .wrapper {
-    padding: var(--spacing-lg);
+    padding: var(--space-6);
   }
 
   .formTitle {

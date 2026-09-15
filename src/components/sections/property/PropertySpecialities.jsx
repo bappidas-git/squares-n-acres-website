@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { useInView } from 'react-intersection-observer';
+import useInView from '../../../hooks/useInView';
 import styles from './PropertySpecialities.module.css';
 
 const DESKTOP_ROW_COUNT = 6;

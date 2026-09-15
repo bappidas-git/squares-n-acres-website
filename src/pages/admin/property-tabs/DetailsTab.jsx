@@ -40,10 +40,10 @@ const DetailsTab = ({ formData, updateListItem, addListItem, removeListItem }) =
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
         Property Details (Key-Value with Icons)
       </Typography>
-      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
+      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)', mt: -1 }}>
         Dynamic details shown in the "Property Details" section. Each item has an icon, label, and
         value. Common examples: Project Area, Total Units, Towers, Floors, RERA ID, Launch Date,
         Possession Date, etc.
@@ -59,15 +59,18 @@ const DetailsTab = ({ formData, updateListItem, addListItem, removeListItem }) =
           sx={{
             p: 2,
             borderRadius: 2,
-            border: dragIndex === index ? '1px dashed #3B82F6' : '1px solid #E5E7EB',
-            bgcolor: dragIndex === index ? '#EFF6FF' : '#fff',
+            border:
+              dragIndex === index
+                ? '1px dashed var(--color-info)'
+                : '1px solid var(--color-border)',
+            bgcolor: dragIndex === index ? 'var(--color-info-bg)' : 'var(--color-bg)',
             cursor: 'grab',
           }}
         >
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
             <Icon
               icon="mdi:drag-vertical"
-              style={{ fontSize: 20, color: '#D1D5DB', flexShrink: 0 }}
+              style={{ fontSize: 20, color: 'var(--color-text-muted)', flexShrink: 0 }}
             />
 
             {/* Icon selector */}
@@ -77,20 +80,23 @@ const DetailsTab = ({ formData, updateListItem, addListItem, removeListItem }) =
                 width: 44,
                 height: 44,
                 borderRadius: 2,
-                border: '1px dashed #D1D5DB',
+                border: '1px dashed var(--color-border-strong)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                bgcolor: spec.icon ? '#F0F7FF' : '#F9FAFB',
+                bgcolor: spec.icon ? 'var(--color-info-bg)' : 'var(--color-surface)',
                 flexShrink: 0,
-                '&:hover': { borderColor: '#C9A86C', bgcolor: '#FEF8F0' },
+                '&:hover': {
+                  borderColor: 'var(--color-primary)',
+                  bgcolor: 'var(--color-warning-bg)',
+                },
               }}
             >
               {spec.icon ? (
-                <Icon icon={spec.icon} style={{ fontSize: 24, color: '#1B2A4A' }} />
+                <Icon icon={spec.icon} style={{ fontSize: 24, color: 'var(--color-charcoal)' }} />
               ) : (
-                <Icon icon="mdi:plus" style={{ fontSize: 18, color: '#9CA3AF' }} />
+                <Icon icon="mdi:plus" style={{ fontSize: 18, color: 'var(--color-text-muted)' }} />
               )}
             </Box>
 
@@ -119,7 +125,7 @@ const DetailsTab = ({ formData, updateListItem, addListItem, removeListItem }) =
               <IconButton
                 size="small"
                 onClick={() => removeListItem('specifications', index)}
-                sx={{ color: '#EF4444' }}
+                sx={{ color: 'var(--color-error-dark)' }}
               >
                 <Icon icon="mdi:close-circle-outline" style={{ fontSize: 20 }} />
               </IconButton>
@@ -129,7 +135,7 @@ const DetailsTab = ({ formData, updateListItem, addListItem, removeListItem }) =
           {spec.icon && (
             <Typography
               variant="caption"
-              sx={{ color: '#9CA3AF', ml: 8, mt: 0.5, display: 'block' }}
+              sx={{ color: 'var(--color-text-muted)', ml: 8, mt: 0.5, display: 'block' }}
             >
               Icon: {spec.icon}
             </Typography>
@@ -142,7 +148,7 @@ const DetailsTab = ({ formData, updateListItem, addListItem, removeListItem }) =
         variant="text"
         onClick={() => addListItem('specifications', { key: '', value: '', icon: '' })}
         startIcon={<Icon icon="mdi:plus" />}
-        sx={{ color: '#6B7280', alignSelf: 'flex-start' }}
+        sx={{ color: 'var(--color-text-muted)', alignSelf: 'flex-start' }}
       >
         Add Detail Item
       </Button>

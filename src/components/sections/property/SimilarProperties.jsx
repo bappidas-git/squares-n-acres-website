@@ -2,34 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { useInView } from 'react-intersection-observer';
-import Slider from 'react-slick';
+import useInView from '../../../hooks/useInView';
 import { propertyService } from '../../../services/api';
 import PropertyCard from '../../common/PropertyCard';
+import { Carousel } from '../../ui';
 import styles from './SimilarProperties.module.css';
-
-import 'slick-carousel/slick/slick.css';
-import 'slick-carousel/slick/slick-theme.css';
-
-const PrevArrow = ({ onClick }) => (
-  <button
-    className={`${styles.slickArrow} ${styles.slickPrev}`}
-    onClick={onClick}
-    aria-label="Previous"
-  >
-    <Icon icon="mdi:chevron-left" />
-  </button>
-);
-
-const NextArrow = ({ onClick }) => (
-  <button
-    className={`${styles.slickArrow} ${styles.slickNext}`}
-    onClick={onClick}
-    aria-label="Next"
-  >
-    <Icon icon="mdi:chevron-right" />
-  </button>
-);
 
 const SimilarProperties = ({ currentProperty }) => {
   const [properties, setProperties] = useState([]);
@@ -67,26 +44,6 @@ const SimilarProperties = ({ currentProperty }) => {
 
   if (!currentProperty || loading || properties.length === 0) return null;
 
-  const settings = {
-    dots: true,
-    infinite: properties.length > 3,
-    speed: 500,
-    slidesToShow: Math.min(3, properties.length),
-    slidesToScroll: 1,
-    prevArrow: <PrevArrow />,
-    nextArrow: <NextArrow />,
-    responsive: [
-      {
-        breakpoint: 960,
-        settings: { slidesToShow: 2, slidesToScroll: 1 },
-      },
-      {
-        breakpoint: 600,
-        settings: { slidesToShow: 1, slidesToScroll: 1, arrows: false },
-      },
-    ],
-  };
-
   return (
     <section className={styles.section} ref={ref} id="similar">
       <motion.div
@@ -101,13 +58,15 @@ const SimilarProperties = ({ currentProperty }) => {
           </Link>
         </div>
 
-        <Slider {...settings} className={styles.slider}>
+        <Carousel
+          label="Similar properties"
+          itemsPerView={{ xs: 1.15, sm: 2, md: 3, lg: 3 }}
+          className={styles.carousel}
+        >
           {properties.map((property) => (
-            <div key={property.id} className={styles.slideItem}>
-              <PropertyCard property={property} />
-            </div>
+            <PropertyCard key={property.id} property={property} />
           ))}
-        </Slider>
+        </Carousel>
       </motion.div>
     </section>
   );

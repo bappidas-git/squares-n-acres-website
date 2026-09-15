@@ -1,103 +1,132 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { Snackbar, Alert, Slide, useMediaQuery, useTheme } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+
+import { toneStyles } from '../ui/tones';
+
+import styles from './ToastProvider.module.css';
+
+/**
+ * The one toast system of the app, public and admin alike (D54).
+ *
+ * At most three toasts are visible at a time — older ones drop off the top, so
+ * a burst of API errors cannot cover the screen. The region is `aria-live`
+ * polite, which announces each toast without stealing focus (§8.3).
+ */
 
 const ToastContext = createContext(null);
 
 export const useToast = () => {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useToast must be used within ToastProvider');
-  return ctx;
+  const context = useContext(ToastContext);
+  if (!context) throw new Error('useToast must be used within ToastProvider');
+  return context;
 };
 
-let toastId = 0;
+const MAX_VISIBLE = 3;
+const DEFAULT_DURATION = 4000;
 
-const SlideTransition = (props) => <Slide {...props} direction="down" />;
+/** `severity` keeps the MUI vocabulary the call sites already use. */
+const TONE_BY_SEVERITY = {
+  success: 'success',
+  error: 'error',
+  warning: 'warning',
+  info: 'info',
+};
+
+let nextId = 0;
 
 const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-
-  const addToast = useCallback((message, severity = 'info', duration = 4000) => {
-    const id = ++toastId;
-    setToasts((prev) => [...prev, { id, message, severity, duration }]);
-    return id;
-  }, []);
+  const timers = useRef(new Map());
+  const reducedMotion = useReducedMotion();
 
   const removeToast = useCallback((id) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    const timer = timers.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timers.current.delete(id);
+    }
+    setToasts((previous) => previous.filter((toast) => toast.id !== id));
   }, []);
 
-  const success = useCallback((msg, dur) => addToast(msg, 'success', dur), [addToast]);
-  const error = useCallback((msg, dur) => addToast(msg, 'error', dur), [addToast]);
-  const warning = useCallback((msg, dur) => addToast(msg, 'warning', dur), [addToast]);
-  const info = useCallback((msg, dur) => addToast(msg, 'info', dur), [addToast]);
+  const addToast = useCallback(
+    (message, severity = 'info', duration = DEFAULT_DURATION) => {
+      const id = (nextId += 1);
+      setToasts((previous) => [...previous, { id, message, severity }].slice(-MAX_VISIBLE));
+      if (duration > 0) {
+        timers.current.set(
+          id,
+          setTimeout(() => removeToast(id), duration)
+        );
+      }
+      return id;
+    },
+    [removeToast]
+  );
+
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      pending.forEach(clearTimeout);
+      pending.clear();
+    };
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      addToast,
+      removeToast,
+      success: (message, duration) => addToast(message, 'success', duration),
+      error: (message, duration) => addToast(message, 'error', duration),
+      warning: (message, duration) => addToast(message, 'warning', duration),
+      info: (message, duration) => addToast(message, 'info', duration),
+    }),
+    [addToast, removeToast]
+  );
+
+  const offscreen = reducedMotion ? {} : { opacity: 0, y: 12, scale: 0.97 };
 
   return (
-    <ToastContext.Provider value={{ addToast, removeToast, success, error, warning, info }}>
+    <ToastContext.Provider value={value}>
       {children}
-      <div
-        style={{
-          position: 'fixed',
-          top: 16,
-          right: isMobile ? '50%' : 16,
-          transform: isMobile ? 'translateX(50%)' : 'none',
-          zIndex: 9999,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          pointerEvents: 'none',
-          maxWidth: isMobile ? 'calc(100vw - 32px)' : 400,
-          width: isMobile ? 'calc(100vw - 32px)' : 'auto',
-        }}
-      >
-        <AnimatePresence>
-          {toasts.map((toast) => (
-            <motion.div
-              key={toast.id}
-              initial={{ opacity: 0, y: -40, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              style={{ pointerEvents: 'auto' }}
-            >
-              <Snackbar
-                open
-                autoHideDuration={toast.duration}
-                onClose={() => removeToast(toast.id)}
-                anchorOrigin={{
-                  vertical: 'top',
-                  horizontal: isMobile ? 'center' : 'right',
+      <div className={styles.region} role="status" aria-live="polite" aria-atomic="false">
+        <AnimatePresence initial={false}>
+          {toasts.map((toast) => {
+            const palette = toneStyles(TONE_BY_SEVERITY[toast.severity] || 'info');
+            return (
+              <motion.div
+                key={toast.id}
+                layout={!reducedMotion}
+                initial={offscreen}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={offscreen}
+                transition={{ duration: reducedMotion ? 0 : 0.2 }}
+                className={styles.toast}
+                style={{
+                  background: palette.background,
+                  borderColor: palette.border,
+                  color: palette.color,
                 }}
-                sx={{
-                  position: 'relative',
-                  top: 'auto !important',
-                  right: 'auto !important',
-                  left: 'auto !important',
-                  bottom: 'auto !important',
-                  transform: 'none !important',
-                }}
-                TransitionComponent={SlideTransition}
               >
-                <Alert
-                  onClose={() => removeToast(toast.id)}
-                  severity={toast.severity}
-                  variant="filled"
-                  sx={{
-                    width: '100%',
-                    minWidth: isMobile ? 'auto' : 320,
-                    borderRadius: '10px',
-                    fontFamily: 'var(--font-body)',
-                    fontWeight: 500,
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                  }}
+                <span className={styles.message}>{toast.message}</span>
+                <button
+                  type="button"
+                  className={styles.close}
+                  onClick={() => removeToast(toast.id)}
+                  aria-label="Dismiss notification"
                 >
-                  {toast.message}
-                </Alert>
-              </Snackbar>
-            </motion.div>
-          ))}
+                  &times;
+                </button>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
       </div>
     </ToastContext.Provider>

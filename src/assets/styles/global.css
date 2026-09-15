@@ -1,72 +1,162 @@
-/* CSS Custom Properties — matching MUI theme */
+/**
+ * Design tokens and base styles — Squares N Acres.
+ *
+ * Together with `src/theme.js` this is the only file in `src/` allowed to hold
+ * colour or font-family literals (`scripts/check-traces.js` enforces it, and
+ * `src/theme.test.js` asserts the two files agree). Everything else uses
+ * `var(--token)` in CSS and `theme.palette.*` / `'var(--token)'` in MUI `sx`.
+ */
 :root {
-  /* Brand Colors */
-  --color-primary: #1b2a4a;
-  --color-primary-light: #2d4470;
-  --color-primary-dark: #111c33;
-  --color-secondary: #c9a86c;
-  --color-secondary-light: #d4bc8e;
-  --color-secondary-dark: #b08e4a;
+  /* ── Brand ─────────────────────────────────────────────────────────────── */
+  /* Sampled from the monogram square; decorative / display text >= 24px only. */
+  --color-brand-red: #e7343a;
+  /* Buttons, active states, primary focus: white text on it is 4.75:1 (AA). */
+  --color-primary: #cf3f38;
+  /* Hover/pressed AND every red text or link on white or surface. */
+  --color-primary-dark: #b2332d;
+  /* Tints, chips, selected rows. */
+  --color-primary-light: #fbe9e8;
+  --color-charcoal: #2b2b2b;
 
-  /* Backgrounds */
-  --color-bg-default: #ffffff;
-  --color-bg-surface: #f8f6f3;
-  --color-bg-paper: #ffffff;
-
-  /* Text */
-  --color-text-primary: #1b2a4a;
-  --color-text-secondary: #6b7280;
-  --color-text-light: #9ca3af;
-
-  /* Borders */
+  /* ── Neutrals ──────────────────────────────────────────────────────────── */
+  --color-text: #1f1f1f;
+  --color-text-muted: #5f6368;
+  --color-text-inverse: #ffffff;
+  --color-bg: #ffffff;
+  --color-surface: #f7f7f8;
+  --color-surface-2: #efeff1;
   --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
 
-  /* Typography */
-  --font-heading: 'Playfair Display', 'Georgia', serif;
-  --font-body: 'DM Sans', 'Helvetica', 'Arial', sans-serif;
-  --font-number: 'Outfit', 'DM Sans', 'Helvetica', sans-serif;
-  /* Non-brand faces: the Google SERP preview mock and code/slug display */
+  /* ── Status (base = icon/border/background, -dark = text, -bg = tint) ──── */
+  --color-success: #1e8e5a;
+  --color-success-dark: #166b45;
+  --color-success-bg: #e6f4ec;
+  --color-warning: #d98e04;
+  --color-warning-dark: #8a5a00;
+  --color-warning-bg: #fff4de;
+  --color-error: #c62828;
+  --color-error-dark: #a31f1f;
+  --color-error-bg: #fdecec;
+  --color-info: #2563eb;
+  --color-info-dark: #1d4ed8;
+  --color-info-bg: #e8effd;
+
+  --color-overlay: rgba(31, 31, 31, 0.6);
+  --color-focus: #1d4ed8;
+
+  /* ── Translucent derivations (the only alpha values in the system) ─────── */
+  --color-overlay-strong: rgba(31, 31, 31, 0.82);
+  --color-scrim: rgba(31, 31, 31, 0.35);
+  /* Muted text, fills and borders on charcoal/photographic surfaces. */
+  --color-on-dark: rgba(255, 255, 255, 0.78);
+  --color-on-dark-subtle: rgba(255, 255, 255, 0.12);
+  --color-on-dark-border: rgba(255, 255, 255, 0.28);
+  /* Frosted white panel floating over imagery. */
+  --color-glass: rgba(255, 255, 255, 0.9);
+  --color-primary-tint: rgba(207, 63, 56, 0.1);
+  --color-primary-ring: rgba(207, 63, 56, 0.22);
+
+  /* ── Search-result preview mock ────────────────────────────────────────── */
+  /* Google's own SERP colours: the preview is only honest if it looks like the
+     real thing, so these are non-brand values used nowhere else (as --font-serp). */
+  --color-serp-title: #1a0dab;
+  --color-serp-url: #006621;
+  --color-serp-text: #545454;
+
+  /* ── Social (share buttons only) ───────────────────────────────────────── */
+  --color-whatsapp: #25d366;
+  --color-facebook: #1877f2;
+  --color-x: #0f1419;
+  --color-linkedin: #0a66c2;
+  --color-instagram: #e4405f;
+  --color-youtube: #ff0000;
+
+  /* ── Typography ────────────────────────────────────────────────────────── */
+  --font-heading: 'Manrope', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-body: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* Non-brand faces: the Google SERP preview mock and code/slug display. */
   --font-serp: arial, sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
-  /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-2xl: 48px;
-  --spacing-3xl: 64px;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: clamp(1.75rem, 1.4rem + 1.2vw, 2.25rem);
+  --font-size-4xl: clamp(2rem, 1.5rem + 2vw, 3rem);
+  --font-size-5xl: clamp(2.5rem, 1.8rem + 3vw, 4rem);
 
-  /* Border Radius */
-  --radius-sm: 4px;
+  --line-height-tight: 1.2;
+  --line-height-snug: 1.35;
+  --line-height-normal: 1.6;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* ── Spacing (4px base) ────────────────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ── Radius ────────────────────────────────────────────────────────────── */
+  --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
-  --radius-full: 50%;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0px 1px 3px rgba(0, 0, 0, 0.06), 0px 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0px 4px 6px rgba(0, 0, 0, 0.06), 0px 2px 4px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0px 8px 16px rgba(0, 0, 0, 0.08), 0px 4px 8px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0px 16px 32px rgba(0, 0, 0, 0.08), 0px 8px 16px rgba(0, 0, 0, 0.04);
+  /* ── Shadows (soft) ────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(31, 31, 31, 0.06), 0 1px 3px rgba(31, 31, 31, 0.04);
+  --shadow-md: 0 4px 12px rgba(31, 31, 31, 0.08), 0 2px 4px rgba(31, 31, 31, 0.04);
+  --shadow-lg: 0 12px 32px rgba(31, 31, 31, 0.1), 0 4px 8px rgba(31, 31, 31, 0.04);
 
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 300ms ease;
-  --transition-slow: 500ms ease;
-
-  /* Z-index layers */
+  /* ── Z-index (aligned with MUI) ────────────────────────────────────────── */
   --z-dropdown: 1000;
-  --z-sticky: 1020;
-  --z-fixed: 1030;
-  --z-modal-backdrop: 1040;
-  --z-modal: 1050;
-  --z-popover: 1060;
-  --z-tooltip: 1070;
+  --z-sticky: 1090;
+  --z-header: 1100;
+  --z-bottom-nav: 1100;
+  --z-drawer: 1200;
+  --z-modal: 1300;
+  --z-toast: 1400;
+  --z-tooltip: 1500;
+
+  /* ── Motion ────────────────────────────────────────────────────────────── */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 400ms ease;
+
+  /* ── Layout ────────────────────────────────────────────────────────────── */
+  --container-max: 1280px;
+  --container-padding: 16px;
+  --header-height: 64px;
+  --bottom-nav-height: 64px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Reset & Base */
+@media (min-width: 900px) {
+  :root {
+    --container-padding: 24px;
+    --header-height: 72px;
+  }
+}
+
+/* ── Reset & base ───────────────────────────────────────────────────────── */
 *,
 *::after,
 *::before {
@@ -80,18 +170,32 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+html,
 body {
-  font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 1.6;
-  color: var(--color-text-primary);
-  background-color: var(--color-bg-default);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
-/* Links */
+body {
+  font-family: var(--font-body);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  color: var(--color-charcoal);
+  line-height: var(--line-height-tight);
+}
+
 a {
   text-decoration: none;
   color: inherit;
@@ -99,90 +203,72 @@ a {
 }
 
 a:hover {
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
 }
 
-/* Images */
 img {
   max-width: 100%;
   height: auto;
   display: block;
 }
 
-/* Lists */
 ul,
 ol {
   list-style: none;
 }
 
-/* Selection */
 ::selection {
-  background-color: var(--color-secondary);
-  color: var(--color-bg-default);
+  background-color: var(--color-primary-light);
+  color: var(--color-text);
 }
 
 ::-moz-selection {
-  background-color: var(--color-secondary);
-  color: var(--color-bg-default);
+  background-color: var(--color-primary-light);
+  color: var(--color-text);
 }
 
-/* Custom Scrollbar */
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg-surface);
+  background: var(--color-surface);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-text-light);
-  border-radius: 4px;
+  background: var(--color-border-strong);
+  border-radius: var(--radius-sm);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-secondary);
+  background: var(--color-text-muted);
 }
 
-/* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-text-light) var(--color-bg-surface);
+  scrollbar-color: var(--color-border-strong) var(--color-surface);
 }
 
-/* Focus styles for accessibility */
+/* ── Focus ──────────────────────────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid var(--color-secondary);
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
 
-/* Slick carousel base overrides */
-.slick-dots li button:before {
-  color: var(--color-secondary) !important;
-}
-
-.slick-dots li.slick-active button:before {
-  color: var(--color-primary) !important;
-}
-
-.slick-prev:before,
-.slick-next:before {
-  color: var(--color-primary) !important;
-}
-
-/* Section spacing utility */
+/* ── Section spacing utility ────────────────────────────────────────────── */
 .section-padding {
-  padding: var(--spacing-3xl) 0;
+  padding: var(--space-16) 0;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .section-padding {
-    padding: var(--spacing-2xl) 0;
+    padding: var(--space-12) 0;
   }
 }
 
-/* ─── Skip to main content — accessibility ─── */
+/* ── Skip to main content ───────────────────────────────────────────────── */
 .skip-to-main {
   position: absolute;
   left: -9999px;
@@ -190,29 +276,29 @@ ol {
   width: 1px;
   height: 1px;
   overflow: hidden;
-  z-index: 9999;
-  padding: 12px 24px;
+  z-index: var(--z-tooltip);
+  padding: var(--space-3) var(--space-6);
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-inverse);
   border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
   text-decoration: none;
   box-shadow: var(--shadow-lg);
 }
 
 .skip-to-main:focus {
   position: fixed;
-  left: 16px;
-  top: 16px;
+  left: var(--space-4);
+  top: var(--space-4);
   width: auto;
   height: auto;
   overflow: visible;
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
-/* ─── Reduced motion preference ─── */
+/* ── Reduced motion ─────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -224,20 +310,12 @@ ol {
   }
 }
 
-/* ─── Shimmer animation for skeleton loaders ─── */
+/* ── Shimmer animation for skeleton loaders ─────────────────────────────── */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
   }
   100% {
     background-position: 200% 0;
-  }
-}
-
-/* ─── Mobile-specific overrides ─── */
-@media (max-width: 960px) {
-  html,
-  body {
-    overflow-x: hidden;
   }
 }

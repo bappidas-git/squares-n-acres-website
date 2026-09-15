@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
+import useInView from '../../../hooks/useInView';
 import { partnerService } from '../../../services/api';
 import styles from './PartnersSection.module.css';
 

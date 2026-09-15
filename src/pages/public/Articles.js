@@ -2,10 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import { articleService } from '../../services/api';
 import LeadForm from '../../components/common/LeadForm';
+import { Section } from '../../components/ui';
 import styles from './Articles.module.css';
 import { SITE } from '../../config/site';
 
@@ -20,21 +20,6 @@ const CATEGORIES = [
 ];
 
 const ARTICLES_PER_PAGE = 6;
-
-const Section = ({ children, className = '', delay = 0 }) => {
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
-  return (
-    <motion.section
-      ref={ref}
-      className={className}
-      initial={{ opacity: 0, y: 30 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay }}
-    >
-      {children}
-    </motion.section>
-  );
-};
 
 const ArticleCard = ({ article, index }) => (
   <motion.article

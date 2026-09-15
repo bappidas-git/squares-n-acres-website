@@ -22,8 +22,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
-  Alert,
   Skeleton,
   Switch,
   useMediaQuery,
@@ -33,15 +31,18 @@ import {
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { articleService } from '../../services/api';
+import { useToast } from '../../components/common/ToastProvider';
+import { toneStyles } from '../../components/ui/tones';
 import {
   ARTICLE_CATEGORIES,
-  ARTICLE_CATEGORY_COLORS as categoryColors,
+  ARTICLE_CATEGORY_TONES as categoryTones,
 } from '../../config/adminConstants';
 
 // Add 'All' option for filter view
 const categories = [{ value: '', label: 'All Categories' }, ...ARTICLE_CATEGORIES];
 
 const AdminArticles = () => {
+  const toast = useToast();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
@@ -54,7 +55,6 @@ const AdminArticles = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, article: null });
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const fetchArticles = useCallback(async () => {
     setLoading(true);
@@ -62,11 +62,11 @@ const AdminArticles = () => {
       const data = await articleService.getAll();
       setArticles(Array.isArray(data) ? data : []);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to load articles', severity: 'error' });
+      toast.error('Failed to load articles');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchArticles();
@@ -105,13 +105,9 @@ const AdminArticles = () => {
       setArticles((prev) =>
         prev.map((a) => (a.id === article.id ? { ...a, isActive: !a.isActive } : a))
       );
-      setSnackbar({
-        open: true,
-        message: `Article ${!article.isActive ? 'published' : 'unpublished'}`,
-        severity: 'success',
-      });
+      toast.success(`Article ${!article.isActive ? 'published' : 'unpublished'}`);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to update article status', severity: 'error' });
+      toast.error('Failed to update article status');
     }
   };
 
@@ -128,13 +124,9 @@ const AdminArticles = () => {
           a.id === article.id ? { ...a, isTrending: nowTrending, trendingOrder } : a
         )
       );
-      setSnackbar({
-        open: true,
-        message: nowTrending ? 'Article marked as trending' : 'Article removed from trending',
-        severity: 'success',
-      });
+      toast.success(nowTrending ? 'Article marked as trending' : 'Article removed from trending');
     } catch {
-      setSnackbar({ open: true, message: 'Failed to update trending status', severity: 'error' });
+      toast.error('Failed to update trending status');
     }
   };
 
@@ -144,9 +136,9 @@ const AdminArticles = () => {
     try {
       await articleService.delete(article.id);
       setArticles((prev) => prev.filter((a) => a.id !== article.id));
-      setSnackbar({ open: true, message: 'Article deleted', severity: 'success' });
+      toast.success('Article deleted');
     } catch {
-      setSnackbar({ open: true, message: 'Failed to delete article', severity: 'error' });
+      toast.error('Failed to delete article');
     } finally {
       setDeleteDialog({ open: false, article: null });
     }
@@ -184,10 +176,10 @@ const AdminArticles = () => {
         }}
       >
         <Box>
-          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
             Articles
           </Typography>
-          <Typography sx={{ fontSize: '0.875rem', color: '#6B7280', mt: 0.5 }}>
+          <Typography sx={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', mt: 0.5 }}>
             {stats.total} articles ({stats.published} published, {stats.draft} drafts)
           </Typography>
         </Box>
@@ -196,11 +188,11 @@ const AdminArticles = () => {
           startIcon={<Icon icon="mdi:plus" />}
           onClick={() => navigate('/admin/articles/add')}
           sx={{
-            bgcolor: '#1B2A4A',
+            bgcolor: 'var(--color-charcoal)',
             textTransform: 'none',
             borderRadius: 2,
             px: 3,
-            '&:hover': { bgcolor: '#2d3f63' },
+            '&:hover': { bgcolor: 'var(--color-charcoal)' },
           }}
         >
           Add Article
@@ -208,7 +200,10 @@ const AdminArticles = () => {
       </Box>
 
       {/* Filters */}
-      <Paper elevation={0} sx={{ p: 2, borderRadius: 2, border: '1px solid #F3F4F6', mb: 3 }}>
+      <Paper
+        elevation={0}
+        sx={{ p: 2, borderRadius: 2, border: '1px solid var(--color-surface)', mb: 3 }}
+      >
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
           <TextField
             size="small"
@@ -221,7 +216,7 @@ const AdminArticles = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Icon icon="mdi:magnify" style={{ color: '#9CA3AF' }} />
+                  <Icon icon="mdi:magnify" style={{ color: 'var(--color-text-muted)' }} />
                 </InputAdornment>
               ),
             }}
@@ -266,7 +261,7 @@ const AdminArticles = () => {
               size="small"
               onClick={clearFilters}
               startIcon={<Icon icon="mdi:close" />}
-              sx={{ textTransform: 'none', color: '#EF4444' }}
+              sx={{ textTransform: 'none', color: 'var(--color-error-dark)' }}
             >
               Clear
             </Button>
@@ -277,7 +272,7 @@ const AdminArticles = () => {
       {/* Table */}
       <Paper
         elevation={0}
-        sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}
+        sx={{ borderRadius: 2, border: '1px solid var(--color-surface)', overflow: 'hidden' }}
       >
         {loading ? (
           <Box sx={{ p: 3 }}>
@@ -289,10 +284,7 @@ const AdminArticles = () => {
           /* Mobile Card View */
           <Box sx={{ p: 2 }}>
             {paginated.map((article) => {
-              const catStyle = categoryColors[article.category] || {
-                bg: '#F3F4F6',
-                color: '#6B7280',
-              };
+              const catStyle = toneStyles(categoryTones[article.category]);
               return (
                 <Paper key={article.id} variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2 }}>
                   <Box
@@ -304,7 +296,12 @@ const AdminArticles = () => {
                     }}
                   >
                     <Typography
-                      sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A', flex: 1 }}
+                      sx={{
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: 'var(--color-charcoal)',
+                        flex: 1,
+                      }}
                     >
                       {article.title}
                     </Typography>
@@ -314,8 +311,12 @@ const AdminArticles = () => {
                       sx={{
                         fontSize: '0.6875rem',
                         height: 22,
-                        bgcolor: article.isActive ? '#ECFDF5' : '#FEF2F2',
-                        color: article.isActive ? '#10B981' : '#EF4444',
+                        bgcolor: article.isActive
+                          ? 'var(--color-success-bg)'
+                          : 'var(--color-error-bg)',
+                        color: article.isActive
+                          ? 'var(--color-success-dark)'
+                          : 'var(--color-error-dark)',
                         ml: 1,
                       }}
                     />
@@ -335,7 +336,7 @@ const AdminArticles = () => {
                       sx={{
                         fontSize: '0.625rem',
                         height: 20,
-                        bgcolor: catStyle.bg,
+                        bgcolor: catStyle.background,
                         color: catStyle.color,
                         textTransform: 'capitalize',
                       }}
@@ -347,15 +348,15 @@ const AdminArticles = () => {
                         sx={{
                           fontSize: '0.625rem',
                           height: 20,
-                          bgcolor: '#FFFBEB',
-                          color: '#F59E0B',
+                          bgcolor: 'var(--color-warning-bg)',
+                          color: 'var(--color-warning-dark)',
                         }}
                       />
                     )}
-                    <Typography sx={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>
+                    <Typography sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>
                       {article.author}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>
+                    <Typography sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>
                       {new Date(article.publishedAt).toLocaleDateString('en-IN', {
                         day: 'numeric',
                         month: 'short',
@@ -385,7 +386,7 @@ const AdminArticles = () => {
                       sx={{
                         textTransform: 'none',
                         fontSize: '0.75rem',
-                        color: article.isTrending ? '#F59E0B' : undefined,
+                        color: article.isTrending ? 'var(--color-warning-dark)' : undefined,
                       }}
                     >
                       {article.isTrending ? 'Untrend' : 'Trend'}
@@ -408,33 +409,41 @@ const AdminArticles = () => {
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#FAFAFA' }}>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                <TableRow sx={{ bgcolor: 'var(--color-surface)' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                  >
                     Title
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                  >
                     Category
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                     align="center"
                   >
                     Status
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                     align="center"
                   >
                     Trending
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                  >
                     Author
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                  >
                     Date
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                     align="center"
                   >
                     Actions
@@ -443,10 +452,7 @@ const AdminArticles = () => {
               </TableHead>
               <TableBody>
                 {paginated.map((article) => {
-                  const catStyle = categoryColors[article.category] || {
-                    bg: '#F3F4F6',
-                    color: '#6B7280',
-                  };
+                  const catStyle = toneStyles(categoryTones[article.category]);
                   return (
                     <TableRow
                       key={article.id}
@@ -455,11 +461,17 @@ const AdminArticles = () => {
                     >
                       <TableCell>
                         <Typography
-                          sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1B2A4A' }}
+                          sx={{
+                            fontSize: '0.8125rem',
+                            fontWeight: 600,
+                            color: 'var(--color-charcoal)',
+                          }}
                         >
                           {article.title}
                         </Typography>
-                        <Typography sx={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>
+                        <Typography
+                          sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}
+                        >
                           /{article.slug}
                         </Typography>
                       </TableCell>
@@ -470,7 +482,7 @@ const AdminArticles = () => {
                           sx={{
                             fontSize: '0.6875rem',
                             height: 22,
-                            bgcolor: catStyle.bg,
+                            bgcolor: catStyle.background,
                             color: catStyle.color,
                             textTransform: 'capitalize',
                           }}
@@ -482,16 +494,20 @@ const AdminArticles = () => {
                           onChange={() => handleTogglePublish(article)}
                           size="small"
                           sx={{
-                            '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                              color: 'var(--color-success-dark)',
+                            },
                             '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                              bgcolor: '#10B981',
+                              bgcolor: 'var(--color-success)',
                             },
                           }}
                         />
                         <Typography
                           sx={{
                             fontSize: '0.625rem',
-                            color: article.isActive ? '#10B981' : '#9CA3AF',
+                            color: article.isActive
+                              ? 'var(--color-success-dark)'
+                              : 'var(--color-text-muted)',
                           }}
                         >
                           {article.isActive ? 'Published' : 'Draft'}
@@ -503,28 +519,32 @@ const AdminArticles = () => {
                           onChange={() => handleToggleTrending(article)}
                           size="small"
                           sx={{
-                            '& .MuiSwitch-switchBase.Mui-checked': { color: '#F59E0B' },
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                              color: 'var(--color-warning-dark)',
+                            },
                             '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                              bgcolor: '#F59E0B',
+                              bgcolor: 'var(--color-warning)',
                             },
                           }}
                         />
                         <Typography
                           sx={{
                             fontSize: '0.625rem',
-                            color: article.isTrending ? '#F59E0B' : '#9CA3AF',
+                            color: article.isTrending
+                              ? 'var(--color-warning-dark)'
+                              : 'var(--color-text-muted)',
                           }}
                         >
                           {article.isTrending ? `#${article.trendingOrder ?? ''}` : 'No'}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography sx={{ fontSize: '0.8125rem', color: '#374151' }}>
+                        <Typography sx={{ fontSize: '0.8125rem', color: 'var(--color-text)' }}>
                           {article.author}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography sx={{ fontSize: '0.8125rem', color: '#374151' }}>
+                        <Typography sx={{ fontSize: '0.8125rem', color: 'var(--color-text)' }}>
                           {new Date(article.publishedAt).toLocaleDateString('en-IN', {
                             day: 'numeric',
                             month: 'short',
@@ -540,7 +560,7 @@ const AdminArticles = () => {
                           >
                             <Icon
                               icon="mdi:pencil-outline"
-                              style={{ fontSize: 18, color: '#6B7280' }}
+                              style={{ fontSize: 18, color: 'var(--color-text-muted)' }}
                             />
                           </IconButton>
                           <IconButton
@@ -549,7 +569,7 @@ const AdminArticles = () => {
                           >
                             <Icon
                               icon="mdi:delete-outline"
-                              style={{ fontSize: 18, color: '#EF4444' }}
+                              style={{ fontSize: 18, color: 'var(--color-error-dark)' }}
                             />
                           </IconButton>
                         </Box>
@@ -562,9 +582,9 @@ const AdminArticles = () => {
                     <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                       <Icon
                         icon="mdi:newspaper-variant-outline"
-                        style={{ fontSize: 40, color: '#D1D5DB' }}
+                        style={{ fontSize: 40, color: 'var(--color-text-muted)' }}
                       />
-                      <Typography sx={{ color: '#9CA3AF', mt: 1 }}>
+                      <Typography sx={{ color: 'var(--color-text-muted)', mt: 1 }}>
                         {hasFilters ? 'No articles match your filters' : 'No articles yet'}
                       </Typography>
                     </TableCell>
@@ -585,7 +605,7 @@ const AdminArticles = () => {
             setPage(0);
           }}
           rowsPerPageOptions={[5, 10, 25]}
-          sx={{ borderTop: '1px solid #F3F4F6' }}
+          sx={{ borderTop: '1px solid var(--color-surface)' }}
         />
       </Paper>
 
@@ -596,12 +616,12 @@ const AdminArticles = () => {
         PaperProps={{ sx: { borderRadius: 3, maxWidth: 420 } }}
       >
         <DialogTitle sx={{ pb: 1 }}>
-          <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
             Delete Article
           </Typography>
         </DialogTitle>
         <DialogContent>
-          <Typography sx={{ fontSize: '0.875rem', color: '#6B7280' }}>
+          <Typography sx={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
             Are you sure you want to delete "{deleteDialog.article?.title}"? This action cannot be
             undone.
           </Typography>
@@ -609,7 +629,7 @@ const AdminArticles = () => {
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button
             onClick={() => setDeleteDialog({ open: false, article: null })}
-            sx={{ textTransform: 'none', color: '#6B7280' }}
+            sx={{ textTransform: 'none', color: 'var(--color-text-muted)' }}
           >
             Cancel
           </Button>
@@ -623,22 +643,6 @@ const AdminArticles = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 2 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

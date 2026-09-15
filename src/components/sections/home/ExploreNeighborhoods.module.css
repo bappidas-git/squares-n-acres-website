@@ -1,6 +1,6 @@
 .section {
   padding: 64px 0;
-  background: var(--color-bg-default);
+  background: var(--color-bg);
 }
 
 .container {
@@ -18,14 +18,14 @@
   font-family: var(--font-heading);
   font-size: 2.25rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   margin-bottom: 8px;
 }
 
 .subtitle {
   font-family: var(--font-body);
   font-size: 1rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
 
 .grid {
@@ -60,8 +60,8 @@
   inset: 0;
   background: linear-gradient(
     to top,
-    rgba(27, 42, 74, 0.75) 0%,
-    rgba(27, 42, 74, 0.15) 60%,
+    var(--color-overlay-strong) 0%,
+    var(--color-scrim) 60%,
     transparent 100%
   );
   transition: background var(--transition-base);
@@ -70,8 +70,8 @@
 .card:hover .cardOverlay {
   background: linear-gradient(
     to top,
-    rgba(201, 168, 108, 0.6) 0%,
-    rgba(27, 42, 74, 0.2) 60%,
+    var(--color-primary) 0%,
+    var(--color-scrim) 60%,
     transparent 100%
   );
 }
@@ -89,7 +89,7 @@
   font-family: var(--font-heading);
   font-size: 1.35rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-inverse);
   margin-bottom: 4px;
 }
 
@@ -99,20 +99,20 @@
   gap: 5px;
   font-family: var(--font-body);
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--color-on-dark);
 }
 
 .countIcon {
   font-size: 16px;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 899.98px) {
   .grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .section {
     padding: 48px 0;
   }

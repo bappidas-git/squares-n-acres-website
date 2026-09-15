@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { SwipeableDrawer } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
+import useScrollDirection from '../../hooks/useScrollDirection';
 import styles from './BottomNav.module.css';
 
 const navItems = [
@@ -34,26 +35,10 @@ const assistanceItems = [
 
 const BottomNav = () => {
   const location = useLocation();
-  const [hidden, setHidden] = useState(false);
+  // D52: the bottom nav is the one chrome that hides on scroll-down.
+  const { direction } = useScrollDirection();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const lastScrollY = useRef(0);
-
-  const handleScroll = useCallback(() => {
-    const currentScrollY = window.scrollY;
-
-    if (currentScrollY > 80) {
-      setHidden(currentScrollY > lastScrollY.current);
-    } else {
-      setHidden(false);
-    }
-
-    lastScrollY.current = currentScrollY;
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
+  const hidden = direction === 'down';
 
   const isActive = (item) => {
     if (!item.path) return location.pathname.startsWith('/buyer-assistance');
@@ -111,12 +96,7 @@ const BottomNav = () => {
         onClose={() => setDrawerOpen(false)}
         onOpen={() => setDrawerOpen(true)}
         disableSwipeToOpen
-        PaperProps={{
-          sx: {
-            borderTopLeftRadius: 16,
-            borderTopRightRadius: 16,
-          },
-        }}
+        PaperProps={{ className: styles.drawerPaper }}
       >
         <div className={styles.drawerContent}>
           <div className={styles.drawerHandle} />

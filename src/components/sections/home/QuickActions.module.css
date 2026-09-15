@@ -1,6 +1,6 @@
 .section {
   padding: 64px 0;
-  background: var(--color-bg-default);
+  background: var(--color-bg);
 }
 
 .container {
@@ -16,7 +16,7 @@
 }
 
 .card {
-  background: #fff;
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 32px 24px;
@@ -28,7 +28,7 @@
 
 .card:hover {
   box-shadow: var(--shadow-lg);
-  border-color: var(--color-secondary);
+  border-color: var(--color-primary);
   transform: translateY(-4px);
 }
 
@@ -36,7 +36,7 @@
   width: 52px;
   height: 52px;
   border-radius: var(--radius-full);
-  background: var(--color-bg-surface);
+  background: var(--color-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -45,21 +45,21 @@
 
 .icon {
   font-size: 26px;
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
 }
 
 .cardTitle {
   font-family: var(--font-heading);
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   margin-bottom: 8px;
 }
 
 .cardDesc {
   font-family: var(--font-body);
   font-size: 0.875rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   line-height: 1.6;
   margin-bottom: 16px;
 }
@@ -71,23 +71,23 @@
   font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
 .cardLink:hover {
-  color: var(--color-secondary-dark);
+  color: var(--color-primary-dark);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 899.98px) {
   .grid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .section {
     padding: 48px 0;
   }

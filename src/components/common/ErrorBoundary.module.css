@@ -1,0 +1,43 @@
+.boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  min-height: 100vh;
+  padding: var(--space-8) var(--container-padding);
+  font-family: var(--font-body);
+  text-align: center;
+  background: var(--color-bg);
+}
+
+.mark {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-charcoal);
+}
+
+.text {
+  margin: 0;
+  max-width: 48ch;
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}

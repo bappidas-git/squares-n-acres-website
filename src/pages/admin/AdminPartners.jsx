@@ -15,8 +15,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
-  Alert,
   Skeleton,
   Switch,
   useMediaQuery,
@@ -25,6 +23,7 @@ import {
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { partnerService } from '../../services/api';
+import { useToast } from '../../components/common/ToastProvider';
 
 const emptyPartner = {
   name: '',
@@ -35,6 +34,7 @@ const emptyPartner = {
 };
 
 const AdminPartners = () => {
+  const toast = useToast();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -45,7 +45,6 @@ const AdminPartners = () => {
   const [form, setForm] = useState(emptyPartner);
   const [saving, setSaving] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, partner: null });
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const fetchPartners = useCallback(async () => {
     setLoading(true);
@@ -53,11 +52,11 @@ const AdminPartners = () => {
       const data = await partnerService.getAll();
       setPartners(Array.isArray(data) ? data : []);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to load partners', severity: 'error' });
+      toast.error('Failed to load partners');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchPartners();
@@ -83,7 +82,7 @@ const AdminPartners = () => {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      setSnackbar({ open: true, message: 'Partner name is required', severity: 'error' });
+      toast.error('Partner name is required');
       return;
     }
 
@@ -96,15 +95,15 @@ const AdminPartners = () => {
             .map((p) => (p.id === editingPartner.id ? { ...p, ...updated } : p))
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
         );
-        setSnackbar({ open: true, message: 'Partner updated', severity: 'success' });
+        toast.success('Partner updated');
       } else {
         const created = await partnerService.create(form);
         setPartners((prev) => [...prev, created].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
-        setSnackbar({ open: true, message: 'Partner added', severity: 'success' });
+        toast.success('Partner added');
       }
       setDialogOpen(false);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to save partner', severity: 'error' });
+      toast.error('Failed to save partner');
     } finally {
       setSaving(false);
     }
@@ -116,13 +115,9 @@ const AdminPartners = () => {
       setPartners((prev) =>
         prev.map((p) => (p.id === partner.id ? { ...p, isActive: !p.isActive } : p))
       );
-      setSnackbar({
-        open: true,
-        message: `Partner ${!partner.isActive ? 'activated' : 'deactivated'}`,
-        severity: 'success',
-      });
+      toast.success(`Partner ${!partner.isActive ? 'activated' : 'deactivated'}`);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to update partner', severity: 'error' });
+      toast.error('Failed to update partner');
     }
   };
 
@@ -132,9 +127,9 @@ const AdminPartners = () => {
     try {
       await partnerService.delete(partner.id);
       setPartners((prev) => prev.filter((p) => p.id !== partner.id));
-      setSnackbar({ open: true, message: 'Partner deleted', severity: 'success' });
+      toast.success('Partner deleted');
     } catch {
-      setSnackbar({ open: true, message: 'Failed to delete partner', severity: 'error' });
+      toast.error('Failed to delete partner');
     } finally {
       setDeleteDialog({ open: false, partner: null });
     }
@@ -154,10 +149,10 @@ const AdminPartners = () => {
         }}
       >
         <Box>
-          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
             Partners
           </Typography>
-          <Typography sx={{ fontSize: '0.875rem', color: '#6B7280', mt: 0.5 }}>
+          <Typography sx={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', mt: 0.5 }}>
             {partners.length} partners ({partners.filter((p) => p.isActive).length} active)
           </Typography>
         </Box>
@@ -166,11 +161,11 @@ const AdminPartners = () => {
           startIcon={<Icon icon="mdi:plus" />}
           onClick={handleOpenAdd}
           sx={{
-            bgcolor: '#1B2A4A',
+            bgcolor: 'var(--color-charcoal)',
             textTransform: 'none',
             borderRadius: 2,
             px: 3,
-            '&:hover': { bgcolor: '#2d3f63' },
+            '&:hover': { bgcolor: 'var(--color-charcoal)' },
           }}
         >
           Add Partner
@@ -180,7 +175,7 @@ const AdminPartners = () => {
       {/* Partner List */}
       <Paper
         elevation={0}
-        sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}
+        sx={{ borderRadius: 2, border: '1px solid var(--color-surface)', overflow: 'hidden' }}
       >
         {loading ? (
           <Box sx={{ p: 3 }}>
@@ -205,7 +200,12 @@ const AdminPartners = () => {
                     />
                   )}
                   <Typography
-                    sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A', flex: 1 }}
+                    sx={{
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      color: 'var(--color-charcoal)',
+                      flex: 1,
+                    }}
                   >
                     {partner.name}
                   </Typography>
@@ -223,21 +223,27 @@ const AdminPartners = () => {
                     onChange={() => handleToggleActive(partner)}
                     size="small"
                     sx={{
-                      '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
+                      '& .MuiSwitch-switchBase.Mui-checked': { color: 'var(--color-success-dark)' },
                       '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                        bgcolor: '#10B981',
+                        bgcolor: 'var(--color-success)',
                       },
                     }}
                   />
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
                     <IconButton size="small" onClick={() => handleOpenEdit(partner)}>
-                      <Icon icon="mdi:pencil-outline" style={{ fontSize: 16, color: '#6B7280' }} />
+                      <Icon
+                        icon="mdi:pencil-outline"
+                        style={{ fontSize: 16, color: 'var(--color-text-muted)' }}
+                      />
                     </IconButton>
                     <IconButton
                       size="small"
                       onClick={() => setDeleteDialog({ open: true, partner })}
                     >
-                      <Icon icon="mdi:delete-outline" style={{ fontSize: 16, color: '#EF4444' }} />
+                      <Icon
+                        icon="mdi:delete-outline"
+                        style={{ fontSize: 16, color: 'var(--color-error-dark)' }}
+                      />
                     </IconButton>
                   </Box>
                 </Box>
@@ -248,30 +254,41 @@ const AdminPartners = () => {
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#FAFAFA' }}>
+                <TableRow sx={{ bgcolor: 'var(--color-surface)' }}>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280', width: 60 }}
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      color: 'var(--color-text-muted)',
+                      width: 60,
+                    }}
                     align="center"
                   >
                     Order
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                  >
                     Logo
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                  >
                     Name
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                  >
                     Website
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                     align="center"
                   >
                     Active
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                     align="center"
                   >
                     Actions
@@ -282,7 +299,13 @@ const AdminPartners = () => {
                 {partners.map((partner) => (
                   <TableRow key={partner.id} hover sx={{ opacity: partner.isActive ? 1 : 0.55 }}>
                     <TableCell align="center">
-                      <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#9CA3AF' }}>
+                      <Typography
+                        sx={{
+                          fontSize: '0.8125rem',
+                          fontWeight: 600,
+                          color: 'var(--color-text-muted)',
+                        }}
+                      >
                         {partner.order}
                       </Typography>
                     </TableCell>
@@ -294,13 +317,19 @@ const AdminPartners = () => {
                           style={{ maxHeight: 32, maxWidth: 100, objectFit: 'contain' }}
                         />
                       ) : (
-                        <Typography sx={{ fontSize: '0.75rem', color: '#9CA3AF' }}>
+                        <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                           No logo
                         </Typography>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1B2A4A' }}>
+                      <Typography
+                        sx={{
+                          fontSize: '0.8125rem',
+                          fontWeight: 600,
+                          color: 'var(--color-charcoal)',
+                        }}
+                      >
                         {partner.name}
                       </Typography>
                     </TableCell>
@@ -308,7 +337,7 @@ const AdminPartners = () => {
                       <Typography
                         sx={{
                           fontSize: '0.75rem',
-                          color: '#6B7280',
+                          color: 'var(--color-text-muted)',
                           maxWidth: 200,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -324,9 +353,11 @@ const AdminPartners = () => {
                         onChange={() => handleToggleActive(partner)}
                         size="small"
                         sx={{
-                          '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: 'var(--color-success-dark)',
+                          },
                           '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                            bgcolor: '#10B981',
+                            bgcolor: 'var(--color-success)',
                           },
                         }}
                       />
@@ -336,7 +367,7 @@ const AdminPartners = () => {
                         <IconButton size="small" onClick={() => handleOpenEdit(partner)}>
                           <Icon
                             icon="mdi:pencil-outline"
-                            style={{ fontSize: 18, color: '#6B7280' }}
+                            style={{ fontSize: 18, color: 'var(--color-text-muted)' }}
                           />
                         </IconButton>
                         <IconButton
@@ -345,7 +376,7 @@ const AdminPartners = () => {
                         >
                           <Icon
                             icon="mdi:delete-outline"
-                            style={{ fontSize: 18, color: '#EF4444' }}
+                            style={{ fontSize: 18, color: 'var(--color-error-dark)' }}
                           />
                         </IconButton>
                       </Box>
@@ -357,9 +388,11 @@ const AdminPartners = () => {
                     <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                       <Icon
                         icon="mdi:handshake-outline"
-                        style={{ fontSize: 40, color: '#D1D5DB' }}
+                        style={{ fontSize: 40, color: 'var(--color-text-muted)' }}
                       />
-                      <Typography sx={{ color: '#9CA3AF', mt: 1 }}>No partners yet</Typography>
+                      <Typography sx={{ color: 'var(--color-text-muted)', mt: 1 }}>
+                        No partners yet
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 )}
@@ -377,9 +410,11 @@ const AdminPartners = () => {
         fullWidth
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ borderBottom: '1px solid #F3F4F6', pb: 2 }}>
+        <DialogTitle sx={{ borderBottom: '1px solid var(--color-surface)', pb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography sx={{ fontSize: '1.125rem', fontWeight: 700, color: '#1B2A4A' }}>
+            <Typography
+              sx={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-charcoal)' }}
+            >
               {editingPartner ? 'Edit Partner' : 'Add Partner'}
             </Typography>
             <IconButton size="small" onClick={() => setDialogOpen(false)}>
@@ -389,7 +424,9 @@ const AdminPartners = () => {
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Box sx={{ mb: 2.5 }}>
-            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 0.75 }}>
+            <Typography
+              sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 0.75 }}
+            >
               Partner Name *
             </Typography>
             <TextField
@@ -403,7 +440,9 @@ const AdminPartners = () => {
           </Box>
 
           <Box sx={{ mb: 2.5 }}>
-            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 0.75 }}>
+            <Typography
+              sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 0.75 }}
+            >
               Logo URL
             </Typography>
             <TextField
@@ -418,7 +457,9 @@ const AdminPartners = () => {
           </Box>
 
           <Box sx={{ mb: 2.5 }}>
-            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 0.75 }}>
+            <Typography
+              sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 0.75 }}
+            >
               Website URL (optional)
             </Typography>
             <TextField
@@ -445,10 +486,10 @@ const AdminPartners = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #F3F4F6' }}>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid var(--color-surface)' }}>
           <Button
             onClick={() => setDialogOpen(false)}
-            sx={{ textTransform: 'none', color: '#6B7280' }}
+            sx={{ textTransform: 'none', color: 'var(--color-text-muted)' }}
           >
             Cancel
           </Button>
@@ -458,10 +499,10 @@ const AdminPartners = () => {
             disabled={saving}
             sx={{
               textTransform: 'none',
-              bgcolor: '#1B2A4A',
+              bgcolor: 'var(--color-charcoal)',
               borderRadius: 2,
               px: 4,
-              '&:hover': { bgcolor: '#2d3f63' },
+              '&:hover': { bgcolor: 'var(--color-charcoal)' },
             }}
           >
             {saving ? 'Saving...' : editingPartner ? 'Update Partner' : 'Add Partner'}
@@ -476,19 +517,19 @@ const AdminPartners = () => {
         PaperProps={{ sx: { borderRadius: 3, maxWidth: 420 } }}
       >
         <DialogTitle sx={{ pb: 1 }}>
-          <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
             Delete Partner
           </Typography>
         </DialogTitle>
         <DialogContent>
-          <Typography sx={{ fontSize: '0.875rem', color: '#6B7280' }}>
+          <Typography sx={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
             Are you sure you want to delete this partner? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button
             onClick={() => setDeleteDialog({ open: false, partner: null })}
-            sx={{ textTransform: 'none', color: '#6B7280' }}
+            sx={{ textTransform: 'none', color: 'var(--color-text-muted)' }}
           >
             Cancel
           </Button>
@@ -502,22 +543,6 @@ const AdminPartners = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 2 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

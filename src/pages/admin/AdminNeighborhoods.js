@@ -15,8 +15,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
-  Alert,
   Skeleton,
   Switch,
   useMediaQuery,
@@ -25,6 +23,7 @@ import {
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { neighborhoodService } from '../../services/api';
+import { useToast } from '../../components/common/ToastProvider';
 
 const emptyNeighborhood = {
   name: '',
@@ -35,6 +34,7 @@ const emptyNeighborhood = {
 };
 
 const AdminNeighborhoods = () => {
+  const toast = useToast();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -45,7 +45,6 @@ const AdminNeighborhoods = () => {
   const [form, setForm] = useState(emptyNeighborhood);
   const [saving, setSaving] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, item: null });
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const fetchNeighborhoods = useCallback(async () => {
     setLoading(true);
@@ -53,11 +52,11 @@ const AdminNeighborhoods = () => {
       const data = await neighborhoodService.getAll();
       setNeighborhoods(Array.isArray(data) ? data : []);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to load neighborhoods', severity: 'error' });
+      toast.error('Failed to load neighborhoods');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchNeighborhoods();
@@ -89,7 +88,7 @@ const AdminNeighborhoods = () => {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      setSnackbar({ open: true, message: 'Neighborhood name is required', severity: 'warning' });
+      toast.warning('Neighborhood name is required');
       return;
     }
 
@@ -105,24 +104,16 @@ const AdminNeighborhoods = () => {
 
       if (editingItem) {
         await neighborhoodService.update(editingItem.id, payload);
-        setSnackbar({
-          open: true,
-          message: 'Neighborhood updated successfully',
-          severity: 'success',
-        });
+        toast.success('Neighborhood updated successfully');
       } else {
         await neighborhoodService.create(payload);
-        setSnackbar({
-          open: true,
-          message: 'Neighborhood created successfully',
-          severity: 'success',
-        });
+        toast.success('Neighborhood created successfully');
       }
 
       handleClose();
       fetchNeighborhoods();
     } catch {
-      setSnackbar({ open: true, message: 'Failed to save neighborhood', severity: 'error' });
+      toast.error('Failed to save neighborhood');
     } finally {
       setSaving(false);
     }
@@ -134,11 +125,11 @@ const AdminNeighborhoods = () => {
 
     try {
       await neighborhoodService.delete(item.id);
-      setSnackbar({ open: true, message: 'Neighborhood deleted', severity: 'success' });
+      toast.success('Neighborhood deleted');
       setDeleteDialog({ open: false, item: null });
       fetchNeighborhoods();
     } catch {
-      setSnackbar({ open: true, message: 'Failed to delete neighborhood', severity: 'error' });
+      toast.error('Failed to delete neighborhood');
     }
   };
 
@@ -147,7 +138,7 @@ const AdminNeighborhoods = () => {
       await neighborhoodService.update(item.id, { isActive: !item.isActive });
       fetchNeighborhoods();
     } catch {
-      setSnackbar({ open: true, message: 'Failed to update status', severity: 'error' });
+      toast.error('Failed to update status');
     }
   };
 
@@ -160,7 +151,10 @@ const AdminNeighborhoods = () => {
     return (
       <Box sx={{ p: { xs: 2, md: 3 } }}>
         <Skeleton height={40} width={250} sx={{ mb: 3 }} />
-        <Paper elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid #F3F4F6' }}>
+        <Paper
+          elevation={0}
+          sx={{ p: 3, borderRadius: 2, border: '1px solid var(--color-surface)' }}
+        >
           {[...Array(5)].map((_, i) => (
             <Skeleton key={i} height={56} sx={{ mb: 1 }} />
           ))}
@@ -183,10 +177,10 @@ const AdminNeighborhoods = () => {
         }}
       >
         <Box>
-          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
             Neighborhoods
           </Typography>
-          <Typography sx={{ fontSize: '0.875rem', color: '#6B7280', mt: 0.5 }}>
+          <Typography sx={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', mt: 0.5 }}>
             Manage neighborhoods displayed on the homepage
           </Typography>
         </Box>
@@ -195,11 +189,11 @@ const AdminNeighborhoods = () => {
           startIcon={<Icon icon="mdi:plus" />}
           onClick={handleOpenAdd}
           sx={{
-            bgcolor: '#1B2A4A',
+            bgcolor: 'var(--color-charcoal)',
             textTransform: 'none',
             borderRadius: 2,
             px: 3,
-            '&:hover': { bgcolor: '#2d3f63' },
+            '&:hover': { bgcolor: 'var(--color-charcoal)' },
           }}
         >
           Add Neighborhood
@@ -209,15 +203,20 @@ const AdminNeighborhoods = () => {
       {/* Table */}
       <Paper
         elevation={0}
-        sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}
+        sx={{ borderRadius: 2, border: '1px solid var(--color-surface)', overflow: 'hidden' }}
       >
         {neighborhoods.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 6, px: 3 }}>
-            <Icon icon="mdi:map-marker-radius-outline" style={{ fontSize: 48, color: '#D1D5DB' }} />
-            <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: '#6B7280', mt: 2 }}>
+            <Icon
+              icon="mdi:map-marker-radius-outline"
+              style={{ fontSize: 48, color: 'var(--color-text-muted)' }}
+            />
+            <Typography
+              sx={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-muted)', mt: 2 }}
+            >
               No neighborhoods added yet
             </Typography>
-            <Typography sx={{ fontSize: '0.8125rem', color: '#9CA3AF', mt: 0.5 }}>
+            <Typography sx={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', mt: 0.5 }}>
               Add neighborhoods to display them on the homepage
             </Typography>
           </Box>
@@ -225,34 +224,64 @@ const AdminNeighborhoods = () => {
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#F9FAFB' }}>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}>
+                <TableRow sx={{ bgcolor: 'var(--color-surface)' }}>
+                  <TableCell
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: '0.8125rem',
+                      color: 'var(--color-text-muted)',
+                    }}
+                  >
                     Image
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}>
+                  <TableCell
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: '0.8125rem',
+                      color: 'var(--color-text-muted)',
+                    }}
+                  >
                     Name
                   </TableCell>
                   {!isMobile && (
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}>
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '0.8125rem',
+                        color: 'var(--color-text-muted)',
+                      }}
+                    >
                       City
                     </TableCell>
                   )}
                   {!isMobile && (
                     <TableCell
-                      sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '0.8125rem',
+                        color: 'var(--color-text-muted)',
+                      }}
                       align="center"
                     >
                       Properties
                     </TableCell>
                   )}
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: '0.8125rem',
+                      color: 'var(--color-text-muted)',
+                    }}
                     align="center"
                   >
                     Active
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: '0.8125rem',
+                      color: 'var(--color-text-muted)',
+                    }}
                     align="right"
                   >
                     Actions
@@ -272,7 +301,7 @@ const AdminNeighborhoods = () => {
                           height: 48,
                           objectFit: 'cover',
                           borderRadius: 1,
-                          bgcolor: '#F3F4F6',
+                          bgcolor: 'var(--color-surface)',
                         }}
                         onError={(e) => {
                           e.target.src = 'https://picsum.photos/seed/locality/64/48';
@@ -280,25 +309,35 @@ const AdminNeighborhoods = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A' }}>
+                      <Typography
+                        sx={{
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          color: 'var(--color-charcoal)',
+                        }}
+                      >
                         {item.name}
                       </Typography>
                       {isMobile && item.city && (
-                        <Typography sx={{ fontSize: '0.75rem', color: '#9CA3AF' }}>
+                        <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                           {item.city}
                         </Typography>
                       )}
                     </TableCell>
                     {!isMobile && (
                       <TableCell>
-                        <Typography sx={{ fontSize: '0.8125rem', color: '#6B7280' }}>
+                        <Typography
+                          sx={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}
+                        >
                           {item.city || '—'}
                         </Typography>
                       </TableCell>
                     )}
                     {!isMobile && (
                       <TableCell align="center">
-                        <Typography sx={{ fontSize: '0.8125rem', color: '#6B7280' }}>
+                        <Typography
+                          sx={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}
+                        >
                           {item.propertyCount ?? 0}
                         </Typography>
                       </TableCell>
@@ -309,9 +348,11 @@ const AdminNeighborhoods = () => {
                         onChange={() => handleToggleActive(item)}
                         size="small"
                         sx={{
-                          '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: 'var(--color-success-dark)',
+                          },
                           '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                            bgcolor: '#10B981',
+                            bgcolor: 'var(--color-success)',
                           },
                         }}
                       />
@@ -320,14 +361,14 @@ const AdminNeighborhoods = () => {
                       <IconButton
                         size="small"
                         onClick={() => handleOpenEdit(item)}
-                        sx={{ color: '#6B7280', mr: 0.5 }}
+                        sx={{ color: 'var(--color-text-muted)', mr: 0.5 }}
                       >
                         <Icon icon="mdi:pencil-outline" style={{ fontSize: 18 }} />
                       </IconButton>
                       <IconButton
                         size="small"
                         onClick={() => setDeleteDialog({ open: true, item })}
-                        sx={{ color: '#EF4444' }}
+                        sx={{ color: 'var(--color-error-dark)' }}
                       >
                         <Icon icon="mdi:delete-outline" style={{ fontSize: 18 }} />
                       </IconButton>
@@ -348,7 +389,7 @@ const AdminNeighborhoods = () => {
         fullWidth
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ fontWeight: 700, color: '#1B2A4A', fontSize: '1.125rem' }}>
+        <DialogTitle sx={{ fontWeight: 700, color: 'var(--color-charcoal)', fontSize: '1.125rem' }}>
           {editingItem ? 'Edit Neighborhood' : 'Add Neighborhood'}
         </DialogTitle>
         <DialogContent dividers>
@@ -395,7 +436,7 @@ const AdminNeighborhoods = () => {
                   maxHeight: 200,
                   objectFit: 'cover',
                   borderRadius: 2,
-                  border: '1px solid #E5E7EB',
+                  border: '1px solid var(--color-border)',
                 }}
                 onError={(e) => {
                   e.target.style.display = 'none';
@@ -421,11 +462,13 @@ const AdminNeighborhoods = () => {
                 onChange={(e) => updateForm('isActive', e.target.checked)}
                 size="small"
                 sx={{
-                  '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
-                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#10B981' },
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: 'var(--color-success-dark)' },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                    bgcolor: 'var(--color-success)',
+                  },
                 }}
               />
-              <Typography sx={{ fontSize: '0.875rem', color: '#374151' }}>
+              <Typography sx={{ fontSize: '0.875rem', color: 'var(--color-text)' }}>
                 Active (visible on homepage)
               </Typography>
             </Box>
@@ -434,7 +477,7 @@ const AdminNeighborhoods = () => {
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button
             onClick={handleClose}
-            sx={{ textTransform: 'none', color: '#6B7280', borderRadius: 2 }}
+            sx={{ textTransform: 'none', color: 'var(--color-text-muted)', borderRadius: 2 }}
           >
             Cancel
           </Button>
@@ -443,11 +486,11 @@ const AdminNeighborhoods = () => {
             variant="contained"
             disabled={saving}
             sx={{
-              bgcolor: '#1B2A4A',
+              bgcolor: 'var(--color-charcoal)',
               textTransform: 'none',
               borderRadius: 2,
               px: 4,
-              '&:hover': { bgcolor: '#2d3f63' },
+              '&:hover': { bgcolor: 'var(--color-charcoal)' },
             }}
           >
             {saving ? 'Saving...' : editingItem ? 'Update' : 'Create'}
@@ -461,9 +504,11 @@ const AdminNeighborhoods = () => {
         onClose={() => setDeleteDialog({ open: false, item: null })}
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ fontWeight: 700, color: '#1B2A4A' }}>Delete Neighborhood</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700, color: 'var(--color-charcoal)' }}>
+          Delete Neighborhood
+        </DialogTitle>
         <DialogContent>
-          <Typography sx={{ fontSize: '0.875rem', color: '#6B7280' }}>
+          <Typography sx={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
             Are you sure you want to delete <strong>{deleteDialog.item?.name}</strong>? This action
             cannot be undone.
           </Typography>
@@ -471,7 +516,7 @@ const AdminNeighborhoods = () => {
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button
             onClick={() => setDeleteDialog({ open: false, item: null })}
-            sx={{ textTransform: 'none', color: '#6B7280', borderRadius: 2 }}
+            sx={{ textTransform: 'none', color: 'var(--color-text-muted)', borderRadius: 2 }}
           >
             Cancel
           </Button>
@@ -479,32 +524,16 @@ const AdminNeighborhoods = () => {
             onClick={handleDelete}
             variant="contained"
             sx={{
-              bgcolor: '#EF4444',
+              bgcolor: 'var(--color-error)',
               textTransform: 'none',
               borderRadius: 2,
-              '&:hover': { bgcolor: '#DC2626' },
+              '&:hover': { bgcolor: 'var(--color-error)' },
             }}
           >
             Delete
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 2 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

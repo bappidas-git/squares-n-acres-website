@@ -1,0 +1,19 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.image {
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* The mark is designed for light backgrounds (§2.2 rule 5): on a dark surface
+   it goes inside a white container instead of being recoloured. */
+.onDark {
+  background: var(--color-bg);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { useInView } from 'react-intersection-observer';
+import useInView from '../../../hooks/useInView';
 import styles from './PropertyFaq.module.css';
 
 const FaqItem = ({ faq, isOpen, onToggle }) => (

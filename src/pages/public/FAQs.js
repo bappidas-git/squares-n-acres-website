@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import { faqService } from '../../services/api';
 import LeadForm from '../../components/common/LeadForm';
+import { Section } from '../../components/ui';
 import styles from './FAQs.module.css';
 import { SITE } from '../../config/site';
 
@@ -17,21 +17,6 @@ const FAQ_CATEGORIES = [
   { value: 'legal', label: 'Legal', icon: 'mdi:scale-balance' },
   { value: 'general', label: 'General', icon: 'mdi:information-outline' },
 ];
-
-const Section = ({ children, className = '', delay = 0 }) => {
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
-  return (
-    <motion.section
-      ref={ref}
-      className={className}
-      initial={{ opacity: 0, y: 30 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay }}
-    >
-      {children}
-    </motion.section>
-  );
-};
 
 const FaqItem = ({ faq, isOpen, onToggle, index }) => (
   <motion.div

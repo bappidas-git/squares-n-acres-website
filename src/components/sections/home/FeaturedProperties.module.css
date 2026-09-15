@@ -1,6 +1,6 @@
 .section {
   padding: 64px 0;
-  background: var(--color-bg-surface);
+  background: var(--color-surface);
 }
 
 .container {
@@ -18,14 +18,14 @@
   font-family: var(--font-heading);
   font-size: 2.25rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   margin-bottom: 8px;
 }
 
 .subtitle {
   font-family: var(--font-body);
   font-size: 1rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
 
 /* Carousel wrapper with arrow positioning context */
@@ -46,11 +46,11 @@
   height: 44px;
   border-radius: 50%;
   border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.95);
-  color: var(--color-text-primary);
+  background: var(--color-glass);
+  color: var(--color-text);
   font-size: 24px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   transition:
     background var(--transition-fast),
     box-shadow var(--transition-fast),
@@ -58,9 +58,9 @@
 }
 
 .arrowBtn:hover {
-  background: #fff;
-  border-color: var(--color-secondary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: var(--color-bg);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
 }
 
 .arrowLeft {
@@ -117,7 +117,7 @@
   width: 40px;
   height: 40px;
   border: 3px solid var(--color-border);
-  border-top-color: var(--color-secondary);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -141,7 +141,7 @@
 }
 
 .emptyText {
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   font-size: 0.95rem;
 }
 
@@ -156,8 +156,8 @@
   align-items: center;
   gap: 8px;
   padding: 12px 32px;
-  background: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: var(--radius-lg);
   font-family: var(--font-body);
@@ -168,12 +168,12 @@
 }
 
 .ctaBtn:hover {
-  background: var(--color-secondary-dark);
-  color: #fff;
+  background: var(--color-primary-dark);
+  color: var(--color-text-inverse);
 }
 
 /* Tablet */
-@media (max-width: 960px) {
+@media (max-width: 899.98px) {
   .scrollItem {
     flex: 0 0 320px;
   }
@@ -194,7 +194,7 @@
 }
 
 /* Mobile */
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .section {
     padding: 48px 0;
   }
@@ -219,6 +219,6 @@
     width: 36px;
     height: 36px;
     font-size: 20px;
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--color-glass);
   }
 }

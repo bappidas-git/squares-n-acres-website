@@ -1,9 +1,20 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { useInView } from 'react-intersection-observer';
-import CountUp from 'react-countup';
+import useInView from '../../../hooks/useInView';
+import useCountUp from '../../../hooks/useCountUp';
+import { formatNumber } from '../../../utils/format';
 import styles from './BuilderOverview.module.css';
+
+/**
+ * One animated statistic. It is its own component because the counter is a
+ * hook and the stats are rendered in a loop; `enabled` holds it at zero until
+ * the section scrolls into view.
+ */
+const StatValue = ({ value, suffix = '', enabled }) => {
+  const current = useCountUp(value, { enabled, duration: 2000 });
+  return `${formatNumber(current)}${suffix}`;
+};
 
 const BuilderOverview = ({ developer, developerInfo }) => {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.15 });
@@ -69,11 +80,7 @@ const BuilderOverview = ({ developer, developerInfo }) => {
               >
                 <Icon icon={stat.icon} className={styles.statIcon} />
                 <span className={styles.statValue}>
-                  {inView ? (
-                    <CountUp end={stat.value} duration={2} suffix={stat.suffix} />
-                  ) : (
-                    `0${stat.suffix}`
-                  )}
+                  <StatValue value={stat.value} suffix={stat.suffix} enabled={inView} />
                 </span>
                 <span className={styles.statLabel}>{stat.label}</span>
               </motion.div>

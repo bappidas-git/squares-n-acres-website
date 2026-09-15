@@ -58,10 +58,10 @@ const GalleryTab = ({ formData, updateField, updateListItem, addListItem, remove
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
         Gallery Images
       </Typography>
-      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1.5 }}>
+      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)', mt: -1.5 }}>
         Add image URLs. Drag to reorder. First image will be the main cover.
       </Typography>
 
@@ -78,15 +78,15 @@ const GalleryTab = ({ formData, updateField, updateListItem, addListItem, remove
             alignItems: 'center',
             p: 1,
             borderRadius: 2,
-            bgcolor: dragIndex === index ? '#EFF6FF' : 'transparent',
-            border: dragIndex === index ? '1px dashed #3B82F6' : '1px solid transparent',
+            bgcolor: dragIndex === index ? 'var(--color-info-bg)' : 'transparent',
+            border: dragIndex === index ? '1px dashed var(--color-info)' : '1px solid transparent',
             cursor: 'grab',
             transition: 'background-color 0.15s',
           }}
         >
           <Icon
             icon="mdi:drag-vertical"
-            style={{ fontSize: 20, color: '#D1D5DB', flexShrink: 0 }}
+            style={{ fontSize: 20, color: 'var(--color-text-muted)', flexShrink: 0 }}
           />
 
           <Box
@@ -94,7 +94,7 @@ const GalleryTab = ({ formData, updateField, updateListItem, addListItem, remove
               width: 56,
               height: 56,
               borderRadius: 1.5,
-              bgcolor: '#F3F4F6',
+              bgcolor: 'var(--color-surface)',
               backgroundImage: url ? `url(${url})` : 'none',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
@@ -104,14 +104,19 @@ const GalleryTab = ({ formData, updateField, updateListItem, addListItem, remove
               justifyContent: 'center',
             }}
           >
-            {!url && <Icon icon="mdi:image-outline" style={{ fontSize: 20, color: '#D1D5DB' }} />}
+            {!url && (
+              <Icon
+                icon="mdi:image-outline"
+                style={{ fontSize: 20, color: 'var(--color-text-muted)' }}
+              />
+            )}
           </Box>
 
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             {index === 0 && (
               <Typography
                 variant="caption"
-                sx={{ color: '#C9A86C', fontWeight: 600, fontSize: '0.65rem' }}
+                sx={{ color: 'var(--color-primary-dark)', fontWeight: 600, fontSize: '0.65rem' }}
               >
                 COVER IMAGE
               </Typography>
@@ -134,7 +139,7 @@ const GalleryTab = ({ formData, updateField, updateListItem, addListItem, remove
             <IconButton
               size="small"
               onClick={() => removeListItem('gallery', index)}
-              sx={{ color: '#EF4444' }}
+              sx={{ color: 'var(--color-error-dark)' }}
             >
               <Icon icon="mdi:close-circle-outline" style={{ fontSize: 20 }} />
             </IconButton>
@@ -147,7 +152,7 @@ const GalleryTab = ({ formData, updateField, updateListItem, addListItem, remove
         variant="text"
         onClick={() => addListItem('gallery', '')}
         startIcon={<Icon icon="mdi:plus" />}
-        sx={{ color: '#6B7280', alignSelf: 'flex-start' }}
+        sx={{ color: 'var(--color-text-muted)', alignSelf: 'flex-start' }}
       >
         Add Image
       </Button>

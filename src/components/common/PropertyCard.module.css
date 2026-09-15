@@ -1,5 +1,5 @@
 .card {
-  background: #fff;
+  background: var(--color-bg);
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--color-border);
@@ -22,7 +22,7 @@
   width: 100%;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  background: var(--color-bg-surface);
+  background: var(--color-surface);
 }
 
 .image {
@@ -54,12 +54,12 @@ video.image {
   font-family: var(--font-body);
   font-size: 0.75rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-text-inverse);
   z-index: 2;
 }
 
 .badgeSale {
-  background: var(--color-secondary);
+  background: var(--color-primary);
 }
 
 .badgeRent {
@@ -99,7 +99,7 @@ video.image {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--color-glass);
   border: none;
   display: flex;
   align-items: center;
@@ -111,15 +111,15 @@ video.image {
 }
 
 .heartBtn:hover {
-  background: #fff;
+  background: var(--color-bg);
 }
 
 .heartEmpty {
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
 
 .heartFilled {
-  color: #e74c3c;
+  color: var(--color-error-dark);
 }
 
 /* Nav buttons */
@@ -130,7 +130,7 @@ video.image {
   width: 32px;
   height: 32px;
   border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--color-glass);
   border: none;
   display: flex;
   align-items: center;
@@ -138,7 +138,7 @@ video.image {
   cursor: pointer;
   z-index: 2;
   font-size: 20px;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   opacity: 0;
   transition: opacity var(--transition-fast);
 }
@@ -170,12 +170,12 @@ video.image {
   width: 7px;
   height: 7px;
   border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--color-glass);
   transition: background var(--transition-fast);
 }
 
 .dotActive {
-  background: #fff;
+  background: var(--color-bg);
 }
 
 /* Body */
@@ -190,7 +190,7 @@ video.image {
   font-family: var(--font-heading);
   font-size: 1.05rem;
   font-weight: 600;
-  color: var(--color-secondary-dark);
+  color: var(--color-primary-dark);
   text-decoration: none;
   margin-bottom: 4px;
   display: block;
@@ -199,21 +199,21 @@ video.image {
 }
 
 .name:hover {
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
 }
 
 .price {
   font-family: var(--font-body);
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   margin-bottom: 6px;
 }
 
 .priceUnit {
   font-weight: 400;
   font-size: 0.8rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
 
 .location {
@@ -222,13 +222,13 @@ video.image {
   gap: 4px;
   font-family: var(--font-body);
   font-size: 0.8rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   margin-bottom: 14px;
 }
 
 .locIcon {
   font-size: 16px;
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
   flex-shrink: 0;
 }
 
@@ -255,7 +255,7 @@ video.image {
 .detailLabel {
   font-family: var(--font-body);
   font-size: 0.7rem;
-  color: var(--color-text-light);
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -264,7 +264,7 @@ video.image {
   font-family: var(--font-body);
   font-size: 0.8rem;
   font-weight: 500;
-  color: var(--color-text-primary);
+  color: var(--color-text);
 }
 
 /* Image placeholder / shimmer */
@@ -273,9 +273,9 @@ video.image {
   inset: 0;
   background: linear-gradient(
     110deg,
-    var(--color-bg-surface) 8%,
-    #f0ede8 18%,
-    var(--color-bg-surface) 33%
+    var(--color-surface) 8%,
+    var(--color-surface-2) 18%,
+    var(--color-surface) 33%
   );
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
@@ -311,7 +311,7 @@ video.image {
   gap: 4px;
   margin-left: auto;
   padding-right: 20px;
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
   font-family: var(--font-body);
   font-size: 0.75rem;
   font-weight: 600;
@@ -327,7 +327,7 @@ video.image {
   align-items: center;
   gap: 4px;
   padding-left: 20px;
-  color: var(--color-primary);
+  color: var(--color-primary-dark);
   font-family: var(--font-body);
   font-size: 0.75rem;
   font-weight: 600;
@@ -352,8 +352,8 @@ video.image {
   gap: 6px;
   padding: 8px 20px;
   border-radius: 20px;
-  background: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   font-family: var(--font-body);
   font-size: 0.85rem;
   font-weight: 600;
@@ -363,7 +363,7 @@ video.image {
 }
 
 /* Touch targets: ensure buttons are at least 44x44 */
-@media (max-width: 960px) {
+@media (max-width: 899.98px) {
   .heartBtn {
     width: 44px;
     height: 44px;

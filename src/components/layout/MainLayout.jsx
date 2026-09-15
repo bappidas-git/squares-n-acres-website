@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { useMediaQuery, useTheme } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
+import useBreakpoint from '../../hooks/useBreakpoint';
 import Header from './Header';
 import MobileHeader from './MobileHeader';
 import Footer from './Footer';
@@ -9,6 +9,7 @@ import BottomNav from './BottomNav';
 import NewsletterSection from '../common/NewsletterSection';
 import ScrollToTop from '../common/ScrollToTop';
 import BackToTop from '../common/BackToTop';
+import styles from './MainLayout.module.css';
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -17,8 +18,8 @@ const pageVariants = {
 };
 
 const MainLayout = ({ children }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md')); // below 960px
+  // One breakpoint for JS and CSS: `md` = 900px (D51).
+  const { isMobile } = useBreakpoint();
   const location = useLocation();
 
   return (
@@ -35,16 +36,7 @@ const MainLayout = ({ children }) => {
       {isMobile ? <MobileHeader /> : <Header />}
 
       {/* Main Content */}
-      <main
-        id="main-content"
-        role="main"
-        style={{
-          paddingTop: isMobile ? 60 : 72,
-          paddingBottom: isMobile ? 56 : 0,
-          minHeight: '100vh',
-          overflowX: 'clip',
-        }}
-      >
+      <main id="main-content" className={styles.main}>
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

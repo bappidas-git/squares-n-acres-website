@@ -26,7 +26,6 @@ import {
   DialogActions,
   Skeleton,
   Alert,
-  Snackbar,
   Card,
   CardContent,
   InputAdornment,
@@ -38,6 +37,8 @@ import {
 import { Icon } from '@iconify/react';
 import { leadService, propertyService } from '../../services/api';
 import useDebounce from '../../hooks/useDebounce';
+import { useToast } from '../../components/common/ToastProvider';
+import { toneStyles } from '../../components/ui/tones';
 import {
   LEAD_STATUS_CONFIG as statusConfig,
   LEAD_STATUS_OPTIONS as statusOptions,
@@ -57,6 +58,7 @@ const formatDate = (dateStr, options) => {
 };
 
 const AdminLeads = () => {
+  const toast = useToast();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -87,9 +89,6 @@ const AdminLeads = () => {
 
   // Delete dialog
   const [deleteDialog, setDeleteDialog] = useState({ open: false, id: null, name: '' });
-
-  // Snackbar
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   // Mobile expanded card
   const [expandedCard, setExpandedCard] = useState(null);
@@ -162,18 +161,14 @@ const AdminLeads = () => {
           lastLeadCountRef.current = allLeads.length;
           // Re-fetch with current filters to update the display
           fetchLeads();
-          setSnackbar({
-            open: true,
-            message: `${newCount} new lead${newCount > 1 ? 's' : ''} received`,
-            severity: 'info',
-          });
+          toast.info(`${newCount} new lead${newCount > 1 ? 's' : ''} received`);
         }
       } catch {
         // silent fail for polling
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [fetchLeads]);
+  }, [fetchLeads, toast]);
 
   // Get property title by id
   const getPropertyTitle = (propertyId) => {
@@ -190,13 +185,9 @@ const AdminLeads = () => {
           l.id === leadId ? { ...l, status: newStatus, updatedAt: new Date().toISOString() } : l
         )
       );
-      setSnackbar({
-        open: true,
-        message: `Status updated to ${statusConfig[newStatus].label}`,
-        severity: 'success',
-      });
+      toast.success(`Status updated to ${statusConfig[newStatus].label}`);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to update status', severity: 'error' });
+      toast.error('Failed to update status');
     }
     setStatusAnchor(null);
     setStatusLeadId(null);
@@ -207,9 +198,9 @@ const AdminLeads = () => {
     try {
       await leadService.delete(deleteDialog.id);
       setLeads((prev) => prev.filter((l) => l.id !== deleteDialog.id));
-      setSnackbar({ open: true, message: 'Lead deleted successfully', severity: 'success' });
+      toast.success('Lead deleted successfully');
     } catch {
-      setSnackbar({ open: true, message: 'Failed to delete lead', severity: 'error' });
+      toast.error('Failed to delete lead');
     } finally {
       setDeleteDialog({ open: false, id: null, name: '' });
     }
@@ -248,7 +239,7 @@ const AdminLeads = () => {
       link.click();
       URL.revokeObjectURL(url);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to export CSV', severity: 'error' });
+      toast.error('Failed to export CSV');
     } finally {
       setExporting(false);
     }
@@ -277,7 +268,7 @@ const AdminLeads = () => {
       >
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: '#1B2A4A' }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, color: 'var(--color-charcoal)' }}>
               Lead Management
             </Typography>
             <Chip
@@ -287,8 +278,8 @@ const AdminLeads = () => {
                 height: 24,
                 fontSize: '0.75rem',
                 fontWeight: 600,
-                bgcolor: '#F3F4F6',
-                color: '#6B7280',
+                bgcolor: 'var(--color-surface)',
+                color: 'var(--color-text-muted)',
               }}
             />
             {newLeadCount > 0 && (
@@ -299,13 +290,13 @@ const AdminLeads = () => {
                   height: 24,
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  bgcolor: '#EFF6FF',
-                  color: '#3B82F6',
+                  bgcolor: 'var(--color-info-bg)',
+                  color: 'var(--color-info-dark)',
                 }}
               />
             )}
           </Box>
-          <Typography variant="body2" sx={{ color: '#6B7280', mt: 0.5 }}>
+          <Typography variant="body2" sx={{ color: 'var(--color-text-muted)', mt: 0.5 }}>
             Manage and track all incoming leads
           </Typography>
         </Box>
@@ -333,7 +324,10 @@ const AdminLeads = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Icon icon="mdi:magnify" style={{ fontSize: 20, color: '#9CA3AF' }} />
+                  <Icon
+                    icon="mdi:magnify"
+                    style={{ fontSize: 20, color: 'var(--color-text-muted)' }}
+                  />
                 </InputAdornment>
               ),
             }}
@@ -355,7 +349,7 @@ const AdminLeads = () => {
                         width: 8,
                         height: 8,
                         borderRadius: '50%',
-                        bgcolor: statusConfig[s].color,
+                        bgcolor: toneStyles(statusConfig[s].tone).border,
                       }}
                     />
                     {statusConfig[s].label}
@@ -412,7 +406,7 @@ const AdminLeads = () => {
                 setDateTo('');
               }}
               startIcon={<Icon icon="mdi:filter-off-outline" />}
-              sx={{ color: '#6B7280' }}
+              sx={{ color: 'var(--color-text-muted)' }}
             >
               Clear
             </Button>
@@ -442,8 +436,11 @@ const AdminLeads = () => {
             ))
           ) : currentPageData.length === 0 ? (
             <Paper sx={{ p: 4, borderRadius: 3, textAlign: 'center' }}>
-              <Icon icon="mdi:account-search-outline" style={{ fontSize: 48, color: '#D1D5DB' }} />
-              <Typography variant="body1" sx={{ color: '#9CA3AF', mt: 1 }}>
+              <Icon
+                icon="mdi:account-search-outline"
+                style={{ fontSize: 48, color: 'var(--color-text-muted)' }}
+              />
+              <Typography variant="body1" sx={{ color: 'var(--color-text-muted)', mt: 1 }}>
                 No leads found
               </Typography>
             </Paper>
@@ -457,7 +454,7 @@ const AdminLeads = () => {
                   sx={{
                     borderRadius: 3,
                     cursor: 'pointer',
-                    borderLeft: `4px solid ${sCfg.color}`,
+                    borderLeft: `4px solid ${toneStyles(sCfg.tone).border}`,
                   }}
                   onClick={() => setExpandedCard(isExpanded ? null : lead.id)}
                 >
@@ -470,13 +467,19 @@ const AdminLeads = () => {
                       }}
                     >
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+                        <Typography
+                          variant="subtitle2"
+                          sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}
+                        >
                           {lead.name}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: '#6B7280', display: 'block' }}>
+                        <Typography
+                          variant="caption"
+                          sx={{ color: 'var(--color-text-muted)', display: 'block' }}
+                        >
                           {lead.email}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
+                        <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
                           {formatSource(lead.source)} &middot;{' '}
                           {formatDate(lead.createdAt || lead.created_at, {
                             day: 'numeric',
@@ -491,24 +494,24 @@ const AdminLeads = () => {
                           height: 22,
                           fontSize: '0.6875rem',
                           fontWeight: 600,
-                          bgcolor: sCfg.bg,
-                          color: sCfg.color,
+                          bgcolor: toneStyles(sCfg.tone).background,
+                          color: toneStyles(sCfg.tone).color,
                         }}
                       />
                     </Box>
 
                     {isExpanded && (
-                      <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #E5E7EB' }}>
+                      <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid var(--color-border)' }}>
                         <Typography
                           variant="caption"
-                          sx={{ color: '#6B7280', display: 'block', mb: 0.5 }}
+                          sx={{ color: 'var(--color-text-muted)', display: 'block', mb: 0.5 }}
                         >
                           Phone: {lead.phone}
                         </Typography>
                         {lead.message && (
                           <Typography
                             variant="caption"
-                            sx={{ color: '#6B7280', display: 'block', mb: 1 }}
+                            sx={{ color: 'var(--color-text-muted)', display: 'block', mb: 1 }}
                           >
                             "{lead.message}"
                           </Typography>
@@ -516,7 +519,7 @@ const AdminLeads = () => {
                         {lead.propertyId && (
                           <Typography
                             variant="caption"
-                            sx={{ color: '#C9A86C', display: 'block', mb: 1 }}
+                            sx={{ color: 'var(--color-primary-dark)', display: 'block', mb: 1 }}
                           >
                             Property: {getPropertyTitle(lead.propertyId) || `#${lead.propertyId}`}
                           </Typography>
@@ -529,7 +532,11 @@ const AdminLeads = () => {
                               e.stopPropagation();
                               navigate(`/admin/leads/${lead.id}`);
                             }}
-                            sx={{ borderRadius: 2, fontSize: '0.75rem', bgcolor: '#1B2A4A' }}
+                            sx={{
+                              borderRadius: 2,
+                              fontSize: '0.75rem',
+                              bgcolor: 'var(--color-charcoal)',
+                            }}
                           >
                             View Details
                           </Button>
@@ -543,8 +550,8 @@ const AdminLeads = () => {
                             sx={{
                               borderRadius: 2,
                               fontSize: '0.75rem',
-                              borderColor: '#EF4444',
-                              color: '#EF4444',
+                              borderColor: 'var(--color-error)',
+                              color: 'var(--color-error-dark)',
                             }}
                           >
                             Delete
@@ -564,29 +571,41 @@ const AdminLeads = () => {
           <TableContainer>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ bgcolor: '#F9FAFB' }}>
-                  <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem' }}>
+                <TableRow sx={{ bgcolor: 'var(--color-surface)' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}
+                  >
                     Name
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}
+                  >
                     Contact
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}
+                  >
                     Source
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}
+                  >
                     Property
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}
+                  >
                     Status
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}
+                  >
                     Date
                   </TableCell>
                   <TableCell
                     sx={{
                       fontWeight: 600,
-                      color: '#6B7280',
+                      color: 'var(--color-text-muted)',
                       fontSize: '0.75rem',
                       textAlign: 'right',
                     }}
@@ -611,9 +630,9 @@ const AdminLeads = () => {
                     <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                       <Icon
                         icon="mdi:account-search-outline"
-                        style={{ fontSize: 48, color: '#D1D5DB' }}
+                        style={{ fontSize: 48, color: 'var(--color-text-muted)' }}
                       />
-                      <Typography variant="body2" sx={{ color: '#9CA3AF', mt: 1 }}>
+                      <Typography variant="body2" sx={{ color: 'var(--color-text-muted)', mt: 1 }}>
                         No leads found
                       </Typography>
                     </TableCell>
@@ -636,7 +655,11 @@ const AdminLeads = () => {
                         <TableCell>
                           <Typography
                             variant="body2"
-                            sx={{ fontWeight: 600, color: '#1B2A4A', fontSize: '0.8125rem' }}
+                            sx={{
+                              fontWeight: 600,
+                              color: 'var(--color-charcoal)',
+                              fontSize: '0.8125rem',
+                            }}
                           >
                             {lead.name}
                           </Typography>
@@ -646,11 +669,11 @@ const AdminLeads = () => {
                         <TableCell>
                           <Typography
                             variant="body2"
-                            sx={{ color: '#6B7280', fontSize: '0.8125rem' }}
+                            sx={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}
                           >
                             {lead.email}
                           </Typography>
-                          <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
+                          <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
                             {lead.phone}
                           </Typography>
                         </TableCell>
@@ -659,7 +682,7 @@ const AdminLeads = () => {
                         <TableCell>
                           <Typography
                             variant="body2"
-                            sx={{ color: '#6B7280', fontSize: '0.75rem' }}
+                            sx={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}
                           >
                             {formatSource(lead.source)}
                           </Typography>
@@ -671,7 +694,7 @@ const AdminLeads = () => {
                             <Typography
                               variant="body2"
                               sx={{
-                                color: '#C9A86C',
+                                color: 'var(--color-primary-dark)',
                                 fontSize: '0.75rem',
                                 maxWidth: 160,
                                 overflow: 'hidden',
@@ -684,7 +707,7 @@ const AdminLeads = () => {
                           ) : (
                             <Typography
                               variant="body2"
-                              sx={{ color: '#D1D5DB', fontSize: '0.75rem' }}
+                              sx={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}
                             >
                               --
                             </Typography>
@@ -705,8 +728,8 @@ const AdminLeads = () => {
                               height: 24,
                               fontSize: '0.6875rem',
                               fontWeight: 600,
-                              bgcolor: sCfg.bg,
-                              color: sCfg.color,
+                              bgcolor: toneStyles(sCfg.tone).background,
+                              color: toneStyles(sCfg.tone).color,
                               cursor: 'pointer',
                               '&:hover': { opacity: 0.85 },
                             }}
@@ -717,7 +740,11 @@ const AdminLeads = () => {
                         <TableCell>
                           <Typography
                             variant="body2"
-                            sx={{ color: '#9CA3AF', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                            sx={{
+                              color: 'var(--color-text-muted)',
+                              fontSize: '0.75rem',
+                              whiteSpace: 'nowrap',
+                            }}
                           >
                             {formatDate(lead.createdAt || lead.created_at)}
                           </Typography>
@@ -733,7 +760,10 @@ const AdminLeads = () => {
                               <IconButton
                                 size="small"
                                 onClick={() => navigate(`/admin/leads/${lead.id}`)}
-                                sx={{ color: '#6B7280', '&:hover': { color: '#1B2A4A' } }}
+                                sx={{
+                                  color: 'var(--color-text-muted)',
+                                  '&:hover': { color: 'var(--color-charcoal)' },
+                                }}
                               >
                                 <Icon icon="mdi:eye-outline" style={{ fontSize: 18 }} />
                               </IconButton>
@@ -745,7 +775,10 @@ const AdminLeads = () => {
                                   setStatusAnchor(e.currentTarget);
                                   setStatusLeadId(lead.id);
                                 }}
-                                sx={{ color: '#6B7280', '&:hover': { color: '#F59E0B' } }}
+                                sx={{
+                                  color: 'var(--color-text-muted)',
+                                  '&:hover': { color: 'var(--color-warning-dark)' },
+                                }}
                               >
                                 <Icon icon="mdi:swap-horizontal" style={{ fontSize: 18 }} />
                               </IconButton>
@@ -756,7 +789,10 @@ const AdminLeads = () => {
                                 onClick={() =>
                                   setDeleteDialog({ open: true, id: lead.id, name: lead.name })
                                 }
-                                sx={{ color: '#EF4444', '&:hover': { color: '#DC2626' } }}
+                                sx={{
+                                  color: 'var(--color-error-dark)',
+                                  '&:hover': { color: 'var(--color-error-dark)' },
+                                }}
                               >
                                 <Icon icon="mdi:delete-outline" style={{ fontSize: 18 }} />
                               </IconButton>
@@ -805,7 +841,7 @@ const AdminLeads = () => {
             variant="caption"
             sx={{
               fontWeight: 600,
-              color: '#9CA3AF',
+              color: 'var(--color-text-muted)',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
             }}
@@ -830,7 +866,7 @@ const AdminLeads = () => {
                     width: 10,
                     height: 10,
                     borderRadius: '50%',
-                    bgcolor: cfg.color,
+                    bgcolor: toneStyles(cfg.tone).border,
                   }}
                 />
                 {cfg.label}
@@ -846,9 +882,11 @@ const AdminLeads = () => {
         onClose={() => setDeleteDialog({ open: false, id: null, name: '' })}
         PaperProps={{ sx: { borderRadius: 3, maxWidth: 420 } }}
       >
-        <DialogTitle sx={{ fontWeight: 600, color: '#1B2A4A' }}>Delete Lead</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
+          Delete Lead
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText sx={{ color: '#6B7280' }}>
+          <DialogContentText sx={{ color: 'var(--color-text-muted)' }}>
             Are you sure you want to delete the lead from <strong>{deleteDialog.name}</strong>? This
             action cannot be undone.
           </DialogContentText>
@@ -856,7 +894,7 @@ const AdminLeads = () => {
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button
             onClick={() => setDeleteDialog({ open: false, id: null, name: '' })}
-            sx={{ color: '#6B7280' }}
+            sx={{ color: 'var(--color-text-muted)' }}
           >
             Cancel
           </Button>
@@ -864,8 +902,8 @@ const AdminLeads = () => {
             onClick={handleDelete}
             variant="contained"
             sx={{
-              bgcolor: '#EF4444',
-              '&:hover': { bgcolor: '#DC2626' },
+              bgcolor: 'var(--color-error)',
+              '&:hover': { bgcolor: 'var(--color-error)' },
               borderRadius: 2,
             }}
           >
@@ -873,22 +911,6 @@ const AdminLeads = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 2 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

@@ -119,8 +119,20 @@ const isColourFinding = (finding) => finding.kind === 'hex' || COLOUR_PATTERN_ID
  */
 const ALLOW_LIST = ['home', 'homes', 'homepage', 'home-loan', 'home loan', 'hometown'];
 
-/** Files allowed to contain hex colour literals. */
-const HEX_ALLOWED_FILES = new Set(['src/assets/styles/global.css', 'src/theme.js']);
+/**
+ * Files allowed to contain hex colour literals.
+ *
+ * The two token files are the design system's home (§2.4). `public/index.html`
+ * (`theme-color`) and `public/manifest.json` (`theme_color`,
+ * `background_color`) are browser/OS chrome: neither can reference a CSS
+ * variable, so their literals are structural, not a styling decision.
+ */
+const HEX_ALLOWED_FILES = new Set([
+  'src/assets/styles/global.css',
+  'src/theme.js',
+  'public/index.html',
+  'public/manifest.json',
+]);
 
 /** Directory prefixes allowed to contain hex colour literals. */
 const HEX_ALLOWED_PREFIXES = ['src/seo/data/', 'public/brand/'];

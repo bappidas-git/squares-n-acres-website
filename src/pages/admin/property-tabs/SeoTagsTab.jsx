@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Box, Typography, TextField, Chip, InputAdornment, Paper } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { TAG_OPTIONS } from './constants';
+import { toneStyles } from '../../../components/ui/tones';
 import ImageUrlHelperText from '../../../components/admin/ImageUrlHelperText';
 import { calculateSeoScore, SEO_LIMITS } from '../../../utils/seoScoring';
 import { generateSeoData } from '../../../utils/seoGenerator';
@@ -57,17 +58,18 @@ const SeoTagsTab = ({ formData, updateField }) => {
   // Color helpers for character count
   const getTitleLenColor = (len) => {
     if (len >= SEO_LIMITS.TITLE_OPTIMAL_MIN && len <= SEO_LIMITS.TITLE_OPTIMAL_MAX)
-      return '#10B981';
-    if (len > 0 && len <= SEO_LIMITS.TITLE_MAX_LENGTH) return '#F59E0B';
-    if (len > SEO_LIMITS.TITLE_MAX_LENGTH) return '#EF4444';
-    return '#9CA3AF';
+      return 'var(--color-success)';
+    if (len > 0 && len <= SEO_LIMITS.TITLE_MAX_LENGTH) return 'var(--color-warning)';
+    if (len > SEO_LIMITS.TITLE_MAX_LENGTH) return 'var(--color-error)';
+    return 'var(--color-text-muted)';
   };
 
   const getDescLenColor = (len) => {
-    if (len >= SEO_LIMITS.DESC_OPTIMAL_MIN && len <= SEO_LIMITS.DESC_OPTIMAL_MAX) return '#10B981';
-    if (len > 0 && len <= SEO_LIMITS.DESC_MAX_LENGTH) return '#F59E0B';
-    if (len > SEO_LIMITS.DESC_MAX_LENGTH) return '#EF4444';
-    return '#9CA3AF';
+    if (len >= SEO_LIMITS.DESC_OPTIMAL_MIN && len <= SEO_LIMITS.DESC_OPTIMAL_MAX)
+      return 'var(--color-success)';
+    if (len > 0 && len <= SEO_LIMITS.DESC_MAX_LENGTH) return 'var(--color-warning)';
+    if (len > SEO_LIMITS.DESC_MAX_LENGTH) return 'var(--color-error)';
+    return 'var(--color-text-muted)';
   };
 
   return (
@@ -83,7 +85,7 @@ const SeoTagsTab = ({ formData, updateField }) => {
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
             SEO Settings
           </Typography>
           <Chip
@@ -94,16 +96,16 @@ const SeoTagsTab = ({ formData, updateField }) => {
               fontSize: '0.6875rem',
               bgcolor:
                 scoreData.totalScore >= 80
-                  ? '#ECFDF5'
+                  ? 'var(--color-success-bg)'
                   : scoreData.totalScore >= 60
-                    ? '#FFFBEB'
-                    : '#FEF2F2',
+                    ? 'var(--color-warning-bg)'
+                    : 'var(--color-error-bg)',
               color:
                 scoreData.totalScore >= 80
-                  ? '#059669'
+                  ? 'var(--color-success-dark)'
                   : scoreData.totalScore >= 60
-                    ? '#D97706'
-                    : '#DC2626',
+                    ? 'var(--color-warning)'
+                    : 'var(--color-error-dark)',
             }}
           />
         </Box>
@@ -114,9 +116,9 @@ const SeoTagsTab = ({ formData, updateField }) => {
           onClick={handleAutoGenerate}
           sx={{
             fontWeight: 500,
-            bgcolor: '#F3F4F6',
-            color: '#374151',
-            '&:hover': { bgcolor: '#E5E7EB' },
+            bgcolor: 'var(--color-surface)',
+            color: 'var(--color-text)',
+            '&:hover': { bgcolor: 'var(--color-surface-2)' },
           }}
         />
       </Box>
@@ -125,19 +127,39 @@ const SeoTagsTab = ({ formData, updateField }) => {
       {scoreData.issues.length > 0 && (
         <Paper
           variant="outlined"
-          sx={{ p: 1.5, borderRadius: 2, border: '1px solid #FEF3C7', bgcolor: '#FFFBEB' }}
+          sx={{
+            p: 1.5,
+            borderRadius: 2,
+            border: '1px solid var(--color-warning-bg)',
+            bgcolor: 'var(--color-warning-bg)',
+          }}
         >
-          <Typography sx={{ fontSize: '0.6875rem', fontWeight: 600, color: '#D97706', mb: 0.5 }}>
+          <Typography
+            sx={{
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              color: 'var(--color-warning-dark)',
+              mb: 0.5,
+            }}
+          >
             SEO Improvement Tips ({scoreData.issues.length})
           </Typography>
           {scoreData.issues.slice(0, 5).map((issue, idx) => (
-            <Typography key={idx} sx={{ fontSize: '0.6875rem', color: '#92400E', pl: 1 }}>
+            <Typography
+              key={idx}
+              sx={{ fontSize: '0.6875rem', color: 'var(--color-warning-dark)', pl: 1 }}
+            >
               — {issue}
             </Typography>
           ))}
           {scoreData.issues.length > 5 && (
             <Typography
-              sx={{ fontSize: '0.6875rem', color: '#92400E', pl: 1, fontStyle: 'italic' }}
+              sx={{
+                fontSize: '0.6875rem',
+                color: 'var(--color-warning-dark)',
+                pl: 1,
+                fontStyle: 'italic',
+              }}
             >
               + {scoreData.issues.length - 5} more suggestions
             </Typography>
@@ -234,7 +256,7 @@ const SeoTagsTab = ({ formData, updateField }) => {
                 label={kw}
                 size="small"
                 onDelete={() => removeKeyword(kw)}
-                sx={{ bgcolor: '#F3F4F6' }}
+                sx={{ bgcolor: 'var(--color-surface)' }}
               />
             ))}
           </Box>
@@ -252,13 +274,16 @@ const SeoTagsTab = ({ formData, updateField }) => {
       />
 
       {/* Open Graph */}
-      <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+      <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid var(--color-border)' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <Icon icon="mdi:share-variant" style={{ fontSize: 20, color: '#C9A86C' }} />
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+          <Icon
+            icon="mdi:share-variant"
+            style={{ fontSize: 20, color: 'var(--color-primary-dark)' }}
+          />
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
             Open Graph Tags
           </Typography>
-          <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
+          <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
             (For social media sharing)
           </Typography>
         </Box>
@@ -297,10 +322,10 @@ const SeoTagsTab = ({ formData, updateField }) => {
       </Paper>
 
       {/* Twitter Card */}
-      <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+      <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid var(--color-border)' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <Icon icon="mdi:twitter" style={{ fontSize: 20, color: '#C9A86C' }} />
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+          <Icon icon="mdi:twitter" style={{ fontSize: 20, color: 'var(--color-primary-dark)' }} />
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
             Twitter Card
           </Typography>
         </Box>
@@ -313,8 +338,12 @@ const SeoTagsTab = ({ formData, updateField }) => {
               onClick={() => updateField('twitterCard', type)}
               sx={{
                 fontWeight: 500,
-                bgcolor: formData.twitterCard === type ? '#1B2A4A' : '#F3F4F6',
-                color: formData.twitterCard === type ? '#fff' : '#6B7280',
+                bgcolor:
+                  formData.twitterCard === type ? 'var(--color-charcoal)' : 'var(--color-surface)',
+                color:
+                  formData.twitterCard === type
+                    ? 'var(--color-text-inverse)'
+                    : 'var(--color-text-muted)',
               }}
             />
           ))}
@@ -324,7 +353,7 @@ const SeoTagsTab = ({ formData, updateField }) => {
       {/* Schema Markup */}
       <Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
             JSON-LD Schema Markup
           </Typography>
           {formData.schemaMarkup &&
@@ -332,13 +361,23 @@ const SeoTagsTab = ({ formData, updateField }) => {
               <Chip
                 label="Valid JSON"
                 size="small"
-                sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#ECFDF5', color: '#059669' }}
+                sx={{
+                  height: 18,
+                  fontSize: '0.625rem',
+                  bgcolor: 'var(--color-success-bg)',
+                  color: 'var(--color-success-dark)',
+                }}
               />
             ) : (
               <Chip
                 label="Invalid JSON"
                 size="small"
-                sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#FEF2F2', color: '#DC2626' }}
+                sx={{
+                  height: 18,
+                  fontSize: '0.625rem',
+                  bgcolor: 'var(--color-error-bg)',
+                  color: 'var(--color-error-dark)',
+                }}
               />
             ))}
         </Box>
@@ -360,7 +399,10 @@ const SeoTagsTab = ({ formData, updateField }) => {
 
       {/* Property Tags */}
       <Box sx={{ mt: 1 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A', mb: 1.5 }}>
+        <Typography
+          variant="subtitle2"
+          sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mb: 1.5 }}
+        >
           Property Tags
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -372,7 +414,10 @@ const SeoTagsTab = ({ formData, updateField }) => {
                 icon={
                   <Icon
                     icon={tag.icon}
-                    style={{ fontSize: 16, color: selected ? tag.color : '#9CA3AF' }}
+                    style={{
+                      fontSize: 16,
+                      color: selected ? toneStyles(tag.tone).color : 'var(--color-text-muted)',
+                    }}
                   />
                 }
                 label={tag.label}
@@ -380,9 +425,11 @@ const SeoTagsTab = ({ formData, updateField }) => {
                 onClick={() => toggleTag(tag.value)}
                 sx={{
                   fontWeight: 600,
-                  bgcolor: selected ? tag.bg : '#F3F4F6',
-                  color: selected ? tag.color : '#9CA3AF',
-                  border: selected ? `1px solid ${tag.color}` : '1px solid transparent',
+                  bgcolor: selected ? toneStyles(tag.tone).background : 'var(--color-surface)',
+                  color: selected ? toneStyles(tag.tone).color : 'var(--color-text-muted)',
+                  border: selected
+                    ? `1px solid ${toneStyles(tag.tone).border}`
+                    : '1px solid transparent',
                   '&:hover': { opacity: 0.85 },
                 }}
               />

@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
+import { useCssVars } from '../../hooks/useCssVar';
 import { propertyService, leadService, articleService, dashboardService } from '../../services/api';
 
 // Animated counter hook
@@ -97,7 +98,7 @@ const StatsCard = ({
               variant="h5"
               sx={{
                 fontWeight: 700,
-                color: '#1B2A4A',
+                color: 'var(--color-charcoal)',
                 fontFamily: 'var(--font-body)',
                 lineHeight: 1.2,
               }}
@@ -120,20 +121,28 @@ const StatsCard = ({
                 fontSize: '0.65rem',
                 fontWeight: 600,
                 bgcolor: trendUp ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-                color: trendUp ? '#059669' : '#DC2626',
+                color: trendUp ? 'var(--color-success-dark)' : 'var(--color-error-dark)',
                 '& .MuiChip-icon': { color: 'inherit', ml: '4px' },
                 '& .MuiChip-label': { px: 0.5 },
               }}
             />
           )}
         </Box>
-        <Typography variant="caption" sx={{ color: '#6B7280', fontWeight: 500, lineHeight: 1.3 }}>
+        <Typography
+          variant="caption"
+          sx={{ color: 'var(--color-text-muted)', fontWeight: 500, lineHeight: 1.3 }}
+        >
           {label}
         </Typography>
         {subLabel && (
           <Typography
             variant="caption"
-            sx={{ color: '#9CA3AF', display: 'block', fontSize: '0.675rem', lineHeight: 1.2 }}
+            sx={{
+              color: 'var(--color-text-muted)',
+              display: 'block',
+              fontSize: '0.675rem',
+              lineHeight: 1.2,
+            }}
           >
             {subLabel}
           </Typography>
@@ -145,15 +154,41 @@ const StatsCard = ({
 
 // Lead status config
 const leadStatusConfig = {
-  new: { label: 'New', color: '#3B82F6', bg: '#EFF6FF' },
-  contacted: { label: 'Contacted', color: '#F59E0B', bg: '#FFFBEB' },
-  qualified: { label: 'Qualified', color: '#10B981', bg: '#ECFDF5' },
-  converted: { label: 'Converted', color: '#B45309', bg: '#FEF3C7' },
-  lost: { label: 'Lost', color: '#EF4444', bg: '#FEF2F2' },
+  new: { label: 'New', color: 'var(--color-info-dark)', bg: 'var(--color-info-bg)' },
+  contacted: {
+    label: 'Contacted',
+    color: 'var(--color-warning-dark)',
+    bg: 'var(--color-warning-bg)',
+  },
+  qualified: {
+    label: 'Qualified',
+    color: 'var(--color-success-dark)',
+    bg: 'var(--color-success-bg)',
+  },
+  converted: {
+    label: 'Converted',
+    color: 'var(--color-warning-dark)',
+    bg: 'var(--color-warning-bg)',
+  },
+  lost: { label: 'Lost', color: 'var(--color-error-dark)', bg: 'var(--color-error-bg)' },
 };
 
-// Simple SVG Donut Chart
+/** The token names the charts paint with, in series order. */
+const CHART_SERIES_TOKENS = [
+  '--color-charcoal',
+  '--color-primary',
+  '--color-info',
+  '--color-success',
+  '--color-warning',
+  '--color-primary-dark',
+];
+
+/**
+ * Simple SVG donut. SVG presentation attributes are not a reliable place for
+ * `var()`, so the concrete colours are read off the document with `useCssVars`.
+ */
 const DonutChart = ({ data, size = 160 }) => {
+  const [charcoal, muted] = useCssVars(['--color-charcoal', '--color-text-muted']);
   const total = data.reduce((sum, d) => sum + d.value, 0);
   if (total === 0) return null;
 
@@ -197,10 +232,10 @@ const DonutChart = ({ data, size = 160 }) => {
             />
           );
         })}
-        <text x={cx} y={cy - 6} textAnchor="middle" fontSize="22" fontWeight="700" fill="#1B2A4A">
+        <text x={cx} y={cy - 6} textAnchor="middle" fontSize="22" fontWeight="700" fill={charcoal}>
           {total}
         </text>
-        <text x={cx} y={cy + 14} textAnchor="middle" fontSize="11" fill="#9CA3AF">
+        <text x={cx} y={cy + 14} textAnchor="middle" fontSize="11" fill={muted}>
           Total
         </text>
       </svg>
@@ -216,8 +251,8 @@ const DonutChart = ({ data, size = 160 }) => {
                 flexShrink: 0,
               }}
             />
-            <Typography variant="caption" sx={{ color: '#6B7280' }}>
-              {item.label}: <strong style={{ color: '#1B2A4A' }}>{item.value}</strong>
+            <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
+              {item.label}: <strong style={{ color: 'var(--color-charcoal)' }}>{item.value}</strong>
             </Typography>
           </Box>
         ))}
@@ -237,7 +272,10 @@ const BarChart = ({ data, maxHeight = 120 }) => {
           key={i}
           sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}
         >
-          <Typography variant="caption" sx={{ color: '#6B7280', mb: 0.5, fontWeight: 600 }}>
+          <Typography
+            variant="caption"
+            sx={{ color: 'var(--color-text-muted)', mb: 0.5, fontWeight: 600 }}
+          >
             {item.value}
           </Typography>
           <Box
@@ -245,7 +283,7 @@ const BarChart = ({ data, maxHeight = 120 }) => {
               width: '100%',
               maxWidth: 40,
               height: Math.max((item.value / maxVal) * maxHeight, 4),
-              bgcolor: item.color || '#1B2A4A',
+              bgcolor: item.color || 'var(--color-charcoal)',
               borderRadius: '4px 4px 0 0',
               transition: 'height 0.8s ease',
             }}
@@ -253,7 +291,7 @@ const BarChart = ({ data, maxHeight = 120 }) => {
           <Typography
             variant="caption"
             sx={{
-              color: '#9CA3AF',
+              color: 'var(--color-text-muted)',
               mt: 0.5,
               fontSize: '0.625rem',
               textAlign: 'center',
@@ -269,6 +307,12 @@ const BarChart = ({ data, maxHeight = 120 }) => {
 };
 
 const Dashboard = () => {
+  const seriesColors = useCssVars(CHART_SERIES_TOKENS);
+  const [successColor, warningColor, infoColor] = useCssVars([
+    '--color-success',
+    '--color-warning',
+    '--color-info',
+  ]);
   const navigate = useNavigate();
   const { user } = useAdminAuth();
   const [loading, setLoading] = useState(true);
@@ -394,7 +438,7 @@ const Dashboard = () => {
   const sourceBarData = Object.entries(leadsBySource).map(([label, value], i) => ({
     label: label.length > 10 ? label.slice(0, 10) + '...' : label,
     value,
-    color: ['#1B2A4A', '#C9A86C', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'][i % 6],
+    color: seriesColors[i % seriesColors.length],
   }));
 
   // Property status data for donut
@@ -402,17 +446,17 @@ const Dashboard = () => {
     {
       label: 'Ready to Move',
       value: properties.filter((p) => p.status === 'ready-to-move').length,
-      color: '#10B981',
+      color: successColor,
     },
     {
       label: 'Under Construction',
       value: properties.filter((p) => p.status === 'under-construction').length,
-      color: '#F59E0B',
+      color: warningColor,
     },
     {
       label: 'Pre-launch',
       value: properties.filter((p) => p.status === 'pre-launch').length,
-      color: '#3B82F6',
+      color: infoColor,
     },
   ];
 
@@ -435,10 +479,13 @@ const Dashboard = () => {
         }}
       >
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: '#1B2A4A', lineHeight: 1.3 }}>
+          <Typography
+            variant="h6"
+            sx={{ fontWeight: 700, color: 'var(--color-charcoal)', lineHeight: 1.3 }}
+          >
             Welcome back, {user?.name?.split(' ')[0] || 'Admin'}
           </Typography>
-          <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
+          <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
             {today}
           </Typography>
         </Box>
@@ -477,7 +524,7 @@ const Dashboard = () => {
         <Grid item xs={6} md={3}>
           <StatsCard
             icon="mdi:home-city-outline"
-            iconColor="#1B2A4A"
+            iconColor="var(--color-charcoal)"
             iconBg="rgba(27,42,74,0.08)"
             label="Properties"
             value={stats.totalProperties}
@@ -490,7 +537,7 @@ const Dashboard = () => {
         <Grid item xs={6} md={3}>
           <StatsCard
             icon="mdi:account-group-outline"
-            iconColor="#3B82F6"
+            iconColor="var(--color-info)"
             iconBg="rgba(59,130,246,0.08)"
             label="Leads"
             value={stats.totalLeads}
@@ -503,7 +550,7 @@ const Dashboard = () => {
         <Grid item xs={6} md={3}>
           <StatsCard
             icon="mdi:newspaper-variant-outline"
-            iconColor="#10B981"
+            iconColor="var(--color-success)"
             iconBg="rgba(16,185,129,0.08)"
             label="Articles"
             value={stats.totalArticles}
@@ -516,7 +563,7 @@ const Dashboard = () => {
         <Grid item xs={6} md={3}>
           <StatsCard
             icon="mdi:eye-outline"
-            iconColor="#8B5CF6"
+            iconColor="var(--color-primary)"
             iconBg="rgba(139,92,246,0.08)"
             label="Visits (30d)"
             value={stats.websiteVisits || 0}
@@ -531,7 +578,10 @@ const Dashboard = () => {
         {/* Lead Sources */}
         <Grid item xs={12} md={4}>
           <Paper sx={{ p: 2.5, borderRadius: 2.5, height: '100%' }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A', mb: 1.5 }}>
+            <Typography
+              variant="subtitle2"
+              sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mb: 1.5 }}
+            >
               Leads by Source
             </Typography>
             {sourceBarData.length > 0 ? (
@@ -543,7 +593,7 @@ const Dashboard = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   height: 120,
-                  color: '#9CA3AF',
+                  color: 'var(--color-text-muted)',
                 }}
               >
                 <Typography variant="caption">No lead data</Typography>
@@ -554,7 +604,10 @@ const Dashboard = () => {
         {/* Property Status */}
         <Grid item xs={12} sm={6} md={3}>
           <Paper sx={{ p: 2.5, borderRadius: 2.5, height: '100%' }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A', mb: 1.5 }}>
+            <Typography
+              variant="subtitle2"
+              sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mb: 1.5 }}
+            >
               Properties by Status
             </Typography>
             {properties.length > 0 ? (
@@ -568,7 +621,7 @@ const Dashboard = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   height: 120,
-                  color: '#9CA3AF',
+                  color: 'var(--color-text-muted)',
                 }}
               >
                 <Typography variant="caption">No data</Typography>
@@ -587,7 +640,10 @@ const Dashboard = () => {
                 mb: 1.5,
               }}
             >
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}
+              >
                 Lead Status Overview
               </Typography>
             </Box>
@@ -610,7 +666,7 @@ const Dashboard = () => {
                       />
                       <Typography
                         variant="caption"
-                        sx={{ color: '#6B7280', flex: 1, minWidth: 70 }}
+                        sx={{ color: 'var(--color-text-muted)', flex: 1, minWidth: 70 }}
                       >
                         {cfg.label}
                       </Typography>
@@ -618,7 +674,7 @@ const Dashboard = () => {
                         sx={{
                           flex: 2,
                           height: 6,
-                          bgcolor: '#F3F4F6',
+                          bgcolor: 'var(--color-surface)',
                           borderRadius: 1,
                           overflow: 'hidden',
                         }}
@@ -635,7 +691,12 @@ const Dashboard = () => {
                       </Box>
                       <Typography
                         variant="caption"
-                        sx={{ color: '#1B2A4A', fontWeight: 600, minWidth: 24, textAlign: 'right' }}
+                        sx={{
+                          color: 'var(--color-charcoal)',
+                          fontWeight: 600,
+                          minWidth: 24,
+                          textAlign: 'right',
+                        }}
                       >
                         {count}
                       </Typography>
@@ -650,7 +711,7 @@ const Dashboard = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   height: 120,
-                  color: '#9CA3AF',
+                  color: 'var(--color-text-muted)',
                 }}
               >
                 <Typography variant="caption">No lead data</Typography>
@@ -671,7 +732,7 @@ const Dashboard = () => {
             justifyContent: 'space-between',
           }}
         >
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
             Recent Leads
           </Typography>
           <Button
@@ -679,7 +740,11 @@ const Dashboard = () => {
             variant="text"
             onClick={() => navigate('/admin/leads')}
             endIcon={<Icon icon="mdi:arrow-right" style={{ fontSize: 14 }} />}
-            sx={{ color: '#6B7280', fontSize: '0.75rem', '&:hover': { color: '#1B2A4A' } }}
+            sx={{
+              color: 'var(--color-text-muted)',
+              fontSize: '0.75rem',
+              '&:hover': { color: 'var(--color-charcoal)' },
+            }}
           >
             View All
           </Button>
@@ -687,11 +752,11 @@ const Dashboard = () => {
         <TableContainer>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ '& th': { bgcolor: '#FAFAFA', py: 1 } }}>
+              <TableRow sx={{ '& th': { bgcolor: 'var(--color-surface)', py: 1 } }}>
                 <TableCell
                   sx={{
                     fontWeight: 600,
-                    color: '#6B7280',
+                    color: 'var(--color-text-muted)',
                     fontSize: '0.7rem',
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
@@ -702,7 +767,7 @@ const Dashboard = () => {
                 <TableCell
                   sx={{
                     fontWeight: 600,
-                    color: '#6B7280',
+                    color: 'var(--color-text-muted)',
                     fontSize: '0.7rem',
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
@@ -713,7 +778,7 @@ const Dashboard = () => {
                 <TableCell
                   sx={{
                     fontWeight: 600,
-                    color: '#6B7280',
+                    color: 'var(--color-text-muted)',
                     fontSize: '0.7rem',
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
@@ -725,7 +790,7 @@ const Dashboard = () => {
                 <TableCell
                   sx={{
                     fontWeight: 600,
-                    color: '#6B7280',
+                    color: 'var(--color-text-muted)',
                     fontSize: '0.7rem',
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
@@ -737,7 +802,7 @@ const Dashboard = () => {
                 <TableCell
                   sx={{
                     fontWeight: 600,
-                    color: '#6B7280',
+                    color: 'var(--color-text-muted)',
                     fontSize: '0.7rem',
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
@@ -749,7 +814,7 @@ const Dashboard = () => {
                 <TableCell
                   sx={{
                     fontWeight: 600,
-                    color: '#6B7280',
+                    color: 'var(--color-text-muted)',
                     fontSize: '0.7rem',
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
@@ -760,7 +825,7 @@ const Dashboard = () => {
                 <TableCell
                   sx={{
                     fontWeight: 600,
-                    color: '#6B7280',
+                    color: 'var(--color-text-muted)',
                     fontSize: '0.7rem',
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
@@ -784,7 +849,11 @@ const Dashboard = () => {
                 ))
               ) : recentLeads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: '#9CA3AF' }}>
+                  <TableCell
+                    colSpan={7}
+                    align="center"
+                    sx={{ py: 4, color: 'var(--color-text-muted)' }}
+                  >
                     No leads found
                   </TableCell>
                 </TableRow>
@@ -798,15 +867,21 @@ const Dashboard = () => {
                       sx={{ cursor: 'pointer', '&:last-child td': { border: 0 } }}
                       onClick={() => navigate(`/admin/leads/${lead.id}`)}
                     >
-                      <TableCell sx={{ fontWeight: 500, color: '#1B2A4A', fontSize: '0.8125rem' }}>
+                      <TableCell
+                        sx={{
+                          fontWeight: 500,
+                          color: 'var(--color-charcoal)',
+                          fontSize: '0.8125rem',
+                        }}
+                      >
                         {lead.name}
                       </TableCell>
-                      <TableCell sx={{ color: '#6B7280', fontSize: '0.8125rem' }}>
+                      <TableCell sx={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>
                         {lead.email}
                       </TableCell>
                       <TableCell
                         sx={{
-                          color: '#6B7280',
+                          color: 'var(--color-text-muted)',
                           fontSize: '0.8125rem',
                           display: { xs: 'none', sm: 'table-cell' },
                         }}
@@ -815,7 +890,7 @@ const Dashboard = () => {
                       </TableCell>
                       <TableCell
                         sx={{
-                          color: '#6B7280',
+                          color: 'var(--color-text-muted)',
                           fontSize: '0.75rem',
                           display: { xs: 'none', md: 'table-cell' },
                         }}
@@ -824,7 +899,7 @@ const Dashboard = () => {
                       </TableCell>
                       <TableCell
                         sx={{
-                          color: '#6B7280',
+                          color: 'var(--color-text-muted)',
                           fontSize: '0.75rem',
                           display: { xs: 'none', lg: 'table-cell' },
                           maxWidth: 140,
@@ -850,7 +925,7 @@ const Dashboard = () => {
                       </TableCell>
                       <TableCell
                         sx={{
-                          color: '#9CA3AF',
+                          color: 'var(--color-text-muted)',
                           fontSize: '0.75rem',
                           display: { xs: 'none', sm: 'table-cell' },
                           whiteSpace: 'nowrap',

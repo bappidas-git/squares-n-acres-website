@@ -20,8 +20,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
-  Alert,
   Skeleton,
   Switch,
   useMediaQuery,
@@ -30,9 +28,11 @@ import {
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { faqService } from '../../services/api';
+import { useToast } from '../../components/common/ToastProvider';
+import { toneStyles } from '../../components/ui/tones';
 import {
   FAQ_CATEGORIES as faqCategories,
-  FAQ_CATEGORY_COLORS as categoryColors,
+  FAQ_CATEGORY_TONES as categoryTones,
 } from '../../config/adminConstants';
 
 const emptyFaq = {
@@ -44,6 +44,7 @@ const emptyFaq = {
 };
 
 const FaqManager = () => {
+  const toast = useToast();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -54,7 +55,6 @@ const FaqManager = () => {
   const [form, setForm] = useState(emptyFaq);
   const [saving, setSaving] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, faq: null });
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [categoryFilter, setCategoryFilter] = useState('');
 
   const fetchFaqs = useCallback(async () => {
@@ -66,11 +66,11 @@ const FaqManager = () => {
       );
       setFaqs(sorted);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to load FAQs', severity: 'error' });
+      toast.error('Failed to load FAQs');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchFaqs();
@@ -98,7 +98,7 @@ const FaqManager = () => {
 
   const handleSave = async () => {
     if (!form.question.trim() || !form.answer.trim()) {
-      setSnackbar({ open: true, message: 'Question and answer are required', severity: 'error' });
+      toast.error('Question and answer are required');
       return;
     }
 
@@ -111,15 +111,15 @@ const FaqManager = () => {
             .map((f) => (f.id === editingFaq.id ? { ...f, ...updated } : f))
             .sort((a, b) => (a.order || 0) - (b.order || 0))
         );
-        setSnackbar({ open: true, message: 'FAQ updated', severity: 'success' });
+        toast.success('FAQ updated');
       } else {
         const created = await faqService.create(form);
         setFaqs((prev) => [...prev, created].sort((a, b) => (a.order || 0) - (b.order || 0)));
-        setSnackbar({ open: true, message: 'FAQ added', severity: 'success' });
+        toast.success('FAQ added');
       }
       setDialogOpen(false);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to save FAQ', severity: 'error' });
+      toast.error('Failed to save FAQ');
     } finally {
       setSaving(false);
     }
@@ -129,13 +129,9 @@ const FaqManager = () => {
     try {
       await faqService.update(faq.id, { isActive: !faq.isActive });
       setFaqs((prev) => prev.map((f) => (f.id === faq.id ? { ...f, isActive: !f.isActive } : f)));
-      setSnackbar({
-        open: true,
-        message: `FAQ ${!faq.isActive ? 'activated' : 'deactivated'}`,
-        severity: 'success',
-      });
+      toast.success(`FAQ ${!faq.isActive ? 'activated' : 'deactivated'}`);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to update FAQ', severity: 'error' });
+      toast.error('Failed to update FAQ');
     }
   };
 
@@ -145,9 +141,9 @@ const FaqManager = () => {
     try {
       await faqService.delete(faq.id);
       setFaqs((prev) => prev.filter((f) => f.id !== faq.id));
-      setSnackbar({ open: true, message: 'FAQ deleted', severity: 'success' });
+      toast.success('FAQ deleted');
     } catch {
-      setSnackbar({ open: true, message: 'Failed to delete FAQ', severity: 'error' });
+      toast.error('Failed to delete FAQ');
     } finally {
       setDeleteDialog({ open: false, faq: null });
     }
@@ -170,7 +166,7 @@ const FaqManager = () => {
         return updated.sort((a, b) => (a.order || 0) - (b.order || 0));
       });
     } catch {
-      setSnackbar({ open: true, message: 'Failed to reorder', severity: 'error' });
+      toast.error('Failed to reorder');
     }
   };
 
@@ -188,10 +184,10 @@ const FaqManager = () => {
         }}
       >
         <Box>
-          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
             FAQ Manager
           </Typography>
-          <Typography sx={{ fontSize: '0.875rem', color: '#6B7280', mt: 0.5 }}>
+          <Typography sx={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', mt: 0.5 }}>
             {faqs.length} FAQs ({faqs.filter((f) => f.isActive).length} active)
           </Typography>
         </Box>
@@ -200,11 +196,11 @@ const FaqManager = () => {
           startIcon={<Icon icon="mdi:plus" />}
           onClick={handleOpenAdd}
           sx={{
-            bgcolor: '#1B2A4A',
+            bgcolor: 'var(--color-charcoal)',
             textTransform: 'none',
             borderRadius: 2,
             px: 3,
-            '&:hover': { bgcolor: '#2d3f63' },
+            '&:hover': { bgcolor: 'var(--color-charcoal)' },
           }}
         >
           Add FAQ
@@ -212,14 +208,17 @@ const FaqManager = () => {
       </Box>
 
       {/* Category Filter */}
-      <Paper elevation={0} sx={{ p: 2, borderRadius: 2, border: '1px solid #F3F4F6', mb: 3 }}>
+      <Paper
+        elevation={0}
+        sx={{ p: 2, borderRadius: 2, border: '1px solid var(--color-surface)', mb: 3 }}
+      >
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Chip
             label="All"
             onClick={() => setCategoryFilter('')}
             sx={{
-              bgcolor: !categoryFilter ? '#1B2A4A' : '#F3F4F6',
-              color: !categoryFilter ? '#fff' : '#6B7280',
+              bgcolor: !categoryFilter ? 'var(--color-charcoal)' : 'var(--color-surface)',
+              color: !categoryFilter ? 'var(--color-text-inverse)' : 'var(--color-text-muted)',
               fontWeight: 500,
               fontSize: '0.8125rem',
               cursor: 'pointer',
@@ -227,7 +226,7 @@ const FaqManager = () => {
             }}
           />
           {faqCategories.map((cat) => {
-            const style = categoryColors[cat.value] || { bg: '#F3F4F6', color: '#6B7280' };
+            const style = toneStyles(categoryTones[cat.value]);
             const isSelected = categoryFilter === cat.value;
             return (
               <Chip
@@ -235,8 +234,8 @@ const FaqManager = () => {
                 label={cat.label}
                 onClick={() => setCategoryFilter(isSelected ? '' : cat.value)}
                 sx={{
-                  bgcolor: isSelected ? style.color : style.bg,
-                  color: isSelected ? '#fff' : style.color,
+                  bgcolor: isSelected ? style.border : style.background,
+                  color: isSelected ? 'var(--color-text-inverse)' : style.color,
                   fontWeight: 500,
                   fontSize: '0.8125rem',
                   cursor: 'pointer',
@@ -251,7 +250,7 @@ const FaqManager = () => {
       {/* FAQ List */}
       <Paper
         elevation={0}
-        sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}
+        sx={{ borderRadius: 2, border: '1px solid var(--color-surface)', overflow: 'hidden' }}
       >
         {loading ? (
           <Box sx={{ p: 3 }}>
@@ -263,7 +262,7 @@ const FaqManager = () => {
           /* Mobile Card View */
           <Box sx={{ p: 2 }}>
             {filteredFaqs.map((faq) => {
-              const catStyle = categoryColors[faq.category] || { bg: '#F3F4F6', color: '#6B7280' };
+              const catStyle = toneStyles(categoryTones[faq.category]);
               return (
                 <Paper
                   key={faq.id}
@@ -284,20 +283,30 @@ const FaqManager = () => {
                     }}
                   >
                     <Typography
-                      sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A', flex: 1 }}
+                      sx={{
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: 'var(--color-charcoal)',
+                        flex: 1,
+                      }}
                     >
                       {faq.question}
                     </Typography>
                     <Chip
                       label={`#${faq.order}`}
                       size="small"
-                      sx={{ fontSize: '0.625rem', height: 20, bgcolor: '#F3F4F6', ml: 1 }}
+                      sx={{
+                        fontSize: '0.625rem',
+                        height: 20,
+                        bgcolor: 'var(--color-surface)',
+                        ml: 1,
+                      }}
                     />
                   </Box>
                   <Typography
                     sx={{
                       fontSize: '0.75rem',
-                      color: '#6B7280',
+                      color: 'var(--color-text-muted)',
                       mb: 1.5,
                       display: '-webkit-box',
                       WebkitLineClamp: 2,
@@ -322,7 +331,7 @@ const FaqManager = () => {
                         sx={{
                           fontSize: '0.625rem',
                           height: 20,
-                          bgcolor: catStyle.bg,
+                          bgcolor: catStyle.background,
                           color: catStyle.color,
                           textTransform: 'capitalize',
                         }}
@@ -332,9 +341,11 @@ const FaqManager = () => {
                         onChange={() => handleToggleActive(faq)}
                         size="small"
                         sx={{
-                          '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: 'var(--color-success-dark)',
+                          },
                           '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                            bgcolor: '#10B981',
+                            bgcolor: 'var(--color-success)',
                           },
                         }}
                       />
@@ -343,13 +354,13 @@ const FaqManager = () => {
                       <IconButton size="small" onClick={() => handleOpenEdit(faq)}>
                         <Icon
                           icon="mdi:pencil-outline"
-                          style={{ fontSize: 16, color: '#6B7280' }}
+                          style={{ fontSize: 16, color: 'var(--color-text-muted)' }}
                         />
                       </IconButton>
                       <IconButton size="small" onClick={() => setDeleteDialog({ open: true, faq })}>
                         <Icon
                           icon="mdi:delete-outline"
-                          style={{ fontSize: 16, color: '#EF4444' }}
+                          style={{ fontSize: 16, color: 'var(--color-error-dark)' }}
                         />
                       </IconButton>
                     </Box>
@@ -363,33 +374,42 @@ const FaqManager = () => {
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#FAFAFA' }}>
+                <TableRow sx={{ bgcolor: 'var(--color-surface)' }}>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280', width: 60 }}
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      color: 'var(--color-text-muted)',
+                      width: 60,
+                    }}
                     align="center"
                   >
                     Order
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                  >
                     Question
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                  >
                     Category
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                     align="center"
                   >
                     Active
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                     align="center"
                   >
                     Reorder
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                     align="center"
                   >
                     Actions
@@ -398,10 +418,7 @@ const FaqManager = () => {
               </TableHead>
               <TableBody>
                 {filteredFaqs.map((faq, index) => {
-                  const catStyle = categoryColors[faq.category] || {
-                    bg: '#F3F4F6',
-                    color: '#6B7280',
-                  };
+                  const catStyle = toneStyles(categoryTones[faq.category]);
                   return (
                     <TableRow
                       key={faq.id}
@@ -413,21 +430,29 @@ const FaqManager = () => {
                     >
                       <TableCell align="center">
                         <Typography
-                          sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#9CA3AF' }}
+                          sx={{
+                            fontSize: '0.8125rem',
+                            fontWeight: 600,
+                            color: 'var(--color-text-muted)',
+                          }}
                         >
                           {faq.order}
                         </Typography>
                       </TableCell>
                       <TableCell>
                         <Typography
-                          sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1B2A4A' }}
+                          sx={{
+                            fontSize: '0.8125rem',
+                            fontWeight: 600,
+                            color: 'var(--color-charcoal)',
+                          }}
                         >
                           {faq.question}
                         </Typography>
                         <Typography
                           sx={{
                             fontSize: '0.6875rem',
-                            color: '#9CA3AF',
+                            color: 'var(--color-text-muted)',
                             maxWidth: 400,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -444,7 +469,7 @@ const FaqManager = () => {
                           sx={{
                             fontSize: '0.6875rem',
                             height: 22,
-                            bgcolor: catStyle.bg,
+                            bgcolor: catStyle.background,
                             color: catStyle.color,
                             textTransform: 'capitalize',
                           }}
@@ -456,9 +481,11 @@ const FaqManager = () => {
                           onChange={() => handleToggleActive(faq)}
                           size="small"
                           sx={{
-                            '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                              color: 'var(--color-success-dark)',
+                            },
                             '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                              bgcolor: '#10B981',
+                              bgcolor: 'var(--color-success)',
                             },
                           }}
                         />
@@ -472,7 +499,13 @@ const FaqManager = () => {
                           >
                             <Icon
                               icon="mdi:arrow-up"
-                              style={{ fontSize: 16, color: index === 0 ? '#D1D5DB' : '#6B7280' }}
+                              style={{
+                                fontSize: 16,
+                                color:
+                                  index === 0
+                                    ? 'var(--color-text-muted)'
+                                    : 'var(--color-text-muted)',
+                              }}
                             />
                           </IconButton>
                           <IconButton
@@ -484,7 +517,10 @@ const FaqManager = () => {
                               icon="mdi:arrow-down"
                               style={{
                                 fontSize: 16,
-                                color: index === filteredFaqs.length - 1 ? '#D1D5DB' : '#6B7280',
+                                color:
+                                  index === filteredFaqs.length - 1
+                                    ? 'var(--color-text-muted)'
+                                    : 'var(--color-text-muted)',
                               }}
                             />
                           </IconButton>
@@ -495,7 +531,7 @@ const FaqManager = () => {
                           <IconButton size="small" onClick={() => handleOpenEdit(faq)}>
                             <Icon
                               icon="mdi:pencil-outline"
-                              style={{ fontSize: 18, color: '#6B7280' }}
+                              style={{ fontSize: 18, color: 'var(--color-text-muted)' }}
                             />
                           </IconButton>
                           <IconButton
@@ -504,7 +540,7 @@ const FaqManager = () => {
                           >
                             <Icon
                               icon="mdi:delete-outline"
-                              style={{ fontSize: 18, color: '#EF4444' }}
+                              style={{ fontSize: 18, color: 'var(--color-error-dark)' }}
                             />
                           </IconButton>
                         </Box>
@@ -517,9 +553,11 @@ const FaqManager = () => {
                     <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                       <Icon
                         icon="mdi:help-circle-outline"
-                        style={{ fontSize: 40, color: '#D1D5DB' }}
+                        style={{ fontSize: 40, color: 'var(--color-text-muted)' }}
                       />
-                      <Typography sx={{ color: '#9CA3AF', mt: 1 }}>No FAQs found</Typography>
+                      <Typography sx={{ color: 'var(--color-text-muted)', mt: 1 }}>
+                        No FAQs found
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 )}
@@ -537,9 +575,11 @@ const FaqManager = () => {
         fullWidth
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ borderBottom: '1px solid #F3F4F6', pb: 2 }}>
+        <DialogTitle sx={{ borderBottom: '1px solid var(--color-surface)', pb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography sx={{ fontSize: '1.125rem', fontWeight: 700, color: '#1B2A4A' }}>
+            <Typography
+              sx={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-charcoal)' }}
+            >
               {editingFaq ? 'Edit FAQ' : 'Add FAQ'}
             </Typography>
             <IconButton size="small" onClick={() => setDialogOpen(false)}>
@@ -549,7 +589,9 @@ const FaqManager = () => {
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Box sx={{ mb: 2.5 }}>
-            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 0.75 }}>
+            <Typography
+              sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 0.75 }}
+            >
               Question *
             </Typography>
             <TextField
@@ -563,7 +605,9 @@ const FaqManager = () => {
           </Box>
 
           <Box sx={{ mb: 2.5 }}>
-            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 0.75 }}>
+            <Typography
+              sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 0.75 }}
+            >
               Answer *
             </Typography>
             <TextField
@@ -606,10 +650,10 @@ const FaqManager = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #F3F4F6' }}>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid var(--color-surface)' }}>
           <Button
             onClick={() => setDialogOpen(false)}
-            sx={{ textTransform: 'none', color: '#6B7280' }}
+            sx={{ textTransform: 'none', color: 'var(--color-text-muted)' }}
           >
             Cancel
           </Button>
@@ -619,10 +663,10 @@ const FaqManager = () => {
             disabled={saving}
             sx={{
               textTransform: 'none',
-              bgcolor: '#1B2A4A',
+              bgcolor: 'var(--color-charcoal)',
               borderRadius: 2,
               px: 4,
-              '&:hover': { bgcolor: '#2d3f63' },
+              '&:hover': { bgcolor: 'var(--color-charcoal)' },
             }}
           >
             {saving ? 'Saving...' : editingFaq ? 'Update FAQ' : 'Add FAQ'}
@@ -637,19 +681,19 @@ const FaqManager = () => {
         PaperProps={{ sx: { borderRadius: 3, maxWidth: 420 } }}
       >
         <DialogTitle sx={{ pb: 1 }}>
-          <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
             Delete FAQ
           </Typography>
         </DialogTitle>
         <DialogContent>
-          <Typography sx={{ fontSize: '0.875rem', color: '#6B7280' }}>
+          <Typography sx={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
             Are you sure you want to delete this FAQ? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button
             onClick={() => setDeleteDialog({ open: false, faq: null })}
-            sx={{ textTransform: 'none', color: '#6B7280' }}
+            sx={{ textTransform: 'none', color: 'var(--color-text-muted)' }}
           >
             Cancel
           </Button>
@@ -663,22 +707,6 @@ const FaqManager = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 2 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

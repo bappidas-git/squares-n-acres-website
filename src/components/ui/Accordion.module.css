@@ -1,0 +1,65 @@
+.accordion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  overflow: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.itemOpen {
+  border-color: var(--color-primary-light);
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-4) var(--space-5);
+  border: 0;
+  background: none;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+  text-align: left;
+  cursor: pointer;
+}
+
+.trigger:hover {
+  background: var(--color-surface);
+}
+
+.marker {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  font-size: var(--font-size-xl);
+  line-height: 1;
+  transition: transform var(--transition-fast);
+}
+
+.markerOpen {
+  transform: rotate(45deg);
+}
+
+.panel {
+  padding: 0 var(--space-5) var(--space-5);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marker {
+    transition: none;
+  }
+}

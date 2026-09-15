@@ -15,9 +15,9 @@ import { Icon } from '@iconify/react';
 import IconPicker from '../../../components/admin/IconPicker';
 
 const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pending', color: '#9CA3AF' },
-  { value: 'in-progress', label: 'In Progress', color: '#D97706' },
-  { value: 'completed', label: 'Completed', color: '#059669' },
+  { value: 'pending', label: 'Pending', color: 'var(--color-text-muted)' },
+  { value: 'in-progress', label: 'In Progress', color: 'var(--color-warning-dark)' },
+  { value: 'completed', label: 'Completed', color: 'var(--color-success-dark)' },
 ];
 
 const ConstructionStatusTab = ({ formData, updateField }) => {
@@ -59,16 +59,16 @@ const ConstructionStatusTab = ({ formData, updateField }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
         Construction Timeline
       </Typography>
-      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
+      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)', mt: -1 }}>
         Define milestones for the construction timeline. Each milestone has a label, status, and
         optional icon.
       </Typography>
 
       {timeline.map((item, index) => (
-        <Paper key={index} sx={{ p: 2, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+        <Paper key={index} sx={{ p: 2, borderRadius: 2, border: '1px solid var(--color-border)' }}>
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Status indicator */}
             <Box
@@ -76,7 +76,9 @@ const ConstructionStatusTab = ({ formData, updateField }) => {
                 width: 12,
                 height: 12,
                 borderRadius: '50%',
-                bgcolor: STATUS_OPTIONS.find((s) => s.value === item.status)?.color || '#9CA3AF',
+                bgcolor:
+                  STATUS_OPTIONS.find((s) => s.value === item.status)?.color ||
+                  'var(--color-surface-2)',
                 flexShrink: 0,
               }}
             />
@@ -88,19 +90,19 @@ const ConstructionStatusTab = ({ formData, updateField }) => {
                 width: 40,
                 height: 40,
                 borderRadius: 2,
-                border: '1px dashed #D1D5DB',
+                border: '1px dashed var(--color-border-strong)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                bgcolor: '#F9FAFB',
+                bgcolor: 'var(--color-surface)',
                 flexShrink: 0,
-                '&:hover': { borderColor: '#C9A86C' },
+                '&:hover': { borderColor: 'var(--color-primary)' },
               }}
             >
               <Icon
                 icon={item.icon || 'mdi:progress-clock'}
-                style={{ fontSize: 22, color: '#1B2A4A' }}
+                style={{ fontSize: 22, color: 'var(--color-charcoal)' }}
               />
             </Box>
 
@@ -132,7 +134,11 @@ const ConstructionStatusTab = ({ formData, updateField }) => {
             </FormControl>
 
             {timeline.length > 1 && (
-              <IconButton size="small" onClick={() => removeItem(index)} sx={{ color: '#EF4444' }}>
+              <IconButton
+                size="small"
+                onClick={() => removeItem(index)}
+                sx={{ color: 'var(--color-error-dark)' }}
+              >
                 <Icon icon="mdi:close-circle-outline" style={{ fontSize: 20 }} />
               </IconButton>
             )}
@@ -145,7 +151,7 @@ const ConstructionStatusTab = ({ formData, updateField }) => {
         variant="text"
         onClick={addItem}
         startIcon={<Icon icon="mdi:plus" />}
-        sx={{ color: '#6B7280', alignSelf: 'flex-start' }}
+        sx={{ color: 'var(--color-text-muted)', alignSelf: 'flex-start' }}
       >
         Add Milestone
       </Button>

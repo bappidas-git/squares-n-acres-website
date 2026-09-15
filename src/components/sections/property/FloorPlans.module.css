@@ -1,5 +1,5 @@
 .section {
-  padding: var(--spacing-2xl) 0;
+  padding: var(--space-12) 0;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -7,14 +7,14 @@
   font-family: var(--font-heading);
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-lg);
+  color: var(--color-text);
+  margin-bottom: var(--space-6);
 }
 
 .tabs {
   display: flex;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-lg);
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
   overflow-x: auto;
   padding-bottom: 4px;
 }
@@ -23,31 +23,31 @@
   padding: 8px 20px;
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--color-bg-default);
+  background: var(--color-bg);
   font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast);
 }
 
 .tab:hover {
-  border-color: var(--color-secondary-light);
-  color: var(--color-text-primary);
+  border-color: var(--color-primary);
+  color: var(--color-text);
 }
 
 .tabActive {
-  background: var(--color-secondary);
-  border-color: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-text-inverse);
 }
 
 .content {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-xl);
+  gap: var(--space-8);
   align-items: start;
 }
 
@@ -55,14 +55,14 @@
   margin-top: 15px;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--space-4);
 }
 
 .planImage {
   position: relative;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: var(--color-bg-surface);
+  background: var(--color-surface);
 }
 
 .planImage img {
@@ -86,12 +86,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(27, 42, 74, 0.35);
+  background: var(--color-scrim);
   transition: background 0.3s ease;
 }
 
 .planImageBlurred:hover .blurOverlay {
-  background: rgba(27, 42, 74, 0.5);
+  background: var(--color-overlay);
 }
 
 .blurOverlayContent {
@@ -100,36 +100,36 @@
   align-items: center;
   gap: 8px;
   text-align: center;
-  padding: var(--spacing-md);
+  padding: var(--space-4);
 }
 
 .blurOverlayIcon {
   font-size: 2.5rem;
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .blurOverlayText {
   font-family: var(--font-heading);
   font-size: 1.1rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .blurOverlaySubtext {
   font-family: var(--font-body);
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--color-on-dark);
 }
 
 .getPricingBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-sm);
+  gap: var(--space-2);
   width: 100%;
   padding: 14px 24px;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-inverse);
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
@@ -157,65 +157,65 @@
 .planDetails {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--space-6);
 }
 
 .planConfig {
   font-family: var(--font-heading);
   font-size: 1.35rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--color-text);
 }
 
 .planStats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-md);
+  gap: var(--space-4);
 }
 
 .planStat {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: var(--spacing-md);
-  background: var(--color-bg-surface);
+  padding: var(--space-4);
+  background: var(--color-surface);
   border-radius: var(--radius-md);
 }
 
 .statIcon {
   font-size: 1.25rem;
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
 }
 
 .statLabel {
   font-family: var(--font-body);
   font-size: 0.75rem;
-  color: var(--color-text-light);
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
 .statValue {
-  font-family: var(--font-number);
+  font-family: var(--font-heading);
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--color-text);
 }
 
 .statValue small {
   font-weight: 400;
   font-size: 0.75rem;
-  color: var(--color-text-light);
+  color: var(--color-text-muted);
 }
 
 .requestBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-sm);
+  gap: var(--space-2);
   padding: 12px 24px;
-  background: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
@@ -226,16 +226,16 @@
 }
 
 .requestBtn:hover {
-  background: var(--color-secondary-dark);
+  background: var(--color-primary-dark);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 899.98px) {
   .content {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .title {
     font-size: 1.5rem;
   }

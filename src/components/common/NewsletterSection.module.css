@@ -1,5 +1,10 @@
 .newsletter {
-  background: linear-gradient(135deg, #f8f3eb 0%, #f2e8d5 50%, #ede0cc 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-surface) 0%,
+    var(--color-surface) 50%,
+    var(--color-surface-2) 100%
+  );
   padding: 64px 24px;
 }
 
@@ -13,14 +18,14 @@
   font-family: var(--font-heading);
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   margin-bottom: 32px;
   line-height: 1.3;
 }
 
 .subtitle {
   font-size: 0.938rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   margin-top: -16px;
   margin-bottom: 32px;
   line-height: 1.5;
@@ -43,8 +48,8 @@
   padding: 14px 18px;
   font-family: var(--font-body);
   font-size: 0.938rem;
-  color: var(--color-text-primary);
-  background: #fff;
+  color: var(--color-text);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   outline: none;
@@ -52,11 +57,11 @@
 }
 
 .input::placeholder {
-  color: var(--color-text-light);
+  color: var(--color-text-muted);
 }
 
 .input:focus {
-  border-color: var(--color-secondary);
+  border-color: var(--color-primary);
 }
 
 .submitBtn {
@@ -68,8 +73,8 @@
   font-family: var(--font-body);
   font-size: 0.938rem;
   font-weight: 500;
-  color: #fff;
-  background-color: var(--color-secondary);
+  color: var(--color-text-inverse);
+  background-color: var(--color-primary);
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -79,7 +84,7 @@
 }
 
 .submitBtn:hover {
-  background-color: var(--color-secondary-dark);
+  background-color: var(--color-primary-dark);
 }
 
 .submitBtn:disabled {
@@ -90,8 +95,8 @@
 .spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
+  border: 2px solid var(--color-on-dark-border);
+  border-top-color: var(--color-text-inverse);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
@@ -104,16 +109,16 @@
 
 .disclaimer {
   font-size: 0.75rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 
 .disclaimer a {
-  color: var(--color-secondary-dark);
+  color: var(--color-primary-dark);
   text-decoration: underline;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .newsletter {
     padding: 48px 20px;
   }

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Drawer, IconButton } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BRAND } from '../../config/site';
+import useScrollDirection from '../../hooks/useScrollDirection';
+import { Logo } from '../ui';
 import styles from './MobileHeader.module.css';
 
 const navItems = [
@@ -63,29 +64,10 @@ const accordionVariants = {
 
 const MobileHeader = () => {
   const location = useLocation();
-  const [scrolled, setScrolled] = useState(false);
-  const [hidden, setHidden] = useState(false);
+  // D52: the header stays put at every width; only the elevation changes.
+  const { scrolled } = useScrollDirection();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [expandedItem, setExpandedItem] = useState(null);
-  const lastScrollY = useRef(0);
-
-  const handleScroll = useCallback(() => {
-    const currentScrollY = window.scrollY;
-    setScrolled(currentScrollY > 10);
-
-    if (currentScrollY > 80) {
-      setHidden(currentScrollY > lastScrollY.current);
-    } else {
-      setHidden(false);
-    }
-
-    lastScrollY.current = currentScrollY;
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
 
   // Close drawer on route change
   useEffect(() => {
@@ -98,12 +80,10 @@ const MobileHeader = () => {
   };
 
   return (
-    <header
-      className={`${styles.mobileHeader} ${scrolled ? styles.scrolled : ''} ${hidden ? styles.hidden : ''}`}
-    >
+    <header className={`${styles.mobileHeader} ${scrolled ? styles.scrolled : ''}`}>
       <div className={styles.headerInner}>
         <Link to="/" className={styles.logo}>
-          <img src={BRAND.logoUrl} alt={BRAND.name} width="94" height="40" />
+          <Logo height={32} />
         </Link>
 
         <button
@@ -138,7 +118,7 @@ const MobileHeader = () => {
           {/* Drawer Header */}
           <div className={styles.drawerHeader}>
             <Link to="/" onClick={() => setDrawerOpen(false)}>
-              <img src={BRAND.logoUrl} alt={BRAND.name} width="94" height="40" />
+              <Logo height={32} />
             </Link>
             <IconButton onClick={() => setDrawerOpen(false)} aria-label="Close menu">
               <Icon icon="mdi:close" width={24} />

@@ -5,6 +5,7 @@ import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-mo
 import { useMediaQuery, useTheme } from '@mui/material';
 import styles from './PropertyCard.module.css';
 import { TAG_OPTIONS } from '../../pages/admin/property-tabs/constants';
+import { toneStyles } from '../ui/tones';
 
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov'];
 
@@ -116,7 +117,10 @@ const PropertyCard = memo(({ property }) => {
         {!currentMediaUrl ? (
           <div
             className={styles.imagePlaceholder}
-            style={{ background: 'linear-gradient(135deg, #1B2A4A 0%, #2D4470 100%)' }}
+            style={{
+              background:
+                'linear-gradient(135deg, var(--color-charcoal) 0%, var(--color-charcoal) 100%)',
+            }}
           />
         ) : currentIsVideo ? (
           <video
@@ -156,7 +160,11 @@ const PropertyCard = memo(({ property }) => {
                 <span
                   key={tagVal}
                   className={styles.tag}
-                  style={{ background: tag.bg, color: tag.color, borderColor: tag.color }}
+                  style={{
+                    background: toneStyles(tag.tone).background,
+                    color: toneStyles(tag.tone).color,
+                    borderColor: toneStyles(tag.tone).border,
+                  }}
                 >
                   <Icon icon={tag.icon} style={{ fontSize: 12 }} />
                   {tag.label}

@@ -43,15 +43,18 @@ const Forbidden = () => {
             mb: 3,
           }}
         >
-          <Icon icon="mdi:shield-lock-outline" style={{ fontSize: 36, color: '#EF4444' }} />
+          <Icon
+            icon="mdi:shield-lock-outline"
+            style={{ fontSize: 36, color: 'var(--color-error-dark)' }}
+          />
         </Box>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#1B2A4A', mb: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, color: 'var(--color-charcoal)', mb: 1 }}>
           403
         </Typography>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: '#1B2A4A', mb: 1 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mb: 1 }}>
           Access Denied
         </Typography>
-        <Typography variant="body2" sx={{ color: '#6B7280', mb: 3 }}>
+        <Typography variant="body2" sx={{ color: 'var(--color-text-muted)', mb: 3 }}>
           You don't have permission to access this page. Please contact your administrator if you
           believe this is an error.
         </Typography>
@@ -94,7 +97,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          bgcolor: '#F4F6F8',
+          bgcolor: 'var(--color-surface)',
         }}
       >
         <CircularProgress sx={{ color: 'primary.main' }} />

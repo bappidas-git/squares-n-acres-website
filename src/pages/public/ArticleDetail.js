@@ -184,25 +184,25 @@ const shareLinks = (title, url) => [
     name: 'WhatsApp',
     icon: 'mdi:whatsapp',
     url: `https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`,
-    color: '#25D366',
+    color: 'var(--color-whatsapp)',
   },
   {
     name: 'Facebook',
     icon: 'mdi:facebook',
     url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
-    color: '#1877F2',
+    color: 'var(--color-facebook)',
   },
   {
     name: 'Twitter',
     icon: 'mdi:twitter',
     url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`,
-    color: '#1DA1F2',
+    color: 'var(--color-x)',
   },
   {
     name: 'LinkedIn',
     icon: 'mdi:linkedin',
     url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
-    color: '#0A66C2',
+    color: 'var(--color-linkedin)',
   },
 ];
 
@@ -416,7 +416,7 @@ const ArticleDetail = () => {
                   className={styles.shareBtn}
                   onClick={handleCopyLink}
                   title="Copy link"
-                  style={{ '--share-color': '#6B7280' }}
+                  style={{ '--share-color': 'var(--color-text-muted)' }}
                 >
                   <Icon icon={copied ? 'mdi:check' : 'mdi:link-variant'} />
                 </button>

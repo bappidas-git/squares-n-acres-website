@@ -35,10 +35,10 @@ const ConstructionSpecsTab = ({ formData, updateField }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
         Construction Specifications
       </Typography>
-      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -2 }}>
+      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)', mt: -2 }}>
         Add detailed construction specs by category. These appear in the Construction Specifications
         section.
       </Typography>
@@ -61,8 +61,8 @@ const ConstructionSpecsTab = ({ formData, updateField }) => {
               sx={{
                 alignSelf: 'flex-start',
                 borderRadius: 2,
-                color: '#6B7280',
-                borderColor: '#D1D5DB',
+                color: 'var(--color-text-muted)',
+                borderColor: 'var(--color-border-strong)',
               }}
             >
               Add {config.label} Specs
@@ -71,10 +71,19 @@ const ConstructionSpecsTab = ({ formData, updateField }) => {
         }
 
         return (
-          <Paper key={category} sx={{ p: 2, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+          <Paper
+            key={category}
+            sx={{ p: 2, borderRadius: 2, border: '1px solid var(--color-border)' }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-              <Icon icon={config.icon} style={{ fontSize: 20, color: '#C9A86C' }} />
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+              <Icon
+                icon={config.icon}
+                style={{ fontSize: 20, color: 'var(--color-primary-dark)' }}
+              />
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}
+              >
                 {config.label}
               </Typography>
             </Box>
@@ -104,7 +113,7 @@ const ConstructionSpecsTab = ({ formData, updateField }) => {
                   <IconButton
                     size="small"
                     onClick={() => removeSpec(category, index)}
-                    sx={{ color: '#EF4444' }}
+                    sx={{ color: 'var(--color-error-dark)' }}
                   >
                     <Icon icon="mdi:close-circle-outline" style={{ fontSize: 20 }} />
                   </IconButton>
@@ -117,7 +126,7 @@ const ConstructionSpecsTab = ({ formData, updateField }) => {
               variant="text"
               onClick={() => addSpec(category)}
               startIcon={<Icon icon="mdi:plus" />}
-              sx={{ color: '#6B7280' }}
+              sx={{ color: 'var(--color-text-muted)' }}
             >
               Add {config.label} Spec
             </Button>

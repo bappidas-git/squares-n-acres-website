@@ -1,0 +1,94 @@
+.carousel {
+  position: relative;
+}
+
+.viewport {
+  display: flex;
+  gap: var(--gap, var(--space-5));
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: var(--space-1);
+}
+
+.viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.item {
+  flex: 0 0 var(--item-width, 100%);
+  scroll-snap-align: start;
+  min-width: 0;
+}
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+}
+
+.arrow:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.prev {
+  left: calc(var(--space-4) * -1);
+}
+
+.next {
+  right: calc(var(--space-4) * -1);
+}
+
+@media (max-width: 899.98px) {
+  .arrow {
+    display: none;
+  }
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-border-strong);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.dotActive {
+  background: var(--color-primary);
+  width: 20px;
+}
+
+.dotHit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewport {
+    scroll-behavior: auto;
+  }
+}

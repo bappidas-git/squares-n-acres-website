@@ -13,11 +13,12 @@ import {
   TextField,
   Skeleton,
   Alert,
-  Snackbar,
   Divider,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { leadService, propertyService } from '../../services/api';
+import { useToast } from '../../components/common/ToastProvider';
+import { toneStyles } from '../../components/ui/tones';
 import {
   LEAD_STATUS_CONFIG as statusConfig,
   LEAD_STATUS_OPTIONS as statusOptions,
@@ -36,6 +37,7 @@ const formatDate = (
 };
 
 const LeadDetail = () => {
+  const toast = useToast();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -43,7 +45,6 @@ const LeadDetail = () => {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   // Note input
   const [noteText, setNoteText] = useState('');
@@ -67,7 +68,7 @@ const LeadDetail = () => {
       detail: `via ${formatSource(leadData.source)}`,
       date: createdDate,
       icon: 'mdi:account-plus-outline',
-      color: '#3B82F6',
+      color: 'var(--color-info-dark)',
     });
 
     // Note events
@@ -78,7 +79,7 @@ const LeadDetail = () => {
         detail: note.text,
         date: note.addedAt || note.added_at || note.created_at,
         icon: 'mdi:note-edit-outline',
-        color: '#8B5CF6',
+        color: 'var(--color-primary-dark)',
       });
     });
 
@@ -90,7 +91,7 @@ const LeadDetail = () => {
         detail: '',
         date: updatedDate,
         icon: statusConfig[leadData.status]?.icon || 'mdi:swap-horizontal',
-        color: statusConfig[leadData.status]?.color || '#6B7280',
+        tone: statusConfig[leadData.status]?.tone || 'neutral',
       });
     }
 
@@ -116,11 +117,7 @@ const LeadDetail = () => {
           setProperty(propData);
         } catch {
           setProperty(null);
-          setSnackbar({
-            open: true,
-            message: 'Could not load linked property details',
-            severity: 'warning',
-          });
+          toast.warning('Could not load linked property details');
         }
       }
       setError(null);
@@ -129,7 +126,7 @@ const LeadDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, toast]);
 
   useEffect(() => {
     fetchLead();
@@ -144,13 +141,9 @@ const LeadDetail = () => {
       // Refetch full lead to get accurate updated data
       const freshLead = await leadService.getById(lead.id);
       setLead(freshLead);
-      setSnackbar({
-        open: true,
-        message: `Status updated to ${statusConfig[newStatus].label}`,
-        severity: 'success',
-      });
+      toast.success(`Status updated to ${statusConfig[newStatus].label}`);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to update status', severity: 'error' });
+      toast.error('Failed to update status');
     } finally {
       setUpdatingStatus(false);
     }
@@ -170,7 +163,7 @@ const LeadDetail = () => {
         updatedAt: new Date().toISOString(),
       }));
       setNoteText('');
-      setSnackbar({ open: true, message: 'Note added successfully', severity: 'success' });
+      toast.success('Note added successfully');
       // Refetch in the background to reconcile with server data
       try {
         const freshLead = await leadService.getById(lead.id);
@@ -179,7 +172,7 @@ const LeadDetail = () => {
         // Keep optimistic update if background refetch fails
       }
     } catch {
-      setSnackbar({ open: true, message: 'Failed to add note', severity: 'error' });
+      toast.error('Failed to add note');
     } finally {
       setAddingNote(false);
     }
@@ -211,7 +204,7 @@ const LeadDetail = () => {
         <Button
           startIcon={<Icon icon="mdi:arrow-left" />}
           onClick={() => navigate('/admin/leads')}
-          sx={{ mb: 2, color: '#6B7280' }}
+          sx={{ mb: 2, color: 'var(--color-text-muted)' }}
         >
           Back to Leads
         </Button>
@@ -239,11 +232,15 @@ const LeadDetail = () => {
           <Button
             startIcon={<Icon icon="mdi:arrow-left" />}
             onClick={() => navigate('/admin/leads')}
-            sx={{ color: '#6B7280', minWidth: 'auto', '&:hover': { color: '#1B2A4A' } }}
+            sx={{
+              color: 'var(--color-text-muted)',
+              minWidth: 'auto',
+              '&:hover': { color: 'var(--color-charcoal)' },
+            }}
           >
             Back
           </Button>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, color: 'var(--color-charcoal)' }}>
             {lead.name}
           </Typography>
           <Chip
@@ -253,8 +250,8 @@ const LeadDetail = () => {
               height: 24,
               fontSize: '0.75rem',
               fontWeight: 600,
-              bgcolor: sCfg.bg,
-              color: sCfg.color,
+              bgcolor: toneStyles(sCfg.tone).background,
+              color: toneStyles(sCfg.tone).color,
             }}
           />
         </Box>
@@ -268,9 +265,12 @@ const LeadDetail = () => {
             href={`tel:${lead.phone}`}
             sx={{
               borderRadius: 2,
-              borderColor: '#10B981',
-              color: '#10B981',
-              '&:hover': { borderColor: '#059669', bgcolor: '#ECFDF5' },
+              borderColor: 'var(--color-success)',
+              color: 'var(--color-success-dark)',
+              '&:hover': {
+                borderColor: 'var(--color-success)',
+                bgcolor: 'var(--color-success-bg)',
+              },
             }}
           >
             Call
@@ -282,9 +282,9 @@ const LeadDetail = () => {
             href={`mailto:${lead.email}`}
             sx={{
               borderRadius: 2,
-              borderColor: '#3B82F6',
-              color: '#3B82F6',
-              '&:hover': { borderColor: '#2563EB', bgcolor: '#EFF6FF' },
+              borderColor: 'var(--color-info)',
+              color: 'var(--color-info-dark)',
+              '&:hover': { borderColor: 'var(--color-info)', bgcolor: 'var(--color-info-bg)' },
             }}
           >
             Email
@@ -298,9 +298,9 @@ const LeadDetail = () => {
             rel="noopener noreferrer"
             sx={{
               borderRadius: 2,
-              borderColor: '#25D366',
-              color: '#25D366',
-              '&:hover': { borderColor: '#128C7E', bgcolor: 'rgba(37,211,102,0.05)' },
+              borderColor: 'var(--color-whatsapp)',
+              color: 'var(--color-whatsapp)',
+              '&:hover': { borderColor: 'var(--color-whatsapp)', bgcolor: 'rgba(37,211,102,0.05)' },
             }}
           >
             WhatsApp
@@ -319,7 +319,10 @@ const LeadDetail = () => {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Lead Information Card */}
           <Paper sx={{ p: 3, borderRadius: 3 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1B2A4A', mb: 2 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mb: 2 }}
+            >
               Lead Information
             </Typography>
 
@@ -328,13 +331,19 @@ const LeadDetail = () => {
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                 <Icon
                   icon="mdi:account-outline"
-                  style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }}
+                  style={{ fontSize: 20, color: 'var(--color-text-muted)', marginTop: 2 }}
                 />
                 <Box>
-                  <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'var(--color-text-muted)', display: 'block' }}
+                  >
                     Full Name
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#1B2A4A' }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 500, color: 'var(--color-charcoal)' }}
+                  >
                     {lead.name}
                   </Typography>
                 </Box>
@@ -344,10 +353,13 @@ const LeadDetail = () => {
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                 <Icon
                   icon="mdi:email-outline"
-                  style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }}
+                  style={{ fontSize: 20, color: 'var(--color-text-muted)', marginTop: 2 }}
                 />
                 <Box>
-                  <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'var(--color-text-muted)', display: 'block' }}
+                  >
                     Email
                   </Typography>
                   <Typography
@@ -356,7 +368,7 @@ const LeadDetail = () => {
                     href={`mailto:${lead.email}`}
                     sx={{
                       fontWeight: 500,
-                      color: '#3B82F6',
+                      color: 'var(--color-info-dark)',
                       textDecoration: 'none',
                       '&:hover': { textDecoration: 'underline' },
                     }}
@@ -370,10 +382,13 @@ const LeadDetail = () => {
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                 <Icon
                   icon="mdi:phone-outline"
-                  style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }}
+                  style={{ fontSize: 20, color: 'var(--color-text-muted)', marginTop: 2 }}
                 />
                 <Box>
-                  <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'var(--color-text-muted)', display: 'block' }}
+                  >
                     Phone
                   </Typography>
                   <Typography
@@ -382,7 +397,7 @@ const LeadDetail = () => {
                     href={`tel:${lead.phone}`}
                     sx={{
                       fontWeight: 500,
-                      color: '#3B82F6',
+                      color: 'var(--color-info-dark)',
                       textDecoration: 'none',
                       '&:hover': { textDecoration: 'underline' },
                     }}
@@ -396,13 +411,19 @@ const LeadDetail = () => {
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                 <Icon
                   icon="mdi:source-branch"
-                  style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }}
+                  style={{ fontSize: 20, color: 'var(--color-text-muted)', marginTop: 2 }}
                 />
                 <Box>
-                  <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'var(--color-text-muted)', display: 'block' }}
+                  >
                     Source
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#1B2A4A' }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 500, color: 'var(--color-charcoal)' }}
+                  >
                     {formatSource(lead.source)}
                   </Typography>
                 </Box>
@@ -413,17 +434,20 @@ const LeadDetail = () => {
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                   <Icon
                     icon="mdi:home-city-outline"
-                    style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }}
+                    style={{ fontSize: 20, color: 'var(--color-text-muted)', marginTop: 2 }}
                   />
                   <Box>
-                    <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: 'var(--color-text-muted)', display: 'block' }}
+                    >
                       Linked Property
                     </Typography>
                     <Typography
                       variant="body2"
                       sx={{
                         fontWeight: 500,
-                        color: '#C9A86C',
+                        color: 'var(--color-primary-dark)',
                         cursor: 'pointer',
                         '&:hover': { textDecoration: 'underline' },
                       }}
@@ -432,7 +456,7 @@ const LeadDetail = () => {
                       {property.title}
                     </Typography>
                     {property.location && (
-                      <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
+                      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
                         {property.location.area}, {property.location.city}
                       </Typography>
                     )}
@@ -445,13 +469,19 @@ const LeadDetail = () => {
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                   <Icon
                     icon="mdi:message-text-outline"
-                    style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }}
+                    style={{ fontSize: 20, color: 'var(--color-text-muted)', marginTop: 2 }}
                   />
                   <Box>
-                    <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: 'var(--color-text-muted)', display: 'block' }}
+                    >
                       Message
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#4B5563', lineHeight: 1.6 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: 'var(--color-text-muted)', lineHeight: 1.6 }}
+                    >
                       {lead.message}
                     </Typography>
                   </Box>
@@ -461,18 +491,30 @@ const LeadDetail = () => {
               {/* Dates */}
               <Box sx={{ display: 'flex', gap: 3, mt: 1 }}>
                 <Box>
-                  <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'var(--color-text-muted)', display: 'block' }}
+                  >
                     Created
                   </Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 500, color: '#6B7280' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ fontWeight: 500, color: 'var(--color-text-muted)' }}
+                  >
                     {formatDate(lead.createdAt || lead.created_at)}
                   </Typography>
                 </Box>
                 <Box>
-                  <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'var(--color-text-muted)', display: 'block' }}
+                  >
                     Last Updated
                   </Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 500, color: '#6B7280' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ fontWeight: 500, color: 'var(--color-text-muted)' }}
+                  >
                     {formatDate(lead.updatedAt || lead.updated_at)}
                   </Typography>
                 </Box>
@@ -482,7 +524,10 @@ const LeadDetail = () => {
 
           {/* Status Change Card */}
           <Paper sx={{ p: 3, borderRadius: 3 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1B2A4A', mb: 2 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mb: 2 }}
+            >
               Status
             </Typography>
             <FormControl fullWidth size="small" disabled={updatingStatus}>
@@ -502,7 +547,7 @@ const LeadDetail = () => {
                             width: 10,
                             height: 10,
                             borderRadius: '50%',
-                            bgcolor: cfg.color,
+                            bgcolor: toneStyles(cfg.tone).border,
                           }}
                         />
                         {cfg.label}
@@ -529,8 +574,13 @@ const LeadDetail = () => {
                       px: 1,
                       borderRadius: 1,
                       textAlign: 'center',
-                      bgcolor: isActive ? cfg.bg : isPast ? `${cfg.color}15` : '#F9FAFB',
-                      border: isActive ? `2px solid ${cfg.color}` : '2px solid transparent',
+                      bgcolor:
+                        isActive || isPast
+                          ? toneStyles(cfg.tone).background
+                          : 'var(--color-surface)',
+                      border: isActive
+                        ? `2px solid ${toneStyles(cfg.tone).border}`
+                        : '2px solid transparent',
                       transition: 'all 0.2s ease',
                     }}
                   >
@@ -538,7 +588,10 @@ const LeadDetail = () => {
                       variant="caption"
                       sx={{
                         fontWeight: isActive ? 700 : 500,
-                        color: isActive ? cfg.color : isPast ? cfg.color : '#9CA3AF',
+                        color:
+                          isActive || isPast
+                            ? toneStyles(cfg.tone).color
+                            : 'var(--color-text-muted)',
                         fontSize: '0.625rem',
                         whiteSpace: 'nowrap',
                       }}
@@ -556,7 +609,10 @@ const LeadDetail = () => {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Notes Section */}
           <Paper sx={{ p: 3, borderRadius: 3 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1B2A4A', mb: 2 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mb: 2 }}
+            >
               Notes
               {lead.notes?.length > 0 && (
                 <Chip
@@ -567,8 +623,8 @@ const LeadDetail = () => {
                     height: 20,
                     fontSize: '0.6875rem',
                     fontWeight: 600,
-                    bgcolor: '#F3F4F6',
-                    color: '#6B7280',
+                    bgcolor: 'var(--color-surface)',
+                    color: 'var(--color-text-muted)',
                   }}
                 />
               )}
@@ -593,7 +649,11 @@ const LeadDetail = () => {
                 onClick={handleAddNote}
                 disabled={!noteText.trim() || addingNote}
                 startIcon={<Icon icon="mdi:plus" />}
-                sx={{ borderRadius: 2, bgcolor: '#1B2A4A', '&:hover': { bgcolor: '#2D4470' } }}
+                sx={{
+                  borderRadius: 2,
+                  bgcolor: 'var(--color-charcoal)',
+                  '&:hover': { bgcolor: 'var(--color-charcoal)' },
+                }}
               >
                 {addingNote ? 'Adding...' : 'Add Note'}
               </Button>
@@ -604,8 +664,11 @@ const LeadDetail = () => {
             {/* Notes List */}
             {!lead.notes || lead.notes.length === 0 ? (
               <Box sx={{ textAlign: 'center', py: 3 }}>
-                <Icon icon="mdi:note-text-outline" style={{ fontSize: 36, color: '#D1D5DB' }} />
-                <Typography variant="body2" sx={{ color: '#9CA3AF', mt: 1 }}>
+                <Icon
+                  icon="mdi:note-text-outline"
+                  style={{ fontSize: 36, color: 'var(--color-text-muted)' }}
+                />
+                <Typography variant="body2" sx={{ color: 'var(--color-text-muted)', mt: 1 }}>
                   No notes yet
                 </Typography>
               </Box>
@@ -622,17 +685,20 @@ const LeadDetail = () => {
                       key={i}
                       sx={{
                         p: 2,
-                        bgcolor: '#F9FAFB',
+                        bgcolor: 'var(--color-surface)',
                         borderRadius: 2,
-                        borderLeft: '3px solid #C9A86C',
+                        borderLeft: '3px solid var(--color-primary)',
                       }}
                     >
-                      <Typography variant="body2" sx={{ color: '#374151', lineHeight: 1.6 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: 'var(--color-text)', lineHeight: 1.6 }}
+                      >
                         {note.text}
                       </Typography>
                       <Typography
                         variant="caption"
-                        sx={{ color: '#9CA3AF', mt: 0.5, display: 'block' }}
+                        sx={{ color: 'var(--color-text-muted)', mt: 0.5, display: 'block' }}
                       >
                         {formatDate(note.addedAt || note.added_at || note.created_at)}
                       </Typography>
@@ -644,14 +710,20 @@ const LeadDetail = () => {
 
           {/* Activity Timeline */}
           <Paper sx={{ p: 3, borderRadius: 3 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1B2A4A', mb: 2 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mb: 2 }}
+            >
               Activity Timeline
             </Typography>
 
             {timeline.length === 0 ? (
               <Box sx={{ textAlign: 'center', py: 3 }}>
-                <Icon icon="mdi:timeline-outline" style={{ fontSize: 36, color: '#D1D5DB' }} />
-                <Typography variant="body2" sx={{ color: '#9CA3AF', mt: 1 }}>
+                <Icon
+                  icon="mdi:timeline-outline"
+                  style={{ fontSize: 36, color: 'var(--color-text-muted)' }}
+                />
+                <Typography variant="body2" sx={{ color: 'var(--color-text-muted)', mt: 1 }}>
                   No activity yet
                 </Typography>
               </Box>
@@ -676,7 +748,7 @@ const LeadDetail = () => {
                           top: 32,
                           bottom: 0,
                           width: 2,
-                          bgcolor: '#E5E7EB',
+                          bgcolor: 'var(--color-surface-2)',
                         }}
                       />
                     )}
@@ -702,7 +774,11 @@ const LeadDetail = () => {
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography
                         variant="body2"
-                        sx={{ fontWeight: 600, color: '#1B2A4A', fontSize: '0.8125rem' }}
+                        sx={{
+                          fontWeight: 600,
+                          color: 'var(--color-charcoal)',
+                          fontSize: '0.8125rem',
+                        }}
                       >
                         {event.text}
                       </Typography>
@@ -710,7 +786,7 @@ const LeadDetail = () => {
                         <Typography
                           variant="caption"
                           sx={{
-                            color: '#6B7280',
+                            color: 'var(--color-text-muted)',
                             display: 'block',
                             mt: 0.25,
                             overflow: 'hidden',
@@ -723,7 +799,7 @@ const LeadDetail = () => {
                       )}
                       <Typography
                         variant="caption"
-                        sx={{ color: '#9CA3AF', mt: 0.25, display: 'block' }}
+                        sx={{ color: 'var(--color-text-muted)', mt: 0.25, display: 'block' }}
                       >
                         {formatDate(event.date)}
                       </Typography>
@@ -739,27 +815,7 @@ const LeadDetail = () => {
   );
 
   // On mobile, render as full page; on desktop, render inline
-  return (
-    <>
-      {detailContent}
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 2 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </>
-  );
+  return <>{detailContent}</>;
 };
 
 export default LeadDetail;

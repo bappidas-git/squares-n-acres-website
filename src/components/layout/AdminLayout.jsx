@@ -13,18 +13,24 @@ import {
   ListItemText,
   Divider,
   Typography,
-  Snackbar,
-  Alert,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { leadService } from '../../services/api';
 import { getNavItemsForRole } from '../../config/rbac';
+import { useToast } from '../common/ToastProvider';
 import styles from './AdminLayout.module.css';
 import { BRAND } from '../../config/site';
+import { Logo } from '../ui';
+import { getItem, setItem } from '../../utils/storage';
 
-// Page title mapping
-const pageTitles = {
+/**
+ * Page title per admin route. Exact paths first, then the parameterised ones —
+ * every route registered in `src/routes/index.js` has an entry, so the topbar
+ * never falls back to the generic label.
+ */
+const PAGE_TITLES = {
+  '/admin': 'Dashboard',
   '/admin/dashboard': 'Dashboard',
   '/admin/properties': 'Properties',
   '/admin/properties/add': 'Add Property',
@@ -34,8 +40,15 @@ const pageTitles = {
   '/admin/seo': 'SEO Manager',
   '/admin/faqs': 'FAQ Manager',
   '/admin/neighborhoods': 'Neighborhoods',
+  '/admin/partners': 'Partners',
   '/admin/settings': 'Site Settings',
 };
+
+const PAGE_TITLE_PATTERNS = [
+  [/^\/admin\/properties\/edit\//, 'Edit Property'],
+  [/^\/admin\/articles\/edit\//, 'Edit Article'],
+  [/^\/admin\/leads\/[^/]+$/, 'Lead Detail'],
+];
 
 // Format source for display
 const formatSource = (source) => {
@@ -55,17 +68,21 @@ const formatSource = (source) => {
   return sourceMap[source] || source.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
+/** Persisted sidebar state (§4.2 storage keys). */
+const SIDEBAR_STORAGE_KEY = 'sna_admin_sidebar_collapsed';
+
 const AdminLayout = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const location = useLocation();
   const navigate = useNavigate();
+  const toast = useToast();
   const { user, logout, role } = useAdminAuth();
 
   // Dynamic navigation items based on user role (from centralized RBAC config)
   const navItems = useMemo(() => getNavItemsForRole(role), [role]);
 
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => getItem(SIDEBAR_STORAGE_KEY, false) === true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState({});
   const [profileAnchor, setProfileAnchor] = useState(null);
@@ -74,8 +91,6 @@ const AdminLayout = () => {
   // Notification state
   const [notifAnchor, setNotifAnchor] = useState(null);
   const [recentLeads, setRecentLeads] = useState([]);
-  const [toastOpen, setToastOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
   const lastLeadCountRef = useRef(0);
   const isInitialFetchRef = useRef(true);
 
@@ -97,8 +112,7 @@ const AdminLayout = () => {
       if (!isInitialFetchRef.current && allLeads.length > lastLeadCountRef.current) {
         const newestLead = sorted[0];
         if (newestLead) {
-          setToastMessage(`New lead from ${formatSource(newestLead.source)}: ${newestLead.name}`);
-          setToastOpen(true);
+          toast.info(`New lead from ${formatSource(newestLead.source)}: ${newestLead.name}`);
         }
       }
       lastLeadCountRef.current = allLeads.length;
@@ -106,7 +120,7 @@ const AdminLayout = () => {
     } catch {
       setNewLeadCount(0);
     }
-  }, []);
+  }, [toast]);
 
   // Initial fetch
   useEffect(() => {
@@ -121,14 +135,10 @@ const AdminLayout = () => {
 
   // Current page title
   const pageTitle = useMemo(() => {
-    const path = location.pathname;
-    // Check for exact match first
-    if (pageTitles[path]) return pageTitles[path];
-    // Check for partial match (e.g., edit pages)
-    if (path.includes('/admin/properties/edit')) return 'Edit Property';
-    if (path.includes('/admin/articles/edit')) return 'Edit Article';
-    if (path.includes('/admin/leads/')) return 'Lead Detail';
-    return 'Admin Panel';
+    const path = location.pathname.replace(/\/+$/, '') || '/admin';
+    if (PAGE_TITLES[path]) return PAGE_TITLES[path];
+    const pattern = PAGE_TITLE_PATTERNS.find(([re]) => re.test(path));
+    return pattern ? pattern[1] : 'Admin Panel';
   }, [location.pathname]);
 
   const toggleExpand = (label) => {
@@ -158,7 +168,7 @@ const AdminLayout = () => {
   const renderNavItems = (items) =>
     items.map((item) => {
       const hasChildren = item.children && item.children.length > 0;
-      const expanded = expandedItems[item.label] || isParentActive(item.children);
+      const expanded = expandedItems[item.label] ?? isParentActive(item.children);
       const active = hasChildren ? isParentActive(item.children) : isActive(item.path);
 
       return (
@@ -233,17 +243,17 @@ const AdminLayout = () => {
   const sidebarContent = (mobile = false) => (
     <>
       {/* Brand */}
-      <div className={styles.sidebarBrand}>
-        <div className={styles.brandLogo}>
-          <Icon icon="mdi:home-city" style={{ fontSize: 20, color: '#C9A86C' }} />
+      {mobile ? null : (
+        <div className={styles.sidebarBrand}>
+          <Logo variant="monogram" height={collapsed ? 24 : 28} onDark />
+          {!collapsed && (
+            <div className={styles.brandText}>
+              <div className={styles.brandTitle}>{BRAND.name}</div>
+              <div className={styles.brandSubtitle}>Admin</div>
+            </div>
+          )}
         </div>
-        {(!collapsed || mobile) && (
-          <div className={styles.brandText}>
-            <div className={styles.brandTitle}>{BRAND.name}</div>
-            <div className={styles.brandSubtitle}>Admin Panel</div>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Navigation */}
       <div className={mobile ? styles.mobileDrawerNav : styles.sidebarNav}>
@@ -287,22 +297,23 @@ const AdminLayout = () => {
           open={mobileOpen}
           onClose={() => setMobileOpen(false)}
           ModalProps={{ keepMounted: true }}
-          sx={{
-            '& .MuiDrawer-paper': { width: 280, border: 'none' },
-          }}
+          sx={{ '& .MuiDrawer-paper': { width: 280, border: 'none' } }}
         >
           <div className={styles.mobileDrawer}>
             <div className={styles.mobileDrawerHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div className={styles.brandLogo}>
-                  <Icon icon="mdi:home-city" style={{ fontSize: 20, color: '#C9A86C' }} />
-                </div>
-                <div>
+              <div className={styles.sidebarBrand}>
+                <Logo variant="monogram" height={28} onDark />
+                <div className={styles.brandText}>
                   <div className={styles.brandTitle}>{BRAND.name}</div>
-                  <div className={styles.brandSubtitle}>Admin Panel</div>
+                  <div className={styles.brandSubtitle}>Admin</div>
                 </div>
               </div>
-              <IconButton onClick={() => setMobileOpen(false)} size="small">
+              <IconButton
+                onClick={() => setMobileOpen(false)}
+                size="small"
+                aria-label="Close menu"
+                className={styles.drawerClose}
+              >
                 <Icon icon="mdi:close" />
               </IconButton>
             </div>
@@ -328,7 +339,12 @@ const AdminLayout = () => {
           ) : (
             <button
               className={styles.collapseBtn}
-              onClick={() => setCollapsed((prev) => !prev)}
+              onClick={() =>
+                setCollapsed((previous) => {
+                  setItem(SIDEBAR_STORAGE_KEY, !previous);
+                  return !previous;
+                })
+              }
               type="button"
               aria-label="Toggle sidebar"
             >
@@ -374,14 +390,16 @@ const AdminLayout = () => {
                 alignItems: 'center',
               }}
             >
-              <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A' }}>
+              <Typography
+                sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)' }}
+              >
                 Notifications
               </Typography>
               {newLeadCount > 0 && (
                 <Box
                   sx={{
-                    bgcolor: '#EFF6FF',
-                    color: '#3B82F6',
+                    bgcolor: 'var(--color-info-bg)',
+                    color: 'var(--color-info-dark)',
                     fontSize: '0.6875rem',
                     fontWeight: 700,
                     px: 1,
@@ -396,8 +414,11 @@ const AdminLayout = () => {
             <Divider />
             {recentLeads.length === 0 ? (
               <Box sx={{ px: 2, py: 3, textAlign: 'center' }}>
-                <Icon icon="mdi:bell-off-outline" style={{ fontSize: 32, color: '#D1D5DB' }} />
-                <Typography sx={{ fontSize: '0.8125rem', color: '#9CA3AF', mt: 1 }}>
+                <Icon
+                  icon="mdi:bell-off-outline"
+                  style={{ fontSize: 32, color: 'var(--color-text-muted)' }}
+                />
+                <Typography sx={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', mt: 1 }}>
                   No recent leads
                 </Typography>
               </Box>
@@ -426,7 +447,7 @@ const AdminLayout = () => {
                           width: 36,
                           height: 36,
                           borderRadius: '50%',
-                          bgcolor: isNew ? '#EFF6FF' : '#F3F4F6',
+                          bgcolor: isNew ? 'var(--color-info-bg)' : 'var(--color-surface)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -435,7 +456,10 @@ const AdminLayout = () => {
                       >
                         <Icon
                           icon="mdi:account-outline"
-                          style={{ fontSize: 18, color: isNew ? '#3B82F6' : '#9CA3AF' }}
+                          style={{
+                            fontSize: 18,
+                            color: isNew ? 'var(--color-info-dark)' : 'var(--color-text-muted)',
+                          }}
                         />
                       </Box>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -443,7 +467,7 @@ const AdminLayout = () => {
                           sx={{
                             fontSize: '0.8125rem',
                             fontWeight: isNew ? 600 : 400,
-                            color: '#1B2A4A',
+                            color: 'var(--color-charcoal)',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -451,10 +475,14 @@ const AdminLayout = () => {
                         >
                           {lead.name}
                         </Typography>
-                        <Typography sx={{ fontSize: '0.6875rem', color: '#6B7280' }}>
+                        <Typography
+                          sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}
+                        >
                           {formatSource(lead.source)}
                         </Typography>
-                        <Typography sx={{ fontSize: '0.625rem', color: '#9CA3AF', mt: 0.25 }}>
+                        <Typography
+                          sx={{ fontSize: '0.625rem', color: 'var(--color-text-muted)', mt: 0.25 }}
+                        >
                           {new Date(lead.createdAt).toLocaleDateString('en-IN', {
                             day: 'numeric',
                             month: 'short',
@@ -469,7 +497,7 @@ const AdminLayout = () => {
                             width: 8,
                             height: 8,
                             borderRadius: '50%',
-                            bgcolor: '#3B82F6',
+                            bgcolor: 'var(--color-info)',
                             flexShrink: 0,
                             mt: 0.5,
                           }}
@@ -488,7 +516,9 @@ const AdminLayout = () => {
               }}
               sx={{ justifyContent: 'center', py: 1.5 }}
             >
-              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 500, color: '#3B82F6' }}>
+              <Typography
+                sx={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--color-info-dark)' }}
+              >
                 View All Leads
               </Typography>
             </MenuItem>
@@ -502,7 +532,10 @@ const AdminLayout = () => {
           >
             <div className={styles.profileAvatar}>{userInitials}</div>
             {!isMobile && <span className={styles.profileName}>{user?.name || 'Admin'}</span>}
-            <Icon icon="mdi:chevron-down" style={{ fontSize: 16, color: '#9CA3AF' }} />
+            <Icon
+              icon="mdi:chevron-down"
+              style={{ fontSize: 16, color: 'var(--color-text-muted)' }}
+            />
           </button>
 
           <Menu
@@ -516,10 +549,12 @@ const AdminLayout = () => {
             }}
           >
             <Box sx={{ px: 2, py: 1.5 }}>
-              <Box sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A' }}>
+              <Box sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)' }}>
                 {user?.name || 'Admin'}
               </Box>
-              <Box sx={{ fontSize: '0.75rem', color: '#9CA3AF' }}>{user?.email || ''}</Box>
+              <Box sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                {user?.email || ''}
+              </Box>
             </Box>
             <Divider />
             <MenuItem
@@ -537,9 +572,14 @@ const AdminLayout = () => {
             </MenuItem>
             <MenuItem onClick={handleLogout}>
               <ListItemIcon>
-                <Icon icon="mdi:logout" style={{ fontSize: 18, color: '#EF4444' }} />
+                <Icon
+                  icon="mdi:logout"
+                  style={{ fontSize: 18, color: 'var(--color-error-dark)' }}
+                />
               </ListItemIcon>
-              <ListItemText primaryTypographyProps={{ fontSize: '0.875rem', color: '#EF4444' }}>
+              <ListItemText
+                primaryTypographyProps={{ fontSize: '0.875rem', color: 'var(--color-error-dark)' }}
+              >
                 Logout
               </ListItemText>
             </MenuItem>
@@ -557,33 +597,6 @@ const AdminLayout = () => {
       </main>
 
       {/* Toast notification for new leads */}
-      <Snackbar
-        open={toastOpen}
-        autoHideDuration={5000}
-        onClose={() => setToastOpen(false)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        sx={{ mt: 8 }}
-      >
-        <Alert
-          onClose={() => setToastOpen(false)}
-          severity="info"
-          icon={<Icon icon="mdi:account-plus-outline" style={{ fontSize: 20 }} />}
-          sx={{
-            borderRadius: 2,
-            bgcolor: '#EFF6FF',
-            color: '#1B2A4A',
-            border: '1px solid #BFDBFE',
-            '& .MuiAlert-icon': { color: '#3B82F6' },
-            cursor: 'pointer',
-          }}
-          onClick={() => {
-            setToastOpen(false);
-            navigate('/admin/leads');
-          }}
-        >
-          {toastMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

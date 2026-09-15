@@ -54,7 +54,7 @@ const selectSx = {
     borderColor: 'var(--color-primary)',
   },
   '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-    borderColor: 'var(--color-secondary)',
+    borderColor: 'var(--color-primary)',
   },
 };
 

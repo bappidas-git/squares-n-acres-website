@@ -7,8 +7,6 @@ import {
   Button,
   Tabs,
   Tab,
-  Snackbar,
-  Alert,
   Skeleton,
   Divider,
   IconButton,
@@ -17,6 +15,7 @@ import { Icon } from '@iconify/react';
 import { siteSettingsService } from '../../services/api';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import UserManagement from '../../components/admin/UserManagement';
+import { useToast } from '../../components/common/ToastProvider';
 
 // Default settings structure — ensures every field exists so inputs are
 // always controlled and no value is ever silently dropped.
@@ -81,7 +80,9 @@ const TabPanel = ({ children, value, index }) => (
 
 const FieldGroup = ({ label, children }) => (
   <Box sx={{ mb: 2.5 }}>
-    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 0.75 }}>
+    <Typography
+      sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 0.75 }}
+    >
       {label}
     </Typography>
     {children}
@@ -89,6 +90,7 @@ const FieldGroup = ({ label, children }) => (
 );
 
 const AdminSettings = () => {
+  const toast = useToast();
   const { role } = useAdminAuth();
   const isAdmin = role === 'admin';
 
@@ -96,7 +98,6 @@ const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [hasChanges, setHasChanges] = useState(false);
 
   // Tab index for User Management (last tab, admin-only)
@@ -110,8 +111,7 @@ const AdminSettings = () => {
         const data = await siteSettingsService.get();
         if (!cancelled) setSettings(mergeWithDefaults(data));
       } catch {
-        if (!cancelled)
-          setSnackbar({ open: true, message: 'Failed to load settings', severity: 'error' });
+        if (!cancelled) toast.error('Failed to load settings');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -120,7 +120,7 @@ const AdminSettings = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [toast]);
 
   // Immutable field updater — uses spread operators instead of
   // JSON.parse(JSON.stringify()) to avoid dropping undefined values
@@ -174,21 +174,24 @@ const AdminSettings = () => {
       // state is the source of truth.  Replacing it would discard any
       // keystrokes the user made while the save request was in-flight and
       // could re-introduce null values from the server.
-      setSnackbar({ open: true, message: 'Settings saved successfully', severity: 'success' });
+      toast.success('Settings saved successfully');
       setHasChanges(false);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to save settings', severity: 'error' });
+      toast.error('Failed to save settings');
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [toast]);
 
   if (loading) {
     return (
       <Box sx={{ p: { xs: 2, md: 3 } }}>
         <Skeleton height={40} width={200} sx={{ mb: 3 }} />
         <Skeleton height={48} sx={{ mb: 2 }} />
-        <Paper elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid #F3F4F6' }}>
+        <Paper
+          elevation={0}
+          sx={{ p: 3, borderRadius: 2, border: '1px solid var(--color-surface)' }}
+        >
           {[...Array(6)].map((_, i) => (
             <Skeleton key={i} height={56} sx={{ mb: 2 }} />
           ))}
@@ -211,10 +214,10 @@ const AdminSettings = () => {
         }}
       >
         <Box>
-          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
             Site Settings
           </Typography>
-          <Typography sx={{ fontSize: '0.875rem', color: '#6B7280', mt: 0.5 }}>
+          <Typography sx={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', mt: 0.5 }}>
             Manage global website configuration
           </Typography>
         </Box>
@@ -225,12 +228,15 @@ const AdminSettings = () => {
             onClick={handleSave}
             disabled={saving || !hasChanges}
             sx={{
-              bgcolor: '#1B2A4A',
+              bgcolor: 'var(--color-charcoal)',
               textTransform: 'none',
               borderRadius: 2,
               px: 4,
-              '&:hover': { bgcolor: '#2d3f63' },
-              '&.Mui-disabled': { bgcolor: '#E5E7EB', color: '#9CA3AF' },
+              '&:hover': { bgcolor: 'var(--color-charcoal)' },
+              '&.Mui-disabled': {
+                bgcolor: 'var(--color-surface-2)',
+                color: 'var(--color-text-muted)',
+              },
             }}
           >
             {saving ? 'Saving...' : 'Save Settings'}
@@ -241,7 +247,7 @@ const AdminSettings = () => {
       {/* Tabs */}
       <Paper
         elevation={0}
-        sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}
+        sx={{ borderRadius: 2, border: '1px solid var(--color-surface)', overflow: 'hidden' }}
       >
         <Tabs
           value={activeTab}
@@ -249,16 +255,16 @@ const AdminSettings = () => {
           variant="scrollable"
           scrollButtons="auto"
           sx={{
-            borderBottom: '1px solid #F3F4F6',
+            borderBottom: '1px solid var(--color-surface)',
             '& .MuiTab-root': {
               textTransform: 'none',
               fontWeight: 500,
               fontSize: '0.875rem',
-              color: '#6B7280',
+              color: 'var(--color-text-muted)',
               minHeight: 48,
             },
-            '& .Mui-selected': { color: '#1B2A4A', fontWeight: 600 },
-            '& .MuiTabs-indicator': { bgcolor: '#C9A86C' },
+            '& .Mui-selected': { color: 'var(--color-charcoal)', fontWeight: 600 },
+            '& .MuiTabs-indicator': { bgcolor: 'var(--color-primary)' },
           }}
         >
           <Tab
@@ -333,7 +339,9 @@ const AdminSettings = () => {
 
             <Divider sx={{ my: 3 }} />
 
-            <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A', mb: 2 }}>
+            <Typography
+              sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', mb: 2 }}
+            >
               Contact Information
             </Typography>
 
@@ -400,7 +408,9 @@ const AdminSettings = () => {
 
             <Divider sx={{ my: 3 }} />
 
-            <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A', mb: 2 }}>
+            <Typography
+              sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', mb: 2 }}
+            >
               Background Media
             </Typography>
 
@@ -430,7 +440,7 @@ const AdminSettings = () => {
                   <Typography
                     sx={{
                       fontSize: '0.75rem',
-                      color: '#6B7280',
+                      color: 'var(--color-text-muted)',
                       mb: 1,
                       display: 'flex',
                       alignItems: 'center',
@@ -475,7 +485,7 @@ const AdminSettings = () => {
                     mt: 3,
                     p: 4,
                     borderRadius: 2,
-                    bgcolor: '#1B2A4A',
+                    bgcolor: 'var(--color-charcoal)',
                     textAlign: 'center',
                     position: 'relative',
                     overflow: 'hidden',
@@ -518,7 +528,12 @@ const AdminSettings = () => {
                       Hero Preview
                     </Typography>
                     <Typography
-                      sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', mb: 0.5 }}
+                      sx={{
+                        fontSize: '1.5rem',
+                        fontWeight: 700,
+                        color: 'var(--color-text-inverse)',
+                        mb: 0.5,
+                      }}
                     >
                       {settings.heroText?.title || 'Hero Title'}
                     </Typography>
@@ -543,7 +558,10 @@ const AdminSettings = () => {
                 InputProps={{
                   startAdornment: (
                     <Box sx={{ mr: 1, display: 'flex' }}>
-                      <Icon icon="mdi:instagram" style={{ fontSize: 20, color: '#E4405F' }} />
+                      <Icon
+                        icon="mdi:instagram"
+                        style={{ fontSize: 20, color: 'var(--color-instagram)' }}
+                      />
                     </Box>
                   ),
                 }}
@@ -561,7 +579,10 @@ const AdminSettings = () => {
                 InputProps={{
                   startAdornment: (
                     <Box sx={{ mr: 1, display: 'flex' }}>
-                      <Icon icon="mdi:facebook" style={{ fontSize: 20, color: '#1877F2' }} />
+                      <Icon
+                        icon="mdi:facebook"
+                        style={{ fontSize: 20, color: 'var(--color-facebook)' }}
+                      />
                     </Box>
                   ),
                 }}
@@ -579,7 +600,7 @@ const AdminSettings = () => {
                 InputProps={{
                   startAdornment: (
                     <Box sx={{ mr: 1, display: 'flex' }}>
-                      <Icon icon="mdi:twitter" style={{ fontSize: 20, color: '#1DA1F2' }} />
+                      <Icon icon="mdi:twitter" style={{ fontSize: 20, color: 'var(--color-x)' }} />
                     </Box>
                   ),
                 }}
@@ -597,7 +618,10 @@ const AdminSettings = () => {
                 InputProps={{
                   startAdornment: (
                     <Box sx={{ mr: 1, display: 'flex' }}>
-                      <Icon icon="mdi:linkedin" style={{ fontSize: 20, color: '#0A66C2' }} />
+                      <Icon
+                        icon="mdi:linkedin"
+                        style={{ fontSize: 20, color: 'var(--color-linkedin)' }}
+                      />
                     </Box>
                   ),
                 }}
@@ -615,7 +639,10 @@ const AdminSettings = () => {
                 InputProps={{
                   startAdornment: (
                     <Box sx={{ mr: 1, display: 'flex' }}>
-                      <Icon icon="mdi:youtube" style={{ fontSize: 20, color: '#FF0000' }} />
+                      <Icon
+                        icon="mdi:youtube"
+                        style={{ fontSize: 20, color: 'var(--color-youtube)' }}
+                      />
                     </Box>
                   ),
                 }}
@@ -651,15 +678,28 @@ const AdminSettings = () => {
             {/* Preview */}
             <Paper
               variant="outlined"
-              sx={{ mt: 3, p: 3, borderRadius: 2, bgcolor: '#FAFAFA', textAlign: 'center' }}
+              sx={{
+                mt: 3,
+                p: 3,
+                borderRadius: 2,
+                bgcolor: 'var(--color-surface)',
+                textAlign: 'center',
+              }}
             >
-              <Typography sx={{ fontSize: '0.6875rem', color: '#9CA3AF', mb: 1 }}>
+              <Typography sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', mb: 1 }}>
                 Newsletter Section Preview
               </Typography>
-              <Typography sx={{ fontSize: '1.125rem', fontWeight: 600, color: '#1B2A4A', mb: 0.5 }}>
+              <Typography
+                sx={{
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  color: 'var(--color-charcoal)',
+                  mb: 0.5,
+                }}
+              >
                 {settings.newsletterText || 'Newsletter Heading'}
               </Typography>
-              <Typography sx={{ fontSize: '0.8125rem', color: '#6B7280' }}>
+              <Typography sx={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
                 {settings.newsletterSubtitle || 'Subscribe to stay updated'}
               </Typography>
               <Box
@@ -677,8 +717,8 @@ const AdminSettings = () => {
                     flex: 1,
                     height: 36,
                     borderRadius: 2,
-                    border: '1px solid #D1D5DB',
-                    bgcolor: '#fff',
+                    border: '1px solid var(--color-border-strong)',
+                    bgcolor: 'var(--color-bg)',
                   }}
                 />
                 <Box
@@ -686,13 +726,19 @@ const AdminSettings = () => {
                     width: 90,
                     height: 36,
                     borderRadius: 2,
-                    bgcolor: '#C9A86C',
+                    bgcolor: 'var(--color-primary)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Typography sx={{ fontSize: '0.75rem', color: '#fff', fontWeight: 600 }}>
+                  <Typography
+                    sx={{
+                      fontSize: '0.75rem',
+                      color: 'var(--color-text-inverse)',
+                      fontWeight: 600,
+                    }}
+                  >
                     Subscribe
                   </Typography>
                 </Box>
@@ -735,10 +781,12 @@ const AdminSettings = () => {
 
             <Divider sx={{ my: 3 }} />
 
-            <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A', mb: 2 }}>
+            <Typography
+              sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', mb: 2 }}
+            >
               Footer Gallery Images
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: '#6B7280', mb: 2 }}>
+            <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', mb: 2 }}>
               Add image URLs for the footer image collage. Recommended: 6 images for best layout.
             </Typography>
 
@@ -767,7 +815,7 @@ const AdminSettings = () => {
                       (gallery || []).filter((_, i) => i !== idx)
                     );
                   }}
-                  sx={{ color: '#EF4444', mt: 0.5 }}
+                  sx={{ color: 'var(--color-error-dark)', mt: 0.5 }}
                 >
                   <Icon icon="mdi:close" style={{ fontSize: 18 }} />
                 </IconButton>
@@ -780,7 +828,7 @@ const AdminSettings = () => {
                 onClick={() => {
                   updateField('footerGallery', (gallery) => [...(gallery || []), '']);
                 }}
-                sx={{ textTransform: 'none', mt: 1, color: '#1B2A4A' }}
+                sx={{ textTransform: 'none', mt: 1, color: 'var(--color-charcoal)' }}
               >
                 Add Image ({6 - (settings.footerGallery || []).length} remaining)
               </Button>
@@ -788,10 +836,12 @@ const AdminSettings = () => {
 
             <Divider sx={{ my: 3 }} />
 
-            <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A', mb: 2 }}>
+            <Typography
+              sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', mb: 2 }}
+            >
               Footer Link Groups
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: '#6B7280', mb: 2 }}>
+            <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', mb: 2 }}>
               Manage the link columns shown in the footer. Each group has a title and a set of
               links.
             </Typography>
@@ -820,7 +870,7 @@ const AdminSettings = () => {
                         (groups || []).filter((_, i) => i !== gIdx)
                       );
                     }}
-                    sx={{ color: '#EF4444' }}
+                    sx={{ color: 'var(--color-error-dark)' }}
                   >
                     <Icon icon="mdi:delete-outline" style={{ fontSize: 18 }} />
                   </IconButton>
@@ -864,7 +914,7 @@ const AdminSettings = () => {
                           return updated;
                         });
                       }}
-                      sx={{ color: '#EF4444' }}
+                      sx={{ color: 'var(--color-error-dark)' }}
                     >
                       <Icon icon="mdi:close" style={{ fontSize: 16 }} />
                     </IconButton>
@@ -898,7 +948,7 @@ const AdminSettings = () => {
                   { title: '', links: [] },
                 ]);
               }}
-              sx={{ textTransform: 'none', color: '#1B2A4A' }}
+              sx={{ textTransform: 'none', color: 'var(--color-charcoal)' }}
             >
               Add Link Group
             </Button>
@@ -911,13 +961,20 @@ const AdminSettings = () => {
               sx={{
                 p: 3,
                 borderRadius: 2,
-                bgcolor: '#1B2A4A',
+                bgcolor: 'var(--color-charcoal)',
               }}
             >
               <Typography sx={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.5)', mb: 1 }}>
                 Footer Preview
               </Typography>
-              <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: '#C9A86C', mb: 0.5 }}>
+              <Typography
+                sx={{
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  color: 'var(--color-primary-dark)',
+                  mb: 0.5,
+                }}
+              >
                 {settings.companyName || 'Company Name'}
               </Typography>
               <Typography
@@ -953,44 +1010,30 @@ const AdminSettings = () => {
             display: 'flex',
             alignItems: 'center',
             gap: 2,
-            bgcolor: '#fff',
-            border: '1px solid #F3F4F6',
+            bgcolor: 'var(--color-bg)',
+            border: '1px solid var(--color-surface)',
             zIndex: 100,
           }}
         >
-          <Typography sx={{ fontSize: '0.8125rem', color: '#6B7280' }}>Unsaved changes</Typography>
+          <Typography sx={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
+            Unsaved changes
+          </Typography>
           <Button
             variant="contained"
             size="small"
             onClick={handleSave}
             disabled={saving}
             sx={{
-              bgcolor: '#1B2A4A',
+              bgcolor: 'var(--color-charcoal)',
               textTransform: 'none',
               borderRadius: 2,
-              '&:hover': { bgcolor: '#2d3f63' },
+              '&:hover': { bgcolor: 'var(--color-charcoal)' },
             }}
           >
             {saving ? 'Saving...' : 'Save'}
           </Button>
         </Paper>
       )}
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 2 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

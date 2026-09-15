@@ -1,0 +1,208 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.label {
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.required {
+  color: var(--color-error-dark);
+  margin-left: 2px;
+}
+
+.control {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  font-family: var(--font-body);
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.control::placeholder {
+  color: var(--color-text-muted);
+}
+
+.control:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.control:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-ring);
+}
+
+.control:disabled {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.invalid {
+  border-color: var(--color-error);
+}
+
+.invalid:focus {
+  box-shadow: 0 0 0 3px var(--color-error-bg);
+}
+
+.textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.select {
+  cursor: pointer;
+  appearance: none;
+  padding-right: var(--space-10);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+    linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+  background-repeat: no-repeat;
+  background-position:
+    calc(100% - 21px) center,
+    calc(100% - 16px) center;
+  background-size:
+    5px 5px,
+    5px 5px;
+}
+
+.hint {
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.error {
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-error-dark);
+}
+
+/* ── Prefixed inputs (phone, URL) ────────────────────────────────────────── */
+.group {
+  display: flex;
+  align-items: stretch;
+}
+
+.prefix {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-right: 0;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  background: var(--color-surface);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.group .control {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+/* ── Choice groups ───────────────────────────────────────────────────────── */
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.column {
+  flex-direction: column;
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.choice input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.legend {
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+/* ── Switch ──────────────────────────────────────────────────────────────── */
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 44px;
+}
+
+.switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-border-strong);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.switchOn {
+  background: var(--color-primary);
+}
+
+.knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast);
+}
+
+.switchOn .knob {
+  transform: translateX(20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .knob,
+  .switch {
+    transition: none;
+  }
+}

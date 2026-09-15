@@ -1,6 +1,6 @@
 .section {
   padding: 64px 0;
-  background: var(--color-bg-default);
+  background: var(--color-bg);
 }
 
 .container {
@@ -18,14 +18,14 @@
   font-family: var(--font-heading);
   font-size: 2.25rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   margin-bottom: 8px;
 }
 
 .subtitle {
   font-family: var(--font-body);
   font-size: 1rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
 
 /* Tab Bar */
@@ -55,7 +55,7 @@
   border: 1px solid var(--color-border);
   border-radius: 100px;
   background: transparent;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   font-family: var(--font-body);
   font-size: 0.85rem;
   font-weight: 500;
@@ -66,20 +66,20 @@
 }
 
 .tab:hover {
-  border-color: var(--color-text-secondary);
-  color: var(--color-text-primary);
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
 }
 
 .tabActive {
-  background: var(--color-text-primary);
-  border-color: var(--color-text-primary);
-  color: #fff;
+  background: var(--color-text);
+  border-color: var(--color-text);
+  color: var(--color-text-inverse);
 }
 
 .tabActive:hover {
-  background: var(--color-text-primary);
-  border-color: var(--color-text-primary);
-  color: #fff;
+  background: var(--color-text);
+  border-color: var(--color-text);
+  color: var(--color-text-inverse);
 }
 
 /* FAQ List */
@@ -98,7 +98,7 @@
 }
 
 .faqItemActive {
-  border-color: var(--color-secondary);
+  border-color: var(--color-primary);
 }
 
 .faqQuestion {
@@ -114,7 +114,7 @@
   font-family: var(--font-body);
   font-size: 0.95rem;
   font-weight: 500;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   text-align: left;
 }
 
@@ -127,19 +127,19 @@
 
 .questionIcon {
   font-size: 20px;
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
   flex-shrink: 0;
 }
 
 .expandIcon {
   font-size: 20px;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   flex-shrink: 0;
   transition: color var(--transition-fast);
 }
 
 .faqItemActive .expandIcon {
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
 }
 
 .faqAnswer {
@@ -150,7 +150,7 @@
   padding: 0 20px 16px 50px;
   font-family: var(--font-body);
   font-size: 0.875rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   line-height: 1.7;
 }
 
@@ -167,7 +167,7 @@
 }
 
 .emptyText {
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   font-size: 0.9rem;
 }
 
@@ -184,16 +184,16 @@
   font-family: var(--font-body);
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
 .ctaLink:hover {
-  color: var(--color-secondary-dark);
+  color: var(--color-primary-dark);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .section {
     padding: 48px 0;
   }

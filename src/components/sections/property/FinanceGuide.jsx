@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { useInView } from 'react-intersection-observer';
+import useInView from '../../../hooks/useInView';
 import { leadService } from '../../../services/api';
 import {
   getNameErrorMessage,
@@ -9,6 +9,7 @@ import {
   getMobileErrorMessage,
 } from '../../../utils/validators';
 import { DEFAULT_BANKS } from '../../../config/adminConstants';
+import { toneStyles } from '../../ui/tones';
 import styles from './FinanceGuide.module.css';
 
 const formatCurrency = (val) => {
@@ -45,11 +46,11 @@ const incomeRanges = [
 ];
 
 const creditScoreOptions = [
-  { value: 'excellent', label: 'Excellent (750+)', color: '#10B981' },
-  { value: 'good', label: 'Good (700-749)', color: '#3B82F6' },
-  { value: 'fair', label: 'Fair (650-699)', color: '#F59E0B' },
-  { value: 'poor', label: 'Poor (Below 650)', color: '#EF4444' },
-  { value: 'not-sure', label: 'Not Sure', color: '#6B7280' },
+  { value: 'excellent', label: 'Excellent (750+)', tone: 'success' },
+  { value: 'good', label: 'Good (700-749)', tone: 'info' },
+  { value: 'fair', label: 'Fair (650-699)', tone: 'warning' },
+  { value: 'poor', label: 'Poor (Below 650)', tone: 'error' },
+  { value: 'not-sure', label: 'Not Sure', tone: 'neutral' },
 ];
 
 const existingEmiOptions = [
@@ -126,42 +127,44 @@ const computeEligibleLoan = (data, rate = 8.5, tenureYears = 20) => {
   return Math.round((availableEmi * (Math.pow(1 + r, n) - 1)) / (r * Math.pow(1 + r, n)));
 };
 
+/**
+ * Score bands. Each band names a tone; `toneStyles` turns it into the token
+ * triplet, so no band carries a colour of its own.
+ */
+const withTone = (band) => ({ ...band, ...toneStyles(band.tone) });
+
 const getScoreLabel = (score) => {
   if (score >= 75)
-    return {
+    return withTone({
       label: 'Excellent',
-      color: '#10B981',
-      bg: '#ECFDF5',
+      tone: 'success',
       icon: 'mdi:check-decagram',
       message:
         'Your estimated EMI capacity is strong. Based on standard FOIR (Fixed Obligation to Income Ratio) norms, you may have a high likelihood of loan approval with competitive interest rates.',
-    };
+    });
   if (score >= 50)
-    return {
+    return withTone({
       label: 'Good',
-      color: '#3B82F6',
-      bg: '#EFF6FF',
+      tone: 'info',
       icon: 'mdi:thumb-up',
       message:
         "Your estimated EMI capacity looks favourable. You may be eligible for home loans from most banks. Final approval and terms are subject to the respective bank's assessment.",
-    };
+    });
   if (score >= 25)
-    return {
+    return withTone({
       label: 'Moderate',
-      color: '#F59E0B',
-      bg: '#FFFBEB',
+      tone: 'warning',
       icon: 'mdi:alert-circle-outline',
       message:
         'Your existing obligations consume a significant portion of your income. Consider reducing existing EMIs or exploring a longer tenure to improve your affordability. Consult a bank for a detailed evaluation.',
-    };
-  return {
+    });
+  return withTone({
     label: 'Needs Improvement',
-    color: '#EF4444',
-    bg: '#FEF2F2',
+    tone: 'error',
     icon: 'mdi:information-outline',
     message:
       'Your current financial obligations may exceed the recommended FOIR limit. We suggest clearing existing liabilities or increasing your income before applying. Speak to a financial advisor for personalised guidance.',
-  };
+  });
 };
 
 const FinanceGuide = ({
@@ -680,11 +683,17 @@ const FinanceGuide = ({
               onClick={() => onChange('creditScore', opt.value)}
               style={
                 data.creditScore === opt.value
-                  ? { borderColor: opt.color, background: `${opt.color}10` }
+                  ? {
+                      borderColor: toneStyles(opt.tone).border,
+                      background: toneStyles(opt.tone).background,
+                    }
                   : {}
               }
             >
-              <span className={styles.creditDot} style={{ background: opt.color }} />
+              <span
+                className={styles.creditDot}
+                style={{ background: toneStyles(opt.tone).border }}
+              />
               {opt.label}
             </button>
           ))}
@@ -871,12 +880,8 @@ const FinanceGuide = ({
                   transition={{ duration: 0.35, delay: 0.1 + idx * 0.06 }}
                 >
                   <div className={styles.bankCardHeader}>
-                    <div className={styles.bankIconWrap} style={{ background: `${bank.color}15` }}>
-                      <Icon
-                        icon={bank.icon}
-                        className={styles.bankIconLg}
-                        style={{ color: bank.color }}
-                      />
+                    <div className={styles.bankIconWrap}>
+                      <Icon icon={bank.icon} className={styles.bankIconLg} />
                     </div>
                     <div className={styles.bankNameBlock}>
                       <span className={styles.bankName}>{bank.name}</span>
@@ -1024,7 +1029,7 @@ const FinanceGuide = ({
                       <p
                         style={{
                           fontSize: '0.65rem',
-                          color: '#9CA3AF',
+                          color: 'var(--color-text-muted)',
                           textAlign: 'center',
                           marginTop: '8px',
                           lineHeight: 1.5,
@@ -1145,7 +1150,7 @@ const FinanceGuide = ({
                               style={
                                 item.highlight
                                   ? {
-                                      background: '#F0FDF4',
+                                      background: 'var(--color-success-bg)',
                                       borderRadius: '8px',
                                       padding: '10px 12px',
                                     }
@@ -1158,7 +1163,9 @@ const FinanceGuide = ({
                                 <span
                                   className={styles.breakdownScore}
                                   style={
-                                    item.highlight ? { fontWeight: 700, color: '#10B981' } : {}
+                                    item.highlight
+                                      ? { fontWeight: 700, color: 'var(--color-success-dark)' }
+                                      : {}
                                   }
                                 >
                                   {item.value}
@@ -1167,7 +1174,7 @@ const FinanceGuide = ({
                               <span
                                 style={{
                                   fontSize: '0.75rem',
-                                  color: '#6B7280',
+                                  color: 'var(--color-text-muted)',
                                   marginTop: '2px',
                                   display: 'block',
                                 }}
@@ -1188,7 +1195,10 @@ const FinanceGuide = ({
                       <div className={styles.recoList}>
                         {fitScore >= 50 && (
                           <div className={styles.recoItem}>
-                            <Icon icon="mdi:check-circle" style={{ color: '#10B981' }} />
+                            <Icon
+                              icon="mdi:check-circle"
+                              style={{ color: 'var(--color-success-dark)' }}
+                            />
                             <span>
                               Based on the FOIR estimate, you may be eligible for home loans from
                               major banks for this property.
@@ -1197,7 +1207,10 @@ const FinanceGuide = ({
                         )}
                         {fitScore < 75 && assessmentData.creditScore !== 'excellent' && (
                           <div className={styles.recoItem}>
-                            <Icon icon="mdi:arrow-up-circle" style={{ color: '#3B82F6' }} />
+                            <Icon
+                              icon="mdi:arrow-up-circle"
+                              style={{ color: 'var(--color-info-dark)' }}
+                            />
                             <span>
                               A good credit score (750+) can help you negotiate better interest
                               rates from banks.
@@ -1206,7 +1219,10 @@ const FinanceGuide = ({
                         )}
                         {assessmentData.existingEmi !== '0' && (
                           <div className={styles.recoItem}>
-                            <Icon icon="mdi:information" style={{ color: '#F59E0B' }} />
+                            <Icon
+                              icon="mdi:information"
+                              style={{ color: 'var(--color-warning-dark)' }}
+                            />
                             <span>
                               Clearing or reducing existing EMIs before applying can significantly
                               improve your loan eligibility and available capacity.
@@ -1215,7 +1231,10 @@ const FinanceGuide = ({
                         )}
                         {parseInt(assessmentData.downPayment) < 20 && (
                           <div className={styles.recoItem}>
-                            <Icon icon="mdi:piggy-bank-outline" style={{ color: '#8B5CF6' }} />
+                            <Icon
+                              icon="mdi:piggy-bank-outline"
+                              style={{ color: 'var(--color-primary-dark)' }}
+                            />
                             <span>
                               A higher down payment (20%+) can lower your EMI burden and improve
                               loan approval chances with banks.
@@ -1223,7 +1242,10 @@ const FinanceGuide = ({
                           </div>
                         )}
                         <div className={styles.recoItem}>
-                          <Icon icon="mdi:phone-outline" style={{ color: '#C9A86C' }} />
+                          <Icon
+                            icon="mdi:phone-outline"
+                            style={{ color: 'var(--color-primary-dark)' }}
+                          />
                           <span>
                             Our property advisors will contact you shortly to assist with connecting
                             you to suitable banks and financial institutions.
@@ -1237,13 +1259,18 @@ const FinanceGuide = ({
                       style={{
                         marginTop: '16px',
                         padding: '12px 16px',
-                        background: '#FEF9E7',
+                        background: 'var(--color-warning-bg)',
                         borderRadius: '8px',
-                        border: '1px solid #F5E6B8',
+                        border: '1px solid var(--color-warning)',
                       }}
                     >
                       <p
-                        style={{ fontSize: '0.7rem', color: '#92400E', lineHeight: 1.6, margin: 0 }}
+                        style={{
+                          fontSize: '0.7rem',
+                          color: 'var(--color-warning-dark)',
+                          lineHeight: 1.6,
+                          margin: 0,
+                        }}
                       >
                         <Icon
                           icon="mdi:alert-outline"
@@ -1312,7 +1339,7 @@ const FinanceGuide = ({
                     <p
                       style={{
                         fontSize: '0.65rem',
-                        color: '#9CA3AF',
+                        color: 'var(--color-text-muted)',
                         textAlign: 'center',
                         marginTop: '8px',
                         lineHeight: 1.5,
@@ -1476,7 +1503,7 @@ const FinanceGuide = ({
                     <div className={styles.emiLegendItem}>
                       <span
                         className={styles.emiLegendDot}
-                        style={{ background: 'var(--color-secondary)' }}
+                        style={{ background: 'var(--color-primary)' }}
                       />
                       Interest
                     </div>
@@ -1503,7 +1530,10 @@ const FinanceGuide = ({
                     <span className={styles.emiSummaryLabel}>
                       <Icon icon="mdi:percent-circle" /> Total Interest
                     </span>
-                    <span className={styles.emiSummaryValue} style={{ color: '#EF4444' }}>
+                    <span
+                      className={styles.emiSummaryValue}
+                      style={{ color: 'var(--color-error-dark)' }}
+                    >
                       {formatCurrency(totalInterest)}
                     </span>
                   </div>
@@ -1559,17 +1589,8 @@ const FinanceGuide = ({
               {/* Modal Header */}
               <div className={styles.eligibilityHeader}>
                 <div className={styles.eligibilityTitleWrap}>
-                  <div
-                    className={styles.eligibilityBankIcon}
-                    style={{ background: `${eligibilityModal.bank.color}15` }}
-                  >
-                    <Icon
-                      icon={eligibilityModal.bank.icon}
-                      style={{
-                        color: eligibilityModal.bank.color,
-                        fontSize: '1.3rem',
-                      }}
-                    />
+                  <div className={styles.eligibilityBankIcon}>
+                    <Icon icon={eligibilityModal.bank.icon} style={{ fontSize: '1.3rem' }} />
                   </div>
                   <div>
                     <h3 className={styles.eligibilityTitle}>
@@ -1630,7 +1651,7 @@ const FinanceGuide = ({
                           <p
                             style={{
                               fontSize: '0.65rem',
-                              color: '#9CA3AF',
+                              color: 'var(--color-text-muted)',
                               textAlign: 'center',
                               marginTop: '8px',
                               lineHeight: 1.5,
@@ -1708,7 +1729,7 @@ const FinanceGuide = ({
                                 width: '100%',
                                 margin: '12px 0',
                                 padding: '12px',
-                                background: '#F9FAFB',
+                                background: 'var(--color-surface)',
                                 borderRadius: '8px',
                                 textAlign: 'left',
                               }}
@@ -1721,8 +1742,12 @@ const FinanceGuide = ({
                                   fontSize: '0.8rem',
                                 }}
                               >
-                                <span style={{ color: '#6B7280' }}>Available EMI Capacity</span>
-                                <span style={{ fontWeight: 600, color: '#059669' }}>
+                                <span style={{ color: 'var(--color-text-muted)' }}>
+                                  Available EMI Capacity
+                                </span>
+                                <span
+                                  style={{ fontWeight: 600, color: 'var(--color-success-dark)' }}
+                                >
                                   {formatCurrency(availableEmi)}/month
                                 </span>
                               </div>
@@ -1733,8 +1758,12 @@ const FinanceGuide = ({
                                   fontSize: '0.8rem',
                                 }}
                               >
-                                <span style={{ color: '#6B7280' }}>Estimated Loan Eligibility</span>
-                                <span style={{ fontWeight: 600, color: '#059669' }}>
+                                <span style={{ color: 'var(--color-text-muted)' }}>
+                                  Estimated Loan Eligibility
+                                </span>
+                                <span
+                                  style={{ fontWeight: 600, color: 'var(--color-success-dark)' }}
+                                >
                                   {formatCurrency(eligibleLoan)}
                                 </span>
                               </div>
@@ -1742,7 +1771,7 @@ const FinanceGuide = ({
                                 style={{
                                   display: 'block',
                                   fontSize: '0.65rem',
-                                  color: '#9CA3AF',
+                                  color: 'var(--color-text-muted)',
                                   marginTop: '6px',
                                 }}
                               >
@@ -1757,7 +1786,7 @@ const FinanceGuide = ({
                             <p
                               style={{
                                 fontSize: '0.65rem',
-                                color: '#9CA3AF',
+                                color: 'var(--color-text-muted)',
                                 textAlign: 'center',
                                 lineHeight: 1.5,
                                 marginTop: '4px',

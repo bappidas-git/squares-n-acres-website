@@ -73,7 +73,7 @@ const AdminLogin = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: '#F4F6F8',
+        bgcolor: 'var(--color-surface)',
         p: 2,
       }}
     >
@@ -101,7 +101,10 @@ const AdminLogin = () => {
               mb: 2,
             }}
           >
-            <Icon icon="mdi:shield-lock-outline" style={{ fontSize: 28, color: '#C9A86C' }} />
+            <Icon
+              icon="mdi:shield-lock-outline"
+              style={{ fontSize: 28, color: 'var(--color-primary-dark)' }}
+            />
           </Box>
           <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.main' }}>
             {BRAND.name}
@@ -134,7 +137,10 @@ const AdminLogin = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Icon icon="mdi:email-outline" style={{ fontSize: 20, color: '#6B7280' }} />
+                  <Icon
+                    icon="mdi:email-outline"
+                    style={{ fontSize: 20, color: 'var(--color-text-muted)' }}
+                  />
                 </InputAdornment>
               ),
             }}
@@ -153,7 +159,10 @@ const AdminLogin = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Icon icon="mdi:lock-outline" style={{ fontSize: 20, color: '#6B7280' }} />
+                  <Icon
+                    icon="mdi:lock-outline"
+                    style={{ fontSize: 20, color: 'var(--color-text-muted)' }}
+                  />
                 </InputAdornment>
               ),
               endAdornment: (
@@ -165,7 +174,7 @@ const AdminLogin = () => {
                   >
                     <Icon
                       icon={showPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'}
-                      style={{ fontSize: 20, color: '#6B7280' }}
+                      style={{ fontSize: 20, color: 'var(--color-text-muted)' }}
                     />
                   </IconButton>
                 </InputAdornment>

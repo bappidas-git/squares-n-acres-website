@@ -17,20 +17,20 @@
   font-family: var(--font-body);
   font-size: 0.9rem;
   font-weight: 500;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .filterToggle:hover {
   border-color: var(--color-primary);
-  background: var(--color-bg-surface);
+  background: var(--color-surface);
 }
 
 .filterToggleActive {
   border-color: var(--color-primary);
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .filterToggleIcon {
@@ -55,7 +55,7 @@
   gap: 6px;
   padding: 8px 16px;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-inverse);
   border-radius: 24px;
   font-family: var(--font-body);
   font-size: 0.85rem;
@@ -72,7 +72,7 @@
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: #fff;
+  background: var(--color-bg);
   margin-bottom: 24px;
 }
 
@@ -94,7 +94,7 @@
   font-family: var(--font-body);
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -109,7 +109,7 @@
   margin: 20px auto 0;
   padding: 8px 24px;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-inverse);
   border: none;
   border-radius: 24px;
   font-family: var(--font-body);
@@ -152,8 +152,8 @@
 .applyBtn {
   flex: 1;
   padding: 12px 32px;
-  background: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
@@ -164,7 +164,7 @@
 }
 
 .applyBtn:hover {
-  background: var(--color-secondary-dark);
+  background: var(--color-primary-dark);
 }
 
 .clearBtn {
@@ -174,14 +174,14 @@
   font-family: var(--font-body);
   font-size: 0.9rem;
   font-weight: 500;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   cursor: pointer;
   transition: color var(--transition-fast);
   white-space: nowrap;
 }
 
 .clearBtn:hover {
-  color: var(--color-text-primary);
+  color: var(--color-text);
 }
 
 /* Applied Filter Chips */
@@ -197,12 +197,12 @@
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  background: var(--color-bg-surface);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 20px;
   font-family: var(--font-body);
   font-size: 0.8rem;
-  color: var(--color-text-primary);
+  color: var(--color-text);
 }
 
 .chipRemove {
@@ -214,14 +214,14 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   font-size: 16px;
   padding: 0;
   transition: color var(--transition-fast);
 }
 
 .chipRemove:hover {
-  color: var(--color-text-primary);
+  color: var(--color-text);
 }
 
 /* Mobile Bottom Sheet */
@@ -244,7 +244,7 @@
   font-family: var(--font-heading);
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--color-text);
 }
 
 .mobileCloseBtn {
@@ -255,10 +255,10 @@
   height: 36px;
   border-radius: var(--radius-full);
   border: none;
-  background: var(--color-bg-surface);
+  background: var(--color-surface);
   cursor: pointer;
   font-size: 20px;
-  color: var(--color-text-primary);
+  color: var(--color-text);
 }
 
 .mobileField {
@@ -270,7 +270,7 @@
   font-family: var(--font-body);
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -282,7 +282,7 @@
   left: 0;
   right: 0;
   padding: 16px 24px;
-  background: #fff;
+  background: var(--color-bg);
   border-top: 1px solid var(--color-border);
   z-index: 10;
 }
@@ -290,8 +290,8 @@
 .mobileApplyBtnInner {
   width: 100%;
   padding: 14px;
-  background: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
@@ -301,7 +301,7 @@
 }
 
 /* Responsive */
-@media (max-width: 960px) {
+@media (max-width: 899.98px) {
   .filterGrid {
     grid-template-columns: 1fr 1fr;
   }
@@ -315,7 +315,7 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .filterRow {
     flex-wrap: wrap;
     gap: 12px;

@@ -11,8 +11,6 @@ import {
   FormControl,
   InputLabel,
   Chip,
-  Snackbar,
-  Alert,
   Skeleton,
   Divider,
   Dialog,
@@ -24,6 +22,7 @@ import { Icon } from '@iconify/react';
 import { articleService } from '../../services/api';
 import { ARTICLE_CATEGORIES as categories } from '../../config/adminConstants';
 import { SITE } from '../../config/site';
+import { useToast } from '../../components/common/ToastProvider';
 
 const generateSlug = (title) =>
   title
@@ -74,13 +73,13 @@ const MarkdownHelpModal = ({ open, onClose }) => (
         alignItems: 'center',
         p: 2.5,
         pb: 1.5,
-        borderBottom: '1px solid #E5E7EB',
+        borderBottom: '1px solid var(--color-border)',
       }}
     >
-      <Typography sx={{ fontSize: '1.25rem', fontWeight: 700, color: '#1B2A4A' }}>
+      <Typography sx={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
         Markdown Writing Guide
       </Typography>
-      <IconButton onClick={onClose} size="small" sx={{ color: '#6B7280' }}>
+      <IconButton onClick={onClose} size="small" sx={{ color: 'var(--color-text-muted)' }}>
         <Icon icon="mdi:close" />
       </IconButton>
     </Box>
@@ -89,22 +88,34 @@ const MarkdownHelpModal = ({ open, onClose }) => (
         sx={{
           fontFamily: 'var(--font-body)',
           fontSize: '0.9rem',
-          color: '#374151',
+          color: 'var(--color-text)',
           lineHeight: 1.7,
-          '& h3': { fontSize: '1.05rem', fontWeight: 700, color: '#1B2A4A', mt: 3, mb: 1 },
-          '& h4': { fontSize: '0.95rem', fontWeight: 600, color: '#1B2A4A', mt: 2, mb: 0.75 },
+          '& h3': {
+            fontSize: '1.05rem',
+            fontWeight: 700,
+            color: 'var(--color-charcoal)',
+            mt: 3,
+            mb: 1,
+          },
+          '& h4': {
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            color: 'var(--color-charcoal)',
+            mt: 2,
+            mb: 0.75,
+          },
           '& code': {
-            bgcolor: '#F3F4F6',
+            bgcolor: 'var(--color-surface)',
             px: 0.75,
             py: 0.25,
             borderRadius: 1,
             fontSize: '0.8rem',
             fontFamily: 'var(--font-mono)',
-            color: '#D97706',
+            color: 'var(--color-warning-dark)',
           },
           '& pre': {
-            bgcolor: '#F9FAFB',
-            border: '1px solid #E5E7EB',
+            bgcolor: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
             borderRadius: 2,
             p: 2,
             overflow: 'auto',
@@ -112,25 +123,25 @@ const MarkdownHelpModal = ({ open, onClose }) => (
             fontFamily: 'var(--font-mono)',
             lineHeight: 1.6,
             mb: 2,
-            '& code': { bgcolor: 'transparent', p: 0, color: '#374151' },
+            '& code': { bgcolor: 'transparent', p: 0, color: 'var(--color-text)' },
           },
           '& table': {
             width: '100%',
             borderCollapse: 'collapse',
             mb: 2,
             '& th': {
-              bgcolor: '#F3F4F6',
+              bgcolor: 'var(--color-surface)',
               p: 1,
               textAlign: 'left',
               fontSize: '0.8rem',
               fontWeight: 600,
-              borderBottom: '2px solid #E5E7EB',
+              borderBottom: '2px solid var(--color-border)',
             },
-            '& td': { p: 1, fontSize: '0.8rem', borderBottom: '1px solid #F3F4F6' },
+            '& td': { p: 1, fontSize: '0.8rem', borderBottom: '1px solid var(--color-surface)' },
           },
         }}
       >
-        <Typography variant="body2" sx={{ color: '#6B7280', mb: 3 }}>
+        <Typography variant="body2" sx={{ color: 'var(--color-text-muted)', mb: 3 }}>
           This editor supports Markdown syntax. Use the following formatting options to create rich
           article content.
         </Typography>
@@ -258,15 +269,20 @@ const PREVIEW_HOST = SITE.placeholderDomain.replace(/^https?:\/\//, '');
 const GooglePreview = ({ title, description }) => (
   <Paper
     variant="outlined"
-    sx={{ p: 2, borderRadius: 2, bgcolor: '#FAFAFA', border: '1px solid #E5E7EB' }}
+    sx={{
+      p: 2,
+      borderRadius: 2,
+      bgcolor: 'var(--color-surface)',
+      border: '1px solid var(--color-border)',
+    }}
   >
-    <Typography sx={{ fontSize: '0.6875rem', color: '#9CA3AF', mb: 0.5 }}>
+    <Typography sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', mb: 0.5 }}>
       Google Search Preview
     </Typography>
     <Typography
       sx={{
         fontSize: '1.125rem',
-        color: '#1a0dab',
+        color: 'var(--color-serp-title)',
         fontFamily: 'var(--font-serp)',
         lineHeight: 1.3,
         overflow: 'hidden',
@@ -277,14 +293,19 @@ const GooglePreview = ({ title, description }) => (
       {title || `Article Title — ${SITE.name}`}
     </Typography>
     <Typography
-      sx={{ fontSize: '0.8125rem', color: '#006621', fontFamily: 'var(--font-serp)', mt: 0.25 }}
+      sx={{
+        fontSize: '0.8125rem',
+        color: 'var(--color-serp-url)',
+        fontFamily: 'var(--font-serp)',
+        mt: 0.25,
+      }}
     >
       {PREVIEW_HOST}/insights/articles/...
     </Typography>
     <Typography
       sx={{
         fontSize: '0.8125rem',
-        color: '#545454',
+        color: 'var(--color-serp-text)',
         fontFamily: 'var(--font-serp)',
         mt: 0.25,
         display: '-webkit-box',
@@ -300,6 +321,7 @@ const GooglePreview = ({ title, description }) => (
 );
 
 const ArticleForm = () => {
+  const toast = useToast();
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = Boolean(id);
@@ -309,7 +331,6 @@ const ArticleForm = () => {
   const [loading, setLoading] = useState(isEditing);
   const [saving, setSaving] = useState(false);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [markdownHelpOpen, setMarkdownHelpOpen] = useState(false);
   const [allArticles, setAllArticles] = useState([]);
   const [selectedRelatedArticles, setSelectedRelatedArticles] = useState([]);
@@ -337,11 +358,11 @@ const ArticleForm = () => {
       });
       setSlugManuallyEdited(true);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to load article', severity: 'error' });
+      toast.error('Failed to load article');
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, toast]);
 
   // Fetch all articles for the Related Articles selector
   const fetchAllArticles = useCallback(async () => {
@@ -350,9 +371,9 @@ const ArticleForm = () => {
       setAllArticles(Array.isArray(data) ? data : []);
     } catch {
       setAllArticles([]);
-      setSnackbar({ open: true, message: 'Could not load related articles', severity: 'warning' });
+      toast.warning('Could not load related articles');
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchArticle();
@@ -396,11 +417,11 @@ const ArticleForm = () => {
 
   const handleSave = async (publish = false) => {
     if (!form.title.trim()) {
-      setSnackbar({ open: true, message: 'Title is required', severity: 'error' });
+      toast.error('Title is required');
       return;
     }
     if (!form.content.trim()) {
-      setSnackbar({ open: true, message: 'Content is required', severity: 'error' });
+      toast.error('Content is required');
       return;
     }
 
@@ -417,19 +438,15 @@ const ArticleForm = () => {
 
       if (isEditing) {
         await articleService.update(id, payload);
-        setSnackbar({ open: true, message: 'Article updated', severity: 'success' });
+        toast.success('Article updated');
       } else {
         await articleService.create(payload);
-        setSnackbar({
-          open: true,
-          message: publish ? 'Article published' : 'Draft saved',
-          severity: 'success',
-        });
+        toast.success(publish ? 'Article published' : 'Draft saved');
       }
 
       setTimeout(() => navigate('/admin/articles'), 1000);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to save article', severity: 'error' });
+      toast.error('Failed to save article');
     } finally {
       setSaving(false);
     }
@@ -454,25 +471,32 @@ const ArticleForm = () => {
           <Button
             startIcon={<Icon icon="mdi:arrow-left" />}
             onClick={() => navigate('/admin/articles')}
-            sx={{ textTransform: 'none', color: '#6B7280' }}
+            sx={{ textTransform: 'none', color: 'var(--color-text-muted)' }}
           >
             Back
           </Button>
-          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
             {isEditing ? 'Edit Article' : 'New Article'}
           </Typography>
         </Box>
       </Box>
 
       {/* Main Form */}
-      <Paper elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid #F3F4F6', mb: 3 }}>
-        <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A', mb: 2 }}>
+      <Paper
+        elevation={0}
+        sx={{ p: 3, borderRadius: 2, border: '1px solid var(--color-surface)', mb: 3 }}
+      >
+        <Typography
+          sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', mb: 2 }}
+        >
           Article Details
         </Typography>
 
         {/* Title */}
         <Box sx={{ mb: 2.5 }}>
-          <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 0.75 }}>
+          <Typography
+            sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 0.75 }}
+          >
             Title *
           </Typography>
           <TextField
@@ -487,9 +511,14 @@ const ArticleForm = () => {
 
         {/* Slug */}
         <Box sx={{ mb: 2.5 }}>
-          <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 0.75 }}>
+          <Typography
+            sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 0.75 }}
+          >
             Slug
-            <Typography component="span" sx={{ fontSize: '0.6875rem', color: '#9CA3AF', ml: 1 }}>
+            <Typography
+              component="span"
+              sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', ml: 1 }}
+            >
               (auto-generated from title)
             </Typography>
           </Typography>
@@ -534,7 +563,9 @@ const ArticleForm = () => {
 
         {/* Tags */}
         <Box sx={{ mb: 2.5 }}>
-          <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 0.75 }}>
+          <Typography
+            sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 0.75 }}
+          >
             Tags
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
@@ -557,8 +588,8 @@ const ArticleForm = () => {
               sx={{
                 textTransform: 'none',
                 borderRadius: 2,
-                borderColor: '#D1D5DB',
-                color: '#374151',
+                borderColor: 'var(--color-border-strong)',
+                color: 'var(--color-text)',
               }}
             >
               Add
@@ -571,7 +602,7 @@ const ArticleForm = () => {
                 label={tag}
                 size="small"
                 onDelete={() => handleRemoveTag(tag)}
-                sx={{ fontSize: '0.75rem', bgcolor: '#F3F4F6' }}
+                sx={{ fontSize: '0.75rem', bgcolor: 'var(--color-surface)' }}
               />
             ))}
           </Box>
@@ -579,7 +610,9 @@ const ArticleForm = () => {
 
         {/* Featured Image */}
         <Box sx={{ mb: 2.5 }}>
-          <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 0.75 }}>
+          <Typography
+            sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 0.75 }}
+          >
             Featured Image URL
           </Typography>
           <TextField
@@ -597,9 +630,12 @@ const ArticleForm = () => {
         {/* Content */}
         <Box sx={{ mb: 2.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
-            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151' }}>
+            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)' }}>
               Content *{' '}
-              <Typography component="span" sx={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>
+              <Typography
+                component="span"
+                sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}
+              >
                 (Markdown supported)
               </Typography>
             </Typography>
@@ -610,9 +646,9 @@ const ArticleForm = () => {
               sx={{
                 width: 22,
                 height: 22,
-                bgcolor: '#EEF2FF',
-                color: '#4F46E5',
-                '&:hover': { bgcolor: '#E0E7FF' },
+                bgcolor: 'var(--color-info-bg)',
+                color: 'var(--color-info-dark)',
+                '&:hover': { bgcolor: 'var(--color-info-bg)' },
               }}
             >
               <Icon icon="mdi:help-circle-outline" width={16} />
@@ -634,9 +670,14 @@ const ArticleForm = () => {
 
         {/* Excerpt */}
         <Box>
-          <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 0.75 }}>
+          <Typography
+            sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 0.75 }}
+          >
             Excerpt
-            <Typography component="span" sx={{ fontSize: '0.6875rem', color: '#9CA3AF', ml: 1 }}>
+            <Typography
+              component="span"
+              sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', ml: 1 }}
+            >
               (auto-generated from first paragraph, editable)
             </Typography>
           </Typography>
@@ -654,11 +695,16 @@ const ArticleForm = () => {
       </Paper>
 
       {/* Related Articles */}
-      <Paper elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid #F3F4F6', mb: 3 }}>
-        <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A', mb: 0.5 }}>
+      <Paper
+        elevation={0}
+        sx={{ p: 3, borderRadius: 2, border: '1px solid var(--color-surface)', mb: 3 }}
+      >
+        <Typography
+          sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', mb: 0.5 }}
+        >
           Related Articles
         </Typography>
-        <Typography sx={{ fontSize: '0.75rem', color: '#9CA3AF', mb: 2 }}>
+        <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', mb: 2 }}>
           Select articles to show in the "Related Articles" section. If none selected, the system
           will auto-suggest based on category.
         </Typography>
@@ -686,7 +732,7 @@ const ArticleForm = () => {
                   {...rest}
                   label={option.title}
                   size="small"
-                  sx={{ fontSize: '0.75rem', bgcolor: '#F3F4F6', maxWidth: 280 }}
+                  sx={{ fontSize: '0.75rem', bgcolor: 'var(--color-surface)', maxWidth: 280 }}
                 />
               );
             })
@@ -706,10 +752,12 @@ const ArticleForm = () => {
                   py: 1,
                 }}
               >
-                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 500, color: '#374151' }}>
+                <Typography
+                  sx={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--color-text)' }}
+                >
                   {option.title}
                 </Typography>
-                <Typography sx={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>
+                <Typography sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>
                   {option.category
                     ? option.category
                         .split('-')
@@ -727,7 +775,7 @@ const ArticleForm = () => {
           sx={{ mb: 1 }}
         />
         {selectedRelatedArticles.length > 0 && (
-          <Typography sx={{ fontSize: '0.6875rem', color: '#6B7280' }}>
+          <Typography sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>
             {selectedRelatedArticles.length} article
             {selectedRelatedArticles.length !== 1 ? 's' : ''} selected
           </Typography>
@@ -735,8 +783,13 @@ const ArticleForm = () => {
       </Paper>
 
       {/* SEO Section */}
-      <Paper elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid #F3F4F6', mb: 3 }}>
-        <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A', mb: 2 }}>
+      <Paper
+        elevation={0}
+        sx={{ p: 3, borderRadius: 2, border: '1px solid var(--color-surface)', mb: 3 }}
+      >
+        <Typography
+          sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', mb: 2 }}
+        >
           SEO Settings
         </Typography>
 
@@ -748,9 +801,14 @@ const ArticleForm = () => {
         </Box>
 
         <Box sx={{ mb: 2.5 }}>
-          <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 0.75 }}>
+          <Typography
+            sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 0.75 }}
+          >
             SEO Title
-            <Typography component="span" sx={{ fontSize: '0.6875rem', color: '#9CA3AF', ml: 1 }}>
+            <Typography
+              component="span"
+              sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', ml: 1 }}
+            >
               {(form.seoTitle || '').length}/70
             </Typography>
           </Typography>
@@ -765,9 +823,14 @@ const ArticleForm = () => {
         </Box>
 
         <Box>
-          <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 0.75 }}>
+          <Typography
+            sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 0.75 }}
+          >
             SEO Description
-            <Typography component="span" sx={{ fontSize: '0.6875rem', color: '#9CA3AF', ml: 1 }}>
+            <Typography
+              component="span"
+              sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', ml: 1 }}
+            >
               {(form.seoDescription || '').length}/160
             </Typography>
           </Typography>
@@ -785,11 +848,11 @@ const ArticleForm = () => {
       </Paper>
 
       {/* Action Buttons */}
-      <Paper elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid #F3F4F6' }}>
+      <Paper elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid var(--color-surface)' }}>
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <Button
             onClick={() => navigate('/admin/articles')}
-            sx={{ textTransform: 'none', color: '#6B7280' }}
+            sx={{ textTransform: 'none', color: 'var(--color-text-muted)' }}
           >
             Cancel
           </Button>
@@ -801,8 +864,8 @@ const ArticleForm = () => {
             sx={{
               textTransform: 'none',
               borderRadius: 2,
-              borderColor: '#D1D5DB',
-              color: '#374151',
+              borderColor: 'var(--color-border-strong)',
+              color: 'var(--color-text)',
             }}
           >
             {saving ? 'Saving...' : 'Save Draft'}
@@ -814,10 +877,10 @@ const ArticleForm = () => {
             startIcon={<Icon icon="mdi:publish" />}
             sx={{
               textTransform: 'none',
-              bgcolor: '#1B2A4A',
+              bgcolor: 'var(--color-charcoal)',
               borderRadius: 2,
               px: 4,
-              '&:hover': { bgcolor: '#2d3f63' },
+              '&:hover': { bgcolor: 'var(--color-charcoal)' },
             }}
           >
             {saving ? 'Publishing...' : isEditing ? 'Update & Publish' : 'Publish'}
@@ -827,22 +890,6 @@ const ArticleForm = () => {
 
       {/* Markdown Help Modal */}
       <MarkdownHelpModal open={markdownHelpOpen} onClose={() => setMarkdownHelpOpen(false)} />
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 2 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };
