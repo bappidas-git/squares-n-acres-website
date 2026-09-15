@@ -22,7 +22,13 @@
   height: 48px;
   width: auto;
   margin-bottom: 12px;
-  filter: brightness(0) invert(1);
+  object-fit: contain;
+  /* Temporary white container: the logo is designed for light backgrounds and
+     the footer surface is still dark. Prompt 04 moves the footer to the light
+     surface and replaces these literals with design tokens. */
+  background: #fff;
+  padding: 8px;
+  border-radius: 8px;
 }
 
 .brandSubtitle {

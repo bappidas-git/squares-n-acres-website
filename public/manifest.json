@@ -1,0 +1,29 @@
+{
+  "name": "Squares N Acres",
+  "short_name": "Squares N Acres",
+  "description": "Squares N Acres helps you buy, sell and rent apartments, villas, plots and commercial spaces across Bengaluru. Verified listings, locality guides and expert assistance.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#CF3F38",
+  "icons": [
+    {
+      "src": "brand/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "brand/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

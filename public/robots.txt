@@ -1,3 +1,3 @@
-# https://www.robotstxt.org/robotstxt.html
+# Development placeholder. In production /robots.txt is proxied to the API (see backend_developer_guidelines/06_SEO_SITEMAP_ROBOTS.md).
 User-agent: *
-Disallow:
+Disallow: /admin
