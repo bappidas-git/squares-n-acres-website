@@ -48,7 +48,6 @@ const PropertyFaq = ({ property }) => {
             <FaqItem
               key={idx}
               faq={faq}
-              index={idx}
               isOpen={openIdx === idx}
               onToggle={() => setOpenIdx((prev) => (prev === idx ? null : idx))}
             />

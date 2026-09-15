@@ -88,7 +88,7 @@ const ToastProvider = ({ children }) => {
                     width: '100%',
                     minWidth: isMobile ? 'auto' : 320,
                     borderRadius: '10px',
-                    fontFamily: '"DM Sans", sans-serif',
+                    fontFamily: 'var(--font-body)',
                     fontWeight: 500,
                     boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
                   }}

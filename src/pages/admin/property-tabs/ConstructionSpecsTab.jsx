@@ -39,14 +39,18 @@ const ConstructionSpecsTab = ({ formData, updateField }) => {
         Construction Specifications
       </Typography>
       <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -2 }}>
-        Add detailed construction specs by category. These appear in the Construction Specifications section.
+        Add detailed construction specs by category. These appear in the Construction Specifications
+        section.
       </Typography>
 
       {CONSTRUCTION_SPEC_CATEGORIES.map((category) => {
         const items = formData.constructionSpecs[category] || [];
         const config = CATEGORY_CONFIG[category] || { label: category, icon: 'mdi:cog' };
 
-        if (items.length === 0 && !['flooring', 'doors', 'structure', 'electrical'].includes(category)) {
+        if (
+          items.length === 0 &&
+          !['flooring', 'doors', 'structure', 'electrical'].includes(category)
+        ) {
           return (
             <Button
               key={category}
@@ -54,7 +58,12 @@ const ConstructionSpecsTab = ({ formData, updateField }) => {
               variant="outlined"
               onClick={() => addSpec(category)}
               startIcon={<Icon icon="mdi:plus" />}
-              sx={{ alignSelf: 'flex-start', borderRadius: 2, color: '#6B7280', borderColor: '#D1D5DB' }}
+              sx={{
+                alignSelf: 'flex-start',
+                borderRadius: 2,
+                color: '#6B7280',
+                borderColor: '#D1D5DB',
+              }}
             >
               Add {config.label} Specs
             </Button>
@@ -71,7 +80,10 @@ const ConstructionSpecsTab = ({ formData, updateField }) => {
             </Box>
 
             {items.map((item, index) => (
-              <Box key={index} sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: 1, flexWrap: 'wrap' }}>
+              <Box
+                key={index}
+                sx={{ display: 'flex', gap: 1.5, alignItems: 'center', mb: 1, flexWrap: 'wrap' }}
+              >
                 <TextField
                   size="small"
                   label="Area / Component"
@@ -89,7 +101,11 @@ const ConstructionSpecsTab = ({ formData, updateField }) => {
                   placeholder="e.g., Italian marble flooring"
                 />
                 {items.length > 1 && (
-                  <IconButton size="small" onClick={() => removeSpec(category, index)} sx={{ color: '#EF4444' }}>
+                  <IconButton
+                    size="small"
+                    onClick={() => removeSpec(category, index)}
+                    sx={{ color: '#EF4444' }}
+                  >
                     <Icon icon="mdi:close-circle-outline" style={{ fontSize: 20 }} />
                   </IconButton>
                 )}

@@ -3,14 +3,14 @@
 .adminRoot {
   display: flex;
   min-height: 100vh;
-  background-color: #F4F6F8;
+  background-color: #f4f6f8;
 }
 
 /* ===== Sidebar ===== */
 .sidebar {
   width: 260px;
-  background: #FFFFFF;
-  border-right: 1px solid #E5E7EB;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
   transition: width 300ms ease;
@@ -31,7 +31,7 @@
   align-items: center;
   gap: 12px;
   padding: 20px 16px;
-  border-bottom: 1px solid #E5E7EB;
+  border-bottom: 1px solid #e5e7eb;
   min-height: 64px;
 }
 
@@ -39,7 +39,7 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: #1B2A4A;
+  background: #1b2a4a;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -54,13 +54,13 @@
 .brandTitle {
   font-size: 0.875rem;
   font-weight: 700;
-  color: #1B2A4A;
+  color: #1b2a4a;
   line-height: 1.2;
 }
 
 .brandSubtitle {
   font-size: 0.675rem;
-  color: #6B7280;
+  color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 600;
@@ -81,7 +81,7 @@
   font-size: 0.675rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #9CA3AF;
+  color: #9ca3af;
   font-weight: 600;
   padding: 8px 12px 4px;
 }
@@ -94,7 +94,7 @@
   border-radius: 8px;
   cursor: pointer;
   transition: all 150ms ease;
-  color: #4B5563;
+  color: #4b5563;
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
@@ -103,13 +103,13 @@
 }
 
 .navItem:hover {
-  background: #F3F4F6;
-  color: #1B2A4A;
+  background: #f3f4f6;
+  color: #1b2a4a;
 }
 
 .navItemActive {
   background: rgba(27, 42, 74, 0.08);
-  color: #1B2A4A;
+  color: #1b2a4a;
   font-weight: 600;
 }
 
@@ -121,7 +121,7 @@
   transform: translateY(-50%);
   width: 3px;
   height: 20px;
-  background: #C9A86C;
+  background: #c9a86c;
   border-radius: 0 4px 4px 0;
 }
 
@@ -139,8 +139,8 @@
 }
 
 .navBadge {
-  background: #EF4444;
-  color: #FFFFFF;
+  background: #ef4444;
+  color: #ffffff;
   font-size: 0.625rem;
   font-weight: 700;
   min-width: 18px;
@@ -173,7 +173,7 @@
   border-radius: 6px;
   cursor: pointer;
   transition: all 150ms ease;
-  color: #6B7280;
+  color: #6b7280;
   font-size: 0.8125rem;
   font-weight: 400;
   text-decoration: none;
@@ -181,19 +181,19 @@
 }
 
 .navSubItem:hover {
-  background: #F3F4F6;
-  color: #1B2A4A;
+  background: #f3f4f6;
+  color: #1b2a4a;
 }
 
 .navSubItemActive {
-  color: #1B2A4A;
+  color: #1b2a4a;
   font-weight: 600;
   background: rgba(27, 42, 74, 0.04);
 }
 
 /* Sidebar Footer */
 .sidebarFooter {
-  border-top: 1px solid #E5E7EB;
+  border-top: 1px solid #e5e7eb;
   padding: 12px;
 }
 
@@ -210,11 +210,11 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1B2A4A 0%, #2D4470 100%);
+  background: linear-gradient(135deg, #1b2a4a 0%, #2d4470 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #C9A86C;
+  color: #c9a86c;
   font-weight: 700;
   font-size: 0.875rem;
   flex-shrink: 0;
@@ -229,14 +229,14 @@
 .userName {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #1B2A4A;
+  color: #1b2a4a;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .userRole {
   font-size: 0.6875rem;
-  color: #9CA3AF;
+  color: #9ca3af;
   text-transform: capitalize;
 }
 
@@ -248,7 +248,7 @@
   border-radius: 8px;
   cursor: pointer;
   transition: all 150ms ease;
-  color: #6B7280;
+  color: #6b7280;
   font-size: 0.8125rem;
   font-weight: 500;
   border: none;
@@ -258,8 +258,8 @@
 }
 
 .logoutBtn:hover {
-  background: #FEF2F2;
-  color: #EF4444;
+  background: #fef2f2;
+  color: #ef4444;
 }
 
 /* ===== Top Bar ===== */
@@ -269,8 +269,8 @@
   right: 0;
   left: 260px;
   height: 64px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #E5E7EB;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -299,20 +299,20 @@
   border: none;
   background: none;
   cursor: pointer;
-  color: #6B7280;
+  color: #6b7280;
   transition: all 150ms ease;
 }
 
 .collapseBtn:hover {
-  background: #F3F4F6;
-  color: #1B2A4A;
+  background: #f3f4f6;
+  color: #1b2a4a;
 }
 
 .pageTitle {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #1B2A4A;
-  font-family: 'DM Sans', sans-serif;
+  color: #1b2a4a;
+  font-family: var(--font-body);
 }
 
 .topBarRight {
@@ -331,25 +331,14 @@
   border: none;
   background: none;
   cursor: pointer;
-  color: #6B7280;
+  color: #6b7280;
   transition: all 150ms ease;
   position: relative;
 }
 
 .topBarIconBtn:hover {
-  background: #F3F4F6;
-  color: #1B2A4A;
-}
-
-.notificationDot {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #EF4444;
-  border: 2px solid #FFFFFF;
+  background: #f3f4f6;
+  color: #1b2a4a;
 }
 
 .notificationBadge {
@@ -359,15 +348,15 @@
   min-width: 16px;
   height: 16px;
   border-radius: 8px;
-  background: #EF4444;
-  color: #FFFFFF;
+  background: #ef4444;
+  color: #ffffff;
   font-size: 0.5625rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 4px;
-  border: 2px solid #FFFFFF;
+  border: 2px solid #ffffff;
   line-height: 1;
 }
 
@@ -384,18 +373,18 @@
 }
 
 .profileDropdown:hover {
-  background: #F3F4F6;
+  background: #f3f4f6;
 }
 
 .profileAvatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1B2A4A 0%, #2D4470 100%);
+  background: linear-gradient(135deg, #1b2a4a 0%, #2d4470 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #C9A86C;
+  color: #c9a86c;
   font-weight: 700;
   font-size: 0.75rem;
 }
@@ -412,7 +401,9 @@
   margin-left: 260px;
   margin-top: 64px;
   padding: 24px;
-  transition: margin-left 300ms ease, max-width 300ms ease;
+  transition:
+    margin-left 300ms ease,
+    max-width 300ms ease;
   min-height: calc(100vh - 64px);
   max-width: calc(100vw - 260px);
   overflow-x: hidden;
@@ -466,7 +457,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border-bottom: 1px solid #E5E7EB;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .mobileDrawerNav {
@@ -476,6 +467,6 @@
 }
 
 .mobileDrawerFooter {
-  border-top: 1px solid #E5E7EB;
+  border-top: 1px solid #e5e7eb;
   padding: 12px;
 }

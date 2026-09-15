@@ -144,14 +144,10 @@ const HeroSection = () => {
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlightIndex((prev) =>
-        prev < suggestions.length - 1 ? prev + 1 : 0
-      );
+      setHighlightIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setHighlightIndex((prev) =>
-        prev > 0 ? prev - 1 : suggestions.length - 1
-      );
+      setHighlightIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
     } else if (e.key === 'Enter' && highlightIndex >= 0) {
       e.preventDefault();
       handleSuggestionClick(suggestions[highlightIndex]);
@@ -170,8 +166,7 @@ const HeroSection = () => {
 
   const title = heroData?.title || 'Find Your Dream Home';
   const subtitle =
-    heroData?.subtitle ||
-    'Discover the perfect property from our exclusive collection';
+    heroData?.subtitle || 'Discover the perfect property from our exclusive collection';
 
   const handleMediaLoad = () => setMediaLoaded(true);
   const handleMediaError = () => {
@@ -204,8 +199,7 @@ const HeroSection = () => {
             className={styles.bgImage}
             style={{
               y: bgY,
-              backgroundImage:
-                mediaUrl && !mediaError ? `url(${mediaUrl})` : 'none',
+              backgroundImage: mediaUrl && !mediaError ? `url(${mediaUrl})` : 'none',
               backgroundColor: !mediaUrl || mediaError ? FALLBACK_BG : undefined,
             }}
           >
@@ -269,9 +263,7 @@ const HeroSection = () => {
                 aria-controls="hero-search-suggestions"
                 aria-haspopup="listbox"
               />
-              {suggestionsLoading && (
-                <div className={styles.searchSpinner} />
-              )}
+              {suggestionsLoading && <div className={styles.searchSpinner} />}
             </div>
             <button type="submit" className={styles.searchBtn}>
               <Icon icon="mdi:magnify" className={styles.searchBtnIcon} />
@@ -303,14 +295,9 @@ const HeroSection = () => {
                     aria-selected={highlightIndex === idx}
                   >
                     <div className={styles.suggestionMain}>
-                      <Icon
-                        icon="mdi:home-outline"
-                        className={styles.suggestionIcon}
-                      />
+                      <Icon icon="mdi:home-outline" className={styles.suggestionIcon} />
                       <div className={styles.suggestionText}>
-                        <span className={styles.suggestionTitle}>
-                          {property.title}
-                        </span>
+                        <span className={styles.suggestionTitle}>{property.title}</span>
                         <span className={styles.suggestionLocation}>
                           {[property.location?.area, property.location?.city]
                             .filter(Boolean)
@@ -319,9 +306,7 @@ const HeroSection = () => {
                       </div>
                     </div>
                     {property.price && (
-                      <span className={styles.suggestionPrice}>
-                        {formatPrice(property.price)}
-                      </span>
+                      <span className={styles.suggestionPrice}>{formatPrice(property.price)}</span>
                     )}
                   </li>
                 ))}

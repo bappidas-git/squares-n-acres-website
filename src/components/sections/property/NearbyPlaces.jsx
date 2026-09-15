@@ -108,7 +108,9 @@ const NearbyPlaces = ({ nearbyPlaces = [], location }) => {
                 </div>
                 <div className={styles.placeInfo}>
                   <span className={styles.placeName}>{place.name || 'Unknown Place'}</span>
-                  <span className={styles.placeType}>{typeConfig[place.type]?.label || place.type || 'Other'}</span>
+                  <span className={styles.placeType}>
+                    {typeConfig[place.type]?.label || place.type || 'Other'}
+                  </span>
                 </div>
                 <span className={styles.placeDistance}>{place.distance || '—'}</span>
               </motion.div>

@@ -5,6 +5,7 @@ import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
 import styles from './LegalAssistance.module.css';
+import { SITE } from '../../config/site';
 
 /* ── Animated section wrapper ──────────────────── */
 const Section = ({ children, className = '', delay = 0 }) => {
@@ -28,37 +29,43 @@ const services = [
     icon: 'mdi:file-search-outline',
     title: 'Title Verification',
     desc: 'Thorough verification of property title history to ensure clear and marketable ownership.',
-    detail: 'Our legal experts conduct an exhaustive search of all title documents going back 30+ years. We verify the chain of ownership, check for encumbrances, liens, and pending litigation, and provide a comprehensive title report with our opinion on the property\'s legal status.',
+    detail:
+      "Our legal experts conduct an exhaustive search of all title documents going back 30+ years. We verify the chain of ownership, check for encumbrances, liens, and pending litigation, and provide a comprehensive title report with our opinion on the property's legal status.",
   },
   {
     icon: 'mdi:file-document-edit-outline',
     title: 'Agreement Drafting',
     desc: 'Professional drafting and review of sale agreements, rental agreements, and MOUs.',
-    detail: 'We draft airtight legal agreements that protect your interests. This includes sale deeds, sale agreements, lease agreements, joint development agreements, and memorandums of understanding. Every clause is carefully crafted to prevent future disputes.',
+    detail:
+      'We draft airtight legal agreements that protect your interests. This includes sale deeds, sale agreements, lease agreements, joint development agreements, and memorandums of understanding. Every clause is carefully crafted to prevent future disputes.',
   },
   {
     icon: 'mdi:shield-check-outline',
     title: 'RERA Compliance',
     desc: 'Complete RERA registration verification and compliance checks for your property.',
-    detail: 'We verify the RERA registration of the project, check compliance with RERA timelines and commitments, review the builder\'s track record, and ensure all statutory approvals are in place. This protects your investment and ensures legal compliance.',
+    detail:
+      "We verify the RERA registration of the project, check compliance with RERA timelines and commitments, review the builder's track record, and ensure all statutory approvals are in place. This protects your investment and ensures legal compliance.",
   },
   {
     icon: 'mdi:home-account',
     title: 'Property Registration',
-    desc: 'End-to-end assistance with property registration at the Sub-Registrar\'s office.',
-    detail: 'Our team handles the entire registration process — from document preparation and stamp duty calculation to scheduling the appointment and accompanying you to the Sub-Registrar\'s office. We ensure the registration is completed correctly and efficiently.',
+    desc: "End-to-end assistance with property registration at the Sub-Registrar's office.",
+    detail:
+      "Our team handles the entire registration process — from document preparation and stamp duty calculation to scheduling the appointment and accompanying you to the Sub-Registrar's office. We ensure the registration is completed correctly and efficiently.",
   },
   {
     icon: 'mdi:magnify-scan',
     title: 'Due Diligence',
     desc: 'Comprehensive legal due diligence covering all aspects of the property.',
-    detail: 'Our due diligence covers property tax verification, encumbrance certificate analysis, land use and zoning compliance, building plan approvals, environmental clearances, and any pending litigation. We leave no stone unturned to protect your investment.',
+    detail:
+      'Our due diligence covers property tax verification, encumbrance certificate analysis, land use and zoning compliance, building plan approvals, environmental clearances, and any pending litigation. We leave no stone unturned to protect your investment.',
   },
   {
     icon: 'mdi:scale-balance',
     title: 'Dispute Resolution',
     desc: 'Expert legal representation and resolution for property-related disputes.',
-    detail: 'Whether it\'s a boundary dispute, possession issue, builder delay, or inheritance conflict, our experienced legal team provides strategic counsel and representation. We explore mediation, arbitration, and litigation options to achieve the best outcome for you.',
+    detail:
+      "Whether it's a boundary dispute, possession issue, builder delay, or inheritance conflict, our experienced legal team provides strategic counsel and representation. We explore mediation, arbitration, and litigation options to achieve the best outcome for you.",
   },
 ];
 
@@ -88,12 +95,30 @@ const stats = [
 ];
 
 const faqs = [
-  { q: 'How long does property title verification take?', a: 'A standard title verification takes 7-10 working days. For properties with complex ownership histories, it may take up to 15 days. We provide preliminary findings within 3-4 days.' },
-  { q: 'What is the cost of property registration in Karnataka?', a: 'In Karnataka, stamp duty is 5% of the property value (3% for rural areas), and registration charges are 1%. Additional surcharge and cess may apply. We provide a complete cost breakdown during consultation.' },
-  { q: 'Do I need a lawyer for property registration?', a: 'While not legally mandatory, having a lawyer is highly recommended. A legal expert ensures all documents are proper, the sale deed is correctly drafted, and your interests are protected during the registration process.' },
-  { q: 'What is an encumbrance certificate and why is it important?', a: 'An Encumbrance Certificate (EC) is a document that certifies the property is free from any legal or monetary liabilities. It shows all registered transactions on the property and is essential for verifying clean title and obtaining home loans.' },
-  { q: 'Can you help with inherited property disputes?', a: 'Yes, we have extensive experience handling inherited property matters including succession certificates, legal heir certificates, property partition, and dispute resolution among heirs. We recommend early legal intervention to avoid prolonged disputes.' },
-  { q: 'What is RERA and how does it protect home buyers?', a: 'RERA (Real Estate Regulatory Authority) is a regulatory body that ensures transparency and accountability in real estate. It protects buyers by mandating project registration, timely delivery, quality standards, and providing a grievance redressal mechanism.' },
+  {
+    q: 'How long does property title verification take?',
+    a: 'A standard title verification takes 7-10 working days. For properties with complex ownership histories, it may take up to 15 days. We provide preliminary findings within 3-4 days.',
+  },
+  {
+    q: 'What is the cost of property registration in Karnataka?',
+    a: 'In Karnataka, stamp duty is 5% of the property value (3% for rural areas), and registration charges are 1%. Additional surcharge and cess may apply. We provide a complete cost breakdown during consultation.',
+  },
+  {
+    q: 'Do I need a lawyer for property registration?',
+    a: 'While not legally mandatory, having a lawyer is highly recommended. A legal expert ensures all documents are proper, the sale deed is correctly drafted, and your interests are protected during the registration process.',
+  },
+  {
+    q: 'What is an encumbrance certificate and why is it important?',
+    a: 'An Encumbrance Certificate (EC) is a document that certifies the property is free from any legal or monetary liabilities. It shows all registered transactions on the property and is essential for verifying clean title and obtaining home loans.',
+  },
+  {
+    q: 'Can you help with inherited property disputes?',
+    a: 'Yes, we have extensive experience handling inherited property matters including succession certificates, legal heir certificates, property partition, and dispute resolution among heirs. We recommend early legal intervention to avoid prolonged disputes.',
+  },
+  {
+    q: 'What is RERA and how does it protect home buyers?',
+    a: 'RERA (Real Estate Regulatory Authority) is a regulatory body that ensures transparency and accountability in real estate. It protects buyers by mandating project registration, timely delivery, quality standards, and providing a grievance redressal mechanism.',
+  },
 ];
 
 const leadFields = [
@@ -115,7 +140,13 @@ const leadFields = [
       { value: 'dispute-resolution', label: 'Dispute Resolution' },
     ],
   },
-  { name: 'message', label: 'Message', type: 'textarea', required: false, placeholder: 'Describe your requirement...' },
+  {
+    name: 'message',
+    label: 'Message',
+    type: 'textarea',
+    required: false,
+    placeholder: 'Describe your requirement...',
+  },
 ];
 
 /* ── Component ─────────────────────────────────── */
@@ -123,14 +154,20 @@ const LegalAssistance = () => {
   const [expandedService, setExpandedService] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
 
-  const toggleService = useCallback((i) => setExpandedService((prev) => (prev === i ? null : i)), []);
+  const toggleService = useCallback(
+    (i) => setExpandedService((prev) => (prev === i ? null : i)),
+    []
+  );
   const toggleFaq = useCallback((i) => setOpenFaq((prev) => (prev === i ? null : i)), []);
 
   return (
     <>
       <Helmet>
-        <title>Legal Assistance | H.O.M Advisory</title>
-        <meta name="description" content="Expert legal assistance for property transactions. Title verification, RERA compliance, property registration, and dispute resolution in Bangalore." />
+        <title>{`Legal Assistance | ${SITE.name}`}</title>
+        <meta
+          name="description"
+          content="Expert legal assistance for property transactions. Title verification, RERA compliance, property registration, and dispute resolution in Bangalore."
+        />
       </Helmet>
 
       <div className={styles.page}>
@@ -181,7 +218,9 @@ const LegalAssistance = () => {
           <div className={styles.container}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>Our Legal Services</h2>
-              <p className={styles.sectionSubtitle}>Comprehensive legal support for all your property needs</p>
+              <p className={styles.sectionSubtitle}>
+                Comprehensive legal support for all your property needs
+              </p>
             </div>
 
             <div className={styles.servicesGrid}>
@@ -233,7 +272,9 @@ const LegalAssistance = () => {
           <div className={styles.container}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>How It Works</h2>
-              <p className={styles.sectionSubtitle}>Get expert legal support in three simple steps</p>
+              <p className={styles.sectionSubtitle}>
+                Get expert legal support in three simple steps
+              </p>
             </div>
 
             <div className={styles.processGrid}>
@@ -307,15 +348,14 @@ const LegalAssistance = () => {
           <div className={styles.container}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>Frequently Asked Questions</h2>
-              <p className={styles.sectionSubtitle}>Common questions about property legal processes</p>
+              <p className={styles.sectionSubtitle}>
+                Common questions about property legal processes
+              </p>
             </div>
 
             <div className={styles.faqList}>
               {faqs.map((faq, i) => (
-                <div
-                  key={i}
-                  className={`${styles.faqItem} ${openFaq === i ? styles.faqOpen : ''}`}
-                >
+                <div key={i} className={`${styles.faqItem} ${openFaq === i ? styles.faqOpen : ''}`}>
                   <button
                     className={styles.faqQuestion}
                     onClick={() => toggleFaq(i)}

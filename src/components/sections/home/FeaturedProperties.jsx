@@ -34,7 +34,9 @@ const FeaturedProperties = () => {
         const data = await propertyService.getFeatured();
         // Safety filter: ensure only active, published properties are displayed
         setProperties(
-          (Array.isArray(data) ? data : []).filter((p) => !!p.isActive && p.publishStatus !== 'draft')
+          (Array.isArray(data) ? data : []).filter(
+            (p) => !!p.isActive && p.publishStatus !== 'draft'
+          )
         );
       } catch {
         setProperties([]);
@@ -53,9 +55,7 @@ const FeaturedProperties = () => {
 
     // In auto-scroll mode, track has duplicated items, so use half width
     // In static mode, track has original items only
-    const contentWidth = shouldAutoScroll
-      ? track.scrollWidth / 2
-      : track.scrollWidth;
+    const contentWidth = shouldAutoScroll ? track.scrollWidth / 2 : track.scrollWidth;
     const viewportWidth = viewport.clientWidth;
 
     const needsScroll = contentWidth > viewportWidth + 10; // 10px tolerance
@@ -64,9 +64,7 @@ const FeaturedProperties = () => {
     // Update arrow visibility for non-auto-scroll mode
     if (!needsScroll) {
       setCanScrollLeft(viewport.scrollLeft > 5);
-      setCanScrollRight(
-        viewport.scrollLeft < viewport.scrollWidth - viewport.clientWidth - 5
-      );
+      setCanScrollRight(viewport.scrollLeft < viewport.scrollWidth - viewport.clientWidth - 5);
     }
   }, [shouldAutoScroll]);
 
@@ -122,9 +120,7 @@ const FeaturedProperties = () => {
     const viewport = viewportRef.current;
     if (!viewport || shouldAutoScroll) return;
     setCanScrollLeft(viewport.scrollLeft > 5);
-    setCanScrollRight(
-      viewport.scrollLeft < viewport.scrollWidth - viewport.clientWidth - 5
-    );
+    setCanScrollRight(viewport.scrollLeft < viewport.scrollWidth - viewport.clientWidth - 5);
   }, [shouldAutoScroll]);
 
   useEffect(() => {
@@ -232,9 +228,7 @@ const FeaturedProperties = () => {
   };
 
   // Build display items
-  const displayItems = shouldAutoScroll
-    ? [...properties, ...properties]
-    : properties;
+  const displayItems = shouldAutoScroll ? [...properties, ...properties] : properties;
 
   const showArrows = properties.length > 0 && !loading;
   const showLeftArrow = shouldAutoScroll || canScrollLeft;
@@ -250,9 +244,7 @@ const FeaturedProperties = () => {
           transition={{ duration: 0.5 }}
         >
           <h2 className={styles.title}>Featured Properties</h2>
-          <p className={styles.subtitle}>
-            Explore our handpicked selection of premium properties
-          </p>
+          <p className={styles.subtitle}>Explore our handpicked selection of premium properties</p>
         </motion.div>
 
         {loading ? (
@@ -293,10 +285,7 @@ const FeaturedProperties = () => {
             >
               <div className={styles.carouselTrack} ref={trackRef}>
                 {displayItems.map((property, index) => (
-                  <div
-                    key={`${property.id}-${index}`}
-                    className={styles.scrollItem}
-                  >
+                  <div key={`${property.id}-${index}`} className={styles.scrollItem}>
                     <PropertyCard property={property} />
                   </div>
                 ))}
@@ -317,9 +306,7 @@ const FeaturedProperties = () => {
         ) : (
           <div className={styles.emptyState}>
             <Icon icon="mdi:home-search-outline" className={styles.emptyIcon} />
-            <p className={styles.emptyText}>
-              No featured properties available at this time.
-            </p>
+            <p className={styles.emptyText}>No featured properties available at this time.</p>
           </div>
         )}
 

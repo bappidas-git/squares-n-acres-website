@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -16,16 +16,16 @@ import {
   useTheme,
   CircularProgress,
   IconButton,
-} from "@mui/material";
-import { Icon } from "@iconify/react";
-import { propertyService } from "../../services/api";
+} from '@mui/material';
+import { Icon } from '@iconify/react';
+import { propertyService } from '../../services/api';
 import {
   TAB_CONFIG,
   DRAFT_STORAGE_KEY,
   generateSlug,
   getDefaultFormData,
   getDefaultSections,
-} from "./property-tabs/constants";
+} from './property-tabs/constants';
 import {
   GalleryTab,
   BasicInfoTab,
@@ -43,12 +43,12 @@ import {
   SimilarPropertiesTab,
   SeoTagsTab,
   SectionVisibilityTab,
-} from "./property-tabs";
+} from './property-tabs';
 
 const PropertyForm = ({ propertyId = null }) => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isEdit = Boolean(propertyId);
 
   const [formData, setFormData] = useState(getDefaultFormData());
@@ -58,8 +58,8 @@ const PropertyForm = ({ propertyId = null }) => {
   const [errors, setErrors] = useState({});
   const [snackbar, setSnackbar] = useState({
     open: false,
-    message: "",
-    severity: "success",
+    message: '',
+    severity: 'success',
   });
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
 
@@ -79,10 +79,10 @@ const PropertyForm = ({ propertyId = null }) => {
         if (!property) {
           setSnackbar({
             open: true,
-            message: "Property not found",
-            severity: "error",
+            message: 'Property not found',
+            severity: 'error',
           });
-          navigate("/admin/properties");
+          navigate('/admin/properties');
           return;
         }
 
@@ -90,64 +90,91 @@ const PropertyForm = ({ propertyId = null }) => {
         // main property response didn't include it. Use empty-string-aware
         // checks so that "" from normalization doesn't block the merge.
         if (seoData) {
-          const seoNested = seoData.data && typeof seoData.data === "object" ? seoData.data : seoData;
+          const seoNested =
+            seoData.data && typeof seoData.data === 'object' ? seoData.data : seoData;
           if (!property.seoTitle) {
-            property.seoTitle = seoNested.meta_title || seoNested.title || seoNested.seo_title || seoNested.seoTitle || "";
+            property.seoTitle =
+              seoNested.meta_title ||
+              seoNested.title ||
+              seoNested.seo_title ||
+              seoNested.seoTitle ||
+              '';
           }
           if (!property.seoDescription) {
-            property.seoDescription = seoNested.meta_description || seoNested.description || seoNested.seo_description || seoNested.seoDescription || "";
+            property.seoDescription =
+              seoNested.meta_description ||
+              seoNested.description ||
+              seoNested.seo_description ||
+              seoNested.seoDescription ||
+              '';
           }
           if (!property.seoKeywords || !property.seoKeywords.length) {
             const kw = seoNested.keywords || seoNested.seo_keywords || seoNested.seoKeywords;
-            property.seoKeywords = Array.isArray(kw) ? kw
-              : typeof kw === "string" && kw.trim() ? kw.split(",").map((k) => k.trim()).filter(Boolean)
-              : [];
+            property.seoKeywords = Array.isArray(kw)
+              ? kw
+              : typeof kw === 'string' && kw.trim()
+                ? kw
+                    .split(',')
+                    .map((k) => k.trim())
+                    .filter(Boolean)
+                : [];
           }
           if (!property.canonicalUrl) {
-            property.canonicalUrl = seoNested.canonical_url || seoNested.canonicalUrl || "";
+            property.canonicalUrl = seoNested.canonical_url || seoNested.canonicalUrl || '';
           }
           if (!property.ogTitle) {
-            property.ogTitle = seoNested.og_title || seoNested.ogTitle || "";
+            property.ogTitle = seoNested.og_title || seoNested.ogTitle || '';
           }
           if (!property.ogDescription) {
-            property.ogDescription = seoNested.og_description || seoNested.ogDescription || "";
+            property.ogDescription = seoNested.og_description || seoNested.ogDescription || '';
           }
           if (!property.ogImage) {
-            property.ogImage = seoNested.og_image || seoNested.ogImage || "";
+            property.ogImage = seoNested.og_image || seoNested.ogImage || '';
           }
-          if (!property.twitterCard || property.twitterCard === "summary_large_image") {
-            property.twitterCard = seoNested.twitter_card || seoNested.twitterCard || property.twitterCard || "summary_large_image";
+          if (!property.twitterCard || property.twitterCard === 'summary_large_image') {
+            property.twitterCard =
+              seoNested.twitter_card ||
+              seoNested.twitterCard ||
+              property.twitterCard ||
+              'summary_large_image';
           }
           if (!property.schemaMarkup) {
             const sm = seoNested.schema_markup || seoNested.schemaMarkup;
-            property.schemaMarkup = typeof sm === "string" ? sm : sm ? JSON.stringify(sm) : "";
+            property.schemaMarkup = typeof sm === 'string' ? sm : sm ? JSON.stringify(sm) : '';
           }
         }
 
         // normalizePropertyResponse already handles specifications normalization
         // (array/object formats, field name variants). Ensure at least one empty entry for UI.
-        const specs = Array.isArray(property.specifications) && property.specifications.length
-          ? property.specifications.map((s) => ({
-              key: s.key || "",
-              value: s.value != null ? String(s.value) : "",
-              icon: s.icon || "",
-            }))
-          : [{ key: "", value: "", icon: "" }];
+        const specs =
+          Array.isArray(property.specifications) && property.specifications.length
+            ? property.specifications.map((s) => ({
+                key: s.key || '',
+                value: s.value != null ? String(s.value) : '',
+                icon: s.icon || '',
+              }))
+            : [{ key: '', value: '', icon: '' }];
 
         // normalizePropertyResponse already normalizes floor plan items.
         // Ensure at least one empty entry for UI.
         const floorPlansData = Array.isArray(property.floorPlans) ? property.floorPlans : [];
         const nearbyPlacesData = Array.isArray(property.nearbyPlaces) ? property.nearbyPlaces : [];
         const cSpecs = property.constructionSpecs || {};
-        const cTimeline = Array.isArray(property.constructionTimeline) ? property.constructionTimeline : [];
+        const cTimeline = Array.isArray(property.constructionTimeline)
+          ? property.constructionTimeline
+          : [];
         const devInfo = property.developerInfo || null;
-        const simIds = Array.isArray(property.similarPropertyIds) ? property.similarPropertyIds : [];
+        const simIds = Array.isArray(property.similarPropertyIds)
+          ? property.similarPropertyIds
+          : [];
         const specialitiesData = Array.isArray(property.specialities) ? property.specialities : [];
 
         // Gallery is already normalized to string[] by normalizePropertyResponse
-        const galleryData = Array.isArray(property.gallery) ? property.gallery.map((item) =>
-          typeof item === "object" && item !== null ? item.url || item.image || "" : (item || "")
-        ) : [];
+        const galleryData = Array.isArray(property.gallery)
+          ? property.gallery.map((item) =>
+              typeof item === 'object' && item !== null ? item.url || item.image || '' : item || ''
+            )
+          : [];
 
         // Set slugManuallyEdited BEFORE formData to prevent the auto-slug
         // effect from overwriting the loaded slug (avoids race condition
@@ -161,194 +188,179 @@ const PropertyForm = ({ propertyId = null }) => {
         const defaults = getDefaultFormData();
         setFormData({
           ...defaults,
-          title: property.title || "",
-          slug: property.slug || "",
-          type: property.type || "sale",
-          propertyType: property.propertyType || "apartment",
-          category: property.category || property.propertyType || "apartment",
-          status: property.status || "pre-launch",
+          title: property.title || '',
+          slug: property.slug || '',
+          type: property.type || 'sale',
+          propertyType: property.propertyType || 'apartment',
+          category: property.category || property.propertyType || 'apartment',
+          status: property.status || 'pre-launch',
           sections: { ...getDefaultSections(), ...(property.sections || {}) },
-          publishStatus:
-            property.publishStatus ||
-            (property.isActive ? "published" : "draft"),
-          price: property.price || "",
-          priceUnit: property.priceUnit || "onwards",
-          developer: property.developer || "",
-          description: property.description || "",
-          highlights: property.highlights?.length ? property.highlights : [""],
+          publishStatus: property.publishStatus || (property.isActive ? 'published' : 'draft'),
+          price: property.price || '',
+          priceUnit: property.priceUnit || 'onwards',
+          developer: property.developer || '',
+          description: property.description || '',
+          highlights: property.highlights?.length ? property.highlights : [''],
           location: {
-            area: property.location?.area || "",
-            city: property.location?.city || "",
-            state: property.location?.state || "",
-            lat: property.location?.lat || "",
-            lng: property.location?.lng || "",
-            address: property.location?.address || property.address || "",
+            area: property.location?.area || '',
+            city: property.location?.city || '',
+            state: property.location?.state || '',
+            lat: property.location?.lat || '',
+            lng: property.location?.lng || '',
+            address: property.location?.address || property.address || '',
           },
           configuration: property.configuration || [],
           dimensionRange: {
-            min: property.dimensionRange?.min || "",
-            max: property.dimensionRange?.max || "",
-            unit: property.dimensionRange?.unit || "sqft",
+            min: property.dimensionRange?.min || '',
+            max: property.dimensionRange?.max || '',
+            unit: property.dimensionRange?.unit || 'sqft',
           },
-          possession: property.possession || "",
+          possession: property.possession || '',
           specifications: specs,
           amenities: property.amenities || [],
           floorPlans: floorPlansData.length
             ? floorPlansData.map((fp) => ({
-                config: fp.config || "",
-                area: fp.area != null ? String(fp.area) : "",
-                price: fp.price != null ? String(fp.price) : "",
-                image: fp.image || "",
-                bedrooms: fp.bedrooms != null ? String(fp.bedrooms) : "",
-                bathrooms: fp.bathrooms != null ? String(fp.bathrooms) : "",
+                config: fp.config || '',
+                area: fp.area != null ? String(fp.area) : '',
+                price: fp.price != null ? String(fp.price) : '',
+                image: fp.image || '',
+                bedrooms: fp.bedrooms != null ? String(fp.bedrooms) : '',
+                bathrooms: fp.bathrooms != null ? String(fp.bathrooms) : '',
               }))
             : [
                 {
-                  config: "",
-                  area: "",
-                  price: "",
-                  image: "",
-                  bedrooms: "",
-                  bathrooms: "",
+                  config: '',
+                  area: '',
+                  price: '',
+                  image: '',
+                  bedrooms: '',
+                  bathrooms: '',
                 },
               ],
-          gallery: galleryData.length ? galleryData : [""],
+          gallery: galleryData.length ? galleryData : [''],
           nearbyPlaces: nearbyPlacesData.length
             ? nearbyPlacesData.map((np) => ({
-                name: np.name || "",
-                distance: np.distance || "",
-                type: np.type || "school",
+                name: np.name || '',
+                distance: np.distance || '',
+                type: np.type || 'school',
               }))
-            : [{ name: "", distance: "", type: "school" }],
-          brochureUrl: property.brochureUrl || "",
-          floorPlanPdfUrl: property.floorPlanPdfUrl || "",
+            : [{ name: '', distance: '', type: 'school' }],
+          brochureUrl: property.brochureUrl || '',
+          floorPlanPdfUrl: property.floorPlanPdfUrl || '',
           specialities: specialitiesData.length
             ? specialitiesData.map((s) => ({
-                icon: s.icon || "",
-                name: s.name || "",
-                description: s.description || "",
+                icon: s.icon || '',
+                name: s.name || '',
+                description: s.description || '',
               }))
-            : [{ icon: "", name: "", description: "" }],
+            : [{ icon: '', name: '', description: '' }],
           documents: (property.documents || []).length
             ? property.documents.map((d) => ({
-                name: d.name || "",
-                icon: d.icon || "mdi:file-document",
-                url: d.url || "",
+                name: d.name || '',
+                icon: d.icon || 'mdi:file-document',
+                url: d.url || '',
               }))
-            : [{ name: "", icon: "mdi:file-document", url: "" }],
+            : [{ name: '', icon: 'mdi:file-document', url: '' }],
           constructionSpecs: {
-            flooring: cSpecs.flooring?.length
-              ? cSpecs.flooring
-              : [{ area: "", spec: "" }],
-            doors: cSpecs.doors?.length
-              ? cSpecs.doors
-              : [{ area: "", spec: "" }],
-            structure: cSpecs.structure?.length
-              ? cSpecs.structure
-              : [{ area: "", spec: "" }],
-            electrical: cSpecs.electrical?.length
-              ? cSpecs.electrical
-              : [{ area: "", spec: "" }],
-            ...(cSpecs.plumbing?.length
-              ? { plumbing: cSpecs.plumbing }
-              : {}),
-            ...(cSpecs.others?.length
-              ? { others: cSpecs.others }
-              : {}),
+            flooring: cSpecs.flooring?.length ? cSpecs.flooring : [{ area: '', spec: '' }],
+            doors: cSpecs.doors?.length ? cSpecs.doors : [{ area: '', spec: '' }],
+            structure: cSpecs.structure?.length ? cSpecs.structure : [{ area: '', spec: '' }],
+            electrical: cSpecs.electrical?.length ? cSpecs.electrical : [{ area: '', spec: '' }],
+            ...(cSpecs.plumbing?.length ? { plumbing: cSpecs.plumbing } : {}),
+            ...(cSpecs.others?.length ? { others: cSpecs.others } : {}),
           },
           constructionTimeline: cTimeline.length
             ? cTimeline.map((t) => ({
-                label: t.label || "",
-                status: t.status || "pending",
-                icon: t.icon || "mdi:progress-clock",
+                label: t.label || '',
+                status: t.status || 'pending',
+                icon: t.icon || 'mdi:progress-clock',
               }))
             : [
-                { label: "Foundation", status: "pending", icon: "mdi:shovel" },
-                { label: "Structure", status: "pending", icon: "mdi:crane" },
+                { label: 'Foundation', status: 'pending', icon: 'mdi:shovel' },
+                { label: 'Structure', status: 'pending', icon: 'mdi:crane' },
                 {
-                  label: "Finishing",
-                  status: "pending",
-                  icon: "mdi:format-paint",
+                  label: 'Finishing',
+                  status: 'pending',
+                  icon: 'mdi:format-paint',
                 },
                 {
-                  label: "Handover",
-                  status: "pending",
-                  icon: "mdi:key-variant",
+                  label: 'Handover',
+                  status: 'pending',
+                  icon: 'mdi:key-variant',
                 },
               ],
-          developerInfo: devInfo && (devInfo.name || devInfo.description || devInfo.logo)
-            ? {
-                name: devInfo.name || property.developer || "",
-                description: devInfo.description || "",
-                logo: devInfo.logo || "",
-                stats: Array.isArray(devInfo.stats) && devInfo.stats.length
-                  ? devInfo.stats.map((s) => ({
-                      value: s.value ?? "",
-                      suffix: s.suffix || "+",
-                      label: s.label || "",
-                      icon: s.icon || "mdi:chart-line",
-                    }))
-                  : [
-                      {
-                        value: "",
-                        suffix: "+",
-                        label: "Years Experience",
-                        icon: "mdi:calendar-star",
-                      },
-                      {
-                        value: "",
-                        suffix: "+",
-                        label: "Projects Completed",
-                        icon: "mdi:office-building",
-                      },
-                    ],
-              }
-            : {
-                name: property.developer || "",
-                description: "",
-                logo: "",
-                stats: [
-                  {
-                    value: "",
-                    suffix: "+",
-                    label: "Years Experience",
-                    icon: "mdi:calendar-star",
-                  },
-                  {
-                    value: "",
-                    suffix: "+",
-                    label: "Projects Completed",
-                    icon: "mdi:office-building",
-                  },
-                ],
-              },
+          developerInfo:
+            devInfo && (devInfo.name || devInfo.description || devInfo.logo)
+              ? {
+                  name: devInfo.name || property.developer || '',
+                  description: devInfo.description || '',
+                  logo: devInfo.logo || '',
+                  stats:
+                    Array.isArray(devInfo.stats) && devInfo.stats.length
+                      ? devInfo.stats.map((s) => ({
+                          value: s.value ?? '',
+                          suffix: s.suffix || '+',
+                          label: s.label || '',
+                          icon: s.icon || 'mdi:chart-line',
+                        }))
+                      : [
+                          {
+                            value: '',
+                            suffix: '+',
+                            label: 'Years Experience',
+                            icon: 'mdi:calendar-star',
+                          },
+                          {
+                            value: '',
+                            suffix: '+',
+                            label: 'Projects Completed',
+                            icon: 'mdi:office-building',
+                          },
+                        ],
+                }
+              : {
+                  name: property.developer || '',
+                  description: '',
+                  logo: '',
+                  stats: [
+                    {
+                      value: '',
+                      suffix: '+',
+                      label: 'Years Experience',
+                      icon: 'mdi:calendar-star',
+                    },
+                    {
+                      value: '',
+                      suffix: '+',
+                      label: 'Projects Completed',
+                      icon: 'mdi:office-building',
+                    },
+                  ],
+                },
           faqs: (property.faqs || []).length
             ? property.faqs.map((f) => ({
-                question: f.question || "",
-                answer: f.answer || "",
+                question: f.question || '',
+                answer: f.answer || '',
               }))
-            : [{ question: "", answer: "" }],
+            : [{ question: '', answer: '' }],
           similarPropertyIds: simIds,
-          seoTitle: property.seoTitle || "",
-          seoDescription: property.seoDescription || "",
+          seoTitle: property.seoTitle || '',
+          seoDescription: property.seoDescription || '',
           seoKeywords: Array.isArray(property.seoKeywords) ? property.seoKeywords : [],
-          ogTitle: property.ogTitle || "",
-          ogDescription: property.ogDescription || "",
-          ogImage: property.ogImage || "",
-          twitterCard: property.twitterCard || "summary_large_image",
-          canonicalUrl: property.canonicalUrl || "",
-          schemaMarkup: property.schemaMarkup || "",
+          ogTitle: property.ogTitle || '',
+          ogDescription: property.ogDescription || '',
+          ogImage: property.ogImage || '',
+          twitterCard: property.twitterCard || 'summary_large_image',
+          canonicalUrl: property.canonicalUrl || '',
+          schemaMarkup: property.schemaMarkup || '',
           tags: Array.isArray(property.tags) ? property.tags : [],
-          isActive:
-            property.isActive !== undefined
-              ? property.isActive
-              : true,
+          isActive: property.isActive !== undefined ? property.isActive : true,
         });
       } catch {
         setSnackbar({
           open: true,
-          message: "Failed to load property data",
-          severity: "error",
+          message: 'Failed to load property data',
+          severity: 'error',
         });
       } finally {
         setLoading(false);
@@ -367,8 +379,8 @@ const PropertyForm = ({ propertyId = null }) => {
         setFormData((prev) => ({ ...prev, ...parsed }));
         setSnackbar({
           open: true,
-          message: "Draft restored from local storage",
-          severity: "info",
+          message: 'Draft restored from local storage',
+          severity: 'info',
         });
       }
     } catch {
@@ -426,31 +438,21 @@ const PropertyForm = ({ propertyId = null }) => {
   // ---- Validation ----
   const validate = () => {
     const errs = {};
-    if (!formData.title.trim()) errs.title = "Property name is required";
-    if (!formData.slug.trim()) errs.slug = "Slug is required";
-    if (!formData.price || Number(formData.price) <= 0)
-      errs.price = "Valid price is required";
-    if (!formData.developer.trim())
-      errs.developer = "Developer name is required";
-    if (!formData.location.area.trim())
-      errs["location.area"] = "Area is required";
-    if (!formData.location.city.trim())
-      errs["location.city"] = "City is required";
-    if (!formData.description.trim())
-      errs.description = "Description is required";
+    if (!formData.title.trim()) errs.title = 'Property name is required';
+    if (!formData.slug.trim()) errs.slug = 'Slug is required';
+    if (!formData.price || Number(formData.price) <= 0) errs.price = 'Valid price is required';
+    if (!formData.developer.trim()) errs.developer = 'Developer name is required';
+    if (!formData.location.area.trim()) errs['location.area'] = 'Area is required';
+    if (!formData.location.city.trim()) errs['location.city'] = 'City is required';
+    if (!formData.description.trim()) errs.description = 'Description is required';
     setErrors(errs);
 
     // Navigate to the tab containing the first error
     const errorKeys = Object.keys(errs);
     if (errorKeys.length > 0) {
       const firstError = errorKeys[0];
-      if (["title", "slug", "price", "developer"].includes(firstError))
-        setActiveTab(1);
-      else if (
-        firstError === "description" ||
-        firstError.startsWith("location")
-      )
-        setActiveTab(2);
+      if (['title', 'slug', 'price', 'developer'].includes(firstError)) setActiveTab(1);
+      else if (firstError === 'description' || firstError.startsWith('location')) setActiveTab(2);
     }
 
     return Object.keys(errs).length === 0;
@@ -469,13 +471,11 @@ const PropertyForm = ({ propertyId = null }) => {
       .map((s) => ({
         key: s.key.trim(),
         value: isNaN(Number(s.value)) ? s.value : Number(s.value),
-        icon: s.icon || "",
+        icon: s.icon || '',
       }));
 
     // Filter empty FAQs
-    const validFaqs = formData.faqs.filter(
-      (f) => f.question.trim() && f.answer.trim(),
-    );
+    const validFaqs = formData.faqs.filter((f) => f.question.trim() && f.answer.trim());
 
     // Filter developer stats
     const devStats = (formData.developerInfo?.stats || [])
@@ -486,13 +486,9 @@ const PropertyForm = ({ propertyId = null }) => {
       Object.entries(formData.constructionSpecs)
         .filter(
           ([, items]) =>
-            Array.isArray(items) &&
-            items.some((item) => item.area.trim() && item.spec.trim()),
+            Array.isArray(items) && items.some((item) => item.area.trim() && item.spec.trim())
         )
-        .map(([key, items]) => [
-          key,
-          items.filter((item) => item.area.trim() && item.spec.trim()),
-        ]),
+        .map(([key, items]) => [key, items.filter((item) => item.area.trim() && item.spec.trim())])
     );
 
     return {
@@ -512,21 +508,13 @@ const PropertyForm = ({ propertyId = null }) => {
       location_area: formData.location.area.trim(),
       location_city: formData.location.city.trim(),
       location_state: formData.location.state.trim(),
-      location_lat: formData.location.lat
-        ? Number(formData.location.lat)
-        : null,
-      location_lng: formData.location.lng
-        ? Number(formData.location.lng)
-        : null,
-      location_address: formData.location.address?.trim() || "",
+      location_lat: formData.location.lat ? Number(formData.location.lat) : null,
+      location_lng: formData.location.lng ? Number(formData.location.lng) : null,
+      location_address: formData.location.address?.trim() || '',
       configuration: formData.configuration,
       // Flat dimension fields for Laravel backend
-      dimension_min: formData.dimensionRange.min
-        ? Number(formData.dimensionRange.min)
-        : null,
-      dimension_max: formData.dimensionRange.max
-        ? Number(formData.dimensionRange.max)
-        : null,
+      dimension_min: formData.dimensionRange.min ? Number(formData.dimensionRange.min) : null,
+      dimension_max: formData.dimensionRange.max ? Number(formData.dimensionRange.max) : null,
       dimension_unit: formData.dimensionRange.unit,
       possession: formData.possession,
       specifications: specsArray,
@@ -534,18 +522,16 @@ const PropertyForm = ({ propertyId = null }) => {
       floorPlans: formData.floorPlans.filter((fp) => fp.config.trim()),
       gallery: formData.gallery.filter((g) => g.trim()),
       nearbyPlaces: formData.nearbyPlaces.filter((np) => np.name.trim()),
-      brochure_url: formData.brochureUrl?.trim() || "",
-      floor_plan_pdf_url: formData.floorPlanPdfUrl?.trim() || "",
+      brochure_url: formData.brochureUrl?.trim() || '',
+      floor_plan_pdf_url: formData.floorPlanPdfUrl?.trim() || '',
       specialities: formData.specialities.filter((s) => s.name.trim()),
       documents: formData.documents.filter((d) => d.name.trim()),
       constructionSpecs: filteredConstructionSpecs,
-      constructionTimeline: formData.constructionTimeline.filter((t) =>
-        t.label.trim(),
-      ),
+      constructionTimeline: formData.constructionTimeline.filter((t) => t.label.trim()),
       developerInfo: {
         name: formData.developerInfo?.name || formData.developer.trim(),
-        description: formData.developerInfo?.description?.trim() || "",
-        logo: formData.developerInfo?.logo?.trim() || "",
+        description: formData.developerInfo?.description?.trim() || '',
+        logo: formData.developerInfo?.logo?.trim() || '',
         stats: devStats,
       },
       faqs: validFaqs,
@@ -554,11 +540,11 @@ const PropertyForm = ({ propertyId = null }) => {
       meta_title: formData.seoTitle.trim(),
       meta_description: formData.seoDescription.trim(),
       keywords: formData.seoKeywords,
-      og_title: formData.ogTitle?.trim() || "",
-      og_description: formData.ogDescription?.trim() || "",
-      og_image: formData.ogImage?.trim() || "",
-      twitter_card: formData.twitterCard || "summary_large_image",
-      canonical_url: formData.canonicalUrl?.trim() || "",
+      og_title: formData.ogTitle?.trim() || '',
+      og_description: formData.ogDescription?.trim() || '',
+      og_image: formData.ogImage?.trim() || '',
+      twitter_card: formData.twitterCard || 'summary_large_image',
+      canonical_url: formData.canonicalUrl?.trim() || '',
       schema_markup: formData.schemaMarkup.trim(),
       tags: formData.tags,
       is_active: formData.isActive,
@@ -570,8 +556,8 @@ const PropertyForm = ({ propertyId = null }) => {
     if (!validate()) {
       setSnackbar({
         open: true,
-        message: "Please fix the errors before saving",
-        severity: "error",
+        message: 'Please fix the errors before saving',
+        severity: 'error',
       });
       return;
     }
@@ -579,7 +565,7 @@ const PropertyForm = ({ propertyId = null }) => {
     try {
       setSaving(true);
       const payload = buildPayload();
-      payload.publish_status = publish ? "published" : "draft";
+      payload.publish_status = publish ? 'published' : 'draft';
       payload.is_active = publish;
 
       if (isEdit) {
@@ -602,37 +588,33 @@ const PropertyForm = ({ propertyId = null }) => {
         ]);
         setSnackbar({
           open: true,
-          message: "Property updated successfully",
-          severity: "success",
+          message: 'Property updated successfully',
+          severity: 'success',
         });
       } else {
         await propertyService.create(payload);
         localStorage.removeItem(DRAFT_STORAGE_KEY);
         setSnackbar({
           open: true,
-          message: publish
-            ? "Property published successfully"
-            : "Property saved as draft",
-          severity: "success",
+          message: publish ? 'Property published successfully' : 'Property saved as draft',
+          severity: 'success',
         });
       }
 
-      setTimeout(() => navigate("/admin/properties"), 1200);
+      setTimeout(() => navigate('/admin/properties'), 1200);
     } catch (err) {
       // Show specific backend validation errors when available
       const backendErrors = err?.response?.data?.errors;
       if (backendErrors) {
-        const messages = Object.values(backendErrors).flat().join(". ");
+        const messages = Object.values(backendErrors).flat().join('. ');
         setSnackbar({
           open: true,
-          message: messages || "Validation failed. Please check all fields.",
-          severity: "error",
+          message: messages || 'Validation failed. Please check all fields.',
+          severity: 'error',
         });
       } else {
-        const msg =
-          err?.response?.data?.message ||
-          "Failed to save property. Please try again.";
-        setSnackbar({ open: true, message: msg, severity: "error" });
+        const msg = err?.response?.data?.message || 'Failed to save property. Please try again.';
+        setSnackbar({ open: true, message: msg, severity: 'error' });
       }
     } finally {
       setSaving(false);
@@ -678,55 +660,52 @@ const PropertyForm = ({ propertyId = null }) => {
     return (
       <Box
         sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "50vh",
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '50vh',
         }}
       >
-        <CircularProgress sx={{ color: "#C9A86C" }} />
+        <CircularProgress sx={{ color: '#C9A86C' }} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ minWidth: 0, overflow: "hidden" }}>
+    <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
       {/* Header */}
       <Box
         sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           mb: 3,
-          flexWrap: "wrap",
+          flexWrap: 'wrap',
           gap: 2,
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <IconButton
-            onClick={() => navigate("/admin/properties")}
-            sx={{ color: "#6B7280" }}
-          >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <IconButton onClick={() => navigate('/admin/properties')} sx={{ color: '#6B7280' }}>
             <Icon icon="mdi:arrow-left" />
           </IconButton>
           <Box>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: "#1B2A4A" }}>
-              {isEdit ? "Edit Property" : "Add New Property"}
+            <Typography variant="h5" sx={{ fontWeight: 700, color: '#1B2A4A' }}>
+              {isEdit ? 'Edit Property' : 'Add New Property'}
             </Typography>
-            <Typography variant="body2" sx={{ color: "#6B7280" }}>
+            <Typography variant="body2" sx={{ color: '#6B7280' }}>
               {isEdit
-                ? `Editing: ${formData.title || "Untitled"}`
-                : "Fill in the details below to create a new property listing"}
+                ? `Editing: ${formData.title || 'Untitled'}`
+                : 'Fill in the details below to create a new property listing'}
             </Typography>
           </Box>
         </Box>
 
         {!isMobile && (
-          <Box sx={{ display: "flex", gap: 1.5 }}>
+          <Box sx={{ display: 'flex', gap: 1.5 }}>
             <Button
               variant="outlined"
-              onClick={() => navigate("/admin/properties")}
-              sx={{ borderRadius: 2, color: "#6B7280", borderColor: "#D1D5DB" }}
+              onClick={() => navigate('/admin/properties')}
+              sx={{ borderRadius: 2, color: '#6B7280', borderColor: '#D1D5DB' }}
             >
               Cancel
             </Button>
@@ -746,68 +725,63 @@ const PropertyForm = ({ propertyId = null }) => {
               disabled={saving}
               startIcon={
                 saving ? (
-                  <CircularProgress size={18} sx={{ color: "#fff" }} />
+                  <CircularProgress size={18} sx={{ color: '#fff' }} />
                 ) : (
                   <Icon icon="mdi:check" />
                 )
               }
               sx={{ borderRadius: 2 }}
             >
-              {isEdit ? "Update & Publish" : "Publish"}
+              {isEdit ? 'Update & Publish' : 'Publish'}
             </Button>
           </Box>
         )}
       </Box>
 
       {isMobile ? (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {TAB_CONFIG.map((tab, index) => (
             <Accordion
               key={tab.key}
               expanded={activeTab === index}
               onChange={() => setActiveTab(activeTab === index ? -1 : index)}
               sx={{
-                borderRadius: "12px !important",
-                "&:before": { display: "none" },
-                border:
-                  activeTab === index
-                    ? "1px solid #C9A86C"
-                    : "1px solid #E5E7EB",
+                borderRadius: '12px !important',
+                '&:before': { display: 'none' },
+                border: activeTab === index ? '1px solid #C9A86C' : '1px solid #E5E7EB',
               }}
             >
               <AccordionSummary expandIcon={<Icon icon="mdi:chevron-down" />}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <Box
                     sx={{
                       width: 28,
                       height: 28,
-                      borderRadius: "50%",
-                      bgcolor: activeTab === index ? "#1B2A4A" : "#F3F4F6",
-                      color: activeTab === index ? "#fff" : "#6B7280",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "0.75rem",
+                      borderRadius: '50%',
+                      bgcolor: activeTab === index ? '#1B2A4A' : '#F3F4F6',
+                      color: activeTab === index ? '#fff' : '#6B7280',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.75rem',
                       fontWeight: 600,
                     }}
                   >
                     {index + 1}
                   </Box>
-                  <Box
-                    sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
-                  >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                     <Icon
                       icon={tab.icon}
                       style={{
                         fontSize: 18,
-                        color: activeTab === index ? "#C9A86C" : "#9CA3AF",
+                        color: activeTab === index ? '#C9A86C' : '#9CA3AF',
                       }}
                     />
                     <Typography
                       variant="subtitle2"
                       sx={{
                         fontWeight: 600,
-                        color: activeTab === index ? "#1B2A4A" : "#6B7280",
+                        color: activeTab === index ? '#1B2A4A' : '#6B7280',
                       }}
                     >
                       {tab.label}
@@ -815,14 +789,12 @@ const PropertyForm = ({ propertyId = null }) => {
                   </Box>
                 </Box>
               </AccordionSummary>
-              <AccordionDetails sx={{ pt: 0 }}>
-                {tabRenderers[index]()}
-              </AccordionDetails>
+              <AccordionDetails sx={{ pt: 0 }}>{tabRenderers[index]()}</AccordionDetails>
             </Accordion>
           ))}
         </Box>
       ) : (
-        <Paper sx={{ borderRadius: 3, overflow: "hidden", maxWidth: "100%" }}>
+        <Paper sx={{ borderRadius: 3, overflow: 'hidden', maxWidth: '100%' }}>
           <Tabs
             value={activeTab}
             onChange={(e, val) => setActiveTab(val)}
@@ -830,21 +802,21 @@ const PropertyForm = ({ propertyId = null }) => {
             scrollButtons="auto"
             allowScrollButtonsMobile
             sx={{
-              borderBottom: "1px solid #E5E7EB",
-              maxWidth: "100%",
-              "& .MuiTab-root": {
-                textTransform: "none",
+              borderBottom: '1px solid #E5E7EB',
+              maxWidth: '100%',
+              '& .MuiTab-root': {
+                textTransform: 'none',
                 fontWeight: 500,
                 minHeight: 56,
-                color: "#6B7280",
-                fontSize: { xs: "0.7rem", md: "0.775rem", lg: "0.825rem" },
-                minWidth: { xs: "auto", md: 80 },
+                color: '#6B7280',
+                fontSize: { xs: '0.7rem', md: '0.775rem', lg: '0.825rem' },
+                minWidth: { xs: 'auto', md: 80 },
                 px: { xs: 0.75, md: 1.5 },
-                "&.Mui-selected": { color: "#1B2A4A", fontWeight: 600 },
+                '&.Mui-selected': { color: '#1B2A4A', fontWeight: 600 },
               },
-              "& .MuiTabs-indicator": { bgcolor: "#C9A86C", height: 3 },
-              "& .MuiTabs-scrollButtons": {
-                "&.Mui-disabled": { opacity: 0.3 },
+              '& .MuiTabs-indicator': { bgcolor: '#C9A86C', height: 3 },
+              '& .MuiTabs-scrollButtons': {
+                '&.Mui-disabled': { opacity: 0.3 },
               },
             }}
           >
@@ -852,7 +824,7 @@ const PropertyForm = ({ propertyId = null }) => {
               <Tab
                 key={tab.key}
                 label={
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Icon icon={tab.icon} style={{ fontSize: 16 }} />
                     {tab.label}
                   </Box>
@@ -860,7 +832,7 @@ const PropertyForm = ({ propertyId = null }) => {
               />
             ))}
           </Tabs>
-          <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, overflow: "hidden" }}>
+          <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 }, overflow: 'hidden' }}>
             {tabRenderers[activeTab]()}
           </Box>
         </Paper>
@@ -869,25 +841,25 @@ const PropertyForm = ({ propertyId = null }) => {
       {isMobile && (
         <Paper
           sx={{
-            position: "sticky",
+            position: 'sticky',
             bottom: 0,
             mt: 2,
             p: 2,
             borderRadius: 3,
-            display: "flex",
+            display: 'flex',
             gap: 1,
             zIndex: 10,
-            boxShadow: "0px -4px 12px rgba(0,0,0,0.08)",
+            boxShadow: '0px -4px 12px rgba(0,0,0,0.08)',
           }}
         >
           <Button
             variant="outlined"
-            onClick={() => navigate("/admin/properties")}
+            onClick={() => navigate('/admin/properties')}
             sx={{
               borderRadius: 2,
               flex: 1,
-              color: "#6B7280",
-              borderColor: "#D1D5DB",
+              color: '#6B7280',
+              borderColor: '#D1D5DB',
             }}
           >
             Cancel
@@ -908,11 +880,11 @@ const PropertyForm = ({ propertyId = null }) => {
             sx={{ borderRadius: 2, flex: 1 }}
           >
             {saving ? (
-              <CircularProgress size={20} sx={{ color: "#fff" }} />
+              <CircularProgress size={20} sx={{ color: '#fff' }} />
             ) : isEdit ? (
-              "Update"
+              'Update'
             ) : (
-              "Publish"
+              'Publish'
             )}
           </Button>
         </Paper>
@@ -922,7 +894,7 @@ const PropertyForm = ({ propertyId = null }) => {
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert
           onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}

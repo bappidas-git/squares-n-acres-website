@@ -82,19 +82,6 @@
   cursor: not-allowed;
 }
 
-/* Skeleton Grid */
-.skeletonGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-
-.skeletonCard {
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-}
-
 /* Empty State */
 .emptyState {
   display: flex;
@@ -181,8 +168,7 @@
 
 /* Responsive */
 @media (max-width: 960px) {
-  .propertyGrid,
-  .skeletonGrid {
+  .propertyGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 
@@ -208,8 +194,7 @@
     padding: 24px 0 48px;
   }
 
-  .propertyGrid,
-  .skeletonGrid {
+  .propertyGrid {
     grid-template-columns: 1fr;
     gap: 16px;
   }

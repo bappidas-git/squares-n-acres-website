@@ -44,8 +44,9 @@ const DetailsTab = ({ formData, updateListItem, addListItem, removeListItem }) =
         Property Details (Key-Value with Icons)
       </Typography>
       <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
-        Dynamic details shown in the "Property Details" section. Each item has an icon, label, and value.
-        Common examples: Project Area, Total Units, Towers, Floors, RERA ID, Launch Date, Possession Date, etc.
+        Dynamic details shown in the "Property Details" section. Each item has an icon, label, and
+        value. Common examples: Project Area, Total Units, Towers, Floors, RERA ID, Launch Date,
+        Possession Date, etc.
       </Typography>
 
       {formData.specifications.map((spec, index) => (
@@ -64,7 +65,10 @@ const DetailsTab = ({ formData, updateListItem, addListItem, removeListItem }) =
           }}
         >
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Icon icon="mdi:drag-vertical" style={{ fontSize: 20, color: '#D1D5DB', flexShrink: 0 }} />
+            <Icon
+              icon="mdi:drag-vertical"
+              style={{ fontSize: 20, color: '#D1D5DB', flexShrink: 0 }}
+            />
 
             {/* Icon selector */}
             <Box
@@ -123,7 +127,10 @@ const DetailsTab = ({ formData, updateListItem, addListItem, removeListItem }) =
           </Box>
 
           {spec.icon && (
-            <Typography variant="caption" sx={{ color: '#9CA3AF', ml: 8, mt: 0.5, display: 'block' }}>
+            <Typography
+              variant="caption"
+              sx={{ color: '#9CA3AF', ml: 8, mt: 0.5, display: 'block' }}
+            >
               Icon: {spec.icon}
             </Typography>
           )}

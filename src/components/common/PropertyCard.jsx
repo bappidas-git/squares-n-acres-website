@@ -55,27 +55,30 @@ const PropertyCard = memo(({ property }) => {
   const handleShare = useCallback(() => {
     if (!property) return;
     if (navigator.share) {
-      navigator.share({
-        title: property.title,
-        url: `${window.location.origin}/properties/${property.slug}`,
-      }).catch(() => {});
+      navigator
+        .share({
+          title: property.title,
+          url: `${window.location.origin}/properties/${property.slug}`,
+        })
+        .catch(() => {});
     } else {
-      navigator.clipboard.writeText(
-        `${window.location.origin}/properties/${property.slug}`
-      );
+      navigator.clipboard.writeText(`${window.location.origin}/properties/${property.slug}`);
     }
     setSwipeAction(null);
   }, [property]);
 
-  const handleDragEnd = useCallback((_, info) => {
-    if (info.offset.x < -SWIPE_THRESHOLD) {
-      setSwipeAction('enquire');
-      // Auto-dismiss after 2s
-      setTimeout(() => setSwipeAction(null), 2000);
-    } else if (info.offset.x > SWIPE_THRESHOLD) {
-      handleShare();
-    }
-  }, [handleShare]);
+  const handleDragEnd = useCallback(
+    (_, info) => {
+      if (info.offset.x < -SWIPE_THRESHOLD) {
+        setSwipeAction('enquire');
+        // Auto-dismiss after 2s
+        setTimeout(() => setSwipeAction(null), 2000);
+      } else if (info.offset.x > SWIPE_THRESHOLD) {
+        handleShare();
+      }
+    },
+    [handleShare]
+  );
 
   if (!property) return null;
 
@@ -111,7 +114,10 @@ const PropertyCard = memo(({ property }) => {
       <div className={styles.imageWrapper}>
         {/* Render video or image based on media type; gradient fallback when no gallery */}
         {!currentMediaUrl ? (
-          <div className={styles.imagePlaceholder} style={{ background: 'linear-gradient(135deg, #1B2A4A 0%, #2D4470 100%)' }} />
+          <div
+            className={styles.imagePlaceholder}
+            style={{ background: 'linear-gradient(135deg, #1B2A4A 0%, #2D4470 100%)' }}
+          />
         ) : currentIsVideo ? (
           <video
             ref={videoRef}
@@ -173,10 +179,18 @@ const PropertyCard = memo(({ property }) => {
 
         {images.length > 1 && (
           <>
-            <button className={`${styles.navBtn} ${styles.navPrev}`} onClick={handlePrev} aria-label="Previous image">
+            <button
+              className={`${styles.navBtn} ${styles.navPrev}`}
+              onClick={handlePrev}
+              aria-label="Previous image"
+            >
               <Icon icon="mdi:chevron-left" />
             </button>
-            <button className={`${styles.navBtn} ${styles.navNext}`} onClick={handleNext} aria-label="Next image">
+            <button
+              className={`${styles.navBtn} ${styles.navNext}`}
+              onClick={handleNext}
+              aria-label="Next image"
+            >
               <Icon icon="mdi:chevron-right" />
             </button>
             <div className={styles.dots}>
@@ -203,22 +217,29 @@ const PropertyCard = memo(({ property }) => {
 
         <div className={styles.location}>
           <Icon icon="mdi:map-marker-outline" className={styles.locIcon} />
-          <span>{[property.location?.area || property.location_area, property.location?.city || property.location_city].filter(Boolean).join(', ') || '—'}</span>
+          <span>
+            {[
+              property.location?.area || property.location_area,
+              property.location?.city || property.location_city,
+            ]
+              .filter(Boolean)
+              .join(', ') || '—'}
+          </span>
         </div>
 
         <div className={styles.detailsGrid}>
           <div className={styles.detailItem}>
             <span className={styles.detailLabel}>Configuration</span>
-            <span className={styles.detailValue}>
-              {property.configuration?.join(', ') || '—'}
-            </span>
+            <span className={styles.detailValue}>{property.configuration?.join(', ') || '—'}</span>
           </div>
           <div className={styles.detailItem}>
             <span className={styles.detailLabel}>Area</span>
             <span className={styles.detailValue}>
               {property.dimensionRange
                 ? `${property.dimensionRange.min} - ${property.dimensionRange.max} ${property.dimensionRange.unit}`
-                : (property.dimension_min ? `${property.dimension_min} - ${property.dimension_max} ${property.dimension_unit || 'sqft'}` : '—')}
+                : property.dimension_min
+                  ? `${property.dimension_min} - ${property.dimension_max} ${property.dimension_unit || 'sqft'}`
+                  : '—'}
             </span>
           </div>
           <div className={styles.detailItem}>

@@ -33,9 +33,7 @@ const BasicInfoTab = ({ formData, updateField, errors, setSlugManuallyEdited }) 
   const toggleTag = (tag) => {
     updateField(
       'tags',
-      formData.tags.includes(tag)
-        ? formData.tags.filter((t) => t !== tag)
-        : [...formData.tags, tag]
+      formData.tags.includes(tag) ? formData.tags.filter((t) => t !== tag) : [...formData.tags, tag]
     );
   };
 
@@ -70,11 +68,7 @@ const BasicInfoTab = ({ formData, updateField, errors, setSlugManuallyEdited }) 
       <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <FormControl>
           <FormLabel sx={{ fontWeight: 600, mb: 1, color: '#1B2A4A' }}>Type</FormLabel>
-          <RadioGroup
-            row
-            value={formData.type}
-            onChange={(e) => handleTypeChange(e.target.value)}
-          >
+          <RadioGroup row value={formData.type} onChange={(e) => handleTypeChange(e.target.value)}>
             <FormControlLabel value="sale" control={<Radio />} label="Sale" />
             <FormControlLabel value="rent" control={<Radio />} label="Rent" />
           </RadioGroup>
@@ -91,7 +85,9 @@ const BasicInfoTab = ({ formData, updateField, errors, setSlugManuallyEdited }) 
             }}
           >
             {categoryOptions.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
             ))}
           </Select>
         </FormControl>
@@ -171,7 +167,12 @@ const BasicInfoTab = ({ formData, updateField, errors, setSlugManuallyEdited }) 
             return (
               <Chip
                 key={tag.value}
-                icon={<Icon icon={tag.icon} style={{ fontSize: 16, color: selected ? tag.color : '#9CA3AF' }} />}
+                icon={
+                  <Icon
+                    icon={tag.icon}
+                    style={{ fontSize: 16, color: selected ? tag.color : '#9CA3AF' }}
+                  />
+                }
                 label={tag.label}
                 clickable
                 onClick={() => toggleTag(tag.value)}

@@ -5,6 +5,7 @@ import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
 import styles from './DirectLeaseRetails.module.css';
+import { SITE } from '../../config/site';
 
 /* ── Animated section wrapper ──────────────────── */
 const Section = ({ children, className = '', delay = 0 }) => {
@@ -24,24 +25,72 @@ const Section = ({ children, className = '', delay = 0 }) => {
 
 /* ── Static data ───────────────────────────────── */
 const spaceTypes = [
-  { icon: 'mdi:store-outline', title: 'Retail Shops', desc: 'High-footfall retail spaces in malls, high streets, and mixed-use developments.' },
-  { icon: 'mdi:office-building-outline', title: 'Office Spaces', desc: 'Grade-A commercial office spaces available on direct lease from landlords.' },
-  { icon: 'mdi:warehouse', title: 'Showrooms', desc: 'Large-format showroom spaces for automobile, furniture, and lifestyle brands.' },
-  { icon: 'mdi:food-outline', title: 'F&B Outlets', desc: 'Ready-to-operate food court and restaurant spaces in prime dining destinations.' },
+  {
+    icon: 'mdi:store-outline',
+    title: 'Retail Shops',
+    desc: 'High-footfall retail spaces in malls, high streets, and mixed-use developments.',
+  },
+  {
+    icon: 'mdi:office-building-outline',
+    title: 'Office Spaces',
+    desc: 'Grade-A commercial office spaces available on direct lease from landlords.',
+  },
+  {
+    icon: 'mdi:warehouse',
+    title: 'Showrooms',
+    desc: 'Large-format showroom spaces for automobile, furniture, and lifestyle brands.',
+  },
+  {
+    icon: 'mdi:food-outline',
+    title: 'F&B Outlets',
+    desc: 'Ready-to-operate food court and restaurant spaces in prime dining destinations.',
+  },
 ];
 
 const benefits = [
-  { icon: 'mdi:handshake-outline', title: 'Direct from Landlord', desc: 'No intermediaries — negotiate directly with property owners for the best terms.' },
-  { icon: 'mdi:cash-remove', title: 'Zero Brokerage', desc: 'Save lakhs in brokerage fees with our direct landlord connections.' },
-  { icon: 'mdi:file-document-check-outline', title: 'Transparent Terms', desc: 'Clear lease agreements with no hidden charges or escalation surprises.' },
-  { icon: 'mdi:map-marker-check-outline', title: 'Prime Locations', desc: 'Access to premium retail and commercial spaces in high-demand areas.' },
+  {
+    icon: 'mdi:handshake-outline',
+    title: 'Direct from Landlord',
+    desc: 'No intermediaries — negotiate directly with property owners for the best terms.',
+  },
+  {
+    icon: 'mdi:cash-remove',
+    title: 'Zero Brokerage',
+    desc: 'Save lakhs in brokerage fees with our direct landlord connections.',
+  },
+  {
+    icon: 'mdi:file-document-check-outline',
+    title: 'Transparent Terms',
+    desc: 'Clear lease agreements with no hidden charges or escalation surprises.',
+  },
+  {
+    icon: 'mdi:map-marker-check-outline',
+    title: 'Prime Locations',
+    desc: 'Access to premium retail and commercial spaces in high-demand areas.',
+  },
 ];
 
 const process = [
-  { icon: 'mdi:clipboard-list-outline', title: 'Share Requirements', desc: 'Tell us your space needs — type, size, budget, and preferred locations.' },
-  { icon: 'mdi:magnify', title: 'Curated Options', desc: 'We shortlist the best matching spaces from our direct landlord network.' },
-  { icon: 'mdi:eye-outline', title: 'Site Visits', desc: 'Visit shortlisted properties with our commercial real estate experts.' },
-  { icon: 'mdi:file-sign', title: 'Lease & Move In', desc: 'We facilitate the lease agreement and handover for a smooth transition.' },
+  {
+    icon: 'mdi:clipboard-list-outline',
+    title: 'Share Requirements',
+    desc: 'Tell us your space needs — type, size, budget, and preferred locations.',
+  },
+  {
+    icon: 'mdi:magnify',
+    title: 'Curated Options',
+    desc: 'We shortlist the best matching spaces from our direct landlord network.',
+  },
+  {
+    icon: 'mdi:eye-outline',
+    title: 'Site Visits',
+    desc: 'Visit shortlisted properties with our commercial real estate experts.',
+  },
+  {
+    icon: 'mdi:file-sign',
+    title: 'Lease & Move In',
+    desc: 'We facilitate the lease agreement and handover for a smooth transition.',
+  },
 ];
 
 const leadFields = [
@@ -62,8 +111,20 @@ const leadFields = [
       { value: 'other', label: 'Other' },
     ],
   },
-  { name: 'areaRequired', label: 'Area Required', type: 'text', required: false, placeholder: 'Approx. area in sq.ft (optional)' },
-  { name: 'message', label: 'Requirements', type: 'textarea', required: false, placeholder: 'Location preference, budget, or any specific needs...' },
+  {
+    name: 'areaRequired',
+    label: 'Area Required',
+    type: 'text',
+    required: false,
+    placeholder: 'Approx. area in sq.ft (optional)',
+  },
+  {
+    name: 'message',
+    label: 'Requirements',
+    type: 'textarea',
+    required: false,
+    placeholder: 'Location preference, budget, or any specific needs...',
+  },
 ];
 
 /* ── Component ─────────────────────────────────── */
@@ -71,8 +132,11 @@ const DirectLeaseRetails = () => {
   return (
     <>
       <Helmet>
-        <title>Direct Lease & Retails | H.O.M Advisory</title>
-        <meta name="description" content="Find retail shops, office spaces, showrooms, and F&B outlets on direct lease from landlords. Zero brokerage, transparent terms, prime locations." />
+        <title>{`Direct Lease & Retails | ${SITE.name}`}</title>
+        <meta
+          name="description"
+          content="Find retail shops, office spaces, showrooms, and F&B outlets on direct lease from landlords. Zero brokerage, transparent terms, prime locations."
+        />
       </Helmet>
 
       <div className={styles.page}>
@@ -90,8 +154,8 @@ const DirectLeaseRetails = () => {
             </span>
             <h1 className={styles.heroTitle}>Direct Lease & Retail Spaces</h1>
             <p className={styles.heroSubtitle}>
-              Access premium commercial and retail spaces directly from landlords —
-              no intermediaries, zero brokerage, transparent terms.
+              Access premium commercial and retail spaces directly from landlords — no
+              intermediaries, zero brokerage, transparent terms.
             </p>
           </motion.div>
         </section>
@@ -191,8 +255,8 @@ const DirectLeaseRetails = () => {
               <div className={styles.formInfo}>
                 <h2 className={styles.sectionTitle}>Find Your Space</h2>
                 <p className={styles.formInfoText}>
-                  Share your requirements and our commercial real estate experts will
-                  present the best options within 48 hours.
+                  Share your requirements and our commercial real estate experts will present the
+                  best options within 48 hours.
                 </p>
                 <div className={styles.formBenefits}>
                   <div className={styles.benefit}>

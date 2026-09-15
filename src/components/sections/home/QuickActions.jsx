@@ -9,8 +9,7 @@ const actions = [
   {
     icon: 'mdi:home-search',
     title: 'Buy a home',
-    description:
-      'Find your place with an immersive photo experience and the most listings.',
+    description: 'Find your place with an immersive photo experience and the most listings.',
     link: '/properties?type=sale',
   },
   {
@@ -23,8 +22,7 @@ const actions = [
   {
     icon: 'mdi:office-building',
     title: 'Lease Office Space',
-    description:
-      'Discover premium commercial spaces perfect for your business needs.',
+    description: 'Discover premium commercial spaces perfect for your business needs.',
     link: '/properties?type=lease',
   },
 ];

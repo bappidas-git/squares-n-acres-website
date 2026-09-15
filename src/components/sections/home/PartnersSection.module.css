@@ -1,6 +1,6 @@
 .section {
   padding: 64px 0;
-  background: #F8F6F3;
+  background: #f8f6f3;
 }
 
 .container {
@@ -40,13 +40,7 @@
     black 92%,
     transparent 100%
   );
-  mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    black 8%,
-    black 92%,
-    transparent 100%
-  );
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
 }
 
 .marqueeTrack {
@@ -84,7 +78,9 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   text-decoration: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
   background: #fff;
   flex-shrink: 0;
 }
@@ -102,7 +98,9 @@
   object-fit: contain;
   filter: grayscale(100%);
   opacity: 0.7;
-  transition: filter var(--transition-base), opacity var(--transition-base);
+  transition:
+    filter var(--transition-base),
+    opacity var(--transition-base);
 }
 
 .partnerCard:hover .partnerLogo {

@@ -9,29 +9,25 @@ const steps = [
     number: 1,
     icon: 'mdi:magnify',
     title: 'Search Properties',
-    description:
-      'Browse our extensive collection of premium properties.',
+    description: 'Browse our extensive collection of premium properties.',
   },
   {
     number: 2,
     icon: 'mdi:calendar-check',
     title: 'Schedule a Tour',
-    description:
-      'Visit your favourite properties with our expert agents.',
+    description: 'Visit your favourite properties with our expert agents.',
   },
   {
     number: 3,
     icon: 'mdi:file-document-edit-outline',
     title: 'Make an Offer',
-    description:
-      'Get guidance on making competitive offers.',
+    description: 'Get guidance on making competitive offers.',
   },
   {
     number: 4,
     icon: 'mdi:handshake-outline',
     title: 'Close the Deal',
-    description:
-      'Complete your purchase with our support.',
+    description: 'Complete your purchase with our support.',
   },
 ];
 
@@ -65,9 +61,7 @@ const HowItWorks = () => {
           transition={{ duration: 0.5 }}
         >
           <h2 className={styles.title}>How It Works</h2>
-          <p className={styles.subtitle}>
-            Your journey to homeownership in four simple steps
-          </p>
+          <p className={styles.subtitle}>Your journey to homeownership in four simple steps</p>
         </motion.div>
 
         <div className={styles.stepsWrapper}>

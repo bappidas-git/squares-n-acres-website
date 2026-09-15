@@ -24,12 +24,14 @@
   padding: var(--spacing-md) var(--spacing-lg);
   background: var(--color-bg-surface);
   border-radius: var(--radius-md);
-  transition: box-shadow var(--transition-fast), background var(--transition-fast);
+  transition:
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
 }
 
 .docItem:hover {
   box-shadow: var(--shadow-sm);
-  background: #FAFBFC;
+  background: #fafbfc;
 }
 
 .docIcon {
@@ -124,7 +126,9 @@
   pointer-events: none;
   opacity: 0;
   transform: translateY(4px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
   z-index: 10;
 }
 

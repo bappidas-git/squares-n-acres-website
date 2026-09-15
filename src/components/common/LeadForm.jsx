@@ -3,7 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { leadService } from '../../services/api';
 import { useToast } from './ToastProvider';
-import { getNameErrorMessage, getEmailErrorMessage, getMobileErrorMessage, sanitizeInput } from '../../utils/validators';
+import {
+  getNameErrorMessage,
+  getEmailErrorMessage,
+  getMobileErrorMessage,
+  sanitizeInput,
+} from '../../utils/validators';
 import styles from './LeadForm.module.css';
 
 const LeadForm = ({
@@ -16,7 +21,13 @@ const LeadForm = ({
 }) => {
   const defaultFields = [
     { name: 'name', label: 'Full Name', type: 'text', required: true, placeholder: 'Your Name *' },
-    { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'Email Address *' },
+    {
+      name: 'email',
+      label: 'Email',
+      type: 'email',
+      required: true,
+      placeholder: 'Email Address *',
+    },
     { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: 'Phone Number *' },
   ];
 
@@ -157,8 +168,18 @@ const LeadForm = ({
                       placeholder={field.placeholder || field.label}
                       value={formData[field.name] || ''}
                       onChange={handleChange}
-                      inputMode={field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : undefined}
-                      autoComplete={field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : field.name === 'name' ? 'name' : undefined}
+                      inputMode={
+                        field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : undefined
+                      }
+                      autoComplete={
+                        field.type === 'email'
+                          ? 'email'
+                          : field.type === 'tel'
+                            ? 'tel'
+                            : field.name === 'name'
+                              ? 'name'
+                              : undefined
+                      }
                       className={`${styles.input} ${errors[field.name] ? styles.inputError : ''}`}
                     />
                   )}

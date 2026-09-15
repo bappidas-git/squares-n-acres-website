@@ -96,26 +96,6 @@
   opacity: 0.8;
 }
 
-.qualities {
-  display: flex;
-  gap: var(--spacing-lg);
-  flex-wrap: wrap;
-}
-
-.qualityItem {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-}
-
-.qualityIcon {
-  font-size: 1.25rem;
-  color: var(--color-secondary);
-}
-
 @media (max-width: 960px) {
   .statsGrid {
     grid-template-columns: repeat(2, 1fr);
@@ -133,10 +113,5 @@
 
   .statValue {
     font-size: 1.5rem;
-  }
-
-  .qualities {
-    flex-direction: column;
-    gap: var(--spacing-sm);
   }
 }

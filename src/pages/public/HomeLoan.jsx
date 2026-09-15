@@ -5,6 +5,7 @@ import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
 import styles from './HomeLoan.module.css';
+import { SITE } from '../../config/site';
 
 /* ── EMI helpers ────────────────────────────────── */
 const calcEMI = (principal, rate, years) => {
@@ -109,10 +110,26 @@ const RangeInput = ({ label, value, min, max, step, unit, displayValue, onChange
 
 /* ── Static data ───────────────────────────────── */
 const steps = [
-  { icon: 'mdi:file-document-check-outline', title: 'Check Eligibility', desc: 'Use our calculator and check your loan eligibility based on income and credit score.' },
-  { icon: 'mdi:folder-upload-outline', title: 'Submit Documents', desc: 'Upload required documents including ID proof, income proof, and property papers.' },
-  { icon: 'mdi:bank-check', title: 'Bank Processing', desc: 'The bank verifies your documents, conducts property valuation, and processes the application.' },
-  { icon: 'mdi:cash-check', title: 'Loan Disbursement', desc: 'Once approved, the loan amount is disbursed to the seller or builder account.' },
+  {
+    icon: 'mdi:file-document-check-outline',
+    title: 'Check Eligibility',
+    desc: 'Use our calculator and check your loan eligibility based on income and credit score.',
+  },
+  {
+    icon: 'mdi:folder-upload-outline',
+    title: 'Submit Documents',
+    desc: 'Upload required documents including ID proof, income proof, and property papers.',
+  },
+  {
+    icon: 'mdi:bank-check',
+    title: 'Bank Processing',
+    desc: 'The bank verifies your documents, conducts property valuation, and processes the application.',
+  },
+  {
+    icon: 'mdi:cash-check',
+    title: 'Loan Disbursement',
+    desc: 'Once approved, the loan amount is disbursed to the seller or builder account.',
+  },
 ];
 
 const documents = [
@@ -138,12 +155,30 @@ const banks = [
 ];
 
 const faqs = [
-  { q: 'What is the minimum credit score required for a home loan?', a: 'Most banks require a minimum CIBIL score of 700 or above. However, some lenders may consider scores from 650 with higher interest rates.' },
-  { q: 'Can I get a home loan for a property under construction?', a: 'Yes, banks offer home loans for under-construction properties. The loan amount is disbursed in stages based on the construction progress.' },
-  { q: 'What is the maximum tenure for a home loan?', a: 'Most banks offer home loans for up to 30 years. The maximum tenure depends on your age at the time of loan maturity — typically up to 60-65 years of age.' },
-  { q: 'Can I prepay my home loan without penalties?', a: 'For floating-rate home loans, RBI guidelines prohibit banks from charging prepayment or foreclosure penalties. Fixed-rate loans may have a prepayment charge.' },
-  { q: 'How much home loan can I get based on my salary?', a: 'Generally, banks offer up to 60 times your monthly salary. The exact amount depends on your income, existing obligations, credit score, and the property value.' },
-  { q: 'What are the tax benefits on a home loan?', a: 'You can claim up to ₹1.5 lakh deduction on principal repayment under Section 80C, and up to ₹2 lakh on interest under Section 24(b) for a self-occupied property.' },
+  {
+    q: 'What is the minimum credit score required for a home loan?',
+    a: 'Most banks require a minimum CIBIL score of 700 or above. However, some lenders may consider scores from 650 with higher interest rates.',
+  },
+  {
+    q: 'Can I get a home loan for a property under construction?',
+    a: 'Yes, banks offer home loans for under-construction properties. The loan amount is disbursed in stages based on the construction progress.',
+  },
+  {
+    q: 'What is the maximum tenure for a home loan?',
+    a: 'Most banks offer home loans for up to 30 years. The maximum tenure depends on your age at the time of loan maturity — typically up to 60-65 years of age.',
+  },
+  {
+    q: 'Can I prepay my home loan without penalties?',
+    a: 'For floating-rate home loans, RBI guidelines prohibit banks from charging prepayment or foreclosure penalties. Fixed-rate loans may have a prepayment charge.',
+  },
+  {
+    q: 'How much home loan can I get based on my salary?',
+    a: 'Generally, banks offer up to 60 times your monthly salary. The exact amount depends on your income, existing obligations, credit score, and the property value.',
+  },
+  {
+    q: 'What are the tax benefits on a home loan?',
+    a: 'You can claim up to ₹1.5 lakh deduction on principal repayment under Section 80C, and up to ₹2 lakh on interest under Section 24(b) for a self-occupied property.',
+  },
 ];
 
 const leadFields = [
@@ -202,8 +237,11 @@ const HomeLoan = () => {
   return (
     <>
       <Helmet>
-        <title>Home Loan Assistance | H.O.M Advisory</title>
-        <meta name="description" content="Get expert home loan assistance with H.O.M Advisory. Use our EMI calculator, explore partner banks, and get pre-approved for your dream home in Bangalore." />
+        <title>{`Home Loan Assistance | ${SITE.name}`}</title>
+        <meta
+          name="description"
+          content={`Get expert home loan assistance with ${SITE.name}. Use our EMI calculator, explore partner banks, and get pre-approved for your dream home in Bangalore.`}
+        />
       </Helmet>
 
       <div className={styles.page}>
@@ -232,7 +270,9 @@ const HomeLoan = () => {
           <div className={styles.container}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>EMI Calculator</h2>
-              <p className={styles.sectionSubtitle}>Plan your home loan with our interactive EMI calculator</p>
+              <p className={styles.sectionSubtitle}>
+                Plan your home loan with our interactive EMI calculator
+              </p>
             </div>
 
             <div className={styles.calcGrid}>
@@ -296,7 +336,9 @@ const HomeLoan = () => {
           <div className={styles.container}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>How to Apply</h2>
-              <p className={styles.sectionSubtitle}>A simple 4-step process to get your home loan</p>
+              <p className={styles.sectionSubtitle}>
+                A simple 4-step process to get your home loan
+              </p>
             </div>
 
             <div className={styles.stepsGrid}>
@@ -326,7 +368,9 @@ const HomeLoan = () => {
           <div className={styles.container}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>Required Documents</h2>
-              <p className={styles.sectionSubtitle}>Keep these documents ready for a smooth application</p>
+              <p className={styles.sectionSubtitle}>
+                Keep these documents ready for a smooth application
+              </p>
             </div>
 
             <div className={styles.docGrid}>
@@ -352,7 +396,9 @@ const HomeLoan = () => {
           <div className={styles.container}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>Our Partner Banks</h2>
-              <p className={styles.sectionSubtitle}>We work with India's leading banks to get you the best rates</p>
+              <p className={styles.sectionSubtitle}>
+                We work with India's leading banks to get you the best rates
+              </p>
             </div>
 
             <div className={styles.banksGrid}>
@@ -380,8 +426,8 @@ const HomeLoan = () => {
               <div className={styles.formInfo}>
                 <h2 className={styles.sectionTitle}>Get Pre-Approved</h2>
                 <p className={styles.formInfoText}>
-                  Fill in your details and our home loan experts will guide you through the entire process —
-                  from eligibility check to final disbursement.
+                  Fill in your details and our home loan experts will guide you through the entire
+                  process — from eligibility check to final disbursement.
                 </p>
                 <div className={styles.formBenefits}>
                   <div className={styles.benefit}>
@@ -422,10 +468,7 @@ const HomeLoan = () => {
 
             <div className={styles.faqList}>
               {faqs.map((faq, i) => (
-                <div
-                  key={i}
-                  className={`${styles.faqItem} ${openFaq === i ? styles.faqOpen : ''}`}
-                >
+                <div key={i} className={`${styles.faqItem} ${openFaq === i ? styles.faqOpen : ''}`}>
                   <button
                     className={styles.faqQuestion}
                     onClick={() => toggleFaq(i)}

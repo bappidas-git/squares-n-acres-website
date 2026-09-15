@@ -99,9 +99,7 @@ const AdminPartners = () => {
         setSnackbar({ open: true, message: 'Partner updated', severity: 'success' });
       } else {
         const created = await partnerService.create(form);
-        setPartners((prev) =>
-          [...prev, created].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        );
+        setPartners((prev) => [...prev, created].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
         setSnackbar({ open: true, message: 'Partner added', severity: 'success' });
       }
       setDialogOpen(false);
@@ -145,7 +143,16 @@ const AdminPartners = () => {
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          mb: 3,
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
+      >
         <Box>
           <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#1B2A4A' }}>
             Partners
@@ -171,7 +178,10 @@ const AdminPartners = () => {
       </Box>
 
       {/* Partner List */}
-      <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}>
+      <Paper
+        elevation={0}
+        sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}
+      >
         {loading ? (
           <Box sx={{ p: 3 }}>
             {[...Array(4)].map((_, i) => (
@@ -194,25 +204,39 @@ const AdminPartners = () => {
                       style={{ maxHeight: 32, maxWidth: 80, objectFit: 'contain' }}
                     />
                   )}
-                  <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A', flex: 1 }}>
+                  <Typography
+                    sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A', flex: 1 }}
+                  >
                     {partner.name}
                   </Typography>
                 </Box>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    gap: 1,
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
                   <Switch
                     checked={partner.isActive}
                     onChange={() => handleToggleActive(partner)}
                     size="small"
                     sx={{
                       '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
-                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#10B981' },
+                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                        bgcolor: '#10B981',
+                      },
                     }}
                   />
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
                     <IconButton size="small" onClick={() => handleOpenEdit(partner)}>
                       <Icon icon="mdi:pencil-outline" style={{ fontSize: 16, color: '#6B7280' }} />
                     </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteDialog({ open: true, partner })}>
+                    <IconButton
+                      size="small"
+                      onClick={() => setDeleteDialog({ open: true, partner })}
+                    >
                       <Icon icon="mdi:delete-outline" style={{ fontSize: 16, color: '#EF4444' }} />
                     </IconButton>
                   </Box>
@@ -225,12 +249,33 @@ const AdminPartners = () => {
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#FAFAFA' }}>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280', width: 60 }} align="center">Order</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>Logo</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>Name</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>Website</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }} align="center">Active</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }} align="center">Actions</TableCell>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280', width: 60 }}
+                    align="center"
+                  >
+                    Order
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                    Logo
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                    Name
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                    Website
+                  </TableCell>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    align="center"
+                  >
+                    Active
+                  </TableCell>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    align="center"
+                  >
+                    Actions
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -249,7 +294,9 @@ const AdminPartners = () => {
                           style={{ maxHeight: 32, maxWidth: 100, objectFit: 'contain' }}
                         />
                       ) : (
-                        <Typography sx={{ fontSize: '0.75rem', color: '#9CA3AF' }}>No logo</Typography>
+                        <Typography sx={{ fontSize: '0.75rem', color: '#9CA3AF' }}>
+                          No logo
+                        </Typography>
                       )}
                     </TableCell>
                     <TableCell>
@@ -259,7 +306,14 @@ const AdminPartners = () => {
                     </TableCell>
                     <TableCell>
                       <Typography
-                        sx={{ fontSize: '0.75rem', color: '#6B7280', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        sx={{
+                          fontSize: '0.75rem',
+                          color: '#6B7280',
+                          maxWidth: 200,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
                       >
                         {partner.website || '—'}
                       </Typography>
@@ -271,17 +325,28 @@ const AdminPartners = () => {
                         size="small"
                         sx={{
                           '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
-                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#10B981' },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            bgcolor: '#10B981',
+                          },
                         }}
                       />
                     </TableCell>
                     <TableCell align="center">
                       <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                         <IconButton size="small" onClick={() => handleOpenEdit(partner)}>
-                          <Icon icon="mdi:pencil-outline" style={{ fontSize: 18, color: '#6B7280' }} />
+                          <Icon
+                            icon="mdi:pencil-outline"
+                            style={{ fontSize: 18, color: '#6B7280' }}
+                          />
                         </IconButton>
-                        <IconButton size="small" onClick={() => setDeleteDialog({ open: true, partner })}>
-                          <Icon icon="mdi:delete-outline" style={{ fontSize: 18, color: '#EF4444' }} />
+                        <IconButton
+                          size="small"
+                          onClick={() => setDeleteDialog({ open: true, partner })}
+                        >
+                          <Icon
+                            icon="mdi:delete-outline"
+                            style={{ fontSize: 18, color: '#EF4444' }}
+                          />
                         </IconButton>
                       </Box>
                     </TableCell>
@@ -290,7 +355,10 @@ const AdminPartners = () => {
                 {partners.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                      <Icon icon="mdi:handshake-outline" style={{ fontSize: 40, color: '#D1D5DB' }} />
+                      <Icon
+                        icon="mdi:handshake-outline"
+                        style={{ fontSize: 40, color: '#D1D5DB' }}
+                      />
                       <Typography sx={{ color: '#9CA3AF', mt: 1 }}>No partners yet</Typography>
                     </TableCell>
                   </TableRow>
@@ -369,7 +437,9 @@ const AdminPartners = () => {
               label="Display Order"
               type="number"
               value={form.order}
-              onChange={(e) => setForm((prev) => ({ ...prev, order: parseInt(e.target.value, 10) || 1 }))}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, order: parseInt(e.target.value, 10) || 1 }))
+              }
               sx={{ width: 120, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               inputProps={{ min: 1 }}
             />

@@ -15,11 +15,14 @@ const useThrottledScroll = (callback, delay = 100) => {
         lastRun.current = now;
         callback();
       } else if (!rafId.current) {
-        rafId.current = setTimeout(() => {
-          lastRun.current = Date.now();
-          callback();
-          rafId.current = null;
-        }, delay - (now - lastRun.current));
+        rafId.current = setTimeout(
+          () => {
+            lastRun.current = Date.now();
+            callback();
+            rafId.current = null;
+          },
+          delay - (now - lastRun.current)
+        );
       }
     };
 

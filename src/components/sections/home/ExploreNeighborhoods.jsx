@@ -55,9 +55,7 @@ const ExploreNeighborhoods = () => {
           transition={{ duration: 0.5 }}
         >
           <h2 className={styles.title}>Explore Neighborhoods</h2>
-          <p className={styles.subtitle}>
-            Discover the best locations in Bangalore
-          </p>
+          <p className={styles.subtitle}>Discover the best locations in Bangalore</p>
         </motion.div>
 
         <div className={styles.grid}>

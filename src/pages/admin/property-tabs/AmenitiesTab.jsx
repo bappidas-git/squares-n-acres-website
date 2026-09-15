@@ -21,13 +21,20 @@ import { AMENITY_CATEGORIES } from './constants';
 
 const AmenitiesTab = ({ formData, updateField }) => {
   const [customDialog, setCustomDialog] = useState(false);
-  const [customAmenity, setCustomAmenity] = useState({ name: '', icon: 'mdi:star-outline', category: 'convenience' });
+  const [customAmenity, setCustomAmenity] = useState({
+    name: '',
+    icon: 'mdi:star-outline',
+    category: 'convenience',
+  });
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
 
   const toggleAmenity = (amenity) => {
     const exists = formData.amenities.find((a) => a.name === amenity.name);
     if (exists) {
-      updateField('amenities', formData.amenities.filter((a) => a.name !== amenity.name));
+      updateField(
+        'amenities',
+        formData.amenities.filter((a) => a.name !== amenity.name)
+      );
     } else {
       updateField('amenities', [...formData.amenities, amenity]);
     }
@@ -36,7 +43,10 @@ const AmenitiesTab = ({ formData, updateField }) => {
   const isSelected = (name) => formData.amenities.some((a) => a.name === name);
 
   const customAmenities = formData.amenities.filter(
-    (a) => !Object.values(AMENITY_CATEGORIES).some((cat) => cat.items.some((item) => item.name === a.name))
+    (a) =>
+      !Object.values(AMENITY_CATEGORIES).some((cat) =>
+        cat.items.some((item) => item.name === a.name)
+      )
   );
 
   return (
@@ -122,7 +132,9 @@ const AmenitiesTab = ({ formData, updateField }) => {
         PaperProps={{ sx: { borderRadius: 3, maxWidth: 400 } }}
       >
         <DialogTitle sx={{ fontWeight: 600, color: '#1B2A4A' }}>Add Custom Amenity</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '8px !important' }}>
+        <DialogContent
+          sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '8px !important' }}
+        >
           <TextField
             label="Amenity Name"
             value={customAmenity.name}
@@ -153,13 +165,17 @@ const AmenitiesTab = ({ formData, updateField }) => {
               onChange={(e) => setCustomAmenity((prev) => ({ ...prev, category: e.target.value }))}
             >
               {Object.entries(AMENITY_CATEGORIES).map(([key, cat]) => (
-                <MenuItem key={key} value={key}>{cat.label}</MenuItem>
+                <MenuItem key={key} value={key}>
+                  {cat.label}
+                </MenuItem>
               ))}
             </Select>
           </FormControl>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setCustomDialog(false)} sx={{ color: '#6B7280' }}>Cancel</Button>
+          <Button onClick={() => setCustomDialog(false)} sx={{ color: '#6B7280' }}>
+            Cancel
+          </Button>
           <Button
             variant="contained"
             disabled={!customAmenity.name.trim()}

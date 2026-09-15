@@ -63,13 +63,15 @@ const FloorPlans = ({
               onClick={handleFloorPlanImageClick}
               role={!isLeadCaptured ? 'button' : undefined}
               tabIndex={!isLeadCaptured ? 0 : undefined}
-              onKeyDown={!isLeadCaptured ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleFloorPlanImageClick(); } : undefined}
+              onKeyDown={
+                !isLeadCaptured
+                  ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') handleFloorPlanImageClick();
+                    }
+                  : undefined
+              }
             >
-              <img
-                src={activePlan.image}
-                alt={`${activePlan.config} floor plan`}
-                loading="lazy"
-              />
+              <img src={activePlan.image} alt={`${activePlan.config} floor plan`} loading="lazy" />
               {!isLeadCaptured && (
                 <div className={styles.blurOverlay}>
                   <div className={styles.blurOverlayContent}>
@@ -102,8 +104,7 @@ const FloorPlans = ({
                 <Icon icon="mdi:currency-inr" className={styles.statIcon} />
                 <span className={styles.statLabel}>Price</span>
                 <span className={styles.statValue}>
-                  {formatPrice(activePlan.price, priceUnit)}{' '}
-                  <small>{priceUnit}</small>
+                  {formatPrice(activePlan.price, priceUnit)} <small>{priceUnit}</small>
                 </span>
               </div>
               <div className={styles.planStat}>

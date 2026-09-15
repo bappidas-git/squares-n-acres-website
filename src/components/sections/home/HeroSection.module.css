@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #1B2A4A;
+  background-color: #1b2a4a;
 }
 
 /* Clips parallax background without hiding the suggestions dropdown */
@@ -134,7 +134,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .searchBtn {
@@ -190,7 +192,7 @@
 
 .suggestionItem:hover,
 .suggestionHighlight {
-  background: #F8F6F3;
+  background: #f8f6f3;
 }
 
 .suggestionMain {

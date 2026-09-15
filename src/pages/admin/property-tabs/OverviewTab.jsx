@@ -14,7 +14,14 @@ import {
 import { Icon } from '@iconify/react';
 import { CONFIGURATION_OPTIONS } from './constants';
 
-const OverviewTab = ({ formData, updateField, updateListItem, addListItem, removeListItem, errors }) => {
+const OverviewTab = ({
+  formData,
+  updateField,
+  updateListItem,
+  addListItem,
+  removeListItem,
+  errors,
+}) => {
   const updateLocation = useCallback(
     (field, value) => {
       updateField('location', { ...formData.location, [field]: value });
@@ -46,7 +53,10 @@ const OverviewTab = ({ formData, updateField, updateListItem, addListItem, remov
         value={formData.description}
         onChange={(e) => updateField('description', e.target.value)}
         error={!!errors.description}
-        helperText={errors.description || 'Describe the property in detail. This appears in the Overview section.'}
+        helperText={
+          errors.description ||
+          'Describe the property in detail. This appears in the Overview section.'
+        }
         multiline
         rows={5}
         fullWidth
@@ -146,7 +156,9 @@ const OverviewTab = ({ formData, updateField, updateListItem, addListItem, remov
           onChange={(e) => updateDimensionRange('min', e.target.value)}
           sx={{ width: 140 }}
         />
-        <Typography variant="body2" sx={{ color: '#9CA3AF' }}>to</Typography>
+        <Typography variant="body2" sx={{ color: '#9CA3AF' }}>
+          to
+        </Typography>
         <TextField
           label="Max Area"
           type="number"
@@ -185,7 +197,11 @@ const OverviewTab = ({ formData, updateField, updateListItem, addListItem, remov
             onChange={(e) => updateListItem('highlights', index, e.target.value)}
           />
           {formData.highlights.length > 1 && (
-            <IconButton size="small" onClick={() => removeListItem('highlights', index)} sx={{ color: '#EF4444' }}>
+            <IconButton
+              size="small"
+              onClick={() => removeListItem('highlights', index)}
+              sx={{ color: '#EF4444' }}
+            >
               <Icon icon="mdi:close-circle-outline" style={{ fontSize: 20 }} />
             </IconButton>
           )}

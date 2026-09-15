@@ -28,7 +28,10 @@ const DeveloperTab = ({ formData, updateField }) => {
   };
 
   const removeStat = (index) => {
-    updateDevInfo('stats', devInfo.stats.filter((_, i) => i !== index));
+    updateDevInfo(
+      'stats',
+      devInfo.stats.filter((_, i) => i !== index)
+    );
   };
 
   const openIconPicker = (index) => {
@@ -78,7 +81,8 @@ const DeveloperTab = ({ formData, updateField }) => {
         Developer Stats / Metrics
       </Typography>
       <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
-        Add metrics displayed in the developer section. e.g., "20+ Years Experience", "50+ Projects".
+        Add metrics displayed in the developer section. e.g., "20+ Years Experience", "50+
+        Projects".
       </Typography>
 
       {devInfo.stats.map((stat, index) => (
@@ -100,7 +104,10 @@ const DeveloperTab = ({ formData, updateField }) => {
                 '&:hover': { borderColor: '#C9A86C' },
               }}
             >
-              <Icon icon={stat.icon || 'mdi:chart-line'} style={{ fontSize: 22, color: '#1B2A4A' }} />
+              <Icon
+                icon={stat.icon || 'mdi:chart-line'}
+                style={{ fontSize: 22, color: '#1B2A4A' }}
+              />
             </Box>
 
             <TextField

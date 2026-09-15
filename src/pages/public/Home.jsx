@@ -10,15 +10,16 @@ import FaqSection from '../../components/sections/home/FaqSection';
 import PartnersSection from '../../components/sections/home/PartnersSection';
 import TrendingTopics from '../../components/sections/home/TrendingTopics';
 import styles from './Home.module.css';
+import { SITE } from '../../config/site';
 
 const Home = () => {
   return (
     <>
       <Helmet>
-        <title>H.O.M Advisory | Find Your Dream Home in Bangalore</title>
+        <title>{`${SITE.name} | Find Your Dream Home in Bangalore`}</title>
         <meta
           name="description"
-          content="Discover premium properties in Bangalore with H.O.M Advisory. Buy, rent, or lease luxury apartments, villas, and office spaces with expert guidance."
+          content={`Discover premium properties in Bangalore with ${SITE.name}. Buy, rent, or lease luxury apartments, villas, and office spaces with expert guidance.`}
         />
       </Helmet>
 

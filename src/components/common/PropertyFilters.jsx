@@ -181,9 +181,7 @@ const PropertyFilters = ({
       filters.bhk.forEach((b) => chips.push({ key: 'bhk', value: b, label: b }));
     }
     if (filters.priceRange && !preFilters.priceRange) {
-      const range = PRICE_RANGES.find(
-        (r) => `${r.min}-${r.max}` === filters.priceRange
-      );
+      const range = PRICE_RANGES.find((r) => `${r.min}-${r.max}` === filters.priceRange);
       chips.push({
         key: 'priceRange',
         value: filters.priceRange,
@@ -191,9 +189,7 @@ const PropertyFilters = ({
       });
     }
     if (filters.locations?.length && !preFilters.locations) {
-      filters.locations.forEach((l) =>
-        chips.push({ key: 'locations', value: l, label: l })
-      );
+      filters.locations.forEach((l) => chips.push({ key: 'locations', value: l, label: l }));
     }
     if (filters.propertyType && !preFilters.propertyType) {
       const pt = PROPERTY_TYPES.find((t) => t.value === filters.propertyType);
@@ -253,10 +249,7 @@ const PropertyFilters = ({
             >
               {BHK_OPTIONS.map((opt) => (
                 <MenuItem key={opt} value={opt}>
-                  <Checkbox
-                    checked={(currentFilters.bhk || []).includes(opt)}
-                    size="small"
-                  />
+                  <Checkbox checked={(currentFilters.bhk || []).includes(opt)} size="small" />
                   <ListItemText primary={opt} />
                 </MenuItem>
               ))}
@@ -452,9 +445,7 @@ const PropertyFilters = ({
                       <Autocomplete
                         options={developerOptions}
                         value={currentFilters.developer || ''}
-                        onChange={(_, newValue) =>
-                          onChange('developer', newValue || '')
-                        }
+                        onChange={(_, newValue) => onChange('developer', newValue || '')}
                         renderInput={(params) => (
                           <TextField
                             {...params}
@@ -566,11 +557,7 @@ const PropertyFilters = ({
                   >
                     Apply Filters
                   </button>
-                  <button
-                    className={styles.clearBtn}
-                    onClick={clearFilters}
-                    type="button"
-                  >
+                  <button className={styles.clearBtn} onClick={clearFilters} type="button">
                     Clear All
                   </button>
                 </div>
@@ -632,11 +619,7 @@ const PropertyFilters = ({
           </div>
 
           <div className={styles.mobileApplyBtn}>
-            <button
-              className={styles.mobileApplyBtnInner}
-              onClick={applyFilters}
-              type="button"
-            >
+            <button className={styles.mobileApplyBtnInner} onClick={applyFilters} type="button">
               Apply Filters
             </button>
           </div>

@@ -10,6 +10,7 @@ import { PropertyDetailSkeleton } from '../../components/common/SkeletonLoaders'
 import { useToast } from '../../components/common/ToastProvider';
 import { validateLeadForm } from '../../utils/validators';
 import { leadStorage } from '../../utils/leadStorage';
+import { SITE } from '../../config/site';
 import PropertyGallery from '../../components/sections/property/PropertyGallery';
 import PropertyOverview from '../../components/sections/property/PropertyOverview';
 import PropertySpecs from '../../components/sections/property/PropertySpecs';
@@ -50,12 +51,6 @@ const modalVariants = {
 };
 
 const swalConfig = {
-  customClass: {
-    popup: 'hom-swal-popup',
-    title: 'hom-swal-title',
-    htmlContainer: 'hom-swal-html',
-    confirmButton: 'hom-swal-confirm',
-  },
   confirmButtonColor: '#C9A86C',
   iconColor: '#059669',
 };
@@ -94,7 +89,6 @@ const PropertyDetails = () => {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [showLeadForm, setShowLeadForm] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const [leadCaptured, setLeadCaptured] = useState(false);
 
@@ -124,7 +118,11 @@ const PropertyDetails = () => {
 
   // Floor plan request modal state (separate from Contact Agent)
   const [floorPlanRequestModal, setFloorPlanRequestModal] = useState({ open: false });
-  const [floorPlanRequestFormData, setFloorPlanRequestFormData] = useState({ name: '', email: '', phone: '' });
+  const [floorPlanRequestFormData, setFloorPlanRequestFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+  });
   const [floorPlanRequestSubmitting, setFloorPlanRequestSubmitting] = useState(false);
   const [floorPlanRequestSubmitted, setFloorPlanRequestSubmitted] = useState(false);
   const [floorPlanRequestError, setFloorPlanRequestError] = useState('');
@@ -180,10 +178,12 @@ const PropertyDetails = () => {
 
   const handleShare = useCallback(() => {
     if (isMobile && navigator.share) {
-      navigator.share({
-        title: property?.title,
-        url: window.location.href,
-      }).catch(() => {});
+      navigator
+        .share({
+          title: property?.title,
+          url: window.location.href,
+        })
+        .catch(() => {});
     } else if (isMobile) {
       setShareSheetOpen(true);
     } else {
@@ -212,18 +212,21 @@ const PropertyDetails = () => {
   }, []);
 
   // Download modal handlers
-  const openDownloadModal = useCallback((type) => {
-    if (leadCaptured) {
-      showLeadCapturedAlert(type);
-      return;
-    }
-    const prefilled = getPrefilledData();
-    setDownloadModal({ open: true, type });
-    setDownloadSubmitted(false);
-    setDownloadError('');
-    setDownloadErrors({});
-    setDownloadFormData(prefilled);
-  }, [leadCaptured, showLeadCapturedAlert, getPrefilledData]);
+  const openDownloadModal = useCallback(
+    (type) => {
+      if (leadCaptured) {
+        showLeadCapturedAlert(type);
+        return;
+      }
+      const prefilled = getPrefilledData();
+      setDownloadModal({ open: true, type });
+      setDownloadSubmitted(false);
+      setDownloadError('');
+      setDownloadErrors({});
+      setDownloadFormData(prefilled);
+    },
+    [leadCaptured, showLeadCapturedAlert, getPrefilledData]
+  );
 
   const closeDownloadModal = useCallback(() => {
     setDownloadModal({ open: false, type: '' });
@@ -238,47 +241,54 @@ const PropertyDetails = () => {
     setDownloadErrors((prev) => ({ ...prev, [name]: '' }));
   }, []);
 
-  const handleDownloadSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    setDownloadError('');
+  const handleDownloadSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setDownloadError('');
 
-    const { valid, errors: vErrors } = validateLeadForm(downloadFormData);
-    if (!valid) {
-      setDownloadErrors(vErrors);
-      return;
-    }
+      const { valid, errors: vErrors } = validateLeadForm(downloadFormData);
+      if (!valid) {
+        setDownloadErrors(vErrors);
+        return;
+      }
 
-    try {
-      setDownloadSubmitting(true);
-      const source = downloadModal.type === 'brochure' ? 'brochure_download' : 'floorplan_download';
-      await leadService.create({
-        ...downloadFormData,
-        propertyId: property?.id || null,
-        source,
-      });
-      saveLeadToSession(downloadFormData, property?.id, source);
-      setDownloadSubmitted(true);
-      toast.success('Request submitted successfully!');
-    } catch {
-      setDownloadError('Something went wrong. Please try again.');
-    } finally {
-      setDownloadSubmitting(false);
-    }
-  }, [downloadFormData, downloadModal.type, property?.id, toast, saveLeadToSession]);
+      try {
+        setDownloadSubmitting(true);
+        const source =
+          downloadModal.type === 'brochure' ? 'brochure_download' : 'floorplan_download';
+        await leadService.create({
+          ...downloadFormData,
+          propertyId: property?.id || null,
+          source,
+        });
+        saveLeadToSession(downloadFormData, property?.id, source);
+        setDownloadSubmitted(true);
+        toast.success('Request submitted successfully!');
+      } catch {
+        setDownloadError('Something went wrong. Please try again.');
+      } finally {
+        setDownloadSubmitting(false);
+      }
+    },
+    [downloadFormData, downloadModal.type, property?.id, toast, saveLeadToSession]
+  );
 
   // Document download modal handlers
-  const openDocModal = useCallback((docName) => {
-    if (leadCaptured) {
-      showLeadCapturedAlert('document');
-      return;
-    }
-    const prefilled = getPrefilledData();
-    setDocModal({ open: true, docName });
-    setDocSubmitted(false);
-    setDocError('');
-    setDocErrors({});
-    setDocFormData(prefilled);
-  }, [leadCaptured, showLeadCapturedAlert, getPrefilledData]);
+  const openDocModal = useCallback(
+    (docName) => {
+      if (leadCaptured) {
+        showLeadCapturedAlert('document');
+        return;
+      }
+      const prefilled = getPrefilledData();
+      setDocModal({ open: true, docName });
+      setDocSubmitted(false);
+      setDocError('');
+      setDocErrors({});
+      setDocFormData(prefilled);
+    },
+    [leadCaptured, showLeadCapturedAlert, getPrefilledData]
+  );
 
   const closeDocModal = useCallback(() => {
     setDocModal({ open: false, docName: '' });
@@ -293,47 +303,53 @@ const PropertyDetails = () => {
     setDocErrors((prev) => ({ ...prev, [name]: '' }));
   }, []);
 
-  const handleDocSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    setDocError('');
+  const handleDocSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setDocError('');
 
-    const { valid, errors: vErrors } = validateLeadForm(docFormData);
-    if (!valid) {
-      setDocErrors(vErrors);
-      return;
-    }
+      const { valid, errors: vErrors } = validateLeadForm(docFormData);
+      if (!valid) {
+        setDocErrors(vErrors);
+        return;
+      }
 
-    try {
-      setDocSubmitting(true);
-      await leadService.create({
-        ...docFormData,
-        propertyId: property?.id || null,
-        source: 'document_download',
-        message: `Requested document: ${docModal.docName}`,
-      });
-      saveLeadToSession(docFormData, property?.id, 'document_download');
-      setDocSubmitted(true);
-      toast.success('Request submitted successfully!');
-    } catch {
-      setDocError('Something went wrong. Please try again.');
-    } finally {
-      setDocSubmitting(false);
-    }
-  }, [docFormData, docModal.docName, property?.id, toast, saveLeadToSession]);
+      try {
+        setDocSubmitting(true);
+        await leadService.create({
+          ...docFormData,
+          propertyId: property?.id || null,
+          source: 'document_download',
+          message: `Requested document: ${docModal.docName}`,
+        });
+        saveLeadToSession(docFormData, property?.id, 'document_download');
+        setDocSubmitted(true);
+        toast.success('Request submitted successfully!');
+      } catch {
+        setDocError('Something went wrong. Please try again.');
+      } finally {
+        setDocSubmitting(false);
+      }
+    },
+    [docFormData, docModal.docName, property?.id, toast, saveLeadToSession]
+  );
 
   // Pricing modal handlers
-  const openPricingModal = useCallback((config) => {
-    if (leadCaptured) {
-      showLeadCapturedAlert('pricing', config);
-      return;
-    }
-    const prefilled = getPrefilledData();
-    setPricingModal({ open: true, config });
-    setPricingSubmitted(false);
-    setPricingError('');
-    setPricingErrors({});
-    setPricingFormData(prefilled);
-  }, [leadCaptured, showLeadCapturedAlert, getPrefilledData]);
+  const openPricingModal = useCallback(
+    (config) => {
+      if (leadCaptured) {
+        showLeadCapturedAlert('pricing', config);
+        return;
+      }
+      const prefilled = getPrefilledData();
+      setPricingModal({ open: true, config });
+      setPricingSubmitted(false);
+      setPricingError('');
+      setPricingErrors({});
+      setPricingFormData(prefilled);
+    },
+    [leadCaptured, showLeadCapturedAlert, getPrefilledData]
+  );
 
   const closePricingModal = useCallback(() => {
     setPricingModal({ open: false, config: '' });
@@ -348,33 +364,36 @@ const PropertyDetails = () => {
     setPricingErrors((prev) => ({ ...prev, [name]: '' }));
   }, []);
 
-  const handlePricingSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    setPricingError('');
+  const handlePricingSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setPricingError('');
 
-    const { valid, errors: vErrors } = validateLeadForm(pricingFormData);
-    if (!valid) {
-      setPricingErrors(vErrors);
-      return;
-    }
+      const { valid, errors: vErrors } = validateLeadForm(pricingFormData);
+      if (!valid) {
+        setPricingErrors(vErrors);
+        return;
+      }
 
-    try {
-      setPricingSubmitting(true);
-      await leadService.create({
-        ...pricingFormData,
-        propertyId: property?.id || null,
-        source: 'detailed_pricing',
-        message: `Requested detailed pricing for ${pricingModal.config} — ${property?.title || ''}`,
-      });
-      saveLeadToSession(pricingFormData, property?.id, 'detailed_pricing');
-      setPricingSubmitted(true);
-      toast.success('Pricing request submitted successfully!');
-    } catch {
-      setPricingError('Something went wrong. Please try again.');
-    } finally {
-      setPricingSubmitting(false);
-    }
-  }, [pricingFormData, pricingModal.config, property?.id, property?.title, toast, saveLeadToSession]);
+      try {
+        setPricingSubmitting(true);
+        await leadService.create({
+          ...pricingFormData,
+          propertyId: property?.id || null,
+          source: 'detailed_pricing',
+          message: `Requested detailed pricing for ${pricingModal.config} — ${property?.title || ''}`,
+        });
+        saveLeadToSession(pricingFormData, property?.id, 'detailed_pricing');
+        setPricingSubmitted(true);
+        toast.success('Pricing request submitted successfully!');
+      } catch {
+        setPricingError('Something went wrong. Please try again.');
+      } finally {
+        setPricingSubmitting(false);
+      }
+    },
+    [pricingFormData, pricingModal.config, property?.id, property?.title, toast, saveLeadToSession]
+  );
 
   // Floor plan request modal handlers (for "Request Floor Plan Details" CTA)
   const openFloorPlanRequestModal = useCallback(() => {
@@ -403,38 +422,44 @@ const PropertyDetails = () => {
     setFloorPlanRequestErrors((prev) => ({ ...prev, [name]: '' }));
   }, []);
 
-  const handleFloorPlanRequestSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    setFloorPlanRequestError('');
+  const handleFloorPlanRequestSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setFloorPlanRequestError('');
 
-    const { valid, errors: vErrors } = validateLeadForm(floorPlanRequestFormData);
-    if (!valid) {
-      setFloorPlanRequestErrors(vErrors);
-      return;
-    }
+      const { valid, errors: vErrors } = validateLeadForm(floorPlanRequestFormData);
+      if (!valid) {
+        setFloorPlanRequestErrors(vErrors);
+        return;
+      }
 
-    try {
-      setFloorPlanRequestSubmitting(true);
-      await leadService.create({
-        ...floorPlanRequestFormData,
-        propertyId: property?.id || null,
-        source: 'floorplan_request',
-        message: `Requested floor plan details for ${property?.title || ''}`,
-      });
-      saveLeadToSession(floorPlanRequestFormData, property?.id, 'floorplan_request');
-      setFloorPlanRequestSubmitted(true);
-      toast.success('Floor plan request submitted successfully!');
-    } catch {
-      setFloorPlanRequestError('Something went wrong. Please try again.');
-    } finally {
-      setFloorPlanRequestSubmitting(false);
-    }
-  }, [floorPlanRequestFormData, property?.id, property?.title, toast, saveLeadToSession]);
+      try {
+        setFloorPlanRequestSubmitting(true);
+        await leadService.create({
+          ...floorPlanRequestFormData,
+          propertyId: property?.id || null,
+          source: 'floorplan_request',
+          message: `Requested floor plan details for ${property?.title || ''}`,
+        });
+        saveLeadToSession(floorPlanRequestFormData, property?.id, 'floorplan_request');
+        setFloorPlanRequestSubmitted(true);
+        toast.success('Floor plan request submitted successfully!');
+      } catch {
+        setFloorPlanRequestError('Something went wrong. Please try again.');
+      } finally {
+        setFloorPlanRequestSubmitting(false);
+      }
+    },
+    [floorPlanRequestFormData, property?.id, property?.title, toast, saveLeadToSession]
+  );
 
   // Callback for when EnquiryForm or FinanceGuide captures a lead
-  const handleLeadCapturedFromChild = useCallback((formData) => {
-    saveLeadToSession(formData, property?.id, 'child_form');
-  }, [property?.id, saveLeadToSession]);
+  const handleLeadCapturedFromChild = useCallback(
+    (formData) => {
+      saveLeadToSession(formData, property?.id, 'child_form');
+    },
+    [property?.id, saveLeadToSession]
+  );
 
   // Section visibility from admin toggles (defaults to all enabled)
   const sec = useMemo(() => {
@@ -450,21 +475,28 @@ const PropertyDetails = () => {
   const sectionFlags = useMemo(() => {
     if (!property) return {};
     const hasSpecs = (() => {
-      if (Array.isArray(property.specificationsArray) && property.specificationsArray.some(s => s.key && s.value)) return true;
       if (property.specifications && typeof property.specifications === 'object') {
-        return Object.values(property.specifications).some(v => v !== null && v !== undefined && v !== '' && v !== '—');
+        return Object.values(property.specifications).some(
+          (v) => v !== null && v !== undefined && v !== '' && v !== '—'
+        );
       }
       return false;
     })();
     const hasConstructionSpecs = (() => {
-      if (!property.constructionSpecs || typeof property.constructionSpecs !== 'object') return false;
+      if (!property.constructionSpecs || typeof property.constructionSpecs !== 'object')
+        return false;
       return Object.values(property.constructionSpecs).some(
-        (arr) => Array.isArray(arr) && arr.length > 0 && arr.some(item => item.area?.trim() && item.spec?.trim())
+        (arr) =>
+          Array.isArray(arr) &&
+          arr.length > 0 &&
+          arr.some((item) => item.area?.trim() && item.spec?.trim())
       );
     })();
-    const hasConstructionTimeline = Array.isArray(property.constructionTimeline) && property.constructionTimeline.length > 0;
+    const hasConstructionTimeline =
+      Array.isArray(property.constructionTimeline) && property.constructionTimeline.length > 0;
     const hasFaqs = Array.isArray(property.faqs) && property.faqs.length > 0;
-    const hasSimilar = Array.isArray(property.similarPropertyIds) && property.similarPropertyIds.length > 0;
+    const hasSimilar =
+      Array.isArray(property.similarPropertyIds) && property.similarPropertyIds.length > 0;
     const hasDeveloperInfo = Boolean(
       property.developerInfo?.name || property.developerInfo?.description || property.developer
     );
@@ -496,8 +528,10 @@ const PropertyDetails = () => {
     if (enabled('finance') && isSale) sections.push('finance');
     if (enabled('location') && sectionFlags.hasNearbyPlaces) sections.push('nearby');
     if (enabled('documents') && sectionFlags.hasDocuments) sections.push('documents');
-    if (enabled('constructionSpecs') && sectionFlags.hasConstructionSpecs) sections.push('construction-specs');
-    if (enabled('construction') && sectionFlags.hasConstructionTimeline) sections.push('construction');
+    if (enabled('constructionSpecs') && sectionFlags.hasConstructionSpecs)
+      sections.push('construction-specs');
+    if (enabled('construction') && sectionFlags.hasConstructionTimeline)
+      sections.push('construction');
     if (enabled('developer') && sectionFlags.hasDeveloper) sections.push('builder');
     if (enabled('faqs') && sectionFlags.hasFaqs) sections.push('faqs');
     if (enabled('similar') && sectionFlags.hasSimilar) sections.push('similar');
@@ -533,9 +567,18 @@ const PropertyDetails = () => {
   }
 
   const {
-    hasOverview, hasSpecs, hasSpecialities, hasAmenities,
-    hasFloorPlans, hasNearbyPlaces, hasDocuments, hasConstructionSpecs,
-    hasConstructionTimeline, hasDeveloper, hasFaqs, hasSimilar,
+    hasOverview,
+    hasSpecs,
+    hasSpecialities,
+    hasAmenities,
+    hasFloorPlans,
+    hasNearbyPlaces,
+    hasDocuments,
+    hasConstructionSpecs,
+    hasConstructionTimeline,
+    hasDeveloper,
+    hasFaqs,
+    hasSimilar,
   } = sectionFlags;
 
   // Helper: check if admin has enabled a section (defaults to true if not set)
@@ -544,13 +587,15 @@ const PropertyDetails = () => {
   const badge = property.type === 'rent' ? 'For Rent' : 'For Sale';
   const badgeClass = property.type === 'rent' ? styles.badgeRent : styles.badgeSale;
 
-  const downloadModalTitle = downloadModal.type === 'brochure'
-    ? `Download Brochure — ${property.title}`
-    : `Download Floor Plans — ${property.title}`;
+  const downloadModalTitle =
+    downloadModal.type === 'brochure'
+      ? `Download Brochure — ${property.title}`
+      : `Download Floor Plans — ${property.title}`;
 
-  const thankYouMessage = downloadModal.type === 'brochure'
-    ? 'Your brochure download request has been received. Our team will share the brochure with you shortly.'
-    : 'Your floor plan request has been received. Our team will share the detailed floor plans with you shortly.';
+  const thankYouMessage =
+    downloadModal.type === 'brochure'
+      ? 'Your brochure download request has been received. Our team will share the brochure with you shortly.'
+      : 'Your floor plan request has been received. Our team will share the detailed floor plans with you shortly.';
 
   const savedUserDetails = getSavedUserDetails();
 
@@ -559,21 +604,38 @@ const PropertyDetails = () => {
       <Helmet>
         {/* Primary Meta Tags */}
         <title>{property.seoTitle || property.title}</title>
-        <meta name="description" content={property.seoDescription || property.description?.slice(0, 160)} />
+        <meta
+          name="description"
+          content={property.seoDescription || property.description?.slice(0, 160)}
+        />
         {property.seoKeywords?.length > 0 && (
           <meta name="keywords" content={property.seoKeywords.join(', ')} />
         )}
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
 
         {/* Canonical URL — always set to prevent duplicate content */}
-        <link rel="canonical" href={property.canonicalUrl || `${window.location.origin}/properties/${property.slug}`} />
+        <link
+          rel="canonical"
+          href={property.canonicalUrl || `${window.location.origin}/properties/${property.slug}`}
+        />
 
         {/* Open Graph tags */}
-        <meta property="og:title" content={property.ogTitle || property.seoTitle || property.title} />
-        <meta property="og:description" content={property.ogDescription || property.seoDescription || property.description?.slice(0, 160)} />
+        <meta
+          property="og:title"
+          content={property.ogTitle || property.seoTitle || property.title}
+        />
+        <meta
+          property="og:description"
+          content={
+            property.ogDescription || property.seoDescription || property.description?.slice(0, 160)
+          }
+        />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content={property.canonicalUrl || `${window.location.origin}/properties/${property.slug}`} />
-        <meta property="og:site_name" content="HOM Advisory" />
+        <meta
+          property="og:url"
+          content={property.canonicalUrl || `${window.location.origin}/properties/${property.slug}`}
+        />
+        <meta property="og:site_name" content={SITE.name} />
         {(property.ogImage || property.gallery?.[0]) && (
           <meta property="og:image" content={property.ogImage || property.gallery[0]} />
         )}
@@ -583,8 +645,16 @@ const PropertyDetails = () => {
 
         {/* Twitter Card tags */}
         <meta name="twitter:card" content={property.twitterCard || 'summary_large_image'} />
-        <meta name="twitter:title" content={property.ogTitle || property.seoTitle || property.title} />
-        <meta name="twitter:description" content={property.ogDescription || property.seoDescription || property.description?.slice(0, 160)} />
+        <meta
+          name="twitter:title"
+          content={property.ogTitle || property.seoTitle || property.title}
+        />
+        <meta
+          name="twitter:description"
+          content={
+            property.ogDescription || property.seoDescription || property.description?.slice(0, 160)
+          }
+        />
         {(property.ogImage || property.gallery?.[0]) && (
           <meta name="twitter:image" content={property.ogImage || property.gallery[0]} />
         )}
@@ -597,41 +667,6 @@ const PropertyDetails = () => {
           <script type="application/ld+json">{property.schemaMarkup}</script>
         )}
       </Helmet>
-
-      {/* Lead capture modal overlay — spring animation */}
-      <AnimatePresence>
-        {showLeadForm && (
-          <motion.div
-            className={styles.modalOverlay}
-            onClick={() => setShowLeadForm(false)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className={styles.modalContent}
-              variants={modalVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className={styles.modalClose}
-                onClick={() => setShowLeadForm(false)}
-                aria-label="Close enquiry form"
-              >
-                <Icon icon="mdi:close" />
-              </button>
-              <EnquiryForm
-                property={property}
-                savedUserDetails={savedUserDetails}
-                onLeadCaptured={handleLeadCapturedFromChild}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Download Lead Capture Modal */}
       <AnimatePresence>
@@ -671,7 +706,10 @@ const PropertyDetails = () => {
               ) : (
                 <>
                   <h3 className={styles.modalTitle}>{downloadModalTitle}</h3>
-                  <form onSubmit={handleDownloadSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <form
+                    onSubmit={handleDownloadSubmit}
+                    style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+                  >
                     <div>
                       <input
                         type="text"
@@ -681,7 +719,9 @@ const PropertyDetails = () => {
                         onChange={handleDownloadFormChange}
                         style={downloadErrors.name ? inputErrorStyle : inputStyle}
                       />
-                      {downloadErrors.name && <span style={fieldErrorTextStyle}>{downloadErrors.name}</span>}
+                      {downloadErrors.name && (
+                        <span style={fieldErrorTextStyle}>{downloadErrors.name}</span>
+                      )}
                     </div>
                     <div>
                       <input
@@ -692,7 +732,9 @@ const PropertyDetails = () => {
                         onChange={handleDownloadFormChange}
                         style={downloadErrors.email ? inputErrorStyle : inputStyle}
                       />
-                      {downloadErrors.email && <span style={fieldErrorTextStyle}>{downloadErrors.email}</span>}
+                      {downloadErrors.email && (
+                        <span style={fieldErrorTextStyle}>{downloadErrors.email}</span>
+                      )}
                     </div>
                     <div>
                       <input
@@ -703,10 +745,18 @@ const PropertyDetails = () => {
                         onChange={handleDownloadFormChange}
                         style={downloadErrors.phone ? inputErrorStyle : inputStyle}
                       />
-                      {downloadErrors.phone && <span style={fieldErrorTextStyle}>{downloadErrors.phone}</span>}
+                      {downloadErrors.phone && (
+                        <span style={fieldErrorTextStyle}>{downloadErrors.phone}</span>
+                      )}
                     </div>
                     {downloadError && (
-                      <p style={{ color: '#dc2626', fontSize: '0.8rem', fontFamily: '"DM Sans", sans-serif' }}>
+                      <p
+                        style={{
+                          color: '#dc2626',
+                          fontSize: '0.8rem',
+                          fontFamily: 'var(--font-body)',
+                        }}
+                      >
                         {downloadError}
                       </p>
                     )}
@@ -724,14 +774,16 @@ const PropertyDetails = () => {
                         color: '#fff',
                         border: 'none',
                         borderRadius: '8px',
-                        fontFamily: '"DM Sans", sans-serif',
+                        fontFamily: 'var(--font-body)',
                         fontSize: '0.9rem',
                         fontWeight: 600,
                         cursor: downloadSubmitting ? 'not-allowed' : 'pointer',
                         opacity: downloadSubmitting ? 0.7 : 1,
                       }}
                     >
-                      {downloadSubmitting ? 'Submitting...' : (
+                      {downloadSubmitting ? (
+                        'Submitting...'
+                      ) : (
                         <>
                           <Icon icon="mdi:download" />
                           {downloadModal.type === 'brochure' ? 'Get Brochure' : 'Get Floor Plans'}
@@ -777,7 +829,8 @@ const PropertyDetails = () => {
                   <Icon icon="mdi:check-circle" className={styles.thankYouIcon} />
                   <h3 className={styles.thankYouTitle}>Thank You!</h3>
                   <p className={styles.thankYouText}>
-                    Your request for "{docModal.docName}" has been received. Our team will share the document with you shortly.
+                    Your request for "{docModal.docName}" has been received. Our team will share the
+                    document with you shortly.
                   </p>
                   <button className={styles.thankYouClose} onClick={closeDocModal}>
                     Close
@@ -785,13 +838,22 @@ const PropertyDetails = () => {
                 </div>
               ) : (
                 <>
-                  <h3 className={styles.modalTitle}>
-                    Download {docModal.docName}
-                  </h3>
-                  <p style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '0.8rem', color: '#6B7280', marginBottom: '16px', lineHeight: 1.5 }}>
+                  <h3 className={styles.modalTitle}>Download {docModal.docName}</h3>
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.8rem',
+                      color: '#6B7280',
+                      marginBottom: '16px',
+                      lineHeight: 1.5,
+                    }}
+                  >
                     Please share your details to receive the document.
                   </p>
-                  <form onSubmit={handleDocSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <form
+                    onSubmit={handleDocSubmit}
+                    style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+                  >
                     <div>
                       <input
                         type="text"
@@ -812,7 +874,9 @@ const PropertyDetails = () => {
                         onChange={handleDocFormChange}
                         style={docErrors.email ? inputErrorStyle : inputStyle}
                       />
-                      {docErrors.email && <span style={fieldErrorTextStyle}>{docErrors.email}</span>}
+                      {docErrors.email && (
+                        <span style={fieldErrorTextStyle}>{docErrors.email}</span>
+                      )}
                     </div>
                     <div>
                       <input
@@ -823,10 +887,18 @@ const PropertyDetails = () => {
                         onChange={handleDocFormChange}
                         style={docErrors.phone ? inputErrorStyle : inputStyle}
                       />
-                      {docErrors.phone && <span style={fieldErrorTextStyle}>{docErrors.phone}</span>}
+                      {docErrors.phone && (
+                        <span style={fieldErrorTextStyle}>{docErrors.phone}</span>
+                      )}
                     </div>
                     {docError && (
-                      <p style={{ color: '#dc2626', fontSize: '0.8rem', fontFamily: '"DM Sans", sans-serif' }}>
+                      <p
+                        style={{
+                          color: '#dc2626',
+                          fontSize: '0.8rem',
+                          fontFamily: 'var(--font-body)',
+                        }}
+                      >
                         {docError}
                       </p>
                     )}
@@ -844,14 +916,16 @@ const PropertyDetails = () => {
                         color: '#fff',
                         border: 'none',
                         borderRadius: '8px',
-                        fontFamily: '"DM Sans", sans-serif',
+                        fontFamily: 'var(--font-body)',
                         fontSize: '0.9rem',
                         fontWeight: 600,
                         cursor: docSubmitting ? 'not-allowed' : 'pointer',
                         opacity: docSubmitting ? 0.7 : 1,
                       }}
                     >
-                      {docSubmitting ? 'Submitting...' : (
+                      {docSubmitting ? (
+                        'Submitting...'
+                      ) : (
                         <>
                           <Icon icon="mdi:download" />
                           Get Document
@@ -897,7 +971,8 @@ const PropertyDetails = () => {
                   <Icon icon="mdi:check-circle" className={styles.thankYouIcon} />
                   <h3 className={styles.thankYouTitle}>Thank You!</h3>
                   <p className={styles.thankYouText}>
-                    Your request for {pricingModal.config} detailed pricing has been received. Our team will share the pricing details with you shortly.
+                    Your request for {pricingModal.config} detailed pricing has been received. Our
+                    team will share the pricing details with you shortly.
                   </p>
                   <button className={styles.thankYouClose} onClick={closePricingModal}>
                     Close
@@ -911,15 +986,35 @@ const PropertyDetails = () => {
                       <h3 className={styles.modalTitle} style={{ marginBottom: 0 }}>
                         Get {pricingModal.config} Detailed Pricing
                       </h3>
-                      <p style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '0.8rem', color: '#6B7280', margin: '4px 0 0', lineHeight: 1.5 }}>
+                      <p
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          fontSize: '0.8rem',
+                          color: '#6B7280',
+                          margin: '4px 0 0',
+                          lineHeight: 1.5,
+                        }}
+                      >
                         {property?.title}
                       </p>
                     </div>
                   </div>
-                  <p style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '0.8rem', color: '#6B7280', marginBottom: '16px', lineHeight: 1.5 }}>
-                    Please share your details to receive the complete pricing breakdown including all charges and payment plans.
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.8rem',
+                      color: '#6B7280',
+                      marginBottom: '16px',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Please share your details to receive the complete pricing breakdown including
+                    all charges and payment plans.
                   </p>
-                  <form onSubmit={handlePricingSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <form
+                    onSubmit={handlePricingSubmit}
+                    style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+                  >
                     <div>
                       <input
                         type="text"
@@ -929,7 +1024,9 @@ const PropertyDetails = () => {
                         onChange={handlePricingFormChange}
                         style={pricingErrors.name ? inputErrorStyle : inputStyle}
                       />
-                      {pricingErrors.name && <span style={fieldErrorTextStyle}>{pricingErrors.name}</span>}
+                      {pricingErrors.name && (
+                        <span style={fieldErrorTextStyle}>{pricingErrors.name}</span>
+                      )}
                     </div>
                     <div>
                       <input
@@ -940,7 +1037,9 @@ const PropertyDetails = () => {
                         onChange={handlePricingFormChange}
                         style={pricingErrors.email ? inputErrorStyle : inputStyle}
                       />
-                      {pricingErrors.email && <span style={fieldErrorTextStyle}>{pricingErrors.email}</span>}
+                      {pricingErrors.email && (
+                        <span style={fieldErrorTextStyle}>{pricingErrors.email}</span>
+                      )}
                     </div>
                     <div>
                       <input
@@ -951,10 +1050,18 @@ const PropertyDetails = () => {
                         onChange={handlePricingFormChange}
                         style={pricingErrors.phone ? inputErrorStyle : inputStyle}
                       />
-                      {pricingErrors.phone && <span style={fieldErrorTextStyle}>{pricingErrors.phone}</span>}
+                      {pricingErrors.phone && (
+                        <span style={fieldErrorTextStyle}>{pricingErrors.phone}</span>
+                      )}
                     </div>
                     {pricingError && (
-                      <p style={{ color: '#dc2626', fontSize: '0.8rem', fontFamily: '"DM Sans", sans-serif' }}>
+                      <p
+                        style={{
+                          color: '#dc2626',
+                          fontSize: '0.8rem',
+                          fontFamily: 'var(--font-body)',
+                        }}
+                      >
                         {pricingError}
                       </p>
                     )}
@@ -972,14 +1079,16 @@ const PropertyDetails = () => {
                         color: '#fff',
                         border: 'none',
                         borderRadius: '8px',
-                        fontFamily: '"DM Sans", sans-serif',
+                        fontFamily: 'var(--font-body)',
                         fontSize: '0.9rem',
                         fontWeight: 600,
                         cursor: pricingSubmitting ? 'not-allowed' : 'pointer',
                         opacity: pricingSubmitting ? 0.7 : 1,
                       }}
                     >
-                      {pricingSubmitting ? 'Submitting...' : (
+                      {pricingSubmitting ? (
+                        'Submitting...'
+                      ) : (
                         <>
                           <Icon icon="mdi:currency-inr" />
                           Get Detailed Pricing
@@ -1025,7 +1134,8 @@ const PropertyDetails = () => {
                   <Icon icon="mdi:check-circle" className={styles.thankYouIcon} />
                   <h3 className={styles.thankYouTitle}>Thank You!</h3>
                   <p className={styles.thankYouText}>
-                    Your floor plan request has been received. Our executive will contact you within 24 hours with detailed floor plan information.
+                    Your floor plan request has been received. Our executive will contact you within
+                    24 hours with detailed floor plan information.
                   </p>
                   <button className={styles.thankYouClose} onClick={closeFloorPlanRequestModal}>
                     Close
@@ -1039,15 +1149,35 @@ const PropertyDetails = () => {
                       <h3 className={styles.modalTitle} style={{ marginBottom: 0 }}>
                         Request Floor Plan Details
                       </h3>
-                      <p style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '0.8rem', color: '#6B7280', margin: '4px 0 0', lineHeight: 1.5 }}>
+                      <p
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          fontSize: '0.8rem',
+                          color: '#6B7280',
+                          margin: '4px 0 0',
+                          lineHeight: 1.5,
+                        }}
+                      >
                         {property?.title}
                       </p>
                     </div>
                   </div>
-                  <p style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '0.8rem', color: '#6B7280', marginBottom: '16px', lineHeight: 1.5 }}>
-                    Please share your details to receive the complete floor plan with dimensions and layout details.
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.8rem',
+                      color: '#6B7280',
+                      marginBottom: '16px',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Please share your details to receive the complete floor plan with dimensions and
+                    layout details.
                   </p>
-                  <form onSubmit={handleFloorPlanRequestSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <form
+                    onSubmit={handleFloorPlanRequestSubmit}
+                    style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+                  >
                     <div>
                       <input
                         type="text"
@@ -1057,7 +1187,9 @@ const PropertyDetails = () => {
                         onChange={handleFloorPlanRequestFormChange}
                         style={floorPlanRequestErrors.name ? inputErrorStyle : inputStyle}
                       />
-                      {floorPlanRequestErrors.name && <span style={fieldErrorTextStyle}>{floorPlanRequestErrors.name}</span>}
+                      {floorPlanRequestErrors.name && (
+                        <span style={fieldErrorTextStyle}>{floorPlanRequestErrors.name}</span>
+                      )}
                     </div>
                     <div>
                       <input
@@ -1068,7 +1200,9 @@ const PropertyDetails = () => {
                         onChange={handleFloorPlanRequestFormChange}
                         style={floorPlanRequestErrors.email ? inputErrorStyle : inputStyle}
                       />
-                      {floorPlanRequestErrors.email && <span style={fieldErrorTextStyle}>{floorPlanRequestErrors.email}</span>}
+                      {floorPlanRequestErrors.email && (
+                        <span style={fieldErrorTextStyle}>{floorPlanRequestErrors.email}</span>
+                      )}
                     </div>
                     <div>
                       <input
@@ -1079,10 +1213,18 @@ const PropertyDetails = () => {
                         onChange={handleFloorPlanRequestFormChange}
                         style={floorPlanRequestErrors.phone ? inputErrorStyle : inputStyle}
                       />
-                      {floorPlanRequestErrors.phone && <span style={fieldErrorTextStyle}>{floorPlanRequestErrors.phone}</span>}
+                      {floorPlanRequestErrors.phone && (
+                        <span style={fieldErrorTextStyle}>{floorPlanRequestErrors.phone}</span>
+                      )}
                     </div>
                     {floorPlanRequestError && (
-                      <p style={{ color: '#dc2626', fontSize: '0.8rem', fontFamily: '"DM Sans", sans-serif' }}>
+                      <p
+                        style={{
+                          color: '#dc2626',
+                          fontSize: '0.8rem',
+                          fontFamily: 'var(--font-body)',
+                        }}
+                      >
                         {floorPlanRequestError}
                       </p>
                     )}
@@ -1100,14 +1242,16 @@ const PropertyDetails = () => {
                         color: '#fff',
                         border: 'none',
                         borderRadius: '8px',
-                        fontFamily: '"DM Sans", sans-serif',
+                        fontFamily: 'var(--font-body)',
                         fontSize: '0.9rem',
                         fontWeight: 600,
                         cursor: floorPlanRequestSubmitting ? 'not-allowed' : 'pointer',
                         opacity: floorPlanRequestSubmitting ? 0.7 : 1,
                       }}
                     >
-                      {floorPlanRequestSubmitting ? 'Submitting...' : (
+                      {floorPlanRequestSubmitting ? (
+                        'Submitting...'
+                      ) : (
                         <>
                           <Icon icon="mdi:file-document-outline" />
                           Get Floor Plan Details
@@ -1139,8 +1283,16 @@ const PropertyDetails = () => {
           }}
         >
           <div style={{ textAlign: 'center', padding: '8px 0 16px' }}>
-            <div style={{ width: 40, height: 4, background: '#D1D5DB', borderRadius: 2, margin: '0 auto 16px' }} />
-            <h3 style={{ fontFamily: '"Playfair Display", serif', fontSize: '1.1rem', marginBottom: 16 }}>
+            <div
+              style={{
+                width: 40,
+                height: 4,
+                background: '#D1D5DB',
+                borderRadius: 2,
+                margin: '0 auto 16px',
+              }}
+            />
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', marginBottom: 16 }}>
               Share this Property
             </h3>
             <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
@@ -1180,9 +1332,13 @@ const PropertyDetails = () => {
         <div className={styles.container}>
           {/* Breadcrumb */}
           <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-            <Link to="/" className={styles.breadcrumbLink}>Home</Link>
+            <Link to="/" className={styles.breadcrumbLink}>
+              Home
+            </Link>
             <Icon icon="mdi:chevron-right" className={styles.breadcrumbSep} />
-            <Link to="/properties" className={styles.breadcrumbLink}>Properties</Link>
+            <Link to="/properties" className={styles.breadcrumbLink}>
+              Properties
+            </Link>
             <Icon icon="mdi:chevron-right" className={styles.breadcrumbSep} />
             <span className={styles.breadcrumbCurrent}>{property.title}</span>
           </nav>
@@ -1231,7 +1387,11 @@ const PropertyDetails = () => {
 
                 <div className={styles.locationRow}>
                   <Icon icon="mdi:map-marker" className={styles.locationIcon} />
-                  <span>{[property.location?.area, property.location?.city].filter(Boolean).join(', ') || '—'}</span>
+                  <span>
+                    {[property.location?.area, property.location?.city]
+                      .filter(Boolean)
+                      .join(', ') || '—'}
+                  </span>
                 </div>
 
                 <div className={styles.quickChips}>
@@ -1243,7 +1403,8 @@ const PropertyDetails = () => {
                   {property.dimensionRange && (
                     <span className={styles.chip}>
                       <Icon icon="mdi:ruler-square" />
-                      {property.dimensionRange.min} - {property.dimensionRange.max} {property.dimensionRange.unit}
+                      {property.dimensionRange.min} - {property.dimensionRange.max}{' '}
+                      {property.dimensionRange.unit}
                     </span>
                   )}
                   {property.possession && (
@@ -1254,7 +1415,11 @@ const PropertyDetails = () => {
                 </div>
 
                 <div className={styles.headerActions}>
-                  <button className={styles.shareBtn} onClick={handleShare} aria-label="Share property">
+                  <button
+                    className={styles.shareBtn}
+                    onClick={handleShare}
+                    aria-label="Share property"
+                  >
                     <Icon icon="mdi:share-variant" />
                     Share
                   </button>
@@ -1266,7 +1431,10 @@ const PropertyDetails = () => {
                 <PropertyOverview property={property} />
               </SectionGuard>
               <SectionGuard sectionEnabled={sectionEnabled('details')} hasData={hasSpecs}>
-                <PropertySpecs specifications={property.specifications} specificationsArray={property.specificationsArray} propertyType={property.propertyType} />
+                <PropertySpecs
+                  specifications={property.specifications}
+                  propertyType={property.propertyType}
+                />
               </SectionGuard>
               <SectionGuard sectionEnabled={sectionEnabled('highlights')} hasData={hasSpecialities}>
                 <PropertySpecialities specialities={property.specialities} />
@@ -1284,7 +1452,11 @@ const PropertyDetails = () => {
                   onFloorPlanImageClick={openFloorPlanRequestModal}
                 />
               </SectionGuard>
-              <SectionGuard sectionEnabled={sectionEnabled('finance')} hasData={true} typeAllowed={isSale}>
+              <SectionGuard
+                sectionEnabled={sectionEnabled('finance')}
+                hasData={true}
+                typeAllowed={isSale}
+              >
                 <FinanceGuide
                   price={property.price}
                   property={property}
@@ -1298,14 +1470,28 @@ const PropertyDetails = () => {
               <SectionGuard sectionEnabled={sectionEnabled('documents')} hasData={hasDocuments}>
                 <PropertyDocuments documents={property.documents} onDownloadClick={openDocModal} />
               </SectionGuard>
-              <SectionGuard sectionEnabled={sectionEnabled('constructionSpecs')} hasData={hasConstructionSpecs} typeAllowed={!isRent}>
+              <SectionGuard
+                sectionEnabled={sectionEnabled('constructionSpecs')}
+                hasData={hasConstructionSpecs}
+                typeAllowed={!isRent}
+              >
                 <ConstructionSpecs constructionSpecs={property.constructionSpecs} />
               </SectionGuard>
-              <SectionGuard sectionEnabled={sectionEnabled('construction')} hasData={hasConstructionTimeline} typeAllowed={!isRent}>
-                <ConstructionStatus status={property.status} constructionTimeline={property.constructionTimeline} />
+              <SectionGuard
+                sectionEnabled={sectionEnabled('construction')}
+                hasData={hasConstructionTimeline}
+                typeAllowed={!isRent}
+              >
+                <ConstructionStatus
+                  status={property.status}
+                  constructionTimeline={property.constructionTimeline}
+                />
               </SectionGuard>
               <SectionGuard sectionEnabled={sectionEnabled('developer')} hasData={hasDeveloper}>
-                <BuilderOverview developer={property.developer} developerInfo={property.developerInfo} />
+                <BuilderOverview
+                  developer={property.developer}
+                  developerInfo={property.developerInfo}
+                />
               </SectionGuard>
               <SectionGuard sectionEnabled={sectionEnabled('faqs')} hasData={hasFaqs}>
                 <PropertyFaq property={property} />
@@ -1345,7 +1531,7 @@ const inputStyle = {
   padding: '10px 14px',
   border: '1.5px solid #E5E7EB',
   borderRadius: '8px',
-  fontFamily: '"DM Sans", sans-serif',
+  fontFamily: 'var(--font-body)',
   fontSize: '0.875rem',
   color: '#1B2A4A',
   outline: 'none',
@@ -1360,7 +1546,7 @@ const inputErrorStyle = {
 const fieldErrorTextStyle = {
   color: '#dc2626',
   fontSize: '0.75rem',
-  fontFamily: '"DM Sans", sans-serif',
+  fontFamily: 'var(--font-body)',
   marginTop: '4px',
   display: 'block',
 };
@@ -1375,7 +1561,7 @@ const shareOptionStyle = {
   borderRadius: 12,
   background: '#fff',
   cursor: 'pointer',
-  fontFamily: '"DM Sans", sans-serif',
+  fontFamily: 'var(--font-body)',
   fontSize: '0.75rem',
   color: '#1B2A4A',
   textDecoration: 'none',

@@ -105,10 +105,18 @@ const AdminNeighborhoods = () => {
 
       if (editingItem) {
         await neighborhoodService.update(editingItem.id, payload);
-        setSnackbar({ open: true, message: 'Neighborhood updated successfully', severity: 'success' });
+        setSnackbar({
+          open: true,
+          message: 'Neighborhood updated successfully',
+          severity: 'success',
+        });
       } else {
         await neighborhoodService.create(payload);
-        setSnackbar({ open: true, message: 'Neighborhood created successfully', severity: 'success' });
+        setSnackbar({
+          open: true,
+          message: 'Neighborhood created successfully',
+          severity: 'success',
+        });
       }
 
       handleClose();
@@ -164,7 +172,16 @@ const AdminNeighborhoods = () => {
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1100, mx: 'auto' }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          mb: 3,
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
+      >
         <Box>
           <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#1B2A4A' }}>
             Neighborhoods
@@ -190,7 +207,10 @@ const AdminNeighborhoods = () => {
       </Box>
 
       {/* Table */}
-      <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}>
+      <Paper
+        elevation={0}
+        sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}
+      >
         {neighborhoods.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 6, px: 3 }}>
             <Icon icon="mdi:map-marker-radius-outline" style={{ fontSize: 48, color: '#D1D5DB' }} />
@@ -206,20 +226,35 @@ const AdminNeighborhoods = () => {
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#F9FAFB' }}>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}>Image</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}>Name</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}>
+                    Image
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}>
+                    Name
+                  </TableCell>
                   {!isMobile && (
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}>City</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}>
+                      City
+                    </TableCell>
                   )}
                   {!isMobile && (
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }} align="center">
+                    <TableCell
+                      sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}
+                      align="center"
+                    >
                       Properties
                     </TableCell>
                   )}
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }} align="center">
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}
+                    align="center"
+                  >
                     Active
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }} align="right">
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.8125rem', color: '#6B7280' }}
+                    align="right"
+                  >
                     Actions
                   </TableCell>
                 </TableRow>
@@ -230,7 +265,7 @@ const AdminNeighborhoods = () => {
                     <TableCell sx={{ width: 64 }}>
                       <Box
                         component="img"
-                        src={item.image || 'https://placehold.co/64x48/1B2A4A/white?text=N'}
+                        src={item.image || 'https://picsum.photos/seed/locality/64/48'}
                         alt={item.name}
                         sx={{
                           width: 64,
@@ -240,7 +275,7 @@ const AdminNeighborhoods = () => {
                           bgcolor: '#F3F4F6',
                         }}
                         onError={(e) => {
-                          e.target.src = 'https://placehold.co/64x48/1B2A4A/white?text=N';
+                          e.target.src = 'https://picsum.photos/seed/locality/64/48';
                         }}
                       />
                     </TableCell>
@@ -275,7 +310,9 @@ const AdminNeighborhoods = () => {
                         size="small"
                         sx={{
                           '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
-                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#10B981' },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            bgcolor: '#10B981',
+                          },
                         }}
                       />
                     </TableCell>
@@ -424,13 +461,11 @@ const AdminNeighborhoods = () => {
         onClose={() => setDeleteDialog({ open: false, item: null })}
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ fontWeight: 700, color: '#1B2A4A' }}>
-          Delete Neighborhood
-        </DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700, color: '#1B2A4A' }}>Delete Neighborhood</DialogTitle>
         <DialogContent>
           <Typography sx={{ fontSize: '0.875rem', color: '#6B7280' }}>
-            Are you sure you want to delete <strong>{deleteDialog.item?.name}</strong>?
-            This action cannot be undone.
+            Are you sure you want to delete <strong>{deleteDialog.item?.name}</strong>? This action
+            cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>

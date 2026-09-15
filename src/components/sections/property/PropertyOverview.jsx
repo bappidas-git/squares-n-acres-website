@@ -62,9 +62,7 @@ const PropertyOverview = ({ property }) => {
       >
         <h2 className={styles.title}>Project Overview</h2>
 
-        {property.description && (
-          <p className={styles.description}>{property.description}</p>
-        )}
+        {property.description && <p className={styles.description}>{property.description}</p>}
 
         <div className={styles.detailsGrid}>
           {details.map((detail, idx) => (
@@ -97,19 +95,13 @@ const PropertyOverview = ({ property }) => {
               ))}
             </ul>
             {remainingCount > 0 && !showAllHighlights && (
-              <button
-                className={styles.viewMoreBtn}
-                onClick={() => setShowAllHighlights(true)}
-              >
+              <button className={styles.viewMoreBtn} onClick={() => setShowAllHighlights(true)}>
                 <Icon icon="mdi:chevron-down" className={styles.viewMoreIcon} />
                 View {remainingCount} More Reason{remainingCount > 1 ? 's' : ''}
               </button>
             )}
             {showAllHighlights && totalHighlights > INITIAL_VISIBLE_COUNT && (
-              <button
-                className={styles.viewMoreBtn}
-                onClick={() => setShowAllHighlights(false)}
-              >
+              <button className={styles.viewMoreBtn} onClick={() => setShowAllHighlights(false)}>
                 <Icon icon="mdi:chevron-up" className={styles.viewMoreIcon} />
                 Show Less
               </button>

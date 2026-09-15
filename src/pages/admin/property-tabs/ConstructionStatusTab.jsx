@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Button, IconButton, Paper, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  IconButton,
+  Paper,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+} from '@mui/material';
 import { Icon } from '@iconify/react';
 import IconPicker from '../../../components/admin/IconPicker';
 
@@ -29,7 +40,10 @@ const ConstructionStatusTab = ({ formData, updateField }) => {
   };
 
   const removeItem = (index) => {
-    updateField('constructionTimeline', timeline.filter((_, i) => i !== index));
+    updateField(
+      'constructionTimeline',
+      timeline.filter((_, i) => i !== index)
+    );
   };
 
   const openIconPicker = (index) => {
@@ -49,7 +63,8 @@ const ConstructionStatusTab = ({ formData, updateField }) => {
         Construction Timeline
       </Typography>
       <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
-        Define milestones for the construction timeline. Each milestone has a label, status, and optional icon.
+        Define milestones for the construction timeline. Each milestone has a label, status, and
+        optional icon.
       </Typography>
 
       {timeline.map((item, index) => (
@@ -83,7 +98,10 @@ const ConstructionStatusTab = ({ formData, updateField }) => {
                 '&:hover': { borderColor: '#C9A86C' },
               }}
             >
-              <Icon icon={item.icon || 'mdi:progress-clock'} style={{ fontSize: 22, color: '#1B2A4A' }} />
+              <Icon
+                icon={item.icon || 'mdi:progress-clock'}
+                style={{ fontSize: 22, color: '#1B2A4A' }}
+              />
             </Box>
 
             <TextField

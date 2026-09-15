@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1B2A4A 0%, #2D4470 60%, #1B2A4A 100%);
+  background: linear-gradient(135deg, #1b2a4a 0%, #2d4470 60%, #1b2a4a 100%);
   padding: var(--spacing-3xl) var(--spacing-lg);
   text-align: center;
 }
@@ -107,7 +107,9 @@
   padding: var(--spacing-xl);
   text-align: center;
   border: 1px solid transparent;
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base);
 }
 
 .cultureCard:hover {
@@ -456,7 +458,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Modal Success ────────────────────────────── */

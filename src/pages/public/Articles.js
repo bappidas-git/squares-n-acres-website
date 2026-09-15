@@ -7,6 +7,7 @@ import { Icon } from '@iconify/react';
 import { articleService } from '../../services/api';
 import LeadForm from '../../components/common/LeadForm';
 import styles from './Articles.module.css';
+import { SITE } from '../../config/site';
 
 const CATEGORIES = [
   { value: 'all', label: 'All' },
@@ -144,7 +145,9 @@ const Articles = () => {
         // Fallback: use latest articles if trending fetch fails
         if (articles.length > 0) {
           setTrendingArticles(
-            [...articles].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)).slice(0, 4)
+            [...articles]
+              .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+              .slice(0, 4)
           );
         }
       }
@@ -162,10 +165,10 @@ const Articles = () => {
   return (
     <>
       <Helmet>
-        <title>Real Estate Articles & Insights | H.O.M Advisory</title>
+        <title>{`Real Estate Articles & Insights | ${SITE.name}`}</title>
         <meta
           name="description"
-          content="Expert articles on Indian real estate — buying guides, market trends, investment tips, legal advice, and interior design ideas from H.O.M Advisory."
+          content={`Expert articles on Indian real estate — buying guides, market trends, investment tips, legal advice, and interior design ideas from ${SITE.name}.`}
         />
       </Helmet>
 
@@ -288,7 +291,9 @@ const Articles = () => {
                       <span className={styles.trendingNum}>{String(i + 1).padStart(2, '0')}</span>
                       <div className={styles.trendingInfo}>
                         <span className={styles.trendingTitle}>{article.title}</span>
-                        <span className={styles.trendingDate}>{formatDate(article.publishedAt)}</span>
+                        <span className={styles.trendingDate}>
+                          {formatDate(article.publishedAt)}
+                        </span>
                       </div>
                     </Link>
                   ))}
@@ -307,8 +312,20 @@ const Articles = () => {
                   title=""
                   subtitle=""
                   fields={[
-                    { name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'Your Name' },
-                    { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'Email Address' },
+                    {
+                      name: 'name',
+                      label: 'Name',
+                      type: 'text',
+                      required: true,
+                      placeholder: 'Your Name',
+                    },
+                    {
+                      name: 'email',
+                      label: 'Email',
+                      type: 'email',
+                      required: true,
+                      placeholder: 'Email Address',
+                    },
                   ]}
                   source="newsletter_articles"
                   className={styles.newsletterForm}

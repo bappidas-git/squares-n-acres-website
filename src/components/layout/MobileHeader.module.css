@@ -6,7 +6,9 @@
   z-index: var(--z-sticky);
   background-color: #fff;
   border-bottom: 1px solid var(--color-border);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .mobileHeader.scrolled {
@@ -132,7 +134,9 @@
   font-size: 0.938rem;
   color: var(--color-text-secondary);
   text-decoration: none;
-  transition: color var(--transition-fast), background-color var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
 }
 
 .accordionLink:hover {
@@ -174,7 +178,9 @@
   font-weight: 500;
   color: var(--color-text-primary);
   text-decoration: none;
-  transition: color var(--transition-fast), background-color var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
 }
 
 .bottomLink:hover {

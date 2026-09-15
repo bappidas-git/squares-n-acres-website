@@ -25,7 +25,8 @@ const HighlightsTab = ({ formData, updateListItem, addListItem, removeListItem }
         Property Highlights / Specialities
       </Typography>
       <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
-        Key features shown as highlight cards with icons. e.g., RERA Approved, Eco-Friendly, Smart Home, etc.
+        Key features shown as highlight cards with icons. e.g., RERA Approved, Eco-Friendly, Smart
+        Home, etc.
       </Typography>
 
       {formData.specialities.map((item, index) => (

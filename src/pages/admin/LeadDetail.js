@@ -25,7 +25,10 @@ import {
 } from '../../config/adminConstants';
 
 // Safe date formatting — never shows "Invalid Date"
-const formatDate = (dateStr, options = { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) => {
+const formatDate = (
+  dateStr,
+  options = { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }
+) => {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return '-';
@@ -113,7 +116,11 @@ const LeadDetail = () => {
           setProperty(propData);
         } catch {
           setProperty(null);
-          setSnackbar({ open: true, message: 'Could not load linked property details', severity: 'warning' });
+          setSnackbar({
+            open: true,
+            message: 'Could not load linked property details',
+            severity: 'warning',
+          });
         }
       }
       setError(null);
@@ -186,7 +193,7 @@ const LeadDetail = () => {
   };
 
   const timeline = buildTimeline(lead);
-  const sCfg = lead ? (statusConfig[lead.status] || statusConfig.new) : statusConfig.new;
+  const sCfg = lead ? statusConfig[lead.status] || statusConfig.new : statusConfig.new;
 
   if (loading) {
     return (
@@ -259,7 +266,12 @@ const LeadDetail = () => {
             variant="outlined"
             startIcon={<Icon icon="mdi:phone-outline" />}
             href={`tel:${lead.phone}`}
-            sx={{ borderRadius: 2, borderColor: '#10B981', color: '#10B981', '&:hover': { borderColor: '#059669', bgcolor: '#ECFDF5' } }}
+            sx={{
+              borderRadius: 2,
+              borderColor: '#10B981',
+              color: '#10B981',
+              '&:hover': { borderColor: '#059669', bgcolor: '#ECFDF5' },
+            }}
           >
             Call
           </Button>
@@ -268,7 +280,12 @@ const LeadDetail = () => {
             variant="outlined"
             startIcon={<Icon icon="mdi:email-outline" />}
             href={`mailto:${lead.email}`}
-            sx={{ borderRadius: 2, borderColor: '#3B82F6', color: '#3B82F6', '&:hover': { borderColor: '#2563EB', bgcolor: '#EFF6FF' } }}
+            sx={{
+              borderRadius: 2,
+              borderColor: '#3B82F6',
+              color: '#3B82F6',
+              '&:hover': { borderColor: '#2563EB', bgcolor: '#EFF6FF' },
+            }}
           >
             Email
           </Button>
@@ -279,7 +296,12 @@ const LeadDetail = () => {
             href={getWhatsAppLink(lead.phone)}
             target="_blank"
             rel="noopener noreferrer"
-            sx={{ borderRadius: 2, borderColor: '#25D366', color: '#25D366', '&:hover': { borderColor: '#128C7E', bgcolor: 'rgba(37,211,102,0.05)' } }}
+            sx={{
+              borderRadius: 2,
+              borderColor: '#25D366',
+              color: '#25D366',
+              '&:hover': { borderColor: '#128C7E', bgcolor: 'rgba(37,211,102,0.05)' },
+            }}
           >
             WhatsApp
           </Button>
@@ -304,7 +326,10 @@ const LeadDetail = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {/* Name */}
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                <Icon icon="mdi:account-outline" style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }} />
+                <Icon
+                  icon="mdi:account-outline"
+                  style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }}
+                />
                 <Box>
                   <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
                     Full Name
@@ -317,7 +342,10 @@ const LeadDetail = () => {
 
               {/* Email */}
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                <Icon icon="mdi:email-outline" style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }} />
+                <Icon
+                  icon="mdi:email-outline"
+                  style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }}
+                />
                 <Box>
                   <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
                     Email
@@ -326,7 +354,12 @@ const LeadDetail = () => {
                     variant="body2"
                     component="a"
                     href={`mailto:${lead.email}`}
-                    sx={{ fontWeight: 500, color: '#3B82F6', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                    sx={{
+                      fontWeight: 500,
+                      color: '#3B82F6',
+                      textDecoration: 'none',
+                      '&:hover': { textDecoration: 'underline' },
+                    }}
                   >
                     {lead.email}
                   </Typography>
@@ -335,7 +368,10 @@ const LeadDetail = () => {
 
               {/* Phone */}
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                <Icon icon="mdi:phone-outline" style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }} />
+                <Icon
+                  icon="mdi:phone-outline"
+                  style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }}
+                />
                 <Box>
                   <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
                     Phone
@@ -344,7 +380,12 @@ const LeadDetail = () => {
                     variant="body2"
                     component="a"
                     href={`tel:${lead.phone}`}
-                    sx={{ fontWeight: 500, color: '#3B82F6', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                    sx={{
+                      fontWeight: 500,
+                      color: '#3B82F6',
+                      textDecoration: 'none',
+                      '&:hover': { textDecoration: 'underline' },
+                    }}
                   >
                     {lead.phone}
                   </Typography>
@@ -353,7 +394,10 @@ const LeadDetail = () => {
 
               {/* Source */}
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                <Icon icon="mdi:source-branch" style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }} />
+                <Icon
+                  icon="mdi:source-branch"
+                  style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }}
+                />
                 <Box>
                   <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
                     Source
@@ -367,7 +411,10 @@ const LeadDetail = () => {
               {/* Property Link */}
               {property && (
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                  <Icon icon="mdi:home-city-outline" style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }} />
+                  <Icon
+                    icon="mdi:home-city-outline"
+                    style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }}
+                  />
                   <Box>
                     <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
                       Linked Property
@@ -396,7 +443,10 @@ const LeadDetail = () => {
               {/* Message */}
               {lead.message && (
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                  <Icon icon="mdi:message-text-outline" style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }} />
+                  <Icon
+                    icon="mdi:message-text-outline"
+                    style={{ fontSize: 20, color: '#9CA3AF', marginTop: 2 }}
+                  />
                   <Box>
                     <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block' }}>
                       Message
@@ -512,7 +562,14 @@ const LeadDetail = () => {
                 <Chip
                   size="small"
                   label={lead.notes.length}
-                  sx={{ ml: 1, height: 20, fontSize: '0.6875rem', fontWeight: 600, bgcolor: '#F3F4F6', color: '#6B7280' }}
+                  sx={{
+                    ml: 1,
+                    height: 20,
+                    fontSize: '0.6875rem',
+                    fontWeight: 600,
+                    bgcolor: '#F3F4F6',
+                    color: '#6B7280',
+                  }}
                 />
               )}
             </Typography>
@@ -545,7 +602,7 @@ const LeadDetail = () => {
             <Divider sx={{ my: 2 }} />
 
             {/* Notes List */}
-            {(!lead.notes || lead.notes.length === 0) ? (
+            {!lead.notes || lead.notes.length === 0 ? (
               <Box sx={{ textAlign: 'center', py: 3 }}>
                 <Icon icon="mdi:note-text-outline" style={{ fontSize: 36, color: '#D1D5DB' }} />
                 <Typography variant="body2" sx={{ color: '#9CA3AF', mt: 1 }}>
@@ -573,7 +630,10 @@ const LeadDetail = () => {
                       <Typography variant="body2" sx={{ color: '#374151', lineHeight: 1.6 }}>
                         {note.text}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: 0.5, display: 'block' }}>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: '#9CA3AF', mt: 0.5, display: 'block' }}
+                      >
                         {formatDate(note.addedAt || note.added_at || note.created_at)}
                       </Typography>
                     </Box>
@@ -640,7 +700,10 @@ const LeadDetail = () => {
 
                     {/* Timeline content */}
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#1B2A4A', fontSize: '0.8125rem' }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 600, color: '#1B2A4A', fontSize: '0.8125rem' }}
+                      >
                         {event.text}
                       </Typography>
                       {event.detail && (
@@ -658,7 +721,10 @@ const LeadDetail = () => {
                           {event.detail}
                         </Typography>
                       )}
-                      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: 0.25, display: 'block' }}>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: '#9CA3AF', mt: 0.25, display: 'block' }}
+                      >
                         {formatDate(event.date)}
                       </Typography>
                     </Box>

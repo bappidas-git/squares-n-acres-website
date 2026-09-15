@@ -12,13 +12,21 @@ import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 
 const PrevArrow = ({ onClick }) => (
-  <button className={`${styles.slickArrow} ${styles.slickPrev}`} onClick={onClick} aria-label="Previous">
+  <button
+    className={`${styles.slickArrow} ${styles.slickPrev}`}
+    onClick={onClick}
+    aria-label="Previous"
+  >
     <Icon icon="mdi:chevron-left" />
   </button>
 );
 
 const NextArrow = ({ onClick }) => (
-  <button className={`${styles.slickArrow} ${styles.slickNext}`} onClick={onClick} aria-label="Next">
+  <button
+    className={`${styles.slickArrow} ${styles.slickNext}`}
+    onClick={onClick}
+    aria-label="Next"
+  >
     <Icon icon="mdi:chevron-right" />
   </button>
 );
@@ -43,7 +51,9 @@ const SimilarProperties = ({ currentProperty }) => {
         const filtered = Array.isArray(data) ? data : [];
         setProperties(
           filtered
-            .filter((p) => p.id !== currentProperty.id && !!p.isActive && p.publishStatus !== 'draft')
+            .filter(
+              (p) => p.id !== currentProperty.id && !!p.isActive && p.publishStatus !== 'draft'
+            )
             .slice(0, 4)
         );
       } catch {

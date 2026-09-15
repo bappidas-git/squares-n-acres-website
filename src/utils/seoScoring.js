@@ -60,13 +60,17 @@ const checkTitle = (property) => {
   } else if (len >= TITLE_MIN_LENGTH && len <= TITLE_MAX_LENGTH) {
     result.score += 3;
     if (len < TITLE_OPTIMAL_MIN) {
-      result.issues.push(`Title is ${len} chars — aim for ${TITLE_OPTIMAL_MIN}-${TITLE_OPTIMAL_MAX} for best results`);
+      result.issues.push(
+        `Title is ${len} chars — aim for ${TITLE_OPTIMAL_MIN}-${TITLE_OPTIMAL_MAX} for best results`
+      );
     } else {
       result.issues.push(`Title is ${len} chars — try to keep under ${TITLE_OPTIMAL_MAX}`);
     }
   } else {
     if (len < TITLE_MIN_LENGTH) {
-      result.issues.push(`Title is too short (${len} chars) — minimum ${TITLE_MIN_LENGTH} recommended`);
+      result.issues.push(
+        `Title is too short (${len} chars) — minimum ${TITLE_MIN_LENGTH} recommended`
+      );
     } else {
       result.issues.push(`Title is too long (${len} chars) — Google may truncate it`);
     }
@@ -76,7 +80,8 @@ const checkTitle = (property) => {
   const location = property.location?.area?.toLowerCase() || '';
   const city = property.location?.city?.toLowerCase() || '';
   const titleLower = title.toLowerCase();
-  const hasLocation = (location && titleLower.includes(location)) || (city && titleLower.includes(city));
+  const hasLocation =
+    (location && titleLower.includes(location)) || (city && titleLower.includes(city));
   if (hasLocation) {
     result.score += 3;
   } else {
@@ -120,20 +125,39 @@ const checkDescription = (property) => {
   } else if (len >= DESC_MIN_LENGTH && len <= DESC_MAX_LENGTH) {
     result.score += 4;
     if (len < DESC_OPTIMAL_MIN) {
-      result.issues.push(`Description is ${len} chars — aim for ${DESC_OPTIMAL_MIN}-${DESC_OPTIMAL_MAX}`);
+      result.issues.push(
+        `Description is ${len} chars — aim for ${DESC_OPTIMAL_MIN}-${DESC_OPTIMAL_MAX}`
+      );
     } else {
       result.issues.push(`Description is ${len} chars — try to keep under ${DESC_OPTIMAL_MAX}`);
     }
   } else {
     if (len < DESC_MIN_LENGTH) {
-      result.issues.push(`Description is too short (${len} chars) — minimum ${DESC_MIN_LENGTH} recommended`);
+      result.issues.push(
+        `Description is too short (${len} chars) — minimum ${DESC_MIN_LENGTH} recommended`
+      );
     } else {
       result.issues.push(`Description is too long (${len} chars) — Google will truncate it`);
     }
   }
 
   // CTA / action word presence (5 points)
-  const ctaWords = ['buy', 'explore', 'discover', 'find', 'view', 'book', 'schedule', 'visit', 'check', 'premium', 'luxury', 'affordable', 'best', 'top'];
+  const ctaWords = [
+    'buy',
+    'explore',
+    'discover',
+    'find',
+    'view',
+    'book',
+    'schedule',
+    'visit',
+    'check',
+    'premium',
+    'luxury',
+    'affordable',
+    'best',
+    'top',
+  ];
   const descLower = desc.toLowerCase();
   const hasCta = ctaWords.some((word) => descLower.includes(word));
   if (hasCta) {
@@ -174,19 +198,29 @@ const checkSchema = (property) => {
   if (parsed['@context'] && parsed['@type']) {
     result.score += 5;
   } else {
-    if (!parsed['@context']) result.issues.push('Schema missing @context (should be https://schema.org)');
+    if (!parsed['@context'])
+      result.issues.push('Schema missing @context (should be https://schema.org)');
     if (!parsed['@type']) result.issues.push('Schema missing @type');
   }
 
   // Uses appropriate real estate type (5 points)
-  const validTypes = ['RealEstateListing', 'Residence', 'Product', 'Apartment', 'House', 'SingleFamilyResidence'];
+  const validTypes = [
+    'RealEstateListing',
+    'Residence',
+    'Product',
+    'Apartment',
+    'House',
+    'SingleFamilyResidence',
+  ];
   const schemaType = parsed['@type'];
   const types = Array.isArray(schemaType) ? schemaType : [schemaType];
   const hasValidType = types.some((t) => validTypes.includes(t));
   if (hasValidType) {
     result.score += 5;
   } else {
-    result.issues.push('Consider using RealEstateListing or Residence as @type for better rich results');
+    result.issues.push(
+      'Consider using RealEstateListing or Residence as @type for better rich results'
+    );
   }
 
   return result;
@@ -272,10 +306,14 @@ const checkKeywords = (property) => {
     result.score += 3;
   } else if (keywords.length < MIN_KEYWORDS) {
     result.score += 1;
-    result.issues.push(`Only ${keywords.length} keyword(s) — aim for ${MIN_KEYWORDS}-${MAX_KEYWORDS}`);
+    result.issues.push(
+      `Only ${keywords.length} keyword(s) — aim for ${MIN_KEYWORDS}-${MAX_KEYWORDS}`
+    );
   } else {
     result.score += 1;
-    result.issues.push(`Too many keywords (${keywords.length}) — keep under ${MAX_KEYWORDS} to avoid stuffing`);
+    result.issues.push(
+      `Too many keywords (${keywords.length}) — keep under ${MAX_KEYWORDS} to avoid stuffing`
+    );
   }
 
   // Keywords appear in title/description (3 points)
@@ -287,7 +325,9 @@ const checkKeywords = (property) => {
   if (matchCount > 0) {
     result.score += 3;
   } else {
-    result.issues.push('Keywords do not appear in the title or description — align them for consistency');
+    result.issues.push(
+      'Keywords do not appear in the title or description — align them for consistency'
+    );
   }
 
   return result;
@@ -374,14 +414,18 @@ const checkSlug = (property) => {
     result.score += 2;
   } else {
     result.score += 1;
-    result.issues.push('Slug contains special characters or uppercase — use lowercase-hyphenated format');
+    result.issues.push(
+      'Slug contains special characters or uppercase — use lowercase-hyphenated format'
+    );
   }
 
   // Reasonable length (1 point)
   if (slug.length <= SLUG_MAX_LENGTH) {
     result.score += 1;
   } else {
-    result.issues.push(`Slug is ${slug.length} chars — keep under ${SLUG_MAX_LENGTH} for cleaner URLs`);
+    result.issues.push(
+      `Slug is ${slug.length} chars — keep under ${SLUG_MAX_LENGTH} for cleaner URLs`
+    );
   }
 
   return result;

@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1B2A4A 0%, #2D4470 60%, #1B2A4A 100%);
+  background: linear-gradient(135deg, #1b2a4a 0%, #2d4470 60%, #1b2a4a 100%);
   padding: var(--spacing-3xl) var(--spacing-lg);
   text-align: center;
 }
@@ -207,7 +207,9 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--color-border);
-  transition: box-shadow var(--transition-base), border-color var(--transition-base);
+  transition:
+    box-shadow var(--transition-base),
+    border-color var(--transition-base);
 }
 
 .faqOpen {
@@ -289,8 +291,12 @@
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .emptyState {

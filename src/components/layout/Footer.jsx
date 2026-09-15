@@ -63,10 +63,12 @@ const Footer = () => {
   }, []);
 
   // Derive data from API settings, falling back to defaults
-  const companyName = settings?.companyName || 'H.O.M Advisory';
-  const companySubtitle = settings?.companySubtitle || 'HOME OFFICE MARKET';
-  const description = settings?.companyDescription || 'Your connection to the finest homes and experiences no matter the destination or lifestyle.';
-  const tagline = settings?.tagline || 'ELEVATING EVERY EXPERIENCE IN REAL ESTATE';
+  const companyName = settings?.companyName || BRAND.name;
+  const companySubtitle = settings?.companySubtitle || '';
+  const description =
+    settings?.companyDescription ||
+    'Bengaluru real-estate advisory. Buy, sell, rent and invest with confidence.';
+  const tagline = settings?.tagline || 'Your trusted partner for Bengaluru property';
   const contactInfo = settings?.contactInfo || {};
 
   // Social links from API
@@ -81,9 +83,10 @@ const Footer = () => {
     : DEFAULT_SOCIAL;
 
   // Footer link groups from API
-  const linkGroups = Array.isArray(settings?.footerLinkGroups) && settings.footerLinkGroups.length > 0
-    ? settings.footerLinkGroups
-    : DEFAULT_LINK_GROUPS;
+  const linkGroups =
+    Array.isArray(settings?.footerLinkGroups) && settings.footerLinkGroups.length > 0
+      ? settings.footerLinkGroups
+      : DEFAULT_LINK_GROUPS;
 
   // Gallery images from API — exactly 6 images for consistent 3x2 grid layout
   const rawGallery = Array.isArray(settings?.footerGallery) ? settings.footerGallery : [];
@@ -107,7 +110,7 @@ const Footer = () => {
             height="48"
             className={styles.brandLogo}
           />
-          <div className={styles.brandSubtitle}>{companySubtitle}</div>
+          {companySubtitle && <div className={styles.brandSubtitle}>{companySubtitle}</div>}
           <p className={styles.brandTagline}>{description}</p>
           <div className={styles.brandElevating}>{tagline}</div>
           <div className={styles.socialIcons}>

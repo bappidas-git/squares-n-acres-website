@@ -25,7 +25,10 @@ const useAnimatedCount = (target, duration = 1200) => {
   const frameRef = useRef();
 
   useEffect(() => {
-    if (target === 0) { setCount(0); return; }
+    if (target === 0) {
+      setCount(0);
+      return;
+    }
     const startTime = performance.now();
     const animate = (now) => {
       const progress = Math.min((now - startTime) / duration, 1);
@@ -43,7 +46,17 @@ const useAnimatedCount = (target, duration = 1200) => {
 };
 
 // Stats Card Component — compact layout
-const StatsCard = ({ icon, iconColor, iconBg, label, value, subLabel, trend, trendUp, loading }) => {
+const StatsCard = ({
+  icon,
+  iconColor,
+  iconBg,
+  label,
+  value,
+  subLabel,
+  trend,
+  trendUp,
+  loading,
+}) => {
   const animatedValue = useAnimatedCount(loading ? 0 : value);
 
   return (
@@ -80,7 +93,15 @@ const StatsCard = ({ icon, iconColor, iconBg, label, value, subLabel, trend, tre
           {loading ? (
             <Skeleton width={50} height={32} />
           ) : (
-            <Typography variant="h5" sx={{ fontWeight: 700, color: '#1B2A4A', fontFamily: 'DM Sans', lineHeight: 1.2 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: '#1B2A4A',
+                fontFamily: 'var(--font-body)',
+                lineHeight: 1.2,
+              }}
+            >
               {animatedValue.toLocaleString()}
             </Typography>
           )}
@@ -110,7 +131,10 @@ const StatsCard = ({ icon, iconColor, iconBg, label, value, subLabel, trend, tre
           {label}
         </Typography>
         {subLabel && (
-          <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block', fontSize: '0.675rem', lineHeight: 1.2 }}>
+          <Typography
+            variant="caption"
+            sx={{ color: '#9CA3AF', display: 'block', fontSize: '0.675rem', lineHeight: 1.2 }}
+          >
             {subLabel}
           </Typography>
         )}
@@ -141,7 +165,15 @@ const DonutChart = ({ data, size = 160 }) => {
   let offset = 0;
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 3,
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+      }}
+    >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {data.map((item, i) => {
           const pct = item.value / total;
@@ -175,7 +207,15 @@ const DonutChart = ({ data, size = 160 }) => {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
         {data.map((item, i) => (
           <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: item.color, flexShrink: 0 }} />
+            <Box
+              sx={{
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                bgcolor: item.color,
+                flexShrink: 0,
+              }}
+            />
             <Typography variant="caption" sx={{ color: '#6B7280' }}>
               {item.label}: <strong style={{ color: '#1B2A4A' }}>{item.value}</strong>
             </Typography>
@@ -193,7 +233,10 @@ const BarChart = ({ data, maxHeight = 120 }) => {
   return (
     <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1.5, height: maxHeight + 30, pt: 2 }}>
       {data.map((item, i) => (
-        <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+        <Box
+          key={i}
+          sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}
+        >
           <Typography variant="caption" sx={{ color: '#6B7280', mb: 0.5, fontWeight: 600 }}>
             {item.value}
           </Typography>
@@ -356,9 +399,21 @@ const Dashboard = () => {
 
   // Property status data for donut
   const propertyStatusData = [
-    { label: 'Ready to Move', value: properties.filter((p) => p.status === 'ready-to-move').length, color: '#10B981' },
-    { label: 'Under Construction', value: properties.filter((p) => p.status === 'under-construction').length, color: '#F59E0B' },
-    { label: 'Pre-launch', value: properties.filter((p) => p.status === 'pre-launch').length, color: '#3B82F6' },
+    {
+      label: 'Ready to Move',
+      value: properties.filter((p) => p.status === 'ready-to-move').length,
+      color: '#10B981',
+    },
+    {
+      label: 'Under Construction',
+      value: properties.filter((p) => p.status === 'under-construction').length,
+      color: '#F59E0B',
+    },
+    {
+      label: 'Pre-launch',
+      value: properties.filter((p) => p.status === 'pre-launch').length,
+      color: '#3B82F6',
+    },
   ];
 
   const getPropertyTitle = (propertyId) => {
@@ -369,7 +424,16 @@ const Dashboard = () => {
   return (
     <Box>
       {/* Welcome + Quick Actions Row */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5, flexWrap: 'wrap', gap: 1.5 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 2.5,
+          flexWrap: 'wrap',
+          gap: 1.5,
+        }}
+      >
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 700, color: '#1B2A4A', lineHeight: 1.3 }}>
             Welcome back, {user?.name?.split(' ')[0] || 'Admin'}
@@ -395,7 +459,13 @@ const Dashboard = () => {
             color="primary"
             startIcon={<Icon icon="mdi:pencil-outline" style={{ fontSize: 16 }} />}
             onClick={() => navigate('/admin/articles/add')}
-            sx={{ borderRadius: 1.5, fontSize: '0.8rem', textTransform: 'none', py: 0.75, display: { xs: 'none', sm: 'inline-flex' } }}
+            sx={{
+              borderRadius: 1.5,
+              fontSize: '0.8rem',
+              textTransform: 'none',
+              py: 0.75,
+              display: { xs: 'none', sm: 'inline-flex' },
+            }}
           >
             Write Article
           </Button>
@@ -467,7 +537,15 @@ const Dashboard = () => {
             {sourceBarData.length > 0 ? (
               <BarChart data={sourceBarData} maxHeight={100} />
             ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 120, color: '#9CA3AF' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: 120,
+                  color: '#9CA3AF',
+                }}
+              >
                 <Typography variant="caption">No lead data</Typography>
               </Box>
             )}
@@ -484,7 +562,15 @@ const Dashboard = () => {
                 <DonutChart data={propertyStatusData} size={130} />
               </Box>
             ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 120, color: '#9CA3AF' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: 120,
+                  color: '#9CA3AF',
+                }}
+              >
                 <Typography variant="caption">No data</Typography>
               </Box>
             )}
@@ -493,7 +579,14 @@ const Dashboard = () => {
         {/* Lead Status Summary */}
         <Grid item xs={12} sm={6} md={5}>
           <Paper sx={{ p: 2.5, borderRadius: 2.5, height: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                mb: 1.5,
+              }}
+            >
               <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
                 Lead Status Overview
               </Typography>
@@ -502,17 +595,48 @@ const Dashboard = () => {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {Object.entries(leadStatusConfig).map(([key, cfg]) => {
                   const count = recentLeads.filter((l) => l.status === key).length;
-                  const pct = recentLeads.length > 0 ? Math.round((count / recentLeads.length) * 100) : 0;
+                  const pct =
+                    recentLeads.length > 0 ? Math.round((count / recentLeads.length) * 100) : 0;
                   return (
                     <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: cfg.color, flexShrink: 0 }} />
-                      <Typography variant="caption" sx={{ color: '#6B7280', flex: 1, minWidth: 70 }}>
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          bgcolor: cfg.color,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <Typography
+                        variant="caption"
+                        sx={{ color: '#6B7280', flex: 1, minWidth: 70 }}
+                      >
                         {cfg.label}
                       </Typography>
-                      <Box sx={{ flex: 2, height: 6, bgcolor: '#F3F4F6', borderRadius: 1, overflow: 'hidden' }}>
-                        <Box sx={{ width: `${pct}%`, height: '100%', bgcolor: cfg.color, borderRadius: 1, transition: 'width 0.6s ease' }} />
+                      <Box
+                        sx={{
+                          flex: 2,
+                          height: 6,
+                          bgcolor: '#F3F4F6',
+                          borderRadius: 1,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: `${pct}%`,
+                            height: '100%',
+                            bgcolor: cfg.color,
+                            borderRadius: 1,
+                            transition: 'width 0.6s ease',
+                          }}
+                        />
                       </Box>
-                      <Typography variant="caption" sx={{ color: '#1B2A4A', fontWeight: 600, minWidth: 24, textAlign: 'right' }}>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: '#1B2A4A', fontWeight: 600, minWidth: 24, textAlign: 'right' }}
+                      >
                         {count}
                       </Typography>
                     </Box>
@@ -520,7 +644,15 @@ const Dashboard = () => {
                 })}
               </Box>
             ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 120, color: '#9CA3AF' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: 120,
+                  color: '#9CA3AF',
+                }}
+              >
                 <Typography variant="caption">No lead data</Typography>
               </Box>
             )}
@@ -530,7 +662,15 @@ const Dashboard = () => {
 
       {/* Recent Leads Table */}
       <Paper sx={{ borderRadius: 2.5, overflow: 'hidden' }}>
-        <Box sx={{ px: 2.5, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box
+          sx={{
+            px: 2.5,
+            py: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
             Recent Leads
           </Typography>
@@ -548,13 +688,87 @@ const Dashboard = () => {
           <Table size="small">
             <TableHead>
               <TableRow sx={{ '& th': { bgcolor: '#FAFAFA', py: 1 } }}>
-                <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Name</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Email</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5, display: { xs: 'none', sm: 'table-cell' } }}>Phone</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5, display: { xs: 'none', md: 'table-cell' } }}>Source</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5, display: { xs: 'none', lg: 'table-cell' } }}>Property</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.5, display: { xs: 'none', sm: 'table-cell' } }}>Date</TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#6B7280',
+                    fontSize: '0.7rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Name
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#6B7280',
+                    fontSize: '0.7rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Email
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#6B7280',
+                    fontSize: '0.7rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                    display: { xs: 'none', sm: 'table-cell' },
+                  }}
+                >
+                  Phone
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#6B7280',
+                    fontSize: '0.7rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                    display: { xs: 'none', md: 'table-cell' },
+                  }}
+                >
+                  Source
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#6B7280',
+                    fontSize: '0.7rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                    display: { xs: 'none', lg: 'table-cell' },
+                  }}
+                >
+                  Property
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#6B7280',
+                    fontSize: '0.7rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Status
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#6B7280',
+                    fontSize: '0.7rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                    display: { xs: 'none', sm: 'table-cell' },
+                  }}
+                >
+                  Date
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -562,7 +776,9 @@ const Dashboard = () => {
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
                     {Array.from({ length: 7 }).map((_, j) => (
-                      <TableCell key={j}><Skeleton /></TableCell>
+                      <TableCell key={j}>
+                        <Skeleton />
+                      </TableCell>
                     ))}
                   </TableRow>
                 ))
@@ -588,13 +804,35 @@ const Dashboard = () => {
                       <TableCell sx={{ color: '#6B7280', fontSize: '0.8125rem' }}>
                         {lead.email}
                       </TableCell>
-                      <TableCell sx={{ color: '#6B7280', fontSize: '0.8125rem', display: { xs: 'none', sm: 'table-cell' } }}>
+                      <TableCell
+                        sx={{
+                          color: '#6B7280',
+                          fontSize: '0.8125rem',
+                          display: { xs: 'none', sm: 'table-cell' },
+                        }}
+                      >
                         {lead.phone}
                       </TableCell>
-                      <TableCell sx={{ color: '#6B7280', fontSize: '0.75rem', display: { xs: 'none', md: 'table-cell' } }}>
+                      <TableCell
+                        sx={{
+                          color: '#6B7280',
+                          fontSize: '0.75rem',
+                          display: { xs: 'none', md: 'table-cell' },
+                        }}
+                      >
                         {lead.source?.replace(/-/g, ' ') || '—'}
                       </TableCell>
-                      <TableCell sx={{ color: '#6B7280', fontSize: '0.75rem', display: { xs: 'none', lg: 'table-cell' }, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <TableCell
+                        sx={{
+                          color: '#6B7280',
+                          fontSize: '0.75rem',
+                          display: { xs: 'none', lg: 'table-cell' },
+                          maxWidth: 140,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
                         {lead.propertyId ? getPropertyTitle(lead.propertyId) : '—'}
                       </TableCell>
                       <TableCell>
@@ -610,7 +848,14 @@ const Dashboard = () => {
                           }}
                         />
                       </TableCell>
-                      <TableCell sx={{ color: '#9CA3AF', fontSize: '0.75rem', display: { xs: 'none', sm: 'table-cell' }, whiteSpace: 'nowrap' }}>
+                      <TableCell
+                        sx={{
+                          color: '#9CA3AF',
+                          fontSize: '0.75rem',
+                          display: { xs: 'none', sm: 'table-cell' },
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
                         {new Date(lead.createdAt).toLocaleDateString('en-IN', {
                           day: 'numeric',
                           month: 'short',

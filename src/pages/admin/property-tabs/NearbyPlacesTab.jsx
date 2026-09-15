@@ -1,5 +1,15 @@
 import React from 'react';
-import { Box, Typography, TextField, Button, IconButton, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  IconButton,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from '@mui/material';
 import { Icon } from '@iconify/react';
 import { NEARBY_TYPES } from './constants';
 
@@ -52,7 +62,11 @@ const NearbyPlacesTab = ({ formData, updateListItem, addListItem, removeListItem
             </Select>
           </FormControl>
           {formData.nearbyPlaces.length > 1 && (
-            <IconButton size="small" onClick={() => removeListItem('nearbyPlaces', index)} sx={{ color: '#EF4444' }}>
+            <IconButton
+              size="small"
+              onClick={() => removeListItem('nearbyPlaces', index)}
+              sx={{ color: '#EF4444' }}
+            >
               <Icon icon="mdi:close-circle-outline" style={{ fontSize: 20 }} />
             </IconButton>
           )}

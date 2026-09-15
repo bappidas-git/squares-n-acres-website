@@ -21,6 +21,7 @@ import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { leadService } from '../../services/api';
 import { getNavItemsForRole } from '../../config/rbac';
 import styles from './AdminLayout.module.css';
+import { BRAND } from '../../config/site';
 
 // Page title mapping
 const pageTitles = {
@@ -42,13 +43,13 @@ const formatSource = (source) => {
   const sourceMap = {
     'property-detail-page': 'Property Enquiry',
     'homepage-contact-form': 'Contact Form',
-    'newsletter': 'Newsletter',
+    newsletter: 'Newsletter',
     'home-loan': 'Home Loan',
     'legal-assistance': 'Legal',
     'interior-designing': 'Interior Design',
     'sell-let': 'Sell/Let',
-    'careers': 'Careers',
-    'partnership': 'Partnership',
+    careers: 'Careers',
+    partnership: 'Partnership',
     'property-listing-page': 'Property Listing',
   };
   return sourceMap[source] || source.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -96,9 +97,7 @@ const AdminLayout = () => {
       if (!isInitialFetchRef.current && allLeads.length > lastLeadCountRef.current) {
         const newestLead = sorted[0];
         if (newestLead) {
-          setToastMessage(
-            `New lead from ${formatSource(newestLead.source)}: ${newestLead.name}`
-          );
+          setToastMessage(`New lead from ${formatSource(newestLead.source)}: ${newestLead.name}`);
           setToastOpen(true);
         }
       }
@@ -240,7 +239,7 @@ const AdminLayout = () => {
         </div>
         {(!collapsed || mobile) && (
           <div className={styles.brandText}>
-            <div className={styles.brandTitle}>H.O.M Advisory</div>
+            <div className={styles.brandTitle}>{BRAND.name}</div>
             <div className={styles.brandSubtitle}>Admin Panel</div>
           </div>
         )}
@@ -248,9 +247,7 @@ const AdminLayout = () => {
 
       {/* Navigation */}
       <div className={mobile ? styles.mobileDrawerNav : styles.sidebarNav}>
-        {(!collapsed || mobile) && (
-          <div className={styles.navSectionLabel}>Main Menu</div>
-        )}
+        {(!collapsed || mobile) && <div className={styles.navSectionLabel}>Main Menu</div>}
         {renderNavItems(navItems)}
       </div>
 
@@ -261,7 +258,9 @@ const AdminLayout = () => {
           {(!collapsed || mobile) && (
             <div className={styles.userInfo}>
               <div className={styles.userName}>{user?.name || 'Admin'}</div>
-              <div className={styles.userRole}>{(user?.role || 'admin').replace(/^\w/, (c) => c.toUpperCase())}</div>
+              <div className={styles.userRole}>
+                {(user?.role || 'admin').replace(/^\w/, (c) => c.toUpperCase())}
+              </div>
             </div>
           )}
         </div>
@@ -277,9 +276,7 @@ const AdminLayout = () => {
     <div className={styles.adminRoot}>
       {/* Desktop Sidebar */}
       {!isMobile && (
-        <aside
-          className={`${styles.sidebar} ${collapsed ? styles.sidebarCollapsed : ''}`}
-        >
+        <aside className={`${styles.sidebar} ${collapsed ? styles.sidebarCollapsed : ''}`}>
           {sidebarContent(false)}
         </aside>
       )}
@@ -301,7 +298,7 @@ const AdminLayout = () => {
                   <Icon icon="mdi:home-city" style={{ fontSize: 20, color: '#C9A86C' }} />
                 </div>
                 <div>
-                  <div className={styles.brandTitle}>H.O.M Advisory</div>
+                  <div className={styles.brandTitle}>{BRAND.name}</div>
                   <div className={styles.brandSubtitle}>Admin Panel</div>
                 </div>
               </div>
@@ -316,9 +313,7 @@ const AdminLayout = () => {
 
       {/* Top Bar */}
       <header
-        className={`${styles.topBar} ${
-          !isMobile && collapsed ? styles.topBarCollapsed : ''
-        }`}
+        className={`${styles.topBar} ${!isMobile && collapsed ? styles.topBarCollapsed : ''}`}
       >
         <div className={styles.topBarLeft}>
           {isMobile ? (
@@ -337,10 +332,7 @@ const AdminLayout = () => {
               type="button"
               aria-label="Toggle sidebar"
             >
-              <Icon
-                icon={collapsed ? 'mdi:menu' : 'mdi:menu-open'}
-                style={{ fontSize: 22 }}
-              />
+              <Icon icon={collapsed ? 'mdi:menu' : 'mdi:menu-open'} style={{ fontSize: 22 }} />
             </button>
           )}
           <span className={styles.pageTitle}>{pageTitle}</span>
@@ -373,7 +365,15 @@ const AdminLayout = () => {
               sx: { width: 340, mt: 1, borderRadius: 2, maxHeight: 420 },
             }}
           >
-            <Box sx={{ px: 2, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box
+              sx={{
+                px: 2,
+                py: 1.5,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
               <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A' }}>
                 Notifications
               </Typography>
@@ -418,7 +418,9 @@ const AdminLayout = () => {
                       '&:hover': { bgcolor: isNew ? 'rgba(59,130,246,0.08)' : undefined },
                     }}
                   >
-                    <Box sx={{ display: 'flex', gap: 1.5, width: '100%', alignItems: 'flex-start' }}>
+                    <Box
+                      sx={{ display: 'flex', gap: 1.5, width: '100%', alignItems: 'flex-start' }}
+                    >
                       <Box
                         sx={{
                           width: 36,
@@ -499,9 +501,7 @@ const AdminLayout = () => {
             aria-label="Profile menu"
           >
             <div className={styles.profileAvatar}>{userInitials}</div>
-            {!isMobile && (
-              <span className={styles.profileName}>{user?.name || 'Admin'}</span>
-            )}
+            {!isMobile && <span className={styles.profileName}>{user?.name || 'Admin'}</span>}
             <Icon icon="mdi:chevron-down" style={{ fontSize: 16, color: '#9CA3AF' }} />
           </button>
 
@@ -519,9 +519,7 @@ const AdminLayout = () => {
               <Box sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A' }}>
                 {user?.name || 'Admin'}
               </Box>
-              <Box sx={{ fontSize: '0.75rem', color: '#9CA3AF' }}>
-                {user?.email || 'admin@homadvisory.com'}
-              </Box>
+              <Box sx={{ fontSize: '0.75rem', color: '#9CA3AF' }}>{user?.email || ''}</Box>
             </Box>
             <Divider />
             <MenuItem
@@ -541,9 +539,7 @@ const AdminLayout = () => {
               <ListItemIcon>
                 <Icon icon="mdi:logout" style={{ fontSize: 18, color: '#EF4444' }} />
               </ListItemIcon>
-              <ListItemText
-                primaryTypographyProps={{ fontSize: '0.875rem', color: '#EF4444' }}
-              >
+              <ListItemText primaryTypographyProps={{ fontSize: '0.875rem', color: '#EF4444' }}>
                 Logout
               </ListItemText>
             </MenuItem>

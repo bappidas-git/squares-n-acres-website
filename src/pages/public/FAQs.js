@@ -6,6 +6,7 @@ import { Icon } from '@iconify/react';
 import { faqService } from '../../services/api';
 import LeadForm from '../../components/common/LeadForm';
 import styles from './FAQs.module.css';
+import { SITE } from '../../config/site';
 
 const FAQ_CATEGORIES = [
   { value: 'all', label: 'All', icon: 'mdi:view-grid-outline' },
@@ -40,11 +41,7 @@ const FaqItem = ({ faq, isOpen, onToggle, index }) => (
     viewport={{ once: true }}
     transition={{ delay: index * 0.05, duration: 0.3 }}
   >
-    <button
-      className={styles.faqQuestion}
-      onClick={onToggle}
-      aria-expanded={isOpen}
-    >
+    <button className={styles.faqQuestion} onClick={onToggle} aria-expanded={isOpen}>
       <span className={styles.faqQuestionText}>{faq.question}</span>
       <motion.span
         className={styles.faqArrow}
@@ -74,7 +71,13 @@ const contactFields = [
   { name: 'name', label: 'Full Name', type: 'text', required: true, placeholder: 'Your Name *' },
   { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'Email Address *' },
   { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: 'Phone Number *' },
-  { name: 'message', label: 'Your Question', type: 'textarea', required: true, placeholder: 'Type your question here *' },
+  {
+    name: 'message',
+    label: 'Your Question',
+    type: 'textarea',
+    required: true,
+    placeholder: 'Type your question here *',
+  },
 ];
 
 const FAQs = () => {
@@ -106,9 +109,7 @@ const FAQs = () => {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
-        (f) =>
-          f.question.toLowerCase().includes(q) ||
-          f.answer.toLowerCase().includes(q)
+        (f) => f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q)
       );
     }
     return result;
@@ -127,10 +128,7 @@ const FAQs = () => {
     return Object.entries(groups).map(([category, items]) => ({ category, items }));
   }, [filtered, activeCategory]);
 
-  const toggleFaq = useCallback(
-    (id) => setOpenFaqId((prev) => (prev === id ? null : id)),
-    []
-  );
+  const toggleFaq = useCallback((id) => setOpenFaqId((prev) => (prev === id ? null : id)), []);
 
   const handleCategoryChange = (cat) => {
     setActiveCategory(cat);
@@ -145,10 +143,10 @@ const FAQs = () => {
   return (
     <>
       <Helmet>
-        <title>Frequently Asked Questions | H.O.M Advisory</title>
+        <title>{`Frequently Asked Questions | ${SITE.name}`}</title>
         <meta
           name="description"
-          content="Find answers to common questions about buying, selling, renting properties, home loans, legal processes, and more at H.O.M Advisory."
+          content={`Find answers to common questions about buying, selling, renting properties, home loans, legal processes, and more at ${SITE.name}.`}
         />
       </Helmet>
 
@@ -167,8 +165,8 @@ const FAQs = () => {
             </span>
             <h1 className={styles.heroTitle}>Frequently Asked Questions</h1>
             <p className={styles.heroSubtitle}>
-              Find answers to common questions about buying, selling, renting properties,
-              home loans, and legal processes in Indian real estate.
+              Find answers to common questions about buying, selling, renting properties, home
+              loans, and legal processes in Indian real estate.
             </p>
           </motion.div>
         </section>
@@ -219,7 +217,10 @@ const FAQs = () => {
               <div className={styles.loadingState}>
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className={styles.skeletonItem}>
-                    <div className={styles.skeletonLine} style={{ width: `${70 + Math.random() * 20}%` }} />
+                    <div
+                      className={styles.skeletonLine}
+                      style={{ width: `${70 + Math.random() * 20}%` }}
+                    />
                   </div>
                 ))}
               </div>
@@ -261,22 +262,22 @@ const FAQs = () => {
               <div className={styles.contactInfo}>
                 <h2 className={styles.contactTitle}>Can't find your answer?</h2>
                 <p className={styles.contactText}>
-                  Our real estate experts are here to help. Submit your question and we'll
-                  get back to you with a detailed answer.
+                  Our real estate experts are here to help. Submit your question and we'll get back
+                  to you with a detailed answer.
                 </p>
                 <div className={styles.contactMethods}>
                   <div className={styles.contactMethod}>
                     <Icon icon="mdi:phone-outline" className={styles.contactMethodIcon} />
                     <div>
                       <span className={styles.contactMethodLabel}>Call Us</span>
-                      <span className={styles.contactMethodValue}>(555) 123-4567</span>
+                      <span className={styles.contactMethodValue}>+91 98XXX XXXXX</span>
                     </div>
                   </div>
                   <div className={styles.contactMethod}>
                     <Icon icon="mdi:email-outline" className={styles.contactMethodIcon} />
                     <div>
                       <span className={styles.contactMethodLabel}>Email Us</span>
-                      <span className={styles.contactMethodValue}>info@homadvisory.com</span>
+                      <span className={styles.contactMethodValue}>info@squaresnacres.com</span>
                     </div>
                   </div>
                   <div className={styles.contactMethod}>

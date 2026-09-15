@@ -42,12 +42,14 @@ const PropertySpecialities = ({ specialities = [] }) => {
         </div>
 
         {remainingCount > 0 && (
-          <button
-            className={styles.showMoreBtn}
-            onClick={() => setExpanded(!expanded)}
-          >
-            <Icon icon={expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'} className={styles.showMoreIcon} />
-            {expanded ? 'Show Less' : `Show ${remainingCount} More Highlight${remainingCount > 1 ? 's' : ''}`}
+          <button className={styles.showMoreBtn} onClick={() => setExpanded(!expanded)}>
+            <Icon
+              icon={expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}
+              className={styles.showMoreIcon}
+            />
+            {expanded
+              ? 'Show Less'
+              : `Show ${remainingCount} More Highlight${remainingCount > 1 ? 's' : ''}`}
           </button>
         )}
       </motion.div>

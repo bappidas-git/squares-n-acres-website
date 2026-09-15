@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import styles from './NotFound.module.css';
+import { SITE } from '../../config/site';
 
 const NotFound = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,8 +20,11 @@ const NotFound = () => {
   return (
     <>
       <Helmet>
-        <title>Page Not Found | H.O.M Advisory</title>
-        <meta name="description" content="The page you're looking for doesn't exist. Browse our properties or return to the homepage." />
+        <title>{`Page Not Found | ${SITE.name}`}</title>
+        <meta
+          name="description"
+          content="The page you're looking for doesn't exist. Browse our properties or return to the homepage."
+        />
       </Helmet>
 
       <div className={styles.page}>
@@ -45,8 +49,8 @@ const NotFound = () => {
 
           <h1 className={styles.title}>Page Not Found</h1>
           <p className={styles.subtitle}>
-            The page you're looking for doesn't exist or has been moved.
-            Don't worry — let's help you find your way.
+            The page you're looking for doesn't exist or has been moved. Don't worry — let's help
+            you find your way.
           </p>
 
           {/* Search Bar */}
@@ -79,10 +83,18 @@ const NotFound = () => {
           {/* Quick Links */}
           <div className={styles.quickLinks}>
             <span className={styles.quickLinksLabel}>Quick links:</span>
-            <Link to="/about" className={styles.quickLink}>About Us</Link>
-            <Link to="/contact" className={styles.quickLink}>Contact</Link>
-            <Link to="/sell-let" className={styles.quickLink}>Sell/Let</Link>
-            <Link to="/insights/articles" className={styles.quickLink}>Articles</Link>
+            <Link to="/about" className={styles.quickLink}>
+              About Us
+            </Link>
+            <Link to="/contact" className={styles.quickLink}>
+              Contact
+            </Link>
+            <Link to="/sell-let" className={styles.quickLink}>
+              Sell/Let
+            </Link>
+            <Link to="/insights/articles" className={styles.quickLink}>
+              Articles
+            </Link>
           </div>
         </motion.div>
       </div>

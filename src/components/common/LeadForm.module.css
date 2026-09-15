@@ -50,7 +50,9 @@
   font-size: 0.9rem;
   color: var(--color-text-primary);
   background: var(--color-bg-default);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
   outline: none;
 }
 
@@ -120,7 +122,9 @@
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-fast), transform var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast);
   margin-top: var(--spacing-sm);
 }
 
