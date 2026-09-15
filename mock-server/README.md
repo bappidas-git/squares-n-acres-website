@@ -212,6 +212,87 @@ write the contract defines on such a collection — `POST /leads`, the lead form
 — stays open; `POST /newsletter/subscribe` and `POST /jobs/:id/apply` have
 their own paths and need no exception.
 
+## Properties
+
+`GET /api/properties` implements §5.7 in full: `listingType`, `segment`,
+`propertyTypeId`, `localityId`, `cityId`, `constructionStatus`, `availability`,
+`bedrooms`, `minPrice`/`maxPrice`, `minArea`/`maxArea`/`areaUnit`, `furnishing`,
+`facing`, `developerId`, `amenityIds`, `badgeIds`, `isFeatured`, `isVerified`,
+`reraRegistered`, `possessionBy`, `q`, `ids`, `sort`, `page`, `perPage`. The
+admin list adds `isActive`, `seoScoreBand` and `createdBy`.
+
+Three rules are worth knowing before reading a result set:
+
+| Rule     | What the mock does                                                                                                                                                                        |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| price    | `pricing.price` for a sale, `pricing.rentPerMonth` for a rent or lease, `priceRangeMin` when a project is quoted as a range. **On request** drops out of any price filter and sorts last. |
+| area     | `superBuiltUpArea ?? carpetArea ?? plotArea`, converted to sq ft; the filter's bounds are converted from `areaUnit`, so `minArea=280&areaUnit=sqm` works.                                 |
+| bedrooms | the property's own `configuration.bedrooms` **or** any active unit configuration; `bedrooms=5` means five or more. A plot or an office matches neither.                                   |
+
+```
+curl "http://localhost:4000/api/properties?bedrooms=3&sort=price-asc"
+curl "http://localhost:4000/api/properties?minArea=280&areaUnit=sqm"
+curl "http://localhost:4000/api/properties?ids=3,1"   # in that order, other filters ignored
+```
+
+Every property list carries `meta.facets` — `propertyType`, `locality`,
+`bedrooms` and `constructionStatus` counts computed **after** the filters and
+**before** pagination, so "Whitefield (3)" counts the results you are looking
+at. A property is counted under each bedroom count it can be found under,
+which is exactly what the filter would return.
+
+`GET /properties/featured`, `/properties/suggestions?q=`, `/properties/slug/:slug`,
+`/properties/:id/similar` and `POST /properties/:id/view` complete the public
+set. `similar` answers with the editor's `similarPropertyIds` first — skipping
+the ones that are no longer active — and fills up to six from the same listing
+type in the same locality or of the same property type. A view counts once per
+IP per property per hour; the repeat answers with the same number and writes
+nothing.
+
+On the admin side, `POST`/`PUT`/`PATCH` generate and de-duplicate the slug
+(`seo.slug` always matches), assign an id to every new entry of `images`,
+`unitConfigurations`, `floorPlans`, `documents`, `nearbyPlaces`,
+`constructionTimeline` and `faqs`, keep exactly one cover image, set
+`publishedAt` the first time a listing goes live and record `createdBy` /
+`updatedBy`. `viewCount` and `enquiryCount` are never taken from a client
+(D95). `POST /admin/properties/:id/duplicate` copies the listing as an inactive
+draft named `… (Copy)` at `<slug>-copy`, with the counters and the SEO score
+reset; `DELETE` also removes the listing from every `similarPropertyIds` that
+named it.
+
+## Leads
+
+`POST /api/leads` is the one public write. It is throttled to ten submissions
+per minute per IP, honours the `website` honeypot (a filled one answers
+`200 { "data": null, "message": "ok" }` and stores nothing), normalises the
+phone number to `+919876543210`, maps the boilerplate's 24 legacy `source`
+values onto the §6.17 vocabulary (`property_enquiry` → `property-enquiry`),
+reads `utm_*` out of `pageUrl` when the body carries none, stores `ipAddress`
+and `userAgent`, opens the timeline with "Lead created via …" and increments
+the property's `enquiryCount`. With `siteSettings.leads.autoAssign` set to
+`round-robin` it also hands the lead to the next active sales user.
+
+The CRM list supports `q`, `status`, `source`, `assignedTo` (`me`,
+`unassigned` or an id), `propertyId`, `priority`, `from`/`to` and
+`sort=createdAt|updatedAt|followUpAt|status|priority`. `from` and `to` compare
+the **UTC date** of `createdAt` (D96). `GET /admin/leads/export` answers with
+the same rows as a UTF-8 CSV with a BOM and a
+`Content-Disposition: attachment; filename="leads-<yyyy-mm-dd>.csv"` header.
+
+Every change that matters appends an activity — "Status changed from New to
+Contacted", "Assigned to Sales User", "Priority changed from Medium to High",
+"Follow-up set for 20 Sep 2026", "Note added" — so the lead detail can be read
+as a story. Notes carry their author (`createdBy`, `createdByName`).
+
+**The sales scope (D15)** applies to the list, the detail read, every write and
+the export: a sales user sees the leads assigned to them and the ones nobody
+has taken. A lead outside that scope answers 404, not 403. They may change
+`status`, `priority`, `followUpAt` and `lostReason`, and take an unassigned
+lead with `POST /admin/leads/:id/claim` (409 when somebody got there first);
+handing a lead to somebody else (`assignedTo`), deleting one and the bulk
+actions are `leads.assign`, `leads.delete` and `leads.bulk`, which they do not
+hold.
+
 ## `PUT` versus `PATCH`
 
 |                                                                                                               | `PUT`                               | `PATCH`                              |
@@ -309,12 +390,13 @@ mock-server/
 ├─ db.js                # runtime db, lowdb helpers, ensureRuntimeDb()
 ├─ reset.js             # npm run mock:reset
 ├─ config.js            # MOCK_* environment variables
-├─ routes/              # index.js + auth.js, users.js (prompts 08–09 add more)
+├─ routes/              # index.js + auth, users, properties, leads (09 adds more)
 ├─ middleware/          # auth, role, envelope, errors, timestamps, validate,
 │                       # queryTranslate, publicScope, requestLog, rateLimit
-├─ lib/                 # tokens, password, routePermissions, ids, paginate,
-│                       # sort, filters, slug, embed, scope, enums, models,
-│                       # xml, csv
+├─ lib/                 # tokens, password, routePermissions, propertyFilters,
+│                       # leadFilters, facets, activities, viewCounter, ids,
+│                       # paginate, sort, filters, slug, embed, scope, enums,
+│                       # models, xml, csv
 ├─ schemas/models.js    # the collection descriptors (§6)
 ├─ __tests__/           # npm run test:mock
 └─ .runtime/db.json     # git-ignored working copy
@@ -322,15 +404,16 @@ mock-server/
 
 ## What is not here yet
 
-The property, lead, article, SEO and settings business rules arrive with
-prompts 08 and 09. Until then the sitemap, robots, RSS and `llms.txt` paths —
-served both at `/api/...` and at the root, as Nginx will proxy them (D21) —
-answer `501 { "message": "Not implemented until prompt 09" }`, and the domain
-routes (`/properties/slug/:slug`, `/properties/featured`, `/admin/dashboard`,
-…) answer 404 because outside `/auth/*` and `/admin/users` only the generic
-CRUD router is mounted. They are authenticated and role-checked already: a
+The article, CMS, SEO, settings and dashboard business rules arrive with
+prompt 09, and so do the sitemap, robots, RSS and `llms.txt` documents — served
+both at `/api/...` and at the root, as Nginx will proxy them (D21) — which
+answer `501 { "message": "Not implemented until prompt 09" }` until then.
+Their routes (`/articles/slug/:slug`, `/articles/trending`, `/admin/dashboard`,
+`/admin/seo/overview`, …) answer 404 today because only the generic CRUD router
+stands behind them; they are authenticated and role-checked already, so a
 `/admin/...` path answers 401 or 403 before it answers 404.
 
-The React admin panel cannot sign in against this yet — `AdminAuthContext`
-still posts the boilerplate's payload shape. Prompt 12 rewrites it; until then
-the API is exercised with `curl` and `npm run test:mock`.
+The React app does not call any of this yet: the services still use the
+boilerplate's paths and payload shapes (prompt 11), and the admin panel cannot
+sign in until `AdminAuthContext` is rewritten (prompt 12). Until then the API
+is exercised with `curl` and `npm run test:mock`.

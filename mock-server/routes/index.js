@@ -4,13 +4,19 @@
  * (00_MASTER_CONTEXT.md §10).
  *
  * Prompt 07 added `auth.js` (the five `/auth/*` endpoints) and `users.js`
- * (`/admin/users`); prompt 08 adds `properties.js` and `leads.js`, prompt 09
- * the content, SEO and sitemap routers. Each entry is a factory that receives
- * the shared dependencies from `mock-server/app.js` and returns an Express
- * router.
+ * (`/admin/users`); prompt 08 added `properties.js` and `leads.js`, which own
+ * their prefixes outright — an unknown `/properties/…` or `/leads/…` path is a
+ * 404 from the router rather than a generic CRUD answer. Prompt 09 adds the
+ * content, SEO and sitemap routers. Each entry is a factory that receives the
+ * shared dependencies from `mock-server/app.js` and returns an Express router.
  *
  * @type {Array<(deps: object) => import('express').Router>}
  */
-const customRouters = [require('./auth'), require('./users')];
+const customRouters = [
+  require('./auth'),
+  require('./users'),
+  require('./properties'),
+  require('./leads'),
+];
 
 module.exports = customRouters;

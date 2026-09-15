@@ -8,138 +8,27 @@
  * test framework is installed and none is on the dependency allow-list (§3.3),
  * so these use Node's own `node:test` and `node:assert`.
  *
- * Every test builds its **own** application over its own copy of the seed in
- * `os.tmpdir()`, listening on an ephemeral port. That keeps the committed
- * `db.json` and the developer's `mock-server/.runtime/db.json` untouched, and
- * it gives each test a fresh login rate-limit counter — ten attempts a minute
- * per IP is a rule this file also has to test.
+ * Every test builds its **own** application over its own copy of the seed
+ * (`./helpers.js`), which keeps the committed `db.json` untouched and gives
+ * each test a fresh login rate-limit counter — ten attempts a minute per IP is
+ * a rule this file also has to test.
  */
 
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
 const { after, describe, it } = require('node:test');
-const { randomUUID } = require('node:crypto');
 
-const jsonServer = require('json-server');
+const {
+  ADMIN,
+  MANAGER,
+  SALES,
+  cleanupTempFiles,
+  silenceRequestLog,
+  withServer,
+} = require('./helpers');
 
-const defaultConfig = require('../config');
-const { createApp } = require('../app');
-const { getModel } = require('../lib/models');
+silenceRequestLog();
 
-/** The seed, read once and copied per test. */
-const SEED = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'db.json'), 'utf8'));
-
-const ADMIN = { email: 'admin@squaresnacres.com', password: 'Admin@123' };
-const MANAGER = { email: 'manager@squaresnacres.com', password: 'Manager@123' };
-const SALES = { email: 'sales@squaresnacres.com', password: 'Sales@123' };
-
-/** The request logger writes a line per call; the test output is assertions. */
-console.info = () => {};
-
-/** Every temporary database this file created, removed when it is done. */
-const temporaryFiles = [];
-
-/**
- * The runtime-database interface of `mock-server/db.js`, over a private file.
- *
- * @param {string} file
- * @returns {{db: object, router: object}}
- */
-function createTestDb(file) {
-  const router = jsonServer.router(file);
-  const value = (name) => router.db.get(name).value();
-
-  const db = {
-    getModel,
-    getCollection: (name) => (Array.isArray(value(name)) ? value(name) : []),
-    getSingleton: (name) => (value(name) && !Array.isArray(value(name)) ? value(name) : null),
-    write: () => router.db.write(),
-    removeRecord(name, id) {
-      const rows = db.getCollection(name);
-      const index = rows.findIndex((record) => String(record?.id) === String(id));
-      if (index === -1) return false;
-      rows.splice(index, 1);
-      db.write();
-      return true;
-    },
-  };
-
-  return { db, router };
-}
-
-/**
- * Starts the mock on an ephemeral port over a fresh copy of the seed.
- *
- * @param {{tokenTtlHours?: number}} [options]
- * @returns {Promise<{request: Function, login: Function, db: object, close: Function}>}
- */
-async function startServer({ tokenTtlHours = 24 } = {}) {
-  const file = path.join(os.tmpdir(), `sna-mock-${randomUUID()}.json`);
-  fs.writeFileSync(file, JSON.stringify(SEED), 'utf8');
-  temporaryFiles.push(file);
-
-  const { db, router } = createTestDb(file);
-  const config = { ...defaultConfig, tokenTtlHours, delayMs: 0, runtimePath: file };
-  const app = createApp({ router, config, db });
-
-  const server = await new Promise((resolve) => {
-    const listening = app.listen(0, '127.0.0.1', () => resolve(listening));
-  });
-  const base = `http://127.0.0.1:${server.address().port}/api`;
-
-  /**
-   * One request against the running mock.
-   *
-   * @returns {Promise<{status: number, body: object|null, text: string}>}
-   */
-  const request = async (method, endpoint, { token, body } = {}) => {
-    const response = await fetch(`${base}${endpoint}`, {
-      method,
-      headers: {
-        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
-
-    const text = await response.text();
-    return {
-      status: response.status,
-      text,
-      body: text ? JSON.parse(text) : null,
-    };
-  };
-
-  /** Signs in and returns the token, failing the test when the login failed. */
-  const login = async (credentials) => {
-    const response = await request('POST', '/auth/login', { body: credentials });
-    assert.equal(response.status, 200, `login failed: ${response.text}`);
-    return response.body.data.token;
-  };
-
-  return {
-    request,
-    login,
-    db,
-    close: () => new Promise((resolve) => server.close(resolve)),
-  };
-}
-
-/** Runs `body` against a freshly started server and always closes it. */
-async function withServer(options, body) {
-  const server = await (typeof options === 'function' ? startServer() : startServer(options));
-  try {
-    await (typeof options === 'function' ? options(server) : body(server));
-  } finally {
-    await server.close();
-  }
-}
-
-after(() => {
-  for (const file of temporaryFiles) fs.rmSync(file, { force: true });
-});
+after(cleanupTempFiles);
 
 describe('POST /auth/login', () => {
   it('returns a 48-character token, the expiry and the user', async () => {

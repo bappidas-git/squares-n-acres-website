@@ -42,16 +42,15 @@ const PRIVATE_COLLECTIONS = new Set([
 ]);
 
 /**
- * The public writes the contract defines on a private collection (§5.11,
- * §5.14): the lead form posts to `/leads` without a token. `/newsletter/
- * subscribe` and `/jobs/:id/apply` are their own paths and need no exception.
+ * True when a request without a token may not touch this collection at all.
+ *
+ * The public writes the contract does define on one of these collections —
+ * `POST /leads`, `POST /newsletter/subscribe`, `POST /jobs/:id/apply` — are
+ * served by their own routers (`mock-server/routes/`), which run before this
+ * middleware, so there is no exception to make here.
  */
-const PUBLIC_WRITES = { leads: ['POST'] };
-
-/** True when a request without a token may not touch this collection at all. */
-function isPrivate(name, model, method) {
-  if (!PRIVATE_COLLECTIONS.has(name) && model?.publicRead !== false) return false;
-  return !(PUBLIC_WRITES[name] ?? []).includes(method);
+function isPrivate(name, model) {
+  return PRIVATE_COLLECTIONS.has(name) || model?.publicRead === false;
 }
 
 /**
@@ -89,7 +88,7 @@ function publicScope({ getModel }) {
       return;
     }
 
-    if (isPrivate(segments[0], model, req.method)) {
+    if (isPrivate(segments[0], model)) {
       next(notFound());
       return;
     }
@@ -108,4 +107,4 @@ function publicScope({ getModel }) {
   };
 }
 
-module.exports = { publicScope, adminPrefix, isPrivate, PRIVATE_COLLECTIONS, PUBLIC_WRITES };
+module.exports = { publicScope, adminPrefix, isPrivate, PRIVATE_COLLECTIONS };
