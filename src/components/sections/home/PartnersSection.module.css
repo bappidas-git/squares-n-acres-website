@@ -1,0 +1,158 @@
+.section {
+  padding: 64px 0;
+  background: #F8F6F3;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+}
+
+/* ── Marquee — CSS-driven infinite scroll ─── */
+.marqueeWrapper {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 8%,
+    black 92%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 8%,
+    black 92%,
+    transparent 100%
+  );
+}
+
+.marqueeTrack {
+  display: flex;
+  gap: 24px;
+  width: max-content;
+  animation: marqueeScroll 30s linear infinite;
+  will-change: transform;
+}
+
+/* Pause on hover — desktop only */
+@media (hover: hover) {
+  .marqueeWrapper:hover .marqueeTrack {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.partnerCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 160px;
+  padding: 20px 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.partnerCard:hover {
+  border-color: var(--color-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.partnerLogo {
+  max-height: 40px;
+  max-width: 120px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  filter: grayscale(100%);
+  opacity: 0.7;
+  transition: filter var(--transition-base), opacity var(--transition-base);
+}
+
+.partnerCard:hover .partnerLogo {
+  filter: grayscale(0%);
+  opacity: 1;
+}
+
+.partnerName {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* ── Tablet ── */
+@media (max-width: 960px) {
+  .marqueeTrack {
+    animation-duration: 25s;
+  }
+}
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .section {
+    padding: 48px 0;
+  }
+
+  .title {
+    font-size: 1.75rem;
+  }
+
+  .marqueeTrack {
+    gap: 16px;
+    animation-duration: 20s;
+  }
+
+  .partnerCard {
+    min-width: 130px;
+    padding: 16px 20px;
+  }
+
+  .partnerLogo {
+    max-width: 100px;
+  }
+}
+
+/* ── Respect reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .marqueeTrack {
+    animation: none;
+  }
+}

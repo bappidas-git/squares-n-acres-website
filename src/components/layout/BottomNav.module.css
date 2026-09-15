@@ -1,0 +1,125 @@
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-fixed);
+  background-color: #fff;
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
+  transition: transform 0.3s ease;
+  /* Safe area padding for iOS notch */
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.bottomNav.hidden {
+  transform: translateY(100%);
+}
+
+.navItems {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: 56px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.navButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.navButton.active {
+  color: var(--color-secondary);
+}
+
+.navIcon {
+  display: flex;
+  align-items: center;
+  font-size: 22px;
+}
+
+.navLabel {
+  font-family: var(--font-body);
+  font-size: 0.625rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* SwipeableDrawer content */
+.drawerContent {
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0));
+}
+
+.drawerHandle {
+  width: 40px;
+  height: 4px;
+  background-color: var(--color-border);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+.drawerTitle {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.drawerOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drawerOption {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 12px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--color-text-primary);
+  transition: background-color var(--transition-fast);
+}
+
+.drawerOption:hover {
+  background-color: var(--color-bg-surface);
+}
+
+.drawerOptionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-surface);
+  color: var(--color-secondary);
+  font-size: 20px;
+}
+
+.drawerOptionLabel {
+  font-size: 0.938rem;
+  font-weight: 500;
+}
+
+@media (min-width: 961px) {
+  .bottomNav {
+    display: none;
+  }
+}

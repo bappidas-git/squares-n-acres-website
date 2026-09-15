@@ -1,0 +1,219 @@
+.section {
+  padding: 64px 0;
+  background: var(--color-bg-surface);
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+}
+
+/* Carousel wrapper with arrow positioning context */
+.carouselWrapper {
+  position: relative;
+}
+
+/* Arrow buttons */
+.arrowBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--color-text-primary);
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.arrowBtn:hover {
+  background: #fff;
+  border-color: var(--color-secondary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.arrowLeft {
+  left: -22px;
+}
+
+.arrowRight {
+  right: -22px;
+}
+
+/* Auto-scroll viewport — overflow hidden, CSS transform based */
+.carouselViewportAuto {
+  overflow: hidden;
+  position: relative;
+}
+
+/* Manual scroll viewport — native scroll, hidden scrollbar */
+.carouselViewportManual {
+  overflow-x: auto;
+  overflow-y: hidden;
+  position: relative;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  cursor: grab;
+
+  /* Hide scrollbar across browsers */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.carouselViewportManual::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.carouselTrack {
+  display: flex;
+  gap: 24px;
+  will-change: transform;
+}
+
+.scrollItem {
+  flex: 0 0 380px;
+  min-width: 0;
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-secondary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Empty state */
+.emptyState {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  color: var(--color-border);
+  margin-bottom: 12px;
+}
+
+.emptyText {
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+}
+
+/* CTA */
+.cta {
+  text-align: center;
+  margin-top: 40px;
+}
+
+.ctaBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 32px;
+  background: var(--color-secondary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--transition-fast);
+}
+
+.ctaBtn:hover {
+  background: var(--color-secondary-dark);
+  color: #fff;
+}
+
+/* Tablet */
+@media (max-width: 960px) {
+  .scrollItem {
+    flex: 0 0 320px;
+  }
+
+  .arrowLeft {
+    left: -8px;
+  }
+
+  .arrowRight {
+    right: -8px;
+  }
+
+  .arrowBtn {
+    width: 38px;
+    height: 38px;
+    font-size: 22px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .section {
+    padding: 48px 0;
+  }
+
+  .title {
+    font-size: 1.75rem;
+  }
+
+  .scrollItem {
+    flex: 0 0 300px;
+  }
+
+  .arrowLeft {
+    left: 4px;
+  }
+
+  .arrowRight {
+    right: 4px;
+  }
+
+  .arrowBtn {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+    background: rgba(255, 255, 255, 0.9);
+  }
+}

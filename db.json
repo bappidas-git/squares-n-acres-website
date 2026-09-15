@@ -1,0 +1,3174 @@
+{
+  "properties": [
+    {
+      "id": "1",
+      "title": "Nambiar District 25 Phase 2",
+      "slug": "nambiar-district-25-phase-2",
+      "type": "sale",
+      "status": "ready-to-move",
+      "propertyType": "apartment",
+      "price": 12400000,
+      "priceUnit": "onwards",
+      "location": {
+        "area": "Dommasandra, Sarjapur Road",
+        "city": "Bangalore",
+        "state": "Karnataka",
+        "lat": 12.9058,
+        "lng": 77.6854
+      },
+      "configuration": [
+        "2 BHK",
+        "3 BHK",
+        "4 BHK",
+        "4.5 BHK"
+      ],
+      "dimensionRange": {
+        "min": 1245,
+        "max": 2990,
+        "unit": "sqft"
+      },
+      "possession": "Ready to Move",
+      "developer": "Nambiar Builders",
+      "description": "Nambiar District 25 Phase 2 is a premium residential project located at Dommasandra, Sarjapur Road, Bangalore. The project offers spacious 2, 3, 4 and 4.5 BHK apartments with modern amenities and excellent connectivity to IT hubs. Nestled in the rapidly developing Sarjapur Road corridor, this project provides a perfect blend of urban convenience and peaceful living.",
+      "highlights": [
+        "Prime Sarjapur Road location with excellent connectivity",
+        "Ready to move apartments with premium finishes",
+        "Surrounded by top schools, hospitals, and shopping centres",
+        "Clubhouse with state-of-the-art amenities",
+        "RERA registered project"
+      ],
+      "specifications": {
+        "projectArea": "15 acres",
+        "totalUnits": 750,
+        "launchDate": "2021-06-15",
+        "possessionDate": "2024-12-01",
+        "reraId": "PRM/KA/RERA/1251/309/PR/180523/001927",
+        "towers": 8,
+        "floors": 14,
+        "constructionType": "RCC framed structure"
+      },
+      "amenities": [
+        {
+          "icon": "mdi:swim",
+          "name": "Swimming Pool",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:dumbbell",
+          "name": "Gymnasium",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:basketball",
+          "name": "Basketball Court",
+          "category": "sports"
+        },
+        {
+          "icon": "mdi:tree",
+          "name": "Landscaped Gardens",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:car-parking",
+          "name": "Covered Parking",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:shield-check",
+          "name": "24/7 Security",
+          "category": "safety"
+        },
+        {
+          "icon": "mdi:baby-carriage",
+          "name": "Kids Play Area",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:party-popper",
+          "name": "Clubhouse",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:tennis",
+          "name": "Tennis Court",
+          "category": "sports"
+        },
+        {
+          "icon": "mdi:lightning-bolt",
+          "name": "Power Backup",
+          "category": "convenience"
+        }
+      ],
+      "floorPlans": [
+        {
+          "config": "2 BHK",
+          "area": "1245 sqft",
+          "price": 12400000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=2BHK+Floor+Plan",
+          "bedrooms": 2,
+          "bathrooms": 2
+        },
+        {
+          "config": "3 BHK",
+          "area": "1650 sqft",
+          "price": 16500000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=3BHK+Floor+Plan",
+          "bedrooms": 3,
+          "bathrooms": 2
+        },
+        {
+          "config": "4 BHK",
+          "area": "2200 sqft",
+          "price": 22000000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=4BHK+Floor+Plan",
+          "bedrooms": 4,
+          "bathrooms": 3
+        },
+        {
+          "config": "4.5 BHK",
+          "area": "2990 sqft",
+          "price": 29900000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=4.5BHK+Floor+Plan",
+          "bedrooms": 4,
+          "bathrooms": 4
+        }
+      ],
+      "gallery": [
+        "https://placehold.co/800x600/goldenrod/white?text=Nambiar+Exterior",
+        "https://placehold.co/800x600/goldenrod/white?text=Nambiar+Living+Room",
+        "https://placehold.co/800x600/goldenrod/white?text=Nambiar+Bedroom",
+        "https://placehold.co/800x600/goldenrod/white?text=Nambiar+Kitchen",
+        "https://placehold.co/800x600/goldenrod/white?text=Nambiar+Pool"
+      ],
+      "nearbyPlaces": [
+        {
+          "name": "Wipro Corporate Office",
+          "distance": "3 km",
+          "type": "workplace"
+        },
+        {
+          "name": "Sarjapur Main Road",
+          "distance": "1 km",
+          "type": "transport"
+        },
+        {
+          "name": "Decathlon Sarjapur",
+          "distance": "2 km",
+          "type": "shopping"
+        },
+        {
+          "name": "Greenwood High School",
+          "distance": "4 km",
+          "type": "education"
+        },
+        {
+          "name": "Narayana Multispeciality Hospital",
+          "distance": "5 km",
+          "type": "healthcare"
+        }
+      ],
+      "brochureUrl": "",
+      "floorPlanPdfUrl": "",
+      "specialities": [
+        {
+          "icon": "mdi:shield-star",
+          "name": "RERA Approved",
+          "description": "Fully compliant with RERA regulations"
+        },
+        {
+          "icon": "mdi:leaf",
+          "name": "Eco Friendly Design",
+          "description": "Sustainable materials and green building practices"
+        },
+        {
+          "icon": "mdi:shield-check",
+          "name": "Gated Community",
+          "description": "24/7 security with gated access"
+        },
+        {
+          "icon": "mdi:water-pump",
+          "name": "High Pressure Geysers",
+          "description": "Premium water heating system"
+        },
+        {
+          "icon": "mdi:home-automation",
+          "name": "Smart Home",
+          "description": "Home automation with smart controls"
+        },
+        {
+          "icon": "mdi:map-marker-star",
+          "name": "Prime Location",
+          "description": "Excellent connectivity to IT hubs"
+        }
+      ],
+      "documents": [
+        {
+          "name": "Commencement Certificate",
+          "icon": "mdi:file-certificate"
+        },
+        {
+          "name": "RERA Certificate",
+          "icon": "mdi:file-document-check"
+        },
+        {
+          "name": "Floor Plan Documents",
+          "icon": "mdi:floor-plan"
+        },
+        {
+          "name": "Brochure",
+          "icon": "mdi:book-open-variant"
+        }
+      ],
+      "constructionSpecs": {
+        "flooring": [
+          {
+            "area": "Living Room",
+            "spec": "Italian marble flooring with premium finish"
+          },
+          {
+            "area": "Bedroom",
+            "spec": "Vitrified tiles with anti-skid surface"
+          },
+          {
+            "area": "Kitchen",
+            "spec": "Ceramic tiles with granite countertop"
+          },
+          {
+            "area": "Bathroom",
+            "spec": "Anti-skid ceramic tiles with designer fittings"
+          }
+        ],
+        "doors": [
+          {
+            "area": "Main Door",
+            "spec": "Teak wood frame with decorative laminate, quality hardware fittings"
+          },
+          {
+            "area": "Internal Doors",
+            "spec": "Flush doors with melamine coating and quality fittings"
+          }
+        ],
+        "structure": [
+          {
+            "area": "Foundation",
+            "spec": "RCC framed structure with earthquake resistant design"
+          },
+          {
+            "area": "Walls",
+            "spec": "AAC blocks with weather proof exterior paint"
+          }
+        ],
+        "electrical": [
+          {
+            "area": "Wiring",
+            "spec": "Concealed copper wiring with modular switches"
+          },
+          {
+            "area": "Power",
+            "spec": "Full power backup for common areas and partial for flats"
+          }
+        ]
+      },
+      "tags": [
+        "featured",
+        "premium",
+        "popular"
+      ],
+      "seoTitle": "Nambiar District 25 Phase 2 by Nambiar Builders | Bangalore",
+      "seoDescription": "Explore Nambiar District 25 Phase 2 by Nambiar Builders in Dommasandra, Sarjapur Road, Bangalore. 2 BHK, 3 BHK, 4 BHK, 4.5 BHK apartments from 1245-2990 sqft...",
+      "seoKeywords": [
+        "nambiar district 25 phase 2",
+        "apartments in dommasandra, sarjapur road",
+        "apartments in bangalore",
+        "nambiar builders bangalore",
+        "buy apartments bangalore",
+        "2 BHK apartment in dommasandra, sarjapur road",
+        "ready to move apartments bangalore",
+        "dommasandra, sarjapur road, bangalore real estate"
+      ],
+      "schemaMarkup": "[\n  {\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"RealEstateListing\",\n    \"name\": \"Nambiar District 25 Phase 2\",\n    \"description\": \"Nambiar District 25 Phase 2 is a premium residential project located at Dommasandra, Sarjapur Road, Bangalore. The project offers spacious 2, 3, 4 and 4.5 BHK apartments with modern amenities and excellent connectivity to IT hubs. Nestled in the rapidly developing Sarjapur Road corridor, this pro...\",\n    \"url\": \"https://homadvisory.com/properties/nambiar-district-25-phase-2\",\n    \"datePosted\": \"2026-02-27T06:33:04.975Z\",\n    \"image\": [\n      \"https://placehold.co/800x600/goldenrod/white?text=Nambiar+Exterior\",\n      \"https://placehold.co/800x600/goldenrod/white?text=Nambiar+Living+Room\",\n      \"https://placehold.co/800x600/goldenrod/white?text=Nambiar+Bedroom\",\n      \"https://placehold.co/800x600/goldenrod/white?text=Nambiar+Kitchen\",\n      \"https://placehold.co/800x600/goldenrod/white?text=Nambiar+Pool\"\n    ],\n    \"address\": {\n      \"@type\": \"PostalAddress\",\n      \"streetAddress\": \"Dommasandra, Sarjapur Road\",\n      \"addressLocality\": \"Dommasandra, Sarjapur Road\",\n      \"addressRegion\": \"Bangalore\",\n      \"addressCountry\": \"IN\"\n    },\n    \"geo\": {\n      \"@type\": \"GeoCoordinates\",\n      \"latitude\": 12.9058,\n      \"longitude\": 77.6854\n    },\n    \"offers\": {\n      \"@type\": \"Offer\",\n      \"price\": 12400000,\n      \"priceCurrency\": \"INR\",\n      \"availability\": \"https://schema.org/InStock\"\n    },\n    \"about\": {\n      \"@type\": \"Residence\",\n      \"name\": \"Nambiar District 25 Phase 2\",\n      \"numberOfRooms\": \"2\",\n      \"floorSize\": {\n        \"@type\": \"QuantitativeValue\",\n        \"minValue\": 1245,\n        \"maxValue\": 2990,\n        \"unitCode\": \"FTK\"\n      },\n      \"amenityFeature\": [\n        {\n          \"@type\": \"LocationFeatureSpecification\",\n          \"name\": \"Swimming Pool\"\n        },\n        {\n          \"@type\": \"LocationFeatureSpecification\",\n          \"name\": \"Gymnasium\"\n        },\n        {\n          \"@type\": \"LocationFeatureSpecification\",\n          \"name\": \"Basketball Court\"\n        },\n        {\n          \"@type\": \"LocationFeatureSpecification\",\n          \"name\": \"Landscaped Gardens\"\n        },\n        {\n          \"@type\": \"LocationFeatureSpecification\",\n          \"name\": \"Covered Parking\"\n        },\n        {\n          \"@type\": \"LocationFeatureSpecification\",\n          \"name\": \"24/7 Security\"\n        },\n        {\n          \"@type\": \"LocationFeatureSpecification\",\n          \"name\": \"Kids Play Area\"\n        },\n        {\n          \"@type\": \"LocationFeatureSpecification\",\n          \"name\": \"Clubhouse\"\n        },\n        {\n          \"@type\": \"LocationFeatureSpecification\",\n          \"name\": \"Tennis Court\"\n        },\n        {\n          \"@type\": \"LocationFeatureSpecification\",\n          \"name\": \"Power Backup\"\n        }\n      ]\n    },\n    \"seller\": {\n      \"@type\": \"Organization\",\n      \"name\": \"Nambiar Builders\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n        \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Home\",\n        \"item\": \"https://homadvisory.com\"\n      },\n      {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n        \"name\": \"Properties\",\n        \"item\": \"https://homadvisory.com/properties\"\n      },\n      {\n        \"@type\": \"ListItem\",\n        \"position\": 3,\n        \"name\": \"Bangalore\",\n        \"item\": \"https://homadvisory.com/properties?city=Bangalore\"\n      },\n      {\n        \"@type\": \"ListItem\",\n        \"position\": 4,\n        \"name\": \"Nambiar District 25 Phase 2\"\n      }\n    ]\n  }\n]",
+      "isActive": true,
+      "createdAt": "2024-01-15T10:00:00Z",
+      "updatedAt": "2026-02-27T16:35:19.742Z",
+      "canonicalUrl": "https://homadvisory.com/properties/nambiar-district-25-phase-2",
+      "ogTitle": "Nambiar District 25 Phase 2 by Nambiar Builders | Bangalore",
+      "ogDescription": "Explore Nambiar District 25 Phase 2 by Nambiar Builders in Dommasandra, Sarjapur Road, Bangalore. 2 BHK, 3 BHK, 4 BHK, 4.5 BHK apartments from 1245-2990 sqft...",
+      "ogImage": "https://placehold.co/800x600/goldenrod/white?text=Nambiar+Exterior",
+      "twitterCard": "summary_large_image",
+      "category": "apartment",
+      "sections": {
+        "overview": true,
+        "details": true,
+        "highlights": true,
+        "amenities": true,
+        "floorPlans": true,
+        "finance": true,
+        "location": true,
+        "documents": true,
+        "construction": true,
+        "constructionSpecs": true,
+        "developer": true,
+        "faqs": true,
+        "similar": true
+      }
+    },
+    {
+      "id": "2",
+      "title": "Mahindra Blossom",
+      "slug": "mahindra-blossom",
+      "type": "sale",
+      "status": "under-construction",
+      "propertyType": "apartment",
+      "price": 19500000,
+      "priceUnit": "onwards",
+      "location": {
+        "area": "HopeFarm Junction, Whitefield",
+        "city": "Bangalore",
+        "state": "Karnataka",
+        "lat": 12.9698,
+        "lng": 77.75
+      },
+      "configuration": [
+        "2 BHK",
+        "3 BHK",
+        "3.5 BHK",
+        "4 BHK"
+      ],
+      "dimensionRange": {
+        "min": 1250,
+        "max": 2450,
+        "unit": "sqft"
+      },
+      "possession": "Dec 2030",
+      "developer": "Mahindra Lifespaces",
+      "description": "Mahindra Blossom is a Home at Positive Energy at HopeFarm Junction, Whitefield, Bangalore. Featuring contemporary building design, beautifully landscaped gardens, sustainability & centralized water systems. This is a RERA-approved project offering spacious apartments with world-class amenities, designed to provide a holistic lifestyle experience.",
+      "highlights": [
+        "Prime Whitefield location — IT hub connectivity",
+        "Mahindra Lifespaces — Trusted Legacy of 20+ years",
+        "Centralized AC with VRV/VRF, home automation",
+        "Sustainable design with solar panels, rainwater harvesting",
+        "IGBC pre-certified green building"
+      ],
+      "specifications": {
+        "projectArea": "8 acres",
+        "totalUnits": 450,
+        "launchDate": "2024-03-10",
+        "possessionDate": "2030-12-01",
+        "reraId": "PRM/KA/RERA/1251/310/PR/240310/006543",
+        "towers": 4,
+        "floors": 22,
+        "constructionType": "RCC framed structure with seismic design"
+      },
+      "amenities": [
+        {
+          "icon": "mdi:swim",
+          "name": "Swimming Pool",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:dumbbell",
+          "name": "Gymnasium",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:yoga",
+          "name": "Yoga Deck",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:tree",
+          "name": "Landscaped Gardens",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:car-parking",
+          "name": "Covered Parking",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:shield-check",
+          "name": "24/7 Security",
+          "category": "safety"
+        },
+        {
+          "icon": "mdi:dog",
+          "name": "Pet Park",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:party-popper",
+          "name": "Grand Clubhouse",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:badminton",
+          "name": "Badminton Court",
+          "category": "sports"
+        },
+        {
+          "icon": "mdi:walk",
+          "name": "Jogging Track",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:water-pump",
+          "name": "High Pressure Geysers",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:cctv",
+          "name": "CCTV Surveillance",
+          "category": "safety"
+        }
+      ],
+      "floorPlans": [
+        {
+          "config": "2 BHK",
+          "area": "1250 sqft",
+          "price": 19500000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=2BHK+Floor+Plan",
+          "bedrooms": 2,
+          "bathrooms": 2
+        },
+        {
+          "config": "3 BHK",
+          "area": "1750 sqft",
+          "price": 27300000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=3BHK+Floor+Plan",
+          "bedrooms": 3,
+          "bathrooms": 2
+        },
+        {
+          "config": "3.5 BHK",
+          "area": "2050 sqft",
+          "price": 31980000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=3.5BHK+Floor+Plan",
+          "bedrooms": 3,
+          "bathrooms": 3
+        },
+        {
+          "config": "4 BHK",
+          "area": "2450 sqft",
+          "price": 38220000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=4BHK+Floor+Plan",
+          "bedrooms": 4,
+          "bathrooms": 3
+        }
+      ],
+      "gallery": [
+        "https://placehold.co/800x600/goldenrod/white?text=Mahindra+Exterior",
+        "https://placehold.co/800x600/goldenrod/white?text=Mahindra+Living+Room",
+        "https://placehold.co/800x600/goldenrod/white?text=Mahindra+Bedroom",
+        "https://placehold.co/800x600/goldenrod/white?text=Mahindra+Kitchen",
+        "https://placehold.co/800x600/goldenrod/white?text=Mahindra+Amenities"
+      ],
+      "nearbyPlaces": [
+        {
+          "name": "ITPL (International Tech Park)",
+          "distance": "5 km",
+          "type": "workplace"
+        },
+        {
+          "name": "Phoenix Marketcity",
+          "distance": "4 km",
+          "type": "shopping"
+        },
+        {
+          "name": "Whitefield Railway Station",
+          "distance": "3 km",
+          "type": "transport"
+        },
+        {
+          "name": "Vydehi Hospital",
+          "distance": "6 km",
+          "type": "healthcare"
+        },
+        {
+          "name": "Deens Academy",
+          "distance": "4 km",
+          "type": "education"
+        }
+      ],
+      "brochureUrl": "",
+      "floorPlanPdfUrl": "",
+      "specialities": [
+        {
+          "icon": "mdi:shield-star",
+          "name": "RERA Approved",
+          "description": "Fully compliant with RERA regulations"
+        },
+        {
+          "icon": "mdi:leaf",
+          "name": "Eco with Smart Design",
+          "description": "IGBC pre-certified green building"
+        },
+        {
+          "icon": "mdi:shield-check",
+          "name": "Gated Community",
+          "description": "24/7 security with gated access"
+        },
+        {
+          "icon": "mdi:water-pump",
+          "name": "High Pressure Geysers",
+          "description": "Premium water heating system"
+        },
+        {
+          "icon": "mdi:domain",
+          "name": "Luxury Finishes",
+          "description": "Italian marble and premium materials"
+        },
+        {
+          "icon": "mdi:map-marker-star",
+          "name": "Prime Location",
+          "description": "Whitefield IT hub connectivity"
+        }
+      ],
+      "documents": [
+        {
+          "name": "Commencement Certificate",
+          "icon": "mdi:file-certificate"
+        },
+        {
+          "name": "RERA Certificate",
+          "icon": "mdi:file-document-check"
+        },
+        {
+          "name": "Floor Plan Documents",
+          "icon": "mdi:floor-plan"
+        },
+        {
+          "name": "Brochure",
+          "icon": "mdi:book-open-variant"
+        }
+      ],
+      "constructionSpecs": {
+        "flooring": [
+          {
+            "area": "Living Room",
+            "spec": "Italian marble with premium vitrified finish"
+          },
+          {
+            "area": "Bedroom",
+            "spec": "Engineered wood flooring with premium finish"
+          },
+          {
+            "area": "Kitchen",
+            "spec": "Anti-skid vitrified tiles with granite platform"
+          },
+          {
+            "area": "Bathroom",
+            "spec": "Designer anti-skid tiles with premium fittings"
+          }
+        ],
+        "doors": [
+          {
+            "area": "Main Door",
+            "spec": "Veneer finished flush door with designer hardware and security lock"
+          },
+          {
+            "area": "Internal Doors",
+            "spec": "Painted flush doors with SS handles and quality fittings"
+          }
+        ],
+        "structure": [
+          {
+            "area": "Foundation",
+            "spec": "RCC framed structure with seismic zone compliance"
+          },
+          {
+            "area": "Walls",
+            "spec": "AAC blocks with weather-proof exterior and premium putty finish"
+          }
+        ],
+        "electrical": [
+          {
+            "area": "Wiring",
+            "spec": "Concealed copper wiring with premium modular switches"
+          },
+          {
+            "area": "Power",
+            "spec": "Full DG backup for common areas, partial for apartments"
+          }
+        ]
+      },
+      "tags": [
+        "featured",
+        "trending",
+        "just-launched"
+      ],
+      "seoTitle": "Mahindra Blossom Whitefield | 2, 3, 4 BHK Apartments by Mahindra Lifespaces",
+      "seoDescription": "Mahindra Blossom at Whitefield, Bangalore - Premium apartments by Mahindra Lifespaces. 2, 3, 3.5 & 4 BHK from 1250-2450 sqft starting Rs 1.95 Cr.",
+      "seoKeywords": [
+        "mahindra blossom",
+        "whitefield apartments",
+        "mahindra lifespaces bangalore",
+        "premium flats whitefield"
+      ],
+      "schemaMarkup": "{\"@context\":\"https://schema.org\",\"@type\":\"Residence\",\"name\":\"Mahindra Blossom\"}",
+      "isActive": true,
+      "createdAt": "2024-03-10T08:00:00Z",
+      "updatedAt": "2026-02-27T16:35:19.815Z",
+      "category": "apartment",
+      "sections": {
+        "overview": true,
+        "details": true,
+        "highlights": true,
+        "amenities": true,
+        "floorPlans": true,
+        "finance": true,
+        "location": true,
+        "documents": true,
+        "construction": true,
+        "constructionSpecs": true,
+        "developer": true,
+        "faqs": true,
+        "similar": true
+      },
+      "canonicalUrl": "https://homadvisory.com/properties/mahindra-blossom",
+      "ogTitle": "Mahindra Blossom | HopeFarm Junction, Whitefield, Bangalore",
+      "ogDescription": "Explore Mahindra Blossom by Mahindra Lifespaces in HopeFarm Junction, Whitefield, Bangalore. 2 BHK, 3 BHK, 3.5 BHK, 4 BHK apartments from 1250-2450 sqft. Und...",
+      "ogImage": "https://placehold.co/800x600/goldenrod/white?text=Mahindra+Exterior",
+      "twitterCard": "summary_large_image"
+    },
+    {
+      "id": "3",
+      "title": "Prestige Lakeside Habitat",
+      "slug": "prestige-lakeside-habitat",
+      "type": "sale",
+      "status": "ready-to-move",
+      "propertyType": "villa",
+      "price": 35000000,
+      "priceUnit": "onwards",
+      "location": {
+        "area": "Varthur, Whitefield",
+        "city": "Bangalore",
+        "state": "Karnataka",
+        "lat": 12.9416,
+        "lng": 77.746
+      },
+      "configuration": [
+        "3 BHK Villa",
+        "4 BHK Villa"
+      ],
+      "dimensionRange": {
+        "min": 2800,
+        "max": 4500,
+        "unit": "sqft"
+      },
+      "possession": "Ready to Move",
+      "developer": "Prestige Group",
+      "description": "Prestige Lakeside Habitat is an exquisite villament and villa community nestled in the serene surroundings of Varthur, Whitefield. With lush green landscapes, a pristine lake view, and world-class amenities, this gated community redefines luxury living in Bangalore's premier IT corridor.",
+      "highlights": [
+        "Lakeside living with panoramic views",
+        "Premium villas with private gardens",
+        "Prestige Group — India's most trusted developer",
+        "50+ world-class amenities in the township",
+        "Close to IT hubs — Whitefield, Marathahalli"
+      ],
+      "specifications": {
+        "projectArea": "102 acres",
+        "totalUnits": 3000,
+        "launchDate": "2018-01-20",
+        "possessionDate": "2023-06-15",
+        "reraId": "PRM/KA/RERA/1251/446/PR/180120/001234",
+        "towers": 0,
+        "floors": 4,
+        "constructionType": "Independent villas with RCC structure"
+      },
+      "amenities": [
+        {
+          "icon": "mdi:swim",
+          "name": "Olympic Swimming Pool",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:dumbbell",
+          "name": "Fitness Centre",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:golf",
+          "name": "Mini Golf Course",
+          "category": "sports"
+        },
+        {
+          "icon": "mdi:tree",
+          "name": "Central Park",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:cart",
+          "name": "Retail Avenue",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:school",
+          "name": "International School",
+          "category": "education"
+        },
+        {
+          "icon": "mdi:hospital",
+          "name": "Healthcare Centre",
+          "category": "healthcare"
+        },
+        {
+          "icon": "mdi:party-popper",
+          "name": "Grand Clubhouse",
+          "category": "leisure"
+        }
+      ],
+      "floorPlans": [
+        {
+          "config": "3 BHK Villa",
+          "area": "2800 sqft",
+          "price": 35000000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=3BHK+Villa",
+          "bedrooms": 3,
+          "bathrooms": 3
+        },
+        {
+          "config": "4 BHK Villa",
+          "area": "4500 sqft",
+          "price": 55000000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=4BHK+Villa",
+          "bedrooms": 4,
+          "bathrooms": 4
+        }
+      ],
+      "gallery": [
+        "https://placehold.co/800x600/goldenrod/white?text=Prestige+Villa+Exterior",
+        "https://placehold.co/800x600/goldenrod/white?text=Prestige+Living+Room",
+        "https://placehold.co/800x600/goldenrod/white?text=Prestige+Garden",
+        "https://placehold.co/800x600/goldenrod/white?text=Prestige+Lake+View"
+      ],
+      "nearbyPlaces": [
+        {
+          "name": "ITPL",
+          "distance": "7 km",
+          "type": "workplace"
+        },
+        {
+          "name": "Varthur Lake",
+          "distance": "0.5 km",
+          "type": "landmark"
+        },
+        {
+          "name": "Forum Shantiniketan Mall",
+          "distance": "6 km",
+          "type": "shopping"
+        },
+        {
+          "name": "Columbia Asia Hospital",
+          "distance": "5 km",
+          "type": "healthcare"
+        }
+      ],
+      "brochureUrl": "",
+      "floorPlanPdfUrl": "",
+      "specialities": [],
+      "documents": [],
+      "constructionSpecs": {},
+      "tags": [
+        "premium",
+        "villa",
+        "ready-to-move"
+      ],
+      "seoTitle": "Prestige Lakeside Habitat Varthur | Luxury Villas in Whitefield Bangalore",
+      "seoDescription": "Prestige Lakeside Habitat — Premium villas in Varthur, Whitefield, Bangalore. 3 & 4 BHK villas from 2800-4500 sqft in a 102-acre township.",
+      "seoKeywords": [
+        "prestige lakeside habitat",
+        "villas whitefield bangalore",
+        "luxury villas bangalore",
+        "prestige group villas"
+      ],
+      "schemaMarkup": "{\"@context\":\"https://schema.org\",\"@type\":\"Residence\",\"name\":\"Prestige Lakeside Habitat\"}",
+      "isActive": true,
+      "createdAt": "2024-02-01T09:00:00Z",
+      "updatedAt": "2026-02-27T16:35:19.833Z",
+      "category": "villa",
+      "sections": {
+        "overview": true,
+        "details": true,
+        "highlights": true,
+        "amenities": true,
+        "floorPlans": true,
+        "finance": true,
+        "location": true,
+        "documents": true,
+        "construction": true,
+        "constructionSpecs": true,
+        "developer": true,
+        "faqs": true,
+        "similar": true
+      },
+      "canonicalUrl": "https://homadvisory.com/properties/prestige-lakeside-habitat",
+      "ogTitle": "Prestige Lakeside Habitat | Varthur, Whitefield, Bangalore",
+      "ogDescription": "Explore Prestige Lakeside Habitat by Prestige Group in Varthur, Whitefield, Bangalore. 3 BHK Villa, 4 BHK Villa villas from 2800-4500 sqft. Ready to Move. St...",
+      "ogImage": "https://placehold.co/800x600/goldenrod/white?text=Prestige+Villa+Exterior",
+      "twitterCard": "summary_large_image"
+    },
+    {
+      "id": "4",
+      "title": "Brigade El Dorado",
+      "slug": "brigade-el-dorado",
+      "type": "sale",
+      "status": "pre-launch",
+      "propertyType": "apartment",
+      "price": 8900000,
+      "priceUnit": "onwards",
+      "location": {
+        "area": "Bagalur, North Bangalore",
+        "city": "Bangalore",
+        "state": "Karnataka",
+        "lat": 13.1186,
+        "lng": 77.6358
+      },
+      "configuration": [
+        "1 BHK",
+        "2 BHK",
+        "3 BHK"
+      ],
+      "dimensionRange": {
+        "min": 650,
+        "max": 1450,
+        "unit": "sqft"
+      },
+      "possession": "Mar 2029",
+      "developer": "Brigade Group",
+      "description": "Brigade El Dorado is a pre-launch residential project by Brigade Group in the fast-growing Bagalur corridor of North Bangalore. Positioned near the upcoming Aerospace SEZ and Kempegowda International Airport, this project offers excellent appreciation potential with modern living spaces.",
+      "highlights": [
+        "Pre-launch pricing — best investment opportunity",
+        "Near KIA Airport — 15 minutes drive",
+        "Brigade Group — 35+ years of trust",
+        "Adjacent to upcoming Aerospace Park",
+        "Excellent future connectivity — Metro Phase 3"
+      ],
+      "specifications": {
+        "projectArea": "35 acres",
+        "totalUnits": 2500,
+        "launchDate": "2025-06-01",
+        "possessionDate": "2029-03-01",
+        "reraId": "RERA-PENDING",
+        "towers": 15,
+        "floors": 20,
+        "constructionType": "RCC framed structure"
+      },
+      "amenities": [
+        {
+          "icon": "mdi:swim",
+          "name": "Infinity Pool",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:dumbbell",
+          "name": "Modern Gym",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:movie-open",
+          "name": "Mini Theatre",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:soccer",
+          "name": "Football Ground",
+          "category": "sports"
+        },
+        {
+          "icon": "mdi:office-building",
+          "name": "Co-Working Space",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:ev-station",
+          "name": "EV Charging",
+          "category": "convenience"
+        }
+      ],
+      "floorPlans": [
+        {
+          "config": "1 BHK",
+          "area": "650 sqft",
+          "price": 8900000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=1BHK+Floor+Plan",
+          "bedrooms": 1,
+          "bathrooms": 1
+        },
+        {
+          "config": "2 BHK",
+          "area": "1050 sqft",
+          "price": 14400000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=2BHK+Floor+Plan",
+          "bedrooms": 2,
+          "bathrooms": 2
+        },
+        {
+          "config": "3 BHK",
+          "area": "1450 sqft",
+          "price": 19800000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=3BHK+Floor+Plan",
+          "bedrooms": 3,
+          "bathrooms": 2
+        }
+      ],
+      "gallery": [
+        "https://placehold.co/800x600/goldenrod/white?text=Brigade+Exterior",
+        "https://placehold.co/800x600/goldenrod/white?text=Brigade+Living+Room",
+        "https://placehold.co/800x600/goldenrod/white?text=Brigade+Amenities"
+      ],
+      "nearbyPlaces": [
+        {
+          "name": "Kempegowda Intl Airport",
+          "distance": "12 km",
+          "type": "transport"
+        },
+        {
+          "name": "Aerospace SEZ",
+          "distance": "3 km",
+          "type": "workplace"
+        },
+        {
+          "name": "ITC Factory Outlet",
+          "distance": "8 km",
+          "type": "shopping"
+        },
+        {
+          "name": "Akash Hospital",
+          "distance": "5 km",
+          "type": "healthcare"
+        }
+      ],
+      "brochureUrl": "",
+      "floorPlanPdfUrl": "",
+      "specialities": [],
+      "documents": [],
+      "constructionSpecs": {},
+      "tags": [
+        "new-launch",
+        "trending",
+        "hot-deal"
+      ],
+      "seoTitle": "Brigade El Dorado Bagalur | Pre-Launch Apartments Near KIA Bangalore",
+      "seoDescription": "Brigade El Dorado — Pre-launch apartments in Bagalur, North Bangalore. 1, 2, 3 BHK near airport starting Rs 89 Lakhs by Brigade Group.",
+      "seoKeywords": [
+        "brigade el dorado",
+        "bagalur apartments",
+        "north bangalore flats",
+        "pre-launch bangalore"
+      ],
+      "schemaMarkup": "{\"@context\":\"https://schema.org\",\"@type\":\"Residence\",\"name\":\"Brigade El Dorado\"}",
+      "isActive": true,
+      "createdAt": "2025-01-10T10:00:00Z",
+      "updatedAt": "2026-02-27T16:35:19.842Z",
+      "category": "apartment",
+      "sections": {
+        "overview": true,
+        "details": true,
+        "highlights": true,
+        "amenities": true,
+        "floorPlans": true,
+        "finance": true,
+        "location": true,
+        "documents": true,
+        "construction": true,
+        "constructionSpecs": true,
+        "developer": true,
+        "faqs": true,
+        "similar": true
+      },
+      "canonicalUrl": "https://homadvisory.com/properties/brigade-el-dorado",
+      "ogTitle": "Brigade El Dorado | Bagalur, North Bangalore, Bangalore",
+      "ogDescription": "Explore Brigade El Dorado by Brigade Group in Bagalur, North Bangalore, Bangalore. 1 BHK, 2 BHK, 3 BHK apartments from 650-1450 sqft. Pre-Launch. Starting ₹8...",
+      "ogImage": "https://placehold.co/800x600/goldenrod/white?text=Brigade+Exterior",
+      "twitterCard": "summary_large_image"
+    },
+    {
+      "id": "5",
+      "title": "Sobha Neopolis",
+      "slug": "sobha-neopolis",
+      "type": "sale",
+      "status": "under-construction",
+      "propertyType": "apartment",
+      "price": 22000000,
+      "priceUnit": "onwards",
+      "location": {
+        "area": "Panathur, Off Outer Ring Road",
+        "city": "Bangalore",
+        "state": "Karnataka",
+        "lat": 12.9352,
+        "lng": 77.7248
+      },
+      "configuration": [
+        "3 BHK",
+        "4 BHK"
+      ],
+      "dimensionRange": {
+        "min": 1800,
+        "max": 3200,
+        "unit": "sqft"
+      },
+      "possession": "Jun 2028",
+      "developer": "Sobha Limited",
+      "description": "Sobha Neopolis is a luxury residential development by Sobha Limited, located in the prime Panathur area off Outer Ring Road. Known for Sobha's legendary construction quality, this project delivers unmatched luxury with Italian marble flooring, German kitchen fittings, and expansive balconies overlooking manicured landscapes.",
+      "highlights": [
+        "Sobha's signature construction quality",
+        "Italian marble & German fittings standard",
+        "Prime ORR location — minutes from major tech parks",
+        "Green certified — IGBC Gold rating",
+        "30+ lifestyle amenities"
+      ],
+      "specifications": {
+        "projectArea": "12 acres",
+        "totalUnits": 600,
+        "launchDate": "2024-09-15",
+        "possessionDate": "2028-06-01",
+        "reraId": "PRM/KA/RERA/1251/310/PR/240915/007890",
+        "towers": 6,
+        "floors": 25,
+        "constructionType": "Mivan technology with RCC structure"
+      },
+      "amenities": [
+        {
+          "icon": "mdi:swim",
+          "name": "Temperature Controlled Pool",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:dumbbell",
+          "name": "CrossFit Zone",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:spa",
+          "name": "Spa & Sauna",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:billiards-rack",
+          "name": "Billiards Room",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:book-open-variant",
+          "name": "Library",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:cricket",
+          "name": "Cricket Nets",
+          "category": "sports"
+        },
+        {
+          "icon": "mdi:movie-open",
+          "name": "Private Theatre",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:table-tennis",
+          "name": "Table Tennis",
+          "category": "sports"
+        }
+      ],
+      "floorPlans": [
+        {
+          "config": "3 BHK",
+          "area": "1800 sqft",
+          "price": 22000000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=3BHK+Floor+Plan",
+          "bedrooms": 3,
+          "bathrooms": 3
+        },
+        {
+          "config": "4 BHK",
+          "area": "3200 sqft",
+          "price": 39200000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=4BHK+Floor+Plan",
+          "bedrooms": 4,
+          "bathrooms": 4
+        }
+      ],
+      "gallery": [
+        "https://placehold.co/800x600/goldenrod/white?text=Sobha+Exterior",
+        "https://placehold.co/800x600/goldenrod/white?text=Sobha+Lobby",
+        "https://placehold.co/800x600/goldenrod/white?text=Sobha+Living+Room",
+        "https://placehold.co/800x600/goldenrod/white?text=Sobha+Amenities"
+      ],
+      "nearbyPlaces": [
+        {
+          "name": "RMZ Ecoworld",
+          "distance": "2 km",
+          "type": "workplace"
+        },
+        {
+          "name": "Outer Ring Road",
+          "distance": "0.5 km",
+          "type": "transport"
+        },
+        {
+          "name": "Total Mall",
+          "distance": "3 km",
+          "type": "shopping"
+        },
+        {
+          "name": "Motherhood Hospital",
+          "distance": "4 km",
+          "type": "healthcare"
+        }
+      ],
+      "brochureUrl": "",
+      "floorPlanPdfUrl": "",
+      "specialities": [],
+      "documents": [],
+      "constructionSpecs": {},
+      "tags": [
+        "featured",
+        "premium",
+        "popular"
+      ],
+      "seoTitle": "Sobha Neopolis Panathur | Luxury 3, 4 BHK Apartments Off ORR Bangalore - Test ",
+      "seoDescription": "Sobha Neopolis — Ultra-luxury apartments in Panathur, off Outer Ring Road. 3 & 4 BHK from Rs 2.2 Cr by Sobha Limited.",
+      "seoKeywords": [
+        "sobha neopolis",
+        "panathur apartments",
+        "luxury flats orr bangalore",
+        "sobha limited bangalore"
+      ],
+      "schemaMarkup": "{\"@context\":\"https://schema.org\",\"@type\":\"Residence\",\"name\":\"Sobha Neopolis\"}",
+      "isActive": true,
+      "createdAt": "2024-09-20T10:00:00Z",
+      "updatedAt": "2026-02-27T16:35:19.852Z",
+      "category": "apartment",
+      "sections": {
+        "overview": true,
+        "details": true,
+        "highlights": true,
+        "amenities": true,
+        "floorPlans": true,
+        "finance": true,
+        "location": true,
+        "documents": true,
+        "construction": true,
+        "constructionSpecs": true,
+        "developer": true,
+        "faqs": true,
+        "similar": true
+      },
+      "canonicalUrl": "https://homadvisory.com/properties/sobha-neopolis",
+      "ogTitle": "Sobha Neopolis | Panathur, Off Outer Ring Road, Bangalore",
+      "ogDescription": "Explore Sobha Neopolis by Sobha Limited in Panathur, Off Outer Ring Road, Bangalore. 3 BHK, 4 BHK apartments from 1800-3200 sqft. Under Construction. Startin...",
+      "ogImage": "https://placehold.co/800x600/goldenrod/white?text=Sobha+Exterior",
+      "twitterCard": "summary_large_image"
+    },
+    {
+      "id": "6",
+      "title": "Godrej Splendour",
+      "slug": "godrej-splendour",
+      "type": "rent",
+      "status": "ready-to-move",
+      "propertyType": "apartment",
+      "price": 35000,
+      "priceUnit": "per month",
+      "location": {
+        "area": "Electronic City Phase 1",
+        "city": "Bangalore",
+        "state": "Karnataka",
+        "lat": 12.8452,
+        "lng": 77.6602
+      },
+      "configuration": [
+        "2 BHK",
+        "3 BHK"
+      ],
+      "dimensionRange": {
+        "min": 1100,
+        "max": 1650,
+        "unit": "sqft"
+      },
+      "possession": "Immediate",
+      "developer": "Godrej Properties",
+      "description": "Godrej Splendour in Electronic City Phase 1 offers beautifully designed apartments available for rent. Ideal for IT professionals working in Electronic City, these semi-furnished units come with modern amenities and excellent connectivity.",
+      "highlights": [
+        "Walking distance to Infosys & Wipro campuses",
+        "Semi-furnished with modular kitchen",
+        "Gated community with 24/7 security",
+        "Excellent public transport connectivity",
+        "Pet-friendly community"
+      ],
+      "specifications": {
+        "projectArea": "7 acres",
+        "totalUnits": 800,
+        "launchDate": "2019-05-10",
+        "possessionDate": "2023-01-01",
+        "reraId": "PRM/KA/RERA/1251/309/PR/190510/003456",
+        "towers": 10,
+        "floors": 18,
+        "constructionType": "RCC framed structure"
+      },
+      "amenities": [
+        {
+          "icon": "mdi:swim",
+          "name": "Swimming Pool",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:dumbbell",
+          "name": "Gymnasium",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:shield-check",
+          "name": "24/7 Security",
+          "category": "safety"
+        },
+        {
+          "icon": "mdi:car-parking",
+          "name": "Covered Parking",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:baby-carriage",
+          "name": "Kids Play Area",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:tree",
+          "name": "Landscaped Gardens",
+          "category": "leisure"
+        }
+      ],
+      "floorPlans": [
+        {
+          "config": "2 BHK",
+          "area": "1100 sqft",
+          "price": 35000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=2BHK+Floor+Plan",
+          "bedrooms": 2,
+          "bathrooms": 2
+        },
+        {
+          "config": "3 BHK",
+          "area": "1650 sqft",
+          "price": 52000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=3BHK+Floor+Plan",
+          "bedrooms": 3,
+          "bathrooms": 2
+        }
+      ],
+      "gallery": [
+        "https://placehold.co/800x600/goldenrod/white?text=Godrej+Exterior",
+        "https://placehold.co/800x600/goldenrod/white?text=Godrej+Living+Room",
+        "https://placehold.co/800x600/goldenrod/white?text=Godrej+Bedroom"
+      ],
+      "nearbyPlaces": [
+        {
+          "name": "Infosys Campus",
+          "distance": "1 km",
+          "type": "workplace"
+        },
+        {
+          "name": "Wipro Campus",
+          "distance": "2 km",
+          "type": "workplace"
+        },
+        {
+          "name": "Electronic City Metro Station",
+          "distance": "1.5 km",
+          "type": "transport"
+        },
+        {
+          "name": "Narayana Health",
+          "distance": "3 km",
+          "type": "healthcare"
+        }
+      ],
+      "brochureUrl": "",
+      "floorPlanPdfUrl": "",
+      "specialities": [],
+      "documents": [],
+      "constructionSpecs": {},
+      "tags": [
+        "rent",
+        "electronic-city",
+        "it-hub"
+      ],
+      "seoTitle": "Godrej Splendour for Rent | 2, 3 BHK Apartments Electronic City Bangalore",
+      "seoDescription": "Rent at Godrej Splendour, Electronic City. Semi-furnished 2 & 3 BHK apartments from Rs 35,000/month near IT hubs.",
+      "seoKeywords": [
+        "godrej splendour rent",
+        "electronic city apartments rent",
+        "2 bhk rent electronic city"
+      ],
+      "schemaMarkup": "{\"@context\":\"https://schema.org\",\"@type\":\"Residence\",\"name\":\"Godrej Splendour\"}",
+      "isActive": true,
+      "createdAt": "2024-06-01T10:00:00Z",
+      "updatedAt": "2026-02-27T16:35:19.864Z",
+      "category": "apartment",
+      "sections": {
+        "overview": true,
+        "details": true,
+        "highlights": true,
+        "amenities": true,
+        "floorPlans": true,
+        "finance": true,
+        "location": true,
+        "documents": true,
+        "construction": true,
+        "constructionSpecs": true,
+        "developer": true,
+        "faqs": true,
+        "similar": true
+      },
+      "canonicalUrl": "https://homadvisory.com/properties/godrej-splendour",
+      "ogTitle": "Godrej Splendour — 2 BHK, 3 BHK in Electronic City Phase 1",
+      "ogDescription": "Explore Godrej Splendour by Godrej Properties in Electronic City Phase 1, Bangalore. 2 BHK, 3 BHK apartments from 1100-1650 sqft. Ready to Move. Starting ₹35...",
+      "ogImage": "https://placehold.co/800x600/goldenrod/white?text=Godrej+Exterior",
+      "twitterCard": "summary_large_image"
+    },
+    {
+      "id": "7",
+      "title": "Puravankara Zenium",
+      "slug": "puravankara-zenium",
+      "type": "sale",
+      "status": "under-construction",
+      "propertyType": "apartment",
+      "price": 15500000,
+      "priceUnit": "onwards",
+      "location": {
+        "area": "Hosahalli, Off Kanakapura Road",
+        "city": "Bangalore",
+        "state": "Karnataka",
+        "lat": 12.8726,
+        "lng": 77.5468
+      },
+      "configuration": [
+        "2 BHK",
+        "3 BHK",
+        "3.5 BHK"
+      ],
+      "dimensionRange": {
+        "min": 1100,
+        "max": 2100,
+        "unit": "sqft"
+      },
+      "possession": "Sep 2027",
+      "developer": "Puravankara Limited",
+      "description": "Puravankara Zenium is a modern residential project off Kanakapura Road, South Bangalore. Designed for the discerning homebuyer, it combines contemporary architecture with nature-inspired living, featuring open green spaces, water bodies, and world-class amenities within a secure gated community.",
+      "highlights": [
+        "Kanakapura Road — Bangalore's fastest growing corridor",
+        "Near NICE Road junction — seamless connectivity",
+        "Puravankara — 50+ years of legacy",
+        "Close to Art of Living Ashram & BGS Health City",
+        "Smart home features in all units"
+      ],
+      "specifications": {
+        "projectArea": "18 acres",
+        "totalUnits": 1200,
+        "launchDate": "2024-06-20",
+        "possessionDate": "2027-09-01",
+        "reraId": "PRM/KA/RERA/1251/310/PR/240620/008123",
+        "towers": 10,
+        "floors": 16,
+        "constructionType": "RCC framed with aluminium formwork"
+      },
+      "amenities": [
+        {
+          "icon": "mdi:swim",
+          "name": "Lap Pool",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:dumbbell",
+          "name": "Open Air Gym",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:run",
+          "name": "Running Track",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:meditation",
+          "name": "Meditation Zone",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:bicycle",
+          "name": "Cycling Track",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:fire",
+          "name": "BBQ Area",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:music",
+          "name": "Amphitheatre",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:shield-check",
+          "name": "Gated Security",
+          "category": "safety"
+        }
+      ],
+      "floorPlans": [
+        {
+          "config": "2 BHK",
+          "area": "1100 sqft",
+          "price": 15500000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=2BHK+Floor+Plan",
+          "bedrooms": 2,
+          "bathrooms": 2
+        },
+        {
+          "config": "3 BHK",
+          "area": "1600 sqft",
+          "price": 22500000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=3BHK+Floor+Plan",
+          "bedrooms": 3,
+          "bathrooms": 2
+        },
+        {
+          "config": "3.5 BHK",
+          "area": "2100 sqft",
+          "price": 29500000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=3.5BHK+Floor+Plan",
+          "bedrooms": 3,
+          "bathrooms": 3
+        }
+      ],
+      "gallery": [
+        "https://placehold.co/800x600/goldenrod/white?text=Puravankara+Exterior",
+        "https://placehold.co/800x600/goldenrod/white?text=Puravankara+Clubhouse",
+        "https://placehold.co/800x600/goldenrod/white?text=Puravankara+Garden"
+      ],
+      "nearbyPlaces": [
+        {
+          "name": "NICE Road Junction",
+          "distance": "2 km",
+          "type": "transport"
+        },
+        {
+          "name": "BGS Health City",
+          "distance": "5 km",
+          "type": "healthcare"
+        },
+        {
+          "name": "Art of Living Ashram",
+          "distance": "8 km",
+          "type": "landmark"
+        },
+        {
+          "name": "Fun World Amusement Park",
+          "distance": "10 km",
+          "type": "entertainment"
+        }
+      ],
+      "brochureUrl": "",
+      "floorPlanPdfUrl": "",
+      "specialities": [],
+      "documents": [],
+      "constructionSpecs": {},
+      "tags": [
+        "under-construction",
+        "investment",
+        "south-bangalore"
+      ],
+      "seoTitle": "Puravankara Zenium Kanakapura Road | 2, 3 BHK Apartments South Bangalore",
+      "seoDescription": "Puravankara Zenium — Modern apartments off Kanakapura Road, South Bangalore. 2, 3 & 3.5 BHK from Rs 1.55 Cr.",
+      "seoKeywords": [
+        "puravankara zenium",
+        "kanakapura road apartments",
+        "south bangalore flats",
+        "puravankara bangalore"
+      ],
+      "schemaMarkup": "{\"@context\":\"https://schema.org\",\"@type\":\"Residence\",\"name\":\"Puravankara Zenium\"}",
+      "isActive": true,
+      "createdAt": "2024-07-01T10:00:00Z",
+      "updatedAt": "2026-02-27T16:35:19.874Z",
+      "category": "apartment",
+      "sections": {
+        "overview": true,
+        "details": true,
+        "highlights": true,
+        "amenities": true,
+        "floorPlans": true,
+        "finance": true,
+        "location": true,
+        "documents": true,
+        "construction": true,
+        "constructionSpecs": true,
+        "developer": true,
+        "faqs": true,
+        "similar": true
+      },
+      "canonicalUrl": "https://homadvisory.com/properties/puravankara-zenium",
+      "ogTitle": "Puravankara Zenium by Puravankara Limited | Bangalore",
+      "ogDescription": "Explore Puravankara Zenium by Puravankara Limited in Hosahalli, Off Kanakapura Road, Bangalore. 2 BHK, 3 BHK, 3.5 BHK apartments from 1100-2100 sqft. Under C...",
+      "ogImage": "https://placehold.co/800x600/goldenrod/white?text=Puravankara+Exterior",
+      "twitterCard": "summary_large_image"
+    },
+    {
+      "id": "8",
+      "title": "Salarpuria Sattva Opus",
+      "slug": "salarpuria-sattva-opus",
+      "type": "rent",
+      "status": "ready-to-move",
+      "propertyType": "villa",
+      "price": 85000,
+      "priceUnit": "per month",
+      "location": {
+        "area": "Yeshwanthpur, North Bangalore",
+        "city": "Bangalore",
+        "state": "Karnataka",
+        "lat": 13.022,
+        "lng": 77.5437
+      },
+      "configuration": [
+        "4 BHK Villa"
+      ],
+      "dimensionRange": {
+        "min": 3500,
+        "max": 3500,
+        "unit": "sqft"
+      },
+      "possession": "Immediate",
+      "developer": "Salarpuria Sattva Group",
+      "description": "A premium 4 BHK villa available for rent in Salarpuria Sattva Opus, Yeshwanthpur. Fully furnished with contemporary interiors, private garden, and access to all community amenities. Ideal for expat families and senior professionals.",
+      "highlights": [
+        "Fully furnished luxury villa",
+        "Private garden and terrace",
+        "Walking distance to Yeshwanthpur Metro",
+        "Near Orion Mall and World Trade Center",
+        "Gated community with concierge services"
+      ],
+      "specifications": {
+        "projectArea": "25 acres",
+        "totalUnits": 200,
+        "launchDate": "2017-08-01",
+        "possessionDate": "2021-12-01",
+        "reraId": "PRM/KA/RERA/1251/309/PR/170801/002345",
+        "towers": 0,
+        "floors": 3,
+        "constructionType": "Independent villa structure"
+      },
+      "amenities": [
+        {
+          "icon": "mdi:swim",
+          "name": "Private Pool Access",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:dumbbell",
+          "name": "Gymnasium",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:tennis",
+          "name": "Tennis Court",
+          "category": "sports"
+        },
+        {
+          "icon": "mdi:shield-check",
+          "name": "24/7 Security",
+          "category": "safety"
+        },
+        {
+          "icon": "mdi:home-assistant",
+          "name": "Concierge Service",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:car-parking",
+          "name": "2-Car Garage",
+          "category": "convenience"
+        }
+      ],
+      "floorPlans": [
+        {
+          "config": "4 BHK Villa",
+          "area": "3500 sqft",
+          "price": 85000,
+          "image": "https://placehold.co/600x400/goldenrod/white?text=4BHK+Villa",
+          "bedrooms": 4,
+          "bathrooms": 4
+        }
+      ],
+      "gallery": [
+        "https://placehold.co/800x600/goldenrod/white?text=Sattva+Villa+Exterior",
+        "https://placehold.co/800x600/goldenrod/white?text=Sattva+Villa+Interior",
+        "https://placehold.co/800x600/goldenrod/white?text=Sattva+Villa+Garden"
+      ],
+      "nearbyPlaces": [
+        {
+          "name": "Orion Mall",
+          "distance": "2 km",
+          "type": "shopping"
+        },
+        {
+          "name": "Yeshwanthpur Metro",
+          "distance": "1 km",
+          "type": "transport"
+        },
+        {
+          "name": "World Trade Center",
+          "distance": "3 km",
+          "type": "workplace"
+        },
+        {
+          "name": "MS Ramaiah Hospital",
+          "distance": "4 km",
+          "type": "healthcare"
+        }
+      ],
+      "brochureUrl": "",
+      "floorPlanPdfUrl": "",
+      "specialities": [],
+      "documents": [],
+      "constructionSpecs": {},
+      "tags": [
+        "rent",
+        "villa",
+        "premium",
+        "furnished"
+      ],
+      "seoTitle": "Luxury Villa for Rent in Yeshwanthpur | Salarpuria Sattva Opus Bangalore",
+      "seoDescription": "Rent a luxury 4 BHK villa at Salarpuria Sattva Opus, Yeshwanthpur, Bangalore. Fully furnished, Rs 85,000/month.",
+      "seoKeywords": [
+        "villa rent bangalore",
+        "yeshwanthpur villa",
+        "luxury villa rent bangalore",
+        "salarpuria sattva opus"
+      ],
+      "schemaMarkup": "{\"@context\":\"https://schema.org\",\"@type\":\"Residence\",\"name\":\"Salarpuria Sattva Opus\"}",
+      "isActive": true,
+      "createdAt": "2024-08-15T10:00:00Z",
+      "updatedAt": "2026-02-27T16:35:19.885Z",
+      "category": "villa",
+      "sections": {
+        "overview": true,
+        "details": true,
+        "highlights": true,
+        "amenities": true,
+        "floorPlans": true,
+        "finance": true,
+        "location": true,
+        "documents": true,
+        "construction": true,
+        "constructionSpecs": true,
+        "developer": true,
+        "faqs": true,
+        "similar": true
+      },
+      "canonicalUrl": "https://homadvisory.com/properties/salarpuria-sattva-opus",
+      "ogTitle": "4 BHK Villa Villas in Bangalore | Salarpuria Sattva Opus",
+      "ogDescription": "Explore Salarpuria Sattva Opus by Salarpuria Sattva Group in Yeshwanthpur, North Bangalore, Bangalore. 4 BHK Villa villas from 3500-3500 sqft. Ready to Move....",
+      "ogImage": "https://placehold.co/800x600/goldenrod/white?text=Sattva+Villa+Exterior",
+      "twitterCard": "summary_large_image"
+    },
+    {
+      "id": "b998",
+      "title": "Test Property",
+      "slug": "test-property",
+      "type": "sale",
+      "propertyType": "apartment",
+      "status": "under-construction",
+      "price": 8000000,
+      "priceUnit": "onwards",
+      "developer": "Assam Digital",
+      "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras lorem ex, maximus ut turpis sit amet, mattis rutrum elit. Etiam tincidunt congue augue, ut finibus tortor hendrerit ac. Cras quis dolor ut ligula pulvinar placerat. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Mauris varius tristique mi mattis molestie. Donec pretium enim in ligula feugiat, ut vestibulum mauris malesuada. Phasellus nec nisl malesuada, posuere lectus in, tempus purus. Vestibulum felis dui, pretium in hendrerit non, hendrerit id nisi. Praesent faucibus suscipit nibh, non lobortis ex hendrerit eget. Cras iaculis lobortis lacus, efficitur mollis odio hendrerit nec. Vestibulum sodales laoreet euismod. Ut gravida scelerisque iaculis. Curabitur eget metus sit amet erat semper mattis et in diam.",
+      "highlights": [
+        "Prime location — IT hub connectivity",
+        "Trusted Legacy of 20+ years",
+        "Centralized AC with VRV/VRF, home automation",
+        "Sustainable design with solar panels, rainwater harvesting",
+        "IGBC pre-certified green building"
+      ],
+      "location": {
+        "area": "Khanapara",
+        "city": "Guwahati",
+        "state": "Assam",
+        "lat": 26.1252,
+        "lng": 91.8173,
+        "address": "Khanapara, Near Taj Hotel, Guwahati"
+      },
+      "configuration": [
+        "1 BHK",
+        "2 BHK",
+        "3 BHK"
+      ],
+      "dimensionRange": {
+        "min": 1200,
+        "max": 3500,
+        "unit": "sqft"
+      },
+      "possession": "Dec 2032",
+      "specifications": {
+        "Project Area": "8 acres",
+        "Towers": 4,
+        "Total Units": "450+ Apartments",
+        "Floors": "Upto 22 Floors",
+        "Unit Variants": "RCC framed structure",
+        "Launch Date": "March 2032"
+      },
+      "specificationsArray": [
+        {
+          "key": "Project Area",
+          "value": "8 acres",
+          "icon": ""
+        },
+        {
+          "key": "Towers",
+          "value": "4",
+          "icon": ""
+        },
+        {
+          "key": "Total Units",
+          "value": "450+ Apartments",
+          "icon": ""
+        },
+        {
+          "key": "Floors",
+          "value": "Upto 22 Floors",
+          "icon": ""
+        },
+        {
+          "key": "Unit Variants",
+          "value": "RCC framed structure",
+          "icon": ""
+        },
+        {
+          "key": "Launch Date",
+          "value": "March 2032",
+          "icon": ""
+        }
+      ],
+      "amenities": [
+        {
+          "icon": "mdi:basketball",
+          "name": "Basketball Court",
+          "category": "sports"
+        },
+        {
+          "icon": "mdi:tennis",
+          "name": "Tennis Court",
+          "category": "sports"
+        },
+        {
+          "icon": "mdi:badminton",
+          "name": "Badminton Court",
+          "category": "sports"
+        },
+        {
+          "icon": "mdi:cricket",
+          "name": "Cricket Pitch",
+          "category": "sports"
+        },
+        {
+          "icon": "mdi:swim",
+          "name": "Swimming Pool",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:party-popper",
+          "name": "Clubhouse",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:tree",
+          "name": "Landscaped Gardens",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:baby-carriage",
+          "name": "Kids Play Area",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:dumbbell",
+          "name": "Gymnasium",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:yoga",
+          "name": "Yoga Room",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:run",
+          "name": "Jogging Track",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:meditation",
+          "name": "Meditation Zone",
+          "category": "fitness"
+        },
+        {
+          "icon": "mdi:shield-check",
+          "name": "24/7 Security",
+          "category": "safety"
+        },
+        {
+          "icon": "mdi:cctv",
+          "name": "CCTV Surveillance",
+          "category": "safety"
+        },
+        {
+          "icon": "mdi:gate",
+          "name": "Gated Community",
+          "category": "safety"
+        },
+        {
+          "icon": "mdi:fire-extinguisher",
+          "name": "Fire Safety",
+          "category": "safety"
+        },
+        {
+          "icon": "mdi:car-parking",
+          "name": "Covered Parking",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:lightning-bolt",
+          "name": "Power Backup",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:water-pump",
+          "name": "Water Supply",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:elevator",
+          "name": "High-Speed Elevators",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:ev-station",
+          "name": "EV Charging",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:wifi",
+          "name": "Wi-Fi Connectivity",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:gas-cylinder",
+          "name": "Piped Gas",
+          "category": "convenience"
+        },
+        {
+          "icon": "mdi:movie-open-outline",
+          "name": "Mini Theatre",
+          "category": "leisure"
+        },
+        {
+          "icon": "mdi:book-open-variant",
+          "name": "Library",
+          "category": "leisure"
+        }
+      ],
+      "floorPlans": [
+        {
+          "config": "1 BHK",
+          "area": "1200",
+          "price": "60",
+          "image": "https://res.cloudinary.com/dzbiw7t4i/image/upload/v1767606772/samples/animals/reindeer.jpg",
+          "bedrooms": "1",
+          "bathrooms": "1"
+        },
+        {
+          "config": "2 BHK",
+          "area": "1600",
+          "price": "70",
+          "image": "https://res.cloudinary.com/dzbiw7t4i/image/upload/v1767606771/samples/ecommerce/analog-classic.jpg",
+          "bedrooms": "2",
+          "bathrooms": "2"
+        }
+      ],
+      "gallery": [
+        "https://res.cloudinary.com/dzbiw7t4i/image/upload/v1767606789/cld-sample-2.jpg",
+        "https://video.gumlet.io/688f392c0f894537edc335ad/68a7315019535c52efc9edc9/download.mp4",
+        "https://res.cloudinary.com/dzbiw7t4i/image/upload/v1767606786/samples/cup-on-a-table.jpg",
+        "https://res.cloudinary.com/dzbiw7t4i/image/upload/v1767606785/samples/coffee.jpg"
+      ],
+      "nearbyPlaces": [
+        {
+          "name": "Tech Park",
+          "distance": "5 KM",
+          "type": "workplace"
+        },
+        {
+          "name": "Hosptal",
+          "distance": "1 KM",
+          "type": "hospital"
+        },
+        {
+          "name": "City Center",
+          "distance": "10 KM",
+          "type": "shopping"
+        },
+        {
+          "name": "GHY Airport",
+          "distance": "25 KM",
+          "type": "transport"
+        }
+      ],
+      "brochureUrl": "https://res.cloudinary.com/dzbiw7t4i/image/upload/v1767606775/samples/ecommerce/leather-bag-gray.jpg",
+      "floorPlanPdfUrl": "https://res.cloudinary.com/dzbiw7t4i/image/upload/v1767606774/samples/landscapes/architecture-signs.jpg",
+      "specialities": [
+        {
+          "icon": "mdi:store",
+          "name": "RERA Approved",
+          "description": "Lorem ipsum dolor sit amet"
+        },
+        {
+          "icon": "mdi:home-group",
+          "name": "RERA Approved",
+          "description": "Lorem ipsum dolor sit amet"
+        },
+        {
+          "icon": "mdi:elevator",
+          "name": "RERA Approved",
+          "description": "Lorem ipsum dolor sit amet"
+        },
+        {
+          "icon": "mdi:window-open",
+          "name": "RERA Approved",
+          "description": "Lorem ipsum dolor sit amet"
+        },
+        {
+          "icon": "mdi:key",
+          "name": "RERA Approved",
+          "description": "Lorem ipsum dolor sit amet"
+        }
+      ],
+      "documents": [
+        {
+          "name": "RERA Certificate",
+          "icon": "mdi:file-document",
+          "url": "https://res.cloudinary.com/dzbiw7t4i/image/upload/v1767606771/samples/cloudinary-icon.png"
+        }
+      ],
+      "constructionSpecs": {
+        "flooring": [
+          {
+            "area": "Living Room",
+            "spec": "Italian marble with premium vitrified finish"
+          },
+          {
+            "area": "Bedroom",
+            "spec": "Engineered wood flooring with premium finish"
+          },
+          {
+            "area": "Kitchen",
+            "spec": "Anti-skid vitrified tiles with granite platform"
+          },
+          {
+            "area": "Bathroom",
+            "spec": "Designer anti-skid tiles with premium fittings"
+          }
+        ],
+        "doors": [
+          {
+            "area": "Main Door",
+            "spec": "Veneer finished flush door with designer hardware and security lock"
+          },
+          {
+            "area": "Internal Doors",
+            "spec": "Painted flush doors with SS handles and quality fittings"
+          }
+        ],
+        "structure": [
+          {
+            "area": "Foundation",
+            "spec": "RCC framed structure with seismic zone compliance"
+          },
+          {
+            "area": "Walls",
+            "spec": "AAC blocks with weather-proof exterior and premium putty finish"
+          }
+        ],
+        "electrical": [
+          {
+            "area": "Wiring",
+            "spec": "Concealed copper wiring with premium modular switches"
+          },
+          {
+            "area": "Power",
+            "spec": "Full DG backup for common areas, partial for apartments"
+          }
+        ]
+      },
+      "constructionTimeline": [
+        {
+          "label": "Foundation",
+          "status": "completed",
+          "icon": "mdi:shovel"
+        },
+        {
+          "label": "Structure",
+          "status": "in-progress",
+          "icon": "mdi:crane"
+        },
+        {
+          "label": "Finishing",
+          "status": "pending",
+          "icon": "mdi:format-paint"
+        },
+        {
+          "label": "Handover",
+          "status": "pending",
+          "icon": "mdi:key-variant"
+        }
+      ],
+      "developerInfo": {
+        "name": "Assam Digital",
+        "description": "",
+        "logo": "",
+        "stats": []
+      },
+      "faqs": [
+        {
+          "question": "Test FAQ Qns 1 ?",
+          "answer": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras lorem ex, maximus ut turpis sit amet, mattis rutrum elit. Etiam tincidunt congue augue, ut finibus tortor hendrerit ac."
+        },
+        {
+          "question": "Test FAQ Qns 2 ?",
+          "answer": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras lorem ex, maximus ut turpis sit amet, mattis rutrum elit. Etiam tincidunt congue augue, ut finibus tortor hendrerit ac. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras lorem ex, maximus ut turpis sit amet, mattis rutrum elit. Etiam tincidunt congue augue, ut finibus tortor hendrerit ac."
+        },
+        {
+          "question": "Test FAQ Qns 3 ?",
+          "answer": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras lorem ex, maximus ut turpis sit amet, mattis rutrum elit. Etiam tincidunt congue augue, ut finibus tortor hendrerit ac. Cras quis dolor ut ligula pulvinar placerat. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Mauris varius tristique mi mattis molestie. Donec pretium enim in ligula feugiat, ut vestibulum mauris malesuada. Phasellus nec nisl malesuada, posuere lectus in, tempus purus. Vestibulum felis dui, pretium in hendrerit non, hendrerit id nisi. Praesent faucibus suscipit nibh, non lobortis ex hendrerit eget. Cras iaculis lobortis lacus, efficitur mollis odio hendrerit nec. Vestibulum sodales laoreet euismod. Ut gravida scelerisque iaculis. Curabitur eget metus sit amet erat semper mattis et in diam."
+        }
+      ],
+      "similarPropertyIds": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "seoTitle": "Test Property | 1 BHK, 2 BHK, 3 BHK in Khanapara, Guwahati",
+      "seoDescription": "Test Property by Assam Digital in Khanapara, Guwahati. 1 BHK, 2 BHK, 3 BHK apartments from 1200-3500 sqft. Possession: Dec 2032.",
+      "seoKeywords": [
+        "test property",
+        "khanapara apartments",
+        "assam digital guwahati",
+        "buy guwahati"
+      ],
+      "ogTitle": "Test Property — 1 BHK, 2 BHK, 3 BHK in Khanapara",
+      "ogDescription": "Explore Test Property by Assam Digital in Khanapara, Guwahati. 1 BHK, 2 BHK, 3 BHK apartments from 1200-3500 sqft. Under Construction. Starting ₹80.00 L onwa...",
+      "ogImage": "https://res.cloudinary.com/dzbiw7t4i/image/upload/v1767606789/cld-sample-2.jpg",
+      "twitterCard": "summary_large_image",
+      "canonicalUrl": "https://homadvisory.com/properties/test-property",
+      "schemaMarkup": "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"Residence\",\n  \"name\": \"Test Property\",\n  \"description\": \"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras lorem ex, maximus ut turpis sit amet, mattis rutrum elit. Etiam tincidunt congue augue, ut finibus tortor hendrerit ac. Cras quis dolor ut\",\n  \"address\": {\n    \"@type\": \"PostalAddress\",\n    \"addressLocality\": \"Khanapara\",\n    \"addressRegion\": \"Guwahati\"\n  }\n}",
+      "tags": [
+        "featured"
+      ],
+      "isActive": true,
+      "publishStatus": "published",
+      "createdAt": "2026-02-25T10:07:35.252Z",
+      "updatedAt": "2026-02-27T16:35:19.896Z",
+      "category": "apartment",
+      "sections": {
+        "overview": true,
+        "details": true,
+        "highlights": true,
+        "amenities": true,
+        "floorPlans": true,
+        "finance": true,
+        "location": true,
+        "documents": true,
+        "construction": true,
+        "constructionSpecs": true,
+        "developer": false,
+        "faqs": true,
+        "similar": true
+      }
+    }
+  ],
+  "leads": [
+    {
+      "id": "1",
+      "name": "Rajesh Kumar",
+      "email": "rajesh.kumar@gmail.com",
+      "phone": "+91 98765 43210",
+      "source": "property-detail-page",
+      "propertyId": 1,
+      "message": "Interested in 3 BHK at Nambiar District 25. Please share pricing details and availability for site visit.",
+      "status": "contacted",
+      "notes": [
+        {
+          "text": "Called back, interested in 3BHK. Site visit scheduled for Saturday.",
+          "addedAt": "2025-12-18T10:30:00Z"
+        }
+      ],
+      "createdAt": "2025-12-15T14:00:00Z",
+      "updatedAt": "2025-12-18T10:30:00Z"
+    },
+    {
+      "id": "2",
+      "name": "Priya Sharma",
+      "email": "priya.sharma@outlook.com",
+      "phone": "+91 87654 32109",
+      "source": "homepage-contact-form",
+      "propertyId": null,
+      "message": "Looking for a 2BHK apartment in Whitefield area, budget 80L-1.2Cr. Please help.",
+      "status": "qualified",
+      "notes": [
+        {
+          "text": "Budget confirmed at 1Cr. Shared 3 property options.",
+          "addedAt": "2025-12-10T09:00:00Z"
+        },
+        {
+          "text": "Shortlisted Mahindra Blossom. Arranging site visit.",
+          "addedAt": "2025-12-12T15:00:00Z"
+        }
+      ],
+      "createdAt": "2025-12-08T11:00:00Z",
+      "updatedAt": "2025-12-12T15:00:00Z"
+    },
+    {
+      "id": "3",
+      "name": "Vikram Patel",
+      "email": "vikram.p@yahoo.com",
+      "phone": "+91 76543 21098",
+      "source": "property-listing-page",
+      "propertyId": 4,
+      "message": "When is the Brigade El Dorado launch? Want to book in pre-launch phase.",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2025-12-20T16:00:00Z",
+      "updatedAt": "2025-12-20T16:00:00Z"
+    },
+    {
+      "id": "7590",
+      "name": "Bappi Das",
+      "email": "bappi@assamdigital.com",
+      "phone": "8638959503",
+      "message": "I'm interested in Brigade El Dorado",
+      "propertyId": 4,
+      "source": "property_enquiry",
+      "status": "qualified",
+      "notes": [
+        {
+          "text": "Test",
+          "addedAt": "2026-02-13T12:33:26.281Z"
+        }
+      ],
+      "createdAt": "2026-02-13T12:16:10.426Z",
+      "updatedAt": "2026-02-13T12:33:46.591Z"
+    },
+    {
+      "id": "8123",
+      "name": "Bappi Das",
+      "phone": "9999999999",
+      "email": "mail4bappidas@gmail.com",
+      "propertyId": 3,
+      "source": "financial-assessment",
+      "message": "Financial Assessment Lead | Score: 75/100 | Occupation: business-owner | Income: 20-50 LPA | Credit: good | EMI: 25000-50000 | Employment: 5-10 yrs | Down Payment: 29% | Co-applicant: yes (Income: 10-20)",
+      "assessmentData": {
+        "score": 75,
+        "occupation": "business-owner",
+        "yearlyIncome": "20-50",
+        "employmentYears": "5-10",
+        "existingEmi": "25000-50000",
+        "creditScore": "good",
+        "downPayment": "29",
+        "hasCoApplicant": "yes",
+        "coApplicantIncome": "10-20",
+        "propertyPrice": 35000000
+      },
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-19T10:17:50.401Z",
+      "updatedAt": "2026-02-19T10:17:50.410Z"
+    },
+    {
+      "id": "bfdc",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "2313123213",
+      "propertyId": "2",
+      "source": "detailed_pricing",
+      "message": "Requested detailed pricing for 4 BHK — Mahindra Blossom",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-19T14:32:25.625Z",
+      "updatedAt": "2026-02-19T14:32:25.632Z"
+    },
+    {
+      "id": "53c7",
+      "name": "Bappi Das",
+      "phone": "7787678785",
+      "email": "mail4bappidas@gmail.com",
+      "propertyId": "2",
+      "source": "financial-assessment",
+      "message": "Financial Assessment Lead | Score: 100/100 | Occupation: retired | Income: 50+ LPA | Credit: excellent | EMI: 0 | Employment: 10+ yrs | Down Payment: 36% | Co-applicant: no",
+      "assessmentData": {
+        "score": 100,
+        "occupation": "retired",
+        "yearlyIncome": "50+",
+        "employmentYears": "10+",
+        "existingEmi": "0",
+        "creditScore": "excellent",
+        "downPayment": "36",
+        "hasCoApplicant": "no",
+        "coApplicantIncome": "",
+        "propertyPrice": 19500000
+      },
+      "status": "qualified",
+      "notes": [],
+      "createdAt": "2026-02-19T15:48:42.082Z",
+      "updatedAt": "2026-02-19T15:50:17.643Z"
+    },
+    {
+      "id": "97a9",
+      "name": "Bappi Das",
+      "phone": "7867867876",
+      "email": "mail4bappidas@gmail.com",
+      "propertyId": "1",
+      "source": "financial-assessment",
+      "message": "Financial Assessment Lead | Score: 96/100 | Occupation: salaried | Income: 20-50 LPA | Credit: excellent | EMI: 0 | Employment: 10+ yrs | Down Payment: 25% | Co-applicant: no",
+      "assessmentData": {
+        "score": 96,
+        "occupation": "salaried",
+        "yearlyIncome": "20-50",
+        "employmentYears": "10+",
+        "existingEmi": "0",
+        "creditScore": "excellent",
+        "downPayment": "25",
+        "hasCoApplicant": "no",
+        "coApplicantIncome": "",
+        "propertyPrice": 12400000
+      },
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-20T05:54:52.430Z",
+      "updatedAt": "2026-02-20T05:54:52.430Z"
+    },
+    {
+      "id": "b7a5",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "+919707112233",
+      "propertyId": "1",
+      "source": "detailed_pricing",
+      "message": "Requested detailed pricing for 4 BHK — Nambiar District 25 Phase 2",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-20T06:16:53.501Z",
+      "updatedAt": "2026-02-20T06:16:53.501Z"
+    },
+    {
+      "id": "85e1",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "2313123213",
+      "propertyId": "1",
+      "source": "detailed_pricing",
+      "message": "Requested detailed pricing for 3 BHK — Nambiar District 25 Phase 2",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-20T06:18:54.901Z",
+      "updatedAt": "2026-02-20T06:18:54.901Z"
+    },
+    {
+      "id": "8bb4",
+      "name": "Bappi Das",
+      "phone": "7567567657",
+      "email": "mail4bappidas@gmail.com",
+      "propertyId": "1",
+      "source": "financial-assessment",
+      "message": "Financial Assessment Lead | Score: 91/100 | Occupation: business-owner | Income: 20-50 LPA | Credit: good | EMI: 0 | Employment: 10+ yrs | Down Payment: 27% | Co-applicant: yes (Income: 0-3)",
+      "assessmentData": {
+        "score": 91,
+        "occupation": "business-owner",
+        "yearlyIncome": "20-50",
+        "employmentYears": "10+",
+        "existingEmi": "0",
+        "creditScore": "good",
+        "downPayment": "27",
+        "hasCoApplicant": "yes",
+        "coApplicantIncome": "0-3",
+        "propertyPrice": 12400000
+      },
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-20T06:26:57.319Z",
+      "updatedAt": "2026-02-20T06:26:57.319Z"
+    },
+    {
+      "id": "ebed",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "2313123213",
+      "propertyId": "1",
+      "source": "document_download",
+      "message": "Requested document: Commencement Certificate",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-20T06:55:27.194Z",
+      "updatedAt": "2026-02-20T06:55:27.194Z"
+    },
+    {
+      "id": "b569",
+      "name": "Bappi Das",
+      "phone": "7757574574",
+      "email": "mail4bappidas@gmail.com",
+      "propertyId": "1",
+      "source": "financial-assessment",
+      "message": "Financial Assessment Lead | Score: 89/100 | Occupation: self-employed | Income: 10-20 LPA | Credit: excellent | EMI: 0 | Employment: 3-5 yrs | Down Payment: 20% | Co-applicant: no",
+      "assessmentData": {
+        "score": 89,
+        "occupation": "self-employed",
+        "yearlyIncome": "10-20",
+        "employmentYears": "3-5",
+        "existingEmi": "0",
+        "creditScore": "excellent",
+        "downPayment": "20",
+        "hasCoApplicant": "no",
+        "coApplicantIncome": "",
+        "propertyPrice": 12400000
+      },
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-23T11:33:29.774Z",
+      "updatedAt": "2026-02-23T11:33:29.774Z"
+    },
+    {
+      "id": "36c1",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "+919707112233",
+      "propertyId": "2",
+      "source": "brochure_download",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-23T15:08:07.543Z",
+      "updatedAt": "2026-02-23T15:08:07.543Z"
+    },
+    {
+      "id": "9f1e",
+      "name": "Bappi Das",
+      "phone": "7567568686",
+      "email": "mail4bappidas@gmail.com",
+      "propertyId": "2",
+      "source": "financial-assessment",
+      "message": "Financial Assessment Lead | Score: 95/100 | Occupation: salaried | Income: 50+ LPA | Credit: good | EMI: 0 | Employment: 10+ yrs | Down Payment: 30% | Co-applicant: yes (Income: 10-20)",
+      "assessmentData": {
+        "score": 95,
+        "occupation": "salaried",
+        "yearlyIncome": "50+",
+        "employmentYears": "10+",
+        "existingEmi": "0",
+        "creditScore": "good",
+        "downPayment": "30",
+        "hasCoApplicant": "yes",
+        "coApplicantIncome": "10-20",
+        "propertyPrice": 19500000
+      },
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-23T15:12:40.071Z",
+      "updatedAt": "2026-02-23T15:12:40.071Z"
+    },
+    {
+      "id": "e338",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "2313123213",
+      "propertyId": "2",
+      "source": "floorplan_download",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-25T03:51:55.315Z",
+      "updatedAt": "2026-02-25T03:51:55.315Z"
+    },
+    {
+      "id": "e310",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "2313123213",
+      "propertyId": "2",
+      "source": "brochure_download",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-25T03:53:03.171Z",
+      "updatedAt": "2026-02-25T03:53:03.171Z"
+    },
+    {
+      "id": "c6d6",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "2313123213",
+      "message": "I'm interested in Mahindra Blossom",
+      "propertyId": "2",
+      "source": "property_enquiry",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-25T03:53:17.909Z",
+      "updatedAt": "2026-02-25T03:53:17.909Z"
+    },
+    {
+      "id": "f50c",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "+919707112233",
+      "propertyId": "2",
+      "source": "brochure_download",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-25T04:47:10.053Z",
+      "updatedAt": "2026-02-25T04:47:10.053Z"
+    },
+    {
+      "id": "a5e5",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "2313123213",
+      "propertyId": "2",
+      "source": "brochure_download",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-25T05:22:39.543Z",
+      "updatedAt": "2026-02-25T05:22:39.543Z"
+    },
+    {
+      "id": "0ab7",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "2313123213",
+      "message": "I'm interested in Mahindra Blossom",
+      "propertyId": "2",
+      "source": "property_enquiry",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-25T05:23:03.093Z",
+      "updatedAt": "2026-02-25T05:23:03.093Z"
+    },
+    {
+      "id": "933b",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "2313123213",
+      "message": "I'm interested in Sobha Neopolis",
+      "propertyId": "5",
+      "source": "property_enquiry",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-25T05:24:18.359Z",
+      "updatedAt": "2026-02-25T05:24:18.359Z"
+    },
+    {
+      "id": "27ac",
+      "name": "Bappi Das",
+      "phone": "9999999999",
+      "email": "mail4bappidas@gmail.com",
+      "propertyId": "2",
+      "source": "financial-assessment",
+      "message": "Financial Assessment Lead | Score: 89/100 | Occupation: self-employed | Monthly Income: 50000-100000 | Credit: good | EMI: 1-10000 (Tenure: 12-24) | Employment: 5-10 yrs | Down Payment: 20% | Co-applicant: no",
+      "assessmentData": {
+        "score": 89,
+        "occupation": "self-employed",
+        "monthlyIncome": "50000-100000",
+        "employmentYears": "5-10",
+        "existingEmi": "1-10000",
+        "emiTenure": "12-24",
+        "creditScore": "good",
+        "downPayment": "20",
+        "hasCoApplicant": "no",
+        "coApplicantIncome": "",
+        "propertyPrice": 19500000
+      },
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-25T05:54:28.325Z",
+      "updatedAt": "2026-02-25T05:54:28.325Z"
+    },
+    {
+      "id": "ecec",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "2313123213",
+      "propertyId": "2",
+      "source": "brochure_download",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-26T11:35:48.791Z",
+      "updatedAt": "2026-02-26T11:35:48.791Z"
+    },
+    {
+      "id": "264c",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "231312321355",
+      "message": "I'm interested in Mahindra Blossom",
+      "propertyId": "2",
+      "source": "property_enquiry",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-26T11:36:05.312Z",
+      "updatedAt": "2026-02-26T11:36:05.312Z"
+    },
+    {
+      "id": "08ec",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "231312321355",
+      "propertyId": "5",
+      "source": "brochure_download",
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-26T11:38:59.754Z",
+      "updatedAt": "2026-02-26T11:38:59.754Z"
+    },
+    {
+      "id": "f81c",
+      "name": "Bappi Das",
+      "email": "mail4bappidas@gmail.com",
+      "phone": "2313123213",
+      "propertyId": "2",
+      "source": "brochure_download",
+      "status": "contacted",
+      "notes": [
+        {
+          "text": "fhvhgg",
+          "addedAt": "2026-02-28T14:28:19.567Z"
+        }
+      ],
+      "createdAt": "2026-02-28T14:21:19.209Z",
+      "updatedAt": "2026-02-28T14:28:19.567Z"
+    },
+    {
+      "id": "a850",
+      "name": "Bappi Das",
+      "phone": "2313123213",
+      "email": "mail4bappidas@gmail.com",
+      "propertyId": "2",
+      "source": "financial-assessment",
+      "message": "Financial Assessment Lead | Score: 64/100 | Occupation: salaried | Monthly Income: 250000+ | Credit: excellent | EMI: 50000+ (Tenure: 24+) | Employment: 5-10 yrs | Down Payment: 20% | Co-applicant: yes (Income: 50000-100000)",
+      "assessmentData": {
+        "score": 64,
+        "occupation": "salaried",
+        "monthlyIncome": "250000+",
+        "exactMonthlyIncome": "",
+        "employmentYears": "5-10",
+        "existingEmi": "50000+",
+        "emiTenure": "24+",
+        "creditScore": "excellent",
+        "downPayment": "20",
+        "hasCoApplicant": "yes",
+        "coApplicantIncome": "50000-100000",
+        "propertyPrice": 19500000
+      },
+      "status": "new",
+      "notes": [],
+      "createdAt": "2026-02-28T14:24:05.617Z",
+      "updatedAt": "2026-02-28T14:24:05.617Z"
+    }
+  ],
+  "neighborhoods": [
+    {
+      "id": "1",
+      "name": "Electronic City",
+      "image": "https://placehold.co/400x300/goldenrod/white?text=Electronic+City",
+      "propertyCount": 1,
+      "city": "Bangalore",
+      "isActive": true
+    },
+    {
+      "id": "2",
+      "name": "Marathahalli",
+      "image": "https://placehold.co/400x300/goldenrod/white?text=Marathahalli",
+      "propertyCount": 78,
+      "city": "Bangalore",
+      "isActive": true
+    },
+    {
+      "id": "3",
+      "name": "Hebbal",
+      "image": "https://placehold.co/400x300/goldenrod/white?text=Hebbal",
+      "propertyCount": 41,
+      "city": "Bangalore",
+      "isActive": true
+    },
+    {
+      "id": "4",
+      "name": "Whitefield",
+      "image": "https://placehold.co/400x300/goldenrod/white?text=Whitefield",
+      "propertyCount": 95,
+      "city": "Bangalore",
+      "isActive": true
+    },
+    {
+      "id": "5",
+      "name": "Sarjapur Road",
+      "image": "https://placehold.co/400x300/goldenrod/white?text=Sarjapur+Road",
+      "propertyCount": 67,
+      "city": "Bangalore",
+      "isActive": true
+    },
+    {
+      "id": "6",
+      "name": "Kanakapura Road",
+      "image": "https://placehold.co/400x300/goldenrod/white?text=Kanakapura+Road",
+      "propertyCount": 34,
+      "city": "Bangalore",
+      "isActive": true
+    }
+  ],
+  "partners": [
+    {
+      "id": "1",
+      "name": "Prestige",
+      "logo": "https://placehold.co/200x80/goldenrod/white?text=Prestige",
+      "website": "https://www.prestigeconstructions.com",
+      "isActive": true,
+      "order": 1
+    },
+    {
+      "id": "2",
+      "name": "Brigade",
+      "logo": "https://placehold.co/200x80/goldenrod/white?text=Brigade",
+      "website": "https://www.brigadegroup.com",
+      "isActive": true,
+      "order": 2
+    },
+    {
+      "id": "3",
+      "name": "Sobha",
+      "logo": "https://placehold.co/200x80/goldenrod/white?text=Sobha",
+      "website": "https://www.sobha.com",
+      "isActive": true,
+      "order": 3
+    },
+    {
+      "id": "4",
+      "name": "Godrej",
+      "logo": "https://placehold.co/200x80/goldenrod/white?text=Godrej",
+      "website": "https://www.godrejproperties.com",
+      "isActive": true,
+      "order": 4
+    },
+    {
+      "id": "5",
+      "name": "Puravankara",
+      "logo": "https://placehold.co/200x80/goldenrod/white?text=Puravankara",
+      "website": "https://www.puravankara.com",
+      "isActive": true,
+      "order": 5
+    },
+    {
+      "id": "6",
+      "name": "Mahindra",
+      "logo": "https://placehold.co/200x80/goldenrod/white?text=Mahindra",
+      "website": "https://www.mahindralifespaces.com",
+      "isActive": true,
+      "order": 6
+    }
+  ],
+  "faqs": [
+    {
+      "id": "1",
+      "question": "What is the buying process?",
+      "answer": "The buying process involves: 1) Property search and shortlisting, 2) Site visits and evaluation, 3) Price negotiation, 4) Legal verification of documents, 5) Booking and agreement signing, 6) Home loan processing (if applicable), 7) Registration and stamp duty payment, 8) Possession and handover. Our team at H.O.M Advisory guides you through every step.",
+      "category": "buying",
+      "order": 1,
+      "isActive": true
+    },
+    {
+      "id": "2",
+      "question": "How do I schedule a property viewing??",
+      "answer": "You can schedule a property viewing by: 1) Clicking the 'Schedule Visit' button on any property page, 2) Calling us at (555) 123-4567, 3) Filling out the contact form on our website, or 4) Sending us an email at info@homadvisory.com. Our team will confirm and arrange the visit at your convenience.",
+      "category": "general",
+      "order": 4,
+      "isActive": true
+    },
+    {
+      "id": "3",
+      "question": "What documents do I need to buy a property?",
+      "answer": "To buy a property in India, you typically need: PAN Card, Aadhaar Card, Passport-size photos, Bank statements (last 6 months), Salary slips (last 3 months) or ITR (for self-employed), Property documents from seller including Title Deed, Encumbrance Certificate, Khata Certificate, and RERA registration details. Our legal team helps verify all documents.",
+      "category": "buying",
+      "order": 2,
+      "isActive": true
+    },
+    {
+      "id": "4",
+      "question": "How long does it take to close a deal?",
+      "answer": "The timeline varies depending on several factors. For a ready-to-move property with clear documents, the process from booking to registration typically takes 30-45 days. If a home loan is involved, add another 15-20 days for loan processing. For under-construction properties, you make staged payments per the builder's schedule.",
+      "category": "buying",
+      "order": 3,
+      "isActive": true
+    },
+    {
+      "id": "5",
+      "question": "What are the additional costs beyond the property price?",
+      "answer": "Beyond the base property price, you should budget for: Registration charges (1% of property value in Karnataka), Stamp duty (5% for properties above Rs 45 lakhs), GST (5% for under-construction, 0% for ready-to-move), Legal fees, Home loan processing fees, Maintenance deposit, and Parking charges (if not included). H.O.M Advisory provides a complete cost breakdown upfront.",
+      "category": "buying",
+      "order": 5,
+      "isActive": true
+    },
+    {
+      "id": "6",
+      "question": "How does H.O.M Advisory help with home loans?",
+      "answer": "H.O.M Advisory partners with leading banks and NBFCs to offer you the best home loan rates. We help with: Pre-approval of loan eligibility, Document preparation, Application submission to multiple banks, Rate negotiation, and EMI structuring. Our service is completely free for homebuyers.",
+      "category": "home-loan",
+      "order": 6,
+      "isActive": true
+    },
+    {
+      "id": "7",
+      "question": "How do I sell my property through H.O.M Advisory?",
+      "answer": "To sell your property, simply list it on our platform by filling out the Sell/Let form. Our team will evaluate your property, suggest a competitive market price, create a professional listing with photographs, and market it to our extensive buyer network. We handle all enquiries, site visits, and negotiations on your behalf.",
+      "category": "selling",
+      "order": 7,
+      "isActive": true
+    },
+    {
+      "id": "8",
+      "question": "What is the commission for selling a property?",
+      "answer": "H.O.M Advisory charges a standard brokerage of 1-2% of the transaction value for sale properties. This covers property listing, marketing, buyer screening, negotiation assistance, and documentation support. The exact percentage depends on the property value and location.",
+      "category": "selling",
+      "order": 8,
+      "isActive": true
+    },
+    {
+      "id": "9",
+      "question": "What is the process for renting a property?",
+      "answer": "For tenants: Browse available properties, shortlist preferred options, schedule visits, and once you finalize, we help with rental agreement preparation and move-in. For landlords: List your property, we verify tenants, handle negotiations, and prepare legally compliant rental agreements with police verification.",
+      "category": "renting",
+      "order": 9,
+      "isActive": true
+    },
+    {
+      "id": "10",
+      "question": "What is the security deposit for rented properties in Bangalore?",
+      "answer": "In Bangalore, the standard security deposit is typically 10 months' rent for unfurnished properties. For furnished properties, it can go up to 12 months. This deposit is refundable at the end of the lease period, subject to deductions for any damages. Some areas and newer buildings are now moving to lower deposit models of 3-6 months.",
+      "category": "renting",
+      "order": 10,
+      "isActive": true
+    },
+    {
+      "id": "11",
+      "question": "What is the maximum home loan amount I can get?",
+      "answer": "The maximum home loan amount depends on your income, existing liabilities, credit score, and the property value. Generally, banks finance up to 75-90% of the property value (Loan-to-Value ratio). For properties up to Rs 30 lakhs, LTV can be up to 90%. For properties between Rs 30-75 lakhs, LTV is up to 80%. For above Rs 75 lakhs, it's typically 75%.",
+      "category": "home-loan",
+      "order": 11,
+      "isActive": true
+    },
+    {
+      "id": "12",
+      "question": "What is the difference between fixed and floating interest rates?",
+      "answer": "Fixed interest rates remain constant throughout the loan tenure, providing predictable EMIs. Floating rates are linked to the RBI repo rate and can change periodically. While floating rates are usually 1-2% lower than fixed rates initially, they carry the risk of increasing over time. Most homebuyers in India prefer floating rates due to the overall lower cost and RBI's prohibition on prepayment penalties for floating-rate loans.",
+      "category": "home-loan",
+      "order": 12,
+      "isActive": true
+    },
+    {
+      "id": "13",
+      "question": "What is RERA and how does it protect homebuyers?",
+      "answer": "RERA (Real Estate Regulatory Authority) is a regulatory body established under the Real Estate (Regulation and Development) Act, 2016. It protects homebuyers by: mandating project registration before advertising, ensuring 70% of funds are kept in an escrow account, requiring developers to disclose project details and timelines, providing a mechanism for grievance redressal, and imposing penalties on builders for delays or non-compliance. Always verify RERA registration before buying.",
+      "category": "legal",
+      "order": 13,
+      "isActive": true
+    },
+    {
+      "id": "14",
+      "question": "What legal checks should I do before buying a property?",
+      "answer": "Essential legal checks include: 1) Title deed verification — ensure clear ownership chain for at least 30 years, 2) Encumbrance Certificate (EC) — confirms no pending loans or legal disputes, 3) Khata Certificate and extract — confirms property is in municipal records, 4) RERA registration — mandatory for new projects, 5) Approved building plan, 6) Occupancy Certificate (for ready properties), 7) Tax payment receipts, 8) NOC from relevant authorities. Our legal team handles all these verifications.",
+      "category": "legal",
+      "order": 16,
+      "isActive": true
+    },
+    {
+      "id": "15",
+      "question": "Does H.O.M Advisory offer services in cities other than Bangalore?",
+      "answer": "Currently, H.O.M Advisory primarily operates in Bangalore and surrounding areas. However, we have a network of trusted partners in Mumbai, Hyderabad, Chennai, and Pune. We're actively expanding our direct operations to these cities. Contact us for specific requirements in other cities, and we'll connect you with our partner network.",
+      "category": "general",
+      "order": 14,
+      "isActive": true
+    },
+    {
+      "id": "16",
+      "question": "Are H.O.M Advisory's services free for homebuyers?",
+      "answer": "Yes, our property search, advisory, and site visit coordination services are completely free for homebuyers. We earn our commission from the developer or seller. For specialized services like legal verification, home loan processing, and interior designing, transparent fees are communicated upfront before you engage.",
+      "category": "general",
+      "order": 13,
+      "isActive": true
+    }
+  ],
+  "articles": [
+    {
+      "id": "1",
+      "title": "Premium Apartments in Mumbai: Top 5 Luxury Towers",
+      "slug": "premium-apartments-mumbai-top-luxury-towers",
+      "excerpt": "Discover the most exclusive luxury apartment towers in Mumbai, from South Mumbai's iconic addresses to the emerging skyline of Lower Parel and Worli.",
+      "content": "Mumbai has always been the epicenter of luxury real estate in India. From the iconic Marine Drive to the bustling Bandra-Worli Sea Link corridor, the city offers some of the most prestigious addresses in the country.\n\n## 1. World One, Lower Parel\nStanding at 442 meters, World One is one of the tallest residential towers in the world. It offers 3, 4, and 5 BHK apartments with breathtaking views of the Mumbai skyline.\n\n## 2. Palais Royale, Worli\nThis ultra-luxury tower features private elevators, Italian marble throughout, and an infinity pool on the 35th floor.\n\n## 3. Lodha Altamount, South Mumbai\nLocated in one of the most expensive zip codes in the world, Altamount Road, this tower offers 4 and 5 BHK residences with floor-to-ceiling windows and panoramic sea views.\n\n## 4. Oberoi Three Sixty West, Worli\nDesigned by Kohn Pedersen Fox Associates, this twin-tower project offers world-class amenities including a sky lounge, cigar room, and private cinema.\n\n## 5. Rustomjee Crown, Prabhadevi\nThis Bandra-Worli Sea Link facing tower features 3 and 4 BHK apartments with imported fittings, smart home automation, and concierge services.\n\n## Key Takeaways\n- Mumbai's luxury market continues to grow at 8-10% annually\n- Sea-facing properties command a 40-60% premium\n- New-age luxury includes smart home features and sustainability\n- Average price per sqft in premium areas ranges from Rs 50,000 to Rs 1,50,000",
+      "image": "https://placehold.co/800x400/1B2A4A/C9A86C?text=Mumbai+Luxury+Towers",
+      "category": "market-trends",
+      "tags": [
+        "mumbai",
+        "luxury",
+        "apartments",
+        "investment"
+      ],
+      "author": "H.O.M Advisory Team",
+      "readTime": 6,
+      "publishedAt": "2025-12-01T10:00:00Z",
+      "isActive": true,
+      "seoTitle": "Top 5 Luxury Apartment Towers in Mumbai | H.O.M Advisory",
+      "seoDescription": "Explore Mumbai's most premium luxury apartment towers. Detailed guide to the best high-rise living options in India's financial capital.",
+      "isTrending": true,
+      "trendingOrder": 1
+    },
+    {
+      "id": "2",
+      "title": "Discover Elegance in Bangalore's Most Sought-After Villas",
+      "slug": "elegance-bangalore-sought-after-villas",
+      "excerpt": "Bangalore's villa market is booming. Explore the best villa communities that combine luxury living with nature, from Whitefield to North Bangalore.",
+      "content": "Bangalore's villa market has seen tremendous growth, driven by remote work flexibility and the desire for spacious living. Here's our curated guide to the finest villa communities.\n\n## Why Villas in Bangalore?\n- Work-from-home has made space a priority\n- Bangalore's pleasant climate is perfect for villa living\n- Appreciation rates of 12-15% in premium locations\n- Growing infrastructure with metro and road expansions\n\n## Top Villa Communities\n\n### 1. Prestige Lakeside Habitat, Varthur\nSpread across 102 acres, this mega township offers villas and villaments with lake views. The community includes retail, healthcare, and educational facilities within the premises.\n\n### 2. Total Environment, JP Nagar\nKnown for their boutique approach to villa design, Total Environment creates nature-integrated homes with extensive landscaping and unique architectural styles.\n\n### 3. Embassy Pristine, Devanahalli\nLocated near the international airport, these luxury villas offer spacious plots with world-class amenities and excellent connectivity to North Bangalore's growth corridor.\n\n## Investment Outlook\nVillas in Bangalore have shown consistent appreciation, especially in the north and east corridors near the airport and IT hubs. The average appreciation rate has been 12-15% per annum in premium villa communities.\n\n## Buyer Checklist\n- Verify RERA registration\n- Check land title and zoning permissions\n- Assess water and electricity availability\n- Review the builder's track record\n- Understand maintenance charges and community rules",
+      "image": "https://placehold.co/800x400/1B2A4A/C9A86C?text=Bangalore+Villas",
+      "category": "buying-guide",
+      "tags": [
+        "bangalore",
+        "villas",
+        "luxury",
+        "investment"
+      ],
+      "author": "H.O.M Advisory Team",
+      "readTime": 7,
+      "publishedAt": "2025-11-15T10:00:00Z",
+      "isActive": true,
+      "seoTitle": "Best Luxury Villas in Bangalore 2025 | H.O.M Advisory",
+      "seoDescription": "Complete guide to Bangalore's finest villa communities. From Whitefield to North Bangalore, find your dream villa.",
+      "isTrending": true,
+      "trendingOrder": 2
+    },
+    {
+      "id": "3",
+      "title": "Exclusive Penthouses: 4 Homes with Rooftop Sky Lounges",
+      "slug": "exclusive-penthouses-rooftop-sky-lounges",
+      "excerpt": "Experience the pinnacle of luxury living with these exclusive penthouses featuring private rooftop sky lounges, infinity pools, and panoramic city views.",
+      "content": "Penthouses represent the ultimate in urban luxury. These homes in the sky offer unparalleled views, exclusive amenities, and the kind of privacy that ground-level homes simply cannot match.\n\n## What Makes a Penthouse Special?\n- Private terraces with panoramic views\n- Double-height living areas\n- Personal pools and sky lounges\n- Dedicated elevator access\n\n## Top Penthouses in India\n\n### 1. The Imperial, Delhi\n12,000 sqft penthouse with private helipad, offering views of the Lutyens' Delhi skyline. Features include a private elevator, temperature-controlled wine cellar, and Italian marble throughout.\n\n### 2. World One, Mumbai\nSky villa at 400m height with wraparound balconies offering 360-degree views of the Arabian Sea and the city skyline.\n\n### 3. Embassy One, Bangalore\nPenthouse with 360-degree views of the city, private terrace garden, and access to an exclusive residents-only sky lounge.\n\n### 4. DLF Camellias, Gurgaon\nUltra-luxury penthouse with butler service, private cinema, temperature-controlled pool, and smart home automation throughout.\n\n## Price Range\nPenthouses in India's top cities range from Rs 10 Cr to Rs 100+ Cr, depending on location and amenities.\n\n## Things to Consider\n- Higher maintenance costs compared to regular apartments\n- Wind and weather exposure on upper floors\n- Structural limitations for customization\n- Resale market may be limited to ultra-HNI buyers",
+      "image": "https://placehold.co/800x400/1B2A4A/C9A86C?text=Luxury+Penthouses",
+      "category": "investment",
+      "tags": [
+        "penthouses",
+        "luxury",
+        "sky-lounge",
+        "premium"
+      ],
+      "author": "H.O.M Advisory Team",
+      "readTime": 5,
+      "publishedAt": "2025-10-20T10:00:00Z",
+      "isActive": true,
+      "seoTitle": "Exclusive Penthouses with Rooftop Lounges in India | H.O.M Advisory",
+      "seoDescription": "Discover India's most exclusive penthouses featuring private rooftop sky lounges and infinity pools.",
+      "isTrending": true,
+      "trendingOrder": 3
+    },
+    {
+      "id": "4",
+      "title": "Understanding RERA: A Complete Guide for Indian Homebuyers",
+      "slug": "understanding-rera-complete-guide-homebuyers",
+      "excerpt": "RERA has transformed the Indian real estate landscape. Learn how this landmark regulation protects your rights as a homebuyer and what you must verify before purchasing.",
+      "content": "The Real Estate (Regulation and Development) Act, commonly known as RERA, was enacted in 2016 and has fundamentally changed how real estate transactions work in India.\n\n## What is RERA?\nRERA is a regulatory framework established by the Government of India to bring transparency, accountability, and efficiency to the real estate sector. Each state has its own RERA authority that oversees compliance.\n\n## Key Protections for Homebuyers\n\n### 1. Mandatory Project Registration\nEvery residential project with more than 8 units or land exceeding 500 sqm must be registered with RERA before any advertisement or sale. This ensures all project details are publicly available.\n\n### 2. Escrow Account Requirement\nDevelopers must deposit 70% of the project funds in a dedicated escrow account. This prevents diversion of funds to other projects and ensures your money is used for your project.\n\n### 3. Carpet Area Standardisation\nRERA mandates that pricing must be based on carpet area (usable area), not super built-up area. This eliminates ambiguity in what you're paying for.\n\n### 4. Timely Delivery\nDevelopers must commit to a delivery timeline. Delays attract penalties, and buyers can claim compensation or even withdraw with full refund plus interest.\n\n### 5. Defect Liability Period\nBuilders are liable for structural defects for 5 years after possession. Any defects must be rectified within 30 days at the builder's expense.\n\n## How to Verify RERA Registration\n1. Visit your state's RERA website (e.g., rera.karnataka.gov.in for Karnataka)\n2. Search by project name, developer name, or RERA number\n3. Verify project details match what the developer claims\n4. Check for any complaints or violations against the project\n\n## State-wise RERA Websites\n- Karnataka: rera.karnataka.gov.in\n- Maharashtra: maharera.mahaonline.gov.in\n- Tamil Nadu: rera.tn.gov.in\n- Telangana: rera.telangana.gov.in\n\n## Important Tips\n- Never invest in a project without valid RERA registration\n- Keep copies of all RERA-related documents\n- Report any violations to the RERA authority\n- Understand that RERA covers both residential and commercial projects",
+      "image": "https://placehold.co/800x400/1B2A4A/C9A86C?text=RERA+Guide",
+      "category": "legal",
+      "tags": [
+        "rera",
+        "legal",
+        "homebuyer-guide",
+        "regulation"
+      ],
+      "author": "H.O.M Advisory Team",
+      "readTime": 8,
+      "publishedAt": "2025-12-10T10:00:00Z",
+      "isActive": true,
+      "seoTitle": "Understanding RERA: Complete Guide for Indian Homebuyers | H.O.M Advisory",
+      "seoDescription": "Comprehensive guide to RERA regulations in India. Learn how RERA protects homebuyers and what to verify before buying property.",
+      "isTrending": false,
+      "trendingOrder": null
+    },
+    {
+      "id": "5",
+      "title": "Bangalore Real Estate Market Trends 2025: Where to Invest Next",
+      "slug": "bangalore-real-estate-market-trends-2025",
+      "excerpt": "Bangalore continues to lead India's residential real estate growth. Discover the hottest corridors, price trends, and investment opportunities for 2025.",
+      "content": "Bangalore has cemented its position as India's most dynamic real estate market, driven by a robust IT sector, growing infrastructure, and increasing demand from young professionals and families.\n\n## Market Overview\nThe Bangalore residential market recorded over 65,000 unit launches in 2024, with a healthy absorption rate of 72%. The average price appreciation was 8-12% across key corridors.\n\n## Top Investment Corridors\n\n### 1. North Bangalore (Devanahalli-Bagalur)\nWith the airport as the anchor, this corridor is witnessing massive infrastructure development including the upcoming Aerospace SEZ, metro connectivity, and peripheral ring road. Property prices have appreciated 15-20% in the last year.\n\n### 2. Sarjapur Road\nThe IT corridor connecting Electronic City to Whitefield continues to attract buyers. New developments offer competitive pricing with excellent future appreciation potential.\n\n### 3. Whitefield-ITPL Corridor\nMature market with established social infrastructure. The upcoming metro line will further boost connectivity and property values.\n\n### 4. Kanakapura Road (South Bangalore)\nEmerging as the new affordable luxury corridor with large township projects by top developers. NICE Road connectivity is a major advantage.\n\n## Price Trends\n| Corridor | Avg Price/sqft 2024 | Avg Price/sqft 2025 | Growth |\n|----------|-------------------|-------------------|--------|\n| North Bangalore | Rs 5,200 | Rs 6,000 | 15% |\n| Sarjapur Road | Rs 6,800 | Rs 7,500 | 10% |\n| Whitefield | Rs 7,500 | Rs 8,200 | 9% |\n| Kanakapura Road | Rs 5,500 | Rs 6,100 | 11% |\n\n## What's Driving Growth?\n- IT sector expansion with 5 lakh+ new hires projected\n- Metro Phase 2 and 3 progress\n- Peripheral Ring Road development\n- Growing startup ecosystem\n- Remote work driving demand for larger homes\n\n## Investment Tips for 2025\n1. Focus on pre-launch projects near upcoming metro stations\n2. Look at integrated townships for long-term appreciation\n3. Verify RERA compliance before investing\n4. Consider rental yield potential — Bangalore offers 3-4% yields\n5. Track infrastructure announcements for emerging corridors",
+      "image": "https://placehold.co/800x400/1B2A4A/C9A86C?text=Bangalore+Market+2025",
+      "category": "market-trends",
+      "tags": [
+        "bangalore",
+        "market-trends",
+        "investment",
+        "2025"
+      ],
+      "author": "H.O.M Advisory Team",
+      "readTime": 9,
+      "publishedAt": "2025-12-15T10:00:00Z",
+      "isActive": true,
+      "seoTitle": "Bangalore Real Estate Market Trends 2025 | Investment Guide | H.O.M Advisory",
+      "seoDescription": "Comprehensive analysis of Bangalore's real estate market in 2025. Price trends, top corridors, and investment opportunities.",
+      "isTrending": false,
+      "trendingOrder": null
+    },
+    {
+      "id": "6",
+      "title": "First-Time Homebuyer's Checklist: 10 Steps to Your Dream Home",
+      "slug": "first-time-homebuyer-checklist-10-steps",
+      "excerpt": "Buying your first home in India? Follow this comprehensive 10-step checklist covering everything from budgeting and loan eligibility to registration and possession.",
+      "content": "Buying your first home is one of the most significant financial decisions you'll ever make. This comprehensive guide walks you through every step of the process.\n\n## Step 1: Assess Your Budget\nBefore you start browsing properties, understand your true budget. Factor in:\n- Down payment (typically 10-25% of property value)\n- Home loan EMI (should not exceed 40% of monthly income)\n- Registration and stamp duty (6-8% of property value)\n- GST (5% for under-construction, nil for ready-to-move)\n- Interior and furnishing costs\n- Moving expenses\n\n## Step 2: Check Your Loan Eligibility\nGet pre-approved for a home loan before property hunting. This gives you:\n- A clear budget range\n- Stronger negotiating position\n- Faster closing when you find the right property\n\n## Step 3: Research Locations\nConsider these factors when choosing a location:\n- Proximity to workplace\n- Social infrastructure (schools, hospitals, shopping)\n- Future development plans\n- Public transport connectivity\n- Safety and neighbourhood vibe\n\n## Step 4: Shortlist Properties\nVisit at least 5-8 properties before making a decision. Compare them on:\n- Price per sqft (carpet area)\n- Builder reputation and track record\n- Construction quality\n- Amenities and maintenance charges\n- Possession timeline\n\n## Step 5: Verify Documents\nNever skip legal due diligence:\n- Title deed and ownership chain\n- RERA registration\n- Encumbrance Certificate\n- Building plan approval\n- Land use and zoning compliance\n\n## Step 6: Negotiate the Price\nDon't accept the first price. Research comparable properties and negotiate based on:\n- Market rates in the area\n- Payment plan flexibility\n- Freebies (parking, club membership)\n- Floor and view premium\n\n## Step 7: Book and Sign Agreement\nOnce finalized:\n- Pay the booking amount (usually 5-10%)\n- Review the sale agreement carefully\n- Ensure all promises are in writing\n- Keep copies of all receipts\n\n## Step 8: Process Home Loan\nSubmit your loan application with:\n- Property documents\n- Income proof and bank statements\n- KYC documents\n- Property valuation report\n\n## Step 9: Registration\nAfter loan approval:\n- Pay stamp duty and registration charges\n- Both buyer and seller must be present\n- Get the registered sale deed\n- Apply for property mutation in municipal records\n\n## Step 10: Possession and Move-in\nBefore taking possession:\n- Conduct a thorough inspection\n- Check all fixtures and fittings\n- Verify electricity and water connections\n- Get all original documents from the builder\n- Update address in all official records",
+      "image": "https://placehold.co/800x400/1B2A4A/C9A86C?text=Homebuyer+Checklist",
+      "category": "buying-guide",
+      "tags": [
+        "first-time-buyer",
+        "checklist",
+        "buying-guide",
+        "tips"
+      ],
+      "author": "H.O.M Advisory Team",
+      "readTime": 10,
+      "publishedAt": "2025-11-28T10:00:00Z",
+      "isActive": true,
+      "seoTitle": "First-Time Homebuyer Checklist: 10 Essential Steps | H.O.M Advisory",
+      "seoDescription": "Complete checklist for first-time homebuyers in India. 10 essential steps from budgeting to possession.",
+      "isTrending": false,
+      "trendingOrder": null
+    },
+    {
+      "id": "7",
+      "title": "Smart Interior Design Tips to Maximize Your Apartment Space",
+      "slug": "smart-interior-design-tips-maximize-apartment-space",
+      "excerpt": "Transform your compact apartment into a spacious haven with these expert interior design tips. From multifunctional furniture to smart storage solutions.",
+      "content": "Living in a compact apartment doesn't mean compromising on style or functionality. With smart design choices, you can create a home that feels spacious, organized, and beautiful.\n\n## 1. Embrace Multifunctional Furniture\nInvest in pieces that serve multiple purposes:\n- Sofa-cum-beds for guest rooms\n- Ottoman storage for living rooms\n- Extendable dining tables\n- Murphy beds for studio apartments\n- Coffee tables with hidden storage\n\n## 2. Use Vertical Space Wisely\nDon't let your walls go to waste:\n- Floor-to-ceiling bookshelves\n- Floating shelves in kitchens and bathrooms\n- Tall, narrow storage units\n- Hanging planters and wall gardens\n- Over-door organizers\n\n## 3. Light and Color Strategy\nMake spaces feel larger with:\n- Light, neutral wall colors (whites, creams, pastels)\n- Mirrors to reflect light and create depth\n- Sheer curtains to maximize natural light\n- Strategic task lighting instead of single overhead lights\n- Light-colored flooring\n\n## 4. Kitchen Optimization\nMaximize your kitchen efficiency:\n- Modular kitchen with pull-out drawers\n- Magnetic knife strips and hanging utensil racks\n- Corner units with lazy Susan\n- Under-cabinet lighting\n- Compact appliances designed for Indian cooking\n\n## 5. Bathroom Solutions\n- Wall-mounted vanities to free floor space\n- Glass shower enclosures instead of curtains\n- Recessed medicine cabinets\n- Over-toilet storage units\n\n## 6. Indian-Specific Tips\n- Pooja room integrated into wall niches\n- Shoe rack designs for Indian entryways\n- Separate wet and dry kitchen zones\n- Mosquito-proof window solutions that don't block light\n- Vastu-compliant layout adjustments\n\n## Budget-Friendly Ideas\nYou don't need a massive budget to transform your space:\n- DIY accent walls with paint or wallpaper\n- Repurpose old furniture with a fresh coat of paint\n- Use plants as natural decor elements\n- Switch to curtain dividers instead of walls\n- Invest in good lighting — it transforms any space",
+      "image": "https://placehold.co/800x400/1B2A4A/C9A86C?text=Interior+Design+Tips",
+      "category": "interior",
+      "tags": [
+        "interior-design",
+        "apartment",
+        "space-saving",
+        "tips"
+      ],
+      "author": "H.O.M Advisory Team",
+      "readTime": 7,
+      "publishedAt": "2025-11-05T10:00:00Z",
+      "isActive": true,
+      "seoTitle": "Smart Interior Design Tips for Apartments | H.O.M Advisory",
+      "seoDescription": "Expert interior design tips to maximize space in your Indian apartment. Multifunctional furniture, storage solutions, and budget-friendly ideas.",
+      "isTrending": false,
+      "trendingOrder": null
+    },
+    {
+      "id": "8",
+      "title": "Karnataka Stamp Duty and Registration Charges 2025: Complete Guide",
+      "slug": "karnataka-stamp-duty-registration-charges-2025",
+      "excerpt": "Planning to buy property in Karnataka? Understand the latest stamp duty rates, registration charges, and how to calculate the total cost of property registration.",
+      "content": "Understanding stamp duty and registration charges is crucial for budgeting your property purchase in Karnataka. Here's the complete breakdown for 2025.\n\n## Current Stamp Duty Rates in Karnataka\n\n### For Properties within BBMP Limits (Bangalore)\n- Properties above Rs 45 lakhs: 5% stamp duty\n- Properties between Rs 21-45 lakhs: 3% stamp duty\n- Properties up to Rs 20 lakhs: 2% stamp duty\n\n### For Properties outside BBMP Limits\n- Properties above Rs 35 lakhs: 5% stamp duty\n- Properties between Rs 10-35 lakhs: 3% stamp duty\n- Properties up to Rs 10 lakhs: 2% stamp duty\n\n## Registration Charges\nRegistration charge is standard at 1% of the property value across Karnataka.\n\n## Surcharge and Cess\n- Surcharge: 2% on stamp duty amount\n- Cess: 10% on stamp duty amount\n\n## Example Calculation\nFor a property valued at Rs 1 Crore in Bangalore:\n- Stamp Duty (5%): Rs 5,00,000\n- Registration (1%): Rs 1,00,000\n- Surcharge (2% of stamp duty): Rs 10,000\n- Cess (10% of stamp duty): Rs 50,000\n- **Total: Rs 6,60,000**\n\n## How to Pay\n1. E-Stamping through Stock Holding Corporation of India (SHCIL)\n2. Online payment through the Kaveri portal (kaveri.karnataka.gov.in)\n3. At authorized bank branches\n\n## Important Points\n- Stamp duty is calculated on the higher of agreement value or guidance value\n- Guidance values are updated annually by the government\n- Joint registration with a female co-owner may get concessions in some cases\n- NRI buyers pay the same stamp duty rates\n- Agricultural land has different stamp duty rates\n\n## Documents Required for Registration\n- Sale deed (original and copies)\n- Previous title documents\n- Encumbrance Certificate\n- Khata Certificate and Extract\n- PAN cards of buyer and seller\n- Passport photos\n- Property tax receipts",
+      "image": "https://placehold.co/800x400/1B2A4A/C9A86C?text=Stamp+Duty+Guide",
+      "category": "legal",
+      "tags": [
+        "stamp-duty",
+        "registration",
+        "karnataka",
+        "legal",
+        "costs"
+      ],
+      "author": "H.O.M Advisory Team",
+      "readTime": 6,
+      "publishedAt": "2025-12-18T10:00:00Z",
+      "isActive": true,
+      "seoTitle": "Karnataka Stamp Duty & Registration Charges 2025 | H.O.M Advisory",
+      "seoDescription": "Complete guide to stamp duty and registration charges in Karnataka for 2025. Calculate your property registration costs accurately.",
+      "isTrending": false,
+      "trendingOrder": null
+    },
+    {
+      "id": "9",
+      "title": "North Bangalore: India's Fastest Growing Real Estate Corridor",
+      "slug": "north-bangalore-fastest-growing-real-estate-corridor",
+      "excerpt": "North Bangalore is witnessing unprecedented growth driven by the airport, Aerospace SEZ, and upcoming infrastructure. Discover why investors are bullish on this corridor.",
+      "content": "North Bangalore has emerged as the most promising real estate corridor in the city, attracting both end-users and investors with its rapid infrastructure development and growth potential.\n\n## Why North Bangalore?\n\n### Airport Advantage\nThe Kempegowda International Airport serves as the growth anchor for the entire corridor. With passenger traffic exceeding 35 million annually and the new Terminal 2 operational, the airport ecosystem continues to expand.\n\n### Aerospace SEZ\nThe upcoming Aerospace Special Economic Zone near Devanahalli is expected to create over 50,000 direct jobs, dramatically increasing housing demand in the region.\n\n### Infrastructure Development\n- Six-lane Bellary Road widening\n- Metro Phase 3 (Airport Line) approved\n- Peripheral Ring Road connecting to all parts of Bangalore\n- BIAL IT Investment Region spanning 12,000 acres\n\n## Key Micro-Markets\n\n### Devanahalli\nThe original growth hub near the airport. Mature market with established projects by Brigade, Prestige, and Godrej.\n\n### Bagalur\nEmerging as the value-for-money destination with prices starting from Rs 5,000/sqft. Major projects by Brigade, Provident, and Shriram.\n\n### Yelahanka\nConnects old Bangalore to the new growth corridor. Benefits from metro connectivity and established social infrastructure.\n\n### Hebbal\nThe gateway to North Bangalore. Premium pricing but excellent connectivity to the city center and IT hubs.\n\n## Price Appreciation Potential\nNorth Bangalore has consistently delivered 12-18% annual appreciation over the past 5 years. With the metro line expected by 2028, prices are projected to see another 20-30% jump.\n\n## Risks to Consider\n- Water availability can be a concern in some areas\n- Social infrastructure still developing in newer pockets\n- Traffic congestion on Bellary Road during peak hours\n- Some projects may face delays due to land acquisition issues",
+      "image": "https://placehold.co/800x400/1B2A4A/C9A86C?text=North+Bangalore",
+      "category": "market-trends",
+      "tags": [
+        "north-bangalore",
+        "investment",
+        "airport",
+        "growth"
+      ],
+      "author": "H.O.M Advisory Team",
+      "readTime": 8,
+      "publishedAt": "2025-10-05T10:00:00Z",
+      "isActive": true,
+      "seoTitle": "North Bangalore Real Estate: India's Fastest Growing Corridor | H.O.M Advisory",
+      "seoDescription": "Complete guide to North Bangalore's real estate growth story. Airport corridor, Aerospace SEZ, and investment opportunities.",
+      "isTrending": false,
+      "trendingOrder": null
+    },
+    {
+      "id": "8a37",
+      "title": "Test Article",
+      "slug": "test-article",
+      "category": "buying-guide",
+      "tags": [
+        "test",
+        "article",
+        "sample"
+      ],
+      "image": "https://res.cloudinary.com/dzbiw7t4i/image/upload/v1767606789/main-sample.png",
+      "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla condimentum metus arcu, sed tincidunt dui pharetra eu. Pellentesque quis tincidunt metus. Aenean nisi dolor, tincidunt a facilisis sed, blandit in justo. Fusce vel nisi ac diam sagittis auctor vel ut nisl. Sed pulvinar magna vitae dui posuere sagittis. Suspendisse facilisis eu turpis aliquam laoreet. In quis orci at felis commodo laoreet. Phasellus nec augue egestas, dignissim neque ut, vulputate mi. Curabitur gravida neque massa, non iaculis metus faucibus vitae.\n\nIn egestas massa quis lorem tincidunt, vel sollicitudin ante volutpat. Morbi vitae velit sodales, iaculis nulla ac, condimentum eros. Nullam mattis scelerisque dolor eu rutrum. Pellentesque efficitur eu lectus rhoncus efficitur. Nam dolor mauris, finibus efficitur augue sit amet, scelerisque aliquet arcu. Suspendisse potenti. Nam et lectus quis ipsum porttitor tempus. Phasellus tempus, quam nec placerat volutpat, quam erat sodales lectus, in convallis urna eros vel massa. Donec non turpis erat. Nulla facilisi. Vestibulum sed ligula ac lacus suscipit fermentum nec eu risus. In magna sem, fringilla in lacus vitae, vestibulum pulvinar nisi. Integer ullamcorper, diam id fermentum pellentesque, diam nulla rutrum lectus, vitae aliquam ipsum magna feugiat sapien. Nunc ac tincidunt neque, pulvinar commodo lectus. Etiam in justo in ligula tristique venenatis.\n\nAenean sit amet ex eleifend, posuere velit in, ultricies mi. Aliquam interdum, ipsum sit amet sodales commodo, nunc libero finibus lacus, vitae hendrerit sem tortor eget nisl. Duis eleifend eros eu aliquet accumsan. Praesent ornare purus libero, id egestas augue pellentesque vitae. Duis placerat sollicitudin justo, sit amet congue est fermentum eu. Ut laoreet rhoncus lorem, id imperdiet justo vulputate at. Mauris posuere a massa elementum consectetur. Nunc iaculis sapien sed ultricies venenatis.\n\nAenean non rhoncus risus. Aliquam lacus mi, eleifend ac dolor vitae, posuere interdum orci. Donec quis cursus leo, ut malesuada nulla. Pellentesque ultricies tellus a magna eleifend, blandit commodo metus pharetra. Quisque placerat turpis in iaculis hendrerit. Quisque facilisis dui ligula, a tempus mi interdum at. In vestibulum lorem eget sagittis fermentum. Nullam eget enim scelerisque nunc ornare dictum. Fusce felis ex, vehicula non interdum eu, convallis non risus. Etiam vestibulum at velit in porttitor. Nunc tincidunt condimentum arcu vitae tincidunt. Aenean ultricies pretium massa, quis tincidunt odio auctor vitae. Quisque consequat iaculis ullamcorper. Aenean eget enim at leo egestas lacinia. Nulla facilisi.\n\nMauris eleifend eleifend ipsum, ac bibendum est volutpat vel. Vestibulum ex mauris, dapibus eu interdum at, egestas ac risus. Nulla eget ultrices tortor. Quisque vel consequat dui. Cras quis euismod neque. Nunc et libero et ex interdum blandit. Phasellus sed sem eu neque ultrices molestie. Pellentesque ut nisl nec eros dignissim molestie vel et elit. Fusce vel sagittis turpis, porta tincidunt felis. Aenean dui enim, volutpat sit amet fringilla sit amet, ornare in felis. Phasellus sit amet tempus felis. Pellentesque in bibendum nibh. In id tellus id justo convallis interdum. Interdum et malesuada fames ac ante ipsum primis in faucibus. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.",
+      "excerpt": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla condimentum metus arcu, sed tincidunt dui pharetra eu. Pellentesque quis tincidunt metus. Aenean nisi dolor, tincidunt a facilisis sed, b",
+      "author": "H.O.M Advisory Team",
+      "readTime": 5,
+      "seoTitle": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+      "seoDescription": "",
+      "isActive": true,
+      "publishedAt": "2026-02-25T02:56:36.647Z",
+      "isTrending": false,
+      "trendingOrder": null
+    }
+  ],
+  "siteSettings": {
+    "contactInfo": {
+      "phone": "(555) 123-4567",
+      "email": "info@homadvisory.com",
+      "address": "123 Luxury Ave, Suite 100, Bangalore, Karnataka 560001"
+    },
+    "socialLinks": {
+      "instagram": "https://instagram.com/homadvisory",
+      "facebook": "https://facebook.com/homadvisory",
+      "twitter": "https://twitter.com/homadvisory",
+      "linkedin": "https://linkedin.com/company/homadvisory"
+    },
+    "newsletterText": "Get latest real estate updates in your inbox",
+    "heroText": {
+      "title": "Find Your Dream Home",
+      "subtitle": "Discover the perfect property from our exclusive collection!!!",
+      "backgroundMedia": "https://video.gumlet.io/688f392c0f894537edc335ad/68a7315019535c52efc9edc9/download.mp4",
+      "backgroundImage": "https://res.cloudinary.com/dzbiw7t4i/image/upload/v1767606781/samples/balloons.jpg"
+    },
+    "tagline": "ELEVATING EVERY EXPERIENCE IN REAL ESTATE",
+    "companyName": "H.O.M Advisory",
+    "companySubtitle": "HOME OFFICE MARKET",
+    "companyDescription": "Your connection to the finest homes and experiences no matter the destination or lifestyle.",
+    "footerLinks": {
+      "homes": [
+        "Buy",
+        "Rent",
+        "Sell/Let"
+      ],
+      "offices": [
+        "Flexible Workspace",
+        "Direct Lease",
+        "Retails"
+      ],
+      "market": [
+        "Home Loans",
+        "Legal",
+        "Home Interiors"
+      ]
+    },
+    "footerLinkGroups": [
+      {
+        "title": "Homes",
+        "links": [
+          {
+            "label": "Buy",
+            "path": "/buy/ready-to-move"
+          },
+          {
+            "label": "Rent",
+            "path": "/rent/apartments"
+          },
+          {
+            "label": "Sell/Let",
+            "path": "/sell-let"
+          }
+        ]
+      },
+      {
+        "title": "Offices",
+        "links": [
+          {
+            "label": "Flexible Workspace",
+            "path": "/properties"
+          },
+          {
+            "label": "Direct Lease",
+            "path": "/properties"
+          },
+          {
+            "label": "Retails",
+            "path": "/properties"
+          }
+        ]
+      },
+      {
+        "title": "Market",
+        "links": [
+          {
+            "label": "Home Loans",
+            "path": "/buyer-assistance/home-loan"
+          },
+          {
+            "label": "Legal",
+            "path": "/buyer-assistance/legal-assistance"
+          },
+          {
+            "label": "Home Interiors",
+            "path": "/buyer-assistance/interior-designing"
+          }
+        ]
+      }
+    ],
+    "footerGallery": [
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop"
+    ],
+    "newsletterSubtitle": "Subscribe & Stay Updated"
+  },
+  "adminUsers": [
+    {
+      "id": "1",
+      "name": "Super Admin",
+      "email": "admin@homadvisory.com",
+      "password": "admin@123",
+      "role": "admin",
+      "isActive": true,
+      "avatar": null,
+      "createdAt": "2025-01-15T10:00:00.000Z",
+      "updatedAt": "2025-01-15T10:00:00.000Z"
+    },
+    {
+      "id": "2",
+      "name": "Manager User",
+      "email": "manager@homadvisory.com",
+      "password": "manager@123",
+      "role": "manager",
+      "isActive": true,
+      "avatar": null,
+      "createdAt": "2025-01-15T10:00:00.000Z",
+      "updatedAt": "2025-01-15T10:00:00.000Z"
+    },
+    {
+      "id": "3",
+      "name": "Sales Executive",
+      "email": "sales@homadvisory.com",
+      "password": "sales@123",
+      "role": "sales",
+      "isActive": true,
+      "avatar": null,
+      "createdAt": "2025-01-15T10:00:00.000Z",
+      "updatedAt": "2025-01-15T10:00:00.000Z"
+    }
+  ]
+}

@@ -1,0 +1,231 @@
+.footer {
+  background-color: #1B2A4A;
+  color: #fff;
+}
+
+/* Top Section */
+.footerTop {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 60px 24px 48px;
+  display: flex;
+  gap: 48px;
+  align-items: flex-start;
+}
+
+.brandSection {
+  flex: 1;
+  min-width: 0;
+}
+
+.brandLogo {
+  height: 48px;
+  width: auto;
+  margin-bottom: 12px;
+  filter: brightness(0) invert(1);
+}
+
+.brandSubtitle {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+  margin-bottom: 16px;
+}
+
+.brandTagline {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 20px;
+  max-width: 340px;
+}
+
+.brandElevating {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+  font-style: italic;
+  margin-bottom: 24px;
+}
+
+.socialIcons {
+  display: flex;
+  gap: 12px;
+}
+
+.socialIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 18px;
+  transition: border-color var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
+  text-decoration: none;
+}
+
+.socialIcon:hover {
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+  background-color: rgba(201, 168, 108, 0.1);
+}
+
+/* Image Collage — 3x2 uniform grid for exactly 6 images */
+.imageCollage {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 6px;
+  width: 380px;
+}
+
+.collageCell {
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+}
+
+.collageImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.collageFallback {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Bottom Columns */
+.footerBottom {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+}
+
+.footerColumn h4 {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #fff;
+}
+
+.footerLink {
+  display: block;
+  padding: 4px 0;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.footerLink:hover {
+  color: var(--color-secondary);
+}
+
+.contactItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.contactItem a {
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.contactItem a:hover {
+  color: var(--color-secondary);
+}
+
+.contactIcon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 16px;
+  color: var(--color-secondary);
+}
+
+/* Copyright */
+.copyright {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  padding: 20px 24px;
+  font-size: 0.813rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Tablet */
+@media (max-width: 960px) {
+  .footerTop {
+    flex-direction: column;
+    padding: 40px 20px 32px;
+    gap: 32px;
+  }
+
+  .brandTagline {
+    max-width: none;
+  }
+
+  .imageCollage {
+    width: 100%;
+  }
+
+  .footerBottom {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 0 20px 32px;
+    gap: 24px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .footerTop {
+    padding: 32px 16px 24px;
+    gap: 24px;
+  }
+
+  .imageCollage {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .footerBottom {
+    grid-template-columns: 1fr 1fr;
+    padding: 0 16px 24px;
+    gap: 20px;
+  }
+
+  .footerColumn h4 {
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+  }
+
+  .footerLink {
+    font-size: 0.8125rem;
+  }
+
+  .contactItem {
+    font-size: 0.8125rem;
+  }
+}

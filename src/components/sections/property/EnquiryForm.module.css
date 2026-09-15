@@ -1,0 +1,230 @@
+/* Desktop Sidebar */
+.sidebar {
+  background: var(--color-bg-default);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.formTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.formTitleIcon {
+  font-size: 1.35rem;
+  color: var(--color-secondary);
+}
+
+.field {
+  width: 100%;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg-default);
+  transition: border-color var(--transition-fast);
+  outline: none;
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: var(--color-secondary);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-text-light);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.inputError {
+  border-color: #dc2626;
+}
+
+.errorText {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: #dc2626;
+  margin-top: 4px;
+  display: block;
+}
+
+.error {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: #dc2626;
+}
+
+.submitBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: 12px;
+  background: var(--color-secondary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.submitBtn:hover {
+  background: var(--color-secondary-dark);
+}
+
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Success State */
+.success {
+  text-align: center;
+  padding: var(--spacing-xl) var(--spacing-md);
+}
+
+.successIcon {
+  font-size: 3rem;
+  color: var(--color-secondary);
+  margin-bottom: var(--spacing-md);
+}
+
+.successTitle {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.successText {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-md);
+}
+
+.sendAnotherBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: var(--color-secondary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.sendAnotherBtn:hover {
+  background: var(--color-secondary-dark);
+}
+
+/* Mobile Fixed Button */
+.mobileFixedBtn {
+  display: none;
+  position: fixed;
+  bottom: 64px;
+  left: var(--spacing-md);
+  right: var(--spacing-md);
+  z-index: var(--z-fixed);
+  padding: 14px;
+  background: var(--color-secondary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-xl);
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}
+
+/* Backdrop */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: var(--z-modal-backdrop);
+}
+
+/* Bottom Sheet */
+.bottomSheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-modal);
+  background: var(--color-bg-default);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  padding: var(--spacing-sm) var(--spacing-lg) var(--spacing-xl);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.sheetHandle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+  margin: 0 auto var(--spacing-md);
+}
+
+.sheetClose {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+@media (max-width: 960px) {
+  .sidebar {
+    display: none;
+  }
+
+  .mobileFixedBtn {
+    display: flex;
+  }
+}

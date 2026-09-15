@@ -1,0 +1,132 @@
+.newsletter {
+  background: linear-gradient(135deg, #F8F3EB 0%, #F2E8D5 50%, #EDE0CC 100%);
+  padding: 64px 24px;
+}
+
+.inner {
+  max-width: 680px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.heading {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 32px;
+  line-height: 1.3;
+}
+
+.subtitle {
+  font-size: 0.938rem;
+  color: var(--color-text-secondary);
+  margin-top: -16px;
+  margin-bottom: 32px;
+  line-height: 1.5;
+}
+
+.form {
+  display: flex;
+  gap: 12px;
+  max-width: 560px;
+  margin: 0 auto 16px;
+}
+
+.inputWrapper {
+  flex: 1;
+  position: relative;
+}
+
+.input {
+  width: 100%;
+  padding: 14px 18px;
+  font-family: var(--font-body);
+  font-size: 0.938rem;
+  color: var(--color-text-primary);
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.input::placeholder {
+  color: var(--color-text-light);
+}
+
+.input:focus {
+  border-color: var(--color-secondary);
+}
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  font-family: var(--font-body);
+  font-size: 0.938rem;
+  font-weight: 500;
+  color: #fff;
+  background-color: var(--color-secondary);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.submitBtn:hover {
+  background-color: var(--color-secondary-dark);
+}
+
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.disclaimer {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.disclaimer a {
+  color: var(--color-secondary-dark);
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .newsletter {
+    padding: 48px 20px;
+  }
+
+  .heading {
+    font-size: 1.375rem;
+  }
+
+  .form {
+    flex-direction: column;
+  }
+
+  .submitBtn {
+    width: 100%;
+  }
+}
