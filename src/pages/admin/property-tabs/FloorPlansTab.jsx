@@ -14,10 +14,10 @@ import ImageUrlHelperText from '../../../components/admin/ImageUrlHelperText';
 const FloorPlansTab = ({ formData, updateField, updateListItem, addListItem, removeListItem }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
         Floor Plans & Pricing
       </Typography>
-      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
+      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)', mt: -1 }}>
         Add floor plan variants with configuration details. These appear in the Floor Plans section.
       </Typography>
 
@@ -42,18 +42,21 @@ const FloorPlansTab = ({ formData, updateField, updateListItem, addListItem, rem
       </Box>
 
       {formData.floorPlans.map((fp, index) => (
-        <Paper key={index} sx={{ p: 2, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+        <Paper key={index} sx={{ p: 2, borderRadius: 2, border: '1px solid var(--color-border)' }}>
           <Box
             sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}
           >
-            <Typography variant="caption" sx={{ fontWeight: 600, color: '#6B7280' }}>
+            <Typography
+              variant="caption"
+              sx={{ fontWeight: 600, color: 'var(--color-text-muted)' }}
+            >
               Floor Plan #{index + 1}
             </Typography>
             {formData.floorPlans.length > 1 && (
               <IconButton
                 size="small"
                 onClick={() => removeListItem('floorPlans', index)}
-                sx={{ color: '#EF4444' }}
+                sx={{ color: 'var(--color-error-dark)' }}
               >
                 <Icon icon="mdi:close-circle-outline" style={{ fontSize: 18 }} />
               </IconButton>
@@ -88,7 +91,7 @@ const FloorPlansTab = ({ formData, updateField, updateListItem, addListItem, rem
               }
               sx={{ flex: '1 1 140px' }}
               InputProps={{
-                startAdornment: <InputAdornment position="start">&#8377;</InputAdornment>,
+                startAdornment: <InputAdornment position="start">&#x20B9;</InputAdornment>,
               }}
             />
             <TextField
@@ -142,7 +145,7 @@ const FloorPlansTab = ({ formData, updateField, updateListItem, addListItem, rem
           })
         }
         startIcon={<Icon icon="mdi:plus" />}
-        sx={{ color: '#6B7280', alignSelf: 'flex-start' }}
+        sx={{ color: 'var(--color-text-muted)', alignSelf: 'flex-start' }}
       >
         Add Floor Plan
       </Button>

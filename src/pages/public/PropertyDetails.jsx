@@ -4,7 +4,6 @@ import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { SwipeableDrawer, useMediaQuery, useTheme } from '@mui/material';
-import Swal from 'sweetalert2';
 import { propertyService, leadService } from '../../services/api';
 import { PropertyDetailSkeleton } from '../../components/common/SkeletonLoaders';
 import { useToast } from '../../components/common/ToastProvider';
@@ -28,6 +27,7 @@ import PropertyFaq from '../../components/sections/property/PropertyFaq';
 import SimilarProperties from '../../components/sections/property/SimilarProperties';
 import StickyNav from '../../components/sections/property/StickyNav';
 import SectionGuard from '../../components/common/SectionGuard';
+import { ConfirmDialog } from '../../components/ui';
 import styles from './PropertyDetails.module.css';
 
 const formatPrice = (price, unit) => {
@@ -50,12 +50,7 @@ const modalVariants = {
   exit: { opacity: 0, scale: 0.95, y: 10, transition: { duration: 0.2 } },
 };
 
-const swalConfig = {
-  confirmButtonColor: '#C9A86C',
-  iconColor: '#059669',
-};
-
-const getSweetAlertMessage = (type, config) => {
+const getRequestReceivedMessage = (type, config) => {
   const messages = {
     brochure: {
       title: 'We Have Your Request!',
@@ -91,6 +86,7 @@ const PropertyDetails = () => {
   const [error, setError] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const [leadCaptured, setLeadCaptured] = useState(false);
+  const [requestAlert, setRequestAlert] = useState({ open: false, title: '', text: '' });
 
   // Download lead capture modal state
   const [downloadModal, setDownloadModal] = useState({ open: false, type: '' });
@@ -200,15 +196,9 @@ const PropertyDetails = () => {
     });
   }, [toast]);
 
-  // Show SweetAlert for already-captured leads
+  // Acknowledge a request from a visitor whose details we already hold.
   const showLeadCapturedAlert = useCallback((type, config) => {
-    const msg = getSweetAlertMessage(type, config);
-    Swal.fire({
-      icon: 'success',
-      title: msg.title,
-      text: msg.text,
-      ...swalConfig,
-    });
+    setRequestAlert({ open: true, ...getRequestReceivedMessage(type, config) });
   }, []);
 
   // Download modal handlers
@@ -752,7 +742,7 @@ const PropertyDetails = () => {
                     {downloadError && (
                       <p
                         style={{
-                          color: '#dc2626',
+                          color: 'var(--color-error-dark)',
                           fontSize: '0.8rem',
                           fontFamily: 'var(--font-body)',
                         }}
@@ -770,8 +760,11 @@ const PropertyDetails = () => {
                         gap: '8px',
                         width: '100%',
                         padding: '12px',
-                        background: downloadModal.type === 'brochure' ? '#C9A86C' : '#1B2A4A',
-                        color: '#fff',
+                        background:
+                          downloadModal.type === 'brochure'
+                            ? 'var(--color-primary)'
+                            : 'var(--color-charcoal)',
+                        color: 'var(--color-text-inverse)',
                         border: 'none',
                         borderRadius: '8px',
                         fontFamily: 'var(--font-body)',
@@ -843,7 +836,7 @@ const PropertyDetails = () => {
                     style={{
                       fontFamily: 'var(--font-body)',
                       fontSize: '0.8rem',
-                      color: '#6B7280',
+                      color: 'var(--color-text-muted)',
                       marginBottom: '16px',
                       lineHeight: 1.5,
                     }}
@@ -894,7 +887,7 @@ const PropertyDetails = () => {
                     {docError && (
                       <p
                         style={{
-                          color: '#dc2626',
+                          color: 'var(--color-error-dark)',
                           fontSize: '0.8rem',
                           fontFamily: 'var(--font-body)',
                         }}
@@ -912,8 +905,8 @@ const PropertyDetails = () => {
                         gap: '8px',
                         width: '100%',
                         padding: '12px',
-                        background: '#1B2A4A',
-                        color: '#fff',
+                        background: 'var(--color-charcoal)',
+                        color: 'var(--color-text-inverse)',
                         border: 'none',
                         borderRadius: '8px',
                         fontFamily: 'var(--font-body)',
@@ -990,7 +983,7 @@ const PropertyDetails = () => {
                         style={{
                           fontFamily: 'var(--font-body)',
                           fontSize: '0.8rem',
-                          color: '#6B7280',
+                          color: 'var(--color-text-muted)',
                           margin: '4px 0 0',
                           lineHeight: 1.5,
                         }}
@@ -1003,7 +996,7 @@ const PropertyDetails = () => {
                     style={{
                       fontFamily: 'var(--font-body)',
                       fontSize: '0.8rem',
-                      color: '#6B7280',
+                      color: 'var(--color-text-muted)',
                       marginBottom: '16px',
                       lineHeight: 1.5,
                     }}
@@ -1057,7 +1050,7 @@ const PropertyDetails = () => {
                     {pricingError && (
                       <p
                         style={{
-                          color: '#dc2626',
+                          color: 'var(--color-error-dark)',
                           fontSize: '0.8rem',
                           fontFamily: 'var(--font-body)',
                         }}
@@ -1075,8 +1068,8 @@ const PropertyDetails = () => {
                         gap: '8px',
                         width: '100%',
                         padding: '12px',
-                        background: '#1B2A4A',
-                        color: '#fff',
+                        background: 'var(--color-charcoal)',
+                        color: 'var(--color-text-inverse)',
                         border: 'none',
                         borderRadius: '8px',
                         fontFamily: 'var(--font-body)',
@@ -1153,7 +1146,7 @@ const PropertyDetails = () => {
                         style={{
                           fontFamily: 'var(--font-body)',
                           fontSize: '0.8rem',
-                          color: '#6B7280',
+                          color: 'var(--color-text-muted)',
                           margin: '4px 0 0',
                           lineHeight: 1.5,
                         }}
@@ -1166,7 +1159,7 @@ const PropertyDetails = () => {
                     style={{
                       fontFamily: 'var(--font-body)',
                       fontSize: '0.8rem',
-                      color: '#6B7280',
+                      color: 'var(--color-text-muted)',
                       marginBottom: '16px',
                       lineHeight: 1.5,
                     }}
@@ -1220,7 +1213,7 @@ const PropertyDetails = () => {
                     {floorPlanRequestError && (
                       <p
                         style={{
-                          color: '#dc2626',
+                          color: 'var(--color-error-dark)',
                           fontSize: '0.8rem',
                           fontFamily: 'var(--font-body)',
                         }}
@@ -1238,8 +1231,8 @@ const PropertyDetails = () => {
                         gap: '8px',
                         width: '100%',
                         padding: '12px',
-                        background: '#C9A86C',
-                        color: '#fff',
+                        background: 'var(--color-primary)',
+                        color: 'var(--color-text-inverse)',
                         border: 'none',
                         borderRadius: '8px',
                         fontFamily: 'var(--font-body)',
@@ -1287,7 +1280,7 @@ const PropertyDetails = () => {
               style={{
                 width: 40,
                 height: 4,
-                background: '#D1D5DB',
+                background: 'var(--color-surface-2)',
                 borderRadius: 2,
                 margin: '0 auto 16px',
               }}
@@ -1308,7 +1301,10 @@ const PropertyDetails = () => {
                 aria-label="Share on WhatsApp"
                 onClick={() => setShareSheetOpen(false)}
               >
-                <Icon icon="mdi:whatsapp" style={{ fontSize: 24, color: '#25D366' }} />
+                <Icon
+                  icon="mdi:whatsapp"
+                  style={{ fontSize: 24, color: 'var(--color-whatsapp)' }}
+                />
                 <span>WhatsApp</span>
               </a>
               <a
@@ -1522,6 +1518,14 @@ const PropertyDetails = () => {
         savedUserDetails={savedUserDetails}
         onLeadCaptured={handleLeadCapturedFromChild}
       />
+
+      <ConfirmDialog
+        variant="alert"
+        open={requestAlert.open}
+        title={requestAlert.title}
+        message={requestAlert.text}
+        onClose={() => setRequestAlert((previous) => ({ ...previous, open: false }))}
+      />
     </>
   );
 };
@@ -1529,22 +1533,22 @@ const PropertyDetails = () => {
 const inputStyle = {
   width: '100%',
   padding: '10px 14px',
-  border: '1.5px solid #E5E7EB',
+  border: '1.5px solid var(--color-border)',
   borderRadius: '8px',
   fontFamily: 'var(--font-body)',
   fontSize: '0.875rem',
-  color: '#1B2A4A',
+  color: 'var(--color-charcoal)',
   outline: 'none',
-  background: '#fff',
+  background: 'var(--color-bg)',
 };
 
 const inputErrorStyle = {
   ...inputStyle,
-  border: '1.5px solid #dc2626',
+  border: '1.5px solid var(--color-error-dark)',
 };
 
 const fieldErrorTextStyle = {
-  color: '#dc2626',
+  color: 'var(--color-error-dark)',
   fontSize: '0.75rem',
   fontFamily: 'var(--font-body)',
   marginTop: '4px',
@@ -1557,13 +1561,13 @@ const shareOptionStyle = {
   alignItems: 'center',
   gap: 6,
   padding: '12px 16px',
-  border: '1px solid #E5E7EB',
+  border: '1px solid var(--color-border)',
   borderRadius: 12,
-  background: '#fff',
+  background: 'var(--color-bg)',
   cursor: 'pointer',
   fontFamily: 'var(--font-body)',
   fontSize: '0.75rem',
-  color: '#1B2A4A',
+  color: 'var(--color-charcoal)',
   textDecoration: 'none',
   minWidth: 80,
 };

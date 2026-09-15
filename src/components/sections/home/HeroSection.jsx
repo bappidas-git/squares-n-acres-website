@@ -19,7 +19,7 @@ const isVideoUrl = (url) => {
   }
 };
 
-const FALLBACK_BG = '#1B2A4A';
+const FALLBACK_BG = 'var(--color-charcoal)';
 const MAX_SUGGESTIONS = 5;
 
 const formatPrice = (price) => {

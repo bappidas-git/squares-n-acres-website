@@ -1,0 +1,89 @@
+.stepper {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+  text-align: center;
+  min-width: 0;
+}
+
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: calc(50% + 20px);
+  right: calc(-50% + 20px);
+  height: 2px;
+  background: var(--color-border);
+}
+
+.stepDone:not(:last-child)::after {
+  background: var(--color-primary);
+}
+
+.marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-border);
+  background: var(--color-bg);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.stepActive .marker {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.stepDone .marker {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.label {
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.stepActive .label {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.vertical {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.vertical .step {
+  flex-direction: row;
+  align-items: center;
+  text-align: left;
+  gap: var(--space-3);
+}
+
+.vertical .step::after {
+  display: none;
+}

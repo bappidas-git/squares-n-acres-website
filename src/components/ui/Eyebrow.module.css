@@ -1,0 +1,22 @@
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-primary-dark);
+}
+
+.mark {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.onDark {
+  color: var(--color-primary-light);
+}

@@ -1,28 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
+import useInView from '../../hooks/useInView';
 import { Icon } from '@iconify/react';
 import { Link } from 'react-router-dom';
+import { Section } from '../../components/ui';
 import styles from './About.module.css';
 import { SITE } from '../../config/site';
 
 /* ── Animated section wrapper ──────────────────── */
-const Section = ({ children, className = '', delay = 0 }) => {
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
-  return (
-    <motion.section
-      ref={ref}
-      className={className}
-      initial={{ opacity: 0, y: 30 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay }}
-    >
-      {children}
-    </motion.section>
-  );
-};
-
 /* ── Animated Counter ──────────────────────────── */
 const Counter = ({ end, suffix = '' }) => {
   const [count, setCount] = useState(0);

@@ -10,8 +10,6 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Alert,
-  Snackbar,
   useMediaQuery,
   useTheme,
   CircularProgress,
@@ -19,6 +17,7 @@ import {
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { propertyService } from '../../services/api';
+import { useToast } from '../../components/common/ToastProvider';
 import {
   TAB_CONFIG,
   DRAFT_STORAGE_KEY,
@@ -46,6 +45,7 @@ import {
 } from './property-tabs';
 
 const PropertyForm = ({ propertyId = null }) => {
+  const toast = useToast();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -56,11 +56,6 @@ const PropertyForm = ({ propertyId = null }) => {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
 
   const autoSaveTimerRef = useRef(null);
@@ -77,11 +72,7 @@ const PropertyForm = ({ propertyId = null }) => {
           propertyService.getSeo(propertyId).catch(() => null),
         ]);
         if (!property) {
-          setSnackbar({
-            open: true,
-            message: 'Property not found',
-            severity: 'error',
-          });
+          toast.error('Property not found');
           navigate('/admin/properties');
           return;
         }
@@ -357,17 +348,13 @@ const PropertyForm = ({ propertyId = null }) => {
           isActive: property.isActive !== undefined ? property.isActive : true,
         });
       } catch {
-        setSnackbar({
-          open: true,
-          message: 'Failed to load property data',
-          severity: 'error',
-        });
+        toast.error('Failed to load property data');
       } finally {
         setLoading(false);
       }
     };
     loadProperty();
-  }, [isEdit, propertyId, navigate]);
+  }, [isEdit, propertyId, navigate, toast]);
 
   // ---- Load draft for new properties ----
   useEffect(() => {
@@ -377,16 +364,12 @@ const PropertyForm = ({ propertyId = null }) => {
       if (saved) {
         const parsed = JSON.parse(saved);
         setFormData((prev) => ({ ...prev, ...parsed }));
-        setSnackbar({
-          open: true,
-          message: 'Draft restored from local storage',
-          severity: 'info',
-        });
+        toast.info('Draft restored from local storage');
       }
     } catch {
       // ignore parse errors
     }
-  }, [isEdit]);
+  }, [isEdit, toast]);
 
   // ---- Auto-save draft every 30s for new properties ----
   useEffect(() => {
@@ -554,11 +537,7 @@ const PropertyForm = ({ propertyId = null }) => {
   // ---- Save handlers ----
   const handleSave = async (publish = true) => {
     if (!validate()) {
-      setSnackbar({
-        open: true,
-        message: 'Please fix the errors before saving',
-        severity: 'error',
-      });
+      toast.error('Please fix the errors before saving');
       return;
     }
 
@@ -586,19 +565,11 @@ const PropertyForm = ({ propertyId = null }) => {
           // Also push to the dedicated SEO endpoint (fire-and-forget)
           propertyService.updateSeo(propertyId, seoPayload).catch(() => {}),
         ]);
-        setSnackbar({
-          open: true,
-          message: 'Property updated successfully',
-          severity: 'success',
-        });
+        toast.success('Property updated successfully');
       } else {
         await propertyService.create(payload);
         localStorage.removeItem(DRAFT_STORAGE_KEY);
-        setSnackbar({
-          open: true,
-          message: publish ? 'Property published successfully' : 'Property saved as draft',
-          severity: 'success',
-        });
+        toast.success(publish ? 'Property published successfully' : 'Property saved as draft');
       }
 
       setTimeout(() => navigate('/admin/properties'), 1200);
@@ -607,14 +578,10 @@ const PropertyForm = ({ propertyId = null }) => {
       const backendErrors = err?.response?.data?.errors;
       if (backendErrors) {
         const messages = Object.values(backendErrors).flat().join('. ');
-        setSnackbar({
-          open: true,
-          message: messages || 'Validation failed. Please check all fields.',
-          severity: 'error',
-        });
+        toast.error(messages || 'Validation failed. Please check all fields.');
       } else {
         const msg = err?.response?.data?.message || 'Failed to save property. Please try again.';
-        setSnackbar({ open: true, message: msg, severity: 'error' });
+        toast.error(msg);
       }
     } finally {
       setSaving(false);
@@ -666,7 +633,7 @@ const PropertyForm = ({ propertyId = null }) => {
           minHeight: '50vh',
         }}
       >
-        <CircularProgress sx={{ color: '#C9A86C' }} />
+        <CircularProgress sx={{ color: 'var(--color-primary-dark)' }} />
       </Box>
     );
   }
@@ -685,14 +652,17 @@ const PropertyForm = ({ propertyId = null }) => {
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <IconButton onClick={() => navigate('/admin/properties')} sx={{ color: '#6B7280' }}>
+          <IconButton
+            onClick={() => navigate('/admin/properties')}
+            sx={{ color: 'var(--color-text-muted)' }}
+          >
             <Icon icon="mdi:arrow-left" />
           </IconButton>
           <Box>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: '#1B2A4A' }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, color: 'var(--color-charcoal)' }}>
               {isEdit ? 'Edit Property' : 'Add New Property'}
             </Typography>
-            <Typography variant="body2" sx={{ color: '#6B7280' }}>
+            <Typography variant="body2" sx={{ color: 'var(--color-text-muted)' }}>
               {isEdit
                 ? `Editing: ${formData.title || 'Untitled'}`
                 : 'Fill in the details below to create a new property listing'}
@@ -705,7 +675,11 @@ const PropertyForm = ({ propertyId = null }) => {
             <Button
               variant="outlined"
               onClick={() => navigate('/admin/properties')}
-              sx={{ borderRadius: 2, color: '#6B7280', borderColor: '#D1D5DB' }}
+              sx={{
+                borderRadius: 2,
+                color: 'var(--color-text-muted)',
+                borderColor: 'var(--color-border-strong)',
+              }}
             >
               Cancel
             </Button>
@@ -725,7 +699,7 @@ const PropertyForm = ({ propertyId = null }) => {
               disabled={saving}
               startIcon={
                 saving ? (
-                  <CircularProgress size={18} sx={{ color: '#fff' }} />
+                  <CircularProgress size={18} sx={{ color: 'var(--color-text-inverse)' }} />
                 ) : (
                   <Icon icon="mdi:check" />
                 )
@@ -748,7 +722,10 @@ const PropertyForm = ({ propertyId = null }) => {
               sx={{
                 borderRadius: '12px !important',
                 '&:before': { display: 'none' },
-                border: activeTab === index ? '1px solid #C9A86C' : '1px solid #E5E7EB',
+                border:
+                  activeTab === index
+                    ? '1px solid var(--color-primary)'
+                    : '1px solid var(--color-border)',
               }}
             >
               <AccordionSummary expandIcon={<Icon icon="mdi:chevron-down" />}>
@@ -758,8 +735,12 @@ const PropertyForm = ({ propertyId = null }) => {
                       width: 28,
                       height: 28,
                       borderRadius: '50%',
-                      bgcolor: activeTab === index ? '#1B2A4A' : '#F3F4F6',
-                      color: activeTab === index ? '#fff' : '#6B7280',
+                      bgcolor:
+                        activeTab === index ? 'var(--color-charcoal)' : 'var(--color-surface)',
+                      color:
+                        activeTab === index
+                          ? 'var(--color-text-inverse)'
+                          : 'var(--color-text-muted)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -774,14 +755,18 @@ const PropertyForm = ({ propertyId = null }) => {
                       icon={tab.icon}
                       style={{
                         fontSize: 18,
-                        color: activeTab === index ? '#C9A86C' : '#9CA3AF',
+                        color:
+                          activeTab === index
+                            ? 'var(--color-primary-dark)'
+                            : 'var(--color-text-muted)',
                       }}
                     />
                     <Typography
                       variant="subtitle2"
                       sx={{
                         fontWeight: 600,
-                        color: activeTab === index ? '#1B2A4A' : '#6B7280',
+                        color:
+                          activeTab === index ? 'var(--color-charcoal)' : 'var(--color-text-muted)',
                       }}
                     >
                       {tab.label}
@@ -802,19 +787,19 @@ const PropertyForm = ({ propertyId = null }) => {
             scrollButtons="auto"
             allowScrollButtonsMobile
             sx={{
-              borderBottom: '1px solid #E5E7EB',
+              borderBottom: '1px solid var(--color-border)',
               maxWidth: '100%',
               '& .MuiTab-root': {
                 textTransform: 'none',
                 fontWeight: 500,
                 minHeight: 56,
-                color: '#6B7280',
+                color: 'var(--color-text-muted)',
                 fontSize: { xs: '0.7rem', md: '0.775rem', lg: '0.825rem' },
                 minWidth: { xs: 'auto', md: 80 },
                 px: { xs: 0.75, md: 1.5 },
-                '&.Mui-selected': { color: '#1B2A4A', fontWeight: 600 },
+                '&.Mui-selected': { color: 'var(--color-charcoal)', fontWeight: 600 },
               },
-              '& .MuiTabs-indicator': { bgcolor: '#C9A86C', height: 3 },
+              '& .MuiTabs-indicator': { bgcolor: 'var(--color-primary)', height: 3 },
               '& .MuiTabs-scrollButtons': {
                 '&.Mui-disabled': { opacity: 0.3 },
               },
@@ -858,8 +843,8 @@ const PropertyForm = ({ propertyId = null }) => {
             sx={{
               borderRadius: 2,
               flex: 1,
-              color: '#6B7280',
-              borderColor: '#D1D5DB',
+              color: 'var(--color-text-muted)',
+              borderColor: 'var(--color-border-strong)',
             }}
           >
             Cancel
@@ -880,7 +865,7 @@ const PropertyForm = ({ propertyId = null }) => {
             sx={{ borderRadius: 2, flex: 1 }}
           >
             {saving ? (
-              <CircularProgress size={20} sx={{ color: '#fff' }} />
+              <CircularProgress size={20} sx={{ color: 'var(--color-text-inverse)' }} />
             ) : isEdit ? (
               'Update'
             ) : (
@@ -889,21 +874,6 @@ const PropertyForm = ({ propertyId = null }) => {
           </Button>
         </Paper>
       )}
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 2 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

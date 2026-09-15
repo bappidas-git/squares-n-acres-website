@@ -3,30 +3,26 @@
   top: 0;
   left: 0;
   right: 0;
-  z-index: var(--z-sticky);
-  background-color: #fff;
+  z-index: var(--z-header);
+  background-color: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
+  transition: box-shadow var(--transition-base);
 }
 
+/* D52: the header never hides — it only gains elevation once the page moves. */
 .header.scrolled {
-  box-shadow: var(--shadow-md);
-}
-
-.header.hidden {
-  transform: translateY(-100%);
+  box-shadow: var(--shadow-sm);
 }
 
 .headerInner {
-  max-width: 1280px;
+  max-width: var(--container-max);
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 var(--container-padding);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 72px;
+  gap: var(--space-4);
+  height: var(--header-height);
 }
 
 .logo {
@@ -35,15 +31,10 @@
   flex-shrink: 0;
 }
 
-.logo img {
-  height: 48px;
-  width: auto;
-}
-
 .nav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-1);
 }
 
 .navItem {
@@ -53,12 +44,14 @@
 .navLink {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 16px;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-size: 0.938rem;
-  font-weight: 500;
-  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
   cursor: pointer;
   border: none;
   background: none;
@@ -68,20 +61,21 @@
 }
 
 .navLink:hover {
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
 }
 
 .navLink.active {
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
+  font-weight: var(--font-weight-semibold);
 }
 
 .activeIndicator {
   position: absolute;
   bottom: -1px;
-  left: 16px;
-  right: 16px;
+  left: var(--space-3);
+  right: var(--space-3);
   height: 2px;
-  background-color: var(--color-secondary);
+  background-color: var(--color-primary);
   border-radius: 1px;
 }
 
@@ -100,9 +94,10 @@
   position: absolute;
   top: 100%;
   left: 0;
-  min-width: 200px;
-  background: #fff;
-  border-radius: var(--radius-md);
+  min-width: 216px;
+  margin-top: var(--space-1);
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--color-border);
   overflow: hidden;
@@ -111,10 +106,10 @@
 
 .dropdownItem {
   display: block;
-  padding: 12px 20px;
-  font-size: 0.938rem;
-  font-weight: 400;
-  color: var(--color-text-primary);
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text);
   text-decoration: none;
   transition:
     background-color var(--transition-fast),
@@ -123,8 +118,8 @@
 }
 
 .dropdownItem:hover {
-  background-color: var(--color-bg-surface);
-  color: var(--color-secondary);
+  background-color: var(--color-surface);
+  color: var(--color-primary-dark);
 }
 
 .hamburger {
@@ -136,20 +131,20 @@
   cursor: pointer;
   border: none;
   background: none;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   transition: color var(--transition-fast);
   flex-shrink: 0;
 }
 
 .hamburger:hover {
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
 }
 
 .hamburgerIcon {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  width: 24px;
+  width: 22px;
 }
 
 .hamburgerLine {
@@ -161,7 +156,7 @@
 
 /* Side Drawer */
 .drawerPaper {
-  width: 320px;
+  width: min(320px, 88vw);
   padding: 0;
 }
 
@@ -169,25 +164,22 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  padding: var(--space-4) var(--space-6);
   border-bottom: 1px solid var(--color-border);
 }
 
-.drawerHeader img {
-  height: 40px;
-  width: auto;
-}
-
 .drawerList {
-  padding: 16px 0;
+  padding: var(--space-4) 0;
 }
 
 .drawerItem {
-  display: block;
-  padding: 14px 24px;
-  font-size: 0.938rem;
-  font-weight: 500;
-  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-6);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
   text-decoration: none;
   transition:
     background-color var(--transition-fast),
@@ -195,11 +187,11 @@
 }
 
 .drawerItem:hover {
-  background-color: var(--color-bg-surface);
-  color: var(--color-secondary);
+  background-color: var(--color-surface);
+  color: var(--color-primary-dark);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 899.98px) {
   .header {
     display: none;
   }

@@ -61,10 +61,10 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
         Similar Properties
       </Typography>
-      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
+      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)', mt: -1 }}>
         Select related properties to show in the "Similar Properties" section. If none selected, the
         system auto-selects based on type.
       </Typography>
@@ -80,8 +80,8 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
                 size="small"
                 onDelete={() => toggleProperty(id)}
                 sx={{
-                  bgcolor: '#1B2A4A',
-                  color: '#fff',
+                  bgcolor: 'var(--color-charcoal)',
+                  color: 'var(--color-text-inverse)',
                   '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.6)' },
                 }}
               />
@@ -98,7 +98,7 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <Icon icon="mdi:magnify" style={{ color: '#9CA3AF' }} />
+              <Icon icon="mdi:magnify" style={{ color: 'var(--color-text-muted)' }} />
             </InputAdornment>
           ),
         }}
@@ -106,10 +106,13 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress size={32} sx={{ color: '#C9A86C' }} />
+          <CircularProgress size={32} sx={{ color: 'var(--color-primary-dark)' }} />
         </Box>
       ) : filteredProperties.length === 0 ? (
-        <Typography variant="body2" sx={{ color: '#9CA3AF', textAlign: 'center', py: 4 }}>
+        <Typography
+          variant="body2"
+          sx={{ color: 'var(--color-text-muted)', textAlign: 'center', py: 4 }}
+        >
           No properties found.
         </Typography>
       ) : (
@@ -132,13 +135,17 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
                   p: 1.5,
                   borderRadius: 2,
                   cursor: 'pointer',
-                  border: isSelected ? '2px solid #C9A86C' : '1px solid #E5E7EB',
-                  bgcolor: isSelected ? '#FEF8F0' : '#fff',
+                  border: isSelected
+                    ? '2px solid var(--color-primary)'
+                    : '1px solid var(--color-border)',
+                  bgcolor: isSelected ? 'var(--color-warning-bg)' : 'var(--color-bg)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 2,
                   transition: 'all 0.15s',
-                  '&:hover': { bgcolor: isSelected ? '#FEF8F0' : '#F9FAFB' },
+                  '&:hover': {
+                    bgcolor: isSelected ? 'var(--color-warning-bg)' : 'var(--color-surface)',
+                  },
                 }}
               >
                 <Box
@@ -146,7 +153,7 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
                     width: 56,
                     height: 56,
                     borderRadius: 1.5,
-                    bgcolor: '#F3F4F6',
+                    bgcolor: 'var(--color-surface)',
                     backgroundImage: prop.gallery?.[0] ? `url(${prop.gallery[0]})` : 'none',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
@@ -157,7 +164,10 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
                   }}
                 >
                   {!prop.gallery?.[0] && (
-                    <Icon icon="mdi:home-outline" style={{ fontSize: 24, color: '#D1D5DB' }} />
+                    <Icon
+                      icon="mdi:home-outline"
+                      style={{ fontSize: 24, color: 'var(--color-text-muted)' }}
+                    />
                   )}
                 </Box>
 
@@ -166,7 +176,7 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
                     variant="subtitle2"
                     sx={{
                       fontWeight: 600,
-                      color: '#1B2A4A',
+                      color: 'var(--color-charcoal)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -174,16 +184,22 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
                   >
                     {prop.title}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: '#6B7280' }}>
+                  <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
                     {prop.location?.area}, {prop.location?.city} &middot; {formatPrice(prop.price)}
                   </Typography>
                 </Box>
 
                 <Box sx={{ flexShrink: 0 }}>
                   {isSelected ? (
-                    <Icon icon="mdi:check-circle" style={{ fontSize: 24, color: '#C9A86C' }} />
+                    <Icon
+                      icon="mdi:check-circle"
+                      style={{ fontSize: 24, color: 'var(--color-primary-dark)' }}
+                    />
                   ) : (
-                    <Icon icon="mdi:circle-outline" style={{ fontSize: 24, color: '#D1D5DB' }} />
+                    <Icon
+                      icon="mdi:circle-outline"
+                      style={{ fontSize: 24, color: 'var(--color-text-muted)' }}
+                    />
                   )}
                 </Box>
               </Paper>

@@ -1,65 +1,51 @@
 import React, { useState, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
+import { toneStyles } from '../../components/ui/tones';
+import { Section } from '../../components/ui';
 import styles from './InteriorDesigning.module.css';
 import { SITE } from '../../config/site';
 
 /* ── Animated section wrapper ──────────────────── */
-const Section = ({ children, className = '', delay = 0 }) => {
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
-  return (
-    <motion.section
-      ref={ref}
-      className={className}
-      initial={{ opacity: 0, y: 30 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay }}
-    >
-      {children}
-    </motion.section>
-  );
-};
-
 /* ── Static data ───────────────────────────────── */
 const roomCategories = [
   {
     title: 'Living Room',
     icon: 'mdi:sofa-outline',
     desc: 'Create a welcoming living space with elegant furniture, lighting, and decor that reflects your style.',
-    color: '#E8D5B7',
+    tone: 'warning',
   },
   {
     title: 'Bedroom',
     icon: 'mdi:bed-outline',
     desc: 'Design a serene retreat with premium bedding, wardrobes, and ambient lighting for restful nights.',
-    color: '#C5D5E8',
+    tone: 'info',
   },
   {
     title: 'Kitchen',
     icon: 'mdi:stove',
     desc: 'Modular kitchens with smart storage solutions, premium countertops, and efficient layouts.',
-    color: '#D5E8C5',
+    tone: 'success',
   },
   {
     title: 'Bathroom',
     icon: 'mdi:shower-head',
     desc: 'Spa-like bathrooms with modern fixtures, elegant tiles, and functional storage solutions.',
-    color: '#D5D5E8',
+    tone: 'primary',
   },
   {
     title: 'Balcony',
     icon: 'mdi:flower-outline',
     desc: 'Transform your balcony into a cozy outdoor oasis with planters, seating, and mood lighting.',
-    color: '#E8E5C5',
+    tone: 'neutral',
   },
   {
     title: 'Study Room',
     icon: 'mdi:desk-lamp',
     desc: 'Productive workspaces with ergonomic furniture, built-in shelving, and focused lighting.',
-    color: '#E8D5D5',
+    tone: 'error',
   },
 ];
 
@@ -248,7 +234,10 @@ const InteriorDesigning = () => {
                   viewport={{ once: true, amount: 0.1 }}
                   transition={{ delay: i * 0.08, duration: 0.4 }}
                 >
-                  <div className={styles.roomImage} style={{ backgroundColor: room.color }}>
+                  <div
+                    className={styles.roomImage}
+                    style={{ backgroundColor: toneStyles(room.tone).background }}
+                  >
                     <Icon icon={room.icon} className={styles.roomIcon} />
                   </div>
                   <div className={styles.roomInfo}>

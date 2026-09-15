@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { useInView } from 'react-intersection-observer';
+import useInView from '../../../hooks/useInView';
+import { toneStyles } from '../../ui/tones';
 import styles from './ConstructionStatus.module.css';
 
 const ConstructionStatus = ({ status, constructionTimeline }) => {
@@ -32,12 +33,15 @@ const ConstructionStatus = ({ status, constructionTimeline }) => {
     return status;
   };
 
-  const getStatusColor = () => {
-    if (status === 'ready-to-move') return '#059669';
-    if (status === 'under-construction') return '#D97706';
-    if (status === 'pre-launch') return '#2563EB';
-    return '#6B7280';
+  /** Status tones, resolved to tokens by `toneStyles` at the point of use. */
+  const getStatusTone = () => {
+    if (status === 'ready-to-move') return 'success';
+    if (status === 'under-construction') return 'warning';
+    if (status === 'pre-launch') return 'info';
+    return 'neutral';
   };
+
+  const getStatusColor = () => toneStyles(getStatusTone()).color;
 
   return (
     <section className={styles.section} ref={ref} id="construction">

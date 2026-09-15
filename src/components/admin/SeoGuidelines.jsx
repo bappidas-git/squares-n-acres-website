@@ -14,7 +14,7 @@ const guidelines = [
   {
     id: 'titles',
     icon: 'mdi:format-title',
-    color: '#3B82F6',
+    color: 'var(--color-info-dark)',
     title: 'How to Write SEO Titles',
     content: [
       'Keep titles between 50–60 characters for optimal display on Google search results.',
@@ -30,7 +30,7 @@ const guidelines = [
   {
     id: 'descriptions',
     icon: 'mdi:text-box-outline',
-    color: '#10B981',
+    color: 'var(--color-success-dark)',
     title: 'How to Write Descriptions That Increase CTR',
     content: [
       'Target 140–160 characters — Google truncates descriptions beyond 160 characters.',
@@ -46,7 +46,7 @@ const guidelines = [
   {
     id: 'keywords',
     icon: 'mdi:key-variant',
-    color: '#F59E0B',
+    color: 'var(--color-warning-dark)',
     title: 'How to Choose Keywords Properly',
     content: [
       'Use 3–8 keywords per property — enough for relevance, not so many it becomes spam.',
@@ -62,7 +62,7 @@ const guidelines = [
   {
     id: 'schema',
     icon: 'mdi:code-json',
-    color: '#8B5CF6',
+    color: 'var(--color-primary-dark)',
     title: 'How Schema (JSON-LD) Helps Ranking',
     content: [
       'Schema markup tells Google exactly what your page is about in a structured format.',
@@ -78,7 +78,7 @@ const guidelines = [
   {
     id: 'canonical',
     icon: 'mdi:link-variant',
-    color: '#EC4899',
+    color: 'var(--color-primary)',
     title: 'Importance of Canonical URLs',
     content: [
       'Canonical URLs tell Google which version of a page is the "official" one.',
@@ -93,7 +93,7 @@ const guidelines = [
   {
     id: 'internal-linking',
     icon: 'mdi:vector-link',
-    color: '#06B6D4',
+    color: 'var(--color-info-dark)',
     title: 'Internal Linking Importance',
     content: [
       'Internal links distribute "link equity" across your site — helping deeper pages rank.',
@@ -108,7 +108,7 @@ const guidelines = [
   {
     id: 'page-speed',
     icon: 'mdi:speedometer',
-    color: '#F97316',
+    color: 'var(--color-warning)',
     title: 'Page Speed Importance',
     content: [
       "Google's Core Web Vitals directly impact rankings — fast sites rank higher.",
@@ -123,7 +123,7 @@ const guidelines = [
   {
     id: 'mobile',
     icon: 'mdi:cellphone',
-    color: '#14B8A6',
+    color: 'var(--color-info-dark)',
     title: 'Mobile Friendliness',
     content: [
       'Google uses mobile-first indexing — your mobile site IS your primary site for ranking.',
@@ -138,7 +138,7 @@ const guidelines = [
   {
     id: 'images',
     icon: 'mdi:image-outline',
-    color: '#A855F7',
+    color: 'var(--color-primary-dark)',
     title: 'Image Optimization',
     content: [
       'Every gallery image should have descriptive alt text for accessibility and SEO.',
@@ -153,7 +153,7 @@ const guidelines = [
   {
     id: 'keyword-stuffing',
     icon: 'mdi:alert-octagon-outline',
-    color: '#EF4444',
+    color: 'var(--color-error-dark)',
     title: 'Avoiding Keyword Stuffing',
     content: [
       'Keyword stuffing = repeating keywords unnaturally to manipulate rankings.',
@@ -169,7 +169,7 @@ const guidelines = [
   {
     id: 'local-seo',
     icon: 'mdi:map-marker-radius',
-    color: '#0EA5E9',
+    color: 'var(--color-info-dark)',
     title: 'Local SEO Tips for Real Estate',
     content: [
       'Real estate is inherently local — most buyers search with city or area names.',
@@ -185,7 +185,7 @@ const guidelines = [
   {
     id: 'geo-modifiers',
     icon: 'mdi:earth',
-    color: '#6366F1',
+    color: 'var(--color-info-dark)',
     title: 'Geo Modifiers Usage',
     content: [
       'Geo modifiers are location-specific terms added to keywords for local targeting.',
@@ -201,7 +201,7 @@ const guidelines = [
   {
     id: 'how-google-ranks',
     icon: 'mdi:google',
-    color: '#4285F4',
+    color: 'var(--color-serp-title)',
     title: 'Why Google Ranks Pages',
     content: [
       "Google's goal is to show the most relevant, trustworthy, and useful result for every query.",
@@ -217,7 +217,7 @@ const guidelines = [
   {
     id: 'indexing',
     icon: 'mdi:database-search',
-    color: '#84CC16',
+    color: 'var(--color-success-dark)',
     title: 'How to Improve Indexing',
     content: [
       'Submit your XML sitemap to Google Search Console — this tells Google about all your pages.',
@@ -233,7 +233,7 @@ const guidelines = [
   {
     id: 'sitemap-robots',
     icon: 'mdi:file-tree',
-    color: '#D946EF',
+    color: 'var(--color-primary-dark)',
     title: 'Sitemap & Robots.txt',
     content: [
       'sitemap.xml is a file that lists all pages you want Google to index.',
@@ -250,7 +250,7 @@ const guidelines = [
   {
     id: 'eeat',
     icon: 'mdi:shield-star',
-    color: '#B45309',
+    color: 'var(--color-warning-dark)',
     title: 'E-E-A-T: Experience, Expertise, Authoritativeness, Trust',
     content: [
       "E-E-A-T is Google's framework for evaluating content quality — critical for YMYL (Your Money or Your Life) topics like real estate.",
@@ -279,7 +279,7 @@ const SeoGuidelines = () => {
       elevation={0}
       sx={{
         borderRadius: 2,
-        border: '1px solid #F3F4F6',
+        border: '1px solid var(--color-surface)',
         overflow: 'hidden',
       }}
     >
@@ -290,8 +290,8 @@ const SeoGuidelines = () => {
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
-          borderBottom: '1px solid #F3F4F6',
-          bgcolor: '#FAFAFA',
+          borderBottom: '1px solid var(--color-surface)',
+          bgcolor: 'var(--color-surface)',
         }}
       >
         <Box
@@ -299,19 +299,22 @@ const SeoGuidelines = () => {
             width: 40,
             height: 40,
             borderRadius: 2,
-            bgcolor: '#FEF3C7',
+            bgcolor: 'var(--color-warning-bg)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Icon icon="mdi:school-outline" style={{ fontSize: 22, color: '#B45309' }} />
+          <Icon
+            icon="mdi:school-outline"
+            style={{ fontSize: 22, color: 'var(--color-warning-dark)' }}
+          />
         </Box>
         <Box sx={{ flex: 1 }}>
-          <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
             How to Optimize Properties for Google Ranking
           </Typography>
-          <Typography sx={{ fontSize: '0.75rem', color: '#9CA3AF', mt: 0.25 }}>
+          <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', mt: 0.25 }}>
             Comprehensive SEO guidelines for real estate listings — {guidelines.length} topics
           </Typography>
         </Box>
@@ -321,8 +324,8 @@ const SeoGuidelines = () => {
           sx={{
             fontSize: '0.6875rem',
             fontWeight: 600,
-            bgcolor: '#ECFDF5',
-            color: '#059669',
+            bgcolor: 'var(--color-success-bg)',
+            color: 'var(--color-success-dark)',
           }}
         />
       </Box>
@@ -348,7 +351,10 @@ const SeoGuidelines = () => {
           >
             <AccordionSummary
               expandIcon={
-                <Icon icon="mdi:chevron-down" style={{ fontSize: 20, color: '#9CA3AF' }} />
+                <Icon
+                  icon="mdi:chevron-down"
+                  style={{ fontSize: 20, color: 'var(--color-text-muted)' }}
+                />
               }
               sx={{
                 minHeight: 48,
@@ -361,7 +367,7 @@ const SeoGuidelines = () => {
                 sx={{
                   fontSize: '0.8125rem',
                   fontWeight: 600,
-                  color: '#1B2A4A',
+                  color: 'var(--color-charcoal)',
                 }}
               >
                 {guide.title}
@@ -384,7 +390,7 @@ const SeoGuidelines = () => {
                     key={idx}
                     sx={{
                       fontSize: '0.8125rem',
-                      color: '#4B5563',
+                      color: 'var(--color-text-muted)',
                       lineHeight: 1.6,
                       '&::marker': { color: guide.color },
                     }}

@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { TAG_OPTIONS, CATEGORY_OPTIONS } from './constants';
+import { toneStyles } from '../../../components/ui/tones';
 
 const BasicInfoTab = ({ formData, updateField, errors, setSlugManuallyEdited }) => {
   const categoryOptions = CATEGORY_OPTIONS[formData.type] || CATEGORY_OPTIONS.sale;
@@ -67,7 +68,9 @@ const BasicInfoTab = ({ formData, updateField, errors, setSlugManuallyEdited }) 
 
       <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <FormControl>
-          <FormLabel sx={{ fontWeight: 600, mb: 1, color: '#1B2A4A' }}>Type</FormLabel>
+          <FormLabel sx={{ fontWeight: 600, mb: 1, color: 'var(--color-charcoal)' }}>
+            Type
+          </FormLabel>
           <RadioGroup row value={formData.type} onChange={(e) => handleTypeChange(e.target.value)}>
             <FormControlLabel value="sale" control={<Radio />} label="Sale" />
             <FormControlLabel value="rent" control={<Radio />} label="Rent" />
@@ -117,7 +120,7 @@ const BasicInfoTab = ({ formData, updateField, errors, setSlugManuallyEdited }) 
           required
           sx={{ flex: 1, minWidth: 200 }}
           InputProps={{
-            startAdornment: <InputAdornment position="start">&#8377;</InputAdornment>,
+            startAdornment: <InputAdornment position="start">&#x20B9;</InputAdornment>,
           }}
         />
         <FormControl sx={{ minWidth: 140 }}>
@@ -155,10 +158,16 @@ const BasicInfoTab = ({ formData, updateField, errors, setSlugManuallyEdited }) 
 
       {/* Property Tags */}
       <Box>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A', mb: 1 }}>
+        <Typography
+          variant="subtitle2"
+          sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mb: 1 }}
+        >
           Property Tags
         </Typography>
-        <Typography variant="caption" sx={{ color: '#9CA3AF', display: 'block', mb: 1.5 }}>
+        <Typography
+          variant="caption"
+          sx={{ color: 'var(--color-text-muted)', display: 'block', mb: 1.5 }}
+        >
           Toggle tags to control property visibility in featured sections and search filters.
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -170,7 +179,10 @@ const BasicInfoTab = ({ formData, updateField, errors, setSlugManuallyEdited }) 
                 icon={
                   <Icon
                     icon={tag.icon}
-                    style={{ fontSize: 16, color: selected ? tag.color : '#9CA3AF' }}
+                    style={{
+                      fontSize: 16,
+                      color: selected ? toneStyles(tag.tone).color : 'var(--color-text-muted)',
+                    }}
                   />
                 }
                 label={tag.label}
@@ -178,9 +190,11 @@ const BasicInfoTab = ({ formData, updateField, errors, setSlugManuallyEdited }) 
                 onClick={() => toggleTag(tag.value)}
                 sx={{
                   fontWeight: 600,
-                  bgcolor: selected ? tag.bg : '#F3F4F6',
-                  color: selected ? tag.color : '#9CA3AF',
-                  border: selected ? `1px solid ${tag.color}` : '1px solid transparent',
+                  bgcolor: selected ? toneStyles(tag.tone).background : 'var(--color-surface)',
+                  color: selected ? toneStyles(tag.tone).color : 'var(--color-text-muted)',
+                  border: selected
+                    ? `1px solid ${toneStyles(tag.tone).border}`
+                    : '1px solid transparent',
                   '&:hover': { opacity: 0.85 },
                 }}
               />

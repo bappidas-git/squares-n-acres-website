@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
+import useInView from '../../../hooks/useInView';
 import { Icon } from '@iconify/react';
 import { propertyService } from '../../../services/api';
 import PropertyCard from '../../common/PropertyCard';

@@ -21,16 +21,16 @@ const HighlightsTab = ({ formData, updateListItem, addListItem, removeListItem }
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
         Property Highlights / Specialities
       </Typography>
-      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
+      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)', mt: -1 }}>
         Key features shown as highlight cards with icons. e.g., RERA Approved, Eco-Friendly, Smart
         Home, etc.
       </Typography>
 
       {formData.specialities.map((item, index) => (
-        <Paper key={index} sx={{ p: 2, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+        <Paper key={index} sx={{ p: 2, borderRadius: 2, border: '1px solid var(--color-border)' }}>
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Icon selector */}
             <Box
@@ -39,20 +39,23 @@ const HighlightsTab = ({ formData, updateListItem, addListItem, removeListItem }
                 width: 44,
                 height: 44,
                 borderRadius: 2,
-                border: '1px dashed #D1D5DB',
+                border: '1px dashed var(--color-border-strong)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                bgcolor: item.icon ? '#F0F7FF' : '#F9FAFB',
+                bgcolor: item.icon ? 'var(--color-info-bg)' : 'var(--color-surface)',
                 flexShrink: 0,
-                '&:hover': { borderColor: '#C9A86C', bgcolor: '#FEF8F0' },
+                '&:hover': {
+                  borderColor: 'var(--color-primary)',
+                  bgcolor: 'var(--color-warning-bg)',
+                },
               }}
             >
               {item.icon ? (
-                <Icon icon={item.icon} style={{ fontSize: 24, color: '#1B2A4A' }} />
+                <Icon icon={item.icon} style={{ fontSize: 24, color: 'var(--color-charcoal)' }} />
               ) : (
-                <Icon icon="mdi:plus" style={{ fontSize: 18, color: '#9CA3AF' }} />
+                <Icon icon="mdi:plus" style={{ fontSize: 18, color: 'var(--color-text-muted)' }} />
               )}
             </Box>
 
@@ -80,7 +83,7 @@ const HighlightsTab = ({ formData, updateListItem, addListItem, removeListItem }
               <IconButton
                 size="small"
                 onClick={() => removeListItem('specialities', index)}
-                sx={{ color: '#EF4444' }}
+                sx={{ color: 'var(--color-error-dark)' }}
               >
                 <Icon icon="mdi:close-circle-outline" style={{ fontSize: 20 }} />
               </IconButton>
@@ -94,7 +97,7 @@ const HighlightsTab = ({ formData, updateListItem, addListItem, removeListItem }
         variant="text"
         onClick={() => addListItem('specialities', { icon: '', name: '', description: '' })}
         startIcon={<Icon icon="mdi:plus" />}
-        sx={{ color: '#6B7280', alignSelf: 'flex-start' }}
+        sx={{ color: 'var(--color-text-muted)', alignSelf: 'flex-start' }}
       >
         Add Highlight
       </Button>

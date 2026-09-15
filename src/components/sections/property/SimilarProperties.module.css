@@ -1,19 +1,19 @@
 .section {
-  padding: var(--spacing-2xl) 0;
+  padding: var(--space-12) 0;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--space-6);
 }
 
 .title {
   font-family: var(--font-heading);
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-charcoal);
 }
 
 .viewAll {
@@ -21,65 +21,24 @@
   align-items: center;
   gap: 4px;
   font-family: var(--font-body);
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--color-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary-dark);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
 .viewAll:hover {
-  color: var(--color-secondary-dark);
-}
-
-.slider {
-  margin: 0 -8px;
-}
-
-.slideItem {
-  padding: 0 8px;
-}
-
-.slickArrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 2;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-full);
-  background: var(--color-bg-default);
-  border: 1px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 1.5rem;
   color: var(--color-primary);
-  box-shadow: var(--shadow-md);
-  transition: all var(--transition-fast);
+  text-decoration: underline;
 }
 
-.slickArrow:hover {
-  background: var(--color-secondary);
-  color: #fff;
-  border-color: var(--color-secondary);
+.carousel {
+  --gap: var(--space-4);
 }
 
-.slickPrev {
-  left: -12px;
-}
-
-.slickNext {
-  right: -12px;
-}
-
-@media (max-width: 600px) {
-  .title {
-    font-size: 1.35rem;
-  }
-
+@media (max-width: 599.98px) {
   .viewAll {
-    font-size: 0.8rem;
+    font-size: var(--font-size-xs);
   }
 }

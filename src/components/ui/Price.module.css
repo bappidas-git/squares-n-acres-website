@@ -1,0 +1,30 @@
+.price {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-charcoal);
+  white-space: nowrap;
+}
+
+.sm {
+  font-size: var(--font-size-md);
+}
+
+.md {
+  font-size: var(--font-size-xl);
+}
+
+.lg {
+  font-size: var(--font-size-2xl);
+}
+
+.accent {
+  color: var(--color-primary-dark);
+}
+
+.prefix {
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  display: block;
+}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { siteSettingsService } from '../../services/api';
 import { BRAND } from '../../config/site';
+import { Logo } from '../ui';
 import styles from './Footer.module.css';
 
 // Defaults used when the API hasn't responded yet or fields are missing
@@ -103,13 +104,7 @@ const Footer = () => {
       <div className={styles.footerTop}>
         {/* Brand */}
         <div className={styles.brandSection}>
-          <img
-            src={BRAND.logoUrl}
-            alt={BRAND.name}
-            width="112"
-            height="48"
-            className={styles.brandLogo}
-          />
+          <Logo height={40} className={styles.brandLogo} />
           {companySubtitle && <div className={styles.brandSubtitle}>{companySubtitle}</div>}
           <p className={styles.brandTagline}>{description}</p>
           <div className={styles.brandElevating}>{tagline}</div>

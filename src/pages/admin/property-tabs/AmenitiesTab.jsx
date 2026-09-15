@@ -52,7 +52,7 @@ const AmenitiesTab = ({ formData, updateField }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
           Amenities ({formData.amenities.length} selected)
         </Typography>
         <Button
@@ -69,8 +69,14 @@ const AmenitiesTab = ({ formData, updateField }) => {
       {Object.entries(AMENITY_CATEGORIES).map(([catKey, category]) => (
         <Paper key={catKey} sx={{ p: 2, borderRadius: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-            <Icon icon={category.icon} style={{ fontSize: 20, color: '#C9A86C' }} />
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+            <Icon
+              icon={category.icon}
+              style={{ fontSize: 20, color: 'var(--color-primary-dark)' }}
+            />
+            <Typography
+              variant="subtitle2"
+              sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}
+            >
               {category.label}
             </Typography>
           </Box>
@@ -86,11 +92,13 @@ const AmenitiesTab = ({ formData, updateField }) => {
                   onClick={() => toggleAmenity({ ...amenity, category: catKey })}
                   sx={{
                     fontWeight: 500,
-                    bgcolor: selected ? '#1B2A4A' : '#F3F4F6',
-                    color: selected ? '#fff' : '#6B7280',
-                    '& .MuiChip-icon': { color: selected ? '#C9A86C' : '#9CA3AF' },
+                    bgcolor: selected ? 'var(--color-charcoal)' : 'var(--color-surface)',
+                    color: selected ? 'var(--color-text-inverse)' : 'var(--color-text-muted)',
+                    '& .MuiChip-icon': {
+                      color: selected ? 'var(--color-primary-dark)' : 'var(--color-text-muted)',
+                    },
                     '&:hover': {
-                      bgcolor: selected ? '#2D4470' : '#E5E7EB',
+                      bgcolor: selected ? 'var(--color-charcoal)' : 'var(--color-surface-2)',
                     },
                   }}
                 />
@@ -102,7 +110,10 @@ const AmenitiesTab = ({ formData, updateField }) => {
 
       {customAmenities.length > 0 && (
         <Paper sx={{ p: 2, borderRadius: 2 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A', mb: 1 }}>
+          <Typography
+            variant="subtitle2"
+            sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mb: 1 }}
+          >
             Custom Amenities
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -114,9 +125,9 @@ const AmenitiesTab = ({ formData, updateField }) => {
                 onDelete={() => toggleAmenity(amenity)}
                 sx={{
                   fontWeight: 500,
-                  bgcolor: '#1B2A4A',
-                  color: '#fff',
-                  '& .MuiChip-icon': { color: '#C9A86C' },
+                  bgcolor: 'var(--color-charcoal)',
+                  color: 'var(--color-text-inverse)',
+                  '& .MuiChip-icon': { color: 'var(--color-primary-dark)' },
                   '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.6)' },
                 }}
               />
@@ -131,7 +142,9 @@ const AmenitiesTab = ({ formData, updateField }) => {
         onClose={() => setCustomDialog(false)}
         PaperProps={{ sx: { borderRadius: 3, maxWidth: 400 } }}
       >
-        <DialogTitle sx={{ fontWeight: 600, color: '#1B2A4A' }}>Add Custom Amenity</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
+          Add Custom Amenity
+        </DialogTitle>
         <DialogContent
           sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '8px !important' }}
         >
@@ -173,7 +186,7 @@ const AmenitiesTab = ({ formData, updateField }) => {
           </FormControl>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setCustomDialog(false)} sx={{ color: '#6B7280' }}>
+          <Button onClick={() => setCustomDialog(false)} sx={{ color: 'var(--color-text-muted)' }}>
             Cancel
           </Button>
           <Button

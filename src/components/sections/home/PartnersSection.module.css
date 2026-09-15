@@ -1,6 +1,6 @@
 .section {
   padding: 64px 0;
-  background: #f8f6f3;
+  background: var(--color-surface);
 }
 
 .container {
@@ -18,14 +18,14 @@
   font-family: var(--font-heading);
   font-size: 2.25rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   margin-bottom: 8px;
 }
 
 .subtitle {
   font-family: var(--font-body);
   font-size: 1rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
 
 /* ── Marquee — CSS-driven infinite scroll ─── */
@@ -81,12 +81,12 @@
   transition:
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
-  background: #fff;
+  background: var(--color-bg);
   flex-shrink: 0;
 }
 
 .partnerCard:hover {
-  border-color: var(--color-secondary);
+  border-color: var(--color-primary);
   box-shadow: var(--shadow-sm);
 }
 
@@ -112,19 +112,19 @@
   font-family: var(--font-body);
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   text-align: center;
 }
 
 /* ── Tablet ── */
-@media (max-width: 960px) {
+@media (max-width: 899.98px) {
   .marqueeTrack {
     animation-duration: 25s;
   }
 }
 
 /* ── Mobile ── */
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .section {
     padding: 48px 0;
   }

@@ -1,32 +1,32 @@
 /* Desktop Sidebar */
 .sidebar {
-  background: var(--color-bg-default);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
+  padding: var(--space-6);
   box-shadow: var(--shadow-md);
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--space-4);
 }
 
 .formTitle {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--space-2);
   font-family: var(--font-heading);
   font-size: 1.15rem;
   font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-xs);
+  color: var(--color-text);
+  margin-bottom: var(--space-1);
 }
 
 .formTitleIcon {
   font-size: 1.35rem;
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
 }
 
 .field {
@@ -41,20 +41,20 @@
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: 0.875rem;
-  color: var(--color-text-primary);
-  background: var(--color-bg-default);
+  color: var(--color-text);
+  background: var(--color-bg);
   transition: border-color var(--transition-fast);
   outline: none;
 }
 
 .input:focus,
 .textarea:focus {
-  border-color: var(--color-secondary);
+  border-color: var(--color-primary);
 }
 
 .input::placeholder,
 .textarea::placeholder {
-  color: var(--color-text-light);
+  color: var(--color-text-muted);
 }
 
 .textarea {
@@ -63,13 +63,13 @@
 }
 
 .inputError {
-  border-color: #dc2626;
+  border-color: var(--color-error);
 }
 
 .errorText {
   font-family: var(--font-body);
   font-size: 0.75rem;
-  color: #dc2626;
+  color: var(--color-error-dark);
   margin-top: 4px;
   display: block;
 }
@@ -77,18 +77,18 @@
 .error {
   font-family: var(--font-body);
   font-size: 0.8rem;
-  color: #dc2626;
+  color: var(--color-error-dark);
 }
 
 .submitBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-sm);
+  gap: var(--space-2);
   width: 100%;
   padding: 12px;
-  background: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
@@ -99,7 +99,7 @@
 }
 
 .submitBtn:hover {
-  background: var(--color-secondary-dark);
+  background: var(--color-primary-dark);
 }
 
 .submitBtn:disabled {
@@ -110,28 +110,28 @@
 /* Success State */
 .success {
   text-align: center;
-  padding: var(--spacing-xl) var(--spacing-md);
+  padding: var(--space-8) var(--space-4);
 }
 
 .successIcon {
   font-size: 3rem;
-  color: var(--color-secondary);
-  margin-bottom: var(--spacing-md);
+  color: var(--color-primary-dark);
+  margin-bottom: var(--space-4);
 }
 
 .successTitle {
   font-family: var(--font-heading);
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-sm);
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
 }
 
 .successText {
   font-family: var(--font-body);
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-md);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-4);
 }
 
 .sendAnotherBtn {
@@ -139,8 +139,8 @@
   align-items: center;
   gap: 6px;
   padding: 10px 20px;
-  background: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
@@ -151,7 +151,7 @@
 }
 
 .sendAnotherBtn:hover {
-  background: var(--color-secondary-dark);
+  background: var(--color-primary-dark);
 }
 
 /* Mobile Fixed Button */
@@ -159,30 +159,30 @@
   display: none;
   position: fixed;
   bottom: 64px;
-  left: var(--spacing-md);
-  right: var(--spacing-md);
-  z-index: var(--z-fixed);
+  left: var(--space-4);
+  right: var(--space-4);
+  z-index: var(--z-sticky);
   padding: 14px;
-  background: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: var(--radius-lg);
   font-family: var(--font-body);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-lg);
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-sm);
+  gap: var(--space-2);
 }
 
 /* Backdrop */
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: var(--z-modal-backdrop);
+  background: var(--color-overlay);
+  z-index: var(--z-modal);
 }
 
 /* Bottom Sheet */
@@ -192,9 +192,9 @@
   left: 0;
   right: 0;
   z-index: var(--z-modal);
-  background: var(--color-bg-default);
+  background: var(--color-bg);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  padding: var(--spacing-sm) var(--spacing-lg) var(--spacing-xl);
+  padding: var(--space-2) var(--space-6) var(--space-8);
   max-height: 85vh;
   overflow-y: auto;
 }
@@ -204,22 +204,22 @@
   height: 4px;
   border-radius: 2px;
   background: var(--color-border);
-  margin: 0 auto var(--spacing-md);
+  margin: 0 auto var(--space-4);
 }
 
 .sheetClose {
   position: absolute;
-  top: var(--spacing-md);
-  right: var(--spacing-md);
+  top: var(--space-4);
+  right: var(--space-4);
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   cursor: pointer;
   padding: 4px;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 899.98px) {
   .sidebar {
     display: none;
   }

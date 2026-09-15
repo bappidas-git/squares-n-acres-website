@@ -1,5 +1,5 @@
 .section {
-  padding: var(--spacing-2xl) 0;
+  padding: var(--space-12) 0;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -7,13 +7,13 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--space-6);
 }
 
 .headerLeft {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--space-2);
 }
 
 .badge {
@@ -23,7 +23,7 @@
   font-family: var(--font-body);
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -32,14 +32,14 @@
   font-family: var(--font-heading);
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--color-text);
 }
 
 .logoPlaceholder {
   width: 64px;
   height: 64px;
   border-radius: var(--radius-lg);
-  background: var(--color-bg-surface);
+  background: var(--color-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -47,44 +47,44 @@
 
 .logoIcon {
   font-size: 2rem;
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
 }
 
 .description {
   font-family: var(--font-body);
   font-size: 0.95rem;
   line-height: 1.7;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-xl);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-8);
 }
 
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
 }
 
 .statCard {
-  background: var(--color-primary);
+  background: var(--color-charcoal);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
+  padding: var(--space-6);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 4px;
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .statIcon {
   font-size: 1.5rem;
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
   margin-bottom: 4px;
 }
 
 .statValue {
-  font-family: var(--font-number);
+  font-family: var(--font-heading);
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: 0.3px;
@@ -96,13 +96,13 @@
   opacity: 0.8;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 899.98px) {
   .statsGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .title {
     font-size: 1.5rem;
   }

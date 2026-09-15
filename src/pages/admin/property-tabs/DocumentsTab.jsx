@@ -21,15 +21,15 @@ const DocumentsTab = ({ formData, updateListItem, addListItem, removeListItem })
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
         Property Documents
       </Typography>
-      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
+      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)', mt: -1 }}>
         Add documents that are available for the property. Users can request to download these.
       </Typography>
 
       {formData.documents.map((doc, index) => (
-        <Paper key={index} sx={{ p: 2, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+        <Paper key={index} sx={{ p: 2, borderRadius: 2, border: '1px solid var(--color-border)' }}>
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Icon selector */}
             <Box
@@ -38,19 +38,19 @@ const DocumentsTab = ({ formData, updateListItem, addListItem, removeListItem })
                 width: 40,
                 height: 40,
                 borderRadius: 2,
-                border: '1px dashed #D1D5DB',
+                border: '1px dashed var(--color-border-strong)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                bgcolor: doc.icon ? '#F0F7FF' : '#F9FAFB',
+                bgcolor: doc.icon ? 'var(--color-info-bg)' : 'var(--color-surface)',
                 flexShrink: 0,
-                '&:hover': { borderColor: '#C9A86C' },
+                '&:hover': { borderColor: 'var(--color-primary)' },
               }}
             >
               <Icon
                 icon={doc.icon || 'mdi:file-document'}
-                style={{ fontSize: 22, color: '#1B2A4A' }}
+                style={{ fontSize: 22, color: 'var(--color-charcoal)' }}
               />
             </Box>
 
@@ -74,7 +74,7 @@ const DocumentsTab = ({ formData, updateListItem, addListItem, removeListItem })
               <IconButton
                 size="small"
                 onClick={() => removeListItem('documents', index)}
-                sx={{ color: '#EF4444' }}
+                sx={{ color: 'var(--color-error-dark)' }}
               >
                 <Icon icon="mdi:close-circle-outline" style={{ fontSize: 20 }} />
               </IconButton>
@@ -88,7 +88,7 @@ const DocumentsTab = ({ formData, updateListItem, addListItem, removeListItem })
         variant="text"
         onClick={() => addListItem('documents', { name: '', icon: 'mdi:file-document', url: '' })}
         startIcon={<Icon icon="mdi:plus" />}
-        sx={{ color: '#6B7280', alignSelf: 'flex-start' }}
+        sx={{ color: 'var(--color-text-muted)', alignSelf: 'flex-start' }}
       >
         Add Document
       </Button>

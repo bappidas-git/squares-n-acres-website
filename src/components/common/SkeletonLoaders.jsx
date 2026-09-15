@@ -7,13 +7,22 @@ import { BRAND } from '../../config/site';
  * All use the MUI Skeleton wave animation (shimmer).
  */
 
+/**
+ * Mirrors `PropertyCard`: image, title, price, location and the three-column
+ * detail grid. The card has no footer buttons, so neither does the skeleton —
+ * a skeleton that does not match its component is a layout shift waiting to
+ * happen (ADD-24).
+ */
 export const PropertyCardSkeleton = () => (
   <Box
+    aria-busy="true"
+    aria-live="polite"
     sx={{
-      borderRadius: '8px',
+      borderRadius: 'var(--radius-lg)',
       overflow: 'hidden',
-      bgcolor: 'background.paper',
-      boxShadow: 1,
+      border: '1px solid var(--color-border)',
+      bgcolor: 'var(--color-bg)',
+      boxShadow: 'var(--shadow-sm)',
     }}
   >
     <Skeleton variant="rectangular" width="100%" sx={{ aspectRatio: '4/3' }} animation="wave" />
@@ -21,9 +30,10 @@ export const PropertyCardSkeleton = () => (
       <Skeleton variant="text" width="75%" height={24} animation="wave" />
       <Skeleton variant="text" width="40%" height={28} animation="wave" sx={{ mt: 0.5 }} />
       <Skeleton variant="text" width="60%" height={20} animation="wave" sx={{ mt: 0.5 }} />
-      <Box sx={{ display: 'flex', gap: 1.5, mt: 1.5 }}>
-        <Skeleton variant="rounded" width="45%" height={36} animation="wave" />
-        <Skeleton variant="rounded" width="45%" height={36} animation="wave" />
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, mt: 1.5 }}>
+        <Skeleton variant="text" height={34} animation="wave" />
+        <Skeleton variant="text" height={34} animation="wave" />
+        <Skeleton variant="text" height={34} animation="wave" />
       </Box>
     </Box>
   </Box>
@@ -112,8 +122,11 @@ export const PageHeroSkeleton = () => (
 /**
  * Branded page loading spinner for Suspense fallback.
  */
+/** The Suspense fallback: the monogram, a spinner ring and a live status. */
 export const PageLoader = () => (
   <Box
+    role="status"
+    aria-live="polite"
     sx={{
       minHeight: '60vh',
       display: 'flex',
@@ -123,29 +136,36 @@ export const PageLoader = () => (
       gap: 2,
     }}
   >
-    <Box
-      sx={{
-        width: 48,
-        height: 48,
-        border: '3px solid #E5E7EB',
-        borderTopColor: '#C9A86C',
-        borderRadius: '50%',
-        animation: 'spin 0.8s linear infinite',
-        '@keyframes spin': {
-          to: { transform: 'rotate(360deg)' },
-        },
-      }}
-    />
+    <Box sx={{ position: 'relative', width: 72, height: 72 }}>
+      <Box
+        component="img"
+        src={BRAND.iconUrl}
+        alt=""
+        sx={{ position: 'absolute', inset: '14px', width: 44, height: 44, objectFit: 'contain' }}
+      />
+      <Box
+        sx={{
+          width: 72,
+          height: 72,
+          border: '3px solid var(--color-border)',
+          borderTopColor: 'var(--color-primary)',
+          borderRadius: 'var(--radius-full)',
+          animation: 'pageLoaderSpin 0.8s linear infinite',
+          '@keyframes pageLoaderSpin': { to: { transform: 'rotate(360deg)' } },
+          '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+        }}
+      />
+    </Box>
     <Box
       component="span"
       sx={{
         fontFamily: 'var(--font-body)',
-        fontSize: '1.1rem',
-        color: 'text.secondary',
-        fontWeight: 600,
+        fontSize: 'var(--font-size-sm)',
+        color: 'var(--color-text-muted)',
+        fontWeight: 'var(--font-weight-semibold)',
       }}
     >
-      {BRAND.name}
+      Loading&hellip;
     </Box>
   </Box>
 );

@@ -1,0 +1,13 @@
+.main {
+  /* The header is fixed, so the page starts below it. */
+  padding-top: var(--header-height);
+  min-height: 100vh;
+  overflow-x: clip;
+}
+
+/* Below 900px the bottom navigation covers the last band of the page. */
+@media (max-width: 899.98px) {
+  .main {
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
+  }
+}

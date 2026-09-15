@@ -1,28 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
+import { Section } from '../../components/ui';
 import styles from './RealEstateAwareness.module.css';
 import { BRAND, SITE } from '../../config/site';
 
 /* ── Animated section wrapper ──────────────────── */
-const Section = ({ children, className = '', delay = 0 }) => {
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
-  return (
-    <motion.section
-      ref={ref}
-      className={className}
-      initial={{ opacity: 0, y: 30 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay }}
-    >
-      {children}
-    </motion.section>
-  );
-};
-
 /* ── Educational sections data ─────────────────── */
 const educationalSections = [
   {

@@ -64,7 +64,7 @@ const OverviewTab = ({
       />
 
       {/* Location */}
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
         Location
       </Typography>
       <TextField
@@ -121,7 +121,10 @@ const OverviewTab = ({
       </Box>
 
       {/* Configuration */}
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A', mt: 1 }}>
+      <Typography
+        variant="subtitle2"
+        sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mt: 1 }}
+      >
         Configuration Options
       </Typography>
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -133,10 +136,16 @@ const OverviewTab = ({
             onClick={() => toggleConfiguration(config)}
             sx={{
               fontWeight: 500,
-              bgcolor: formData.configuration.includes(config) ? '#1B2A4A' : '#F3F4F6',
-              color: formData.configuration.includes(config) ? '#fff' : '#6B7280',
+              bgcolor: formData.configuration.includes(config)
+                ? 'var(--color-charcoal)'
+                : 'var(--color-surface)',
+              color: formData.configuration.includes(config)
+                ? 'var(--color-text-inverse)'
+                : 'var(--color-text-muted)',
               '&:hover': {
-                bgcolor: formData.configuration.includes(config) ? '#2D4470' : '#E5E7EB',
+                bgcolor: formData.configuration.includes(config)
+                  ? 'var(--color-charcoal)'
+                  : 'var(--color-surface-2)',
               },
             }}
           />
@@ -144,7 +153,10 @@ const OverviewTab = ({
       </Box>
 
       {/* Dimension Range */}
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A', mt: 1 }}>
+      <Typography
+        variant="subtitle2"
+        sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mt: 1 }}
+      >
         Dimension Range
       </Typography>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -156,7 +168,7 @@ const OverviewTab = ({
           onChange={(e) => updateDimensionRange('min', e.target.value)}
           sx={{ width: 140 }}
         />
-        <Typography variant="body2" sx={{ color: '#9CA3AF' }}>
+        <Typography variant="body2" sx={{ color: 'var(--color-text-muted)' }}>
           to
         </Typography>
         <TextField
@@ -181,10 +193,13 @@ const OverviewTab = ({
       </Box>
 
       {/* Highlights */}
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A', mt: 1 }}>
+      <Typography
+        variant="subtitle2"
+        sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mt: 1 }}
+      >
         Highlights
       </Typography>
-      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -2 }}>
+      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)', mt: -2 }}>
         Key selling points that appear in the Overview section.
       </Typography>
       {formData.highlights.map((highlight, index) => (
@@ -200,7 +215,7 @@ const OverviewTab = ({
             <IconButton
               size="small"
               onClick={() => removeListItem('highlights', index)}
-              sx={{ color: '#EF4444' }}
+              sx={{ color: 'var(--color-error-dark)' }}
             >
               <Icon icon="mdi:close-circle-outline" style={{ fontSize: 20 }} />
             </IconButton>
@@ -212,7 +227,7 @@ const OverviewTab = ({
         variant="text"
         onClick={() => addListItem('highlights', '')}
         startIcon={<Icon icon="mdi:plus" />}
-        sx={{ color: '#6B7280', alignSelf: 'flex-start' }}
+        sx={{ color: 'var(--color-text-muted)', alignSelf: 'flex-start' }}
       >
         Add Highlight
       </Button>

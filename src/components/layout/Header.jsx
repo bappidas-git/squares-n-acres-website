@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Drawer, IconButton } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BRAND } from '../../config/site';
+import useScrollDirection from '../../hooks/useScrollDirection';
+import { Logo } from '../ui';
 import styles from './Header.module.css';
 
 const navItems = [
@@ -64,30 +65,11 @@ const dropdownVariants = {
 
 const Header = () => {
   const location = useLocation();
-  const [scrolled, setScrolled] = useState(false);
-  const [hidden, setHidden] = useState(false);
+  // D52: the header is always visible — it only gains elevation on scroll.
+  const { scrolled } = useScrollDirection();
   const [openDropdown, setOpenDropdown] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const lastScrollY = useRef(0);
   const dropdownTimeoutRef = useRef(null);
-
-  const handleScroll = useCallback(() => {
-    const currentScrollY = window.scrollY;
-    setScrolled(currentScrollY > 10);
-
-    if (currentScrollY > 100) {
-      setHidden(currentScrollY > lastScrollY.current);
-    } else {
-      setHidden(false);
-    }
-
-    lastScrollY.current = currentScrollY;
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
 
   const handleDropdownEnter = (label) => {
     clearTimeout(dropdownTimeoutRef.current);
@@ -106,13 +88,11 @@ const Header = () => {
   };
 
   return (
-    <header
-      className={`${styles.header} ${scrolled ? styles.scrolled : ''} ${hidden ? styles.hidden : ''}`}
-    >
+    <header className={`${styles.header} ${scrolled ? styles.scrolled : ''}`}>
       <div className={styles.headerInner}>
         {/* Logo */}
         <Link to="/" className={styles.logo}>
-          <img src={BRAND.logoUrl} alt={BRAND.name} width="112" height="48" />
+          <Logo height={44} />
         </Link>
 
         {/* Navigation */}
@@ -199,7 +179,7 @@ const Header = () => {
       >
         <div className={styles.drawerHeader}>
           <Link to="/" onClick={() => setDrawerOpen(false)}>
-            <img src={BRAND.logoUrl} alt={BRAND.name} width="94" height="40" />
+            <Logo height={40} />
           </Link>
           <IconButton onClick={() => setDrawerOpen(false)} aria-label="Close menu">
             <Icon icon="mdi:close" width={24} />

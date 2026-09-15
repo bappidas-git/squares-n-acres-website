@@ -28,7 +28,6 @@ import {
   DialogActions,
   Skeleton,
   Alert,
-  Snackbar,
   Card,
   CardContent,
   CardActions,
@@ -39,15 +38,16 @@ import {
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { propertyService } from '../../services/api';
+import { useToast } from '../../components/common/ToastProvider';
 
 // Tag color config
 const tagColors = {
-  featured: { bg: '#FEF3C7', color: '#B45309' },
-  trending: { bg: '#DBEAFE', color: '#1D4ED8' },
-  premium: { bg: '#EDE9FE', color: '#7C3AED' },
-  'hot-deal': { bg: '#FEE2E2', color: '#DC2626' },
-  'new-launch': { bg: '#D1FAE5', color: '#059669' },
-  'ready-to-move': { bg: '#ECFDF5', color: '#10B981' },
+  featured: { bg: 'var(--color-warning-bg)', color: 'var(--color-warning-dark)' },
+  trending: { bg: 'var(--color-info-bg)', color: 'var(--color-info-dark)' },
+  premium: { bg: 'var(--color-primary-light)', color: 'var(--color-primary-dark)' },
+  'hot-deal': { bg: 'var(--color-error-bg)', color: 'var(--color-error-dark)' },
+  'new-launch': { bg: 'var(--color-success-bg)', color: 'var(--color-success-dark)' },
+  'ready-to-move': { bg: 'var(--color-success-bg)', color: 'var(--color-success-dark)' },
 };
 
 const statusLabels = {
@@ -64,6 +64,7 @@ const formatPrice = (price) => {
 };
 
 const AdminProperties = () => {
+  const toast = useToast();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -97,9 +98,6 @@ const AdminProperties = () => {
     title: '',
     bulk: false,
   });
-
-  // Snackbar state
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   // Fetch properties
   const fetchProperties = useCallback(async () => {
@@ -182,13 +180,9 @@ const AdminProperties = () => {
       setProperties((prev) =>
         prev.map((p) => (p.id === id ? { ...p, isActive: !currentStatus } : p))
       );
-      setSnackbar({
-        open: true,
-        message: `Property ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
-        severity: 'success',
-      });
+      toast.success(`Property ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to update status', severity: 'error' });
+      toast.error('Failed to update status');
     }
   };
 
@@ -199,19 +193,15 @@ const AdminProperties = () => {
         await Promise.all(selected.map((id) => propertyService.delete(id)));
         setProperties((prev) => prev.filter((p) => !selected.includes(p.id)));
         setSelected([]);
-        setSnackbar({
-          open: true,
-          message: `${selected.length} properties deleted successfully`,
-          severity: 'success',
-        });
+        toast.success(`${selected.length} properties deleted successfully`);
       } else {
         await propertyService.delete(deleteDialog.id);
         setProperties((prev) => prev.filter((p) => p.id !== deleteDialog.id));
         setSelected((prev) => prev.filter((id) => id !== deleteDialog.id));
-        setSnackbar({ open: true, message: 'Property deleted successfully', severity: 'success' });
+        toast.success('Property deleted successfully');
       }
     } catch {
-      setSnackbar({ open: true, message: 'Failed to delete property', severity: 'error' });
+      toast.error('Failed to delete property');
     } finally {
       setDeleteDialog({ open: false, id: null, title: '', bulk: false });
     }
@@ -225,9 +215,9 @@ const AdminProperties = () => {
         prev.map((p) => (selected.includes(p.id) ? { ...p, isActive: true } : p))
       );
       setSelected([]);
-      setSnackbar({ open: true, message: 'Selected properties activated', severity: 'success' });
+      toast.success('Selected properties activated');
     } catch {
-      setSnackbar({ open: true, message: 'Failed to activate properties', severity: 'error' });
+      toast.error('Failed to activate properties');
     }
   };
 
@@ -238,9 +228,9 @@ const AdminProperties = () => {
         prev.map((p) => (selected.includes(p.id) ? { ...p, isActive: false } : p))
       );
       setSelected([]);
-      setSnackbar({ open: true, message: 'Selected properties deactivated', severity: 'success' });
+      toast.success('Selected properties deactivated');
     } catch {
-      setSnackbar({ open: true, message: 'Failed to deactivate properties', severity: 'error' });
+      toast.error('Failed to deactivate properties');
     }
   };
 
@@ -274,12 +264,12 @@ const AdminProperties = () => {
     <TableCell
       sx={{
         fontWeight: 600,
-        color: '#6B7280',
+        color: 'var(--color-text-muted)',
         fontSize: '0.75rem',
         cursor: 'pointer',
         userSelect: 'none',
         whiteSpace: 'nowrap',
-        '&:hover': { color: '#1B2A4A' },
+        '&:hover': { color: 'var(--color-charcoal)' },
       }}
       onClick={() => handleSort(field)}
     >
@@ -325,10 +315,10 @@ const AdminProperties = () => {
         }}
       >
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, color: 'var(--color-charcoal)' }}>
             Property Management
           </Typography>
-          <Typography variant="body2" sx={{ color: '#6B7280', mt: 0.5 }}>
+          <Typography variant="body2" sx={{ color: 'var(--color-text-muted)', mt: 0.5 }}>
             {filteredProperties.length} properties found
           </Typography>
         </Box>
@@ -362,7 +352,10 @@ const AdminProperties = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Icon icon="mdi:magnify" style={{ fontSize: 20, color: '#9CA3AF' }} />
+                  <Icon
+                    icon="mdi:magnify"
+                    style={{ fontSize: 20, color: 'var(--color-text-muted)' }}
+                  />
                 </InputAdornment>
               ),
             }}
@@ -436,7 +429,7 @@ const AdminProperties = () => {
                 setActiveFilter('all');
               }}
               startIcon={<Icon icon="mdi:filter-off-outline" />}
-              sx={{ color: '#6B7280' }}
+              sx={{ color: 'var(--color-text-muted)' }}
             >
               Clear
             </Button>
@@ -451,15 +444,15 @@ const AdminProperties = () => {
             p: 1.5,
             mb: 2,
             borderRadius: 2,
-            bgcolor: '#EFF6FF',
-            border: '1px solid #BFDBFE',
+            bgcolor: 'var(--color-info-bg)',
+            border: '1px solid var(--color-info-bg)',
             display: 'flex',
             alignItems: 'center',
             gap: 2,
             flexWrap: 'wrap',
           }}
         >
-          <Typography variant="body2" sx={{ fontWeight: 600, color: '#1D4ED8' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: 'var(--color-info-dark)' }}>
             {selected.length} selected
           </Typography>
           <Button
@@ -468,9 +461,12 @@ const AdminProperties = () => {
             onClick={handleBulkActivate}
             startIcon={<Icon icon="mdi:check-circle-outline" />}
             sx={{
-              borderColor: '#10B981',
-              color: '#10B981',
-              '&:hover': { borderColor: '#059669', bgcolor: '#ECFDF5' },
+              borderColor: 'var(--color-success)',
+              color: 'var(--color-success-dark)',
+              '&:hover': {
+                borderColor: 'var(--color-success)',
+                bgcolor: 'var(--color-success-bg)',
+              },
             }}
           >
             Activate
@@ -481,9 +477,12 @@ const AdminProperties = () => {
             onClick={handleBulkDeactivate}
             startIcon={<Icon icon="mdi:close-circle-outline" />}
             sx={{
-              borderColor: '#F59E0B',
-              color: '#F59E0B',
-              '&:hover': { borderColor: '#D97706', bgcolor: '#FFFBEB' },
+              borderColor: 'var(--color-warning)',
+              color: 'var(--color-warning-dark)',
+              '&:hover': {
+                borderColor: 'var(--color-warning)',
+                bgcolor: 'var(--color-warning-bg)',
+              },
             }}
           >
             Deactivate
@@ -494,9 +493,9 @@ const AdminProperties = () => {
             onClick={() => setDeleteDialog({ open: true, id: null, title: '', bulk: true })}
             startIcon={<Icon icon="mdi:delete-outline" />}
             sx={{
-              borderColor: '#EF4444',
-              color: '#EF4444',
-              '&:hover': { borderColor: '#DC2626', bgcolor: '#FEF2F2' },
+              borderColor: 'var(--color-error)',
+              color: 'var(--color-error-dark)',
+              '&:hover': { borderColor: 'var(--color-error)', bgcolor: 'var(--color-error-bg)' },
             }}
           >
             Delete
@@ -505,7 +504,7 @@ const AdminProperties = () => {
             size="small"
             variant="text"
             onClick={() => setSelected([])}
-            sx={{ ml: 'auto', color: '#6B7280' }}
+            sx={{ ml: 'auto', color: 'var(--color-text-muted)' }}
           >
             Clear Selection
           </Button>
@@ -535,8 +534,11 @@ const AdminProperties = () => {
             ))
           ) : currentPageData.length === 0 ? (
             <Paper sx={{ p: 4, borderRadius: 3, textAlign: 'center' }}>
-              <Icon icon="mdi:home-search-outline" style={{ fontSize: 48, color: '#D1D5DB' }} />
-              <Typography variant="body1" sx={{ color: '#9CA3AF', mt: 1 }}>
+              <Icon
+                icon="mdi:home-search-outline"
+                style={{ fontSize: 48, color: 'var(--color-text-muted)' }}
+              />
+              <Typography variant="body1" sx={{ color: 'var(--color-text-muted)', mt: 1 }}>
                 No properties found
               </Typography>
             </Paper>
@@ -555,7 +557,7 @@ const AdminProperties = () => {
                         width: 64,
                         height: 64,
                         borderRadius: 2,
-                        bgcolor: '#F3F4F6',
+                        bgcolor: 'var(--color-surface)',
                         backgroundImage: property.gallery?.[0]
                           ? `url(${property.gallery[0]})`
                           : 'none',
@@ -568,7 +570,10 @@ const AdminProperties = () => {
                       }}
                     >
                       {!property.gallery?.[0] && (
-                        <Icon icon="mdi:image-outline" style={{ fontSize: 24, color: '#D1D5DB' }} />
+                        <Icon
+                          icon="mdi:image-outline"
+                          style={{ fontSize: 24, color: 'var(--color-text-muted)' }}
+                        />
                       )}
                     </Box>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -576,7 +581,7 @@ const AdminProperties = () => {
                         variant="subtitle2"
                         sx={{
                           fontWeight: 600,
-                          color: '#1B2A4A',
+                          color: 'var(--color-charcoal)',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
@@ -584,13 +589,13 @@ const AdminProperties = () => {
                       >
                         {property.title}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#6B7280' }}>
+                      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
                         {property.location?.area || property.location_area},{' '}
                         {property.location?.city || property.location_city}
                       </Typography>
                       <Typography
                         variant="body2"
-                        sx={{ fontWeight: 600, color: '#C9A86C', mt: 0.5 }}
+                        sx={{ fontWeight: 600, color: 'var(--color-primary-dark)', mt: 0.5 }}
                       >
                         {formatPrice(property.price)}
                       </Typography>
@@ -605,8 +610,14 @@ const AdminProperties = () => {
                         height: 22,
                         fontSize: '0.6875rem',
                         fontWeight: 600,
-                        bgcolor: property.type === 'sale' ? '#EFF6FF' : '#FEF3C7',
-                        color: property.type === 'sale' ? '#1D4ED8' : '#B45309',
+                        bgcolor:
+                          property.type === 'sale'
+                            ? 'var(--color-info-bg)'
+                            : 'var(--color-warning-bg)',
+                        color:
+                          property.type === 'sale'
+                            ? 'var(--color-info-dark)'
+                            : 'var(--color-warning-dark)',
                       }}
                     />
                     <Chip
@@ -615,7 +626,10 @@ const AdminProperties = () => {
                       sx={{ height: 22, fontSize: '0.6875rem' }}
                     />
                     {(property.tags || []).map((tag) => {
-                      const tc = tagColors[tag] || { bg: '#F3F4F6', color: '#6B7280' };
+                      const tc = tagColors[tag] || {
+                        bg: 'var(--color-surface)',
+                        color: 'var(--color-text-muted)',
+                      };
                       return (
                         <Chip
                           key={tag}
@@ -635,7 +649,7 @@ const AdminProperties = () => {
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Typography variant="caption" sx={{ color: '#6B7280' }}>
+                    <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
                       Active
                     </Typography>
                     <Switch
@@ -645,9 +659,11 @@ const AdminProperties = () => {
                         handleToggleActive(property.id, property.isActive ?? property.is_active)
                       }
                       sx={{
-                        '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: 'var(--color-success-dark)',
+                        },
                         '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                          bgcolor: '#10B981',
+                          bgcolor: 'var(--color-success)',
                         },
                       }}
                     />
@@ -656,7 +672,7 @@ const AdminProperties = () => {
                     <IconButton
                       size="small"
                       onClick={() => navigate(`/admin/properties/edit/${property.id}`)}
-                      sx={{ color: '#6B7280' }}
+                      sx={{ color: 'var(--color-text-muted)' }}
                     >
                       <Icon icon="mdi:pencil-outline" style={{ fontSize: 18 }} />
                     </IconButton>
@@ -670,7 +686,7 @@ const AdminProperties = () => {
                           bulk: false,
                         })
                       }
-                      sx={{ color: '#EF4444' }}
+                      sx={{ color: 'var(--color-error-dark)' }}
                     >
                       <Icon icon="mdi:delete-outline" style={{ fontSize: 18 }} />
                     </IconButton>
@@ -686,7 +702,7 @@ const AdminProperties = () => {
           <TableContainer>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ bgcolor: '#F9FAFB' }}>
+                <TableRow sx={{ bgcolor: 'var(--color-surface)' }}>
                   <TableCell padding="checkbox">
                     <Checkbox
                       size="small"
@@ -696,23 +712,32 @@ const AdminProperties = () => {
                     />
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem', width: 60 }}
+                    sx={{
+                      fontWeight: 600,
+                      color: 'var(--color-text-muted)',
+                      fontSize: '0.75rem',
+                      width: 60,
+                    }}
                   >
                     Image
                   </TableCell>
                   <SortableHeader field="title">Name</SortableHeader>
                   <SortableHeader field="price">Price</SortableHeader>
 
-                  <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}
+                  >
                     Type
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}
+                  >
                     Status
                   </TableCell>
                   <TableCell
                     sx={{
                       fontWeight: 600,
-                      color: '#6B7280',
+                      color: 'var(--color-text-muted)',
                       fontSize: '0.75rem',
                       textAlign: 'center',
                     }}
@@ -722,7 +747,7 @@ const AdminProperties = () => {
                   <TableCell
                     sx={{
                       fontWeight: 600,
-                      color: '#6B7280',
+                      color: 'var(--color-text-muted)',
                       fontSize: '0.75rem',
                       textAlign: 'right',
                     }}
@@ -750,9 +775,9 @@ const AdminProperties = () => {
                     <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                       <Icon
                         icon="mdi:home-search-outline"
-                        style={{ fontSize: 48, color: '#D1D5DB' }}
+                        style={{ fontSize: 48, color: 'var(--color-text-muted)' }}
                       />
-                      <Typography variant="body2" sx={{ color: '#9CA3AF', mt: 1 }}>
+                      <Typography variant="body2" sx={{ color: 'var(--color-text-muted)', mt: 1 }}>
                         No properties found
                       </Typography>
                     </TableCell>
@@ -784,7 +809,7 @@ const AdminProperties = () => {
                             width: 48,
                             height: 48,
                             borderRadius: 1.5,
-                            bgcolor: '#F3F4F6',
+                            bgcolor: 'var(--color-surface)',
                             backgroundImage: property.gallery?.[0]
                               ? `url(${property.gallery[0]})`
                               : 'none',
@@ -798,7 +823,7 @@ const AdminProperties = () => {
                           {!property.gallery?.[0] && (
                             <Icon
                               icon="mdi:image-outline"
-                              style={{ fontSize: 20, color: '#D1D5DB' }}
+                              style={{ fontSize: 20, color: 'var(--color-text-muted)' }}
                             />
                           )}
                         </Box>
@@ -810,19 +835,19 @@ const AdminProperties = () => {
                           variant="body2"
                           sx={{
                             fontWeight: 600,
-                            color: '#1B2A4A',
+                            color: 'var(--color-charcoal)',
                             maxWidth: 200,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             cursor: 'pointer',
-                            '&:hover': { color: '#C9A86C' },
+                            '&:hover': { color: 'var(--color-primary-dark)' },
                           }}
                           onClick={() => navigate(`/admin/properties/edit/${property.id}`)}
                         >
                           {property.title}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
+                        <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
                           {property.developer}
                         </Typography>
                       </TableCell>
@@ -831,7 +856,11 @@ const AdminProperties = () => {
                       <TableCell>
                         <Typography
                           variant="body2"
-                          sx={{ fontWeight: 600, color: '#1B2A4A', whiteSpace: 'nowrap' }}
+                          sx={{
+                            fontWeight: 600,
+                            color: 'var(--color-charcoal)',
+                            whiteSpace: 'nowrap',
+                          }}
                         >
                           {formatPrice(property.price)}
                         </Typography>
@@ -846,8 +875,14 @@ const AdminProperties = () => {
                             height: 22,
                             fontSize: '0.6875rem',
                             fontWeight: 600,
-                            bgcolor: property.type === 'sale' ? '#EFF6FF' : '#FEF3C7',
-                            color: property.type === 'sale' ? '#1D4ED8' : '#B45309',
+                            bgcolor:
+                              property.type === 'sale'
+                                ? 'var(--color-info-bg)'
+                                : 'var(--color-warning-bg)',
+                            color:
+                              property.type === 'sale'
+                                ? 'var(--color-info-dark)'
+                                : 'var(--color-warning-dark)',
                           }}
                         />
                       </TableCell>
@@ -870,9 +905,11 @@ const AdminProperties = () => {
                             handleToggleActive(property.id, property.isActive ?? property.is_active)
                           }
                           sx={{
-                            '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                              color: 'var(--color-success-dark)',
+                            },
                             '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                              bgcolor: '#10B981',
+                              bgcolor: 'var(--color-success)',
                             },
                           }}
                         />
@@ -885,7 +922,10 @@ const AdminProperties = () => {
                             <IconButton
                               size="small"
                               onClick={() => navigate(`/admin/properties/edit/${property.id}`)}
-                              sx={{ color: '#6B7280', '&:hover': { color: '#1B2A4A' } }}
+                              sx={{
+                                color: 'var(--color-text-muted)',
+                                '&:hover': { color: 'var(--color-charcoal)' },
+                              }}
                             >
                               <Icon icon="mdi:pencil-outline" style={{ fontSize: 18 }} />
                             </IconButton>
@@ -900,12 +940,14 @@ const AdminProperties = () => {
                               onClick={() => handleToggleActive(property.id, property.isActive)}
                               sx={{
                                 color:
-                                  (property.isActive ?? property.is_active) ? '#F59E0B' : '#10B981',
+                                  (property.isActive ?? property.is_active)
+                                    ? 'var(--color-warning)'
+                                    : 'var(--color-success)',
                                 '&:hover': {
                                   color:
                                     (property.isActive ?? property.is_active)
-                                      ? '#D97706'
-                                      : '#059669',
+                                      ? 'var(--color-warning)'
+                                      : 'var(--color-success-dark)',
                                 },
                               }}
                             >
@@ -930,7 +972,10 @@ const AdminProperties = () => {
                                   bulk: false,
                                 })
                               }
-                              sx={{ color: '#EF4444', '&:hover': { color: '#DC2626' } }}
+                              sx={{
+                                color: 'var(--color-error-dark)',
+                                '&:hover': { color: 'var(--color-error-dark)' },
+                              }}
                             >
                               <Icon icon="mdi:delete-outline" style={{ fontSize: 18 }} />
                             </IconButton>
@@ -969,9 +1014,11 @@ const AdminProperties = () => {
         onClose={() => setDeleteDialog({ open: false, id: null, title: '', bulk: false })}
         PaperProps={{ sx: { borderRadius: 3, maxWidth: 420 } }}
       >
-        <DialogTitle sx={{ fontWeight: 600, color: '#1B2A4A' }}>Confirm Delete</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
+          Confirm Delete
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText sx={{ color: '#6B7280' }}>
+          <DialogContentText sx={{ color: 'var(--color-text-muted)' }}>
             {deleteDialog.bulk
               ? `Are you sure you want to delete ${selected.length} selected properties? This action cannot be undone.`
               : `Are you sure you want to delete "${deleteDialog.title}"? This action cannot be undone.`}
@@ -980,7 +1027,7 @@ const AdminProperties = () => {
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button
             onClick={() => setDeleteDialog({ open: false, id: null, title: '', bulk: false })}
-            sx={{ color: '#6B7280' }}
+            sx={{ color: 'var(--color-text-muted)' }}
           >
             Cancel
           </Button>
@@ -988,8 +1035,8 @@ const AdminProperties = () => {
             onClick={handleDelete}
             variant="contained"
             sx={{
-              bgcolor: '#EF4444',
-              '&:hover': { bgcolor: '#DC2626' },
+              bgcolor: 'var(--color-error)',
+              '&:hover': { bgcolor: 'var(--color-error)' },
               borderRadius: 2,
             }}
           >
@@ -997,22 +1044,6 @@ const AdminProperties = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 2 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

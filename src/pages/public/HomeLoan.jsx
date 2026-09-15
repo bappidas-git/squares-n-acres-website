@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
+import { Section } from '../../components/ui';
 import styles from './HomeLoan.module.css';
 import { SITE } from '../../config/site';
 
@@ -24,21 +24,6 @@ const formatCurrency = (val) => {
 const formatCurrencyFull = (val) => `₹${Math.round(val).toLocaleString('en-IN')}`;
 
 /* ── Animated section wrapper ──────────────────── */
-const Section = ({ children, className = '', delay = 0 }) => {
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
-  return (
-    <motion.section
-      ref={ref}
-      className={className}
-      initial={{ opacity: 0, y: 30 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay }}
-    >
-      {children}
-    </motion.section>
-  );
-};
-
 /* ── Donut chart via SVG ───────────────────────── */
 const DonutChart = ({ principal, interest }) => {
   const total = principal + interest;
@@ -52,14 +37,21 @@ const DonutChart = ({ principal, interest }) => {
     <div className={styles.donutWrapper}>
       <svg viewBox="0 0 200 200" className={styles.donut}>
         {/* Interest (background) */}
-        <circle cx="100" cy="100" r={radius} fill="none" stroke="#1B2A4A" strokeWidth="24" />
+        <circle
+          cx="100"
+          cy="100"
+          r={radius}
+          fill="none"
+          stroke="var(--color-charcoal)"
+          strokeWidth="24"
+        />
         {/* Principal (foreground) */}
         <circle
           cx="100"
           cy="100"
           r={radius}
           fill="none"
-          stroke="#C9A86C"
+          stroke="var(--color-primary)"
           strokeWidth="24"
           strokeDasharray={`${principalDash} ${circumference - principalDash}`}
           strokeDashoffset={circumference / 4}
@@ -73,11 +65,11 @@ const DonutChart = ({ principal, interest }) => {
       </div>
       <div className={styles.donutLegend}>
         <span className={styles.legendItem}>
-          <span className={styles.legendDot} style={{ background: '#C9A86C' }} />
+          <span className={styles.legendDot} style={{ background: 'var(--color-primary)' }} />
           Principal: {formatCurrency(principal)}
         </span>
         <span className={styles.legendItem}>
-          <span className={styles.legendDot} style={{ background: '#1B2A4A' }} />
+          <span className={styles.legendDot} style={{ background: 'var(--color-charcoal)' }} />
           Interest: {formatCurrency(interest)}
         </span>
       </div>

@@ -1,0 +1,75 @@
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.iconButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sm {
+  width: 36px;
+  height: 36px;
+}
+
+@media (max-width: 899.98px) {
+  .sm {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.lg {
+  width: 52px;
+  height: 52px;
+}
+
+.round {
+  border-radius: var(--radius-full);
+}
+
+/* ── Variants ────────────────────────────────────────────────────────────── */
+.ghost:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+
+.outline {
+  border-color: var(--color-border);
+  background: var(--color-bg);
+}
+
+.outline:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.solid {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.solid:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.onDark {
+  color: var(--color-text-inverse);
+}
+
+.onDark:hover:not(:disabled) {
+  background: var(--color-on-dark-subtle);
+}

@@ -11,8 +11,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1b2a4a 0%, #2d4470 60%, #1b2a4a 100%);
-  padding: var(--spacing-3xl) var(--spacing-lg);
+  background: linear-gradient(
+    135deg,
+    var(--color-charcoal) 0%,
+    var(--color-charcoal) 60%,
+    var(--color-charcoal) 100%
+  );
+  padding: var(--space-16) var(--space-6);
   text-align: center;
 }
 
@@ -33,29 +38,29 @@
   align-items: center;
   gap: 6px;
   padding: 6px 16px;
-  background: rgba(201, 168, 108, 0.15);
-  border: 1px solid rgba(201, 168, 108, 0.3);
+  background: var(--color-on-dark-subtle);
+  border: 1px solid var(--color-on-dark-border);
   border-radius: 100px;
   font-family: var(--font-body);
   font-size: 0.8rem;
   font-weight: 500;
-  color: var(--color-secondary-light);
-  margin-bottom: var(--spacing-lg);
+  color: var(--color-primary-light);
+  margin-bottom: var(--space-6);
 }
 
 .heroTitle {
   font-family: var(--font-heading);
   font-size: 2.75rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-inverse);
   line-height: 1.2;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--space-4);
 }
 
 .heroSubtitle {
   font-family: var(--font-body);
   font-size: 1.05rem;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--color-on-dark);
   line-height: 1.7;
   max-width: 580px;
   margin: 0 auto;
@@ -63,11 +68,11 @@
 
 /* ── Section ───────────────────────────────────── */
 .section {
-  padding: var(--spacing-3xl) var(--spacing-lg);
+  padding: var(--space-16) var(--space-6);
 }
 
 .sectionAlt {
-  background: var(--color-bg-surface);
+  background: var(--color-surface);
 }
 
 .container {
@@ -77,21 +82,21 @@
 
 .sectionHeader {
   text-align: center;
-  margin-bottom: var(--spacing-2xl);
+  margin-bottom: var(--space-12);
 }
 
 .sectionTitle {
   font-family: var(--font-heading);
   font-size: 2rem;
   font-weight: 700;
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-sm);
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
 }
 
 .sectionSubtitle {
   font-family: var(--font-body);
   font-size: 1rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
 
 /* ── Timeline ─────────────────────────────────── */
@@ -114,7 +119,7 @@
 
 .timelineItem {
   position: relative;
-  padding-bottom: var(--spacing-xl);
+  padding-bottom: var(--space-8);
 }
 
 .timelineItem:last-child {
@@ -128,15 +133,15 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--color-secondary);
-  border: 3px solid var(--color-bg-default);
-  box-shadow: 0 0 0 2px var(--color-secondary);
+  background: var(--color-primary);
+  border: 3px solid var(--color-bg);
+  box-shadow: 0 0 0 2px var(--color-primary);
 }
 
 .timelineContent {
-  background: var(--color-bg-surface);
+  background: var(--color-surface);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
+  padding: var(--space-6);
   border: 1px solid var(--color-border);
 }
 
@@ -145,25 +150,25 @@
   font-family: var(--font-body);
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--color-secondary-dark);
-  background: rgba(201, 168, 108, 0.12);
+  color: var(--color-primary-dark);
+  background: var(--color-primary-tint);
   padding: 2px 10px;
   border-radius: 100px;
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--space-2);
 }
 
 .timelineTitle {
   font-family: var(--font-heading);
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-xs);
+  color: var(--color-text);
+  margin-bottom: var(--space-1);
 }
 
 .timelineDesc {
   font-family: var(--font-body);
   font-size: 0.875rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   line-height: 1.6;
 }
 
@@ -171,14 +176,14 @@
 .valuesGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-2xl);
+  gap: var(--space-6);
+  margin-bottom: var(--space-12);
 }
 
 .valueCard {
-  background: var(--color-bg-default);
+  background: var(--color-bg);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-xl);
+  padding: var(--space-8);
   text-align: center;
   border: 1px solid var(--color-border);
   transition:
@@ -195,27 +200,27 @@
   width: 56px;
   height: 56px;
   border-radius: var(--radius-full);
-  background: rgba(201, 168, 108, 0.12);
+  background: var(--color-primary-tint);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.75rem;
-  color: var(--color-secondary-dark);
-  margin: 0 auto var(--spacing-md);
+  color: var(--color-primary-dark);
+  margin: 0 auto var(--space-4);
 }
 
 .valueTitle {
   font-family: var(--font-heading);
   font-size: 1.15rem;
   font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-sm);
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
 }
 
 .valueDesc {
   font-family: var(--font-body);
   font-size: 0.875rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   line-height: 1.6;
 }
 
@@ -223,62 +228,62 @@
 .mvGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-lg);
+  gap: var(--space-6);
 }
 
 .mvCard {
-  background: var(--color-bg-default);
+  background: var(--color-bg);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-xl);
+  padding: var(--space-8);
   border: 1px solid var(--color-border);
 }
 
 .mvIcon {
   font-size: 2rem;
-  color: var(--color-secondary);
-  margin-bottom: var(--spacing-md);
+  color: var(--color-primary-dark);
+  margin-bottom: var(--space-4);
 }
 
 .mvTitle {
   font-family: var(--font-heading);
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-sm);
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
 }
 
 .mvDesc {
   font-family: var(--font-body);
   font-size: 0.9rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   line-height: 1.7;
 }
 
 /* ── Stats ────────────────────────────────────── */
 .statsSection {
-  padding: var(--spacing-3xl) var(--spacing-lg);
-  background: var(--color-primary);
+  padding: var(--space-16) var(--space-6);
+  background: var(--color-charcoal);
 }
 
 .statsSection .sectionTitle {
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .statsSection .sectionSubtitle {
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--color-on-dark);
 }
 
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: var(--spacing-lg);
+  gap: var(--space-6);
   max-width: 900px;
   margin: 0 auto;
 }
 
 .statCard {
   text-align: center;
-  padding: var(--spacing-lg);
+  padding: var(--space-6);
 }
 
 .statValue {
@@ -286,27 +291,27 @@
   font-family: var(--font-heading);
   font-size: 2.5rem;
   font-weight: 700;
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
   margin-bottom: 4px;
 }
 
 .statLabel {
   font-family: var(--font-body);
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-on-dark);
 }
 
 /* ── Team Grid ────────────────────────────────── */
 .teamGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-lg);
+  gap: var(--space-6);
 }
 
 .teamCard {
   text-align: center;
-  padding: var(--spacing-xl) var(--spacing-md);
-  background: var(--color-bg-surface);
+  padding: var(--space-8) var(--space-4);
+  background: var(--color-surface);
   border-radius: var(--radius-lg);
   transition:
     transform var(--transition-base),
@@ -322,31 +327,31 @@
   width: 100px;
   height: 100px;
   border-radius: var(--radius-full);
-  background: var(--color-bg-default);
+  background: var(--color-bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto var(--spacing-md);
+  margin: 0 auto var(--space-4);
   border: 3px solid var(--color-border);
 }
 
 .teamPlaceholder {
   font-size: 4.5rem;
-  color: var(--color-text-light);
+  color: var(--color-text-muted);
 }
 
 .teamName {
   font-family: var(--font-heading);
   font-size: 1.05rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   margin-bottom: 2px;
 }
 
 .teamRole {
   font-family: var(--font-body);
   font-size: 0.8rem;
-  color: var(--color-secondary-dark);
+  color: var(--color-primary-dark);
   font-weight: 500;
 }
 
@@ -358,38 +363,38 @@
 }
 
 .testimonialCard {
-  background: var(--color-bg-default);
+  background: var(--color-bg);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-2xl) var(--spacing-xl);
+  padding: var(--space-12) var(--space-8);
   box-shadow: var(--shadow-md);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--space-6);
 }
 
 .quoteIcon {
   font-size: 2.5rem;
-  color: var(--color-secondary);
-  margin-bottom: var(--spacing-md);
+  color: var(--color-primary-dark);
+  margin-bottom: var(--space-4);
 }
 
 .testimonialText {
   font-family: var(--font-body);
   font-size: 1.05rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   line-height: 1.8;
   font-style: italic;
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--space-8);
 }
 
 .testimonialAuthor {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--space-4);
   justify-content: center;
 }
 
 .authorAvatar {
   font-size: 2.5rem;
-  color: var(--color-text-light);
+  color: var(--color-text-muted);
   line-height: 1;
 }
 
@@ -398,14 +403,14 @@
   font-family: var(--font-body);
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--color-text);
 }
 
 .authorRole {
   display: block;
   font-family: var(--font-body);
   font-size: 0.8rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
 
 .testimonialDots {
@@ -426,13 +431,13 @@
 }
 
 .dotActive {
-  background: var(--color-secondary);
+  background: var(--color-primary);
 }
 
 /* ── CTA Section ──────────────────────────────── */
 .ctaSection {
-  padding: var(--spacing-3xl) var(--spacing-lg);
-  background: linear-gradient(135deg, #1b2a4a 0%, #2d4470 100%);
+  padding: var(--space-16) var(--space-6);
+  background: linear-gradient(135deg, var(--color-charcoal) 0%, var(--color-charcoal) 100%);
   text-align: center;
 }
 
@@ -445,22 +450,22 @@
   font-family: var(--font-heading);
   font-size: 2rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-inverse);
   line-height: 1.3;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--space-4);
 }
 
 .ctaSubtitle {
   font-family: var(--font-body);
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-on-dark);
   line-height: 1.7;
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--space-8);
 }
 
 .ctaButtons {
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--space-4);
   justify-content: center;
   flex-wrap: wrap;
 }
@@ -480,28 +485,28 @@
 }
 
 .ctaBtnPrimary {
-  background: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
 }
 
 .ctaBtnPrimary:hover {
-  background: var(--color-secondary-dark);
-  color: #fff;
+  background: var(--color-primary-dark);
+  color: var(--color-text-inverse);
 }
 
 .ctaBtnSecondary {
   background: transparent;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: var(--color-text-inverse);
+  border: 1px solid var(--color-on-dark-border);
 }
 
 .ctaBtnSecondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--color-on-dark-subtle);
+  color: var(--color-text-inverse);
 }
 
 /* ── Responsive ───────────────────────────────── */
-@media (max-width: 960px) {
+@media (max-width: 899.98px) {
   .heroTitle {
     font-size: 2.25rem;
   }
@@ -509,7 +514,7 @@
   .valuesGrid {
     grid-template-columns: 1fr;
     max-width: 400px;
-    margin: 0 auto var(--spacing-2xl);
+    margin: 0 auto var(--space-12);
   }
 
   .mvGrid {
@@ -525,10 +530,10 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .hero {
     min-height: 340px;
-    padding: var(--spacing-2xl) var(--spacing-md);
+    padding: var(--space-12) var(--space-4);
   }
 
   .heroTitle {
@@ -540,7 +545,7 @@
   }
 
   .section {
-    padding: var(--spacing-2xl) var(--spacing-md);
+    padding: var(--space-12) var(--space-4);
   }
 
   .sectionTitle {
@@ -548,7 +553,7 @@
   }
 
   .statsSection {
-    padding: var(--spacing-2xl) var(--spacing-md);
+    padding: var(--space-12) var(--space-4);
   }
 
   .statValue {
@@ -557,7 +562,7 @@
 
   .teamGrid {
     grid-template-columns: 1fr 1fr;
-    gap: var(--spacing-md);
+    gap: var(--space-4);
   }
 
   .teamPhoto {
@@ -589,6 +594,6 @@
   }
 
   .timelineContent {
-    padding: var(--spacing-md);
+    padding: var(--space-4);
   }
 }

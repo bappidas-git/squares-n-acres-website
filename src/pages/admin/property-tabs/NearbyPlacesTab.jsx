@@ -16,10 +16,10 @@ import { NEARBY_TYPES } from './constants';
 const NearbyPlacesTab = ({ formData, updateListItem, addListItem, removeListItem }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
         Nearby Places
       </Typography>
-      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
+      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)', mt: -1 }}>
         Add important places near the property. These are displayed in the Location section.
       </Typography>
 
@@ -65,7 +65,7 @@ const NearbyPlacesTab = ({ formData, updateListItem, addListItem, removeListItem
             <IconButton
               size="small"
               onClick={() => removeListItem('nearbyPlaces', index)}
-              sx={{ color: '#EF4444' }}
+              sx={{ color: 'var(--color-error-dark)' }}
             >
               <Icon icon="mdi:close-circle-outline" style={{ fontSize: 20 }} />
             </IconButton>
@@ -78,7 +78,7 @@ const NearbyPlacesTab = ({ formData, updateListItem, addListItem, removeListItem
         variant="text"
         onClick={() => addListItem('nearbyPlaces', { name: '', distance: '', type: 'school' })}
         startIcon={<Icon icon="mdi:plus" />}
-        sx={{ color: '#6B7280', alignSelf: 'flex-start' }}
+        sx={{ color: 'var(--color-text-muted)', alignSelf: 'flex-start' }}
       >
         Add Nearby Place
       </Button>

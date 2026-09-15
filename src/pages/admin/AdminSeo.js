@@ -17,8 +17,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
-  Alert,
   LinearProgress,
   Skeleton,
   useMediaQuery,
@@ -34,10 +32,16 @@ import { calculateSeoScore, getQuickScore, SEO_LIMITS } from '../../utils/seoSco
 import { generateSeoData } from '../../utils/seoGenerator';
 import SeoGuidelines from '../../components/admin/SeoGuidelines';
 import { SITE } from '../../config/site';
+import { useToast } from '../../components/common/ToastProvider';
 
 // ─── Score Bar Component ──────────────────────────────────────
 const SeoScoreBar = ({ score, grade }) => {
-  const color = score >= 80 ? '#10B981' : score >= 60 ? '#F59E0B' : '#EF4444';
+  const color =
+    score >= 80
+      ? 'var(--color-success)'
+      : score >= 60
+        ? 'var(--color-warning)'
+        : 'var(--color-error)';
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 120 }}>
       <LinearProgress
@@ -47,7 +51,7 @@ const SeoScoreBar = ({ score, grade }) => {
           flex: 1,
           height: 6,
           borderRadius: 3,
-          bgcolor: '#F3F4F6',
+          bgcolor: 'var(--color-surface)',
           '& .MuiLinearProgress-bar': { bgcolor: color, borderRadius: 3 },
         }}
       />
@@ -66,7 +70,7 @@ const StatusDot = ({ hasValue, label }) => (
         width: 8,
         height: 8,
         borderRadius: '50%',
-        bgcolor: hasValue ? '#10B981' : '#EF4444',
+        bgcolor: hasValue ? 'var(--color-success)' : 'var(--color-error)',
         display: 'inline-block',
       }}
     />
@@ -83,17 +87,17 @@ const GooglePreview = ({ title, description, slug }) => (
     sx={{
       p: 2,
       borderRadius: 2,
-      bgcolor: '#FAFAFA',
-      border: '1px solid #E5E7EB',
+      bgcolor: 'var(--color-surface)',
+      border: '1px solid var(--color-border)',
     }}
   >
-    <Typography sx={{ fontSize: '0.6875rem', color: '#9CA3AF', mb: 0.5 }}>
+    <Typography sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', mb: 0.5 }}>
       Google Search Preview
     </Typography>
     <Typography
       sx={{
         fontSize: '1.125rem',
-        color: '#1a0dab',
+        color: 'var(--color-serp-title)',
         fontFamily: 'var(--font-serp)',
         lineHeight: 1.3,
         overflow: 'hidden',
@@ -106,7 +110,7 @@ const GooglePreview = ({ title, description, slug }) => (
     <Typography
       sx={{
         fontSize: '0.8125rem',
-        color: '#006621',
+        color: 'var(--color-serp-url)',
         fontFamily: 'var(--font-serp)',
         mt: 0.25,
       }}
@@ -116,7 +120,7 @@ const GooglePreview = ({ title, description, slug }) => (
     <Typography
       sx={{
         fontSize: '0.8125rem',
-        color: '#545454',
+        color: 'var(--color-serp-text)',
         fontFamily: 'var(--font-serp)',
         mt: 0.25,
         display: '-webkit-box',
@@ -136,9 +140,12 @@ const SeoScoreBreakdown = ({ scoreData }) => {
   if (!scoreData) return null;
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+    <Paper
+      variant="outlined"
+      sx={{ p: 2, borderRadius: 2, border: '1px solid var(--color-border)' }}
+    >
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151' }}>
+        <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)' }}>
           SEO Score Breakdown
         </Typography>
         <Chip
@@ -149,16 +156,16 @@ const SeoScoreBreakdown = ({ scoreData }) => {
             fontSize: '0.6875rem',
             bgcolor:
               scoreData.totalScore >= 80
-                ? '#ECFDF5'
+                ? 'var(--color-success-bg)'
                 : scoreData.totalScore >= 60
-                  ? '#FFFBEB'
-                  : '#FEF2F2',
+                  ? 'var(--color-warning-bg)'
+                  : 'var(--color-error-bg)',
             color:
               scoreData.totalScore >= 80
-                ? '#059669'
+                ? 'var(--color-success-dark)'
                 : scoreData.totalScore >= 60
-                  ? '#D97706'
-                  : '#DC2626',
+                  ? 'var(--color-warning)'
+                  : 'var(--color-error-dark)',
           }}
         />
       </Box>
@@ -174,17 +181,19 @@ const SeoScoreBreakdown = ({ scoreData }) => {
                 mb: 0.25,
               }}
             >
-              <Typography sx={{ fontSize: '0.75rem', color: '#4B5563' }}>{check.label}</Typography>
+              <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                {check.label}
+              </Typography>
               <Typography
                 sx={{
                   fontSize: '0.6875rem',
                   fontWeight: 600,
                   color:
                     check.score === check.maxScore
-                      ? '#10B981'
+                      ? 'var(--color-success)'
                       : check.score > 0
-                        ? '#F59E0B'
-                        : '#EF4444',
+                        ? 'var(--color-warning)'
+                        : 'var(--color-error)',
                 }}
               >
                 {check.score}/{check.maxScore}
@@ -196,15 +205,15 @@ const SeoScoreBreakdown = ({ scoreData }) => {
               sx={{
                 height: 4,
                 borderRadius: 2,
-                bgcolor: '#F3F4F6',
+                bgcolor: 'var(--color-surface)',
                 '& .MuiLinearProgress-bar': {
                   borderRadius: 2,
                   bgcolor:
                     check.score === check.maxScore
-                      ? '#10B981'
+                      ? 'var(--color-success)'
                       : check.score > 0
-                        ? '#F59E0B'
-                        : '#EF4444',
+                        ? 'var(--color-warning)'
+                        : 'var(--color-error)',
                 },
               }}
             />
@@ -213,7 +222,7 @@ const SeoScoreBreakdown = ({ scoreData }) => {
                 {check.issues.map((issue, issueIdx) => (
                   <Typography
                     key={issueIdx}
-                    sx={{ fontSize: '0.6875rem', color: '#9CA3AF', pl: 1 }}
+                    sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', pl: 1 }}
                   >
                     — {issue}
                   </Typography>
@@ -229,6 +238,7 @@ const SeoScoreBreakdown = ({ scoreData }) => {
 
 // ─── Main AdminSeo Component ──────────────────────────────────
 const AdminSeo = () => {
+  const toast = useToast();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -252,7 +262,6 @@ const AdminSeo = () => {
   });
   const [keywordInput, setKeywordInput] = useState('');
   const [saving, setSaving] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [bulkGenerating, setBulkGenerating] = useState(false);
   const [showGuidelines, setShowGuidelines] = useState(false);
 
@@ -263,11 +272,11 @@ const AdminSeo = () => {
       const data = await seoService.getAllProperties();
       setProperties(Array.isArray(data) ? data : []);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to load properties', severity: 'error' });
+      toast.error('Failed to load properties');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchProperties();
@@ -335,10 +344,10 @@ const AdminSeo = () => {
       setProperties((prev) =>
         prev.map((p) => ((p.propertyId || p.id) === propertyId ? { ...p, ...editForm } : p))
       );
-      setSnackbar({ open: true, message: 'SEO data saved successfully', severity: 'success' });
+      toast.success('SEO data saved successfully');
       setEditDialogOpen(false);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to save SEO data', severity: 'error' });
+      toast.error('Failed to save SEO data');
     } finally {
       setSaving(false);
     }
@@ -374,11 +383,7 @@ const AdminSeo = () => {
     try {
       const updates = await seoService.bulkAutoGenerate(properties, calculateSeoScore);
       if (updates.length === 0) {
-        setSnackbar({
-          open: true,
-          message: 'All properties already have complete SEO data',
-          severity: 'info',
-        });
+        toast.info('All properties already have complete SEO data');
       } else {
         setProperties((prev) =>
           prev.map((p) => {
@@ -386,14 +391,10 @@ const AdminSeo = () => {
             return u ? { ...p, ...u } : p;
           })
         );
-        setSnackbar({
-          open: true,
-          message: `Auto-generated SEO for ${updates.length} properties`,
-          severity: 'success',
-        });
+        toast.success(`Auto-generated SEO for ${updates.length} properties`);
       }
     } catch {
-      setSnackbar({ open: true, message: 'Failed to auto-generate SEO data', severity: 'error' });
+      toast.error('Failed to auto-generate SEO data');
     } finally {
       setBulkGenerating(false);
     }
@@ -402,16 +403,17 @@ const AdminSeo = () => {
   // ─── Title / Description length color helpers ─────────────
   const getTitleLenColor = (len) => {
     if (len >= SEO_LIMITS.TITLE_OPTIMAL_MIN && len <= SEO_LIMITS.TITLE_OPTIMAL_MAX)
-      return '#10B981';
-    if (len > 0 && len <= SEO_LIMITS.TITLE_MAX_LENGTH) return '#F59E0B';
-    if (len > SEO_LIMITS.TITLE_MAX_LENGTH) return '#EF4444';
-    return '#9CA3AF';
+      return 'var(--color-success)';
+    if (len > 0 && len <= SEO_LIMITS.TITLE_MAX_LENGTH) return 'var(--color-warning)';
+    if (len > SEO_LIMITS.TITLE_MAX_LENGTH) return 'var(--color-error)';
+    return 'var(--color-text-muted)';
   };
   const getDescLenColor = (len) => {
-    if (len >= SEO_LIMITS.DESC_OPTIMAL_MIN && len <= SEO_LIMITS.DESC_OPTIMAL_MAX) return '#10B981';
-    if (len > 0 && len <= SEO_LIMITS.DESC_MAX_LENGTH) return '#F59E0B';
-    if (len > SEO_LIMITS.DESC_MAX_LENGTH) return '#EF4444';
-    return '#9CA3AF';
+    if (len >= SEO_LIMITS.DESC_OPTIMAL_MIN && len <= SEO_LIMITS.DESC_OPTIMAL_MAX)
+      return 'var(--color-success)';
+    if (len > 0 && len <= SEO_LIMITS.DESC_MAX_LENGTH) return 'var(--color-warning)';
+    if (len > SEO_LIMITS.DESC_MAX_LENGTH) return 'var(--color-error)';
+    return 'var(--color-text-muted)';
   };
 
   // ─── Stat Cards ───────────────────────────────────────────
@@ -420,29 +422,29 @@ const AdminSeo = () => {
       label: 'Total Properties',
       value: stats.total,
       icon: 'mdi:home-city-outline',
-      color: '#3B82F6',
-      bg: '#EFF6FF',
+      color: 'var(--color-info-dark)',
+      bg: 'var(--color-info-bg)',
     },
     {
       label: 'SEO Complete',
       value: stats.complete,
       icon: 'mdi:check-circle-outline',
-      color: '#10B981',
-      bg: '#ECFDF5',
+      color: 'var(--color-success-dark)',
+      bg: 'var(--color-success-bg)',
     },
     {
       label: 'Partial SEO',
       value: stats.partial,
       icon: 'mdi:alert-circle-outline',
-      color: '#F59E0B',
-      bg: '#FFFBEB',
+      color: 'var(--color-warning-dark)',
+      bg: 'var(--color-warning-bg)',
     },
     {
       label: 'Avg SEO Score',
       value: `${stats.avgScore}%`,
       icon: 'mdi:chart-line',
-      color: '#8B5CF6',
-      bg: '#F5F3FF',
+      color: 'var(--color-primary-dark)',
+      bg: 'var(--color-primary-light)',
     },
   ];
 
@@ -460,10 +462,10 @@ const AdminSeo = () => {
         }}
       >
         <Box>
-          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#1B2A4A' }}>
+          <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
             SEO Manager
           </Typography>
-          <Typography sx={{ fontSize: '0.875rem', color: '#6B7280', mt: 0.5 }}>
+          <Typography sx={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', mt: 0.5 }}>
             Manage SEO metadata for all property listings
           </Typography>
         </Box>
@@ -475,9 +477,12 @@ const AdminSeo = () => {
             sx={{
               textTransform: 'none',
               borderRadius: 2,
-              borderColor: '#D1D5DB',
-              color: '#374151',
-              '&:hover': { borderColor: '#C9A86C', color: '#C9A86C' },
+              borderColor: 'var(--color-border-strong)',
+              color: 'var(--color-text)',
+              '&:hover': {
+                borderColor: 'var(--color-primary)',
+                color: 'var(--color-primary-dark)',
+              },
             }}
           >
             {showGuidelines ? 'Hide Guide' : 'SEO Guide'}
@@ -488,11 +493,11 @@ const AdminSeo = () => {
             onClick={handleBulkAutoGenerate}
             disabled={bulkGenerating || loading}
             sx={{
-              bgcolor: '#1B2A4A',
+              bgcolor: 'var(--color-charcoal)',
               textTransform: 'none',
               borderRadius: 2,
               px: 3,
-              '&:hover': { bgcolor: '#2d3f63' },
+              '&:hover': { bgcolor: 'var(--color-charcoal)' },
             }}
           >
             {bulkGenerating ? 'Generating...' : 'Auto-Generate Missing SEO'}
@@ -520,7 +525,7 @@ const AdminSeo = () => {
           <Paper
             key={stat.label}
             elevation={0}
-            sx={{ p: 2.5, borderRadius: 2, border: '1px solid #F3F4F6' }}
+            sx={{ p: 2.5, borderRadius: 2, border: '1px solid var(--color-surface)' }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Box
@@ -537,10 +542,14 @@ const AdminSeo = () => {
                 <Icon icon={stat.icon} style={{ fontSize: 20, color: stat.color }} />
               </Box>
               <Box>
-                <Typography sx={{ fontSize: '1.25rem', fontWeight: 700, color: '#1B2A4A' }}>
+                <Typography
+                  sx={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-charcoal)' }}
+                >
                   {loading ? <Skeleton width={40} /> : stat.value}
                 </Typography>
-                <Typography sx={{ fontSize: '0.75rem', color: '#9CA3AF' }}>{stat.label}</Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                  {stat.label}
+                </Typography>
               </Box>
             </Box>
           </Paper>
@@ -548,7 +557,10 @@ const AdminSeo = () => {
       </Box>
 
       {/* Search */}
-      <Paper elevation={0} sx={{ p: 2, borderRadius: 2, border: '1px solid #F3F4F6', mb: 3 }}>
+      <Paper
+        elevation={0}
+        sx={{ p: 2, borderRadius: 2, border: '1px solid var(--color-surface)', mb: 3 }}
+      >
         <TextField
           fullWidth
           size="small"
@@ -561,7 +573,7 @@ const AdminSeo = () => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <Icon icon="mdi:magnify" style={{ color: '#9CA3AF' }} />
+                <Icon icon="mdi:magnify" style={{ color: 'var(--color-text-muted)' }} />
               </InputAdornment>
             ),
           }}
@@ -572,7 +584,7 @@ const AdminSeo = () => {
       {/* Table */}
       <Paper
         elevation={0}
-        sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}
+        sx={{ borderRadius: 2, border: '1px solid var(--color-surface)', overflow: 'hidden' }}
       >
         {loading ? (
           <Box sx={{ p: 3 }}>
@@ -594,7 +606,7 @@ const AdminSeo = () => {
                     mb: 2,
                     borderRadius: 2,
                     cursor: 'pointer',
-                    '&:hover': { borderColor: '#C9A86C' },
+                    '&:hover': { borderColor: 'var(--color-primary)' },
                   }}
                   onClick={() => handleOpenEdit(property)}
                 >
@@ -607,7 +619,12 @@ const AdminSeo = () => {
                     }}
                   >
                     <Typography
-                      sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#1B2A4A', flex: 1 }}
+                      sx={{
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: 'var(--color-charcoal)',
+                        flex: 1,
+                      }}
                     >
                       {property.title}
                     </Typography>
@@ -620,41 +637,47 @@ const AdminSeo = () => {
                         height: 20,
                         bgcolor:
                           scoreData.totalScore >= 80
-                            ? '#ECFDF5'
+                            ? 'var(--color-success-bg)'
                             : scoreData.totalScore >= 60
-                              ? '#FFFBEB'
-                              : '#FEF2F2',
+                              ? 'var(--color-warning-bg)'
+                              : 'var(--color-error-bg)',
                         color:
                           scoreData.totalScore >= 80
-                            ? '#059669'
+                            ? 'var(--color-success-dark)'
                             : scoreData.totalScore >= 60
-                              ? '#D97706'
-                              : '#DC2626',
+                              ? 'var(--color-warning)'
+                              : 'var(--color-error-dark)',
                       }}
                     />
                   </Box>
                   <Box sx={{ display: 'flex', gap: 2, mb: 1.5, flexWrap: 'wrap' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <StatusDot hasValue={!!property.seoTitle?.trim()} label="Title" />
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6B7280' }}>Title</Typography>
+                      <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                        Title
+                      </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <StatusDot hasValue={!!property.seoDescription?.trim()} label="Description" />
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6B7280' }}>Desc</Typography>
+                      <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                        Desc
+                      </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <StatusDot hasValue={property.seoKeywords?.length > 0} label="Keywords" />
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6B7280' }}>
+                      <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                         Keywords ({property.seoKeywords?.length || 0})
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <StatusDot hasValue={!!property.schemaMarkup?.trim()} label="Schema" />
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6B7280' }}>Schema</Typography>
+                      <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                        Schema
+                      </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <StatusDot hasValue={!!property.canonicalUrl?.trim()} label="Canonical" />
-                      <Typography sx={{ fontSize: '0.75rem', color: '#6B7280' }}>
+                      <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                         Canonical
                       </Typography>
                     </Box>
@@ -669,42 +692,48 @@ const AdminSeo = () => {
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#FAFAFA' }}>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                <TableRow sx={{ bgcolor: 'var(--color-surface)' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                  >
                     Property
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                  >
                     SEO Title
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                     align="center"
                   >
                     Desc
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                     align="center"
                   >
                     Keywords
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                     align="center"
                   >
                     Schema
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                     align="center"
                   >
                     Canonical
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                  >
                     SEO Score
                   </TableCell>
                   <TableCell
-                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                    sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                     align="center"
                   >
                     Actions
@@ -723,11 +752,17 @@ const AdminSeo = () => {
                     >
                       <TableCell>
                         <Typography
-                          sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1B2A4A' }}
+                          sx={{
+                            fontSize: '0.8125rem',
+                            fontWeight: 600,
+                            color: 'var(--color-charcoal)',
+                          }}
                         >
                           {property.title}
                         </Typography>
-                        <Typography sx={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>
+                        <Typography
+                          sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}
+                        >
                           {property.location?.area}, {property.location?.city}
                         </Typography>
                       </TableCell>
@@ -737,7 +772,9 @@ const AdminSeo = () => {
                           <Typography
                             sx={{
                               fontSize: '0.75rem',
-                              color: property.seoTitle?.trim() ? '#374151' : '#EF4444',
+                              color: property.seoTitle?.trim()
+                                ? 'var(--color-text)'
+                                : 'var(--color-error-dark)',
                               maxWidth: 200,
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
@@ -761,8 +798,14 @@ const AdminSeo = () => {
                           sx={{
                             fontSize: '0.6875rem',
                             height: 22,
-                            bgcolor: property.seoKeywords?.length > 0 ? '#ECFDF5' : '#FEF2F2',
-                            color: property.seoKeywords?.length > 0 ? '#10B981' : '#EF4444',
+                            bgcolor:
+                              property.seoKeywords?.length > 0
+                                ? 'var(--color-success-bg)'
+                                : 'var(--color-error-bg)',
+                            color:
+                              property.seoKeywords?.length > 0
+                                ? 'var(--color-success-dark)'
+                                : 'var(--color-error-dark)',
                           }}
                         />
                       </TableCell>
@@ -785,7 +828,7 @@ const AdminSeo = () => {
                         >
                           <Icon
                             icon="mdi:pencil-outline"
-                            style={{ fontSize: 18, color: '#6B7280' }}
+                            style={{ fontSize: 18, color: 'var(--color-text-muted)' }}
                           />
                         </IconButton>
                       </TableCell>
@@ -795,8 +838,13 @@ const AdminSeo = () => {
                 {paginated.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                      <Icon icon="mdi:magnify" style={{ fontSize: 40, color: '#D1D5DB' }} />
-                      <Typography sx={{ color: '#9CA3AF', mt: 1 }}>No properties found</Typography>
+                      <Icon
+                        icon="mdi:magnify"
+                        style={{ fontSize: 40, color: 'var(--color-text-muted)' }}
+                      />
+                      <Typography sx={{ color: 'var(--color-text-muted)', mt: 1 }}>
+                        No properties found
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 )}
@@ -815,7 +863,7 @@ const AdminSeo = () => {
             setPage(0);
           }}
           rowsPerPageOptions={[5, 10, 25]}
-          sx={{ borderTop: '1px solid #F3F4F6' }}
+          sx={{ borderTop: '1px solid var(--color-surface)' }}
         />
       </Paper>
 
@@ -833,15 +881,17 @@ const AdminSeo = () => {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            borderBottom: '1px solid #F3F4F6',
+            borderBottom: '1px solid var(--color-surface)',
             pb: 2,
           }}
         >
           <Box>
-            <Typography sx={{ fontSize: '1.125rem', fontWeight: 700, color: '#1B2A4A' }}>
+            <Typography
+              sx={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-charcoal)' }}
+            >
               Edit SEO — {editProperty?.title}
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: '#9CA3AF', mt: 0.25 }}>
+            <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', mt: 0.25 }}>
               {editProperty?.location?.area}, {editProperty?.location?.city}
             </Typography>
           </Box>
@@ -877,7 +927,9 @@ const AdminSeo = () => {
 
           {/* SEO Title */}
           <Box sx={{ mb: 3 }}>
-            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 1 }}>
+            <Typography
+              sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 1 }}
+            >
               SEO Title
               <Typography
                 component="span"
@@ -909,7 +961,9 @@ const AdminSeo = () => {
 
           {/* SEO Description */}
           <Box sx={{ mb: 3 }}>
-            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 1 }}>
+            <Typography
+              sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 1 }}
+            >
               SEO Description
               <Typography
                 component="span"
@@ -943,7 +997,9 @@ const AdminSeo = () => {
 
           {/* Canonical URL */}
           <Box sx={{ mb: 3 }}>
-            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 1 }}>
+            <Typography
+              sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 1 }}
+            >
               Canonical URL
             </Typography>
             <TextField
@@ -958,9 +1014,14 @@ const AdminSeo = () => {
 
           {/* Keywords */}
           <Box sx={{ mb: 3 }}>
-            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 1 }}>
+            <Typography
+              sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 1 }}
+            >
               Keywords ({editForm.seoKeywords.length})
-              <Typography component="span" sx={{ fontSize: '0.6875rem', color: '#9CA3AF', ml: 1 }}>
+              <Typography
+                component="span"
+                sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', ml: 1 }}
+              >
                 Recommended: {SEO_LIMITS.MIN_KEYWORDS}-{SEO_LIMITS.MAX_KEYWORDS} keywords
               </Typography>
             </Typography>
@@ -984,8 +1045,8 @@ const AdminSeo = () => {
                 sx={{
                   textTransform: 'none',
                   borderRadius: 2,
-                  borderColor: '#D1D5DB',
-                  color: '#374151',
+                  borderColor: 'var(--color-border-strong)',
+                  color: 'var(--color-text)',
                 }}
               >
                 Add
@@ -1000,7 +1061,7 @@ const AdminSeo = () => {
                   onDelete={() => handleRemoveKeyword(kw)}
                   sx={{
                     fontSize: '0.75rem',
-                    bgcolor: '#F3F4F6',
+                    bgcolor: 'var(--color-surface)',
                     '& .MuiChip-deleteIcon': { fontSize: 16 },
                   }}
                 />
@@ -1011,14 +1072,19 @@ const AdminSeo = () => {
           {/* Open Graph Section */}
           <Paper
             variant="outlined"
-            sx={{ p: 2, borderRadius: 2, mb: 3, border: '1px solid #E5E7EB' }}
+            sx={{ p: 2, borderRadius: 2, mb: 3, border: '1px solid var(--color-border)' }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Icon icon="mdi:share-variant" style={{ fontSize: 18, color: '#C9A86C' }} />
-              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151' }}>
+              <Icon
+                icon="mdi:share-variant"
+                style={{ fontSize: 18, color: 'var(--color-primary-dark)' }}
+              />
+              <Typography
+                sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)' }}
+              >
                 Open Graph Tags
               </Typography>
-              <Typography sx={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>
+              <Typography sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}>
                 (For social media sharing)
               </Typography>
             </Box>
@@ -1060,11 +1126,16 @@ const AdminSeo = () => {
           {/* Twitter Card Section */}
           <Paper
             variant="outlined"
-            sx={{ p: 2, borderRadius: 2, mb: 3, border: '1px solid #E5E7EB' }}
+            sx={{ p: 2, borderRadius: 2, mb: 3, border: '1px solid var(--color-border)' }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-              <Icon icon="mdi:twitter" style={{ fontSize: 18, color: '#C9A86C' }} />
-              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151' }}>
+              <Icon
+                icon="mdi:twitter"
+                style={{ fontSize: 18, color: 'var(--color-primary-dark)' }}
+              />
+              <Typography
+                sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)' }}
+              >
                 Twitter Card
               </Typography>
             </Box>
@@ -1078,8 +1149,14 @@ const AdminSeo = () => {
                   sx={{
                     fontWeight: 500,
                     fontSize: '0.75rem',
-                    bgcolor: editForm.twitterCard === type ? '#1B2A4A' : '#F3F4F6',
-                    color: editForm.twitterCard === type ? '#fff' : '#6B7280',
+                    bgcolor:
+                      editForm.twitterCard === type
+                        ? 'var(--color-charcoal)'
+                        : 'var(--color-surface)',
+                    color:
+                      editForm.twitterCard === type
+                        ? 'var(--color-text-inverse)'
+                        : 'var(--color-text-muted)',
                   }}
                 />
               ))}
@@ -1088,7 +1165,9 @@ const AdminSeo = () => {
 
           {/* Schema Markup */}
           <Box>
-            <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151', mb: 1 }}>
+            <Typography
+              sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text)', mb: 1 }}
+            >
               Schema Markup (JSON-LD)
               {editForm.schemaMarkup &&
                 (() => {
@@ -1102,8 +1181,8 @@ const AdminSeo = () => {
                           ml: 1,
                           height: 18,
                           fontSize: '0.625rem',
-                          bgcolor: '#ECFDF5',
-                          color: '#059669',
+                          bgcolor: 'var(--color-success-bg)',
+                          color: 'var(--color-success-dark)',
                         }}
                       />
                     );
@@ -1116,8 +1195,8 @@ const AdminSeo = () => {
                           ml: 1,
                           height: 18,
                           fontSize: '0.625rem',
-                          bgcolor: '#FEF2F2',
-                          color: '#DC2626',
+                          bgcolor: 'var(--color-error-bg)',
+                          color: 'var(--color-error-dark)',
                         }}
                       />
                     );
@@ -1140,10 +1219,10 @@ const AdminSeo = () => {
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #F3F4F6' }}>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid var(--color-surface)' }}>
           <Button
             onClick={() => setEditDialogOpen(false)}
-            sx={{ textTransform: 'none', color: '#6B7280' }}
+            sx={{ textTransform: 'none', color: 'var(--color-text-muted)' }}
           >
             Cancel
           </Button>
@@ -1153,32 +1232,16 @@ const AdminSeo = () => {
             disabled={saving}
             sx={{
               textTransform: 'none',
-              bgcolor: '#1B2A4A',
+              bgcolor: 'var(--color-charcoal)',
               borderRadius: 2,
               px: 4,
-              '&:hover': { bgcolor: '#2d3f63' },
+              '&:hover': { bgcolor: 'var(--color-charcoal)' },
             }}
           >
             {saving ? 'Saving...' : 'Save SEO Data'}
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 2 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

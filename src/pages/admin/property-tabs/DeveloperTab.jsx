@@ -47,10 +47,10 @@ const DeveloperTab = ({ formData, updateField }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
         Developer Information
       </Typography>
-      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -2 }}>
+      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)', mt: -2 }}>
         The developer name from Basic Info is used as the heading. Add extra details here.
       </Typography>
 
@@ -77,16 +77,19 @@ const DeveloperTab = ({ formData, updateField }) => {
       </Box>
 
       {/* Stats */}
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A', mt: 1 }}>
+      <Typography
+        variant="subtitle2"
+        sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mt: 1 }}
+      >
         Developer Stats / Metrics
       </Typography>
-      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
+      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)', mt: -1 }}>
         Add metrics displayed in the developer section. e.g., "20+ Years Experience", "50+
         Projects".
       </Typography>
 
       {devInfo.stats.map((stat, index) => (
-        <Paper key={index} sx={{ p: 2, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+        <Paper key={index} sx={{ p: 2, borderRadius: 2, border: '1px solid var(--color-border)' }}>
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
             <Box
               onClick={() => openIconPicker(index)}
@@ -94,19 +97,19 @@ const DeveloperTab = ({ formData, updateField }) => {
                 width: 40,
                 height: 40,
                 borderRadius: 2,
-                border: '1px dashed #D1D5DB',
+                border: '1px dashed var(--color-border-strong)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                bgcolor: '#F9FAFB',
+                bgcolor: 'var(--color-surface)',
                 flexShrink: 0,
-                '&:hover': { borderColor: '#C9A86C' },
+                '&:hover': { borderColor: 'var(--color-primary)' },
               }}
             >
               <Icon
                 icon={stat.icon || 'mdi:chart-line'}
-                style={{ fontSize: 22, color: '#1B2A4A' }}
+                style={{ fontSize: 22, color: 'var(--color-charcoal)' }}
               />
             </Box>
 
@@ -136,7 +139,11 @@ const DeveloperTab = ({ formData, updateField }) => {
               placeholder="e.g., Years Experience"
             />
             {devInfo.stats.length > 1 && (
-              <IconButton size="small" onClick={() => removeStat(index)} sx={{ color: '#EF4444' }}>
+              <IconButton
+                size="small"
+                onClick={() => removeStat(index)}
+                sx={{ color: 'var(--color-error-dark)' }}
+              >
                 <Icon icon="mdi:close-circle-outline" style={{ fontSize: 20 }} />
               </IconButton>
             )}
@@ -149,7 +156,7 @@ const DeveloperTab = ({ formData, updateField }) => {
         variant="text"
         onClick={addStat}
         startIcon={<Icon icon="mdi:plus" />}
-        sx={{ color: '#6B7280', alignSelf: 'flex-start' }}
+        sx={{ color: 'var(--color-text-muted)', alignSelf: 'flex-start' }}
       >
         Add Stat
       </Button>

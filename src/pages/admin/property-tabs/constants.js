@@ -111,38 +111,18 @@ export const NEARBY_TYPES = [
   'entertainment',
 ];
 
+/**
+ * Property badges. `tone` names a semantic tone; `toneStyles(tone)` in
+ * `components/ui/tones.js` resolves it to the `var(--token)` triplet.
+ */
 export const TAG_OPTIONS = [
-  { value: 'featured', label: 'Featured', color: '#B45309', bg: '#FEF3C7', icon: 'mdi:star' },
-  { value: 'popular', label: 'Popular', color: '#0891B2', bg: '#CFFAFE', icon: 'mdi:fire' },
-  {
-    value: 'just-launched',
-    label: 'Just Launched',
-    color: '#4F46E5',
-    bg: '#E0E7FF',
-    icon: 'mdi:rocket-launch',
-  },
-  {
-    value: 'premium',
-    label: 'Premium',
-    color: '#7C3AED',
-    bg: '#EDE9FE',
-    icon: 'mdi:diamond-stone',
-  },
-  { value: 'hot-deal', label: 'Hot Deal', color: '#DC2626', bg: '#FEE2E2', icon: 'mdi:tag-heart' },
-  {
-    value: 'trending',
-    label: 'Trending',
-    color: '#1D4ED8',
-    bg: '#DBEAFE',
-    icon: 'mdi:trending-up',
-  },
-  {
-    value: 'new-launch',
-    label: 'New Launch',
-    color: '#059669',
-    bg: '#D1FAE5',
-    icon: 'mdi:new-box',
-  },
+  { value: 'featured', label: 'Featured', tone: 'warning', icon: 'mdi:star' },
+  { value: 'popular', label: 'Popular', tone: 'info', icon: 'mdi:fire' },
+  { value: 'just-launched', label: 'Just Launched', tone: 'info', icon: 'mdi:rocket-launch' },
+  { value: 'premium', label: 'Premium', tone: 'primary', icon: 'mdi:diamond-stone' },
+  { value: 'hot-deal', label: 'Hot Deal', tone: 'error', icon: 'mdi:tag-heart' },
+  { value: 'trending', label: 'Trending', tone: 'info', icon: 'mdi:trending-up' },
+  { value: 'new-launch', label: 'New Launch', tone: 'success', icon: 'mdi:new-box' },
 ];
 
 export const CONSTRUCTION_SPEC_CATEGORIES = [

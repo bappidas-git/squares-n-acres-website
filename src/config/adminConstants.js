@@ -5,22 +5,16 @@
  */
 
 /* ─── Lead Status Configuration ─── */
+/**
+ * `tone` names a semantic tone; `toneStyles(tone)` in `components/ui/tones.js`
+ * turns it into the `var(--token)` triplet. Records never carry colours.
+ */
 export const LEAD_STATUS_CONFIG = {
-  new: { label: 'New', color: '#3B82F6', bg: '#EFF6FF', icon: 'mdi:new-box' },
-  contacted: {
-    label: 'Contacted',
-    color: '#F59E0B',
-    bg: '#FFFBEB',
-    icon: 'mdi:phone-check-outline',
-  },
-  qualified: {
-    label: 'Qualified',
-    color: '#10B981',
-    bg: '#ECFDF5',
-    icon: 'mdi:check-decagram-outline',
-  },
-  converted: { label: 'Converted', color: '#B45309', bg: '#FEF3C7', icon: 'mdi:handshake-outline' },
-  lost: { label: 'Lost', color: '#EF4444', bg: '#FEF2F2', icon: 'mdi:close-circle-outline' },
+  new: { label: 'New', tone: 'info', icon: 'mdi:new-box' },
+  contacted: { label: 'Contacted', tone: 'warning', icon: 'mdi:phone-check-outline' },
+  qualified: { label: 'Qualified', tone: 'success', icon: 'mdi:check-decagram-outline' },
+  converted: { label: 'Converted', tone: 'primary', icon: 'mdi:handshake-outline' },
+  lost: { label: 'Lost', tone: 'error', icon: 'mdi:close-circle-outline' },
 };
 
 export const LEAD_STATUS_OPTIONS = ['new', 'contacted', 'qualified', 'converted', 'lost'];
@@ -70,12 +64,12 @@ export const ARTICLE_CATEGORIES = [
   { value: 'interior', label: 'Interior Design' },
 ];
 
-export const ARTICLE_CATEGORY_COLORS = {
-  'market-trends': { bg: '#EFF6FF', color: '#3B82F6' },
-  'buying-guide': { bg: '#ECFDF5', color: '#10B981' },
-  investment: { bg: '#FFFBEB', color: '#F59E0B' },
-  legal: { bg: '#FEF2F2', color: '#EF4444' },
-  interior: { bg: '#F5F3FF', color: '#8B5CF6' },
+export const ARTICLE_CATEGORY_TONES = {
+  'market-trends': 'info',
+  'buying-guide': 'success',
+  investment: 'warning',
+  legal: 'error',
+  interior: 'primary',
 };
 
 /* ─── FAQ Categories ─── */
@@ -88,21 +82,21 @@ export const FAQ_CATEGORIES = [
   { value: 'finance', label: 'Finance' },
 ];
 
-export const FAQ_CATEGORY_COLORS = {
-  general: { bg: '#EFF6FF', color: '#3B82F6' },
-  buying: { bg: '#ECFDF5', color: '#10B981' },
-  selling: { bg: '#FFFBEB', color: '#F59E0B' },
-  renting: { bg: '#F5F3FF', color: '#8B5CF6' },
-  legal: { bg: '#FEF2F2', color: '#EF4444' },
-  finance: { bg: '#FFF7ED', color: '#EA580C' },
+export const FAQ_CATEGORY_TONES = {
+  general: 'info',
+  buying: 'success',
+  selling: 'warning',
+  renting: 'primary',
+  legal: 'error',
+  finance: 'neutral',
 };
 
 /* ─── Default Bank Data (for FinanceGuide) ─── */
 export const DEFAULT_BANKS = [
-  { name: 'HDFC Bank', icon: 'mdi:bank', rate: 8.35, maxLoan: 50000000, color: '#004B87' },
-  { name: 'SBI', icon: 'mdi:bank', rate: 8.4, maxLoan: 50000000, color: '#22409A' },
-  { name: 'Axis Bank', icon: 'mdi:bank', rate: 8.55, maxLoan: 50000000, color: '#97144D' },
-  { name: 'ICICI Bank', icon: 'mdi:bank', rate: 8.45, maxLoan: 30000000, color: '#F37021' },
-  { name: 'Kotak Mahindra', icon: 'mdi:bank', rate: 8.7, maxLoan: 30000000, color: '#ED1C24' },
-  { name: 'LIC Housing', icon: 'mdi:bank', rate: 8.5, maxLoan: 50000000, color: '#0072BC' },
+  { name: 'HDFC Bank', icon: 'mdi:bank', rate: 8.35, maxLoan: 50000000 },
+  { name: 'SBI', icon: 'mdi:bank', rate: 8.4, maxLoan: 50000000 },
+  { name: 'Axis Bank', icon: 'mdi:bank', rate: 8.55, maxLoan: 50000000 },
+  { name: 'ICICI Bank', icon: 'mdi:bank', rate: 8.45, maxLoan: 30000000 },
+  { name: 'Kotak Mahindra', icon: 'mdi:bank', rate: 8.7, maxLoan: 30000000 },
+  { name: 'LIC Housing', icon: 'mdi:bank', rate: 8.5, maxLoan: 50000000 },
 ];

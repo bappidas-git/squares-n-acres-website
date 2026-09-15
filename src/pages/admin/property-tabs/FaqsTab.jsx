@@ -24,24 +24,31 @@ const FaqsTab = ({ formData, updateField }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
         Frequently Asked Questions
       </Typography>
-      <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
+      <Typography variant="caption" sx={{ color: 'var(--color-text-muted)', mt: -1 }}>
         Add custom FAQs for this property. If left empty, default FAQs will be auto-generated from
         the property data.
       </Typography>
 
       {faqs.map((faq, index) => (
-        <Paper key={index} sx={{ p: 2, borderRadius: 2, border: '1px solid #E5E7EB' }}>
+        <Paper key={index} sx={{ p: 2, borderRadius: 2, border: '1px solid var(--color-border)' }}>
           <Box
             sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}
           >
-            <Typography variant="caption" sx={{ fontWeight: 600, color: '#6B7280' }}>
+            <Typography
+              variant="caption"
+              sx={{ fontWeight: 600, color: 'var(--color-text-muted)' }}
+            >
               FAQ #{index + 1}
             </Typography>
             {faqs.length > 1 && (
-              <IconButton size="small" onClick={() => removeFaq(index)} sx={{ color: '#EF4444' }}>
+              <IconButton
+                size="small"
+                onClick={() => removeFaq(index)}
+                sx={{ color: 'var(--color-error-dark)' }}
+              >
                 <Icon icon="mdi:close-circle-outline" style={{ fontSize: 18 }} />
               </IconButton>
             )}
@@ -74,7 +81,7 @@ const FaqsTab = ({ formData, updateField }) => {
         variant="text"
         onClick={addFaq}
         startIcon={<Icon icon="mdi:plus" />}
-        sx={{ color: '#6B7280', alignSelf: 'flex-start' }}
+        sx={{ color: 'var(--color-text-muted)', alignSelf: 'flex-start' }}
       >
         Add FAQ
       </Button>

@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import useThrottledScroll from '../../hooks/useThrottledScroll';
+import styles from './BackToTop.module.css';
 
 const BackToTop = () => {
   const [visible, setVisible] = useState(false);
@@ -28,24 +29,7 @@ const BackToTop = () => {
           whileTap={{ scale: 0.9 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           aria-label="Back to top"
-          style={{
-            position: 'fixed',
-            bottom: 80,
-            right: 20,
-            zIndex: 1100,
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            border: 'none',
-            background: '#1B2A4A',
-            color: '#fff',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 16px rgba(27, 42, 74, 0.3)',
-            fontSize: 22,
-          }}
+          className={styles.button}
         >
           <Icon icon="mdi:chevron-up" />
         </motion.button>

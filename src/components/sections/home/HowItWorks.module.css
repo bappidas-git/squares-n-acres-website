@@ -1,6 +1,6 @@
 .section {
   padding: 64px 0;
-  background: var(--color-primary);
+  background: var(--color-charcoal);
 }
 
 .container {
@@ -18,14 +18,14 @@
   font-family: var(--font-heading);
   font-size: 2.25rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-inverse);
   margin-bottom: 8px;
 }
 
 .subtitle {
   font-family: var(--font-body);
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-on-dark);
 }
 
 .stepsWrapper {
@@ -38,7 +38,7 @@
   left: 12%;
   right: 12%;
   height: 2px;
-  background: var(--color-secondary);
+  background: var(--color-primary);
   transform-origin: left center;
   opacity: 0.4;
   z-index: 0;
@@ -61,8 +61,8 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-full);
-  background: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   font-family: var(--font-body);
   font-weight: 700;
   font-size: 0.85rem;
@@ -76,37 +76,37 @@
   width: 64px;
   height: 64px;
   border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-on-dark-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 16px;
-  border: 2px solid rgba(201, 168, 108, 0.3);
+  border: 2px solid var(--color-on-dark-border);
 }
 
 .stepIcon {
   font-size: 28px;
-  color: var(--color-secondary);
+  color: var(--color-primary-dark);
 }
 
 .stepTitle {
   font-family: var(--font-body);
   font-size: 1.05rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-text-inverse);
   margin-bottom: 6px;
 }
 
 .stepDesc {
   font-family: var(--font-body);
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--color-on-dark);
   line-height: 1.5;
   max-width: 220px;
   margin: 0 auto;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 899.98px) {
   .stepsGrid {
     grid-template-columns: repeat(2, 1fr);
     gap: 32px 24px;
@@ -117,7 +117,7 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   .section {
     padding: 48px 0;
   }
@@ -143,7 +143,7 @@
     column-gap: 16px;
     text-align: left;
     padding: 0 0 32px 24px;
-    border-left: 2px solid rgba(201, 168, 108, 0.3);
+    border-left: 2px solid var(--color-on-dark-border);
     position: relative;
   }
 

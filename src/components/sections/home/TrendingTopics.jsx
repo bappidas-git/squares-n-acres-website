@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
+import useInView from '../../../hooks/useInView';
 import { articleService } from '../../../services/api';
 import styles from './TrendingTopics.module.css';
 

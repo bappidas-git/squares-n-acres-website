@@ -22,8 +22,6 @@ import {
   FormControl,
   InputLabel,
   Switch,
-  Snackbar,
-  Alert,
   Skeleton,
   InputAdornment,
   FormHelperText,
@@ -34,18 +32,21 @@ import {
 import { Icon } from '@iconify/react';
 import { userService } from '../../services/api';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
+import { useToast } from '../common/ToastProvider';
+import { toneStyles } from '../ui/tones';
 
 const ROLES = [
-  { value: 'admin', label: 'Admin', color: '#7C3AED' },
-  { value: 'manager', label: 'Manager', color: '#2563EB' },
-  { value: 'sales', label: 'Sales', color: '#059669' },
+  { value: 'admin', label: 'Admin', tone: 'primary' },
+  { value: 'manager', label: 'Manager', tone: 'info' },
+  { value: 'sales', label: 'Sales', tone: 'success' },
 ];
 
-const getRoleColor = (role) => ROLES.find((r) => r.value === role)?.color || '#6B7280';
+const roleStyle = (role) => toneStyles(ROLES.find((r) => r.value === role)?.tone);
 
 const EMPTY_FORM = { name: '', email: '', password: '', role: 'sales' };
 
 const UserManagement = () => {
+  const toast = useToast();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user: currentUser } = useAdminAuth();
@@ -59,7 +60,6 @@ const UserManagement = () => {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [searchQuery, setSearchQuery] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -70,11 +70,11 @@ const UserManagement = () => {
       const data = await userService.getAll();
       setUsers(data);
     } catch {
-      setSnackbar({ open: true, message: 'Failed to load users', severity: 'error' });
+      toast.error('Failed to load users');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchUsers();
@@ -140,16 +140,16 @@ const UserManagement = () => {
 
       if (editingUser) {
         await userService.update(editingUser.id, payload);
-        setSnackbar({ open: true, message: 'User updated successfully', severity: 'success' });
+        toast.success('User updated successfully');
       } else {
         await userService.create({ ...payload, isActive: true });
-        setSnackbar({ open: true, message: 'User created successfully', severity: 'success' });
+        toast.success('User created successfully');
       }
       setModalOpen(false);
       setEditingUser(null);
       fetchUsers();
     } catch {
-      setSnackbar({ open: true, message: 'Failed to save user', severity: 'error' });
+      toast.error('Failed to save user');
     } finally {
       setSaving(false);
     }
@@ -158,31 +158,19 @@ const UserManagement = () => {
   // Toggle active status
   const handleToggleActive = async (targetUser) => {
     if (isSelf(targetUser.id)) {
-      setSnackbar({
-        open: true,
-        message: 'You cannot disable your own account',
-        severity: 'warning',
-      });
+      toast.warning('You cannot disable your own account');
       return;
     }
     if (isLastActiveAdmin(targetUser.id) && targetUser.isActive) {
-      setSnackbar({
-        open: true,
-        message: 'Cannot disable the last remaining admin',
-        severity: 'warning',
-      });
+      toast.warning('Cannot disable the last remaining admin');
       return;
     }
     try {
       await userService.update(targetUser.id, { isActive: !targetUser.isActive });
-      setSnackbar({
-        open: true,
-        message: `User ${targetUser.isActive ? 'disabled' : 'enabled'} successfully`,
-        severity: 'success',
-      });
+      toast.success(`User ${targetUser.isActive ? 'disabled' : 'enabled'} successfully`);
       fetchUsers();
     } catch {
-      setSnackbar({ open: true, message: 'Failed to update user status', severity: 'error' });
+      toast.error('Failed to update user status');
     }
   };
 
@@ -193,10 +181,10 @@ const UserManagement = () => {
       await userService.delete(deletingUser.id);
       setDeleteDialogOpen(false);
       setDeletingUser(null);
-      setSnackbar({ open: true, message: 'User deleted successfully', severity: 'success' });
+      toast.success('User deleted successfully');
       fetchUsers();
     } catch {
-      setSnackbar({ open: true, message: 'Failed to delete user', severity: 'error' });
+      toast.error('Failed to delete user');
     }
   };
 
@@ -226,19 +214,11 @@ const UserManagement = () => {
   // Open delete dialog
   const openDeleteDialog = (targetUser) => {
     if (isSelf(targetUser.id)) {
-      setSnackbar({
-        open: true,
-        message: 'You cannot delete your own account',
-        severity: 'warning',
-      });
+      toast.warning('You cannot delete your own account');
       return;
     }
     if (isLastActiveAdmin(targetUser.id)) {
-      setSnackbar({
-        open: true,
-        message: 'Cannot delete the last remaining admin',
-        severity: 'warning',
-      });
+      toast.warning('Cannot delete the last remaining admin');
       return;
     }
     setDeletingUser(targetUser);
@@ -272,10 +252,10 @@ const UserManagement = () => {
         </Box>
         <Paper
           elevation={0}
-          sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}
+          sx={{ borderRadius: 2, border: '1px solid var(--color-surface)', overflow: 'hidden' }}
         >
           {[...Array(4)].map((_, i) => (
-            <Box key={i} sx={{ px: 3, py: 2, borderBottom: '1px solid #F3F4F6' }}>
+            <Box key={i} sx={{ px: 3, py: 2, borderBottom: '1px solid var(--color-surface)' }}>
               <Skeleton height={40} />
             </Box>
           ))}
@@ -298,10 +278,10 @@ const UserManagement = () => {
         }}
       >
         <Box>
-          <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: '#1B2A4A' }}>
+          <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-charcoal)' }}>
             Users ({users.length})
           </Typography>
-          <Typography sx={{ fontSize: '0.75rem', color: '#9CA3AF' }}>
+          <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
             Manage admin panel users and their roles
           </Typography>
         </Box>
@@ -310,12 +290,12 @@ const UserManagement = () => {
           startIcon={<Icon icon="mdi:account-plus-outline" />}
           onClick={openAddModal}
           sx={{
-            bgcolor: '#1B2A4A',
+            bgcolor: 'var(--color-charcoal)',
             textTransform: 'none',
             borderRadius: 2,
             px: 3,
             fontSize: '0.8125rem',
-            '&:hover': { bgcolor: '#2d3f63' },
+            '&:hover': { bgcolor: 'var(--color-charcoal)' },
           }}
         >
           Add User
@@ -332,7 +312,7 @@ const UserManagement = () => {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <Icon icon="mdi:magnify" style={{ fontSize: 20, color: '#9CA3AF' }} />
+              <Icon icon="mdi:magnify" style={{ fontSize: 20, color: 'var(--color-text-muted)' }} />
             </InputAdornment>
           ),
           ...(searchQuery && {
@@ -352,32 +332,42 @@ const UserManagement = () => {
       <TableContainer
         component={Paper}
         elevation={0}
-        sx={{ borderRadius: 2, border: '1px solid #F3F4F6' }}
+        sx={{ borderRadius: 2, border: '1px solid var(--color-surface)' }}
       >
         <Table size={isMobile ? 'small' : 'medium'}>
           <TableHead>
-            <TableRow sx={{ bgcolor: '#F9FAFB' }}>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+            <TableRow sx={{ bgcolor: 'var(--color-surface)' }}>
+              <TableCell
+                sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+              >
                 Name
               </TableCell>
               {!isMobile && (
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                <TableCell
+                  sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                >
                   Email
                 </TableCell>
               )}
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+              <TableCell
+                sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+              >
                 Role
               </TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+              <TableCell
+                sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+              >
                 Status
               </TableCell>
               {!isMobile && (
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                <TableCell
+                  sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
+                >
                   Created
                 </TableCell>
               )}
               <TableCell
-                sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}
                 align="right"
               >
                 Actions
@@ -390,9 +380,11 @@ const UserManagement = () => {
                 <TableCell colSpan={isMobile ? 4 : 6} align="center" sx={{ py: 6 }}>
                   <Icon
                     icon="mdi:account-search-outline"
-                    style={{ fontSize: 40, color: '#D1D5DB' }}
+                    style={{ fontSize: 40, color: 'var(--color-text-muted)' }}
                   />
-                  <Typography sx={{ fontSize: '0.875rem', color: '#9CA3AF', mt: 1 }}>
+                  <Typography
+                    sx={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', mt: 1 }}
+                  >
                     {searchQuery ? 'No users match your search' : 'No users found'}
                   </Typography>
                 </TableCell>
@@ -404,7 +396,7 @@ const UserManagement = () => {
                   <TableRow
                     key={u.id}
                     sx={{
-                      '&:hover': { bgcolor: '#F9FAFB' },
+                      '&:hover': { bgcolor: 'var(--color-surface)' },
                       opacity: u.isActive === false ? 0.6 : 1,
                     }}
                   >
@@ -416,8 +408,8 @@ const UserManagement = () => {
                             width: 36,
                             height: 36,
                             borderRadius: '50%',
-                            bgcolor: getRoleColor(u.role) + '14',
-                            color: getRoleColor(u.role),
+                            bgcolor: roleStyle(u.role).background,
+                            color: roleStyle(u.role).color,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -435,7 +427,11 @@ const UserManagement = () => {
                         </Box>
                         <Box>
                           <Typography
-                            sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1B2A4A' }}
+                            sx={{
+                              fontSize: '0.8125rem',
+                              fontWeight: 600,
+                              color: 'var(--color-charcoal)',
+                            }}
                           >
                             {u.name}
                             {self && (
@@ -443,7 +439,7 @@ const UserManagement = () => {
                                 component="span"
                                 sx={{
                                   fontSize: '0.625rem',
-                                  color: '#9CA3AF',
+                                  color: 'var(--color-text-muted)',
                                   ml: 0.75,
                                   fontWeight: 400,
                                 }}
@@ -453,7 +449,9 @@ const UserManagement = () => {
                             )}
                           </Typography>
                           {isMobile && (
-                            <Typography sx={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>
+                            <Typography
+                              sx={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)' }}
+                            >
                               {u.email}
                             </Typography>
                           )}
@@ -464,7 +462,7 @@ const UserManagement = () => {
                     {/* Email (desktop) */}
                     {!isMobile && (
                       <TableCell>
-                        <Typography sx={{ fontSize: '0.8125rem', color: '#374151' }}>
+                        <Typography sx={{ fontSize: '0.8125rem', color: 'var(--color-text)' }}>
                           {u.email}
                         </Typography>
                       </TableCell>
@@ -476,8 +474,8 @@ const UserManagement = () => {
                         label={u.role?.charAt(0).toUpperCase() + u.role?.slice(1)}
                         size="small"
                         sx={{
-                          bgcolor: getRoleColor(u.role) + '14',
-                          color: getRoleColor(u.role),
+                          bgcolor: roleStyle(u.role).background,
+                          color: roleStyle(u.role).color,
                           fontWeight: 600,
                           fontSize: '0.6875rem',
                           height: 24,
@@ -506,9 +504,11 @@ const UserManagement = () => {
                             disabled={self || (isLastActiveAdmin(u.id) && u.isActive)}
                             size="small"
                             sx={{
-                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#059669' },
+                              '& .MuiSwitch-switchBase.Mui-checked': {
+                                color: 'var(--color-success-dark)',
+                              },
                               '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                bgcolor: '#059669',
+                                bgcolor: 'var(--color-success)',
                               },
                             }}
                           />
@@ -519,7 +519,7 @@ const UserManagement = () => {
                     {/* Created Date (desktop) */}
                     {!isMobile && (
                       <TableCell>
-                        <Typography sx={{ fontSize: '0.75rem', color: '#9CA3AF' }}>
+                        <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                           {u.createdAt
                             ? new Date(u.createdAt).toLocaleDateString('en-IN', {
                                 day: 'numeric',
@@ -538,7 +538,7 @@ const UserManagement = () => {
                           <IconButton
                             size="small"
                             onClick={() => openEditModal(u)}
-                            sx={{ color: '#3B82F6' }}
+                            sx={{ color: 'var(--color-info-dark)' }}
                           >
                             <Icon icon="mdi:pencil-outline" style={{ fontSize: 18 }} />
                           </IconButton>
@@ -557,7 +557,10 @@ const UserManagement = () => {
                               size="small"
                               onClick={() => openDeleteDialog(u)}
                               disabled={self || isLastActiveAdmin(u.id)}
-                              sx={{ color: '#EF4444', '&.Mui-disabled': { color: '#E5E7EB' } }}
+                              sx={{
+                                color: 'var(--color-error-dark)',
+                                '&.Mui-disabled': { color: 'var(--color-text-muted)' },
+                              }}
                             >
                               <Icon icon="mdi:delete-outline" style={{ fontSize: 18 }} />
                             </IconButton>
@@ -588,13 +591,13 @@ const UserManagement = () => {
             gap: 1,
             fontSize: '1rem',
             fontWeight: 600,
-            color: '#1B2A4A',
+            color: 'var(--color-charcoal)',
             pb: 1,
           }}
         >
           <Icon
             icon={editingUser ? 'mdi:account-edit-outline' : 'mdi:account-plus-outline'}
-            style={{ fontSize: 22, color: '#C9A86C' }}
+            style={{ fontSize: 22, color: 'var(--color-primary-dark)' }}
           />
           {editingUser ? 'Edit User' : 'Add New User'}
         </DialogTitle>
@@ -670,7 +673,7 @@ const UserManagement = () => {
             </Select>
             {errors.role && <FormHelperText>{errors.role}</FormHelperText>}
             {editingUser && isSelf(editingUser.id) && (
-              <FormHelperText sx={{ color: '#9CA3AF' }}>
+              <FormHelperText sx={{ color: 'var(--color-text-muted)' }}>
                 You cannot change your own role
               </FormHelperText>
             )}
@@ -681,7 +684,7 @@ const UserManagement = () => {
           <Button
             onClick={() => setModalOpen(false)}
             disabled={saving}
-            sx={{ textTransform: 'none', color: '#6B7280', borderRadius: 2 }}
+            sx={{ textTransform: 'none', color: 'var(--color-text-muted)', borderRadius: 2 }}
           >
             Cancel
           </Button>
@@ -691,10 +694,10 @@ const UserManagement = () => {
             disabled={saving}
             sx={{
               textTransform: 'none',
-              bgcolor: '#1B2A4A',
+              bgcolor: 'var(--color-charcoal)',
               borderRadius: 2,
               px: 3,
-              '&:hover': { bgcolor: '#2d3f63' },
+              '&:hover': { bgcolor: 'var(--color-charcoal)' },
             }}
           >
             {saving ? 'Saving...' : editingUser ? 'Update User' : 'Create User'}
@@ -710,13 +713,13 @@ const UserManagement = () => {
         fullWidth
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ fontSize: '1rem', fontWeight: 600, color: '#1B2A4A' }}>
+        <DialogTitle sx={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-charcoal)' }}>
           Delete User
         </DialogTitle>
         <DialogContent>
-          <Typography sx={{ fontSize: '0.875rem', color: '#6B7280' }}>
+          <Typography sx={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
             Are you sure you want to delete{' '}
-            <Typography component="span" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
+            <Typography component="span" sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
               {deletingUser?.name}
             </Typography>
             ? This action cannot be undone.
@@ -725,7 +728,7 @@ const UserManagement = () => {
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button
             onClick={() => setDeleteDialogOpen(false)}
-            sx={{ textTransform: 'none', color: '#6B7280', borderRadius: 2 }}
+            sx={{ textTransform: 'none', color: 'var(--color-text-muted)', borderRadius: 2 }}
           >
             Cancel
           </Button>
@@ -734,32 +737,16 @@ const UserManagement = () => {
             onClick={handleDelete}
             sx={{
               textTransform: 'none',
-              bgcolor: '#EF4444',
+              bgcolor: 'var(--color-error)',
               borderRadius: 2,
               px: 3,
-              '&:hover': { bgcolor: '#DC2626' },
+              '&:hover': { bgcolor: 'var(--color-error)' },
             }}
           >
             Delete
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          sx={{ borderRadius: 2 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };
