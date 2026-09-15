@@ -39,7 +39,7 @@
     "test": "react-scripts test",
     "test:ci": "cross-env CI=true react-scripts test --watchAll=false --passWithNoTests",
     "eject": "react-scripts eject",
-    "lint": "eslint \"src/**/*.{js,jsx}\" \"scripts/**/*.js\" --max-warnings=0",
+    "lint": "eslint \"src/**/*.{js,jsx}\" \"scripts/**/*.js\" --max-warnings=0 && node scripts/check-endpoints.js",
     "lint:fix": "eslint \"src/**/*.{js,jsx}\" \"scripts/**/*.js\" --fix",
     "format": "prettier --write \"src/**/*.{js,jsx,css,json}\" \"scripts/**/*.js\" \"docs/**/*.md\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,css,json}\" \"scripts/**/*.js\"",
@@ -47,7 +47,8 @@
     "check:traces:report": "node scripts/check-traces.js --report",
     "generate:brand-assets": "node scripts/fetch-brand-assets.js",
     "check:all": "npm run lint && npm run test:ci && npm run build:ci && npm run check:traces && npm run check:contrast",
-    "check:contrast": "node scripts/contrast-check.js"
+    "check:contrast": "node scripts/contrast-check.js",
+    "check:endpoints": "node scripts/check-endpoints.js"
   },
   "eslintConfig": {
     "extends": [

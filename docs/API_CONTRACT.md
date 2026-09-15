@@ -1,0 +1,695 @@
+# API contract — Squares N Acres
+
+The contract the frontend, the mock server (`mock-server/`) and the future Laravel API all
+implement. It is copied verbatim from `prompts/00_MASTER_CONTEXT.md` §5.1–§5.13 and
+completed with the endpoint catalogue (§5.14) rendered from `src/services/endpoints.js`
+and the response shapes every endpoint returns.
+
+Companion documents: `docs/DATA_MODEL.md` (every collection and field) and
+`docs/RBAC.md` (who may call what). The enums every value comes from live in
+`src/config/enums.js`; the request bodies in `src/services/schemas/`.
+
+Switching between the mock and Laravel is only a change of `REACT_APP_API_URL` — no code
+knows which backend answers.
+
+---
+
+### 5.1 Base URL and paths
+
+`REACT_APP_API_URL` (e.g. `http://localhost:4000/api`, later `https://api.squaresnacres.com/api`). All paths below are relative to it. Public and admin endpoints share the base; admin endpoints are prefixed `/admin/`. Casing: **the entire contract is camelCase** — request bodies, response bodies and query parameters. `db.json` is camelCase. There is **no transformation layer** in the frontend (`transformPropertyPayload`, `normalizePropertyResponse`, `normalizeListResponse`, `extractPaginationMeta`, `buildPayload` conversions and the snake↔camel mappers in `seoService.js` are deleted in prompt 11). The Laravel developer maps `snake_case` columns to camelCase JSON in API Resources.
+
+### 5.2 Success envelope
+
+- Single resource → `{ "data": { … } }`
+- List → `{ "data": [ … ], "meta": { "page": 1, "perPage": 12, "total": 57, "totalPages": 5 } }` (non-paginated lists still return `meta` with `total`, `page: 1`, `perPage: total`, `totalPages: 1`). Property lists additionally return `meta.facets` (§5.7).
+- Action/void → `{ "data": null, "message": "…" }`
+- Never a bare array or bare object.
+
+### 5.3 Error envelope
+
+`{ "message": "Human readable", "errors": { "fieldName": ["message", …] } }` with status **400** bad request, **401** unauthenticated, **403** forbidden (role), **404** not found, **409** conflict (duplicate slug/email), **422** validation (Laravel format, keys camelCase, nested keys dotted: `"location.localityId"`, `"images.0.alt"`), **429** rate limited, **500** server error. The frontend shows `message` in a toast and `errors` inline on fields (`useForm.setServerErrors(errors)` / `usePropertyForm`).
+
+A complete 422 body:
+
+```json
+{
+  "message": "The given data was invalid.",
+  "errors": {
+    "title": ["The title must be at least 10 characters."],
+    "location.localityId": ["The selected locality is invalid."]
+  }
+}
+```
+
+### 5.4 Auth
+
+Header `Authorization: Bearer <token>`. `POST /auth/login { email, password }` → `{ data: { token, expiresAt, user: { id, name, email, role, avatarUrl, phone } } }`; `POST /auth/logout` revokes (200 `{data:null,message}`); `GET /auth/profile` → `{ data: user }` (401 when the token is missing/expired/revoked); `PUT /auth/profile { name, phone, avatarUrl }`; `PUT /auth/password { currentPassword, newPassword }` (422 `currentPassword` when wrong; `newPassword` min 8). Tokens expire after `MOCK_TOKEN_TTL_HOURS` (default 24) on the mock and per Sanctum config on Laravel. Client storage: `sna_auth_token`, `sna_auth_user`, `sna_auth_expires_at` (localStorage); expiry enforced client-side (timer + check on every route change → auto-logout with toast "Your session has expired. Please sign in again.") and server-side (401).
+
+### 5.5 IDs & timestamps
+
+Integer auto-increment `id` (the mock uses `max(id)+1` per collection). ISO-8601 UTC strings `createdAt`, `updatedAt` on every record (and `publishedAt`, `deletedAt`, `lastLoginAt` where relevant); the API sets them, the client never sends them (ignored if sent). Foreign keys `xxxId`. Reads embed denormalised display objects (`property.locality = {id,name,slug}`, `property.location.city = {id,name,slug}`, `property.propertyType = {id,name,slug,segment}`, `property.developer = {id,name,slug,logoUrl}`, `property.amenities[] = {id,name,slug,icon,category}`, `property.badges[] = {id,name,slug,color,icon}`, `lead.property = {id,title,slug}`, `lead.assignedUser = {id,name}`, `article.category/author/tags`, `jobApplication.job = {id,title,slug}`); writes send only the ids (`localityId`, `cityId`, `propertyTypeId`, `developerId`, `amenityIds[]`, `badgeIds[]`, `categoryId`, `authorId`, `tagIds[]`, `assignedTo`). Read-only embedded/computed fields sent by a client are ignored.
+
+### 5.6 Pagination, sorting, filtering
+
+Query params `page` (1-based, default 1), `perPage` (default 12 public / 20 admin, max 100; `perPage=all` allowed **only on admin endpoints** and returns everything), `sort` (a field name or an alias from the endpoint's allowed list; default per endpoint), `order` (`asc|desc`), `q` (full-text on the endpoint's searchable fields, case-insensitive substring), plus endpoint-specific filters. Multi-value filters are comma-separated (`bedrooms=2,3`, `localityId=4,7`). Booleans are the strings `true|false`. Dates are `yyyy-mm-dd` (`from`, `to` inclusive). Unknown params are ignored. Out-of-range `page` returns an empty `data` with correct `meta`.
+
+### 5.7 Property list filters (`GET /properties`, `GET /admin/properties`)
+
+`listingType`, `segment`, `propertyTypeId` (multi), `localityId` (multi), `cityId`, `constructionStatus` (multi), `availability`, `bedrooms` (multi; `5` means ≥ 5; matches `configuration.bedrooms` **or any active `unitConfigurations[].bedrooms`**), `minPrice`, `maxPrice` (compare against `pricing.price` for sale, `pricing.rentPerMonth` for rent/lease; `priceOnRequest` records are excluded when a price filter is set), `minArea`, `maxArea`, `areaUnit` (default sqft; compare against `area.superBuiltUpArea ?? area.carpetArea ?? area.plotArea` converted to the requested unit), `furnishing` (multi), `facing` (multi), `developerId`, `amenityIds` (multi = **all** must match), `badgeIds` (multi = any), `isFeatured`, `isVerified`, `reraRegistered`, `possessionBy` (`yyyy-mm`; `possessionDate <= last day of that month` or ready-to-move), `q` (title, projectName, shortDescription, locality name, developer name), `ids` (multi, returns those ids in the given order, ignores other filters except `isActive` scoping), `sort` ∈ `relevance|newest|price-asc|price-desc|area-desc|popular` (`relevance` = `isFeatured desc, priorityOrder desc, updatedAt desc`; `newest` = `publishedAt desc`; `popular` = `viewCount desc`), `page`, `perPage`. Admin adds `isActive`, `seoScoreBand` (`good|ok|poor|none`), `createdBy`, `sort=updatedAt|price|viewCount|priorityOrder|title|seoScore`. Response `meta.facets` (public + admin): `{ propertyType: [{id,name,count}], locality: [{id,name,count}], bedrooms: [{value,count}], constructionStatus: [{value,count}] }` computed on the result set **before** pagination but **after** the other filters.
+
+### 5.8 Write semantics
+
+`POST` creates → **201** + full record. `PUT` replaces the full record (the client always sends the complete record from the form; missing optional fields become their defaults). `PATCH` updates only the provided fields — used by toggles, bulk actions, SEO panel saves, lead status changes, section-visibility toggles, `order` reorders. `DELETE` → 200 `{ data: null, message }`. Bulk: `POST /admin/<resource>/bulk { ids: [], action: 'activate'|'deactivate'|'delete'|'feature'|'unfeature'|'verify'|'unverify'|'publish'|'unpublish'|'assign'|'status', payload? }` → `{ data: { affected: n }, message }` (unsupported action for the resource → 422).
+
+### 5.9 Slugs
+
+Every public entity has a unique `slug` (lowercase, `[a-z0-9-]`, ≤ 75 chars). Lookup: `GET /<resource>/slug/:slug`. Check: `GET /admin/<resource>/check-slug?slug=&excludeId=` → `{ data: { available: true|false, suggestion } }`. The API auto-generates a slug from the title when the client sends an empty slug and de-duplicates with `-2`, `-3`… A duplicate explicit slug → 409 with `errors.slug`. The entity `slug` and `seo.slug` are always kept identical by the API.
+
+### 5.10 Public vs admin reads
+
+Public list endpoints return only `isActive: true` records (and `status: 'published'` for articles/pages, `publishedAt <= now`); public detail endpoints return 404 for inactive/unpublished/unknown slugs (except `?preview=<token>` on articles/pages, D28). Public responses strip private fields: `agent.phone/whatsapp/email` only when `agent.showOnListing`; never `leads`, `adminUsers`, `apiTokens`, `media`, `createdBy/updatedBy`, `authors[].email`, internal notes, `siteSettings.integrations.*Secret`, `siteSettings.leads`. Admin endpoints return everything, with `isActive` filterable.
+
+### 5.11 Rate limiting & spam
+
+`POST /leads`, `POST /newsletter/subscribe`, `POST /jobs/:id/apply` accept an optional honeypot field `website` (non-empty → 200 `{data:null, message:'ok'}` and nothing stored) and are rate limited per IP (mock: 10/min → 429 `{message:'Too many requests. Please try again in a minute.'}`). Documented for Laravel (`throttle:10,1`).
+
+### 5.12 CORS
+
+The API allows the site origin(s) from configuration; the mock allows `http://localhost:3000`, `http://127.0.0.1:3000` and `http://localhost:5000` (served build).
+
+### 5.13 Sitemap/robots/RSS/llms
+
+`GET /sitemap.xml` (sitemap index), `GET /sitemap-properties.xml`, `/sitemap-localities.xml`, `/sitemap-developers.xml`, `/sitemap-articles.xml`, `/sitemap-pages.xml` (with `<lastmod>`, `<changefreq>`, `<priority>` from `seoSettings.sitemap` and per-entity `seo.sitemap` overrides; `<image:image>` entries for properties), `GET /robots.txt`, `GET /rss.xml` (latest 20 published articles), `GET /llms.txt` — `text/xml` / `text/plain`, no envelope, served both under the API base (`/api/sitemap.xml`) and mirrored at the mock's root (`/sitemap.xml`) for Nginx proxying. URLs use `seoSettings.siteUrl`.
+
+### 5.14 Endpoint catalogue
+
+235 endpoints, generated from `src/services/endpoints.js` — the registry is the source of
+truth and `src/services/endpoints.test.js` fails when one goes missing. Every entry is
+smoke-tested by `scripts/smoke-api.js` and exported to the backend handover package by
+`scripts/generate-backend-guidelines.js`.
+
+**Auth/role** is the minimum the route requires: _public_ needs no token, _any role_ only a
+valid one, and the named roles are checked by `mock-server/middleware/role.js` (403
+otherwise). Within an allowed route the action matrix of `docs/RBAC.md` narrows what the
+caller may do — a sales user reaches `GET /admin/properties` but never
+`POST /admin/properties`, and reaches `GET /admin/leads` scoped to their own and
+unassigned leads.
+
+**Query** lists the accepted parameters; unknown ones are ignored (§5.6). **Body schema**
+names a key of `src/services/schemas/` (`getSchema('property.create')`).
+
+#### Public — no token
+
+| Method | Path                      | Auth/role | Purpose                                                                  | Query                                                                                                                                                                                                                                                                                                                                                         | Body schema | Response shape     | Side effects                                                                     |
+| ------ | ------------------------- | --------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------ | -------------------------------------------------------------------------------- |
+| GET    | `/properties`             | public    | Public paginated property search with facets                             | `page`, `perPage`, `sort`, `order`, `q`, `listingType`, `segment`, `propertyTypeId`, `localityId`, `cityId`, `constructionStatus`, `availability`, `bedrooms`, `minPrice`, `maxPrice`, `minArea`, `maxArea`, `areaUnit`, `furnishing`, `facing`, `developerId`, `amenityIds`, `badgeIds`, `isFeatured`, `isVerified`, `reraRegistered`, `possessionBy`, `ids` | —           | `PropertyList`     | —                                                                                |
+| GET    | `/properties/featured`    | public    | Featured properties, ordered by priority then recency                    | `perPage`, `listingType`, `segment`, `propertyTypeId`, `localityId`, `cityId`, `constructionStatus`, `availability`, `bedrooms`, `minPrice`, `maxPrice`, `minArea`, `maxArea`, `areaUnit`, `furnishing`, `facing`, `developerId`, `amenityIds`, `badgeIds`, `isFeatured`, `isVerified`, `reraRegistered`, `possessionBy`, `ids`                               | —           | `PropertyList`     | —                                                                                |
+| GET    | `/properties/slug/:slug`  | public    | Property details by slug; 404 when inactive                              | —                                                                                                                                                                                                                                                                                                                                                             | —           | `Property`         | —                                                                                |
+| GET    | `/properties/:id/similar` | public    | Admin-selected similar properties, topped up to six by locality and type | `perPage`                                                                                                                                                                                                                                                                                                                                                     | —           | `PropertyList`     | —                                                                                |
+| POST   | `/properties/:id/view`    | public    | Count one property view; debounced per IP per hour                       | —                                                                                                                                                                                                                                                                                                                                                             | —           | `ViewCount`        | Increments `viewCount`; appends a `propertyViews` row; debounced per IP per hour |
+| GET    | `/properties/suggestions` | public    | Type-ahead suggestions for the hero and header search                    | `q`                                                                                                                                                                                                                                                                                                                                                           | —           | `Suggestions`      | —                                                                                |
+| GET    | `/localities`             | public    | Localities with their active property count                              | `page`, `perPage`, `sort`, `order`, `q`, `zone`, `cityId`, `isFeatured`, `ids`                                                                                                                                                                                                                                                                                | —           | `LocalityList`     | —                                                                                |
+| GET    | `/localities/slug/:slug`  | public    | Locality guide page by slug                                              | —                                                                                                                                                                                                                                                                                                                                                             | —           | `Locality`         | —                                                                                |
+| GET    | `/cities`                 | public    | Cities the portal covers                                                 | `page`, `perPage`, `sort`, `order`, `q`                                                                                                                                                                                                                                                                                                                       | —           | `CityList`         | —                                                                                |
+| GET    | `/developers`             | public    | Developers with their active property count                              | `page`, `perPage`, `sort`, `order`, `q`, `isFeatured`, `ids`                                                                                                                                                                                                                                                                                                  | —           | `DeveloperList`    | —                                                                                |
+| GET    | `/developers/slug/:slug`  | public    | Developer page by slug                                                   | —                                                                                                                                                                                                                                                                                                                                                             | —           | `Developer`        | —                                                                                |
+| GET    | `/property-types`         | public    | Property types, optionally filtered by segment                           | `page`, `perPage`, `sort`, `order`, `q`, `segment`                                                                                                                                                                                                                                                                                                            | —           | `PropertyTypeList` | —                                                                                |
+| GET    | `/amenities`              | public    | Amenities, optionally filtered by category                               | `page`, `perPage`, `sort`, `order`, `q`, `category`                                                                                                                                                                                                                                                                                                           | —           | `AmenityList`      | —                                                                                |
+| GET    | `/badges`                 | public    | Property badges                                                          | `page`, `perPage`, `sort`, `order`, `q`                                                                                                                                                                                                                                                                                                                       | —           | `BadgeList`        | —                                                                                |
+| GET    | `/banks`                  | public    | Home-loan partners for the finance section and the EMI calculator        | `page`, `perPage`, `sort`, `order`, `q`                                                                                                                                                                                                                                                                                                                       | —           | `BankList`         | —                                                                                |
+
+#### Public — articles
+
+| Method | Path                   | Auth/role | Purpose                                                       | Query                                                                                                                                    | Body schema | Response shape        | Side effects |
+| ------ | ---------------------- | --------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------------------- | ------------ |
+| GET    | `/articles`            | public    | Published articles, newest or most read first                 | `page`, `perPage`, `sort`, `order`, `q`, `categoryId`, `categorySlug`, `tagId`, `tagSlug`, `authorId`, `authorSlug`, `isFeatured`, `ids` | —           | `ArticleList`         | —            |
+| GET    | `/articles/slug/:slug` | public    | Article by slug; a matching preview token also returns drafts | `preview`                                                                                                                                | —           | `Article`             | —            |
+| GET    | `/articles/trending`   | public    | The six most read published articles                          | `perPage`                                                                                                                                | —           | `ArticleList`         | —            |
+| GET    | `/article-categories`  | public    | Article categories with their published article count         | `page`, `perPage`, `sort`, `order`, `q`                                                                                                  | —           | `ArticleCategoryList` | —            |
+| GET    | `/article-tags`        | public    | Article tags with their published article count               | `page`, `perPage`, `sort`, `order`, `q`                                                                                                  | —           | `ArticleTagList`      | —            |
+| GET    | `/authors`             | public    | Active authors, public fields only                            | `page`, `perPage`, `sort`, `order`, `q`                                                                                                  | —           | `AuthorList`          | —            |
+| GET    | `/authors/slug/:slug`  | public    | Author page by slug                                           | —                                                                                                                                        | —           | `Author`              | —            |
+
+#### Public — content, leads and settings
+
+| Method | Path                    | Auth/role | Purpose                                                                  | Query                                                                               | Body schema             | Response shape    | Side effects                                                                                                                                                                                                |
+| ------ | ----------------------- | --------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- | ----------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/faqs`                 | public    | FAQs for the FAQ page, the home section and property pages               | `page`, `perPage`, `sort`, `order`, `q`, `category`, `showOnHome`, `propertyTypeId` | —                       | `FaqList`         | —                                                                                                                                                                                                           |
+| GET    | `/testimonials`         | public    | Active testimonials                                                      | `page`, `perPage`, `sort`, `order`, `q`, `isFeatured`                               | —                       | `TestimonialList` | —                                                                                                                                                                                                           |
+| GET    | `/team`                 | public    | Team members shown on the About page                                     | `page`, `perPage`, `sort`, `order`, `q`, `showOnAbout`                              | —                       | `TeamMemberList`  | —                                                                                                                                                                                                           |
+| GET    | `/partners`             | public    | Partner logos, optionally filtered by category                           | `page`, `perPage`, `sort`, `order`, `q`, `category`                                 | —                       | `PartnerList`     | —                                                                                                                                                                                                           |
+| GET    | `/pages/slug/:slug`     | public    | Published CMS page by slug; a matching preview token also returns drafts | `preview`                                                                           | —                       | `Page`            | —                                                                                                                                                                                                           |
+| GET    | `/jobs`                 | public    | Open job postings                                                        | `page`, `perPage`, `sort`, `order`, `q`, `department`                               | —                       | `JobList`         | —                                                                                                                                                                                                           |
+| GET    | `/jobs/slug/:slug`      | public    | Job posting by slug                                                      | —                                                                                   | —                       | `Job`             | —                                                                                                                                                                                                           |
+| POST   | `/jobs/:id/apply`       | public    | Apply for a job posting; honeypot and rate limited                       | —                                                                                   | `jobApplication.create` | `JobApplication`  | Creates a `jobApplications` record; honeypot; rate limited 10/min per IP                                                                                                                                    |
+| POST   | `/leads`                | public    | Capture a lead from any form on the site; honeypot and rate limited      | —                                                                                   | `lead.create`           | `Lead`            | Creates the lead with `status:new`, the default priority and a `created` activity; increments the property `enquiryCount`; maps legacy sources; round-robin assignment when enabled; honeypot; rate limited |
+| POST   | `/newsletter/subscribe` | public    | Subscribe an e-mail address; a duplicate answers 200 instead of 409      | —                                                                                   | `newsletter.subscribe`  | `Null`            | Creates a subscriber or returns 200 for a duplicate; honeypot; rate limited                                                                                                                                 |
+| GET    | `/settings`             | public    | The public subset of the site settings                                   | —                                                                                   | —                       | `Settings`        | —                                                                                                                                                                                                           |
+| GET    | `/seo/settings`         | public    | The public subset of the SEO settings used by <Seo> and the sitemap      | —                                                                                   | —                       | `SeoSettings`     | —                                                                                                                                                                                                           |
+| GET    | `/redirects`            | public    | Active redirects, resolved client-side by RedirectHandler                | —                                                                                   | —                       | `RedirectList`    | —                                                                                                                                                                                                           |
+
+#### Public — sitemaps and feeds
+
+| Method | Path                      | Auth/role | Purpose                                                            | Query | Body schema | Response shape | Side effects |
+| ------ | ------------------------- | --------- | ------------------------------------------------------------------ | ----- | ----------- | -------------- | ------------ |
+| GET    | `/sitemap.xml`            | public    | Sitemap index listing every sub-sitemap                            | —     | —           | `Xml`          | —            |
+| GET    | `/sitemap-properties.xml` | public    | Property URLs with lastmod, changefreq, priority and image entries | —     | —           | `Xml`          | —            |
+| GET    | `/sitemap-localities.xml` | public    | Locality URLs                                                      | —     | —           | `Xml`          | —            |
+| GET    | `/sitemap-developers.xml` | public    | Developer URLs                                                     | —     | —           | `Xml`          | —            |
+| GET    | `/sitemap-articles.xml`   | public    | Article, category, tag and author URLs                             | —     | —           | `Xml`          | —            |
+| GET    | `/sitemap-pages.xml`      | public    | CMS page URLs                                                      | —     | —           | `Xml`          | —            |
+| GET    | `/robots.txt`             | public    | robots.txt from seoSettings.robotsTxt                              | —     | —           | `Text`         | —            |
+| GET    | `/rss.xml`                | public    | RSS feed of the latest twenty published articles                   | —     | —           | `Xml`          | —            |
+| GET    | `/llms.txt`               | public    | llms.txt from seoSettings.llmsTxt                                  | —     | —           | `Text`         | —            |
+
+#### Auth
+
+| Method | Path             | Auth/role | Purpose                                                               | Query | Body schema     | Response shape | Side effects                                        |
+| ------ | ---------------- | --------- | --------------------------------------------------------------------- | ----- | --------------- | -------------- | --------------------------------------------------- |
+| POST   | `/auth/login`    | public    | Exchange e-mail and password for a bearer token                       | —     | `auth.login`    | `AuthSession`  | Issues an `apiTokens` record and sets `lastLoginAt` |
+| POST   | `/auth/logout`   | any role  | Revoke the current token                                              | —     | —               | `Null`         | Revokes the presented token                         |
+| GET    | `/auth/profile`  | any role  | The signed-in user; 401 when the token is missing, expired or revoked | —     | —               | `User`         | —                                                   |
+| PUT    | `/auth/profile`  | any role  | Update the signed-in user’s own name, phone and avatar                | —     | `auth.profile`  | `User`         | —                                                   |
+| PUT    | `/auth/password` | any role  | Change the signed-in user’s own password                              | —     | `auth.password` | `Null`         | Revokes every other token of the user               |
+
+#### Admin — dashboard, properties and leads
+
+| Method | Path                              | Auth/role       | Purpose                                                              | Query                                                                                                                                                                                                                                                                                                                                                                                                  | Body schema       | Response shape  | Side effects                                                                                                                                      |
+| ------ | --------------------------------- | --------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/admin/dashboard`                | any role        | Role-aware dashboard aggregates, trends and recent activity          | —                                                                                                                                                                                                                                                                                                                                                                                                      | —                 | `DashboardData` | —                                                                                                                                                 |
+| GET    | `/admin/properties`               | any role        | List properties for the admin table                                  | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `listingType`, `segment`, `propertyTypeId`, `localityId`, `cityId`, `constructionStatus`, `availability`, `bedrooms`, `minPrice`, `maxPrice`, `minArea`, `maxArea`, `areaUnit`, `furnishing`, `facing`, `developerId`, `amenityIds`, `badgeIds`, `isFeatured`, `isVerified`, `reraRegistered`, `possessionBy`, `seoScoreBand`, `createdBy` | —                 | `PropertyList`  | —                                                                                                                                                 |
+| POST   | `/admin/properties`               | admin · manager | Create a property                                                    | —                                                                                                                                                                                                                                                                                                                                                                                                      | `property.create` | `Property`      | Generates and de-duplicates the slug; mirrors it into `seo.slug`                                                                                  |
+| GET    | `/admin/properties/:id`           | any role        | Read one property with every admin field                             | —                                                                                                                                                                                                                                                                                                                                                                                                      | —                 | `Property`      | —                                                                                                                                                 |
+| PUT    | `/admin/properties/:id`           | admin · manager | Replace a property with the full record from the form                | —                                                                                                                                                                                                                                                                                                                                                                                                      | `property.update` | `Property`      | Regenerates the slug when it changed; sets `publishedAt` the first time `isActive` becomes true                                                   |
+| PATCH  | `/admin/properties/:id`           | admin · manager | Update the given fields of a property (toggles, order, SEO panel)    | —                                                                                                                                                                                                                                                                                                                                                                                                      | `property.patch`  | `Property`      | Sets `publishedAt` the first time `isActive` becomes true                                                                                         |
+| DELETE | `/admin/properties/:id`           | admin · manager | Delete a property; 409 when it is still in use                       | —                                                                                                                                                                                                                                                                                                                                                                                                      | —                 | `Null`          | Hard delete                                                                                                                                       |
+| POST   | `/admin/properties/bulk`          | admin · manager | Apply one action to several properties                               | —                                                                                                                                                                                                                                                                                                                                                                                                      | `bulk`            | `BulkResult`    | activate · deactivate · feature · unfeature · verify · unverify · delete                                                                          |
+| GET    | `/admin/properties/check-slug`    | admin · manager | Check whether a property slug is free and suggest an alternative     | `slug`, `excludeId`                                                                                                                                                                                                                                                                                                                                                                                    | —                 | `SlugCheck`     | —                                                                                                                                                 |
+| POST   | `/admin/properties/:id/duplicate` | admin · manager | Copy a property as an inactive draft with a fresh slug               | —                                                                                                                                                                                                                                                                                                                                                                                                      | —                 | `Property`      | Creates an inactive copy: title `"<title> (Copy)"`, slug `<slug>-copy[-n]`, `isFeatured:false`, `viewCount:0`, `enquiryCount:0`, `seo.score:null` |
+| GET    | `/admin/leads`                    | any role        | Lead list for the CRM; scoped to own and unassigned leads for sales  | `page`, `perPage`, `sort`, `order`, `q`, `status`, `source`, `priority`, `assignedTo`, `propertyId`, `from`, `to`                                                                                                                                                                                                                                                                                      | —                 | `LeadList`      | —                                                                                                                                                 |
+| GET    | `/admin/leads/:id`                | any role        | One lead with its notes and activity timeline                        | —                                                                                                                                                                                                                                                                                                                                                                                                      | —                 | `Lead`          | —                                                                                                                                                 |
+| PATCH  | `/admin/leads/:id`                | any role        | Change status, priority, assignee, follow-up or lost reason          | —                                                                                                                                                                                                                                                                                                                                                                                                      | `lead.patch`      | `Lead`          | Appends an activity for a status, priority, assignee or follow-up change                                                                          |
+| DELETE | `/admin/leads/:id`                | admin · manager | Delete a lead; forbidden for sales                                   | —                                                                                                                                                                                                                                                                                                                                                                                                      | —                 | `Null`          | 409 with `data.usedBy` when the record is still referenced                                                                                        |
+| POST   | `/admin/leads/:id/claim`          | any role        | Assign an unassigned lead to the signed-in user                      | —                                                                                                                                                                                                                                                                                                                                                                                                      | —                 | `Lead`          | Sets `assignedTo` to the caller when the lead is unassigned; appends an `assigned` activity                                                       |
+| POST   | `/admin/leads/:id/notes`          | any role        | Append a note to a lead and return the lead                          | —                                                                                                                                                                                                                                                                                                                                                                                                      | `lead.note`       | `Lead`          | Appends the note and a `note-added` activity                                                                                                      |
+| DELETE | `/admin/leads/:id/notes/:noteId`  | any role        | Delete one note from a lead                                          | —                                                                                                                                                                                                                                                                                                                                                                                                      | —                 | `Lead`          | Removes the note; the activity stays                                                                                                              |
+| GET    | `/admin/leads/export`             | any role        | CSV export of the filtered lead list, scoped like the list endpoint  | `q`, `status`, `source`, `priority`, `assignedTo`, `propertyId`, `from`, `to`                                                                                                                                                                                                                                                                                                                          | —                 | `Csv`           | UTF-8 BOM CSV, `Content-Disposition: attachment; filename="leads-<yyyy-mm-dd>.csv"`                                                               |
+| POST   | `/admin/leads/bulk`               | admin · manager | Change status, priority or assignee of several leads, or delete them | —                                                                                                                                                                                                                                                                                                                                                                                                      | `bulk`            | `BulkResult`    | status · assign · priority · delete                                                                                                               |
+
+#### Admin — master data
+
+| Method | Path                               | Auth/role       | Purpose                                                                | Query                                                                                      | Body schema           | Response shape     | Side effects                                                     |
+| ------ | ---------------------------------- | --------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------- | ------------------ | ---------------------------------------------------------------- |
+| GET    | `/admin/localities`                | admin · manager | List localities for the admin table                                    | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `cityId`, `zone`, `isFeatured` | —                     | `LocalityList`     | —                                                                |
+| POST   | `/admin/localities`                | admin · manager | Create a locality                                                      | —                                                                                          | `locality.create`     | `Locality`         | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/localities/:id`            | admin · manager | Read one locality with every admin field                               | —                                                                                          | —                     | `Locality`         | —                                                                |
+| PUT    | `/admin/localities/:id`            | admin · manager | Replace a locality with the full record from the form                  | —                                                                                          | `locality.update`     | `Locality`         | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/localities/:id`            | admin · manager | Update the given fields of a locality (toggles, order, SEO panel)      | —                                                                                          | `locality.patch`      | `Locality`         | —                                                                |
+| DELETE | `/admin/localities/:id`            | admin · manager | Delete a locality; 409 when it is still in use                         | —                                                                                          | —                     | `Null`             | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/localities/bulk`           | admin · manager | Apply one action to several localities                                 | —                                                                                          | `bulk`                | `BulkResult`       | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/localities/check-slug`     | admin · manager | Check whether a locality slug is free and suggest an alternative       | `slug`, `excludeId`                                                                        | —                     | `SlugCheck`        | —                                                                |
+| GET    | `/admin/cities`                    | admin · manager | List cities for the admin table                                        | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`                                 | —                     | `CityList`         | —                                                                |
+| POST   | `/admin/cities`                    | admin · manager | Create a city                                                          | —                                                                                          | `city.create`         | `City`             | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/cities/:id`                | admin · manager | Read one city with every admin field                                   | —                                                                                          | —                     | `City`             | —                                                                |
+| PUT    | `/admin/cities/:id`                | admin · manager | Replace a city with the full record from the form                      | —                                                                                          | `city.update`         | `City`             | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/cities/:id`                | admin · manager | Update the given fields of a city (toggles, order, SEO panel)          | —                                                                                          | `city.patch`          | `City`             | —                                                                |
+| DELETE | `/admin/cities/:id`                | admin · manager | Delete a city; 409 when it is still in use                             | —                                                                                          | —                     | `Null`             | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/cities/bulk`               | admin · manager | Apply one action to several cities                                     | —                                                                                          | `bulk`                | `BulkResult`       | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/cities/check-slug`         | admin · manager | Check whether a city slug is free and suggest an alternative           | `slug`, `excludeId`                                                                        | —                     | `SlugCheck`        | —                                                                |
+| GET    | `/admin/property-types`            | admin · manager | List property types for the admin table                                | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `segment`                      | —                     | `PropertyTypeList` | —                                                                |
+| POST   | `/admin/property-types`            | admin · manager | Create a property type                                                 | —                                                                                          | `propertyType.create` | `PropertyType`     | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/property-types/:id`        | admin · manager | Read one property type with every admin field                          | —                                                                                          | —                     | `PropertyType`     | —                                                                |
+| PUT    | `/admin/property-types/:id`        | admin · manager | Replace a property type with the full record from the form             | —                                                                                          | `propertyType.update` | `PropertyType`     | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/property-types/:id`        | admin · manager | Update the given fields of a property type (toggles, order, SEO panel) | —                                                                                          | `propertyType.patch`  | `PropertyType`     | —                                                                |
+| DELETE | `/admin/property-types/:id`        | admin · manager | Delete a property type; 409 when it is still in use                    | —                                                                                          | —                     | `Null`             | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/property-types/bulk`       | admin · manager | Apply one action to several property types                             | —                                                                                          | `bulk`                | `BulkResult`       | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/property-types/check-slug` | admin · manager | Check whether a property type slug is free and suggest an alternative  | `slug`, `excludeId`                                                                        | —                     | `SlugCheck`        | —                                                                |
+| GET    | `/admin/amenities`                 | admin · manager | List amenities for the admin table                                     | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `category`                     | —                     | `AmenityList`      | —                                                                |
+| POST   | `/admin/amenities`                 | admin · manager | Create a amenity                                                       | —                                                                                          | `amenity.create`      | `Amenity`          | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/amenities/:id`             | admin · manager | Read one amenity with every admin field                                | —                                                                                          | —                     | `Amenity`          | —                                                                |
+| PUT    | `/admin/amenities/:id`             | admin · manager | Replace a amenity with the full record from the form                   | —                                                                                          | `amenity.update`      | `Amenity`          | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/amenities/:id`             | admin · manager | Update the given fields of a amenity (toggles, order, SEO panel)       | —                                                                                          | `amenity.patch`       | `Amenity`          | —                                                                |
+| DELETE | `/admin/amenities/:id`             | admin · manager | Delete a amenity; 409 when it is still in use                          | —                                                                                          | —                     | `Null`             | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/amenities/bulk`            | admin · manager | Apply one action to several amenities                                  | —                                                                                          | `bulk`                | `BulkResult`       | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/amenities/check-slug`      | admin · manager | Check whether a amenity slug is free and suggest an alternative        | `slug`, `excludeId`                                                                        | —                     | `SlugCheck`        | —                                                                |
+| GET    | `/admin/badges`                    | admin · manager | List badges for the admin table                                        | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`                                 | —                     | `BadgeList`        | —                                                                |
+| POST   | `/admin/badges`                    | admin · manager | Create a badge                                                         | —                                                                                          | `badge.create`        | `Badge`            | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/badges/:id`                | admin · manager | Read one badge with every admin field                                  | —                                                                                          | —                     | `Badge`            | —                                                                |
+| PUT    | `/admin/badges/:id`                | admin · manager | Replace a badge with the full record from the form                     | —                                                                                          | `badge.update`        | `Badge`            | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/badges/:id`                | admin · manager | Update the given fields of a badge (toggles, order, SEO panel)         | —                                                                                          | `badge.patch`         | `Badge`            | —                                                                |
+| DELETE | `/admin/badges/:id`                | admin · manager | Delete a badge; 409 when it is still in use                            | —                                                                                          | —                     | `Null`             | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/badges/bulk`               | admin · manager | Apply one action to several badges                                     | —                                                                                          | `bulk`                | `BulkResult`       | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/badges/check-slug`         | admin · manager | Check whether a badge slug is free and suggest an alternative          | `slug`, `excludeId`                                                                        | —                     | `SlugCheck`        | —                                                                |
+| GET    | `/admin/developers`                | admin · manager | List developers for the admin table                                    | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `isFeatured`                   | —                     | `DeveloperList`    | —                                                                |
+| POST   | `/admin/developers`                | admin · manager | Create a developer                                                     | —                                                                                          | `developer.create`    | `Developer`        | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/developers/:id`            | admin · manager | Read one developer with every admin field                              | —                                                                                          | —                     | `Developer`        | —                                                                |
+| PUT    | `/admin/developers/:id`            | admin · manager | Replace a developer with the full record from the form                 | —                                                                                          | `developer.update`    | `Developer`        | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/developers/:id`            | admin · manager | Update the given fields of a developer (toggles, order, SEO panel)     | —                                                                                          | `developer.patch`     | `Developer`        | —                                                                |
+| DELETE | `/admin/developers/:id`            | admin · manager | Delete a developer; 409 when it is still in use                        | —                                                                                          | —                     | `Null`             | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/developers/bulk`           | admin · manager | Apply one action to several developers                                 | —                                                                                          | `bulk`                | `BulkResult`       | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/developers/check-slug`     | admin · manager | Check whether a developer slug is free and suggest an alternative      | `slug`, `excludeId`                                                                        | —                     | `SlugCheck`        | —                                                                |
+| GET    | `/admin/banks`                     | admin · manager | List banks for the admin table                                         | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`                                 | —                     | `BankList`         | —                                                                |
+| POST   | `/admin/banks`                     | admin · manager | Create a bank                                                          | —                                                                                          | `bank.create`         | `Bank`             | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/banks/:id`                 | admin · manager | Read one bank with every admin field                                   | —                                                                                          | —                     | `Bank`             | —                                                                |
+| PUT    | `/admin/banks/:id`                 | admin · manager | Replace a bank with the full record from the form                      | —                                                                                          | `bank.update`         | `Bank`             | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/banks/:id`                 | admin · manager | Update the given fields of a bank (toggles, order, SEO panel)          | —                                                                                          | `bank.patch`          | `Bank`             | —                                                                |
+| DELETE | `/admin/banks/:id`                 | admin · manager | Delete a bank; 409 when it is still in use                             | —                                                                                          | —                     | `Null`             | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/banks/bulk`                | admin · manager | Apply one action to several banks                                      | —                                                                                          | `bulk`                | `BulkResult`       | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/banks/check-slug`          | admin · manager | Check whether a bank slug is free and suggest an alternative           | `slug`, `excludeId`                                                                        | —                     | `SlugCheck`        | —                                                                |
+
+#### Admin — articles
+
+| Method | Path                                   | Auth/role       | Purpose                                                                   | Query                                                                                                                                 | Body schema              | Response shape        | Side effects                                                     |
+| ------ | -------------------------------------- | --------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | --------------------- | ---------------------------------------------------------------- |
+| GET    | `/admin/articles`                      | admin · manager | List articles for the admin table                                         | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `status`, `categoryId`, `tagId`, `authorId`, `isFeatured`, `seoScoreBand` | —                        | `ArticleList`         | —                                                                |
+| POST   | `/admin/articles`                      | admin · manager | Create a article                                                          | —                                                                                                                                     | `article.create`         | `Article`             | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/articles/:id`                  | admin · manager | Read one article with every admin field                                   | —                                                                                                                                     | —                        | `Article`             | —                                                                |
+| PUT    | `/admin/articles/:id`                  | admin · manager | Replace a article with the full record from the form                      | —                                                                                                                                     | `article.update`         | `Article`             | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/articles/:id`                  | admin · manager | Update the given fields of a article (toggles, order, SEO panel)          | —                                                                                                                                     | `article.patch`          | `Article`             | —                                                                |
+| DELETE | `/admin/articles/:id`                  | admin · manager | Delete a article; 409 when it is still in use                             | —                                                                                                                                     | —                        | `Null`                | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/articles/bulk`                 | admin · manager | Apply one action to several articles                                      | —                                                                                                                                     | `bulk`                   | `BulkResult`          | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/articles/check-slug`           | admin · manager | Check whether a article slug is free and suggest an alternative           | `slug`, `excludeId`                                                                                                                   | —                        | `SlugCheck`           | —                                                                |
+| GET    | `/admin/articles/:id/preview-token`    | admin · manager | A 24-hour preview token and URL for an unpublished article                | —                                                                                                                                     | —                        | `PreviewToken`        | Issues a token valid for 24 hours                                |
+| GET    | `/admin/article-categories`            | admin · manager | List article categories for the admin table                               | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`                                                                            | —                        | `ArticleCategoryList` | —                                                                |
+| POST   | `/admin/article-categories`            | admin · manager | Create a article category                                                 | —                                                                                                                                     | `articleCategory.create` | `ArticleCategory`     | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/article-categories/:id`        | admin · manager | Read one article category with every admin field                          | —                                                                                                                                     | —                        | `ArticleCategory`     | —                                                                |
+| PUT    | `/admin/article-categories/:id`        | admin · manager | Replace a article category with the full record from the form             | —                                                                                                                                     | `articleCategory.update` | `ArticleCategory`     | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/article-categories/:id`        | admin · manager | Update the given fields of a article category (toggles, order, SEO panel) | —                                                                                                                                     | `articleCategory.patch`  | `ArticleCategory`     | —                                                                |
+| DELETE | `/admin/article-categories/:id`        | admin · manager | Delete a article category; 409 when it is still in use                    | —                                                                                                                                     | —                        | `Null`                | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/article-categories/bulk`       | admin · manager | Apply one action to several article categories                            | —                                                                                                                                     | `bulk`                   | `BulkResult`          | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/article-categories/check-slug` | admin · manager | Check whether a article category slug is free and suggest an alternative  | `slug`, `excludeId`                                                                                                                   | —                        | `SlugCheck`           | —                                                                |
+| GET    | `/admin/article-tags`                  | admin · manager | List article tags for the admin table                                     | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`                                                                            | —                        | `ArticleTagList`      | —                                                                |
+| POST   | `/admin/article-tags`                  | admin · manager | Create a article tag                                                      | —                                                                                                                                     | `articleTag.create`      | `ArticleTag`          | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/article-tags/:id`              | admin · manager | Read one article tag with every admin field                               | —                                                                                                                                     | —                        | `ArticleTag`          | —                                                                |
+| PUT    | `/admin/article-tags/:id`              | admin · manager | Replace a article tag with the full record from the form                  | —                                                                                                                                     | `articleTag.update`      | `ArticleTag`          | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/article-tags/:id`              | admin · manager | Update the given fields of a article tag (toggles, order, SEO panel)      | —                                                                                                                                     | `articleTag.patch`       | `ArticleTag`          | —                                                                |
+| DELETE | `/admin/article-tags/:id`              | admin · manager | Delete a article tag; 409 when it is still in use                         | —                                                                                                                                     | —                        | `Null`                | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/article-tags/bulk`             | admin · manager | Apply one action to several article tags                                  | —                                                                                                                                     | `bulk`                   | `BulkResult`          | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/article-tags/check-slug`       | admin · manager | Check whether a article tag slug is free and suggest an alternative       | `slug`, `excludeId`                                                                                                                   | —                        | `SlugCheck`           | —                                                                |
+| GET    | `/admin/authors`                       | admin · manager | List authors for the admin table                                          | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`                                                                            | —                        | `AuthorList`          | —                                                                |
+| POST   | `/admin/authors`                       | admin · manager | Create a author                                                           | —                                                                                                                                     | `author.create`          | `Author`              | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/authors/:id`                   | admin · manager | Read one author with every admin field                                    | —                                                                                                                                     | —                        | `Author`              | —                                                                |
+| PUT    | `/admin/authors/:id`                   | admin · manager | Replace a author with the full record from the form                       | —                                                                                                                                     | `author.update`          | `Author`              | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/authors/:id`                   | admin · manager | Update the given fields of a author (toggles, order, SEO panel)           | —                                                                                                                                     | `author.patch`           | `Author`              | —                                                                |
+| DELETE | `/admin/authors/:id`                   | admin · manager | Delete a author; 409 when it is still in use                              | —                                                                                                                                     | —                        | `Null`                | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/authors/bulk`                  | admin · manager | Apply one action to several authors                                       | —                                                                                                                                     | `bulk`                   | `BulkResult`          | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/authors/check-slug`            | admin · manager | Check whether a author slug is free and suggest an alternative            | `slug`, `excludeId`                                                                                                                   | —                        | `SlugCheck`           | —                                                                |
+
+#### Admin — content
+
+| Method | Path                                   | Auth/role       | Purpose                                                              | Query                                                                                                  | Body schema            | Response shape             | Side effects                                                     |
+| ------ | -------------------------------------- | --------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------- | -------------------------- | ---------------------------------------------------------------- |
+| GET    | `/admin/faqs`                          | admin · manager | List FAQs for the admin table                                        | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `category`, `showOnHome`, `propertyTypeId` | —                      | `FaqList`                  | —                                                                |
+| POST   | `/admin/faqs`                          | admin · manager | Create a FAQ                                                         | —                                                                                                      | `faq.create`           | `Faq`                      | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/faqs/:id`                      | admin · manager | Read one FAQ with every admin field                                  | —                                                                                                      | —                      | `Faq`                      | —                                                                |
+| PUT    | `/admin/faqs/:id`                      | admin · manager | Replace a FAQ with the full record from the form                     | —                                                                                                      | `faq.update`           | `Faq`                      | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/faqs/:id`                      | admin · manager | Update the given fields of a FAQ (toggles, order, SEO panel)         | —                                                                                                      | `faq.patch`            | `Faq`                      | —                                                                |
+| DELETE | `/admin/faqs/:id`                      | admin · manager | Delete a FAQ; 409 when it is still in use                            | —                                                                                                      | —                      | `Null`                     | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/faqs/bulk`                     | admin · manager | Apply one action to several FAQs                                     | —                                                                                                      | `bulk`                 | `BulkResult`               | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/testimonials`                  | admin · manager | List testimonials for the admin table                                | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `isFeatured`                               | —                      | `TestimonialList`          | —                                                                |
+| POST   | `/admin/testimonials`                  | admin · manager | Create a testimonial                                                 | —                                                                                                      | `testimonial.create`   | `Testimonial`              | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/testimonials/:id`              | admin · manager | Read one testimonial with every admin field                          | —                                                                                                      | —                      | `Testimonial`              | —                                                                |
+| PUT    | `/admin/testimonials/:id`              | admin · manager | Replace a testimonial with the full record from the form             | —                                                                                                      | `testimonial.update`   | `Testimonial`              | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/testimonials/:id`              | admin · manager | Update the given fields of a testimonial (toggles, order, SEO panel) | —                                                                                                      | `testimonial.patch`    | `Testimonial`              | —                                                                |
+| DELETE | `/admin/testimonials/:id`              | admin · manager | Delete a testimonial; 409 when it is still in use                    | —                                                                                                      | —                      | `Null`                     | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/testimonials/bulk`             | admin · manager | Apply one action to several testimonials                             | —                                                                                                      | `bulk`                 | `BulkResult`               | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/team`                          | admin · manager | List team members for the admin table                                | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `showOnAbout`                              | —                      | `TeamMemberList`           | —                                                                |
+| POST   | `/admin/team`                          | admin · manager | Create a team member                                                 | —                                                                                                      | `teamMember.create`    | `TeamMember`               | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/team/:id`                      | admin · manager | Read one team member with every admin field                          | —                                                                                                      | —                      | `TeamMember`               | —                                                                |
+| PUT    | `/admin/team/:id`                      | admin · manager | Replace a team member with the full record from the form             | —                                                                                                      | `teamMember.update`    | `TeamMember`               | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/team/:id`                      | admin · manager | Update the given fields of a team member (toggles, order, SEO panel) | —                                                                                                      | `teamMember.patch`     | `TeamMember`               | —                                                                |
+| DELETE | `/admin/team/:id`                      | admin · manager | Delete a team member; 409 when it is still in use                    | —                                                                                                      | —                      | `Null`                     | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/team/bulk`                     | admin · manager | Apply one action to several team members                             | —                                                                                                      | `bulk`                 | `BulkResult`               | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/team/check-slug`               | admin · manager | Check whether a team member slug is free and suggest an alternative  | `slug`, `excludeId`                                                                                    | —                      | `SlugCheck`                | —                                                                |
+| GET    | `/admin/partners`                      | admin · manager | List partners for the admin table                                    | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `category`                                 | —                      | `PartnerList`              | —                                                                |
+| POST   | `/admin/partners`                      | admin · manager | Create a partner                                                     | —                                                                                                      | `partner.create`       | `Partner`                  | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/partners/:id`                  | admin · manager | Read one partner with every admin field                              | —                                                                                                      | —                      | `Partner`                  | —                                                                |
+| PUT    | `/admin/partners/:id`                  | admin · manager | Replace a partner with the full record from the form                 | —                                                                                                      | `partner.update`       | `Partner`                  | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/partners/:id`                  | admin · manager | Update the given fields of a partner (toggles, order, SEO panel)     | —                                                                                                      | `partner.patch`        | `Partner`                  | —                                                                |
+| DELETE | `/admin/partners/:id`                  | admin · manager | Delete a partner; 409 when it is still in use                        | —                                                                                                      | —                      | `Null`                     | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/partners/bulk`                 | admin · manager | Apply one action to several partners                                 | —                                                                                                      | `bulk`                 | `BulkResult`               | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/pages`                         | admin · manager | List pages for the admin table                                       | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `status`, `template`                       | —                      | `PageList`                 | —                                                                |
+| POST   | `/admin/pages`                         | admin · manager | Create a page                                                        | —                                                                                                      | `page.create`          | `Page`                     | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/pages/:id`                     | admin · manager | Read one page with every admin field                                 | —                                                                                                      | —                      | `Page`                     | —                                                                |
+| PUT    | `/admin/pages/:id`                     | admin · manager | Replace a page with the full record from the form                    | —                                                                                                      | `page.update`          | `Page`                     | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/pages/:id`                     | admin · manager | Update the given fields of a page (toggles, order, SEO panel)        | —                                                                                                      | `page.patch`           | `Page`                     | —                                                                |
+| DELETE | `/admin/pages/:id`                     | admin · manager | Delete a page; 409 when it is still in use                           | —                                                                                                      | —                      | `Null`                     | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/pages/bulk`                    | admin · manager | Apply one action to several pages                                    | —                                                                                                      | `bulk`                 | `BulkResult`               | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/pages/check-slug`              | admin · manager | Check whether a page slug is free and suggest an alternative         | `slug`, `excludeId`                                                                                    | —                      | `SlugCheck`                | —                                                                |
+| GET    | `/admin/pages/:id/preview-token`       | admin · manager | A 24-hour preview token and URL for an unpublished page              | —                                                                                                      | —                      | `PreviewToken`             | Issues a token valid for 24 hours                                |
+| GET    | `/admin/jobs`                          | admin · manager | List job postings for the admin table                                | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `department`                               | —                      | `JobList`                  | —                                                                |
+| POST   | `/admin/jobs`                          | admin · manager | Create a job posting                                                 | —                                                                                                      | `job.create`           | `Job`                      | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/jobs/:id`                      | admin · manager | Read one job posting with every admin field                          | —                                                                                                      | —                      | `Job`                      | —                                                                |
+| PUT    | `/admin/jobs/:id`                      | admin · manager | Replace a job posting with the full record from the form             | —                                                                                                      | `job.update`           | `Job`                      | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/jobs/:id`                      | admin · manager | Update the given fields of a job posting (toggles, order, SEO panel) | —                                                                                                      | `job.patch`            | `Job`                      | —                                                                |
+| DELETE | `/admin/jobs/:id`                      | admin · manager | Delete a job posting; 409 when it is still in use                    | —                                                                                                      | —                      | `Null`                     | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/jobs/bulk`                     | admin · manager | Apply one action to several job postings                             | —                                                                                                      | `bulk`                 | `BulkResult`               | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/jobs/check-slug`               | admin · manager | Check whether a job posting slug is free and suggest an alternative  | `slug`, `excludeId`                                                                                    | —                      | `SlugCheck`                | —                                                                |
+| GET    | `/admin/job-applications`              | admin · manager | Applications received for the job postings                           | `page`, `perPage`, `sort`, `order`, `q`, `jobId`, `status`                                             | —                      | `JobApplicationList`       | —                                                                |
+| PATCH  | `/admin/job-applications/:id`          | admin · manager | Move an application through the hiring statuses                      | —                                                                                                      | `jobApplication.patch` | `JobApplication`           | —                                                                |
+| DELETE | `/admin/job-applications/:id`          | admin · manager | Delete an application                                                | —                                                                                                      | —                      | `Null`                     | 409 with `data.usedBy` when the record is still referenced       |
+| GET    | `/admin/newsletter-subscribers`        | admin · manager | Newsletter subscribers                                               | `page`, `perPage`, `sort`, `order`, `q`, `status`                                                      | —                      | `NewsletterSubscriberList` | —                                                                |
+| DELETE | `/admin/newsletter-subscribers/:id`    | admin · manager | Remove a subscriber                                                  | —                                                                                                      | —                      | `Null`                     | 409 with `data.usedBy` when the record is still referenced       |
+| GET    | `/admin/newsletter-subscribers/export` | admin · manager | CSV export of the filtered subscriber list                           | `q`, `status`                                                                                          | —                      | `Csv`                      | UTF-8 BOM CSV attachment                                         |
+
+#### Admin — media, SEO, settings and users
+
+| Method | Path                    | Auth/role       | Purpose                                                             | Query                                                                                    | Body schema          | Response shape       | Side effects                                                     |
+| ------ | ----------------------- | --------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------- | -------------------- | ---------------------------------------------------------------- |
+| GET    | `/admin/media`          | admin · manager | List media items for the admin table                                | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `type`, `provider`, `folder` | —                    | `MediaList`          | —                                                                |
+| POST   | `/admin/media`          | admin · manager | Create a media item                                                 | —                                                                                        | `media.create`       | `Media`              | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/media/:id`      | admin · manager | Read one media item with every admin field                          | —                                                                                        | —                    | `Media`              | —                                                                |
+| PUT    | `/admin/media/:id`      | admin · manager | Replace a media item with the full record from the form             | —                                                                                        | `media.update`       | `Media`              | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/media/:id`      | admin · manager | Update the given fields of a media item (toggles, order, SEO panel) | —                                                                                        | `media.patch`        | `Media`              | —                                                                |
+| DELETE | `/admin/media/:id`      | admin · manager | Delete a media item; 409 when it is still in use                    | —                                                                                        | —                    | `Null`               | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/media/bulk`     | admin · manager | Apply one action to several media items                             | —                                                                                        | `bulk`               | `BulkResult`         | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/redirects`      | admin · manager | List redirects for the admin table                                  | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`                               | —                    | `RedirectList`       | —                                                                |
+| POST   | `/admin/redirects`      | admin · manager | Create a redirect                                                   | —                                                                                        | `redirect.create`    | `Redirect`           | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/redirects/:id`  | admin · manager | Read one redirect with every admin field                            | —                                                                                        | —                    | `Redirect`           | —                                                                |
+| PUT    | `/admin/redirects/:id`  | admin · manager | Replace a redirect with the full record from the form               | —                                                                                        | `redirect.update`    | `Redirect`           | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/redirects/:id`  | admin · manager | Update the given fields of a redirect (toggles, order, SEO panel)   | —                                                                                        | `redirect.patch`     | `Redirect`           | —                                                                |
+| DELETE | `/admin/redirects/:id`  | admin · manager | Delete a redirect; 409 when it is still in use                      | —                                                                                        | —                    | `Null`               | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/redirects/bulk` | admin · manager | Apply one action to several redirects                               | —                                                                                        | `bulk`               | `BulkResult`         | activate · deactivate · delete (plus the resource’s own actions) |
+| GET    | `/admin/seo/settings`   | admin · manager | The complete SEO settings singleton                                 | —                                                                                        | —                    | `SeoSettings`        | —                                                                |
+| PUT    | `/admin/seo/settings`   | admin · manager | Replace the SEO settings; known keys are deep-merged                | —                                                                                        | `seoSettings.update` | `SeoSettings`        | Deep-merges the known keys only                                  |
+| GET    | `/admin/seo/overview`   | admin · manager | Lightweight SEO rows for the dashboard and the uniqueness checks    | `page`, `perPage`, `sort`, `order`, `q`, `type`, `scoreBand`, `index`                    | —                    | `SeoOverviewRowList` | —                                                                |
+| GET    | `/admin/settings`       | admin · manager | The complete site settings singleton, including the lead branch     | —                                                                                        | —                    | `Settings`           | —                                                                |
+| PUT    | `/admin/settings`       | admin           | Replace the site settings; known keys are deep-merged               | —                                                                                        | `settings.update`    | `Settings`           | Deep-merges the known keys only                                  |
+| GET    | `/admin/users`          | admin           | List users for the admin table                                      | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `role`                       | —                    | `UserList`           | —                                                                |
+| POST   | `/admin/users`          | admin           | Create a user                                                       | —                                                                                        | `user.create`        | `User`               | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
+| GET    | `/admin/users/:id`      | admin           | Read one user with every admin field                                | —                                                                                        | —                    | `User`               | —                                                                |
+| PUT    | `/admin/users/:id`      | admin           | Replace a user with the full record from the form                   | —                                                                                        | `user.update`        | `User`               | Replaces the record; regenerates the slug when it changed        |
+| PATCH  | `/admin/users/:id`      | admin           | Update the given fields of a user (toggles, order, SEO panel)       | —                                                                                        | `user.patch`         | `User`               | —                                                                |
+| DELETE | `/admin/users/:id`      | admin           | Delete a user; 409 when it is still in use                          | —                                                                                        | —                    | `Null`               | 409 with `data.usedBy` when the record is still referenced       |
+| POST   | `/admin/users/bulk`     | admin           | Apply one action to several users                                   | —                                                                                        | `bulk`               | `BulkResult`         | activate · deactivate · delete (plus the resource’s own actions) |
+
+---
+
+## Response shapes
+
+Every name in the **Response shape** column above is defined here. `XList` is always
+`{ data: X[], meta: ListMeta }`; a single resource is always `{ data: X }`.
+
+### Envelope
+
+```jsonc
+// single resource
+{ "data": { /* the record */ } }
+
+// list
+{ "data": [ /* records */ ], "meta": { "page": 1, "perPage": 12, "total": 57, "totalPages": 5 } }
+
+// action / void
+{ "data": null, "message": "Property deleted." }
+```
+
+### `ListMeta`
+
+```jsonc
+{
+  "page": 1, // 1-based
+  "perPage": 12, // 12 public, 20 admin, `all` on admin endpoints
+  "total": 57,
+  "totalPages": 5,
+  "facets": {
+    // property lists only (§5.7)
+    "propertyType": [{ "id": 1, "name": "Apartments", "count": 24 }],
+    "locality": [{ "id": 4, "name": "Whitefield", "count": 11 }],
+    "bedrooms": [{ "value": 3, "count": 18 }],
+    "constructionStatus": [{ "value": "ready-to-move", "count": 30 }],
+  },
+}
+```
+
+### `Error`
+
+```jsonc
+{
+  "message": "The given data was invalid.",
+  "errors": { "title": ["The title must be at least 10 characters."] },
+}
+```
+
+`errors` is absent on 401, 403, 404, 429 and 500. A 409 from a master-data delete adds
+`data.usedBy`:
+
+```jsonc
+{
+  "message": "This locality is still in use.",
+  "errors": { "id": ["Used by 3 properties"] },
+  "data": { "usedBy": [{ "type": "property", "id": 12, "title": "Lakeview Heights" }] },
+}
+```
+
+### `Property`
+
+Every writable field of `docs/DATA_MODEL.md` §6.1 plus the read-only embeds and counters:
+`propertyType {id,name,slug,segment}`, `amenities[] {id,name,slug,icon,category}`,
+`badges[] {id,name,slug,color,icon}`, `location.locality {id,name,slug}`,
+`location.city {id,name,slug}`, `project.developer {id,name,slug,logoUrl}`, `viewCount`,
+`enquiryCount`, `publishedAt`, `createdAt`, `updatedAt`. Admin reads add `createdBy` and
+`updatedBy`. Public reads drop `agent.phone`, `agent.whatsapp` and `agent.email` unless
+`agent.showOnListing` is true.
+
+### `PropertySummary`
+
+The card payload returned inside `PropertyList`:
+
+```jsonc
+{
+  "id": 1,
+  "slug": "lakeview-heights-3-bhk-whitefield",
+  "title": "Lakeview Heights",
+  "listingType": "sale",
+  "segment": "residential",
+  "propertyType": { "id": 1, "name": "Apartments", "slug": "apartments", "segment": "residential" },
+  "constructionStatus": "ready-to-move",
+  "availability": "available",
+  "pricing": {
+    "price": 14200000,
+    "priceOnRequest": false,
+    "pricePerSqft": 8600,
+    "rentPerMonth": null,
+    "currency": "INR",
+  },
+  "area": { "superBuiltUpArea": 1650, "carpetArea": 1180, "plotArea": null, "areaUnit": "sqft" },
+  "configuration": { "bedrooms": 3, "bathrooms": 3, "balconies": 2 },
+  "location": {
+    "locality": { "id": 4, "name": "Whitefield", "slug": "whitefield" },
+    "city": { "id": 1, "name": "Bengaluru", "slug": "bengaluru" },
+    "showExactLocation": false,
+  },
+  "images": [{ "id": 1, "url": "…", "alt": "…", "isCover": true }],
+  "badges": [{ "id": 2, "name": "Ready to Move", "slug": "ready-to-move", "color": "success" }],
+  "isFeatured": true,
+  "isVerified": true,
+  "publishedAt": "2026-08-02T06:14:00Z",
+  "updatedAt": "2026-09-01T11:20:00Z",
+  "viewCount": 412,
+}
+```
+
+`images` carries at most the first four, cover first. `PropertyList` is
+`{ data: PropertySummary[], meta: ListMeta }` — `meta.facets` is always present.
+
+### `Lead`
+
+Every field of §6.7 including `notes[]` and `activities[]`, plus the embeds
+`property {id,title,slug}` and `assignedUser {id,name}`. `ipAddress` and `userAgent` are
+returned to admins only. `LeadList` rows carry the same shape without `activities`.
+
+### `Article` / `ArticleSummary`
+
+`Article` is every field of §6.8 plus `category`, `tags[]`, `author`, `contentText`,
+`readingTimeMinutes`, `wordCount` and `viewCount`. `ArticleSummary` (what `ArticleList`
+returns) drops `content`, `contentText`, `faqs`, `relatedArticleIds`,
+`relatedPropertyIds` and the full `seo` object, keeping `seo.title` and
+`seo.description`.
+
+### `Locality`, `Developer`, `PropertyType`, `Amenity`, `Badge`, `Bank`, `City`
+
+The fields of §6.2–§6.6 plus `seo` where the entity has one; `Locality`, `Developer` and
+`PropertyType` add the computed `propertyCount`, and `Locality` embeds `city {id,name,slug}`.
+
+### `ArticleCategory`, `ArticleTag`, `Author`
+
+The fields of §6.8 plus the computed `articleCount`. `Author` never exposes `email`
+publicly.
+
+### `Faq`, `Testimonial`, `TeamMember`, `Partner`
+
+The fields of §6.9, unchanged.
+
+### `Page`
+
+The fields of §6.10: `blocks[] { id, type, order, data }` with the `data` shape of the
+block type, plus `seo` and the header/footer placement flags.
+
+### `Job`, `JobApplication`
+
+The fields of §6.11. `Job` adds the computed `applicationCount` on admin reads;
+`JobApplication` embeds `job {id,title,slug}`.
+
+### `Media`, `Redirect`, `NewsletterSubscriber`, `User`
+
+The fields of §6.12 and §6.14. `Media` adds the best-effort `usedIn[] {type,id,title}`.
+`User` never returns `password`. Public `Redirect` rows carry only `fromPath`, `toPath`
+and `statusCode`.
+
+### `Settings`
+
+`siteSettings` (§6.13). `GET /settings` returns every branch except `leads`;
+`GET /admin/settings` returns all of it.
+
+### `SeoSettings`
+
+`seoSettings` (§6.14). The public subset keeps `siteUrl`, `separator`, `titleTemplates`,
+`defaults`, `knowledgeGraph`, `verification`, `breadcrumbs`, `noindex`, `customHeadHtml`
+and `customBodyEndHtml`; `robotsTxt`, `llmsTxt` and `sitemap` are admin-only (they are
+served as files).
+
+### `DashboardData`
+
+```jsonc
+{
+  "data": {
+    "stats": {
+      "propertiesTotal": 0,
+      "propertiesActive": 0,
+      "propertiesFeatured": 0,
+      "propertiesInactive": 0,
+      "leadsTotal": 0,
+      "leadsNew": 0,
+      "leadsToday": 0,
+      "leadsThisMonth": 0,
+      "leadsLastMonth": 0,
+      "conversionRate": 0.0,
+      "articlesPublished": 0,
+      "articlesDraft": 0,
+      "viewsThisMonth": 0,
+      "enquiriesThisMonth": 0,
+      "subscribers": 0,
+    },
+    "trends": {
+      "leadsByDay": [{ "date": "2026-09-15", "count": 3 }],
+      "leadsBySource": [{ "source": "property-enquiry", "count": 12 }],
+      "leadsByStatus": [{ "status": "new", "count": 7 }],
+      "viewsByDay": [{ "date": "2026-09-15", "count": 84 }],
+    },
+    "recentLeads": [
+      {
+        "id": 1,
+        "name": "…",
+        "phone": "…",
+        "source": "…",
+        "status": "new",
+        "propertyId": 1,
+        "property": { "id": 1, "title": "…", "slug": "…" },
+        "createdAt": "…",
+        "assignedTo": null,
+      },
+    ],
+    "topProperties": [{ "id": 1, "title": "…", "slug": "…", "viewCount": 412, "enquiryCount": 9 }],
+    "seoHealth": {
+      "averageScore": 0,
+      "good": 0,
+      "ok": 0,
+      "poor": 0,
+      "missingFocusKeyword": 0,
+      "missingMetaDescription": 0,
+    },
+    "upcomingFollowUps": [
+      { "id": 1, "name": "…", "followUpAt": "…", "status": "contacted", "assignedTo": 3 },
+    ],
+  },
+}
+```
+
+`leadsByDay` and `viewsByDay` always hold 30 entries. For the `sales` role every lead
+figure is scoped to leads assigned to the user or unassigned; property, article and SEO
+figures stay global.
+
+### `SeoOverviewRow`
+
+```jsonc
+{
+  "id": 1,
+  "type": "property",
+  "title": "…",
+  "slug": "…",
+  "url": "https://…/properties/…",
+  "seo": {
+    "focusKeyword": "…",
+    "title": "…",
+    "description": "…",
+    "score": 84,
+    "scoreBand": "good",
+    "testsPassed": 21,
+    "testsTotal": 24,
+    "robots": { "index": true, "follow": true },
+    "lastAnalyzedAt": "…",
+  },
+  "isActive": true,
+  "status": "published",
+  "updatedAt": "…",
+}
+```
+
+`GET /admin/seo/overview` returns `SeoOverviewRowList` and accepts `perPage=all`.
+
+### `Suggestions`
+
+```jsonc
+{
+  "data": {
+    "localities": [{ "id": 4, "name": "Whitefield", "slug": "whitefield", "propertyCount": 11 }],
+    "properties": [
+      {
+        "id": 1,
+        "title": "Lakeview Heights",
+        "slug": "…",
+        "localityName": "Whitefield",
+        "price": 14200000,
+      },
+    ],
+    "propertyTypes": [{ "id": 1, "name": "Apartments", "slug": "apartments" }],
+    "developers": [{ "id": 2, "name": "Aurelia Estates", "slug": "aurelia-estates" }],
+  },
+}
+```
+
+At most five of each; `q` must be at least two characters.
+
+### `AuthSession`
+
+```jsonc
+{
+  "data": {
+    "token": "…",
+    "expiresAt": "2026-09-16T09:00:00Z",
+    "user": {
+      "id": 1,
+      "name": "…",
+      "email": "…",
+      "role": "admin",
+      "avatarUrl": null,
+      "phone": null,
+    },
+  },
+}
+```
+
+### `BulkResult`, `SlugCheck`, `PreviewToken`, `ViewCount`, `Null`
+
+```jsonc
+{ "data": { "affected": 4 }, "message": "4 properties updated." }          // BulkResult
+{ "data": { "available": false, "suggestion": "lakeview-heights-2" } }     // SlugCheck
+{ "data": { "token": "…", "url": "https://…/insights/articles/…?preview=…" } } // PreviewToken
+{ "data": { "viewCount": 413 } }                                            // ViewCount
+{ "data": null, "message": "…" }                                            // Null
+```
+
+### `Csv`, `Xml`, `Text`
+
+Not enveloped. `Csv` is UTF-8 with a BOM and a `Content-Disposition: attachment` header;
+`Xml` is `text/xml`; `Text` is `text/plain`.
