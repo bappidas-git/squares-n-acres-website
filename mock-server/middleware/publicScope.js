@@ -12,14 +12,46 @@
  *     (`isActive=true`, or `status=published` for articles and pages) and a
  *     public detail read of a record outside it answers 404
  *     (`mock-server/middleware/envelope.js`);
- *   - a collection with no public endpoint at all (`publicRead: false` — leads,
- *     media, users, tokens…) answers 404 on the public prefix.
+ *   - a collection with no public endpoint at all ({@link PRIVATE_COLLECTIONS}
+ *     — leads, media, users, tokens…) answers 404 on the public prefix.
  *
- * Authentication and the role matrix arrive with prompt 07; until then the
- * admin prefix is open, which `mock-server/README.md` states plainly.
+ * The admin prefix itself is guarded by `mock-server/middleware/auth.js` and
+ * `role.js`, which `mock-server/app.js` mounts on `/api/admin` before any
+ * router: everything below is about what a request **without** a token sees.
  */
 
 const { notFound } = require('./errors');
+
+/**
+ * Collections that exist only behind `/api/admin` (§5.10, §6.14).
+ *
+ * A public request for one answers 404 — not 403, because the existence of the
+ * collection is not public information either. The list repeats what the
+ * descriptors say with `publicRead: false`; naming them here is what makes
+ * `GET /api/adminUsers` and `GET /api/apiTokens` a stated rule rather than a
+ * property of a schema file somebody could edit.
+ */
+const PRIVATE_COLLECTIONS = new Set([
+  'adminUsers',
+  'apiTokens',
+  'media',
+  'leads',
+  'jobApplications',
+  'newsletterSubscribers',
+  'propertyViews',
+]);
+
+/**
+ * True when a request without a token may not touch this collection at all.
+ *
+ * The public writes the contract does define on one of these collections —
+ * `POST /leads`, `POST /newsletter/subscribe`, `POST /jobs/:id/apply` — are
+ * served by their own routers (`mock-server/routes/`), which run before this
+ * middleware, so there is no exception to make here.
+ */
+function isPrivate(name, model) {
+  return PRIVATE_COLLECTIONS.has(name) || model?.publicRead === false;
+}
 
 /**
  * Strips the `/admin` prefix and records that the request came in through it.
@@ -56,10 +88,7 @@ function publicScope({ getModel }) {
       return;
     }
 
-    // `publicRead: false` hides the collection from public *reads*; the public
-    // writes the contract does define (`POST /leads`, `POST /newsletter/
-    // subscribe`, `POST /jobs/:id/apply`) stay reachable.
-    if (model.publicRead === false && req.method === 'GET') {
+    if (isPrivate(segments[0], model)) {
       next(notFound());
       return;
     }
@@ -78,4 +107,4 @@ function publicScope({ getModel }) {
   };
 }
 
-module.exports = { publicScope, adminPrefix };
+module.exports = { publicScope, adminPrefix, isPrivate, PRIVATE_COLLECTIONS };

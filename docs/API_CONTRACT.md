@@ -172,6 +172,94 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 | PUT    | `/auth/profile`  | any role  | Update the signed-in user’s own name, phone and avatar                | —     | `auth.profile`  | `User`         | —                                                   |
 | PUT    | `/auth/password` | any role  | Change the signed-in user’s own password                              | —     | `auth.password` | `Null`         | Revokes every other token of the user               |
 
+##### Auth — worked examples
+
+Real request/response pairs from the mock (`npm run mock`, seed credentials of §6.14,
+`Content-Type: application/json` on every body).
+
+```jsonc
+// POST /api/auth/login  { "email": "admin@squaresnacres.com", "password": "Admin@123" }
+{
+  "data": {
+    "token": "zVswPVqstiBs-jWupyHqcCfXWNiAHX2JHeDXixNImuVadSEG", // 48 chars, opaque
+    "expiresAt": "2026-09-16T21:41:51.145Z", // now + MOCK_TOKEN_TTL_HOURS
+    "user": {
+      "id": 1,
+      "name": "Admin User",
+      "email": "admin@squaresnacres.com",
+      "role": "admin",
+      "avatarUrl": null,
+      "phone": "9880000010",
+    },
+  },
+}
+
+// POST /api/auth/login  { "email": "admin@squaresnacres.com", "password": "wrong" } → 401
+{ "message": "Invalid email or password." }
+
+// POST /api/auth/login — 11th attempt of a minute from one IP → 429
+{ "message": "Too many requests. Please try again in a minute." }
+```
+
+Every call below sends `Authorization: Bearer <token>`; without it, or with an expired or
+revoked one, the answer is `401 { "message": "Unauthenticated." }` — and
+`401 { "message": "Account is inactive." }` when the account has been deactivated.
+
+```jsonc
+// GET /api/auth/profile
+{
+  "data": {
+    "id": 1,
+    "name": "Admin User",
+    "email": "admin@squaresnacres.com",
+    "role": "admin",
+    "phone": "9880000010",
+    "avatarUrl": null,
+    "isActive": true,
+    "lastLoginAt": "2026-09-15T21:41:51.143Z",
+    "createdAt": "2026-08-01T09:00:00.000Z",
+    "updatedAt": "2026-09-10T09:00:00.000Z",
+  },
+}
+
+// PUT /api/auth/profile  { "name": "Priya Nair", "phone": "9880000013", "avatarUrl": null }
+{
+  "data": {
+    "id": 4,
+    "name": "Priya Nair",
+    "email": "priya@squaresnacres.com",
+    "role": "manager",
+    "phone": "9880000013",
+    "avatarUrl": null,
+    "isActive": true,
+    "lastLoginAt": "2026-09-15T21:42:42.688Z",
+    "createdAt": "2026-09-15T21:42:42.677Z",
+    "updatedAt": "2026-09-15T21:42:42.725Z",
+  },
+}
+```
+
+A `PUT /auth/profile` replaces the three fields it owns, so an omitted `phone` or
+`avatarUrl` is stored as `null` (§5.8). `name` is 2–80 characters; a shorter one answers
+`422 { "errors": { "name": ["The name must be at least 2 characters."] } }`.
+
+```jsonc
+// PUT /api/auth/password  { "currentPassword": "Wrong@123", "newPassword": "Str0ngPass" } → 422
+{
+  "message": "The given data was invalid.",
+  "errors": { "currentPassword": ["Current password is incorrect."] },
+}
+
+// PUT /api/auth/password  { "currentPassword": "Editor@123", "newPassword": "Str0ngPass" }
+{ "data": null, "message": "Password updated." } // every *other* token of the user is revoked
+
+// POST /api/auth/logout
+{ "data": null, "message": "Logged out." }
+```
+
+`newPassword` is at least 8 characters with at least one letter and one digit; a weaker one
+answers `422 { "errors": { "newPassword": [ … ] } }`.
+
 #### Admin — dashboard, properties and leads
 
 | Method | Path                              | Auth/role       | Purpose                                                              | Query                                                                                                                                                                                                                                                                                                                                                                                                  | Body schema       | Response shape  | Side effects                                                                                                                                      |
@@ -195,6 +283,166 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 | DELETE | `/admin/leads/:id/notes/:noteId`  | any role        | Delete one note from a lead                                          | —                                                                                                                                                                                                                                                                                                                                                                                                      | —                 | `Lead`          | Removes the note; the activity stays                                                                                                              |
 | GET    | `/admin/leads/export`             | any role        | CSV export of the filtered lead list, scoped like the list endpoint  | `q`, `status`, `source`, `priority`, `assignedTo`, `propertyId`, `from`, `to`                                                                                                                                                                                                                                                                                                                          | —                 | `Csv`           | UTF-8 BOM CSV, `Content-Disposition: attachment; filename="leads-<yyyy-mm-dd>.csv"`                                                               |
 | POST   | `/admin/leads/bulk`               | admin · manager | Change status, priority or assignee of several leads, or delete them | —                                                                                                                                                                                                                                                                                                                                                                                                      | `bulk`            | `BulkResult`    | status · assign · priority · delete                                                                                                               |
+
+##### Properties and leads — worked examples
+
+From the mock (`npm run mock`) over the starter seed of prompt 06.
+
+```jsonc
+// GET /api/properties?listingType=sale&perPage=2
+{
+  "data": [
+    {
+      "id": 1,
+      "slug": "lakeview-heights-3-bhk-whitefield",
+      "title": "Lakeview Heights — 3 BHK Apartments in Whitefield",
+      "projectName": "Lakeview Heights",
+      "listingType": "sale",
+      "segment": "residential",
+      "propertyTypeId": 1,
+      "propertyType": { "id": 1, "name": "Apartments", "slug": "apartments", "segment": "residential" },
+      "constructionStatus": "ready-to-move",
+      "availability": "available",
+      "amenityIds": [1, 2, 3, "…"],
+      "amenities": [
+        { "id": 1, "name": "Power Backup", "slug": "power-backup", "icon": "mdi:power-plug-outline", "category": "basic" },
+        "…",
+      ],
+      "badges": [{ "id": 3, "name": "…", "slug": "…", "color": "…", "icon": "…" }],
+      "location": {
+        "address": "Off Whitefield Main Road, Whitefield",
+        "localityId": 1,
+        "locality": { "id": 1, "name": "Whitefield", "slug": "whitefield" },
+        "cityId": 1,
+        "city": { "id": 1, "name": "Bengaluru", "slug": "bengaluru" },
+        "showExactLocation": false,
+        "…": "…",
+      },
+      "pricing": { "price": 12400000, "priceOnRequest": false, "pricePerSqft": 7515, "currency": "INR", "…": "…" },
+      "area": { "superBuiltUpArea": 1650, "carpetArea": 1185, "areaUnit": "sqft", "…": "…" },
+      "configuration": { "bedrooms": 3, "bathrooms": 3, "…": "…" },
+      "project": {
+        "developerId": 1,
+        "developer": { "id": 1, "name": "Aurelia Estates", "slug": "aurelia-estates", "logoUrl": "…" },
+        "…": "…",
+      },
+      // `agent.phone`, `whatsapp` and `email` are here only when `showOnListing`
+      // is true; `createdBy` and `updatedBy` never are (§5.10).
+      "agent": { "teamMemberId": 1, "name": "Team Member One", "photoUrl": "…", "showOnListing": false },
+      "viewCount": 184,
+      "enquiryCount": 12,
+      "isActive": true,
+      "isFeatured": true,
+      "…": "…",
+    },
+    "…",
+  ],
+  "meta": {
+    "page": 1,
+    "perPage": 2,
+    "total": 4,
+    "totalPages": 2,
+    // Computed after the filters and before the page is cut (§5.7).
+    "facets": {
+      "propertyType": [
+        { "id": 1, "name": "Apartments", "count": 2 },
+        { "id": 9, "name": "Residential Plots", "count": 1 },
+        { "id": 2, "name": "Villas", "count": 1 },
+      ],
+      "locality": [{ "id": 3, "name": "Electronic City", "count": 1 }, "…"],
+      "bedrooms": [
+        { "value": 2, "count": 2 },
+        { "value": 3, "count": 2 },
+        { "value": 4, "count": 1 },
+      ],
+      "constructionStatus": [
+        { "value": "ready-to-move", "count": 3 },
+        { "value": "under-construction", "count": 1 },
+      ],
+    },
+  },
+}
+
+// POST /api/properties/1/view — once per IP per property per hour
+{ "data": { "viewCount": 185 } }
+
+// GET /api/properties/suggestions?q=whi
+{
+  "data": {
+    "localities": [{ "id": 1, "name": "Whitefield", "slug": "whitefield", "propertyCount": 1 }],
+    "properties": [
+      {
+        "id": 1,
+        "title": "Lakeview Heights — 3 BHK Apartments in Whitefield",
+        "slug": "lakeview-heights-3-bhk-whitefield",
+        "localityName": "Whitefield",
+        "price": 12400000,
+      },
+    ],
+    "propertyTypes": [],
+    "developers": [],
+  },
+}
+```
+
+`POST /api/leads` answers with the stored lead. The `source` arrives as
+`property_enquiry` from an old bundle and is stored as `property-enquiry`; the
+phone number is normalised; `utm` is read out of `pageUrl` when the body carries
+none; `ipAddress` and `userAgent` are stored but returned to admins only.
+
+```jsonc
+// POST /api/leads
+// { "name": "Ananya Rao", "phone": "98765 43210", "source": "property_enquiry",
+//   "propertyId": 1, "requirement": { "listingType": "sale", "bedrooms": 3, "timeline": "1-3-months" },
+//   "pageUrl": "https://www.squaresnacres.com/properties/…?utm_source=google&utm_medium=cpc" }
+{
+  "data": {
+    "id": 7,
+    "name": "Ananya Rao",
+    "phone": "+919876543210",
+    "email": "ananya@example.com",
+    "message": "Interested in a 3 BHK. Please call after 6 pm.",
+    "source": "property-enquiry",
+    "propertyId": 1,
+    "property": {
+      "id": 1,
+      "title": "Lakeview Heights — 3 BHK Apartments in Whitefield",
+      "slug": "lakeview-heights-3-bhk-whitefield",
+    },
+    "requirement": { "listingType": "sale", "bedrooms": 3, "timeline": "1-3-months" },
+    "status": "new",
+    "priority": "medium",
+    "assignedTo": null,
+    "assignedUser": null,
+    "notes": [],
+    "activities": [
+      {
+        "id": 1,
+        "type": "created",
+        "description": "Lead created via Property Enquiry",
+        "createdBy": null,
+        "createdAt": "2026-09-15T22:40:33.115Z",
+      },
+    ],
+    "utm": { "source": "google", "medium": "cpc", "campaign": null, "term": null, "content": null },
+    "consent": true,
+    "createdAt": "2026-09-15T22:40:33.115Z",
+    "updatedAt": "2026-09-15T22:40:33.115Z",
+  },
+}
+
+// POST /api/leads with the honeypot `website` filled in → 200, nothing stored
+{ "data": null, "message": "ok" }
+
+// PATCH /api/admin/leads/1 { "status": "contacted", "assignedTo": 3 } → the lead,
+// with the timeline it just grew:
+// [ "Lead created via Property Enquiry",
+//   "Status changed from New to Contacted",
+//   "Assigned to Sales User" ]
+
+// GET /api/admin/leads/export → text/csv; charset=utf-8, a BOM, then
+// ID,Name,Phone,Email,Source,Status,Priority,Assigned To,Property,Requirement,Message,Follow-up,Created At
+```
 
 #### Admin — master data
 

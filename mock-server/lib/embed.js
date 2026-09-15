@@ -42,8 +42,37 @@ function embedDeveloper(developer) {
 }
 
 /**
+ * The contact card of a listing.
+ *
+ * An `agent` may name a team member instead of repeating their details; the
+ * record then stores only `teamMemberId`, and the read fills in whatever the
+ * editor left empty. A field typed on the property always wins — that is how a
+ * listing gives one project its own direct line.
+ *
+ * @param {object|null} agent
+ * @param {object} source
+ * @returns {object|null}
+ */
+function embedAgent(agent, source) {
+  if (!agent) return agent ?? null;
+
+  const member = byId(source, 'teamMembers', agent.teamMemberId);
+  if (!member) return { ...agent };
+
+  return {
+    ...agent,
+    name: agent.name ?? member.name ?? null,
+    phone: agent.phone ?? member.phone ?? null,
+    whatsapp: agent.whatsapp ?? member.whatsapp ?? null,
+    email: agent.email ?? member.email ?? null,
+    photoUrl: agent.photoUrl ?? member.photoUrl ?? null,
+  };
+}
+
+/**
  * A property with its `propertyType`, `amenities`, `badges`,
- * `location.locality`, `location.city` and `project.developer` embedded.
+ * `location.locality`, `location.city`, `project.developer` and `agent`
+ * display fields embedded.
  *
  * @param {object} property
  * @param {object} [source] collections to resolve the ids against
@@ -80,6 +109,7 @@ function embedProperty(property, source) {
       ...property.project,
       developer: embedDeveloper(byId(db, 'developers', property.project?.developerId)),
     },
+    agent: embedAgent(property.agent, db),
   };
 }
 
@@ -134,6 +164,7 @@ function embedJobApplication(application, source) {
 
 module.exports = {
   embedProperty,
+  embedAgent,
   embedLead,
   embedArticle,
   embedLocality,

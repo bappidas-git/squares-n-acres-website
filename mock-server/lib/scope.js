@@ -9,6 +9,11 @@
  * Each collection's blanket list lives on its descriptor (`publicOmit` in
  * `mock-server/schemas/models.js`); the functions here implement the rules that
  * depend on the record's own values and therefore cannot be a static list.
+ *
+ * The same idea, one role further in: a sales user sees the leads assigned to
+ * them and the ones nobody has taken yet (D15). That scope is applied before
+ * any filter of the list, so it also governs the detail read, the export and
+ * every write.
  */
 
 /** A shallow copy of `record` without `keys`. */
@@ -63,4 +68,39 @@ function publicSeoSettings(settings) {
   return settings ? { ...settings } : settings;
 }
 
-module.exports = { omit, publicProperty, publicAuthor, publicSettings, publicSeoSettings };
+/**
+ * Whether a user may see one lead (D15).
+ *
+ * Admins and managers see every lead; a sales user sees their own and the
+ * unassigned ones — which is what makes "claim" possible in the first place.
+ *
+ * @param {object} lead
+ * @param {object} user the signed-in user (`req.user`)
+ * @returns {boolean}
+ */
+function canSeeLead(lead, user) {
+  if (!user) return false;
+  if (user.role !== 'sales') return true;
+  const assigned = lead?.assignedTo;
+  return assigned === null || assigned === undefined || String(assigned) === String(user.id);
+}
+
+/**
+ * The leads a user may see, in the order they came in.
+ *
+ * @param {Array<object>} leads
+ * @param {object} user
+ * @returns {Array<object>}
+ */
+const scopeLeads = (leads, user) =>
+  user?.role === 'sales' ? leads.filter((lead) => canSeeLead(lead, user)) : leads.slice();
+
+module.exports = {
+  omit,
+  publicProperty,
+  publicAuthor,
+  publicSettings,
+  publicSeoSettings,
+  canSeeLead,
+  scopeLeads,
+};

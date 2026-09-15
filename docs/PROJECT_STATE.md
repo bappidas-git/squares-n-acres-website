@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 06 — Mock server core: Express + JSON Server, envelope, runtime db and starter seed Next prompt: 07
+Last prompt executed: 08 — Mock server: property and lead domain routes Next prompt: 09
 
 ## Executed prompts
 
@@ -12,7 +12,9 @@ Last prompt executed: 06 — Mock server core: Express + JSON Server, envelope, 
 | 03  | Purge HOM traces and dead code; strict trace check            | `f82d069`                                                                          | 2026-09-15 |
 | 04  | Design system: tokens, MUI theme, UI kit and layout restyle   | `373e092`                                                                          | 2026-09-15 |
 | 05  | API contract, enums, endpoint registry and schema descriptors | `1812eae`                                                                          | 2026-09-15 |
-| 06  | Mock server core, runtime db, envelope and starter seed       | HEAD of this branch (a commit cannot contain its own hash — prompt 07 fills it in) | 2026-09-15 |
+| 06  | Mock server core, runtime db, envelope and starter seed       | `1a2ce23`                                                                          | 2026-09-15 |
+| 07  | Auth tokens, RBAC middleware, users CRUD and profile          | `2383116`                                                                          | 2026-09-15 |
+| 08  | Property search and lead pipeline on the mock                 | HEAD of this branch (a commit cannot contain its own hash — prompt 09 fills it in) | 2026-09-15 |
 
 ## Baseline (prompt 01)
 
@@ -164,28 +166,29 @@ The renormalisation is therefore invisible in the diff.
 
 ### npm scripts
 
-| Script                  | Command                                                                            | Added by                     |
-| ----------------------- | ---------------------------------------------------------------------------------- | ---------------------------- |
-| `start`                 | `react-scripts start`                                                              | boilerplate                  |
-| `dev`                   | `concurrently -n mock,web -c blue,green "npm run mock" "npm start"`                | boilerplate (replaced in 06) |
-| `mock`                  | `node mock-server/server.js`                                                       | 06                           |
-| `mock:reset`            | `node mock-server/reset.js`                                                        | 06                           |
-| `build`                 | `react-scripts build`                                                              | boilerplate                  |
-| `test`                  | `react-scripts test`                                                               | boilerplate                  |
-| `eject`                 | `react-scripts eject`                                                              | boilerplate                  |
-| `lint`                  | `eslint … --max-warnings=0 && node scripts/check-endpoints.js`                     | 01 (extended in 05, 06)      |
-| `lint:fix`              | `eslint "src/**/*.{js,jsx}" "mock-server/**/*.js" "scripts/**/*.js" --fix`         | 01 (extended in 06)          |
-| `format`                | `prettier --write "src/**" "mock-server/**/*.js" "scripts/**" "docs/**/*.md"`      | 01 (extended in 06)          |
-| `format:check`          | `prettier --check "src/**" "mock-server/**/*.js" "scripts/**/*.js"`                | 01 (extended in 06)          |
-| `test:ci`               | `cross-env CI=true react-scripts test --watchAll=false --passWithNoTests`          | 01                           |
-| `build:ci`              | `cross-env CI=true react-scripts build`                                            | 01                           |
-| `check:traces`          | `node scripts/check-traces.js`                                                     | 01                           |
-| `check:traces:report`   | `node scripts/check-traces.js --report`                                            | 01                           |
-| `generate:brand-assets` | `node scripts/fetch-brand-assets.js`                                               | 02                           |
-| `check:contrast`        | `node scripts/contrast-check.js`                                                   | 04                           |
-| `check:endpoints`       | `node scripts/check-endpoints.js`                                                  | 05                           |
-| `validate:seed`         | `node scripts/validate-seed.js`                                                    | 06                           |
-| `check:all`             | `… lint && test:ci && build:ci && check:traces && validate:seed && check:contrast` | 01 (extended in 04, 06)      |
+| Script                  | Command                                                                                         | Added by                     |
+| ----------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------- |
+| `start`                 | `react-scripts start`                                                                           | boilerplate                  |
+| `dev`                   | `concurrently -n mock,web -c blue,green "npm run mock" "npm start"`                             | boilerplate (replaced in 06) |
+| `mock`                  | `node mock-server/server.js`                                                                    | 06                           |
+| `mock:reset`            | `node mock-server/reset.js`                                                                     | 06                           |
+| `build`                 | `react-scripts build`                                                                           | boilerplate                  |
+| `test`                  | `react-scripts test`                                                                            | boilerplate                  |
+| `eject`                 | `react-scripts eject`                                                                           | boilerplate                  |
+| `lint`                  | `eslint … --max-warnings=0 && node scripts/check-endpoints.js`                                  | 01 (extended in 05, 06)      |
+| `lint:fix`              | `eslint "src/**/*.{js,jsx}" "mock-server/**/*.js" "scripts/**/*.js" --fix`                      | 01 (extended in 06)          |
+| `format`                | `prettier --write "src/**" "mock-server/**/*.js" "scripts/**" "docs/**/*.md"`                   | 01 (extended in 06)          |
+| `format:check`          | `prettier --check "src/**" "mock-server/**/*.js" "scripts/**/*.js"`                             | 01 (extended in 06)          |
+| `test:ci`               | `cross-env CI=true react-scripts test --watchAll=false --passWithNoTests`                       | 01                           |
+| `test:mock`             | `cd mock-server && node --test`                                                                 | 07                           |
+| `build:ci`              | `cross-env CI=true react-scripts build`                                                         | 01                           |
+| `check:traces`          | `node scripts/check-traces.js`                                                                  | 01                           |
+| `check:traces:report`   | `node scripts/check-traces.js --report`                                                         | 01                           |
+| `generate:brand-assets` | `node scripts/fetch-brand-assets.js`                                                            | 02                           |
+| `check:contrast`        | `node scripts/contrast-check.js`                                                                | 04                           |
+| `check:endpoints`       | `node scripts/check-endpoints.js`                                                               | 05                           |
+| `validate:seed`         | `node scripts/validate-seed.js`                                                                 | 06                           |
+| `check:all`             | `… lint && test:ci && test:mock && build:ci && check:traces && validate:seed && check:contrast` | 01 (extended in 04, 06, 07)  |
 
 ### Environment variables
 
@@ -222,6 +225,19 @@ not wire it.
 disappears from the registry; `scripts/check-endpoints.js` (now part of `npm run lint`)
 fails when a path literal appears anywhere else under `src/`.
 
+**Served by the mock so far:** `GET /api/health` and generic CRUD for all 28 collections
+(06); `POST /auth/login`, `POST /auth/logout`, `GET /auth/profile`, `PUT /auth/profile`,
+`PUT /auth/password`, and `GET|POST /admin/users`, `GET|PUT|PATCH|DELETE /admin/users/:id`,
+`POST /admin/users/bulk` (07); `GET /properties`, `/properties/featured`,
+`/properties/suggestions`, `/properties/slug/:slug`, `/properties/:id/similar`,
+`POST /properties/:id/view`, the admin property CRUD with `duplicate`, `bulk` and
+`check-slug`, `POST /leads`, `GET /admin/leads`, `/admin/leads/export`,
+`GET|PATCH|DELETE /admin/leads/:id`, `POST /admin/leads/:id/claim`,
+`POST /admin/leads/:id/notes`, `DELETE /admin/leads/:id/notes/:noteId` and
+`POST /admin/leads/bulk` (08). Since prompt 07 every `/api/admin/*` path — hand-written or
+generic — answers 401 without a bearer token and 403 outside the §7 matrix; since prompt 08
+the property and lead prefixes answer 404 for a path their own router does not define.
+
 The boilerplate's own endpoint surface stays inventoried in
 `docs/archive/CODEBASE_INVENTORY.md` §d until prompt 11 replaces it.
 
@@ -232,33 +248,32 @@ The boilerplate's own endpoint surface stays inventoried in
 | `test:ci --passWithNoTests`                    | Needed only while `src/` contains no test file; drop the flag once real tests exist.                                                                                                                                                                                            | 35           |
 | Header / MobileHeader / BottomNav nav arrays   | The three components still declare the same `navItems` / `sideMenuItems` literals. Prompt 04 restyled and unified their breakpoints but left the data alone, as its §9 requires ("nav data still hardcoded until prompt 27"). Prompt 27 moves it to `src/config/navigation.js`. | 27           |
 | `scripts/check-endpoints.allow.json`           | Holds `src/services/api.js` and `src/services/seoService.js`, the two files that still call the HOM endpoints with literal paths and snake_case params. Prompt 11 rewrites both onto the registry and empties the file to `[]`.                                                 | 11           |
-| `/api/admin/*` unauthenticated                 | The mock serves every admin route without a token, so the generic CRUD is usable before auth exists. Prompt 07 adds `Authorization: Bearer …`, the `apiTokens` store and the §7 role matrix.                                                                                    | 07           |
 | 501 on the sitemap / robots / RSS / llms paths | The routes are mounted and mirrored at the root (D21) but answer `501` until prompt 09 generates the documents from `seoSettings` and the seed.                                                                                                                                 | 09           |
 
 ## Known issues (open) — id, description, found by, owner prompt
 
 ### Tagged defects of `00_MASTER_CONTEXT.md` §11
 
-| Id                        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Found by                  | Owner prompt                |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | --------------------------- |
-| BUG-01                    | Every write uses `PUT` with partial payloads (11 call sites across property/lead/article/FAQ/neighborhood/partner/user toggles)                                                                                                                                                                                                                                                                                                                                                                             | master spec, confirmed 01 | 11, 14–22, 29, 33, 40       |
-| BUG-02 (contract defined) | List params (`is_active`, `featured`, `property_type`, `per_page`, `search`, `type`, `status`, `area`) match neither `db.json` camelCase nor JSON Server syntax. **Prompt 05 froze the camelCase parameter set**: every accepted parameter of every endpoint is declared in `src/services/endpoints.js` and documented in `docs/API_CONTRACT.md` §5.6/§5.7. The code migration is still open — the mock implements them in 08, `api.js` starts sending them in 11, the listing UI in 26.                    | master spec, confirmed 01 | 08, 11, 26 (contract: 05 ✔) |
-| BUG-03                    | 15 endpoints called by the frontend do not exist on a plain JSON Server (`/auth/*`, `/admin/dashboard`, `/seo/*`, `/properties/slug/:slug`, `/admin/leads/:id/notes`, `/newsletter/subscribe`, `/neighborhoods/active`, `/partners/active`, `/articles/trending`, `/articles/slug/:slug`, `/visits`). **Partially closed in prompt 06:** the mock now serves generic CRUD for all 28 collections under `/api` and `/api/admin` with the §5 envelope; the custom routes above still 404 until prompts 07–09. | master spec, confirmed 01 | 07–09                       |
-| BUG-04 (contract defined) | camelCase/snake_case drift (`transformPropertyPayload`, `normalizePropertyResponse`, `seoService` mappers, nested shapes differ between form, db and sections). **Prompt 05 froze the single camelCase shape** in `docs/DATA_MODEL.md`, `src/services/schemas/` and `mock-server/schemas/models.js`, and `scripts/check-endpoints.js` fails on a snake_case path in the registry. The transformation layer still exists; prompt 11 deletes it and 18–21 rebuild the property form on the frozen shape.      | master spec, confirmed 01 | 11, 18–21 (contract: 05 ✔)  |
-| BUG-05                    | PropertyDetails renders sections with defaults/placeholders (`DEFAULT_BANKS`, `'—'`, `Document`, "Map view available on live version")                                                                                                                                                                                                                                                                                                                                                                      | master spec, confirmed 01 | 23–25                       |
-| BUG-06                    | `StickyNav` ignores toggles; `visibleSections` logic duplicated; "Construction" targets `construction-specs`                                                                                                                                                                                                                                                                                                                                                                                                | master spec, confirmed 01 | 23                          |
-| BUG-07                    | `SimilarProperties` ignores `similarPropertyIds` and fetches by type                                                                                                                                                                                                                                                                                                                                                                                                                                        | master spec, confirmed 01 | 08, 25                      |
-| BUG-08                    | `brochureUrl`, `floorPlanPdfUrl`, `documents[].url` never delivered after lead capture                                                                                                                                                                                                                                                                                                                                                                                                                      | master spec, confirmed 01 | 25, 28                      |
-| BUG-09 (contract defined) | Lead sources inconsistent (21 values in `src/` vs `adminConstants` vs `AdminLayout.formatSource`). **Prompt 05 froze `LEAD_SOURCES` (29 values) and `LEGACY_LEAD_SOURCE_MAP` (24 old values)** in `src/config/enums.js`, tested in `enums.test.js`. The forms still send the old values; the seed converts them in 10, the forms move in 28 and the CRM labels in 29.                                                                                                                                       | master spec, confirmed 01 | 10, 28, 29 (contract: 05 ✔) |
-| BUG-10                    | `NotFound` → `?search=` vs listing `?q=`; `QuickActions` → `type=lease` unsupported; `?area=` only a hidden client-side filter                                                                                                                                                                                                                                                                                                                                                                              | master spec, confirmed 01 | 26, 27, 43                  |
-| BUG-11                    | Hardcoded content on About, Contact, FAQs, HomeLoan, LegalAssistance, InteriorDesigning, Careers, Partnership, SellLet, FlexibleWorkspace, DirectLeaseRetails, RealEstateAwareness, WhyChoose, HowItWorks, Dashboard trends, footer defaults, `SeoGuidelines`                                                                                                                                                                                                                                               | master spec, confirmed 01 | 27, 29, 30, 31, 37, 40      |
-| BUG-14                    | Token expiry never enforced; login writes both storages; logout incomplete; 401 redirect for public calls                                                                                                                                                                                                                                                                                                                                                                                                   | master spec, confirmed 01 | 11, 12                      |
-| BUG-15                    | Careers résumé upload dead; no spam protection; newsletter no dedupe and a false reCAPTCHA notice                                                                                                                                                                                                                                                                                                                                                                                                           | master spec, confirmed 01 | 09, 28, 31                  |
-| BUG-16 (residual)         | Filter logic duplicated between `PropertyListing` and `PropertyFilters`. All the dead code named in the row is gone (01: unused variables; 03: `adminService`, `visitService`, `PropertyDetail.js`, `AnimatedSection.jsx`, the unreachable enquiry modal, five dead CSS class blocks, two dead props, `stats.missing`).                                                                                                                                                                                     | master spec, confirmed 01 | 26                          |
-| BUG-18                    | `getFeatured` tag hack; ad-hoc trending/related; FAQ page/section fetch-all-and-filter                                                                                                                                                                                                                                                                                                                                                                                                                      | master spec, confirmed 01 | 08, 09, 27, 34              |
-| BUG-19                    | Listing paginates client-side after fetching everything                                                                                                                                                                                                                                                                                                                                                                                                                                                     | master spec, confirmed 01 | 26                          |
-| BUG-20 (partial)          | Nav **data** is still hardcoded and duplicated between `Header` and `MobileHeader`. The inconsistency prompt 04 owned is gone: both render on the same 900 px switch, with the same tokens, radii and shadows, and the footer is a light surface. Prompt 27 moves the arrays to `src/config/navigation.js`.                                                                                                                                                                                                 | master spec, confirmed 01 | 27, 43                      |
-| BUG-21                    | Additional defects recorded here by the audit prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                        | 01                        | 01 → all                    |
+| Id                        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Found by                  | Owner prompt                |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | --------------------------- |
+| BUG-01                    | Every write uses `PUT` with partial payloads (11 call sites across property/lead/article/FAQ/neighborhood/partner/user toggles)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | master spec, confirmed 01 | 11, 14–22, 29, 33, 40       |
+| BUG-02 (contract defined) | List params (`is_active`, `featured`, `property_type`, `per_page`, `search`, `type`, `status`, `area`) match neither `db.json` camelCase nor JSON Server syntax. **Prompt 05 froze the camelCase parameter set**: every accepted parameter of every endpoint is declared in `src/services/endpoints.js` and documented in `docs/API_CONTRACT.md` §5.6/§5.7. **Prompt 08 implemented them on the mock**: every §5.7 filter, the six sort options, the facets and `perPage=all` answer to the camelCase names. `api.js` starts sending them in 11, the listing UI in 26.                                                                                                                                                                                                                                           | master spec, confirmed 01 | 08, 11, 26 (contract: 05 ✔) |
+| BUG-03                    | 15 endpoints called by the frontend do not exist on a plain JSON Server (`/auth/*`, `/admin/dashboard`, `/seo/*`, `/properties/slug/:slug`, `/admin/leads/:id/notes`, `/newsletter/subscribe`, `/neighborhoods/active`, `/partners/active`, `/articles/trending`, `/articles/slug/:slug`, `/visits`). **Partially closed in prompts 06–08:** the mock serves generic CRUD for all 28 collections (06), the five `/auth/*` routes plus `/admin/users` (07) and the property and lead routes — `/properties/slug/:slug`, `/admin/leads/:id/notes` and the rest (08); `/admin/dashboard`, `/seo/*`, `/newsletter/subscribe`, `/articles/trending` and `/articles/slug/:slug` still 404 until prompt 09. `/neighborhoods/active`, `/partners/active` and `/visits` are boilerplate paths the contract replaces (11). | master spec, confirmed 01 | 08–09                       |
+| BUG-04 (contract defined) | camelCase/snake_case drift (`transformPropertyPayload`, `normalizePropertyResponse`, `seoService` mappers, nested shapes differ between form, db and sections). **Prompt 05 froze the single camelCase shape** in `docs/DATA_MODEL.md`, `src/services/schemas/` and `mock-server/schemas/models.js`, and `scripts/check-endpoints.js` fails on a snake_case path in the registry. The transformation layer still exists; prompt 11 deletes it and 18–21 rebuild the property form on the frozen shape.                                                                                                                                                                                                                                                                                                           | master spec, confirmed 01 | 11, 18–21 (contract: 05 ✔)  |
+| BUG-05                    | PropertyDetails renders sections with defaults/placeholders (`DEFAULT_BANKS`, `'—'`, `Document`, "Map view available on live version")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | master spec, confirmed 01 | 23–25                       |
+| BUG-06                    | `StickyNav` ignores toggles; `visibleSections` logic duplicated; "Construction" targets `construction-specs`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | master spec, confirmed 01 | 23                          |
+| BUG-07 (server side done) | `SimilarProperties` ignores `similarPropertyIds` and fetches by type. **Prompt 08 built the endpoint**: `GET /properties/:id/similar` answers with the editor's picks first (skipping inactive ones) and fills to six by listing type and locality or property type; the component moves onto it in 25                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | master spec, confirmed 01 | 08, 25                      |
+| BUG-08                    | `brochureUrl`, `floorPlanPdfUrl`, `documents[].url` never delivered after lead capture                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | master spec, confirmed 01 | 25, 28                      |
+| BUG-09 (contract defined) | Lead sources inconsistent (21 values in `src/` vs `adminConstants` vs `AdminLayout.formatSource`). **Prompt 05 froze `LEAD_SOURCES` (29 values) and `LEGACY_LEAD_SOURCE_MAP` (24 old values)** in `src/config/enums.js`, tested in `enums.test.js`. The forms still send the old values; **Prompt 08 applies `LEGACY_LEAD_SOURCE_MAP` on `POST /leads`**, so an old bundle's `property_enquiry` is stored as `property-enquiry` and an unknown value is a 422. The seed converts its own rows in 10, the forms move in 28 and the CRM labels in 29.                                                                                                                                                                                                                                                              | master spec, confirmed 01 | 10, 28, 29 (contract: 05 ✔) |
+| BUG-10                    | `NotFound` → `?search=` vs listing `?q=`; `QuickActions` → `type=lease` unsupported; `?area=` only a hidden client-side filter                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | master spec, confirmed 01 | 26, 27, 43                  |
+| BUG-11                    | Hardcoded content on About, Contact, FAQs, HomeLoan, LegalAssistance, InteriorDesigning, Careers, Partnership, SellLet, FlexibleWorkspace, DirectLeaseRetails, RealEstateAwareness, WhyChoose, HowItWorks, Dashboard trends, footer defaults, `SeoGuidelines`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | master spec, confirmed 01 | 27, 29, 30, 31, 37, 40      |
+| BUG-14 (server side done) | Token expiry never enforced; login writes both storages; logout incomplete; 401 redirect for public calls. **Prompt 07 closed the server half**: a token carries `expiresAt` from `MOCK_TOKEN_TTL_HOURS`, an expired or revoked one answers 401 and is deleted, logout revokes, a password change revokes the user's other tokens and a deactivated account loses its sessions. The client half — one storage, the expiry timer, the auto-logout toast and no 401 redirect on public calls — is prompts 11 and 12.                                                                                                                                                                                                                                                                                               | master spec, confirmed 01 | 11, 12                      |
+| BUG-15                    | Careers résumé upload dead; no spam protection; newsletter no dedupe and a false reCAPTCHA notice                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | master spec, confirmed 01 | 09, 28, 31                  |
+| BUG-16 (residual)         | Filter logic duplicated between `PropertyListing` and `PropertyFilters`. All the dead code named in the row is gone (01: unused variables; 03: `adminService`, `visitService`, `PropertyDetail.js`, `AnimatedSection.jsx`, the unreachable enquiry modal, five dead CSS class blocks, two dead props, `stats.missing`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | master spec, confirmed 01 | 26                          |
+| BUG-18 (partial)          | `getFeatured` tag hack; ad-hoc trending/related; FAQ page/section fetch-all-and-filter. **Prompt 08 gave the mock `/properties/featured` and `/properties/:id/similar`**; `/articles/trending` and the FAQ filters arrive with 09, the components with 27 and 34                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | master spec, confirmed 01 | 08, 09, 27, 34              |
+| BUG-19                    | Listing paginates client-side after fetching everything                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | master spec, confirmed 01 | 26                          |
+| BUG-20 (partial)          | Nav **data** is still hardcoded and duplicated between `Header` and `MobileHeader`. The inconsistency prompt 04 owned is gone: both render on the same 900 px switch, with the same tokens, radii and shadows, and the footer is a light surface. Prompt 27 moves the arrays to `src/config/navigation.js`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | master spec, confirmed 01 | 27, 43                      |
+| BUG-21                    | Additional defects recorded here by the audit prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 01                        | 01 → all                    |
 
 ### Additional defects of `00_MASTER_CONTEXT.md` §11
 
@@ -937,3 +952,197 @@ untouched (JSON Server's own cascade would have removed every lead whose `proper
 `NEW-26` and `NEW-27` (owner prompt 11); `BUG-03` partially closed — generic CRUD is served,
 the custom routes arrive with prompts 07–09; `/api/admin/*` is unauthenticated until prompt 07
 and the SEO document routes answer 501 until prompt 09 (both listed under "Pending rewrites").
+
+### Prompt 07 — Mock server: authentication, tokens, RBAC middleware, users, profile (2026-09-15)
+
+**Files added**
+
+| Path                                  | What it is                                                                                |
+| ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `mock-server/lib/tokens.js`           | `createTokenStore({db, config})` — issue / resolve / revoke / purge over `apiTokens`      |
+| `mock-server/lib/password.js`         | `verify()` and `store()` — plain comparison on the mock, one place to replace with a hash |
+| `mock-server/lib/routePermissions.js` | `resolvePermission(path, method)` — an admin path and method → an area and action of §7   |
+| `mock-server/middleware/auth.js`      | `requireAuth` — `Bearer` → `req.user` (no password) + `req.token`; 401 with one message   |
+| `mock-server/middleware/role.js`      | `role(...roles)`, `can(area, action)` and `adminPermission()` — the matrix, 403           |
+| `mock-server/routes/auth.js`          | `POST /auth/login` (throttled 10/min), `logout`, `GET                                     | PUT /auth/profile`, `PUT /auth/password` |
+| `mock-server/routes/users.js`         | `/admin/users` list, create, read, replace, patch, delete and bulk, with the safety rules |
+| `mock-server/__tests__/auth.test.js`  | 24 `node:test` cases over `createApp()` on a temp copy of the seed — `npm run test:mock`  |
+
+**Files changed**
+
+- `mock-server/app.js` — `requireAuth` + `adminPermission()` mounted on `/api/admin`, and
+  `requireAuth` on `/api/auth/logout|profile|password`, both **before** the custom routers and
+  the generic router, so no admin route can exist without being covered.
+- `mock-server/routes/index.js` — registers `auth.js` and `users.js`.
+- `mock-server/middleware/publicScope.js` — `PRIVATE_COLLECTIONS` (`adminUsers`, `apiTokens`,
+  `media`, `leads`, `jobApplications`, `newsletterSubscribers`, `propertyViews`) answer 404 on
+  any public path, whatever the method; `PUBLIC_WRITES` keeps the one public write the contract
+  defines on such a collection (`POST /leads`) open.
+- `mock-server/config.js` — `MOCK_TOKEN_TTL_HOURS` is parsed as a **number** rather than an
+  integer, so the `0.01` (36 s) of §7 works; the default is unchanged (24).
+- `package.json` — `test:mock` added and included in `check:all`.
+- `mock-server/README.md` — "Authentication", "Roles" and "Tests" sections: the flow, the seed
+  credentials with the note that Laravel hashes them, the TTL, how a permission is resolved and
+  what `/admin/users` refuses.
+- `docs/API_CONTRACT.md` — "Auth — worked examples": login, 401, 429, profile, profile update,
+  password (422 and success) and logout, with the JSON the mock actually returned.
+- `docs/PROJECT_STATE.md`, `docs/DECISIONS.md` — this report and nine decision records.
+
+**Endpoints served**
+
+`POST /api/auth/login` → `{ data: { token, expiresAt, user } }` (48-char opaque token,
+`lastLoginAt` set, expired tokens purged); `POST /api/auth/logout`; `GET /api/auth/profile`;
+`PUT /api/auth/profile`; `PUT /api/auth/password` (revokes the user's other tokens);
+`GET|POST /api/admin/users`, `GET|PUT|PATCH|DELETE /api/admin/users/:id`,
+`POST /api/admin/users/bulk` (`activate|deactivate|delete`).
+
+**npm scripts** `test:mock` (`cd mock-server && node --test`), also in `check:all`.
+**Env vars** none added; `MOCK_TOKEN_TTL_HOURS` is now consumed (and accepts fractions).
+
+**Acceptance checklist**
+
+- [x] All five auth endpoints behave per §5.4 — verified by `npm run test:mock` (24 cases) and
+      by curl against `npm run mock`.
+- [x] `/api/admin/*` answers 401 without a token (`users`, `properties`, `dashboard` checked)
+      and 403 outside the matrix: sales on `GET /admin/users`, manager on `GET /admin/users`,
+      sales on `POST /admin/properties`, `DELETE /admin/properties/1` and `GET /admin/localities`,
+      manager on `PUT /admin/settings`. Sales on `GET /admin/properties` → 200.
+- [x] Private collections are unreachable publicly: `/api/adminUsers`, `/api/apiTokens`,
+      `/api/media`, `/api/leads`, `/api/jobApplications`, `/api/newsletterSubscribers`,
+      `/api/propertyViews` → 404, while the public `POST /api/leads` still answers 201.
+- [x] Users CRUD, bulk and the safety rules work; tokens are revoked on delete, on deactivation
+      and on a password change.
+- [x] `npm run test:mock` (24/24), `npm run lint` (0 errors, 0 warnings, 0 blocking endpoint
+      findings), `npm run test:ci` (573 tests in 10 suites), `npm run build:ci` ("Compiled
+      successfully."), `npm run check:traces` (0 findings), `npm run validate:seed` ("db.json is
+      valid."), `npm run format:check` clean.
+- [x] One commit, clean tree.
+
+**Edge cases verified**
+
+`MOCK_TOKEN_TTL_HOURS=0.01` → `expiresAt` is 36 s out (test + `config.js` unit check); e-mail
+matching is case-insensitive and trimmed (` ADMIN@SquaresNAcres.com` signs in) while
+passwords are case-sensitive; a deactivated user's existing token stops working immediately
+(401); `PUT /admin/users/1` on yourself keeps your role, `PATCH { role }` on yourself is a 422
+naming `role`; `GET /admin/users?perPage=all` returns all three with `meta.perPage: 3`, and a
+regex over the whole response body asserts no `password` key and none of the three seed
+passwords ever appear; the 11th login attempt within a minute is a 429; an expired token is
+deleted when it is presented.
+
+**Manual QA**
+
+`npm run mock` in a second terminal, then curl: `POST /api/auth/login` as each of the three
+seed accounts; `GET /api/auth/profile` with the token; `GET /api/admin/users` as admin (200,
+no passwords) and as sales/manager (403); `GET /api/admin/users` without a token (401);
+`GET /api/adminUsers` (404); sales `GET /api/admin/properties` (200) and
+`POST /api/admin/properties` (403); a created user signing in with their new password, then
+changing it, then logging out (401 afterwards). `GET /api/admin/dashboard` and
+`GET /api/admin/settings` still answer 404 — the permission check passes, the route arrives
+with prompts 08/09.
+
+**Issues left**
+
+`BUG-03` still open for the routes of prompts 08–09. `BUG-14` is closed on the server and open
+on the client: `AdminAuthContext` still posts the boilerplate's login shape, stores the session
+twice and never enforces the expiry, so the admin panel cannot sign in against this mock until
+prompt 12 (prompt 11 rewrites the services first). Nothing else was added to "Pending
+rewrites"; the `/api/admin/*` row of that table is removed — it is done.
+
+### Prompt 08 — Mock server: property and lead domain routes (2026-09-15)
+
+**Files added**
+
+| Path                                       | What it is                                                                                          |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `mock-server/routes/properties.js`         | The public search, `featured`, `suggestions`, `slug`, `similar`, `view` and the admin property CRUD |
+| `mock-server/routes/leads.js`              | `POST /leads` and the CRM: list, detail, patch, delete, claim, notes, bulk, CSV export              |
+| `mock-server/lib/propertyFilters.js`       | Every §5.7 filter and the six sort options, with the price / area / bedrooms accessors              |
+| `mock-server/lib/facets.js`                | `meta.facets` — counted after the filters, before pagination                                        |
+| `mock-server/lib/leadFilters.js`           | The CRM's filters and sorting, with the UTC date comparison of D96                                  |
+| `mock-server/lib/activities.js`            | The lead timeline: `addActivity` and the sentences it writes                                        |
+| `mock-server/lib/viewCounter.js`           | One counted view per IP per property per hour, in memory                                            |
+| `mock-server/__tests__/helpers.js`         | The shared harness: `createApp()` on an ephemeral port over a temp copy of the seed                 |
+| `mock-server/__tests__/properties.test.js` | 22 cases — filters, sorting, facets, featured, suggestions, similar, view, admin CRUD, RBAC         |
+| `mock-server/__tests__/leads.test.js`      | 18 cases — honeypot, throttle, source mapping, scope, activities, notes, bulk, export               |
+
+**Files changed**
+
+- `mock-server/routes/index.js` — registers `properties.js` and `leads.js`.
+- `mock-server/lib/embed.js` — `embedAgent()` fills an agent's display fields from the team
+  member the listing names, without overwriting anything typed on the property itself.
+- `mock-server/lib/scope.js` — `canSeeLead()` and `scopeLeads()`, the sales scope of D15.
+- `mock-server/middleware/publicScope.js` — `PUBLIC_WRITES` removed: `POST /leads` has its own
+  router now, so the private collections are the flat rule prompt 07 described.
+- `mock-server/__tests__/auth.test.js` — moved onto the shared harness; the 24 cases are
+  unchanged.
+- `mock-server/README.md` — "Properties" and "Leads" sections: the filters, the three accessor
+  rules, facets, the write invariants, the lead pipeline and the sales scope.
+- `docs/API_CONTRACT.md` — worked examples: a filtered property list with its facets, the view
+  counter, the type-ahead, a lead as `POST /leads` stores it, the honeypot answer and the CSV
+  header.
+- `docs/PROJECT_STATE.md`, `docs/DECISIONS.md` — this report and 16 decision records.
+
+**Endpoints served**
+
+`GET /api/properties` (all of §5.7 + `meta.facets`), `/properties/featured`,
+`/properties/suggestions`, `/properties/slug/:slug`, `/properties/:id/similar`,
+`POST /properties/:id/view`; `GET|POST /api/admin/properties`,
+`GET|PUT|PATCH|DELETE /api/admin/properties/:id`, `POST /api/admin/properties/:id/duplicate`,
+`POST /api/admin/properties/bulk`, `GET /api/admin/properties/check-slug`; `POST /api/leads`,
+`GET /api/admin/leads`, `GET /api/admin/leads/export`, `GET|PATCH|DELETE /api/admin/leads/:id`,
+`POST /api/admin/leads/:id/claim`, `POST /api/admin/leads/:id/notes`,
+`DELETE /api/admin/leads/:id/notes/:noteId`, `POST /api/admin/leads/bulk`.
+
+**npm scripts** none added. **Env vars** none added.
+
+**Acceptance checklist**
+
+- [x] Every endpoint of §5 for properties and leads answers per contract — `npm run test:mock`
+      runs **64** cases in 17 suites (24 auth, 22 properties, 18 leads), all passing.
+- [x] `?bedrooms=3` returns only 3-BHK listings (including via unit configurations),
+      `?amenityIds=1,2` only listings holding both, `?ids=3,1` returns them in that order.
+- [x] `meta.facets` is present on the public and the admin property list, counted after the
+      filters and before the page is cut.
+- [x] `POST /leads` increments the property's `enquiryCount` (12 → 13), maps
+      `property_enquiry` → `property-enquiry`, stores `activities[0]`, honours the honeypot
+      (200, nothing stored) and the 10/min throttle (the 11th is a 429).
+- [x] The sales scope is enforced on the list (5 of 6 leads), the detail read (404 for the
+      manager's lead), `PATCH` (403 for `assignedTo`), `claim`, `DELETE` (403) and the export
+      (5 rows of 6).
+- [x] The CSV starts with the BOM and the contract's header row; a `PATCH` appends
+      "Status changed from New to Contacted", "Assigned to Sales User",
+      "Priority changed from Medium to High" and "Follow-up set for 20 Sep 2026".
+- [x] `npm run test:mock`, `npm run lint`, `npm run test:ci`, `npm run build:ci`,
+      `npm run check:traces`, `npm run validate:seed` and `npm run format:check` pass.
+- [x] One commit, clean tree.
+
+**Edge cases verified**
+
+`bedrooms=5` matches 5 and above and returns nothing in this seed (the largest home has four);
+a plot never matches a bedrooms filter; `minPrice=0` still excludes a listing quoted on
+request while no price filter excludes nothing; `similar` skips picks that were deactivated;
+`duplicate` of a `-copy` slug becomes `-copy-2`; `PATCH { images: [...] }` replaces the array
+and re-derives the single cover; `PATCH { seo: { title } }` keeps the other 18 `seo` keys, the
+five images and `viewCount`; a lead phone arrives as `+91 98765 43210`, `09876543210` or
+`9876543210` and is stored as `+919876543210`, while `12345` is a 422; `assignedTo=me` and
+`assignedTo=unassigned` both work for an admin; an export with no matching rows is the header
+row and the BOM alone; `from=2026-09-05&to=2026-09-05` selects the whole UTC day.
+
+**Manual QA**
+
+`npm run mock` in a second terminal, then curl: the filter matrix above; `sort=price-asc`
+orders the rent, lease and sale listings by their own price field; `/properties/suggestions?q=w`
+answers four empty groups and `?q=whi` the locality, the listing and its price;
+`POST /properties/1/view` twice returns 185 both times; the admin CRUD end to end (create →
+409 on a duplicate slug → PUT → PATCH → duplicate → bulk → delete, with the deleted id
+disappearing from the two `similarPropertyIds` that held it); `POST /leads` as the enquiry
+form, the honeypot and the throttle; `GET /admin/leads/export -o leads.csv`, opened in a text
+editor: BOM, header row, six rows for the admin and five for the sales user.
+
+**Issues left**
+
+`BUG-03` is open only for the article, CMS, SEO, settings and dashboard routes of prompt 09.
+The React side is untouched by design: the services still call the boilerplate's paths
+(`NEW-26`, `NEW-27`, prompt 11) and the admin panel still cannot sign in (prompt 12). The
+seed is still the six-property starter fixture — prompt 10 replaces it, and the assertions in
+`properties.test.js` that count listings will move with it.
