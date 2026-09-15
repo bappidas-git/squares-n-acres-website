@@ -12,7 +12,6 @@ const AnimatedSection = ({
   delay = 0,
   direction = 'up',
   threshold = 0.1,
-  as: Tag = 'section',
   style,
 }) => {
   const { ref, inView } = useInView({ triggerOnce: true, threshold });

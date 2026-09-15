@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "@iconify/react";
 import { useInView } from "react-intersection-observer";
@@ -165,7 +165,6 @@ const FinanceGuide = ({ price = 0, property = null, savedUserDetails, onLeadCapt
   const banks = Array.isArray(bankData) && bankData.length > 0 ? bankData : DEFAULT_BANKS;
 
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
-  const resultRef = useRef(null);
 
   /* ─── EMI Calculator State ─── */
   const [loanPercent, setLoanPercent] = useState(80);

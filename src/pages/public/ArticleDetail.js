@@ -40,7 +40,6 @@ function renderContent(content) {
   const lines = content.split('\n');
   const elements = [];
   let listItems = [];
-  let inList = false;
 
   const flushList = () => {
     if (listItems.length > 0) {
@@ -52,7 +51,6 @@ function renderContent(content) {
         </ul>
       );
       listItems = [];
-      inList = false;
     }
   };
 
@@ -94,14 +92,12 @@ function renderContent(content) {
 
     // List item
     if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-      inList = true;
       listItems.push(renderInlineFormatting(trimmed.replace(/^[-*]\s+/, '')));
       return;
     }
 
     // Numbered list
     if (/^\d+\.\s/.test(trimmed)) {
-      inList = true;
       listItems.push(renderInlineFormatting(trimmed.replace(/^\d+\.\s+/, '')));
       return;
     }
@@ -238,7 +234,7 @@ const ArticleDetail = () => {
             setRelatedArticles(await getFallbackRelated(data));
           }
         }
-      } catch (err) {
+      } catch {
         // Article fetch failed — UI shows error state
       } finally {
         setLoading(false);

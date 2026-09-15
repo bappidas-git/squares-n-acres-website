@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import { propertyService } from '../../services/api';
 import PropertyCard from '../../components/common/PropertyCard';
@@ -143,7 +142,7 @@ const PropertyListing = ({ routePath }) => {
 
       const data = await propertyService.getAll(params);
       setAllProperties(data);
-    } catch (err) {
+    } catch {
       setError('Failed to load properties. Please try again.');
     } finally {
       setLoading(false);

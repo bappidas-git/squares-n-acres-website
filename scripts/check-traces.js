@@ -1,0 +1,317 @@
+#!/usr/bin/env node
+/**
+ * check-traces.js — scans the repository for leftover traces of the
+ * "H.O.M Advisory" boilerplate (brand strings, the Cloudways API host, the HOM
+ * palette and fonts, the old Cloudinary cloud, Gumlet videos and placehold.co
+ * placeholders) and for hex colour literals outside the two files that are
+ * allowed to hold them.
+ *
+ * Patterns and scanned paths follow 00_MASTER_CONTEXT.md §13 D17.
+ *
+ * Usage:
+ *   node scripts/check-traces.js            # exit 1 when findings exist
+ *   node scripts/check-traces.js --report   # exit 0, print totals only
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.resolve(__dirname, '..');
+const REPORT_ONLY = process.argv.slice(2).includes('--report');
+
+/** Directories scanned recursively. */
+const SCAN_DIRS = ['src', 'public', 'mock-server', 'scripts', 'docs'];
+
+/** Individual files scanned when they exist. */
+const SCAN_FILES = ['db.json', 'README.md', 'package.json'];
+
+/** Directories never entered, wherever they appear. */
+const SKIP_DIRS = new Set([
+  'node_modules',
+  'build',
+  'coverage',
+  'prompts',
+  '.git',
+  '.runtime',
+  'dist',
+]);
+
+/** Paths (relative, posix separators) never scanned. */
+const SKIP_PATHS = [
+  'docs/archive',
+  // This file contains the patterns themselves.
+  'scripts/check-traces.js',
+];
+
+/** Extensions treated as binary and skipped. */
+const BINARY_EXTENSIONS = new Set([
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.webp',
+  '.avif',
+  '.ico',
+  '.svg',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.eot',
+  '.otf',
+  '.mp4',
+  '.webm',
+  '.mp3',
+  '.pdf',
+  '.zip',
+  '.gz',
+  '.map',
+]);
+
+/** Brand / legacy traces — all case-insensitive (D17). */
+const TRACE_PATTERNS = [
+  { id: 'hom-dotted', re: /h\.o\.m/gi, label: 'H.O.M brand string' },
+  { id: 'hom-advisory', re: /\bhom advisory/gi, label: 'HOM Advisory brand string' },
+  { id: 'homadvisory', re: /homadvisory/gi, label: 'homadvisory domain/handle' },
+  { id: 'home-office-market', re: /home office market/gi, label: 'HOM tagline' },
+  { id: 'hom-underscore', re: /\bhom_/gi, label: 'hom_ identifier/storage key' },
+  { id: 'hom-hyphen', re: /\bhom-/gi, label: 'hom- identifier' },
+  { id: 'hom-class', re: /\.hom-/gi, label: '.hom- CSS class' },
+  { id: 'cloudways', re: /cloudwaysapps/gi, label: 'Cloudways API host' },
+  { id: 'palette-navy', re: /#1B2A4A/gi, label: 'HOM palette navy' },
+  { id: 'palette-navy-light', re: /#2D4470/gi, label: 'HOM palette navy light' },
+  { id: 'palette-navy-dark', re: /#111C33/gi, label: 'HOM palette navy dark' },
+  { id: 'palette-gold', re: /#C9A86C/gi, label: 'HOM palette gold' },
+  { id: 'palette-gold-light', re: /#D4BC8E/gi, label: 'HOM palette gold light' },
+  { id: 'palette-gold-dark', re: /#B08E4A/gi, label: 'HOM palette gold dark' },
+  { id: 'palette-cream', re: /#F8F6F3/gi, label: 'HOM palette cream' },
+  { id: 'palette-navy-alt', re: /#2d3f63/gi, label: 'HOM palette navy (alt)' },
+  { id: 'font-playfair', re: /playfair/gi, label: 'HOM font Playfair Display' },
+  { id: 'font-dm-sans', re: /dm sans/gi, label: 'HOM font DM Sans' },
+  { id: 'font-outfit', re: /\boutfit\b/gi, label: 'HOM font Outfit' },
+  { id: 'cloudinary-old', re: /dzbiw7t4i/gi, label: 'old Cloudinary cloud' },
+  { id: 'gumlet', re: /video\.gumlet\.io/gi, label: 'Gumlet video host' },
+  { id: 'placehold', re: /placehold\.co/gi, label: 'placehold.co placeholder' },
+  { id: 'goldenrod', re: /goldenrod/gi, label: 'goldenrod placeholder colour' },
+];
+
+/**
+ * Words that legitimately contain "hom" and must never be reported.
+ * A match is discarded when the matched text, extended to the full surrounding
+ * word, is one of these.
+ */
+const ALLOW_LIST = ['home', 'homes', 'homepage', 'home-loan', 'home loan', 'hometown'];
+
+/** Files allowed to contain hex colour literals. */
+const HEX_ALLOWED_FILES = new Set(['src/assets/styles/global.css', 'src/theme.js']);
+
+/** Directory prefixes allowed to contain hex colour literals. */
+const HEX_ALLOWED_PREFIXES = ['src/seo/data/', 'public/brand/'];
+
+const HEX_RE = /#[0-9a-f]{3,8}\b/gi;
+
+/** A NUL byte marks a binary file whose extension did not give it away. */
+const NUL = String.fromCharCode(0);
+
+const toPosix = (p) => p.split(path.sep).join('/');
+
+const isSkipped = (relPath) =>
+  SKIP_PATHS.some((skip) => relPath === skip || relPath.startsWith(`${skip}/`));
+
+const isHexAllowed = (relPath) =>
+  HEX_ALLOWED_FILES.has(relPath) || HEX_ALLOWED_PREFIXES.some((p) => relPath.startsWith(p));
+
+function collectFiles() {
+  const files = [];
+
+  const walk = (dir) => {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      const rel = toPosix(path.relative(ROOT, full));
+      if (entry.isDirectory()) {
+        if (SKIP_DIRS.has(entry.name) || isSkipped(rel)) continue;
+        walk(full);
+      } else if (entry.isFile()) {
+        if (isSkipped(rel)) continue;
+        if (BINARY_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) continue;
+        files.push(rel);
+      }
+    }
+  };
+
+  for (const dir of SCAN_DIRS) {
+    const full = path.join(ROOT, dir);
+    if (fs.existsSync(full)) walk(full);
+  }
+
+  for (const file of SCAN_FILES) {
+    const full = path.join(ROOT, file);
+    if (fs.existsSync(full) && !isSkipped(file)) files.push(file);
+  }
+
+  // Every .env* file at the repository root (committed or not).
+  for (const entry of fs.readdirSync(ROOT, { withFileTypes: true })) {
+    if (entry.isFile() && entry.name.startsWith('.env')) files.push(entry.name);
+  }
+
+  return [...new Set(files)].sort();
+}
+
+function readTextFile(absolute) {
+  try {
+    // Non-UTF-8 bytes are replaced rather than throwing.
+    return fs.readFileSync(absolute, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+/** Expand a match to the whole surrounding word so the allow-list can be applied. */
+function surroundingWord(line, index, length) {
+  let start = index;
+  let end = index + length;
+  while (start > 0 && /[\w-]/.test(line[start - 1])) start -= 1;
+  while (end < line.length && /[\w-]/.test(line[end])) end += 1;
+  return line.slice(start, end);
+}
+
+function isAllowed(line, index, length) {
+  const word = surroundingWord(line, index, length).toLowerCase();
+  if (ALLOW_LIST.includes(word)) return true;
+  // "home loan" / "home-loan" as a two-word phrase.
+  const phrase = line.slice(index, index + length + 5).toLowerCase();
+  return ALLOW_LIST.some((allowed) => allowed.includes(' ') && phrase.startsWith(allowed));
+}
+
+/**
+ * A hex-looking token that is part of a URL fragment/query of an http(s) string,
+ * or an HTML numeric entity such as `&#8377;`, is not a colour literal.
+ */
+function isHexFalsePositive(line, index) {
+  const before = line.slice(0, index);
+  if (/&\s*$/.test(before)) return true;
+  const quoteStart = Math.max(
+    before.lastIndexOf('"'),
+    before.lastIndexOf("'"),
+    before.lastIndexOf('`')
+  );
+  if (quoteStart !== -1) {
+    const literal = before.slice(quoteStart + 1);
+    if (/^https?:\/\//i.test(literal) && /[?#]/.test(literal)) return true;
+  }
+  return false;
+}
+
+function scanFile(relPath) {
+  const absolute = path.join(ROOT, relPath);
+  const content = readTextFile(absolute);
+  if (content === null) return [];
+  if (content.includes(NUL)) return [];
+
+  const findings = [];
+  const lines = content.split(/\r?\n/);
+
+  lines.forEach((line, i) => {
+    for (const pattern of TRACE_PATTERNS) {
+      pattern.re.lastIndex = 0;
+      let match;
+      while ((match = pattern.re.exec(line)) !== null) {
+        if (match[0].length === 0) {
+          pattern.re.lastIndex += 1;
+          continue;
+        }
+        if (isAllowed(line, match.index, match[0].length)) continue;
+        findings.push({
+          file: relPath,
+          line: i + 1,
+          kind: 'trace',
+          id: pattern.id,
+          label: pattern.label,
+          match: match[0],
+          text: line.trim().slice(0, 160),
+        });
+      }
+    }
+
+    if (!isHexAllowed(relPath)) {
+      HEX_RE.lastIndex = 0;
+      let match;
+      while ((match = HEX_RE.exec(line)) !== null) {
+        if (isHexFalsePositive(line, match.index)) continue;
+        findings.push({
+          file: relPath,
+          line: i + 1,
+          kind: 'hex',
+          id: 'hex-literal',
+          label: 'hex colour literal',
+          match: match[0],
+          text: line.trim().slice(0, 160),
+        });
+      }
+    }
+  });
+
+  return findings;
+}
+
+function main() {
+  const files = collectFiles();
+  const findings = files.flatMap(scanFile);
+
+  const traces = findings.filter((f) => f.kind === 'trace');
+  const hexes = findings.filter((f) => f.kind === 'hex');
+
+  if (!REPORT_ONLY && findings.length > 0) {
+    const byFile = new Map();
+    for (const finding of findings) {
+      if (!byFile.has(finding.file)) byFile.set(finding.file, []);
+      byFile.get(finding.file).push(finding);
+    }
+    for (const [file, items] of [...byFile.entries()].sort()) {
+      console.log(`\n${file} (${items.length})`);
+      for (const item of items) {
+        console.log(`  ${file}:${item.line}: ${item.match}  — ${item.label}`);
+      }
+    }
+  }
+
+  const byPattern = new Map();
+  for (const finding of findings) {
+    const key = `${finding.id} (${finding.label})`;
+    byPattern.set(key, (byPattern.get(key) || 0) + 1);
+  }
+
+  console.log('\n--- check:traces summary ---');
+  console.log(`files scanned:      ${files.length}`);
+  console.log(`brand/legacy traces: ${traces.length}`);
+  console.log(`hex colour literals: ${hexes.length}`);
+  console.log(`total findings:      ${findings.length}`);
+  if (byPattern.size > 0) {
+    console.log('\nby pattern:');
+    for (const [key, count] of [...byPattern.entries()].sort((a, b) => b[1] - a[1])) {
+      console.log(`  ${String(count).padStart(5)}  ${key}`);
+    }
+    const fileCounts = new Map();
+    for (const finding of findings) {
+      fileCounts.set(finding.file, (fileCounts.get(finding.file) || 0) + 1);
+    }
+    console.log('\ntop files:');
+    for (const [file, count] of [...fileCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15)) {
+      console.log(`  ${String(count).padStart(5)}  ${file}`);
+    }
+  }
+
+  if (REPORT_ONLY) {
+    process.exit(0);
+  }
+  process.exit(findings.length > 0 ? 1 : 0);
+}
+
+main();

@@ -18,11 +18,6 @@ const SITE_URL = 'https://homadvisory.com';
 
 // ─── Helpers ──────────────────────────────────────────────────
 
-const capitalize = (str) => {
-  if (!str) return '';
-  return str.replace(/\b\w/g, (c) => c.toUpperCase());
-};
-
 const truncate = (str, max) => {
   if (!str || str.length <= max) return str || '';
   return str.slice(0, max - 3).trim() + '...';
@@ -235,10 +230,9 @@ const generateCanonicalUrl = (property) => {
  *  - BreadcrumbList
  */
 const generateSchemaMarkup = (property) => {
-  const { title, description, location, developer, price, configuration, dimensionRange, gallery, slug, amenities, specifications } = property;
+  const { title, description, location, developer, price, configuration, dimensionRange, gallery, slug, amenities } = property;
   const area = location?.area || '';
   const city = location?.city || '';
-  const state = location?.state || '';
   const priceStr = price ? Number(price) : null;
 
   // Main listing schema

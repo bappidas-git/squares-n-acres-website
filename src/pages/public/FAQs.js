@@ -89,7 +89,7 @@ const FAQs = () => {
       try {
         const data = await faqService.getAll({ isActive: true });
         setFaqs(data);
-      } catch (err) {
+      } catch {
         // FAQs fetch failed — UI shows empty state
       } finally {
         setLoading(false);

@@ -3,9 +3,11 @@ import { Box, Typography, TextField, Button, IconButton } from '@mui/material';
 import { Icon } from '@iconify/react';
 import ImageUrlHelperText from '../../../components/admin/ImageUrlHelperText';
 
+const PLACEHOLDER_COVER_PREFIX = 'https://placehold.co/800x600/goldenrod/white?text=';
+
 const getDefaultCoverUrl = (title) => {
   const name = (title || 'Project_Name').replace(/\s+/g, '_');
-  return `https://placehold.co/800x600/goldenrod/white?text=${encodeURIComponent(name)}`;
+  return `${PLACEHOLDER_COVER_PREFIX}${encodeURIComponent(name)}`;
 };
 
 const GalleryTab = ({ formData, updateField, updateListItem, addListItem, removeListItem }) => {
@@ -15,21 +17,20 @@ const GalleryTab = ({ formData, updateField, updateListItem, addListItem, remove
   // Auto-set cover image default when property name changes and cover URL is empty or is a placeholder
   useEffect(() => {
     if (userEditedCover.current) return;
-    const currentCover = formData.gallery?.[0] || '';
-    const isPlaceholder = currentCover === '' || currentCover.startsWith('https://placehold.co/800x600/goldenrod/white?text=');
-    if (isPlaceholder && formData.title) {
-      const defaultUrl = getDefaultCoverUrl(formData.title);
-      if (formData.gallery?.length > 0) {
-        const updated = [...formData.gallery];
-        updated[0] = defaultUrl;
-        updateField('gallery', updated);
-      }
-    }
-  }, [formData.title]); // eslint-disable-line react-hooks/exhaustive-deps
+    const gallery = formData.gallery;
+    if (!gallery?.length || !formData.title) return;
+    const currentCover = gallery[0] || '';
+    if (currentCover !== '' && !currentCover.startsWith(PLACEHOLDER_COVER_PREFIX)) return;
+    const defaultUrl = getDefaultCoverUrl(formData.title);
+    if (currentCover === defaultUrl) return;
+    const updated = [...gallery];
+    updated[0] = defaultUrl;
+    updateField('gallery', updated);
+  }, [formData.title, formData.gallery, updateField]);
 
   const handleCoverChange = (value) => {
     // Track if user manually entered a non-placeholder value
-    if (value && !value.startsWith('https://placehold.co/800x600/goldenrod/white?text=')) {
+    if (value && !value.startsWith(PLACEHOLDER_COVER_PREFIX)) {
       userEditedCover.current = true;
     } else {
       userEditedCover.current = false;

@@ -53,7 +53,7 @@ const ToastProvider = ({ children }) => {
         }}
       >
         <AnimatePresence>
-          {toasts.map((toast, index) => (
+          {toasts.map((toast) => (
             <motion.div
               key={toast.id}
               initial={{ opacity: 0, y: -40, scale: 0.95 }}

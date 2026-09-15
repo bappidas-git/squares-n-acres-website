@@ -200,14 +200,6 @@ const PropertyDetails = () => {
     });
   }, [toast]);
 
-  const handleOpenLeadForm = useCallback(() => {
-    setShowLeadForm(true);
-    const sidebar = document.getElementById('enquiry-sidebar');
-    if (sidebar && window.innerWidth > 960) {
-      sidebar.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, []);
-
   // Show SweetAlert for already-captured leads
   const showLeadCapturedAlert = useCallback((type, config) => {
     const msg = getSweetAlertMessage(type, config);

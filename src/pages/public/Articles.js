@@ -104,7 +104,7 @@ const Articles = () => {
       try {
         const data = await articleService.getAll({ isActive: true });
         setArticles(data);
-      } catch (err) {
+      } catch {
         // Articles fetch failed — UI shows empty state
       } finally {
         setLoading(false);

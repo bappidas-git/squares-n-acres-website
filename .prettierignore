@@ -1,0 +1,8 @@
+build
+node_modules
+package-lock.json
+public/brand
+mock-server/.runtime
+backend_developer_guidelines
+db.json
+*.min.*
