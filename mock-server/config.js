@@ -15,6 +15,18 @@ function intFromEnv(value, fallback) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
+/**
+ * A positive number from an environment variable, or `fallback`.
+ *
+ * The token lifetime is read this way rather than as an integer so that QA can
+ * watch a session expire: `MOCK_TOKEN_TTL_HOURS=0.01` is 36 seconds, which
+ * prompts 12 and 45 use to test the client-side auto-logout.
+ */
+function numberFromEnv(value, fallback) {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 const config = {
   /** `MOCK_PORT` — the port `npm run mock` listens on. */
   port: intFromEnv(process.env.MOCK_PORT, 4000),
@@ -22,8 +34,8 @@ const config = {
   /** `MOCK_DELAY_MS` — artificial latency on every response, for skeleton QA. */
   delayMs: intFromEnv(process.env.MOCK_DELAY_MS, 0),
 
-  /** `MOCK_TOKEN_TTL_HOURS` — how long a token issued by prompt 07 stays valid. */
-  tokenTtlHours: intFromEnv(process.env.MOCK_TOKEN_TTL_HOURS, 24),
+  /** `MOCK_TOKEN_TTL_HOURS` — how long a token issued by `/auth/login` stays valid. */
+  tokenTtlHours: numberFromEnv(process.env.MOCK_TOKEN_TTL_HOURS, 24),
 
   /** `MOCK_FRESH=1` — re-seed the runtime database on start. */
   fresh: process.env.MOCK_FRESH === '1',

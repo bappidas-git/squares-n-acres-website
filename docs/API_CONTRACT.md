@@ -172,6 +172,94 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 | PUT    | `/auth/profile`  | any role  | Update the signed-in user’s own name, phone and avatar                | —     | `auth.profile`  | `User`         | —                                                   |
 | PUT    | `/auth/password` | any role  | Change the signed-in user’s own password                              | —     | `auth.password` | `Null`         | Revokes every other token of the user               |
 
+##### Auth — worked examples
+
+Real request/response pairs from the mock (`npm run mock`, seed credentials of §6.14,
+`Content-Type: application/json` on every body).
+
+```jsonc
+// POST /api/auth/login  { "email": "admin@squaresnacres.com", "password": "Admin@123" }
+{
+  "data": {
+    "token": "zVswPVqstiBs-jWupyHqcCfXWNiAHX2JHeDXixNImuVadSEG", // 48 chars, opaque
+    "expiresAt": "2026-09-16T21:41:51.145Z", // now + MOCK_TOKEN_TTL_HOURS
+    "user": {
+      "id": 1,
+      "name": "Admin User",
+      "email": "admin@squaresnacres.com",
+      "role": "admin",
+      "avatarUrl": null,
+      "phone": "9880000010",
+    },
+  },
+}
+
+// POST /api/auth/login  { "email": "admin@squaresnacres.com", "password": "wrong" } → 401
+{ "message": "Invalid email or password." }
+
+// POST /api/auth/login — 11th attempt of a minute from one IP → 429
+{ "message": "Too many requests. Please try again in a minute." }
+```
+
+Every call below sends `Authorization: Bearer <token>`; without it, or with an expired or
+revoked one, the answer is `401 { "message": "Unauthenticated." }` — and
+`401 { "message": "Account is inactive." }` when the account has been deactivated.
+
+```jsonc
+// GET /api/auth/profile
+{
+  "data": {
+    "id": 1,
+    "name": "Admin User",
+    "email": "admin@squaresnacres.com",
+    "role": "admin",
+    "phone": "9880000010",
+    "avatarUrl": null,
+    "isActive": true,
+    "lastLoginAt": "2026-09-15T21:41:51.143Z",
+    "createdAt": "2026-08-01T09:00:00.000Z",
+    "updatedAt": "2026-09-10T09:00:00.000Z",
+  },
+}
+
+// PUT /api/auth/profile  { "name": "Priya Nair", "phone": "9880000013", "avatarUrl": null }
+{
+  "data": {
+    "id": 4,
+    "name": "Priya Nair",
+    "email": "priya@squaresnacres.com",
+    "role": "manager",
+    "phone": "9880000013",
+    "avatarUrl": null,
+    "isActive": true,
+    "lastLoginAt": "2026-09-15T21:42:42.688Z",
+    "createdAt": "2026-09-15T21:42:42.677Z",
+    "updatedAt": "2026-09-15T21:42:42.725Z",
+  },
+}
+```
+
+A `PUT /auth/profile` replaces the three fields it owns, so an omitted `phone` or
+`avatarUrl` is stored as `null` (§5.8). `name` is 2–80 characters; a shorter one answers
+`422 { "errors": { "name": ["The name must be at least 2 characters."] } }`.
+
+```jsonc
+// PUT /api/auth/password  { "currentPassword": "Wrong@123", "newPassword": "Str0ngPass" } → 422
+{
+  "message": "The given data was invalid.",
+  "errors": { "currentPassword": ["Current password is incorrect."] },
+}
+
+// PUT /api/auth/password  { "currentPassword": "Editor@123", "newPassword": "Str0ngPass" }
+{ "data": null, "message": "Password updated." } // every *other* token of the user is revoked
+
+// POST /api/auth/logout
+{ "data": null, "message": "Logged out." }
+```
+
+`newPassword` is at least 8 characters with at least one letter and one digit; a weaker one
+answers `422 { "errors": { "newPassword": [ … ] } }`.
+
 #### Admin — dashboard, properties and leads
 
 | Method | Path                              | Auth/role       | Purpose                                                              | Query                                                                                                                                                                                                                                                                                                                                                                                                  | Body schema       | Response shape  | Side effects                                                                                                                                      |

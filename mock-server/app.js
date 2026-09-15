@@ -8,6 +8,7 @@
  *
  *   CORS → JSON body (5 MB) → request log → optional latency → envelope helpers
  *   → `/api/health`
+ *   → bearer token + role matrix     (`/api/admin/*` and the private `/auth/*`)
  *   → custom routers            (prompts 07–09; hand-written routes win)
  *   → sitemap / robots / RSS / llms  (prompt 09; 501 placeholders for now)
  *   → admin prefix → query translation → public scoping → validation
@@ -26,9 +27,11 @@ const defaultConfig = require('./config');
 const dbModule = require('./db');
 const customRouters = require('./routes');
 const { version } = require('../package.json');
+const { adminPermission } = require('./middleware/role');
 const { envelope, renderEnvelope } = require('./middleware/envelope');
 const { errorHandler, notFound } = require('./middleware/errors');
 const { publicScope, adminPrefix } = require('./middleware/publicScope');
+const { requireAuth } = require('./middleware/auth');
 const { queryTranslate } = require('./middleware/queryTranslate');
 const { requestLog } = require('./middleware/requestLog');
 const { timestamps } = require('./middleware/timestamps');
@@ -36,6 +39,9 @@ const { validateWrite } = require('./middleware/validate');
 
 /** The files served both under `/api` and at the root (§5.13, D21). */
 const SEO_FILE_RE = /^\/(sitemap\.xml|sitemap-[a-z0-9-]+\.xml|robots\.txt|rss\.xml|llms\.txt)$/;
+
+/** The `/auth/*` endpoints that need a token; `login` is the only public one. */
+const PRIVATE_AUTH_PATHS = ['/api/auth/logout', '/api/auth/profile', '/api/auth/password'];
 
 /** Artificial latency, used to review skeletons and spinners (`MOCK_DELAY_MS`). */
 function delay(ms) {
@@ -118,6 +124,13 @@ function createApp({ router, config = defaultConfig, db = dbModule } = {}) {
   app.get('/api/health', (req, res) => {
     res.ok({ status: 'ok', time: new Date().toISOString(), version });
   });
+
+  // Authentication and the role matrix run before every router that could
+  // answer an admin request — the hand-written ones and the generic CRUD
+  // fallback alike — so a route cannot be added without being covered (§7).
+  const authenticate = requireAuth(deps);
+  app.use('/api/admin', authenticate, adminPermission());
+  app.use(PRIVATE_AUTH_PATHS, authenticate);
 
   for (const createRouter of customRouters) app.use('/api', createRouter(deps));
 

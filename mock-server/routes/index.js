@@ -3,13 +3,14 @@
  * router so that a hand-written route always wins over the CRUD fallback
  * (00_MASTER_CONTEXT.md §10).
  *
- * The list is empty today: prompt 07 adds `auth.js`, prompt 08 `properties.js`
- * and `leads.js`, prompt 09 the content, SEO and sitemap routers. Each entry is
- * an Express router that receives the shared dependencies from
- * `mock-server/app.js`.
+ * Prompt 07 added `auth.js` (the five `/auth/*` endpoints) and `users.js`
+ * (`/admin/users`); prompt 08 adds `properties.js` and `leads.js`, prompt 09
+ * the content, SEO and sitemap routers. Each entry is a factory that receives
+ * the shared dependencies from `mock-server/app.js` and returns an Express
+ * router.
  *
  * @type {Array<(deps: object) => import('express').Router>}
  */
-const customRouters = [];
+const customRouters = [require('./auth'), require('./users')];
 
 module.exports = customRouters;
