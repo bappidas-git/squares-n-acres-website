@@ -21,3 +21,18 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# mock server runtime + generated handover artefacts
+/mock-server/.runtime/
+/backend_developer_guidelines/.tmp/
+
+# local environment files
+.env
+.env.production
+
+# e2e artefacts
+/e2e/test-results/
+/playwright-report/
+
+# logs
+*.log

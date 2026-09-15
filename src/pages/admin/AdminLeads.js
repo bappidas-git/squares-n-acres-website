@@ -137,7 +137,7 @@ const AdminLeads = () => {
       setLeads(sorted);
       lastLeadCountRef.current = sorted.length;
       setError(null);
-    } catch (err) {
+    } catch {
       setError('Failed to load leads. Please try again.');
     } finally {
       setLoading(false);
@@ -194,7 +194,7 @@ const AdminLeads = () => {
         message: `Status updated to ${statusConfig[newStatus].label}`,
         severity: 'success',
       });
-    } catch (err) {
+    } catch {
       setSnackbar({ open: true, message: 'Failed to update status', severity: 'error' });
     }
     setStatusAnchor(null);
@@ -207,7 +207,7 @@ const AdminLeads = () => {
       await leadService.delete(deleteDialog.id);
       setLeads((prev) => prev.filter((l) => l.id !== deleteDialog.id));
       setSnackbar({ open: true, message: 'Lead deleted successfully', severity: 'success' });
-    } catch (err) {
+    } catch {
       setSnackbar({ open: true, message: 'Failed to delete lead', severity: 'error' });
     } finally {
       setDeleteDialog({ open: false, id: null, name: '' });

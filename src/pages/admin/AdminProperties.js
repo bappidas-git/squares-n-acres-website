@@ -103,7 +103,7 @@ const AdminProperties = () => {
       const data = await propertyService.getAll();
       setProperties(Array.isArray(data) ? data : []);
       setError(null);
-    } catch (err) {
+    } catch {
       setError('Failed to load properties. Please try again.');
     } finally {
       setLoading(false);
@@ -173,7 +173,7 @@ const AdminProperties = () => {
         message: `Property ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
         severity: 'success',
       });
-    } catch (err) {
+    } catch {
       setSnackbar({ open: true, message: 'Failed to update status', severity: 'error' });
     }
   };
@@ -196,7 +196,7 @@ const AdminProperties = () => {
         setSelected((prev) => prev.filter((id) => id !== deleteDialog.id));
         setSnackbar({ open: true, message: 'Property deleted successfully', severity: 'success' });
       }
-    } catch (err) {
+    } catch {
       setSnackbar({ open: true, message: 'Failed to delete property', severity: 'error' });
     } finally {
       setDeleteDialog({ open: false, id: null, title: '', bulk: false });
@@ -212,7 +212,7 @@ const AdminProperties = () => {
       );
       setSelected([]);
       setSnackbar({ open: true, message: 'Selected properties activated', severity: 'success' });
-    } catch (err) {
+    } catch {
       setSnackbar({ open: true, message: 'Failed to activate properties', severity: 'error' });
     }
   };
@@ -225,7 +225,7 @@ const AdminProperties = () => {
       );
       setSelected([]);
       setSnackbar({ open: true, message: 'Selected properties deactivated', severity: 'success' });
-    } catch (err) {
+    } catch {
       setSnackbar({ open: true, message: 'Failed to deactivate properties', severity: 'error' });
     }
   };

@@ -90,7 +90,6 @@ const PropertyForm = ({ propertyId = null }) => {
         // main property response didn't include it. Use empty-string-aware
         // checks so that "" from normalization doesn't block the merge.
         if (seoData) {
-          console.log("[EditProperty] SEO endpoint data:", seoData);
           const seoNested = seoData.data && typeof seoData.data === "object" ? seoData.data : seoData;
           if (!property.seoTitle) {
             property.seoTitle = seoNested.meta_title || seoNested.title || seoNested.seo_title || seoNested.seoTitle || "";
@@ -149,18 +148,6 @@ const PropertyForm = ({ propertyId = null }) => {
         const galleryData = Array.isArray(property.gallery) ? property.gallery.map((item) =>
           typeof item === "object" && item !== null ? item.url || item.image || "" : (item || "")
         ) : [];
-
-        // Debug: log API response and mapped data for troubleshooting hydration issues
-        console.log("[EditProperty] API response (normalized):", property);
-        console.log("[EditProperty] Specs:", specs);
-        console.log("[EditProperty] FloorPlans:", floorPlansData);
-        console.log("[EditProperty] SEO:", {
-          seoTitle: property.seoTitle,
-          seoDescription: property.seoDescription,
-          seoKeywords: property.seoKeywords,
-          ogTitle: property.ogTitle,
-          canonicalUrl: property.canonicalUrl,
-        });
 
         // Set slugManuallyEdited BEFORE formData to prevent the auto-slug
         // effect from overwriting the loaded slug (avoids race condition
@@ -357,7 +344,7 @@ const PropertyForm = ({ propertyId = null }) => {
               ? property.isActive
               : true,
         });
-      } catch (err) {
+      } catch {
         setSnackbar({
           open: true,
           message: "Failed to load property data",
@@ -594,10 +581,6 @@ const PropertyForm = ({ propertyId = null }) => {
       const payload = buildPayload();
       payload.publish_status = publish ? "published" : "draft";
       payload.is_active = publish;
-
-      // Debug: log form state and submit payload for troubleshooting
-      console.log("[EditProperty] FORM STATE at submit:", formData);
-      console.log("[EditProperty] SUBMIT PAYLOAD:", payload);
 
       if (isEdit) {
         // Update property and sync SEO data to the dedicated endpoint

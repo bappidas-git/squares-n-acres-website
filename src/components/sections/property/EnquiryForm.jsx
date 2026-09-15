@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { leadService } from '../../../services/api';
 import { useToast } from '../../common/ToastProvider';
-import { validateLeadForm, sanitizeInput } from '../../../utils/validators';
+import { validateLeadForm } from '../../../utils/validators';
 import styles from './EnquiryForm.module.css';
 
 const EnquiryForm = ({ property, isMobile = false, savedUserDetails, onLeadCaptured }) => {

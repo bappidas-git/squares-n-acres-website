@@ -266,6 +266,7 @@ const HeroSection = () => {
                 autoComplete="off"
                 role="combobox"
                 aria-expanded={showSuggestions}
+                aria-controls="hero-search-suggestions"
                 aria-haspopup="listbox"
               />
               {suggestionsLoading && (
@@ -282,6 +283,7 @@ const HeroSection = () => {
           <AnimatePresence>
             {showSuggestions && searchQuery.trim().length >= 2 && (
               <motion.ul
+                id="hero-search-suggestions"
                 className={styles.suggestions}
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}

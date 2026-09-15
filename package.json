@@ -2,6 +2,10 @@
   "name": "hom-real-eastate-website",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.18",
+    "npm": ">=9"
+  },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
@@ -25,17 +29,99 @@
     "sweetalert2": "^11.26.20",
     "web-vitals": "^2.1.4"
   },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6",
+    "rimraf": "^5.0.10"
+  },
   "scripts": {
     "start": "react-scripts start",
+    "dev": "react-scripts start",
     "build": "react-scripts build",
+    "build:ci": "cross-env CI=true react-scripts build",
     "test": "react-scripts test",
+    "test:ci": "cross-env CI=true react-scripts test --watchAll=false --passWithNoTests",
     "eject": "react-scripts eject",
-    "dev": "react-scripts start"
+    "lint": "eslint \"src/**/*.{js,jsx}\" \"scripts/**/*.js\" --max-warnings=0",
+    "lint:fix": "eslint \"src/**/*.{js,jsx}\" \"scripts/**/*.js\" --fix",
+    "format": "prettier --write \"src/**/*.{js,jsx,css,json}\" \"scripts/**/*.js\" \"docs/**/*.md\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,css,json}\" \"scripts/**/*.js\"",
+    "check:traces": "node scripts/check-traces.js",
+    "check:traces:report": "node scripts/check-traces.js --report",
+    "check:all": "npm run lint && npm run test:ci && npm run build:ci && npm run check:traces"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
-      "react-app/jest"
+      "react-app/jest",
+      "prettier"
+    ],
+    "rules": {
+      "no-console": [
+        "error",
+        {
+          "allow": [
+            "warn",
+            "error"
+          ]
+        }
+      ],
+      "no-unused-vars": [
+        "error",
+        {
+          "argsIgnorePattern": "^_",
+          "varsIgnorePattern": "^_",
+          "ignoreRestSiblings": true
+        }
+      ],
+      "react-hooks/exhaustive-deps": "error",
+      "no-restricted-imports": [
+        "error",
+        {
+          "paths": [
+            {
+              "name": "axios",
+              "message": "Import the shared client from src/services/http.js"
+            },
+            {
+              "name": "@mui/icons-material",
+              "message": "Use @iconify/react icons"
+            }
+          ],
+          "patterns": [
+            "@mui/icons-material/*"
+          ]
+        }
+      ]
+    },
+    "overrides": [
+      {
+        "files": [
+          "src/services/api.js",
+          "src/services/http.js"
+        ],
+        "rules": {
+          "no-restricted-imports": "off"
+        }
+      },
+      {
+        "files": [
+          "scripts/**/*.js",
+          "mock-server/**/*.js"
+        ],
+        "env": {
+          "node": true
+        },
+        "rules": {
+          "no-console": "off"
+        }
+      }
+    ]
+  },
+  "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!(yet-another-react-lightbox)/)"
     ]
   },
   "browserslist": {
@@ -49,6 +135,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "devDependencies": {}
+  }
 }

@@ -124,7 +124,7 @@ const StickyNav = ({ visibleSections }) => {
         items[nextIndex].focus();
       }
     },
-    []
+    [navItems]
   );
 
   return (

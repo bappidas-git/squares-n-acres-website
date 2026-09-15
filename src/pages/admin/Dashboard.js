@@ -317,8 +317,8 @@ const Dashboard = () => {
           .slice(0, 10)
       );
       setProperties(allProperties);
-    } catch (err) {
-      console.error('Dashboard data load failed:', err);
+    } catch {
+      // Load failed — the dashboard renders its empty state
     } finally {
       setLoading(false);
     }

@@ -1,0 +1,366 @@
+# Project state — Squares N Acres website
+
+Status: IN PROGRESS
+Last prompt executed: 01 — Repository audit, tooling baseline and project state files Next prompt: 02
+
+## Executed prompts
+
+| #   | Title                                                      | Commit                                                                             | Date       |
+| --- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------- |
+| 01  | Repository audit, tooling baseline and project state files | HEAD of this branch (a commit cannot contain its own hash — prompt 02 fills it in) | 2026-09-15 |
+
+## Baseline (prompt 01)
+
+### Toolchain
+
+| Item                               | Value                                                                                                                                                                                                                                                                                                                                           |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node -v`                          | `v22.22.2` (above the `.nvmrc` pin of `20`; `engines` requires `>=18.18`)                                                                                                                                                                                                                                                                       |
+| `npm -v`                           | `10.9.7`                                                                                                                                                                                                                                                                                                                                        |
+| `npm install`                      | `added 1624 packages, and audited 1625 packages in 25s` — **70 vulnerabilities (15 low, 15 moderate, 37 high, 3 critical)**, all inside the `react-scripts 5.0.1` dependency tree (`svgo`/`postcss`/`webpack-dev-server`/`workbox`); not fixable without ejecting or a CRA major, so they are accepted for now.                                 |
+| `npm install` deprecation warnings | `w3c-hr-time@1.0.2`, `stable@0.1.8`, `workbox-cacheable-response@6.6.0`, `sourcemap-codec@1.4.8`, `rollup-plugin-terser@7.0.2`, `workbox-google-analytics@6.6.0`, `domexception@2.0.1`, `abab@2.0.6`, `svgo@1.3.2`, `@babel/plugin-proposal-{optional-chaining,numeric-separator,private-methods,nullish-coalescing-operator,class-properties}` |
+| Dev deps added                     | `prettier@3.9.6`, `eslint-config-prettier@10.1.8`, `cross-env@7.0.3`, `rimraf@5.0.10` (`added 11 packages, changed 3 packages`)                                                                                                                                                                                                                 |
+
+Every build emits the CRA notice that `babel-preset-react-app` imports
+`@babel/plugin-proposal-private-property-in-object` without declaring it, plus
+`Browserslist: caniuse-lite is outdated`. Neither fails the build; neither is fixed here
+(adding the Babel plugin would mean a dependency outside the allow-list of §12).
+
+### `npm run build` — before any change
+
+Exit 0, `Compiled with warnings.` — **10 ESLint warnings, 0 errors.** First lines:
+
+```
+Compiled with warnings.
+
+[eslint]
+src/components/sections/home/HeroSection.jsx
+  Line 267:17:  Elements with the ARIA role "combobox" must have the following attributes defined: aria-controls,aria-expanded  jsx-a11y/role-has-required-aria-props
+
+src/components/sections/property/EnquiryForm.jsx
+  Line 6:28:  'sanitizeInput' is defined but never used  no-unused-vars
+
+src/components/sections/property/FinanceGuide.jsx
+  Line 168:9:  'resultRef' is assigned a value but never used  no-unused-vars
+
+src/components/sections/property/StickyNav.jsx
+  Line 127:5:  React Hook useCallback has a missing dependency: 'navItems'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/LeadDetail.js
+  Line 41:9:  'isMobile' is assigned a value but never used  no-unused-vars
+
+src/pages/admin/property-tabs/SeoTagsTab.jsx
+  Line 2:67:  'LinearProgress' is defined but never used  no-unused-vars
+
+src/pages/public/ArticleDetail.js
+  Line 43:7:  'inList' is assigned a value but never used  no-unused-vars
+
+src/pages/public/PropertyDetails.jsx
+  Line 203:9:  'handleOpenLeadForm' is assigned a value but never used  no-unused-vars
+
+src/pages/public/PropertyListing.jsx
+  Line 1:60:  'memo' is defined but never used       no-unused-vars
+  Line 5:10:  'useInView' is defined but never used  no-unused-vars
+```
+
+Bundle (gzip): `main.28d19d0e.js` 212.91 kB + 41.44 kB + 34.67 kB and ~90 further chunks.
+
+### `npx eslint "src/**/*.{js,jsx}"` — before any change (CRA config, no project rules)
+
+`✖ 16 problems (0 errors, 16 warnings)` — the 10 above plus:
+
+```
+src/services/api.js
+  75:7  warning  'extractPaginationMeta' is assigned a value but never used  no-unused-vars
+
+src/utils/seoGenerator.js
+   21:7    warning  'capitalize' is assigned a value but never used      no-unused-vars
+  238:116  warning  'specifications' is assigned a value but never used  no-unused-vars
+  241:9    warning  'state' is assigned a value but never used           no-unused-vars
+
+src/utils/validators.js
+  26:21  warning  Unnecessary escape character: \-  no-useless-escape
+  59:35  warning  Unnecessary escape character: \-  no-useless-escape
+```
+
+Under the **new** config (prompt 01 §7) the same tree reported
+`✖ 26 problems (23 errors, 3 warnings)` — the 16 above re-graded to errors, plus
+`AnimatedSection.jsx` `Tag`, `ToastProvider.jsx` `index`,
+`property-tabs/BasicInfoTab.jsx` `slugManuallyEdited` and the 7 `no-console` errors in
+`PropertyForm.jsx`. All are fixed in this commit.
+
+### Size counters
+
+| Counter                                                | Value                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------ |
+| Files tracked under `src/`                             | 173 (80 `.jsx`, 39 `.js`, 53 `.css`, 1 `.png`)         |
+| Lines under `src/` (`git ls-files src \| xargs wc -l`) | 47 834                                                 |
+| Hex literals in `src/**/*.{js,jsx}` outside `theme.js` | **1 206** (expected ≈ 1 206 ✔)                         |
+| Hex literals in `src/**/*.css` outside `global.css`    | **290** (expected ≈ 290 ✔); 307 including `global.css` |
+| Inline `fontFamily:` literals in `src/**/*.{js,jsx}`   | 30 (17 of them in `PropertyDetails.jsx`)               |
+| JS/JSX files scanned by the inventory                  | 119                                                    |
+
+### HOM-trace counters (regexes of `00_MASTER_CONTEXT.md` §13 D17)
+
+Brand strings only (`h\.o\.m`, `hom advisory`, `homadvisory`, `home office market`, `hom_`,
+`hom-`, `.hom-`, `cloudwaysapps`):
+
+| Scope     | Matches                |
+| --------- | ---------------------- |
+| `db.json` | **52** (expected ≈ 49) |
+| `src/`    | **84** (expected ≈ 90) |
+
+Full D17 pattern set (brand strings + HOM palette hexes + HOM fonts + `dzbiw7t4i` +
+`video.gumlet.io` + `placehold.co` + `goldenrod`):
+
+| Scope     | Matches |
+| --------- | ------- |
+| `db.json` | 226     |
+| `src/`    | 475     |
+
+`npm run check:traces:report` scans 181 files (`src`, `public`, `scripts`, `docs`, `db.json`,
+`README.md`, `package.json`, `.env`). Excluding `docs/**` — whose three new files quote the
+traces as evidence and are handled under "Pending rewrites" — the **product tree** reports:
+
+```
+brand/legacy traces:  717
+hex colour literals: 1495
+total findings:      2212
+```
+
+(The totals printed by the script itself are higher because the scan includes this file and the
+inventory; those documentation findings are not product defects.)
+
+By pattern in the product tree: hex-literal 1495 · HOM palette navy 222 · the dotted brand
+string 95 · `placehold.co` 89 · `goldenrod` 77 · HOM palette gold 63 · the HOM domain 35 ·
+the HOM body font 35 · navy-light 26 · navy-alt 14 · the old Cloudinary cloud 11 · `hom-` 10 ·
+the HOM heading font 9 · the Cloudways host 4 · gold-dark 4 · cream 4 · `.hom-` 4 ·
+the HOM tagline 3 · the Gumlet host 2 · the HOM numeral font 2 · navy-dark 2 · gold-light 2 ·
+`hom_` 2 · the spaced brand string 2.
+
+Worst product files: `db.json` 226 · `AdminSeo.js` 141 · `AdminProperties.js` 94 ·
+`Dashboard.js` 80 · `LeadDetail.js` 76 · `ArticleForm.jsx` 72 ·
+`AdminLayout.module.css` 67 · `AdminSettings.js` 65 · `FaqManager.jsx` 65 ·
+`PropertyDetails.jsx` 60.
+
+`npm run check:traces` (strict) exits **1** — expected until prompt 03.
+
+### Line endings
+
+`git add --renormalize .` after switching `.gitattributes` to `* text=auto eol=lf` changed
+**no** files: the working tree was already LF-only (`file` reports no CRLF in any tracked file).
+The renormalisation is therefore invisible in the diff.
+
+## Current npm scripts / env vars / endpoints added (cumulative lists)
+
+### npm scripts
+
+| Script                | Command                                                                          | Added by                            |
+| --------------------- | -------------------------------------------------------------------------------- | ----------------------------------- |
+| `start`               | `react-scripts start`                                                            | boilerplate                         |
+| `dev`                 | `react-scripts start`                                                            | boilerplate (replaced in prompt 06) |
+| `build`               | `react-scripts build`                                                            | boilerplate                         |
+| `test`                | `react-scripts test`                                                             | boilerplate                         |
+| `eject`               | `react-scripts eject`                                                            | boilerplate                         |
+| `lint`                | `eslint "src/**/*.{js,jsx}" "scripts/**/*.js" --max-warnings=0`                  | 01                                  |
+| `lint:fix`            | `eslint "src/**/*.{js,jsx}" "scripts/**/*.js" --fix`                             | 01                                  |
+| `format`              | `prettier --write "src/**/*.{js,jsx,css,json}" "scripts/**/*.js" "docs/**/*.md"` | 01                                  |
+| `format:check`        | `prettier --check "src/**/*.{js,jsx,css,json}" "scripts/**/*.js"`                | 01                                  |
+| `test:ci`             | `cross-env CI=true react-scripts test --watchAll=false --passWithNoTests`        | 01                                  |
+| `build:ci`            | `cross-env CI=true react-scripts build`                                          | 01                                  |
+| `check:traces`        | `node scripts/check-traces.js`                                                   | 01                                  |
+| `check:traces:report` | `node scripts/check-traces.js --report`                                          | 01                                  |
+| `check:all`           | `npm run lint && npm run test:ci && npm run build:ci && npm run check:traces`    | 01                                  |
+
+### Environment variables
+
+None added. The boilerplate's committed `.env` still holds `REACT_APP_API_URL`
+(Cloudways host), `REACT_APP_SITE_NAME=H.O.M Advisory` and `REACT_APP_GOOGLE_MAPS_KEY`;
+it is removed from git in prompt 02. `.gitignore` now ignores `.env` and `.env.production`
+for the future.
+
+### Endpoints
+
+None added or changed. The boilerplate's endpoint surface is inventoried in
+`docs/CODEBASE_INVENTORY.md` §d.
+
+## Pending rewrites (temporary adapters that must be removed; owner prompt)
+
+| Item                                                                                     | Why it is temporary                                                                                                                                                                                                                                                                                                                                   | Owner prompt |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `docs/CODEBASE_INVENTORY.md` lives at `docs/`                                            | It quotes the boilerplate's brand strings, palette hexes and fonts verbatim as evidence, so `npm run check:traces` counts **80** findings in it. `00_MASTER_CONTEXT.md` §4.1 places the finished file at `docs/archive/CODEBASE_INVENTORY.md`, and `docs/archive/**` is excluded from the scan — move it there when the strict trace check must pass. | 03           |
+| Trace literals inside `docs/PROJECT_STATE.md` (~32 findings) and `docs/DECISIONS.md` (1) | The prompt-01 baseline quotes the counters and palette values it measured. Before the strict `check:traces` becomes a gate, either neutralise these literals (e.g. describe them instead of quoting them) or add the two state files to the scanner's skip list — **not** by weakening the patterns.                                                  | 03           |
+| `test:ci --passWithNoTests`                                                              | Needed only while `src/` contains no test file; drop the flag once real tests exist.                                                                                                                                                                                                                                                                  | 35           |
+| `dev` = `react-scripts start`                                                            | Placeholder until the mock server exists; becomes `concurrently` mock + web.                                                                                                                                                                                                                                                                          | 06           |
+
+## Known issues (open) — id, description, found by, owner prompt
+
+### Tagged defects of `00_MASTER_CONTEXT.md` §11
+
+| Id     | Description                                                                                                                                                                                                                                                                                          | Found by                  | Owner prompt                   |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------ |
+| BUG-01 | Every write uses `PUT` with partial payloads (11 call sites across property/lead/article/FAQ/neighborhood/partner/user toggles)                                                                                                                                                                      | master spec, confirmed 01 | 11, 14–22, 29, 33, 40          |
+| BUG-02 | List params (`is_active`, `featured`, `property_type`, `per_page`, `search`, `type`, `status`, `area`) match neither `db.json` camelCase nor JSON Server syntax                                                                                                                                      | master spec, confirmed 01 | 05, 08, 11, 26                 |
+| BUG-03 | 15 endpoints called by the frontend do not exist on a plain JSON Server (`/auth/*`, `/admin/dashboard`, `/seo/*`, `/properties/slug/:slug`, `/admin/leads/:id/notes`, `/newsletter/subscribe`, `/neighborhoods/active`, `/partners/active`, `/articles/trending`, `/articles/slug/:slug`, `/visits`) | master spec, confirmed 01 | 06–09                          |
+| BUG-04 | camelCase/snake_case drift (`transformPropertyPayload`, `normalizePropertyResponse`, `seoService` mappers, nested shapes differ between form, db and sections)                                                                                                                                       | master spec, confirmed 01 | 05, 11, 18–21                  |
+| BUG-05 | PropertyDetails renders sections with defaults/placeholders (`DEFAULT_BANKS`, `'—'`, `Document`, "Map view available on live version")                                                                                                                                                               | master spec, confirmed 01 | 23–25                          |
+| BUG-06 | `StickyNav` ignores toggles; `visibleSections` logic duplicated; "Construction" targets `construction-specs`                                                                                                                                                                                         | master spec, confirmed 01 | 23                             |
+| BUG-07 | `SimilarProperties` ignores `similarPropertyIds` and fetches by type                                                                                                                                                                                                                                 | master spec, confirmed 01 | 08, 25                         |
+| BUG-08 | `brochureUrl`, `floorPlanPdfUrl`, `documents[].url` never delivered after lead capture                                                                                                                                                                                                               | master spec, confirmed 01 | 25, 28                         |
+| BUG-09 | Lead sources inconsistent (21 values in `src/` vs `adminConstants` vs `AdminLayout.formatSource`)                                                                                                                                                                                                    | master spec, confirmed 01 | 05, 10, 28, 29                 |
+| BUG-10 | `NotFound` → `?search=` vs listing `?q=`; `QuickActions` → `type=lease` unsupported; `?area=` only a hidden client-side filter                                                                                                                                                                       | master spec, confirmed 01 | 26, 27, 43                     |
+| BUG-11 | Hardcoded content on About, Contact, FAQs, HomeLoan, LegalAssistance, InteriorDesigning, Careers, Partnership, SellLet, FlexibleWorkspace, DirectLeaseRetails, RealEstateAwareness, WhyChoose, HowItWorks, Dashboard trends, footer defaults, `SeoGuidelines`                                        | master spec, confirmed 01 | 27, 29, 30, 31, 37, 40         |
+| BUG-12 | 1 206 hex literals in JS/JSX (+290 in CSS modules), 30 inline `fontFamily` literals, `.hom-swal-*`, `ErrorBoundary`, `PageLoader`, `BackToTop`                                                                                                                                                       | master spec, measured 01  | 04 (+ every module prompt), 43 |
+| BUG-13 | Mixed ID types (`"b998"`, `"8a37"`, string ids vs numeric `propertyId`), missing timestamps, plaintext HOM users                                                                                                                                                                                     | master spec, confirmed 01 | 06, 10                         |
+| BUG-14 | Token expiry never enforced; login writes both storages; logout incomplete; 401 redirect for public calls                                                                                                                                                                                            | master spec, confirmed 01 | 11, 12                         |
+| BUG-15 | Careers résumé upload dead; no spam protection; newsletter no dedupe and a false reCAPTCHA notice                                                                                                                                                                                                    | master spec, confirmed 01 | 09, 28, 31                     |
+| BUG-16 | Dead code: `adminService`, `visitService`, `PropertyDetail.js`, `AnimatedSection.jsx`, unreachable enquiry modal, duplicated filter logic (the unused **variables** are cleared in 01)                                                                                                               | master spec, confirmed 01 | 03, 11, 26                     |
+| BUG-17 | "Sign In" in public nav; no favicon/manifest; README/.env describe HOM + Cloudways                                                                                                                                                                                                                   | master spec, confirmed 01 | 02, 03                         |
+| BUG-18 | `getFeatured` tag hack; ad-hoc trending/related; FAQ page/section fetch-all-and-filter                                                                                                                                                                                                               | master spec, confirmed 01 | 08, 09, 27, 34                 |
+| BUG-19 | Listing paginates client-side after fetching everything                                                                                                                                                                                                                                              | master spec, confirmed 01 | 26                             |
+| BUG-20 | Header/MobileHeader/BottomNav/Footer navigation hardcoded and inconsistent                                                                                                                                                                                                                           | master spec, confirmed 01 | 04, 27, 43                     |
+| BUG-21 | Additional defects recorded here by the audit prompt                                                                                                                                                                                                                                                 | 01                        | 01 → all                       |
+
+### Additional defects of `00_MASTER_CONTEXT.md` §11
+
+| Id     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Found by                  | Owner prompt                                    |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ----------------------------------------------- |
+| ADD-01 | `.env` committed with the Cloudways URL; no `.env.example`; README links a non-existent `API_DOCUMENTATION.md`; README says Node 16+                                                                                                                                                                                                                                                                                                                                 | master spec, confirmed 01 | 02                                              |
+| ADD-02 | `dev` script equals `start` (no json-server anywhere); `devDependencies` empty; no ESLint/Prettier config beyond CRA                                                                                                                                                                                                                                                                                                                                                 | master spec               | 01 (tooling half **closed**), 06 (`dev`/`mock`) |
+| ADD-03 | `public/index.html` references a non-existent `favicon.ico`; `robots.txt` allows everything with no sitemap; no `manifest.json`                                                                                                                                                                                                                                                                                                                                      | master spec, confirmed 01 | 02                                              |
+| ADD-04 | `@mui/icons-material` and `web-vitals` are unused dependencies (0 imports each)                                                                                                                                                                                                                                                                                                                                                                                      | master spec, confirmed 01 | 03, 41                                          |
+| ADD-05 | Breakpoint fragmentation — **no header renders between 900 px and 960 px** (MainLayout switches at MUI `md` 900, `Header.module.css` hides at 960); BottomNav/PropertyCard/PropertyFilters use 960/961, AdminLayout 899, others 600/768/1024                                                                                                                                                                                                                         | master spec, confirmed 01 | 04                                              |
+| ADD-06 | Three scroll-hide implementations + a fourth in `useThrottledScroll`; nav data duplicated byte-for-byte; 13 local `Section` components; `formatPrice` ×5, `formatDate` ×3, `GooglePreview` ×2, `getTitleLenColor` ×2, `leadStatusConfig` duplicated in Dashboard; `tagColors` contradicts `TAG_OPTIONS`                                                                                                                                                              | master spec, confirmed 01 | 04, 11, 27                                      |
+| ADD-07 | Three toast systems (`ToastProvider`, AdminLayout Snackbar, UserManagement Snackbar); two 30-second pollers on `GET /admin/leads`                                                                                                                                                                                                                                                                                                                                    | master spec, confirmed 01 | 12, 29                                          |
+| ADD-08 | Two `GET /settings` calls per public page (Footer + NewsletterSection); Articles fires `/articles/trending` twice                                                                                                                                                                                                                                                                                                                                                    | master spec, confirmed 01 | 11, 27, 34                                      |
+| ADD-09 | `LeadForm` ignores `required:false`, has no `<label>`s, no `onSuccess`, posts unsanitised values; `NewsletterSection` validation is `includes('@')`, fails silently, shows a false reCAPTCHA notice                                                                                                                                                                                                                                                                  | master spec, confirmed 01 | 28                                              |
+| ADD-10 | `PropertyCard`: price unit printed twice, `liked` not persisted, `imageLoaded` never reset, timer leak, imports `TAG_OPTIONS` from `pages/admin`, autoplaying videos in grids                                                                                                                                                                                                                                                                                        | master spec, confirmed 01 | 26                                              |
+| ADD-11 | `PropertyFilters`: `clearFilters` wipes every query param, `50000000-Infinity` in URLs, the 4th location silently ignored, only apartment/villa types, desktop applies live but mobile needs Apply                                                                                                                                                                                                                                                                   | master spec, confirmed 01 | 26                                              |
+| ADD-12 | `PropertyDetails`: 30 `useState`s (spec said 24), four copy-pasted modal state machines, `handleOpenLeadForm` dead → **the enquiry modal is unreachable**, `EnquiryForm` mounted three times, `dimensionRange` chip always renders, modals without `role="dialog"`/focus trap, `og:site_name "HOM Advisory"`                                                                                                                                                         | master spec, confirmed 01 | 23–25, 28                                       |
+| ADD-13 | `FinanceGuide` (1 808 lines): typo "Home Finance Clearity", hardcoded "8.35 % / 48 Hrs / Up to 90 % / 0.5 % + GST", six real bank brands, score ignores 6 collected fields, success shown even when the POST fails, `document.body.style.overflow` mutation                                                                                                                                                                                                          | master spec, confirmed 01 | 25                                              |
+| ADD-14 | `ConstructionStatus` progress → `Infinity%`/`NaN%` with one milestone; `BuilderOverview` self-nullifies for description-only developers; `PropertySpecs` legacy-object branch unreachable and `specificationsArray` prop dead                                                                                                                                                                                                                                        | master spec, confirmed 01 | 24                                              |
+| ADD-15 | `HeroSection`: `role="combobox"` without `aria-controls` (**closed in 01**), "View all results" shown with zero suggestions, video/input refs unused; `QuickActions` links `type=lease`                                                                                                                                                                                                                                                                              | master spec, confirmed 01 | 27                                              |
+| ADD-16 | `ArticleDetail` Markdown renderer: duplicate tables on every `\|` line, ordered lists rendered as `<ul>`, only `**bold**` inline, breadcrumb "Insights" and "Articles" to the same URL; `Articles` state not URL-synced                                                                                                                                                                                                                                              | master spec, confirmed 01 | 32, 34                                          |
+| ADD-17 | `Contact`: five `#` social links opening new tabs, generic Brigade Road map with a fabricated `!4v1700000000000`, US-format phone in FAQs `(555) 123-4567`                                                                                                                                                                                                                                                                                                           | master spec, confirmed 01 | 30, 31                                          |
+| ADD-18 | `Careers`: résumé file input has no `name`/`onChange`, form never reset, modal without dialog semantics; `InteriorDesigning` room cards and "Get Started" buttons do nothing; `LegalAssistance`/`RealEstateAwareness` encode conflicting Karnataka stamp-duty figures                                                                                                                                                                                                | master spec, confirmed 01 | 30, 31                                          |
+| ADD-19 | `AdminLogin`: "Remember me" is a no-op, seed passwords in a commented block; `AdminSettings`: `PUT` drops `footerLinks`, tab panels out of order, "Footer Tagline" edits the General `tagline`, hardcoded `role === 'admin'`; `UserManagement`: last-admin guard hole, plaintext passwords echoed, own `ROLES` list                                                                                                                                                  | master spec, confirmed 01 | 12, 40                                          |
+| ADD-20 | `AdminSeo`: `homadvisory.com` in previews, "Auto-Generate" writes HOM titles/canonicals/schema, `stats.missing` dead, saving wipes empty fields, no confirmation before bulk overwrite; `ArticleForm`: author `'H.O.M Advisory Team'`, `readTime` not editable, `isTrending/trendingOrder` dropped on PUT, `setTimeout(navigate)` not cleared                                                                                                                        | master spec, confirmed 01 | 33, 36, 37                                      |
+| ADD-21 | `AdminProperties` fetches the public `/properties`, toggle omits the `is_active` fallback, `Promise.all` bulk aborts on first failure, per-page select-all; `AdminLeads`/`Dashboard` `p.id === propertyId` string-vs-number → Property column always empty; `Dashboard` "Leads by source" from 10 leads; `FaqManager` reorder wrong under a category filter with two sequential PUTs per swap; `LeadDetail` simulated timeline, `isMobile` unused (**closed in 01**) | master spec, confirmed 01 | 17, 22, 29                                      |
+| ADD-22 | Property tabs: `DetailsTab` drag issues N state updates per drag-over; `SectionVisibilityTab` toggle asymmetric for `undefined`; `GalleryTab` seeds `placehold.co/goldenrod` covers; `NearbyPlacesTab` default type `school` unknown to the public map; index keys everywhere; `SeoTagsTab` `homadvisory.com` placeholder                                                                                                                                            | master spec, confirmed 01 | 18–21                                           |
+| ADD-23 | `IconPicker`: 17 invalid MDI ids (all verified present), tiles not keyboard-operable, search ignores the category                                                                                                                                                                                                                                                                                                                                                    | master spec, confirmed 01 | 13                                              |
+| ADD-24 | `SkeletonLoaders.PropertyCardSkeleton` shows two buttons the card doesn't have (CLS); no `aria-busy`; `PageLoader` prints "H.O.M Advisory" in Playfair                                                                                                                                                                                                                                                                                                               | master spec, confirmed 01 | 03, 04                                          |
+| ADD-25 | `ScrollToTop` `document.querySelector(hash)` throws on non-selector hashes; `behavior:'instant'`                                                                                                                                                                                                                                                                                                                                                                     | master spec, confirmed 01 | 04                                              |
+| ADD-26 | `db.json`: mixed `leads[].propertyId`, `.mp4` in a property gallery, hardcoded `neighborhoods.propertyCount`, `(555) 123-4567`, off-scope Mumbai article, lorem-ipsum "Test Article" and Guwahati "Test Property", `faqs[6]` double `??`                                                                                                                                                                                                                             | master spec, confirmed 01 | 10                                              |
+| ADD-27 | `seoScoring.js`/`seoGenerator.js`: HOM site name/URL constants, generic CTA-word scoring, schema string stored in the record                                                                                                                                                                                                                                                                                                                                         | master spec, confirmed 01 | 36                                              |
+| ADD-28 | `AdminLayout`: active parent group cannot collapse, mobile drawer renders the brand twice, toast `onClick` navigates even when closing, `pageTitles` lacks `/admin/partners`, `.notificationDot` dead CSS                                                                                                                                                                                                                                                            | master spec, confirmed 01 | 12                                              |
+
+### New defects found by this audit
+
+| Id     | Description                                                                                                                                                                 | Found by | Owner prompt               |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------- |
+| NEW-01 | `config/rbac.js` has no `/admin/settings/users` entry and no per-area permission matrix; `AdminSettings` uses `role === 'admin'` and `UserManagement` its own `ROLES` array | 01       | 12                         |
+| NEW-02 | `routes/index.js` limits `/admin/seo` and `/admin/settings` to `admin` only; §7 of the master context gives both to `admin` **and** `manager`                               | 01       | 12                         |
+| NEW-03 | Navigation/role data lives in three places: `rbac.NAV_ITEMS`, `AdminLayout.pageTitles` and the `<Route>` declarations                                                       | 01       | 12                         |
+| NEW-04 | `slick-carousel` is a dependency but its CSS is never imported, so the `SimilarProperties` slider renders unstyled                                                          | 01       | 03, 25                     |
+| NEW-05 | `?area=` is a hidden client-side substring filter: no chip, no way to remove it in the UI, wiped by "Clear filters"                                                         | 01       | 26                         |
+| NEW-06 | `PropertyFilters.clearFilters()` replaces the query string with an empty one, dropping `q`, `sort` and `page` too                                                           | 01       | 26                         |
+| NEW-07 | `Articles.js` fires `GET /articles/trending` twice (its effect depends on `articles`)                                                                                       | 01       | 34                         |
+| NEW-08 | `GalleryTab` carried the repository's only `eslint-disable` comment                                                                                                         | 01       | **closed in 01**           |
+| NEW-09 | `SectionVisibilityTab` reads `!== false` but writes `!value`, so the first toggle of an `undefined` key is a no-op on screen                                                | 01       | 21                         |
+| NEW-10 | `AdminSettings` renders `TabPanel index={4}` after `index={5}`, so the JSX order no longer matches the `<Tab>` order                                                        | 01       | 40                         |
+| NEW-11 | `AdminSettings.mergeWithDefaults` omits `footerLinks`, so every save drops that `db.json` key                                                                               | 01       | 40                         |
+| NEW-12 | `AdminAuthContext` restores a session without checking `tokenExpiry`, and `logout()` clears `user` before awaiting `authService.logout()`                                   | 01       | 12                         |
+| NEW-13 | The 401 handler does a full `window.location.href` reload from any page, including public ones                                                                              | 01       | 11                         |
+| NEW-14 | `authService.login` invents a 24-hour `tokenExpiry` client-side when the API omits one                                                                                      | 01       | 11, 12                     |
+| NEW-15 | `useThrottledScroll` has a single consumer (`BackToTop`); Header, MobileHeader, BottomNav and StickyNav each re-implement scroll handling                                   | 01       | 04                         |
+| NEW-16 | `PropertyCard` imports `TAG_OPTIONS` from `pages/admin/property-tabs/constants`, so the public bundle depends on admin code                                                 | 01       | 04, 26                     |
+| NEW-17 | `global.css` loads Google Fonts through a render-blocking CSS `@import` instead of a `<link>` in `index.html`                                                               | 01       | 02, 04                     |
+| NEW-18 | `public/robots.txt` is the CRA default with no `Sitemap:`; `index.html` has no manifest, no OG tags, `theme-color #1B2A4A`                                                  | 01       | 02                         |
+| NEW-19 | `db.json` `partners` and property `developer` values are real company names and URLs (Prestige, Brigade, Sobha, Godrej, Puravankara, Mahindra)                              | 01       | 10                         |
+| NEW-20 | No test file exists anywhere (119 files checked, 0 matches), so `test:ci` needs `--passWithNoTests` until the first tests land                                              | 01       | partially closed in 01; 35 |
+| NEW-21 | `src/assets/images/logo.png` is the only brand asset; there is no favicon, PWA icon or OG image in `public/`                                                                | 01       | 02                         |
+| NEW-22 | `AdminLeads` CSV export is built in the browser: no UTF-8 BOM, the Property column uses the broken id lookup, newlines inside `message` break rows                          | 01       | 29                         |
+| NEW-23 | `FaqManager` reorder writes two sequential `PUT`s and computes `swapIndex` against the filtered array                                                                       | 01       | 17                         |
+| NEW-24 | `Dashboard` falls back to fetching the entire `properties`, `leads` and `articles` collections and recomputing every KPI in the browser                                     | 01       | 29                         |
+
+## Known issues (closed)
+
+| Id               | Description                                                           | Closed by                                                                            |
+| ---------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| NEW-08           | `eslint-disable-line react-hooks/exhaustive-deps` in `GalleryTab.jsx` | 01 — effect restructured with a loop-safe equality guard                             |
+| ADD-15 (partial) | `role="combobox"` without `aria-controls` in `HeroSection`            | 01 — `aria-controls="hero-search-suggestions"` added                                 |
+| ADD-21 (partial) | `LeadDetail` computed `isMobile` and never used it                    | 01 — removed with its `useTheme`/`useMediaQuery` imports                             |
+| ADD-02 (partial) | No ESLint/Prettier config beyond CRA, empty `devDependencies`         | 01 — Prettier + `eslint-config-prettier` + project rule set + cross-platform scripts |
+
+## Prompt reports
+
+### Prompt 01 — Repository audit, tooling baseline and project state files (2026-09-15)
+
+**Files added**
+
+- `docs/PROJECT_STATE.md`, `docs/DECISIONS.md`, `docs/CODEBASE_INVENTORY.md`
+- `.editorconfig`, `.nvmrc` (`20`), `.prettierrc`, `.prettierignore`
+- `scripts/check-traces.js` (+ `--report` mode)
+
+**Files changed**
+
+- `package.json` — `engines`, `devDependencies`, the 9 new scripts, the project `eslintConfig`, the `jest.transformIgnorePatterns` key; script order regrouped (name unchanged — prompt 02 renames it)
+- `package-lock.json` — the four dev dependencies
+- `.gitattributes` — `* text=auto eol=lf` + `*.png|*.jpg|*.ico|*.woff2 binary`
+- `.gitignore` — `/mock-server/.runtime/`, `/backend_developer_guidelines/.tmp/`, `.env`, `.env.production`, `/e2e/test-results/`, `/playwright-report/`, `*.log`
+- 22 files under `src/` — behaviour-preserving lint fixes only (44 insertions, 97 deletions):
+  `AnimatedSection.jsx` (unused `as: Tag`), `ToastProvider.jsx` (unused map `index`),
+  `HeroSection.jsx` (`aria-controls` + listbox `id`), `EnquiryForm.jsx` (unused import),
+  `FinanceGuide.jsx` (`resultRef` + `useRef` import), `StickyNav.jsx` (`navItems` dependency),
+  `AdminLeads.js`, `AdminProperties.js`, `LeadDetail.js`, `PropertyForm.jsx`,
+  `ArticleDetail.js`, `Articles.js`, `FAQs.js`, `PropertyListing.jsx` (16 unused catch
+  bindings → `catch {`), `Dashboard.js` (`console.error` → comment),
+  `PropertyForm.jsx` (7 `console.log`), `BasicInfoTab.jsx` (unused prop),
+  `SeoTagsTab.jsx` (unused import), `GalleryTab.jsx` (effect restructure, no `eslint-disable`),
+  `PropertyDetails.jsx` (dead `handleOpenLeadForm`), `api.js` (dead `extractPaginationMeta`),
+  `seoGenerator.js` (dead `capitalize`, unused destructured `specifications`/`state`),
+  `validators.js` (two unnecessary regex escapes)
+
+**Files removed** — none.
+
+**Endpoints added / changed** — none.
+
+**Env vars** — none. **npm scripts** — see the cumulative table above.
+
+**Acceptance checklist**
+
+- [x] `npm run lint` → 0 errors, 0 warnings across `src/**` and `scripts/**`
+- [x] `npm run build:ci` succeeds (`Compiled successfully.`, no warnings)
+- [x] `npm run test:ci` passes (no tests yet; `--passWithNoTests` added per §7 edge case 5)
+- [x] `npm run check:traces:report` prints totals (2 212 in the product tree, plus 113 in the three new `docs/` files that quote them as evidence); `npm run check:traces` exits 1 — expected until prompt 03
+- [x] `.editorconfig`, `.nvmrc` (`20`), `.prettierrc`, `.prettierignore`, `.gitattributes` (`* text=auto eol=lf`) exist; `package.json` has `engines`, the task-8 scripts, the task-7 `eslintConfig` and the `jest` key
+- [x] `docs/CODEBASE_INVENTORY.md` covers every route, page, component, section, service function, util, constant, hook and `db.json` collection — including `FinanceGuide.jsx` (1 808 lines), `PropertyDetails.jsx` (30 `useState`, spec said 24), `PropertyDetail.js` (dead stub), `adminService` (dead duplicate), the `?search=`/`?q=` mismatch and the 900–960 px header gap
+- [x] `docs/PROJECT_STATE.md` and `docs/DECISIONS.md` exist in the prescribed format; "Known issues (open)" holds BUG-01…BUG-21, ADD-01…ADD-28 and NEW-01…NEW-24 with owner prompts
+- [x] App behaviour unchanged — the fixes only delete unreachable bindings, add one ARIA attribute and correct two hook dependency lists
+- [x] One commit; `git status` clean afterwards
+
+**Verification output**
+
+```
+npm run lint          → exit 0, no findings
+npm run test:ci       → "No tests found, exiting with code 0"
+npm run build:ci      → "Compiled successfully."
+npm run check:traces  → exit 1 (2 212 product-tree findings — expected until prompt 03)
+npm run check:traces:report → exit 0, totals printed
+```
+
+**Manual QA (Chromium, dev server on `http://localhost:3000`)**
+
+| Check                               | Result                                                                                                                                                                                                                                                     |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/` at 1280 px                      | Renders; `h1` = "Find Your Dream Home"; header present; no horizontal scroll                                                                                                                                                                               |
+| `/` at 390 px                       | Renders; same `h1`; mobile header present; no horizontal scroll                                                                                                                                                                                            |
+| `/admin/login` at 1280 px           | Renders the login card (3 inputs, 2 buttons, "Remember me", "Sign In")                                                                                                                                                                                     |
+| `/properties` at 1280 px and 390 px | Renders its `h1` "Property Listings" and the empty/error state without crashing                                                                                                                                                                            |
+| Console                             | Only the pre-existing failures against the unreachable boilerplate API (`ERR_CERT_AUTHORITY_INVALID` on the Cloudways host + the axios interceptor's own `Network error:`). No React, MUI, key or `act()` warnings; no error introduced by the lint fixes. |
+| 930 px viewport                     | Confirms ADD-05 live: the `<header>` element is in the DOM but `display: none`, so no navigation renders between 900 px and 960 px.                                                                                                                        |
+
+**Issues left → moved to "Known issues"** — every defect of `00_MASTER_CONTEXT.md` §11 that
+this audit could confirm, plus NEW-01…NEW-24. Four items are closed above.
+
+**Next prompt: 02 — Rebrand identity and environment.**

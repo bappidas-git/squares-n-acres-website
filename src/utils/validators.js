@@ -23,7 +23,7 @@ export const getNameErrorMessage = (name) => {
   const sanitized = sanitizeInput(name);
   if (!sanitized) return 'Full Name is required';
   if (sanitized.length < 2) return 'Name must be at least 2 characters';
-  if (!/^[a-zA-Z\s.'\-]+$/.test(sanitized))
+  if (!/^[a-zA-Z\s.'-]+$/.test(sanitized))
     return 'Name can only contain letters, spaces, hyphens, and dots';
   return '';
 };
@@ -56,7 +56,7 @@ export const getMobileErrorMessage = (phone) => {
   if (digitsOnly.length < 10) return 'Phone number must be at least 10 digits';
   if (digitsOnly.length > 15) return 'Phone number is too long';
   // Accept: optional +, then digits/spaces/hyphens/parens
-  const phoneRegex = /^[+]?[\d\s()\-]{10,15}$/;
+  const phoneRegex = /^[+]?[\d\s()-]{10,15}$/;
   if (!phoneRegex.test(sanitized)) return 'Enter a valid phone number';
   return '';
 };

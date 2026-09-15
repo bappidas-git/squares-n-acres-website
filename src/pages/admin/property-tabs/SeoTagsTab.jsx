@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Box, Typography, TextField, Chip, InputAdornment, Paper, LinearProgress } from '@mui/material';
+import { Box, Typography, TextField, Chip, InputAdornment, Paper } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { TAG_OPTIONS } from './constants';
 import ImageUrlHelperText from '../../../components/admin/ImageUrlHelperText';

@@ -17,7 +17,7 @@ import {
 import { Icon } from '@iconify/react';
 import { TAG_OPTIONS, CATEGORY_OPTIONS } from './constants';
 
-const BasicInfoTab = ({ formData, updateField, errors, slugManuallyEdited, setSlugManuallyEdited }) => {
+const BasicInfoTab = ({ formData, updateField, errors, setSlugManuallyEdited }) => {
   const categoryOptions = CATEGORY_OPTIONS[formData.type] || CATEGORY_OPTIONS.sale;
 
   const handleTypeChange = (newType) => {

@@ -71,20 +71,6 @@ const normalizeListResponse = (data) => {
   return [];
 };
 
-// Helper: extract pagination meta from Laravel paginated response
-const extractPaginationMeta = (data) => {
-  if (!data || Array.isArray(data)) return null;
-  // Laravel wraps pagination meta at top level or inside meta key
-  const meta = data.meta || {
-    current_page: data.current_page,
-    per_page: data.per_page,
-    total: data.total,
-    last_page: data.last_page,
-  };
-  if (meta && meta.current_page !== undefined) return meta;
-  return null;
-};
-
 // === Property Payload Transformation ===
 // Converts frontend camelCase/nested format to backend snake_case/flat format
 const transformPropertyPayload = (data) => {

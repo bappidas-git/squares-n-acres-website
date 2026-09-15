@@ -15,8 +15,6 @@ import {
   Alert,
   Snackbar,
   Divider,
-  useMediaQuery,
-  useTheme,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { leadService, propertyService } from '../../services/api';
@@ -37,8 +35,6 @@ const formatDate = (dateStr, options = { day: 'numeric', month: 'short', year: '
 const LeadDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const [lead, setLead] = useState(null);
   const [property, setProperty] = useState(null);
@@ -121,7 +117,7 @@ const LeadDetail = () => {
         }
       }
       setError(null);
-    } catch (err) {
+    } catch {
       setError('Failed to load lead details. Please try again.');
     } finally {
       setLoading(false);
@@ -146,7 +142,7 @@ const LeadDetail = () => {
         message: `Status updated to ${statusConfig[newStatus].label}`,
         severity: 'success',
       });
-    } catch (err) {
+    } catch {
       setSnackbar({ open: true, message: 'Failed to update status', severity: 'error' });
     } finally {
       setUpdatingStatus(false);
@@ -175,7 +171,7 @@ const LeadDetail = () => {
       } catch {
         // Keep optimistic update if background refetch fails
       }
-    } catch (err) {
+    } catch {
       setSnackbar({ open: true, message: 'Failed to add note', severity: 'error' });
     } finally {
       setAddingNote(false);
