@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'hom_lead_data';
+const STORAGE_KEY = 'sna_lead';
 
 export const leadStorage = {
   save(userDetails, propertyId, source) {

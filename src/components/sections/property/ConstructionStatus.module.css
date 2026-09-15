@@ -24,13 +24,13 @@
   align-items: center;
   gap: var(--spacing-sm);
   padding: 8px 16px;
-  background: color-mix(in srgb, var(--status-color, #6B7280) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--status-color, #6B7280) 25%, transparent);
+  background: color-mix(in srgb, var(--status-color, #6b7280) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--status-color, #6b7280) 25%, transparent);
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--status-color, #6B7280);
+  color: var(--status-color, #6b7280);
 }
 
 .statusIcon {

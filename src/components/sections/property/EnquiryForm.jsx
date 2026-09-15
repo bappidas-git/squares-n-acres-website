@@ -85,11 +85,7 @@ const EnquiryForm = ({ property, isMobile = false, savedUserDetails, onLeadCaptu
       <p className={styles.successText}>
         Our team will contact you shortly about {property?.title || 'this property'}.
       </p>
-      <button
-        className={styles.sendAnotherBtn}
-        onClick={handleSendAnother}
-        type="button"
-      >
+      <button className={styles.sendAnotherBtn} onClick={handleSendAnother} type="button">
         <Icon icon="mdi:message-plus-outline" />
         Send Another Message
       </button>
@@ -161,10 +157,7 @@ const EnquiryForm = ({ property, isMobile = false, savedUserDetails, onLeadCaptu
   if (isMobile) {
     return (
       <>
-        <button
-          className={styles.mobileFixedBtn}
-          onClick={() => setMobileOpen(true)}
-        >
+        <button className={styles.mobileFixedBtn} onClick={() => setMobileOpen(true)}>
           <Icon icon="mdi:message-text" />
           Enquire Now
         </button>
@@ -204,11 +197,7 @@ const EnquiryForm = ({ property, isMobile = false, savedUserDetails, onLeadCaptu
   }
 
   // Desktop: Sticky sidebar
-  return (
-    <div className={styles.sidebar}>
-      {formContent}
-    </div>
-  );
+  return <div className={styles.sidebar}>{formContent}</div>;
 };
 
 export default EnquiryForm;

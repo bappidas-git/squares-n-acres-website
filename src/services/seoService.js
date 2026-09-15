@@ -46,7 +46,10 @@ const mapBackendToFrontend = (item) => {
   const seoKeywords = (() => {
     if (Array.isArray(rawKeywords)) return rawKeywords;
     if (typeof rawKeywords === 'string' && rawKeywords.trim()) {
-      return rawKeywords.split(',').map((k) => k.trim()).filter(Boolean);
+      return rawKeywords
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean);
     }
     return [];
   })();
@@ -117,9 +120,8 @@ const seoService = {
     const response = await apiClient.get(`/seo/property/${id}`);
     const data = response.data;
     // Handle both wrapped { data: {...} } and direct object responses
-    const seoData = data?.data && typeof data.data === 'object' && !Array.isArray(data.data)
-      ? data.data
-      : data;
+    const seoData =
+      data?.data && typeof data.data === 'object' && !Array.isArray(data.data) ? data.data : data;
     return mapBackendToFrontend(seoData);
   },
 
@@ -131,9 +133,8 @@ const seoService = {
     const payload = mapFrontendToBackend(seoData);
     const response = await apiClient.put(`/seo/property/${id}`, payload);
     const data = response.data;
-    const result = data?.data && typeof data.data === 'object' && !Array.isArray(data.data)
-      ? data.data
-      : data;
+    const result =
+      data?.data && typeof data.data === 'object' && !Array.isArray(data.data) ? data.data : data;
     return mapBackendToFrontend(result);
   },
 
@@ -146,9 +147,8 @@ const seoService = {
       property_id: propertyId,
     });
     const data = response.data;
-    const result = data?.data && typeof data.data === 'object' && !Array.isArray(data.data)
-      ? data.data
-      : data;
+    const result =
+      data?.data && typeof data.data === 'object' && !Array.isArray(data.data) ? data.data : data;
     return mapBackendToFrontend(result);
   },
 

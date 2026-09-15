@@ -52,8 +52,8 @@ const Forbidden = () => {
           Access Denied
         </Typography>
         <Typography variant="body2" sx={{ color: '#6B7280', mb: 3 }}>
-          You don't have permission to access this page. Please contact your administrator
-          if you believe this is an error.
+          You don't have permission to access this page. Please contact your administrator if you
+          believe this is an error.
         </Typography>
         <Button
           variant="contained"

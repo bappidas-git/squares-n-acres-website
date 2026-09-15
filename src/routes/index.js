@@ -51,9 +51,7 @@ const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
 const ALL_ROLES = [ROLES.ADMIN, ROLES.MANAGER, ROLES.SALES];
 
 // Public layout wrapper
-const PublicRoute = ({ children }) => (
-  <MainLayout>{children}</MainLayout>
-);
+const PublicRoute = ({ children }) => <MainLayout>{children}</MainLayout>;
 
 /**
  * Role-protected wrapper for individual admin child routes.
@@ -68,38 +66,192 @@ const AppRoutes = () => {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* === Public Routes (wrapped in MainLayout) === */}
-        <Route path="/" element={<PublicRoute><Home /></PublicRoute>} />
-        <Route path="/properties" element={<PublicRoute><PropertyListing /></PublicRoute>} />
-        <Route path="/properties/:slug" element={<PublicRoute><PropertyDetail /></PublicRoute>} />
+        <Route
+          path="/"
+          element={
+            <PublicRoute>
+              <Home />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/properties"
+          element={
+            <PublicRoute>
+              <PropertyListing />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/properties/:slug"
+          element={
+            <PublicRoute>
+              <PropertyDetail />
+            </PublicRoute>
+          }
+        />
 
         {/* Buy sub-routes */}
-        <Route path="/buy/pre-launch" element={<PublicRoute><PreLaunch /></PublicRoute>} />
-        <Route path="/buy/under-construction" element={<PublicRoute><UnderConstruction /></PublicRoute>} />
-        <Route path="/buy/ready-to-move" element={<PublicRoute><ReadyToMove /></PublicRoute>} />
+        <Route
+          path="/buy/pre-launch"
+          element={
+            <PublicRoute>
+              <PreLaunch />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/buy/under-construction"
+          element={
+            <PublicRoute>
+              <UnderConstruction />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/buy/ready-to-move"
+          element={
+            <PublicRoute>
+              <ReadyToMove />
+            </PublicRoute>
+          }
+        />
 
         {/* Rent sub-routes */}
-        <Route path="/rent/apartments" element={<PublicRoute><RentApartments /></PublicRoute>} />
-        <Route path="/rent/villas" element={<PublicRoute><RentVillas /></PublicRoute>} />
+        <Route
+          path="/rent/apartments"
+          element={
+            <PublicRoute>
+              <RentApartments />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/rent/villas"
+          element={
+            <PublicRoute>
+              <RentVillas />
+            </PublicRoute>
+          }
+        />
 
         {/* Buyer Assistance sub-routes */}
-        <Route path="/buyer-assistance/home-loan" element={<PublicRoute><HomeLoan /></PublicRoute>} />
-        <Route path="/buyer-assistance/legal-assistance" element={<PublicRoute><LegalAssistance /></PublicRoute>} />
-        <Route path="/buyer-assistance/interior-designing" element={<PublicRoute><InteriorDesigning /></PublicRoute>} />
+        <Route
+          path="/buyer-assistance/home-loan"
+          element={
+            <PublicRoute>
+              <HomeLoan />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/buyer-assistance/legal-assistance"
+          element={
+            <PublicRoute>
+              <LegalAssistance />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/buyer-assistance/interior-designing"
+          element={
+            <PublicRoute>
+              <InteriorDesigning />
+            </PublicRoute>
+          }
+        />
 
         {/* Insights sub-routes */}
-        <Route path="/insights/articles" element={<PublicRoute><Articles /></PublicRoute>} />
-        <Route path="/insights/articles/:slug" element={<PublicRoute><ArticleDetail /></PublicRoute>} />
-        <Route path="/insights/faqs" element={<PublicRoute><FAQs /></PublicRoute>} />
-        <Route path="/insights/real-estate-awareness" element={<PublicRoute><RealEstateAwareness /></PublicRoute>} />
+        <Route
+          path="/insights/articles"
+          element={
+            <PublicRoute>
+              <Articles />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/insights/articles/:slug"
+          element={
+            <PublicRoute>
+              <ArticleDetail />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/insights/faqs"
+          element={
+            <PublicRoute>
+              <FAQs />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/insights/real-estate-awareness"
+          element={
+            <PublicRoute>
+              <RealEstateAwareness />
+            </PublicRoute>
+          }
+        />
 
         {/* Other public pages */}
-        <Route path="/contact" element={<PublicRoute><Contact /></PublicRoute>} />
-        <Route path="/about" element={<PublicRoute><About /></PublicRoute>} />
-        <Route path="/sell-let" element={<PublicRoute><SellLet /></PublicRoute>} />
-        <Route path="/careers" element={<PublicRoute><Careers /></PublicRoute>} />
-        <Route path="/partnership" element={<PublicRoute><Partnership /></PublicRoute>} />
-        <Route path="/flexible-workspace" element={<PublicRoute><FlexibleWorkspace /></PublicRoute>} />
-        <Route path="/direct-lease-retails" element={<PublicRoute><DirectLeaseRetails /></PublicRoute>} />
+        <Route
+          path="/contact"
+          element={
+            <PublicRoute>
+              <Contact />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/about"
+          element={
+            <PublicRoute>
+              <About />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/sell-let"
+          element={
+            <PublicRoute>
+              <SellLet />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/careers"
+          element={
+            <PublicRoute>
+              <Careers />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/partnership"
+          element={
+            <PublicRoute>
+              <Partnership />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/flexible-workspace"
+          element={
+            <PublicRoute>
+              <FlexibleWorkspace />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/direct-lease-retails"
+          element={
+            <PublicRoute>
+              <DirectLeaseRetails />
+            </PublicRoute>
+          }
+        />
 
         {/* === Admin Routes === */}
         {/* Login — no layout, no auth required */}
@@ -118,40 +270,145 @@ const AppRoutes = () => {
           <Route index element={<Navigate to="dashboard" replace />} />
 
           {/* Dashboard — all roles */}
-          <Route path="dashboard" element={<RoleRoute allowedRoles={ALL_ROLES}><Dashboard /></RoleRoute>} />
+          <Route
+            path="dashboard"
+            element={
+              <RoleRoute allowedRoles={ALL_ROLES}>
+                <Dashboard />
+              </RoleRoute>
+            }
+          />
 
           {/* Properties — admin + manager */}
-          <Route path="properties" element={<RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}><AdminProperties /></RoleRoute>} />
-          <Route path="properties/add" element={<RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}><AddProperty /></RoleRoute>} />
-          <Route path="properties/edit/:id" element={<RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}><EditProperty /></RoleRoute>} />
+          <Route
+            path="properties"
+            element={
+              <RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}>
+                <AdminProperties />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="properties/add"
+            element={
+              <RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}>
+                <AddProperty />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="properties/edit/:id"
+            element={
+              <RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}>
+                <EditProperty />
+              </RoleRoute>
+            }
+          />
 
           {/* Leads — all roles */}
-          <Route path="leads" element={<RoleRoute allowedRoles={ALL_ROLES}><AdminLeads /></RoleRoute>} />
-          <Route path="leads/:id" element={<RoleRoute allowedRoles={ALL_ROLES}><LeadDetail /></RoleRoute>} />
+          <Route
+            path="leads"
+            element={
+              <RoleRoute allowedRoles={ALL_ROLES}>
+                <AdminLeads />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="leads/:id"
+            element={
+              <RoleRoute allowedRoles={ALL_ROLES}>
+                <LeadDetail />
+              </RoleRoute>
+            }
+          />
 
           {/* SEO — admin only */}
-          <Route path="seo" element={<RoleRoute allowedRoles={[ROLES.ADMIN]}><AdminSeo /></RoleRoute>} />
+          <Route
+            path="seo"
+            element={
+              <RoleRoute allowedRoles={[ROLES.ADMIN]}>
+                <AdminSeo />
+              </RoleRoute>
+            }
+          />
 
           {/* Articles — admin + manager */}
-          <Route path="articles" element={<RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}><AdminArticles /></RoleRoute>} />
-          <Route path="articles/add" element={<RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}><ArticleForm /></RoleRoute>} />
-          <Route path="articles/edit/:id" element={<RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}><ArticleForm /></RoleRoute>} />
+          <Route
+            path="articles"
+            element={
+              <RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}>
+                <AdminArticles />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="articles/add"
+            element={
+              <RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}>
+                <ArticleForm />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="articles/edit/:id"
+            element={
+              <RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}>
+                <ArticleForm />
+              </RoleRoute>
+            }
+          />
 
           {/* FAQs — admin + manager */}
-          <Route path="faqs" element={<RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}><FaqManager /></RoleRoute>} />
+          <Route
+            path="faqs"
+            element={
+              <RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}>
+                <FaqManager />
+              </RoleRoute>
+            }
+          />
 
           {/* Neighborhoods — admin + manager */}
-          <Route path="neighborhoods" element={<RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}><AdminNeighborhoods /></RoleRoute>} />
+          <Route
+            path="neighborhoods"
+            element={
+              <RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}>
+                <AdminNeighborhoods />
+              </RoleRoute>
+            }
+          />
 
           {/* Partners — admin + manager */}
-          <Route path="partners" element={<RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}><AdminPartners /></RoleRoute>} />
+          <Route
+            path="partners"
+            element={
+              <RoleRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}>
+                <AdminPartners />
+              </RoleRoute>
+            }
+          />
 
           {/* Site Settings — admin only */}
-          <Route path="settings" element={<RoleRoute allowedRoles={[ROLES.ADMIN]}><AdminSettings /></RoleRoute>} />
+          <Route
+            path="settings"
+            element={
+              <RoleRoute allowedRoles={[ROLES.ADMIN]}>
+                <AdminSettings />
+              </RoleRoute>
+            }
+          />
         </Route>
 
         {/* 404 Not Found */}
-        <Route path="*" element={<PublicRoute><NotFound /></PublicRoute>} />
+        <Route
+          path="*"
+          element={
+            <PublicRoute>
+              <NotFound />
+            </PublicRoute>
+          }
+        />
       </Routes>
     </Suspense>
   );

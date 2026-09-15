@@ -27,10 +27,7 @@ const MainLayout = ({ children }) => {
       <ScrollToTop />
 
       {/* Skip to main content — accessibility */}
-      <a
-        href="#main-content"
-        className="skip-to-main"
-      >
+      <a href="#main-content" className="skip-to-main">
         Skip to main content
       </a>
 

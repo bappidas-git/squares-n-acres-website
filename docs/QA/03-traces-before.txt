@@ -1,0 +1,873 @@
+
+--- check:traces summary ---
+files scanned:      187
+brand/legacy traces: 796
+hex colour literals: 1518
+total findings:      2314
+
+by pattern:
+   1518  hex-literal (hex colour literal)
+    227  palette-navy (HOM palette navy)
+     99  hom-dotted (H.O.M brand string)
+     93  placehold (placehold.co placeholder)
+     81  goldenrod (goldenrod placeholder colour)
+     65  palette-gold (HOM palette gold)
+     46  homadvisory (homadvisory domain/handle)
+     39  font-dm-sans (HOM font DM Sans)
+     27  palette-navy-light (HOM palette navy light)
+     20  hom-hyphen (hom- identifier)
+     15  font-playfair (HOM font Playfair Display)
+     14  palette-navy-alt (HOM palette navy (alt))
+     13  cloudinary-old (old Cloudinary cloud)
+     11  hom-class (.hom- CSS class)
+      9  hom-underscore (hom_ identifier/storage key)
+      6  palette-cream (HOM palette cream)
+      6  hom-advisory (HOM Advisory brand string)
+      5  font-outfit (HOM font Outfit)
+      5  palette-gold-dark (HOM palette gold dark)
+      4  gumlet (Gumlet video host)
+      4  home-office-market (HOM tagline)
+      3  palette-navy-dark (HOM palette navy dark)
+      3  palette-gold-light (HOM palette gold light)
+      1  cloudways (Cloudways API host)
+
+top files:
+    226  db.json
+    141  src/pages/admin/AdminSeo.js
+     94  src/pages/admin/AdminProperties.js
+     80  src/pages/admin/Dashboard.js
+     79  docs/CODEBASE_INVENTORY.md
+     76  src/pages/admin/LeadDetail.js
+     72  src/pages/admin/ArticleForm.jsx
+     67  src/components/layout/AdminLayout.module.css
+     65  src/pages/admin/AdminSettings.js
+     65  src/pages/admin/FaqManager.jsx
+     60  src/pages/public/PropertyDetails.jsx
+     57  src/pages/admin/AdminLeads.js
+     56  src/pages/admin/AdminArticles.js
+     54  src/components/admin/UserManagement.jsx
+     53  src/pages/admin/property-tabs/SeoTagsTab.jsx
+
+================================================================
+Appendix — every brand/legacy trace finding before prompt 03
+(the 1 497 generic hex-colour findings are omitted: they are the
+design-system prompt's scope, not this one's)
+================================================================
+
+  db.json:107: placehold.co  — placehold.co placeholder
+  db.json:107: goldenrod  — goldenrod placeholder colour
+  db.json:115: placehold.co  — placehold.co placeholder
+  db.json:115: goldenrod  — goldenrod placeholder colour
+  db.json:123: placehold.co  — placehold.co placeholder
+  db.json:123: goldenrod  — goldenrod placeholder colour
+  db.json:131: placehold.co  — placehold.co placeholder
+  db.json:131: goldenrod  — goldenrod placeholder colour
+  db.json:137: placehold.co  — placehold.co placeholder
+  db.json:137: goldenrod  — goldenrod placeholder colour
+  db.json:138: placehold.co  — placehold.co placeholder
+  db.json:138: goldenrod  — goldenrod placeholder colour
+  db.json:139: placehold.co  — placehold.co placeholder
+  db.json:139: goldenrod  — goldenrod placeholder colour
+  db.json:140: placehold.co  — placehold.co placeholder
+  db.json:140: goldenrod  — goldenrod placeholder colour
+  db.json:141: placehold.co  — placehold.co placeholder
+  db.json:141: goldenrod  — goldenrod placeholder colour
+  db.json:289: homadvisory  — homadvisory domain/handle
+  db.json:289: homadvisory  — homadvisory domain/handle
+  db.json:289: homadvisory  — homadvisory domain/handle
+  db.json:289: homadvisory  — homadvisory domain/handle
+  db.json:289: placehold.co  — placehold.co placeholder
+  db.json:289: placehold.co  — placehold.co placeholder
+  db.json:289: placehold.co  — placehold.co placeholder
+  db.json:289: placehold.co  — placehold.co placeholder
+  db.json:289: placehold.co  — placehold.co placeholder
+  db.json:289: goldenrod  — goldenrod placeholder colour
+  db.json:289: goldenrod  — goldenrod placeholder colour
+  db.json:289: goldenrod  — goldenrod placeholder colour
+  db.json:289: goldenrod  — goldenrod placeholder colour
+  db.json:289: goldenrod  — goldenrod placeholder colour
+  db.json:293: homadvisory  — homadvisory domain/handle
+  db.json:296: placehold.co  — placehold.co placeholder
+  db.json:296: goldenrod  — goldenrod placeholder colour
+  db.json:429: placehold.co  — placehold.co placeholder
+  db.json:429: goldenrod  — goldenrod placeholder colour
+  db.json:437: placehold.co  — placehold.co placeholder
+  db.json:437: goldenrod  — goldenrod placeholder colour
+  db.json:445: placehold.co  — placehold.co placeholder
+  db.json:445: goldenrod  — goldenrod placeholder colour
+  db.json:453: placehold.co  — placehold.co placeholder
+  db.json:453: goldenrod  — goldenrod placeholder colour
+  db.json:459: placehold.co  — placehold.co placeholder
+  db.json:459: goldenrod  — goldenrod placeholder colour
+  db.json:460: placehold.co  — placehold.co placeholder
+  db.json:460: goldenrod  — goldenrod placeholder colour
+  db.json:461: placehold.co  — placehold.co placeholder
+  db.json:461: goldenrod  — goldenrod placeholder colour
+  db.json:462: placehold.co  — placehold.co placeholder
+  db.json:462: goldenrod  — goldenrod placeholder colour
+  db.json:463: placehold.co  — placehold.co placeholder
+  db.json:463: goldenrod  — goldenrod placeholder colour
+  db.json:627: homadvisory  — homadvisory domain/handle
+  db.json:630: placehold.co  — placehold.co placeholder
+  db.json:630: goldenrod  — goldenrod placeholder colour
+  db.json:725: placehold.co  — placehold.co placeholder
+  db.json:725: goldenrod  — goldenrod placeholder colour
+  db.json:733: placehold.co  — placehold.co placeholder
+  db.json:733: goldenrod  — goldenrod placeholder colour
+  db.json:739: placehold.co  — placehold.co placeholder
+  db.json:739: goldenrod  — goldenrod placeholder colour
+  db.json:740: placehold.co  — placehold.co placeholder
+  db.json:740: goldenrod  — goldenrod placeholder colour
+  db.json:741: placehold.co  — placehold.co placeholder
+  db.json:741: goldenrod  — goldenrod placeholder colour
+  db.json:742: placehold.co  — placehold.co placeholder
+  db.json:742: goldenrod  — goldenrod placeholder colour
+  db.json:804: homadvisory  — homadvisory domain/handle
+  db.json:807: placehold.co  — placehold.co placeholder
+  db.json:807: goldenrod  — goldenrod placeholder colour
+  db.json:893: placehold.co  — placehold.co placeholder
+  db.json:893: goldenrod  — goldenrod placeholder colour
+  db.json:901: placehold.co  — placehold.co placeholder
+  db.json:901: goldenrod  — goldenrod placeholder colour
+  db.json:909: placehold.co  — placehold.co placeholder
+  db.json:909: goldenrod  — goldenrod placeholder colour
+  db.json:915: placehold.co  — placehold.co placeholder
+  db.json:915: goldenrod  — goldenrod placeholder colour
+  db.json:916: placehold.co  — placehold.co placeholder
+  db.json:916: goldenrod  — goldenrod placeholder colour
+  db.json:917: placehold.co  — placehold.co placeholder
+  db.json:917: goldenrod  — goldenrod placeholder colour
+  db.json:979: homadvisory  — homadvisory domain/handle
+  db.json:982: placehold.co  — placehold.co placeholder
+  db.json:982: goldenrod  — goldenrod placeholder colour
+  db.json:1077: placehold.co  — placehold.co placeholder
+  db.json:1077: goldenrod  — goldenrod placeholder colour
+  db.json:1085: placehold.co  — placehold.co placeholder
+  db.json:1085: goldenrod  — goldenrod placeholder colour
+  db.json:1091: placehold.co  — placehold.co placeholder
+  db.json:1091: goldenrod  — goldenrod placeholder colour
+  db.json:1092: placehold.co  — placehold.co placeholder
+  db.json:1092: goldenrod  — goldenrod placeholder colour
+  db.json:1093: placehold.co  — placehold.co placeholder
+  db.json:1093: goldenrod  — goldenrod placeholder colour
+  db.json:1094: placehold.co  — placehold.co placeholder
+  db.json:1094: goldenrod  — goldenrod placeholder colour
+  db.json:1156: homadvisory  — homadvisory domain/handle
+  db.json:1159: placehold.co  — placehold.co placeholder
+  db.json:1159: goldenrod  — goldenrod placeholder colour
+  db.json:1244: placehold.co  — placehold.co placeholder
+  db.json:1244: goldenrod  — goldenrod placeholder colour
+  db.json:1252: placehold.co  — placehold.co placeholder
+  db.json:1252: goldenrod  — goldenrod placeholder colour
+  db.json:1258: placehold.co  — placehold.co placeholder
+  db.json:1258: goldenrod  — goldenrod placeholder colour
+  db.json:1259: placehold.co  — placehold.co placeholder
+  db.json:1259: goldenrod  — goldenrod placeholder colour
+  db.json:1260: placehold.co  — placehold.co placeholder
+  db.json:1260: goldenrod  — goldenrod placeholder colour
+  db.json:1321: homadvisory  — homadvisory domain/handle
+  db.json:1324: placehold.co  — placehold.co placeholder
+  db.json:1324: goldenrod  — goldenrod placeholder colour
+  db.json:1420: placehold.co  — placehold.co placeholder
+  db.json:1420: goldenrod  — goldenrod placeholder colour
+  db.json:1428: placehold.co  — placehold.co placeholder
+  db.json:1428: goldenrod  — goldenrod placeholder colour
+  db.json:1436: placehold.co  — placehold.co placeholder
+  db.json:1436: goldenrod  — goldenrod placeholder colour
+  db.json:1442: placehold.co  — placehold.co placeholder
+  db.json:1442: goldenrod  — goldenrod placeholder colour
+  db.json:1443: placehold.co  — placehold.co placeholder
+  db.json:1443: goldenrod  — goldenrod placeholder colour
+  db.json:1444: placehold.co  — placehold.co placeholder
+  db.json:1444: goldenrod  — goldenrod placeholder colour
+  db.json:1506: homadvisory  — homadvisory domain/handle
+  db.json:1509: placehold.co  — placehold.co placeholder
+  db.json:1509: goldenrod  — goldenrod placeholder colour
+  db.json:1593: placehold.co  — placehold.co placeholder
+  db.json:1593: goldenrod  — goldenrod placeholder colour
+  db.json:1599: placehold.co  — placehold.co placeholder
+  db.json:1599: goldenrod  — goldenrod placeholder colour
+  db.json:1600: placehold.co  — placehold.co placeholder
+  db.json:1600: goldenrod  — goldenrod placeholder colour
+  db.json:1601: placehold.co  — placehold.co placeholder
+  db.json:1601: goldenrod  — goldenrod placeholder colour
+  db.json:1664: homadvisory  — homadvisory domain/handle
+  db.json:1667: placehold.co  — placehold.co placeholder
+  db.json:1667: goldenrod  — goldenrod placeholder colour
+  db.json:1879: dzbiw7t4i  — old Cloudinary cloud
+  db.json:1887: dzbiw7t4i  — old Cloudinary cloud
+  db.json:1893: dzbiw7t4i  — old Cloudinary cloud
+  db.json:1894: video.gumlet.io  — Gumlet video host
+  db.json:1895: dzbiw7t4i  — old Cloudinary cloud
+  db.json:1896: dzbiw7t4i  — old Cloudinary cloud
+  db.json:1920: dzbiw7t4i  — old Cloudinary cloud
+  db.json:1921: dzbiw7t4i  — old Cloudinary cloud
+  db.json:1953: dzbiw7t4i  — old Cloudinary cloud
+  db.json:2064: dzbiw7t4i  — old Cloudinary cloud
+  db.json:2066: homadvisory  — homadvisory domain/handle
+  db.json:2578: placehold.co  — placehold.co placeholder
+  db.json:2578: goldenrod  — goldenrod placeholder colour
+  db.json:2586: placehold.co  — placehold.co placeholder
+  db.json:2586: goldenrod  — goldenrod placeholder colour
+  db.json:2594: placehold.co  — placehold.co placeholder
+  db.json:2594: goldenrod  — goldenrod placeholder colour
+  db.json:2602: placehold.co  — placehold.co placeholder
+  db.json:2602: goldenrod  — goldenrod placeholder colour
+  db.json:2610: placehold.co  — placehold.co placeholder
+  db.json:2610: goldenrod  — goldenrod placeholder colour
+  db.json:2618: placehold.co  — placehold.co placeholder
+  db.json:2618: goldenrod  — goldenrod placeholder colour
+  db.json:2628: placehold.co  — placehold.co placeholder
+  db.json:2628: goldenrod  — goldenrod placeholder colour
+  db.json:2636: placehold.co  — placehold.co placeholder
+  db.json:2636: goldenrod  — goldenrod placeholder colour
+  db.json:2644: placehold.co  — placehold.co placeholder
+  db.json:2644: goldenrod  — goldenrod placeholder colour
+  db.json:2652: placehold.co  — placehold.co placeholder
+  db.json:2652: goldenrod  — goldenrod placeholder colour
+  db.json:2660: placehold.co  — placehold.co placeholder
+  db.json:2660: goldenrod  — goldenrod placeholder colour
+  db.json:2668: placehold.co  — placehold.co placeholder
+  db.json:2668: goldenrod  — goldenrod placeholder colour
+  db.json:2678: H.O.M  — H.O.M brand string
+  db.json:2686: homadvisory  — homadvisory domain/handle
+  db.json:2710: H.O.M  — H.O.M brand string
+  db.json:2717: H.O.M  — H.O.M brand string
+  db.json:2718: H.O.M  — H.O.M brand string
+  db.json:2725: H.O.M  — H.O.M brand string
+  db.json:2734: H.O.M  — H.O.M brand string
+  db.json:2789: H.O.M  — H.O.M brand string
+  db.json:2790: H.O.M  — H.O.M brand string
+  db.json:2797: H.O.M  — H.O.M brand string
+  db.json:2811: placehold.co  — placehold.co placeholder
+  db.json:2819: H.O.M  — H.O.M brand string
+  db.json:2823: H.O.M  — H.O.M brand string
+  db.json:2834: placehold.co  — placehold.co placeholder
+  db.json:2842: H.O.M  — H.O.M brand string
+  db.json:2846: H.O.M  — H.O.M brand string
+  db.json:2857: placehold.co  — placehold.co placeholder
+  db.json:2865: H.O.M  — H.O.M brand string
+  db.json:2869: H.O.M  — H.O.M brand string
+  db.json:2880: placehold.co  — placehold.co placeholder
+  db.json:2888: H.O.M  — H.O.M brand string
+  db.json:2892: H.O.M  — H.O.M brand string
+  db.json:2903: placehold.co  — placehold.co placeholder
+  db.json:2911: H.O.M  — H.O.M brand string
+  db.json:2915: H.O.M  — H.O.M brand string
+  db.json:2926: placehold.co  — placehold.co placeholder
+  db.json:2934: H.O.M  — H.O.M brand string
+  db.json:2938: H.O.M  — H.O.M brand string
+  db.json:2949: placehold.co  — placehold.co placeholder
+  db.json:2957: H.O.M  — H.O.M brand string
+  db.json:2961: H.O.M  — H.O.M brand string
+  db.json:2972: placehold.co  — placehold.co placeholder
+  db.json:2981: H.O.M  — H.O.M brand string
+  db.json:2985: H.O.M  — H.O.M brand string
+  db.json:2996: placehold.co  — placehold.co placeholder
+  db.json:3004: H.O.M  — H.O.M brand string
+  db.json:3008: H.O.M  — H.O.M brand string
+  db.json:3023: dzbiw7t4i  — old Cloudinary cloud
+  db.json:3026: H.O.M  — H.O.M brand string
+  db.json:3039: homadvisory  — homadvisory domain/handle
+  db.json:3043: homadvisory  — homadvisory domain/handle
+  db.json:3044: homadvisory  — homadvisory domain/handle
+  db.json:3045: homadvisory  — homadvisory domain/handle
+  db.json:3046: homadvisory  — homadvisory domain/handle
+  db.json:3052: video.gumlet.io  — Gumlet video host
+  db.json:3053: dzbiw7t4i  — old Cloudinary cloud
+  db.json:3056: H.O.M  — H.O.M brand string
+  db.json:3057: HOME OFFICE MARKET  — HOM tagline
+  db.json:3143: homadvisory  — homadvisory domain/handle
+  db.json:3154: homadvisory  — homadvisory domain/handle
+  db.json:3165: homadvisory  — homadvisory domain/handle
+  docs/CODEBASE_INVENTORY.md:3: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:99: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:100: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:101: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:101: HOME OFFICE MARKET  — HOM tagline
+  docs/CODEBASE_INVENTORY.md:103: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:103: homadvisory  — homadvisory domain/handle
+  docs/CODEBASE_INVENTORY.md:114: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:114: Playfair  — HOM font Playfair Display
+  docs/CODEBASE_INVENTORY.md:116: #1B2A4A  — HOM palette navy
+  docs/CODEBASE_INVENTORY.md:142: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:179: #1B2A4A  — HOM palette navy
+  docs/CODEBASE_INVENTORY.md:179: #C9A86C  — HOM palette gold
+  docs/CODEBASE_INVENTORY.md:179: #F8F6F3  — HOM palette cream
+  docs/CODEBASE_INVENTORY.md:180: Playfair  — HOM font Playfair Display
+  docs/CODEBASE_INVENTORY.md:180: DM Sans  — HOM font DM Sans
+  docs/CODEBASE_INVENTORY.md:180: Outfit  — HOM font Outfit
+  docs/CODEBASE_INVENTORY.md:181: Playfair  — HOM font Playfair Display
+  docs/CODEBASE_INVENTORY.md:182: hom-  — hom- identifier
+  docs/CODEBASE_INVENTORY.md:182: .hom-  — .hom- CSS class
+  docs/CODEBASE_INVENTORY.md:182: DM Sans  — HOM font DM Sans
+  docs/CODEBASE_INVENTORY.md:182: Outfit  — HOM font Outfit
+  docs/CODEBASE_INVENTORY.md:200: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:202: HOM Advisory  — HOM Advisory brand string
+  docs/CODEBASE_INVENTORY.md:202: hom-  — hom- identifier
+  docs/CODEBASE_INVENTORY.md:202: .hom-  — .hom- CSS class
+  docs/CODEBASE_INVENTORY.md:205: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:206: homadvisory  — homadvisory domain/handle
+  docs/CODEBASE_INVENTORY.md:211: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:216: homadvisory  — homadvisory domain/handle
+  docs/CODEBASE_INVENTORY.md:218: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:225: homadvisory  — homadvisory domain/handle
+  docs/CODEBASE_INVENTORY.md:228: hom_  — hom_ identifier/storage key
+  docs/CODEBASE_INVENTORY.md:229: hom_  — hom_ identifier/storage key
+  docs/CODEBASE_INVENTORY.md:233: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:233: homadvisory  — homadvisory domain/handle
+  docs/CODEBASE_INVENTORY.md:237: homadvisory  — homadvisory domain/handle
+  docs/CODEBASE_INVENTORY.md:254: placehold.co  — placehold.co placeholder
+  docs/CODEBASE_INVENTORY.md:254: goldenrod  — goldenrod placeholder colour
+  docs/CODEBASE_INVENTORY.md:263: homadvisory  — homadvisory domain/handle
+  docs/CODEBASE_INVENTORY.md:352: hom_  — hom_ identifier/storage key
+  docs/CODEBASE_INVENTORY.md:353: HOM Advisory  — HOM Advisory brand string
+  docs/CODEBASE_INVENTORY.md:353: homadvisory  — homadvisory domain/handle
+  docs/CODEBASE_INVENTORY.md:365: #1B2A4A  — HOM palette navy
+  docs/CODEBASE_INVENTORY.md:365: #1B2A4A  — HOM palette navy
+  docs/CODEBASE_INVENTORY.md:365: #2D4470  — HOM palette navy light
+  docs/CODEBASE_INVENTORY.md:365: #111C33  — HOM palette navy dark
+  docs/CODEBASE_INVENTORY.md:365: #C9A86C  — HOM palette gold
+  docs/CODEBASE_INVENTORY.md:365: #D4BC8E  — HOM palette gold light
+  docs/CODEBASE_INVENTORY.md:365: #B08E4A  — HOM palette gold dark
+  docs/CODEBASE_INVENTORY.md:365: #F8F6F3  — HOM palette cream
+  docs/CODEBASE_INVENTORY.md:365: Playfair  — HOM font Playfair Display
+  docs/CODEBASE_INVENTORY.md:365: DM Sans  — HOM font DM Sans
+  docs/CODEBASE_INVENTORY.md:396: homadvisory  — homadvisory domain/handle
+  docs/CODEBASE_INVENTORY.md:402: video.gumlet.io  — Gumlet video host
+  docs/CODEBASE_INVENTORY.md:403: dzbiw7t4i  — old Cloudinary cloud
+  docs/CODEBASE_INVENTORY.md:406: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:462: hom_  — hom_ identifier/storage key
+  docs/CODEBASE_INVENTORY.md:463: hom_  — hom_ identifier/storage key
+  docs/CODEBASE_INVENTORY.md:477: hom-  — hom- identifier
+  docs/CODEBASE_INVENTORY.md:477: .hom-  — .hom- CSS class
+  docs/CODEBASE_INVENTORY.md:507: hom-  — hom- identifier
+  docs/CODEBASE_INVENTORY.md:507: .hom-  — .hom- CSS class
+  docs/CODEBASE_INVENTORY.md:512: H.O.M  — H.O.M brand string
+  docs/CODEBASE_INVENTORY.md:565: #1B2A4A  — HOM palette navy
+  docs/DECISIONS.md:13: hom-  — hom- identifier
+  docs/DECISIONS.md:32: hom-  — hom- identifier
+  docs/PROJECT_STATE.md:104: HOM-  — hom- identifier
+  docs/PROJECT_STATE.md:106: hom advisory  — HOM Advisory brand string
+  docs/PROJECT_STATE.md:106: homadvisory  — homadvisory domain/handle
+  docs/PROJECT_STATE.md:106: home office market  — HOM tagline
+  docs/PROJECT_STATE.md:106: hom_  — hom_ identifier/storage key
+  docs/PROJECT_STATE.md:107: hom-  — hom- identifier
+  docs/PROJECT_STATE.md:107: hom-  — hom- identifier
+  docs/PROJECT_STATE.md:107: .hom-  — .hom- CSS class
+  docs/PROJECT_STATE.md:114: dzbiw7t4i  — old Cloudinary cloud
+  docs/PROJECT_STATE.md:115: video.gumlet.io  — Gumlet video host
+  docs/PROJECT_STATE.md:115: placehold.co  — placehold.co placeholder
+  docs/PROJECT_STATE.md:115: goldenrod  — goldenrod placeholder colour
+  docs/PROJECT_STATE.md:136: placehold.co  — placehold.co placeholder
+  docs/PROJECT_STATE.md:136: goldenrod  — goldenrod placeholder colour
+  docs/PROJECT_STATE.md:137: hom-  — hom- identifier
+  docs/PROJECT_STATE.md:138: hom-  — hom- identifier
+  docs/PROJECT_STATE.md:138: .hom-  — .hom- CSS class
+  docs/PROJECT_STATE.md:140: hom_  — hom_ identifier/storage key
+  docs/PROJECT_STATE.md:234: hom-  — hom- identifier
+  docs/PROJECT_STATE.md:234: .hom-  — .hom- CSS class
+  docs/PROJECT_STATE.md:260: HOM Advisory  — HOM Advisory brand string
+  docs/PROJECT_STATE.md:268: H.O.M  — H.O.M brand string
+  docs/PROJECT_STATE.md:268: homadvisory  — homadvisory domain/handle
+  docs/PROJECT_STATE.md:270: homadvisory  — homadvisory domain/handle
+  docs/PROJECT_STATE.md:270: placehold.co  — placehold.co placeholder
+  docs/PROJECT_STATE.md:270: goldenrod  — goldenrod placeholder colour
+  docs/PROJECT_STATE.md:272: H.O.M  — H.O.M brand string
+  docs/PROJECT_STATE.md:272: Playfair  — HOM font Playfair Display
+  docs/PROJECT_STATE.md:299: #1B2A4A  — HOM palette navy
+  docs/PROJECT_STATE.md:477: cloudwaysapps  — Cloudways API host
+  docs/PROJECT_STATE.md:515: Playfair  — HOM font Playfair Display
+  docs/PROJECT_STATE.md:515: DM Sans  — HOM font DM Sans
+  docs/PROJECT_STATE.md:515: Outfit  — HOM font Outfit
+  docs/QA/03-traces-before.txt:11: H.O.M  — H.O.M brand string
+  docs/QA/03-traces-before.txt:11: hom-  — hom- identifier
+  docs/QA/03-traces-before.txt:12: placehold.co  — placehold.co placeholder
+  docs/QA/03-traces-before.txt:13: goldenrod  — goldenrod placeholder colour
+  docs/QA/03-traces-before.txt:13: goldenrod  — goldenrod placeholder colour
+  docs/QA/03-traces-before.txt:15: homadvisory  — homadvisory domain/handle
+  docs/QA/03-traces-before.txt:15: homadvisory  — homadvisory domain/handle
+  docs/QA/03-traces-before.txt:16: DM Sans  — HOM font DM Sans
+  docs/QA/03-traces-before.txt:18: hom-  — hom- identifier
+  docs/QA/03-traces-before.txt:18: hom-  — hom- identifier
+  docs/QA/03-traces-before.txt:19: playfair  — HOM font Playfair Display
+  docs/QA/03-traces-before.txt:19: Playfair  — HOM font Playfair Display
+  docs/QA/03-traces-before.txt:22: hom-  — hom- identifier
+  docs/QA/03-traces-before.txt:22: hom-  — hom- identifier
+  docs/QA/03-traces-before.txt:22: .hom-  — .hom- CSS class
+  docs/QA/03-traces-before.txt:23: hom_  — hom_ identifier/storage key
+  docs/QA/03-traces-before.txt:23: hom-  — hom- identifier
+  docs/QA/03-traces-before.txt:25: HOM Advisory  — HOM Advisory brand string
+  docs/QA/03-traces-before.txt:25: hom-  — hom- identifier
+  docs/QA/03-traces-before.txt:26: outfit  — HOM font Outfit
+  docs/QA/03-traces-before.txt:26: Outfit  — HOM font Outfit
+  src/App.js:29: DM Sans  — HOM font DM Sans
+  src/App.js:30: #1B2A4A  — HOM palette navy
+  src/App.js:34: #1B2A4A  — HOM palette navy
+  src/assets/styles/global.css:2: Playfair  — HOM font Playfair Display
+  src/assets/styles/global.css:2: Outfit  — HOM font Outfit
+  src/assets/styles/global.css:7: #1B2A4A  — HOM palette navy
+  src/assets/styles/global.css:8: #2D4470  — HOM palette navy light
+  src/assets/styles/global.css:9: #111C33  — HOM palette navy dark
+  src/assets/styles/global.css:10: #C9A86C  — HOM palette gold
+  src/assets/styles/global.css:11: #D4BC8E  — HOM palette gold light
+  src/assets/styles/global.css:12: #B08E4A  — HOM palette gold dark
+  src/assets/styles/global.css:16: #F8F6F3  — HOM palette cream
+  src/assets/styles/global.css:20: #1B2A4A  — HOM palette navy
+  src/assets/styles/global.css:28: Playfair  — HOM font Playfair Display
+  src/assets/styles/global.css:29: DM Sans  — HOM font DM Sans
+  src/assets/styles/global.css:30: DM Sans  — HOM font DM Sans
+  src/assets/styles/global.css:30: Outfit  — HOM font Outfit
+  src/assets/styles/global.css:241: hom-  — hom- identifier
+  src/assets/styles/global.css:241: .hom-  — .hom- CSS class
+  src/assets/styles/global.css:242: DM Sans  — HOM font DM Sans
+  src/assets/styles/global.css:247: hom-  — hom- identifier
+  src/assets/styles/global.css:247: .hom-  — .hom- CSS class
+  src/assets/styles/global.css:248: Playfair  — HOM font Playfair Display
+  src/assets/styles/global.css:251: #1B2A4A  — HOM palette navy
+  src/assets/styles/global.css:254: hom-  — hom- identifier
+  src/assets/styles/global.css:254: .hom-  — .hom- CSS class
+  src/assets/styles/global.css:255: DM Sans  — HOM font DM Sans
+  src/assets/styles/global.css:261: hom-  — hom- identifier
+  src/assets/styles/global.css:261: .hom-  — .hom- CSS class
+  src/assets/styles/global.css:262: DM Sans  — HOM font DM Sans
+  src/components/admin/IconPicker.jsx:176: #1B2A4A  — HOM palette navy
+  src/components/admin/IconPicker.jsx:235: #1B2A4A  — HOM palette navy
+  src/components/admin/IconPicker.jsx:245: #1B2A4A  — HOM palette navy
+  src/components/admin/IconPicker.jsx:247: #2D4470  — HOM palette navy light
+  src/components/admin/IconPicker.jsx:284: #1B2A4A  — HOM palette navy
+  src/components/admin/IconPicker.jsx:287: #2D4470  — HOM palette navy light
+  src/components/admin/IconPicker.jsx:333: #C9A86C  — HOM palette gold
+  src/components/admin/IconPicker.jsx:342: #1B2A4A  — HOM palette navy
+  src/components/admin/IconPicker.jsx:364: #C9A86C  — HOM palette gold
+  src/components/admin/IconPicker.jsx:388: #C9A86C  — HOM palette gold
+  src/components/admin/IconPicker.jsx:389: #1B2A4A  — HOM palette navy
+  src/components/admin/ProtectedRoute.jsx:48: #1B2A4A  — HOM palette navy
+  src/components/admin/ProtectedRoute.jsx:51: #1B2A4A  — HOM palette navy
+  src/components/admin/SeoGuidelines.jsx:311: #1B2A4A  — HOM palette navy
+  src/components/admin/SeoGuidelines.jsx:369: #1B2A4A  — HOM palette navy
+  src/components/admin/UserManagement.jsx:278: #1B2A4A  — HOM palette navy
+  src/components/admin/UserManagement.jsx:290: #1B2A4A  — HOM palette navy
+  src/components/admin/UserManagement.jsx:295: #2d3f63  — HOM palette navy (alt)
+  src/components/admin/UserManagement.jsx:398: #1B2A4A  — HOM palette navy
+  src/components/admin/UserManagement.jsx:531: #1B2A4A  — HOM palette navy
+  src/components/admin/UserManagement.jsx:537: #C9A86C  — HOM palette gold
+  src/components/admin/UserManagement.jsx:629: #1B2A4A  — HOM palette navy
+  src/components/admin/UserManagement.jsx:632: #2d3f63  — HOM palette navy (alt)
+  src/components/admin/UserManagement.jsx:648: #1B2A4A  — HOM palette navy
+  src/components/admin/UserManagement.jsx:654: #1B2A4A  — HOM palette navy
+  src/components/common/BackToTop.jsx:40: #1B2A4A  — HOM palette navy
+  src/components/common/PropertyCard.jsx:114: #1B2A4A  — HOM palette navy
+  src/components/common/PropertyCard.jsx:114: #2D4470  — HOM palette navy light
+  src/components/common/SkeletonLoaders.jsx:124: #C9A86C  — HOM palette gold
+  src/components/common/SkeletonLoaders.jsx:135: Playfair  — HOM font Playfair Display
+  src/components/common/SkeletonLoaders.jsx:141: H.O.M  — H.O.M brand string
+  src/components/common/ToastProvider.jsx:91: DM Sans  — HOM font DM Sans
+  src/components/layout/AdminLayout.jsx:239: #C9A86C  — HOM palette gold
+  src/components/layout/AdminLayout.jsx:243: H.O.M  — H.O.M brand string
+  src/components/layout/AdminLayout.jsx:301: #C9A86C  — HOM palette gold
+  src/components/layout/AdminLayout.jsx:304: H.O.M  — H.O.M brand string
+  src/components/layout/AdminLayout.jsx:377: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.jsx:444: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.jsx:519: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.jsx:523: homadvisory  — homadvisory domain/handle
+  src/components/layout/AdminLayout.jsx:578: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.module.css:42: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.module.css:57: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.module.css:107: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.module.css:112: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.module.css:124: #C9A86C  — HOM palette gold
+  src/components/layout/AdminLayout.module.css:185: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.module.css:189: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.module.css:213: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.module.css:213: #2D4470  — HOM palette navy light
+  src/components/layout/AdminLayout.module.css:217: #C9A86C  — HOM palette gold
+  src/components/layout/AdminLayout.module.css:232: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.module.css:308: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.module.css:314: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.module.css:315: DM Sans  — HOM font DM Sans
+  src/components/layout/AdminLayout.module.css:341: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.module.css:394: #1B2A4A  — HOM palette navy
+  src/components/layout/AdminLayout.module.css:394: #2D4470  — HOM palette navy light
+  src/components/layout/AdminLayout.module.css:398: #C9A86C  — HOM palette gold
+  src/components/layout/Footer.jsx:66: H.O.M  — H.O.M brand string
+  src/components/layout/Footer.jsx:67: HOME OFFICE MARKET  — HOM tagline
+  src/components/layout/Footer.module.css:2: #1B2A4A  — HOM palette navy
+  src/components/sections/home/HeroSection.jsx:22: #1B2A4A  — HOM palette navy
+  src/components/sections/home/HeroSection.module.css:8: #1B2A4A  — HOM palette navy
+  src/components/sections/home/HeroSection.module.css:193: #F8F6F3  — HOM palette cream
+  src/components/sections/home/PartnersSection.module.css:3: #F8F6F3  — HOM palette cream
+  src/components/sections/home/WhyChoose.jsx:52: H.O.M  — H.O.M brand string
+  src/components/sections/property/FinanceGuide.jsx:1274: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminArticles.js:173: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminArticles.js:185: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminArticles.js:189: #2d3f63  — HOM palette navy (alt)
+  src/pages/admin/AdminArticles.js:272: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminArticles.js:368: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminArticles.js:482: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminLeads.js:282: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminLeads.js:457: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminLeads.js:492: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminLeads.js:504: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminLeads.js:599: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminLeads.js:628: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminLeads.js:687: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminLeads.js:792: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminLogin.js:106: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminLogin.js:113: H.O.M  — H.O.M brand string
+  src/pages/admin/AdminLogin.js:234: homadvisory  — homadvisory domain/handle
+  src/pages/admin/AdminLogin.js:237: homadvisory  — homadvisory domain/handle
+  src/pages/admin/AdminLogin.js:240: homadvisory  — homadvisory domain/handle
+  src/pages/admin/AdminNeighborhoods.js:169: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminNeighborhoods.js:181: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminNeighborhoods.js:185: #2d3f63  — HOM palette navy (alt)
+  src/pages/admin/AdminNeighborhoods.js:233: placehold.co  — placehold.co placeholder
+  src/pages/admin/AdminNeighborhoods.js:243: placehold.co  — placehold.co placeholder
+  src/pages/admin/AdminNeighborhoods.js:248: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminNeighborhoods.js:314: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminNeighborhoods.js:409: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminNeighborhoods.js:413: #2d3f63  — HOM palette navy (alt)
+  src/pages/admin/AdminNeighborhoods.js:427: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminPartners.jsx:150: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminPartners.jsx:162: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminPartners.jsx:166: #2d3f63  — HOM palette navy (alt)
+  src/pages/admin/AdminPartners.jsx:197: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminPartners.jsx:256: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminPartners.jsx:314: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminPartners.jsx:391: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminPartners.jsx:394: #2d3f63  — HOM palette navy (alt)
+  src/pages/admin/AdminPartners.jsx:409: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminProperties.js:270: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminProperties.js:314: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminProperties.js:548: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminProperties.js:555: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminProperties.js:742: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminProperties.js:748: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminProperties.js:761: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminProperties.js:812: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminProperties.js:881: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSeo.js:110: homadvisory  — homadvisory domain/handle
+  src/pages/admin/AdminSeo.js:398: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSeo.js:415: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminSeo.js:415: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminSeo.js:426: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSeo.js:430: #2d3f63  — HOM palette navy (alt)
+  src/pages/admin/AdminSeo.js:468: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSeo.js:519: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminSeo.js:524: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSeo.js:595: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSeo.js:697: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSeo.js:794: homadvisory  — homadvisory domain/handle
+  src/pages/admin/AdminSeo.js:849: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminSeo.js:893: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminSeo.js:908: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSeo.js:954: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSeo.js:957: #2d3f63  — HOM palette navy (alt)
+  src/pages/admin/AdminSettings.js:206: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSettings.js:220: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSettings.js:224: #2d3f63  — HOM palette navy (alt)
+  src/pages/admin/AdminSettings.js:249: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSettings.js:250: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminSettings.js:301: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSettings.js:368: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSettings.js:421: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSettings.js:596: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSettings.js:617: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminSettings.js:664: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSettings.js:707: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSettings.js:715: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSettings.js:816: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSettings.js:829: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSettings.js:835: #C9A86C  — HOM palette gold
+  src/pages/admin/AdminSettings.js:876: #1B2A4A  — HOM palette navy
+  src/pages/admin/AdminSettings.js:879: #2d3f63  — HOM palette navy (alt)
+  src/pages/admin/ArticleForm.jsx:50: H.O.M  — H.O.M brand string
+  src/pages/admin/ArticleForm.jsx:70: #1B2A4A  — HOM palette navy
+  src/pages/admin/ArticleForm.jsx:78: #1B2A4A  — HOM palette navy
+  src/pages/admin/ArticleForm.jsx:78: #1B2A4A  — HOM palette navy
+  src/pages/admin/ArticleForm.jsx:162: H.O.M  — H.O.M brand string
+  src/pages/admin/ArticleForm.jsx:165: homadvisory  — homadvisory domain/handle
+  src/pages/admin/ArticleForm.jsx:212: H.O.M  — H.O.M brand string
+  src/pages/admin/ArticleForm.jsx:339: #1B2A4A  — HOM palette navy
+  src/pages/admin/ArticleForm.jsx:347: #1B2A4A  — HOM palette navy
+  src/pages/admin/ArticleForm.jsx:526: #1B2A4A  — HOM palette navy
+  src/pages/admin/ArticleForm.jsx:586: #1B2A4A  — HOM palette navy
+  src/pages/admin/ArticleForm.jsx:661: #1B2A4A  — HOM palette navy
+  src/pages/admin/ArticleForm.jsx:664: #2d3f63  — HOM palette navy (alt)
+  src/pages/admin/Dashboard.js:83: #1B2A4A  — HOM palette navy
+  src/pages/admin/Dashboard.js:83: DM Sans  — HOM font DM Sans
+  src/pages/admin/Dashboard.js:168: #1B2A4A  — HOM palette navy
+  src/pages/admin/Dashboard.js:180: #1B2A4A  — HOM palette navy
+  src/pages/admin/Dashboard.js:205: #1B2A4A  — HOM palette navy
+  src/pages/admin/Dashboard.js:354: #1B2A4A  — HOM palette navy
+  src/pages/admin/Dashboard.js:354: #C9A86C  — HOM palette gold
+  src/pages/admin/Dashboard.js:374: #1B2A4A  — HOM palette navy
+  src/pages/admin/Dashboard.js:410: #1B2A4A  — HOM palette navy
+  src/pages/admin/Dashboard.js:464: #1B2A4A  — HOM palette navy
+  src/pages/admin/Dashboard.js:479: #1B2A4A  — HOM palette navy
+  src/pages/admin/Dashboard.js:497: #1B2A4A  — HOM palette navy
+  src/pages/admin/Dashboard.js:515: #1B2A4A  — HOM palette navy
+  src/pages/admin/Dashboard.js:534: #1B2A4A  — HOM palette navy
+  src/pages/admin/Dashboard.js:542: #1B2A4A  — HOM palette navy
+  src/pages/admin/Dashboard.js:585: #1B2A4A  — HOM palette navy
+  src/pages/admin/FaqManager.jsx:184: #1B2A4A  — HOM palette navy
+  src/pages/admin/FaqManager.jsx:196: #1B2A4A  — HOM palette navy
+  src/pages/admin/FaqManager.jsx:200: #2d3f63  — HOM palette navy (alt)
+  src/pages/admin/FaqManager.jsx:214: #1B2A4A  — HOM palette navy
+  src/pages/admin/FaqManager.jsx:269: #1B2A4A  — HOM palette navy
+  src/pages/admin/FaqManager.jsx:343: #1B2A4A  — HOM palette navy
+  src/pages/admin/FaqManager.jsx:438: #1B2A4A  — HOM palette navy
+  src/pages/admin/FaqManager.jsx:514: #1B2A4A  — HOM palette navy
+  src/pages/admin/FaqManager.jsx:517: #2d3f63  — HOM palette navy (alt)
+  src/pages/admin/FaqManager.jsx:532: #1B2A4A  — HOM palette navy
+  src/pages/admin/LeadDetail.js:235: #1B2A4A  — HOM palette navy
+  src/pages/admin/LeadDetail.js:239: #1B2A4A  — HOM palette navy
+  src/pages/admin/LeadDetail.js:300: #1B2A4A  — HOM palette navy
+  src/pages/admin/LeadDetail.js:312: #1B2A4A  — HOM palette navy
+  src/pages/admin/LeadDetail.js:361: #1B2A4A  — HOM palette navy
+  src/pages/admin/LeadDetail.js:379: #C9A86C  — HOM palette gold
+  src/pages/admin/LeadDetail.js:435: #1B2A4A  — HOM palette navy
+  src/pages/admin/LeadDetail.js:509: #1B2A4A  — HOM palette navy
+  src/pages/admin/LeadDetail.js:539: #1B2A4A  — HOM palette navy
+  src/pages/admin/LeadDetail.js:539: #2D4470  — HOM palette navy light
+  src/pages/admin/LeadDetail.js:570: #C9A86C  — HOM palette gold
+  src/pages/admin/LeadDetail.js:587: #1B2A4A  — HOM palette navy
+  src/pages/admin/LeadDetail.js:643: #1B2A4A  — HOM palette navy
+  src/pages/admin/PropertyForm.jsx:687: #C9A86C  — HOM palette gold
+  src/pages/admin/PropertyForm.jsx:713: #1B2A4A  — HOM palette navy
+  src/pages/admin/PropertyForm.jsx:774: #C9A86C  — HOM palette gold
+  src/pages/admin/PropertyForm.jsx:785: #1B2A4A  — HOM palette navy
+  src/pages/admin/PropertyForm.jsx:803: #C9A86C  — HOM palette gold
+  src/pages/admin/PropertyForm.jsx:810: #1B2A4A  — HOM palette navy
+  src/pages/admin/PropertyForm.jsx:843: #1B2A4A  — HOM palette navy
+  src/pages/admin/PropertyForm.jsx:845: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/AmenitiesTab.jsx:45: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/AmenitiesTab.jsx:62: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/AmenitiesTab.jsx:63: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/AmenitiesTab.jsx:79: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/AmenitiesTab.jsx:81: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/AmenitiesTab.jsx:83: #2D4470  — HOM palette navy light
+  src/pages/admin/property-tabs/AmenitiesTab.jsx:95: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/AmenitiesTab.jsx:107: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/AmenitiesTab.jsx:109: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/AmenitiesTab.jsx:124: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/BasicInfoTab.jsx:72: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/BasicInfoTab.jsx:162: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/ConstructionSpecsTab.jsx:38: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/ConstructionSpecsTab.jsx:67: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/ConstructionSpecsTab.jsx:68: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/ConstructionStatusTab.jsx:48: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/ConstructionStatusTab.jsx:83: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/ConstructionStatusTab.jsx:86: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/DetailsTab.jsx:43: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/DetailsTab.jsx:83: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/DetailsTab.jsx:87: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/DeveloperTab.jsx:47: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/DeveloperTab.jsx:77: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/DeveloperTab.jsx:100: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/DeveloperTab.jsx:103: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/DocumentsTab.jsx:24: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/DocumentsTab.jsx:48: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/DocumentsTab.jsx:51: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/FaqsTab.jsx:24: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/FloorPlansTab.jsx:9: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/FloorPlansTab.jsx:97: placehold.co  — placehold.co placeholder
+  src/pages/admin/property-tabs/GalleryTab.jsx:6: placehold.co  — placehold.co placeholder
+  src/pages/admin/property-tabs/GalleryTab.jsx:6: goldenrod  — goldenrod placeholder colour
+  src/pages/admin/property-tabs/GalleryTab.jsx:57: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/GalleryTab.jsx:105: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/HighlightsTab.jsx:24: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/HighlightsTab.jsx:48: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/HighlightsTab.jsx:52: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/NearbyPlacesTab.jsx:9: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/OverviewTab.jsx:57: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/OverviewTab.jsx:114: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/OverviewTab.jsx:126: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/OverviewTab.jsx:129: #2D4470  — HOM palette navy light
+  src/pages/admin/property-tabs/OverviewTab.jsx:137: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/OverviewTab.jsx:172: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/SectionVisibilityTab.jsx:19: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/SectionVisibilityTab.jsx:47: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/SectionVisibilityTab.jsx:52: #B08E4A  — HOM palette gold dark
+  src/pages/admin/property-tabs/SectionVisibilityTab.jsx:66: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/SectionVisibilityTab.jsx:67: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/SectionVisibilityTab.jsx:77: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/SectionVisibilityTab.jsx:90: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/SectionVisibilityTab.jsx:91: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/SeoTagsTab.jsx:75: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/SeoTagsTab.jsx:197: homadvisory  — homadvisory domain/handle
+  src/pages/admin/property-tabs/SeoTagsTab.jsx:204: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/SeoTagsTab.jsx:205: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/SeoTagsTab.jsx:249: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/SeoTagsTab.jsx:250: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/SeoTagsTab.jsx:263: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/SeoTagsTab.jsx:274: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/SeoTagsTab.jsx:301: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/SimilarPropertiesTab.jsx:53: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/SimilarPropertiesTab.jsx:70: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/SimilarPropertiesTab.jsx:93: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/SimilarPropertiesTab.jsx:111: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/SimilarPropertiesTab.jsx:145: #1B2A4A  — HOM palette navy
+  src/pages/admin/property-tabs/SimilarPropertiesTab.jsx:160: #C9A86C  — HOM palette gold
+  src/pages/admin/property-tabs/constants.js:163: hom_  — hom_ identifier/storage key
+  src/pages/public/About.jsx:56: H.O.M  — H.O.M brand string
+  src/pages/public/About.jsx:87: H.O.M  — H.O.M brand string
+  src/pages/public/About.jsx:89: H.O.M  — H.O.M brand string
+  src/pages/public/About.jsx:90: H.O.M  — H.O.M brand string
+  src/pages/public/About.jsx:107: H.O.M  — H.O.M brand string
+  src/pages/public/About.jsx:108: H.O.M  — H.O.M brand string
+  src/pages/public/About.jsx:126: H.O.M  — H.O.M brand string
+  src/pages/public/About.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/About.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/About.module.css:14: #2D4470  — HOM palette navy light
+  src/pages/public/About.module.css:431: #1B2A4A  — HOM palette navy
+  src/pages/public/About.module.css:431: #2D4470  — HOM palette navy light
+  src/pages/public/ArticleDetail.js:304: H.O.M  — H.O.M brand string
+  src/pages/public/Articles.js:165: H.O.M  — H.O.M brand string
+  src/pages/public/Articles.js:168: H.O.M  — H.O.M brand string
+  src/pages/public/Articles.module.css:17: #1B2A4A  — HOM palette navy
+  src/pages/public/Articles.module.css:17: #1B2A4A  — HOM palette navy
+  src/pages/public/Articles.module.css:17: #2D4470  — HOM palette navy light
+  src/pages/public/Careers.jsx:148: H.O.M  — H.O.M brand string
+  src/pages/public/Careers.jsx:149: H.O.M  — H.O.M brand string
+  src/pages/public/Careers.jsx:178: H.O.M  — H.O.M brand string
+  src/pages/public/Careers.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/Careers.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/Careers.module.css:14: #2D4470  — HOM palette navy light
+  src/pages/public/Contact.jsx:30: homadvisory  — homadvisory domain/handle
+  src/pages/public/Contact.jsx:30: homadvisory  — homadvisory domain/handle
+  src/pages/public/Contact.jsx:116: H.O.M  — H.O.M brand string
+  src/pages/public/Contact.jsx:117: H.O.M  — H.O.M brand string
+  src/pages/public/Contact.jsx:332: H.O.M  — H.O.M brand string
+  src/pages/public/Contact.module.css:14: #1b2a4a  — HOM palette navy
+  src/pages/public/Contact.module.css:14: #1b2a4a  — HOM palette navy
+  src/pages/public/Contact.module.css:14: #2d4470  — HOM palette navy light
+  src/pages/public/DirectLeaseRetails.jsx:74: H.O.M  — H.O.M brand string
+  src/pages/public/DirectLeaseRetails.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/DirectLeaseRetails.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/DirectLeaseRetails.module.css:14: #2D4470  — HOM palette navy light
+  src/pages/public/FAQs.js:148: H.O.M  — H.O.M brand string
+  src/pages/public/FAQs.js:151: H.O.M  — H.O.M brand string
+  src/pages/public/FAQs.js:279: homadvisory  — homadvisory domain/handle
+  src/pages/public/FAQs.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/FAQs.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/FAQs.module.css:14: #2D4470  — HOM palette navy light
+  src/pages/public/FlexibleWorkspace.jsx:69: H.O.M  — H.O.M brand string
+  src/pages/public/FlexibleWorkspace.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/FlexibleWorkspace.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/FlexibleWorkspace.module.css:14: #2D4470  — HOM palette navy light
+  src/pages/public/Home.jsx:18: H.O.M  — H.O.M brand string
+  src/pages/public/Home.jsx:21: H.O.M  — H.O.M brand string
+  src/pages/public/HomeLoan.jsx:54: #1B2A4A  — HOM palette navy
+  src/pages/public/HomeLoan.jsx:61: #C9A86C  — HOM palette gold
+  src/pages/public/HomeLoan.jsx:75: #C9A86C  — HOM palette gold
+  src/pages/public/HomeLoan.jsx:79: #1B2A4A  — HOM palette navy
+  src/pages/public/HomeLoan.jsx:205: H.O.M  — H.O.M brand string
+  src/pages/public/HomeLoan.jsx:206: H.O.M  — H.O.M brand string
+  src/pages/public/HomeLoan.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/HomeLoan.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/HomeLoan.module.css:14: #2D4470  — HOM palette navy light
+  src/pages/public/InteriorDesigning.jsx:175: H.O.M  — H.O.M brand string
+  src/pages/public/InteriorDesigning.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/InteriorDesigning.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/InteriorDesigning.module.css:14: #2D4470  — HOM palette navy light
+  src/pages/public/LegalAssistance.jsx:132: H.O.M  — H.O.M brand string
+  src/pages/public/LegalAssistance.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/LegalAssistance.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/LegalAssistance.module.css:14: #2D4470  — HOM palette navy light
+  src/pages/public/NotFound.jsx:22: H.O.M  — H.O.M brand string
+  src/pages/public/Partnership.jsx:78: H.O.M  — H.O.M brand string
+  src/pages/public/Partnership.jsx:79: H.O.M  — H.O.M brand string
+  src/pages/public/Partnership.jsx:108: H.O.M  — H.O.M brand string
+  src/pages/public/Partnership.jsx:195: H.O.M  — H.O.M brand string
+  src/pages/public/Partnership.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/Partnership.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/Partnership.module.css:14: #2D4470  — HOM palette navy light
+  src/pages/public/PropertyDetails.jsx:54: hom-  — hom- identifier
+  src/pages/public/PropertyDetails.jsx:55: hom-  — hom- identifier
+  src/pages/public/PropertyDetails.jsx:56: hom-  — hom- identifier
+  src/pages/public/PropertyDetails.jsx:57: hom-  — hom- identifier
+  src/pages/public/PropertyDetails.jsx:59: #C9A86C  — HOM palette gold
+  src/pages/public/PropertyDetails.jsx:576: HOM Advisory  — HOM Advisory brand string
+  src/pages/public/PropertyDetails.jsx:709: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:723: #1B2A4A  — HOM palette navy
+  src/pages/public/PropertyDetails.jsx:723: #C9A86C  — HOM palette gold
+  src/pages/public/PropertyDetails.jsx:727: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:791: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:829: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:843: #1B2A4A  — HOM palette navy
+  src/pages/public/PropertyDetails.jsx:847: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:914: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:919: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:957: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:971: #1B2A4A  — HOM palette navy
+  src/pages/public/PropertyDetails.jsx:975: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:1042: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:1047: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:1085: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:1099: #C9A86C  — HOM palette gold
+  src/pages/public/PropertyDetails.jsx:1103: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:1143: Playfair  — HOM font Playfair Display
+  src/pages/public/PropertyDetails.jsx:1348: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:1350: #1B2A4A  — HOM palette navy
+  src/pages/public/PropertyDetails.jsx:1363: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:1378: DM Sans  — HOM font DM Sans
+  src/pages/public/PropertyDetails.jsx:1380: #1B2A4A  — HOM palette navy
+  src/pages/public/PropertyListing.jsx:27: H.O.M  — H.O.M brand string
+  src/pages/public/PropertyListing.jsx:33: H.O.M  — H.O.M brand string
+  src/pages/public/PropertyListing.jsx:39: H.O.M  — H.O.M brand string
+  src/pages/public/PropertyListing.jsx:45: H.O.M  — H.O.M brand string
+  src/pages/public/PropertyListing.jsx:51: H.O.M  — H.O.M brand string
+  src/pages/public/PropertyListing.jsx:57: H.O.M  — H.O.M brand string
+  src/pages/public/PropertyListing.jsx:71: H.O.M  — H.O.M brand string
+  src/pages/public/PropertyListing.jsx:72: H.O.M  — H.O.M brand string
+  src/pages/public/PropertyListing.jsx:73: H.O.M  — H.O.M brand string
+  src/pages/public/RealEstateAwareness.js:220: H.O.M  — H.O.M brand string
+  src/pages/public/RealEstateAwareness.js:487: H.O.M  — H.O.M brand string
+  src/pages/public/RealEstateAwareness.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/RealEstateAwareness.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/RealEstateAwareness.module.css:14: #2D4470  — HOM palette navy light
+  src/pages/public/SellLet.jsx:75: H.O.M  — H.O.M brand string
+  src/pages/public/SellLet.jsx:76: H.O.M  — H.O.M brand string
+  src/pages/public/SellLet.jsx:118: H.O.M  — H.O.M brand string
+  src/pages/public/SellLet.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/SellLet.module.css:14: #1B2A4A  — HOM palette navy
+  src/pages/public/SellLet.module.css:14: #2D4470  — HOM palette navy light
+  src/theme.js:6: #1B2A4A  — HOM palette navy
+  src/theme.js:7: #2D4470  — HOM palette navy light
+  src/theme.js:8: #111C33  — HOM palette navy dark
+  src/theme.js:12: #C9A86C  — HOM palette gold
+  src/theme.js:13: #D4BC8E  — HOM palette gold light
+  src/theme.js:14: #B08E4A  — HOM palette gold dark
+  src/theme.js:20: #F8F6F3  — HOM palette cream
+  src/theme.js:23: #1B2A4A  — HOM palette navy
+  src/theme.js:41: DM Sans  — HOM font DM Sans
+  src/theme.js:43: Playfair  — HOM font Playfair Display
+  src/theme.js:50: Playfair  — HOM font Playfair Display
+  src/theme.js:57: Playfair  — HOM font Playfair Display
+  src/theme.js:63: Playfair  — HOM font Playfair Display
+  src/theme.js:69: DM Sans  — HOM font DM Sans
+  src/theme.js:75: DM Sans  — HOM font DM Sans
+  src/theme.js:81: DM Sans  — HOM font DM Sans
+  src/theme.js:87: DM Sans  — HOM font DM Sans
+  src/theme.js:93: DM Sans  — HOM font DM Sans
+  src/theme.js:99: DM Sans  — HOM font DM Sans
+  src/theme.js:105: DM Sans  — HOM font DM Sans
+  src/theme.js:112: DM Sans  — HOM font DM Sans
+  src/theme.js:118: DM Sans  — HOM font DM Sans
+  src/theme.js:180: #C9A86C  — HOM palette gold
+  src/theme.js:188: #1B2A4A  — HOM palette navy
+  src/theme.js:190: #2D4470  — HOM palette navy light
+  src/theme.js:194: #C9A86C  — HOM palette gold
+  src/theme.js:196: #B08E4A  — HOM palette gold dark
+  src/theme.js:200: #1B2A4A  — HOM palette navy
+  src/theme.js:202: #2D4470  — HOM palette navy light
+  src/theme.js:229: #C9A86C  — HOM palette gold
+  src/theme.js:232: #1B2A4A  — HOM palette navy
+  src/theme.js:242: #1B2A4A  — HOM palette navy
+  src/theme.js:271: #C9A86C  — HOM palette gold
+  src/theme.js:280: #C9A86C  — HOM palette gold
+  src/theme.js:294: #C9A86C  — HOM palette gold
+  src/utils/leadStorage.js:1: hom_  — hom_ identifier/storage key
+  src/utils/seoGenerator.js:16: HOM Advisory  — HOM Advisory brand string
+  src/utils/seoGenerator.js:17: homadvisory  — homadvisory domain/handle

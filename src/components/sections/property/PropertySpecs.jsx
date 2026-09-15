@@ -21,11 +21,12 @@ const PropertySpecs = ({ specifications = {}, specificationsArray, propertyType 
   // 1. specificationsArray prop (explicit array prop)
   // 2. specifications prop passed as an array (most common — API returns array)
   // 3. specifications prop as a legacy object (old format fallback)
-  const specsSource = Array.isArray(specificationsArray) && specificationsArray.length > 0
-    ? specificationsArray
-    : Array.isArray(specifications) && specifications.length > 0
-      ? specifications
-      : null;
+  const specsSource =
+    Array.isArray(specificationsArray) && specificationsArray.length > 0
+      ? specificationsArray
+      : Array.isArray(specifications) && specifications.length > 0
+        ? specifications
+        : null;
 
   let specs;
   if (specsSource) {
@@ -39,13 +40,39 @@ const PropertySpecs = ({ specifications = {}, specificationsArray, propertyType 
   } else {
     specs = [
       { icon: 'mdi:land-plots', label: 'Project Area', value: specifications.projectArea || '—' },
-      { icon: 'mdi:office-building', label: specifications.towers ? 'Towers' : 'Type', value: specifications.towers ? `${specifications.towers} Towers` : propertyType || '—' },
-      { icon: 'mdi:home-group', label: 'Total Units', value: specifications.totalUnits ? `${specifications.totalUnits}+ ${propertyType === 'villa' ? 'Villas' : 'Apartments'}` : '—' },
-      { icon: 'mdi:stairs', label: 'Floors', value: specifications.floors ? `Upto ${specifications.floors} Floors` : '—' },
-      { icon: 'mdi:floor-plan', label: 'Unit Variants', value: specifications.constructionType || '—' },
+      {
+        icon: 'mdi:office-building',
+        label: specifications.towers ? 'Towers' : 'Type',
+        value: specifications.towers ? `${specifications.towers} Towers` : propertyType || '—',
+      },
+      {
+        icon: 'mdi:home-group',
+        label: 'Total Units',
+        value: specifications.totalUnits
+          ? `${specifications.totalUnits}+ ${propertyType === 'villa' ? 'Villas' : 'Apartments'}`
+          : '—',
+      },
+      {
+        icon: 'mdi:stairs',
+        label: 'Floors',
+        value: specifications.floors ? `Upto ${specifications.floors} Floors` : '—',
+      },
+      {
+        icon: 'mdi:floor-plan',
+        label: 'Unit Variants',
+        value: specifications.constructionType || '—',
+      },
       { icon: 'mdi:file-certificate', label: 'RERA ID', value: specifications.reraId || '—' },
-      { icon: 'mdi:rocket-launch', label: 'Launch Date', value: formatDate(specifications.launchDate) },
-      { icon: 'mdi:key-variant', label: 'Possession Date', value: formatDate(specifications.possessionDate) },
+      {
+        icon: 'mdi:rocket-launch',
+        label: 'Launch Date',
+        value: formatDate(specifications.launchDate),
+      },
+      {
+        icon: 'mdi:key-variant',
+        label: 'Possession Date',
+        value: formatDate(specifications.possessionDate),
+      },
     ].filter((s) => s.value !== '—');
   }
 
@@ -88,12 +115,14 @@ const PropertySpecs = ({ specifications = {}, specificationsArray, propertyType 
         </div>
 
         {remainingCount > 0 && (
-          <button
-            className={styles.showMoreBtn}
-            onClick={() => setExpanded(!expanded)}
-          >
-            <Icon icon={expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'} className={styles.showMoreIcon} />
-            {expanded ? 'Show Less' : `Show ${remainingCount} More Specification${remainingCount > 1 ? 's' : ''}`}
+          <button className={styles.showMoreBtn} onClick={() => setExpanded(!expanded)}>
+            <Icon
+              icon={expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}
+              className={styles.showMoreIcon}
+            />
+            {expanded
+              ? 'Show Less'
+              : `Show ${remainingCount} More Specification${remainingCount > 1 ? 's' : ''}`}
           </button>
         )}
       </motion.div>

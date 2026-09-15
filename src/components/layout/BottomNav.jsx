@@ -9,14 +9,27 @@ const navItems = [
   { label: 'Home', path: '/', icon: 'mdi:home-outline', activeIcon: 'mdi:home' },
   { label: 'Search', path: '/properties', icon: 'mdi:magnify', activeIcon: 'mdi:magnify' },
   { label: 'Assistance', path: null, icon: 'mdi:hand-heart-outline', activeIcon: 'mdi:hand-heart' },
-  { label: 'Insights', path: '/insights/articles', icon: 'mdi:newspaper-variant-outline', activeIcon: 'mdi:newspaper-variant' },
+  {
+    label: 'Insights',
+    path: '/insights/articles',
+    icon: 'mdi:newspaper-variant-outline',
+    activeIcon: 'mdi:newspaper-variant',
+  },
   { label: 'Contact', path: '/contact', icon: 'mdi:phone-outline', activeIcon: 'mdi:phone' },
 ];
 
 const assistanceItems = [
   { label: 'Home Loan', path: '/buyer-assistance/home-loan', icon: 'mdi:bank-outline' },
-  { label: 'Legal Assistance', path: '/buyer-assistance/legal-assistance', icon: 'mdi:scale-balance' },
-  { label: 'Interior Designing', path: '/buyer-assistance/interior-designing', icon: 'mdi:palette-outline' },
+  {
+    label: 'Legal Assistance',
+    path: '/buyer-assistance/legal-assistance',
+    icon: 'mdi:scale-balance',
+  },
+  {
+    label: 'Interior Designing',
+    path: '/buyer-assistance/interior-designing',
+    icon: 'mdi:palette-outline',
+  },
 ];
 
 const BottomNav = () => {

@@ -14,10 +14,7 @@ const FaqItem = ({ faq, isOpen, onToggle }) => {
           <Icon icon="mdi:help-circle-outline" className={styles.questionIcon} />
           <span>{faq.question}</span>
         </div>
-        <Icon
-          icon={isOpen ? 'mdi:minus' : 'mdi:plus'}
-          className={styles.expandIcon}
-        />
+        <Icon icon={isOpen ? 'mdi:minus' : 'mdi:plus'} className={styles.expandIcon} />
       </button>
       <AnimatePresence initial={false}>
         {isOpen && (
@@ -47,9 +44,7 @@ const FaqSection = () => {
     const fetchFaqs = async () => {
       try {
         const data = await faqService.getAll({ isActive: true });
-        const activeFaqs = (Array.isArray(data) ? data : []).filter(
-          (f) => f.isActive !== false
-        );
+        const activeFaqs = (Array.isArray(data) ? data : []).filter((f) => f.isActive !== false);
         setFaqs(activeFaqs);
       } catch {
         setFaqs([]);
@@ -65,9 +60,7 @@ const FaqSection = () => {
     const catSet = new Map();
     faqs.forEach((faq) => {
       if (faq.category && !catSet.has(faq.category)) {
-        const label = faq.category
-          .replace(/-/g, ' ')
-          .replace(/\b\w/g, (c) => c.toUpperCase());
+        const label = faq.category.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
         catSet.set(faq.category, label);
       }
     });
@@ -174,9 +167,7 @@ const FaqSection = () => {
               ) : (
                 <div className={styles.emptyCategory}>
                   <Icon icon="mdi:help-circle-outline" className={styles.emptyIcon} />
-                  <p className={styles.emptyText}>
-                    No FAQs available in this category yet.
-                  </p>
+                  <p className={styles.emptyText}>No FAQs available in this category yet.</p>
                 </div>
               )}
             </motion.div>

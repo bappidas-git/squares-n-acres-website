@@ -233,7 +233,7 @@
   font-family: var(--font-body);
   font-size: 0.68rem;
   font-weight: 600;
-  color: #10B981;
+  color: #10b981;
 }
 
 .preApprovedBadge svg {
@@ -416,7 +416,6 @@
   flex-shrink: 0;
 }
 
-
 /* ═══════════════════════════════════════════════════════════
    TAB 2: Financial Fit Assessment
    ═══════════════════════════════════════════════════════════ */
@@ -443,7 +442,7 @@
   justify-content: center;
   flex-shrink: 0;
   font-size: 1.5rem;
-  color: #3B82F6;
+  color: #3b82f6;
 }
 
 .assessmentTitle {
@@ -537,7 +536,7 @@
 }
 
 .formInputError {
-  border-color: #EF4444 !important;
+  border-color: #ef4444 !important;
 }
 
 .formSelect {
@@ -567,7 +566,7 @@
 .fieldError {
   font-family: var(--font-body);
   font-size: 0.72rem;
-  color: #EF4444;
+  color: #ef4444;
   margin-top: 2px;
 }
 
@@ -604,7 +603,7 @@
   margin: 0;
 }
 
-.exactIncomeInput[type="number"] {
+.exactIncomeInput[type='number'] {
   -moz-appearance: textfield;
 }
 
@@ -772,8 +771,12 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinIcon {
@@ -794,7 +797,6 @@
 .privacyNote svg {
   font-size: 0.85rem;
 }
-
 
 /* ═══════════════════════════════════════════════════════════
    Assessment Result
@@ -932,19 +934,6 @@
   color: var(--color-text-primary);
 }
 
-.breakdownBar {
-  height: 6px;
-  background: var(--color-bg-surface);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.breakdownBarFill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.6s ease;
-}
-
 /* Recommendations */
 .recommendations {
   padding: var(--spacing-lg);
@@ -1039,7 +1028,6 @@
   color: var(--color-text-primary);
 }
 
-
 /* ═══════════════════════════════════════════════════════════
    Thank You
    ═══════════════════════════════════════════════════════════ */
@@ -1060,7 +1048,7 @@
   width: 72px;
   height: 72px;
   border-radius: var(--radius-full);
-  background: #ECFDF5;
+  background: #ecfdf5;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1069,7 +1057,7 @@
 
 .thankYouIcon {
   font-size: 2.5rem;
-  color: #10B981;
+  color: #10b981;
 }
 
 .thankYouTitle {
@@ -1145,7 +1133,6 @@
 .thankYouBtnOutline:hover {
   border-color: var(--color-text-secondary);
 }
-
 
 /* ═══════════════════════════════════════════════════════════
    TAB 3: EMI Projections
@@ -1432,7 +1419,6 @@
   margin-top: 1px;
 }
 
-
 /* ═══════════════════════════════════════════════════════════
    Eligibility Check Modal
    ═══════════════════════════════════════════════════════════ */
@@ -1542,13 +1528,13 @@
   width: 56px;
   height: 56px;
   border-radius: var(--radius-full);
-  background: #ECFDF5;
+  background: #ecfdf5;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto var(--spacing-lg);
   font-size: 1.8rem;
-  color: #10B981;
+  color: #10b981;
 }
 
 .eligibilityScoreCircle {
@@ -1667,7 +1653,6 @@
   border-color: var(--color-text-secondary);
   color: var(--color-text-primary);
 }
-
 
 /* ═══════════════════════════════════════════════════════════
    Responsive — Tablet

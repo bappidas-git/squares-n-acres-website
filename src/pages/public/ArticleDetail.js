@@ -6,6 +6,7 @@ import { Icon } from '@iconify/react';
 import { articleService } from '../../services/api';
 import LeadForm from '../../components/common/LeadForm';
 import styles from './ArticleDetail.module.css';
+import { SITE } from '../../config/site';
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', {
@@ -301,7 +302,7 @@ const ArticleDetail = () => {
   return (
     <>
       <Helmet>
-        <title>{article.seoTitle || article.title} | H.O.M Advisory</title>
+        <title>{`${article.seoTitle || article.title} | ${SITE.name}`}</title>
         <meta name="description" content={article.seoDescription || article.excerpt} />
         <meta property="og:title" content={article.seoTitle || article.title} />
         <meta property="og:description" content={article.seoDescription || article.excerpt} />

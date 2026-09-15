@@ -8,6 +8,7 @@ import PropertyCard from '../../components/common/PropertyCard';
 import PropertyFilters from '../../components/common/PropertyFilters';
 import { PropertyGridSkeleton } from '../../components/common/SkeletonLoaders';
 import styles from './PropertyListing.module.css';
+import { SITE } from '../../config/site';
 
 const ITEMS_PER_PAGE = 9;
 
@@ -24,37 +25,37 @@ const ROUTE_CONFIG = {
   '/properties': {
     title: 'Property Listings',
     subtitle: 'Browse our exclusive collection of premium properties',
-    seoTitle: 'Property Listings | H.O.M Advisory',
+    seoTitle: `Property Listings | ${SITE.name}`,
     preFilters: {},
   },
   '/buy/pre-launch': {
     title: 'Pre-Launch Properties',
     subtitle: 'Discover upcoming premium properties before they hit the market',
-    seoTitle: 'Pre-Launch Properties | H.O.M Advisory',
+    seoTitle: `Pre-Launch Properties | ${SITE.name}`,
     preFilters: { status: 'pre-launch', type: 'sale' },
   },
   '/buy/under-construction': {
     title: 'Under Construction Properties',
     subtitle: 'Invest early in premium properties currently under development',
-    seoTitle: 'Under Construction Properties | H.O.M Advisory',
+    seoTitle: `Under Construction Properties | ${SITE.name}`,
     preFilters: { status: 'under-construction', type: 'sale' },
   },
   '/buy/ready-to-move': {
     title: 'Ready to Move Properties',
     subtitle: 'Move into your dream home right away with our ready properties',
-    seoTitle: 'Ready to Move Properties | H.O.M Advisory',
+    seoTitle: `Ready to Move Properties | ${SITE.name}`,
     preFilters: { status: 'ready-to-move', type: 'sale' },
   },
   '/rent/apartments': {
     title: 'Apartments for Rent',
     subtitle: 'Find the perfect apartment to rent from our premium collection',
-    seoTitle: 'Apartments for Rent | H.O.M Advisory',
+    seoTitle: `Apartments for Rent | ${SITE.name}`,
     preFilters: { propertyType: 'apartment', type: 'rent' },
   },
   '/rent/villas': {
     title: 'Villas for Rent',
     subtitle: 'Explore luxurious villas available for rent',
-    seoTitle: 'Villas for Rent | H.O.M Advisory',
+    seoTitle: `Villas for Rent | ${SITE.name}`,
     preFilters: { propertyType: 'villa', type: 'rent' },
   },
 };
@@ -68,14 +69,28 @@ const PropertyListing = ({ routePath }) => {
 
   // Dynamic config override based on URL type param (for homepage category card links)
   const TYPE_LABELS = {
-    sale: { title: 'Properties for Sale', subtitle: 'Explore premium properties available for purchase', seoTitle: 'Properties for Sale | H.O.M Advisory' },
-    rent: { title: 'Properties for Rent', subtitle: 'Find rental properties with flexible terms and premium amenities', seoTitle: 'Properties for Rent | H.O.M Advisory' },
-    lease: { title: 'Commercial Spaces for Lease', subtitle: 'Discover premium commercial and office spaces for your business', seoTitle: 'Office Spaces for Lease | H.O.M Advisory' },
+    sale: {
+      title: 'Properties for Sale',
+      subtitle: 'Explore premium properties available for purchase',
+      seoTitle: `Properties for Sale | ${SITE.name}`,
+    },
+    rent: {
+      title: 'Properties for Rent',
+      subtitle: 'Find rental properties with flexible terms and premium amenities',
+      seoTitle: `Properties for Rent | ${SITE.name}`,
+    },
+    lease: {
+      title: 'Commercial Spaces for Lease',
+      subtitle: 'Discover premium commercial and office spaces for your business',
+      seoTitle: `Office Spaces for Lease | ${SITE.name}`,
+    },
   };
 
   const urlType = searchParams.get('type');
   const typeOverride = urlType && !baseConfig.preFilters.type ? TYPE_LABELS[urlType] : null;
-  const config = typeOverride ? { ...baseConfig, ...typeOverride, preFilters: baseConfig.preFilters } : baseConfig;
+  const config = typeOverride
+    ? { ...baseConfig, ...typeOverride, preFilters: baseConfig.preFilters }
+    : baseConfig;
 
   const [allProperties, setAllProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -196,7 +211,9 @@ const PropertyListing = ({ routePath }) => {
       result = result.filter((p) => {
         if (!Array.isArray(p.configuration)) return false;
         return filters.bhk.some((bhk) =>
-          p.configuration.some((c) => c && typeof c === 'string' && c.toLowerCase().includes(bhk.toLowerCase()))
+          p.configuration.some(
+            (c) => c && typeof c === 'string' && c.toLowerCase().includes(bhk.toLowerCase())
+          )
         );
       });
     }
@@ -205,17 +222,15 @@ const PropertyListing = ({ routePath }) => {
     if (filters.priceRange) {
       const range = PRICE_RANGES_MAP[filters.priceRange];
       if (range) {
-        result = result.filter(
-          (p) => p.price >= range.min && p.price < range.max
-        );
+        result = result.filter((p) => p.price >= range.min && p.price < range.max);
       }
     }
 
     // Location filter
     if (filters.locations && filters.locations.length > 0) {
       result = result.filter((p) =>
-        filters.locations.some(
-          (loc) => (p.location?.area || p.location_area || '').toLowerCase().includes(loc.toLowerCase())
+        filters.locations.some((loc) =>
+          (p.location?.area || p.location_area || '').toLowerCase().includes(loc.toLowerCase())
         )
       );
     }
@@ -362,11 +377,7 @@ const PropertyListing = ({ routePath }) => {
             <div className={styles.errorState}>
               <Icon icon="mdi:alert-circle-outline" className={styles.errorIcon} />
               <p className={styles.emptyTitle}>{error}</p>
-              <button
-                className={styles.retryBtn}
-                onClick={fetchProperties}
-                type="button"
-              >
+              <button className={styles.retryBtn} onClick={fetchProperties} type="button">
                 Try Again
               </button>
             </div>
@@ -378,14 +389,10 @@ const PropertyListing = ({ routePath }) => {
               <Icon icon="mdi:home-search-outline" className={styles.emptyIcon} />
               <h3 className={styles.emptyTitle}>No properties found</h3>
               <p className={styles.emptyText}>
-                No properties found matching your criteria. Try adjusting your
-                filters or clearing them to see all available properties.
+                No properties found matching your criteria. Try adjusting your filters or clearing
+                them to see all available properties.
               </p>
-              <button
-                className={styles.clearFiltersBtn}
-                onClick={handleClearFilters}
-                type="button"
-              >
+              <button className={styles.clearFiltersBtn} onClick={handleClearFilters} type="button">
                 Clear Filters
               </button>
             </div>

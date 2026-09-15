@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1B2A4A 0%, #2D4470 60%, #1B2A4A 100%);
+  background: linear-gradient(135deg, #1b2a4a 0%, #2d4470 60%, #1b2a4a 100%);
   padding: var(--spacing-3xl) var(--spacing-lg);
   text-align: center;
 }
@@ -146,7 +146,9 @@
   background: var(--color-bg-surface);
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base);
   border: 1px solid transparent;
 }
 

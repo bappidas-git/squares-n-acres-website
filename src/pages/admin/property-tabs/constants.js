@@ -18,9 +18,20 @@ export const TAB_CONFIG = [
 ];
 
 export const CONFIGURATION_OPTIONS = [
-  '1 BHK', '1.5 BHK', '2 BHK', '2.5 BHK', '3 BHK', '3.5 BHK',
-  '4 BHK', '4.5 BHK', '5 BHK', '6 BHK',
-  '1 RK', 'Studio', 'Duplex', 'Penthouse',
+  '1 BHK',
+  '1.5 BHK',
+  '2 BHK',
+  '2.5 BHK',
+  '3 BHK',
+  '3.5 BHK',
+  '4 BHK',
+  '4.5 BHK',
+  '5 BHK',
+  '6 BHK',
+  '1 RK',
+  'Studio',
+  'Duplex',
+  'Penthouse',
 ];
 
 export const AMENITY_CATEGORIES = {
@@ -88,22 +99,59 @@ export const AMENITY_CATEGORIES = {
 };
 
 export const NEARBY_TYPES = [
-  'school', 'hospital', 'shopping', 'transport',
-  'workplace', 'restaurant', 'park', 'bank', 'landmark', 'entertainment',
+  'school',
+  'hospital',
+  'shopping',
+  'transport',
+  'workplace',
+  'restaurant',
+  'park',
+  'bank',
+  'landmark',
+  'entertainment',
 ];
 
 export const TAG_OPTIONS = [
   { value: 'featured', label: 'Featured', color: '#B45309', bg: '#FEF3C7', icon: 'mdi:star' },
   { value: 'popular', label: 'Popular', color: '#0891B2', bg: '#CFFAFE', icon: 'mdi:fire' },
-  { value: 'just-launched', label: 'Just Launched', color: '#4F46E5', bg: '#E0E7FF', icon: 'mdi:rocket-launch' },
-  { value: 'premium', label: 'Premium', color: '#7C3AED', bg: '#EDE9FE', icon: 'mdi:diamond-stone' },
+  {
+    value: 'just-launched',
+    label: 'Just Launched',
+    color: '#4F46E5',
+    bg: '#E0E7FF',
+    icon: 'mdi:rocket-launch',
+  },
+  {
+    value: 'premium',
+    label: 'Premium',
+    color: '#7C3AED',
+    bg: '#EDE9FE',
+    icon: 'mdi:diamond-stone',
+  },
   { value: 'hot-deal', label: 'Hot Deal', color: '#DC2626', bg: '#FEE2E2', icon: 'mdi:tag-heart' },
-  { value: 'trending', label: 'Trending', color: '#1D4ED8', bg: '#DBEAFE', icon: 'mdi:trending-up' },
-  { value: 'new-launch', label: 'New Launch', color: '#059669', bg: '#D1FAE5', icon: 'mdi:new-box' },
+  {
+    value: 'trending',
+    label: 'Trending',
+    color: '#1D4ED8',
+    bg: '#DBEAFE',
+    icon: 'mdi:trending-up',
+  },
+  {
+    value: 'new-launch',
+    label: 'New Launch',
+    color: '#059669',
+    bg: '#D1FAE5',
+    icon: 'mdi:new-box',
+  },
 ];
 
 export const CONSTRUCTION_SPEC_CATEGORIES = [
-  'flooring', 'doors', 'structure', 'electrical', 'plumbing', 'others',
+  'flooring',
+  'doors',
+  'structure',
+  'electrical',
+  'plumbing',
+  'others',
 ];
 
 // Category options per property type (sale / rent)
@@ -160,7 +208,7 @@ export const getDefaultSections = () => ({
   similar: true,
 });
 
-export const DRAFT_STORAGE_KEY = 'hom_property_draft';
+export const DRAFT_STORAGE_KEY = 'sna_property_draft';
 
 export const generateSlug = (title) =>
   title

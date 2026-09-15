@@ -8,6 +8,10 @@
  *
  * Patterns and scanned paths follow 00_MASTER_CONTEXT.md §13 D17.
  *
+ * `scripts/check-traces.allow.json` carries the temporary exemptions of the
+ * migration (see ALLOW_FILE below). It is emptied by the design-system prompt,
+ * after which the scan is strict everywhere.
+ *
  * Usage:
  *   node scripts/check-traces.js            # exit 1 when findings exist
  *   node scripts/check-traces.js --report   # exit 0, print totals only
@@ -15,9 +19,11 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
 const REPORT_ONLY = process.argv.slice(2).includes('--report');
+const ALLOW_FILE = path.join(__dirname, 'check-traces.allow.json');
 
 /** Directories scanned recursively. */
 const SCAN_DIRS = ['src', 'public', 'mock-server', 'scripts', 'docs'];
@@ -39,6 +45,8 @@ const SKIP_DIRS = new Set([
 /** Paths (relative, posix separators) never scanned. */
 const SKIP_PATHS = [
   'docs/archive',
+  // QA evidence files are verbatim tool output and quote what the tools found.
+  'docs/QA',
   // This file contains the patterns themselves.
   'scripts/check-traces.js',
 ];
@@ -95,6 +103,16 @@ const TRACE_PATTERNS = [
 ];
 
 /**
+ * Trace patterns that are colour literals. Together with the generic hex scan
+ * they form the "colour literal" class, which the allow file can downgrade to
+ * report-only while the design system is still the boilerplate's.
+ */
+const COLOUR_PATTERN_IDS = new Set(
+  TRACE_PATTERNS.filter((p) => p.id.startsWith('palette-')).map((p) => p.id)
+);
+const isColourFinding = (finding) => finding.kind === 'hex' || COLOUR_PATTERN_IDS.has(finding.id);
+
+/**
  * Words that legitimately contain "hom" and must never be reported.
  * A match is discarded when the matched text, extended to the full surrounding
  * word, is one of these.
@@ -113,6 +131,72 @@ const HEX_RE = /#[0-9a-f]{3,8}\b/gi;
 const NUL = String.fromCharCode(0);
 
 const toPosix = (p) => p.split(path.sep).join('/');
+
+const sha256 = (text) => crypto.createHash('sha256').update(text, 'utf8').digest('hex');
+
+/**
+ * The migration allow-list.
+ *
+ *   files            — every finding in these files is exempt
+ *   lines            — `{ "<file>": [{ line, sha256 }] }`; a finding on that line
+ *                      is exempt only while the line's trimmed text still hashes
+ *                      to `sha256`, so a shift in the file cannot silently exempt
+ *                      a different line
+ *   colourLiterals   — "report" downgrades colour findings (hex literals and the
+ *                      HOM palette hexes) to non-blocking; anything else, and the
+ *                      absence of the key, blocks
+ *
+ * Emptying the file to `{ "files": [], "lines": {} }` makes the scan strict.
+ */
+function loadAllowList() {
+  const empty = { files: new Set(), lines: new Map(), colourLiterals: 'block' };
+  if (!fs.existsSync(ALLOW_FILE)) return empty;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(ALLOW_FILE, 'utf8'));
+  } catch (error) {
+    console.error(`Cannot parse ${toPosix(path.relative(ROOT, ALLOW_FILE))}: ${error.message}`);
+    process.exit(2);
+  }
+
+  const lines = new Map();
+  for (const [file, entries] of Object.entries(parsed.lines || {})) {
+    const byLine = new Map();
+    for (const entry of entries) {
+      const line = typeof entry === 'number' ? entry : entry.line;
+      const hash = typeof entry === 'number' ? null : entry.sha256 || null;
+      byLine.set(line, hash);
+    }
+    lines.set(file, byLine);
+  }
+
+  return {
+    files: new Set(parsed.files || []),
+    lines,
+    colourLiterals: parsed.colourLiterals === 'report' ? 'report' : 'block',
+  };
+}
+
+const ALLOW = loadAllowList();
+
+/**
+ * Decide whether a finding is exempt. Line exemptions are keyed by line number
+ * but verified by content, so a line that moved (or changed) is reported with a
+ * note instead of being waved through.
+ */
+function classifyAllowance(finding, lineText) {
+  if (ALLOW.files.has(finding.file)) return { allowed: true };
+
+  const byLine = ALLOW.lines.get(finding.file);
+  if (!byLine || !byLine.has(finding.line)) return { allowed: false };
+
+  const expected = byLine.get(finding.line);
+  if (expected && expected !== sha256(lineText.trim())) {
+    return { allowed: false, note: 'allow-listed line no longer matches its recorded content' };
+  }
+  return { allowed: true };
+}
 
 const isSkipped = (relPath) =>
   SKIP_PATHS.some((skip) => relPath === skip || relPath.startsWith(`${skip}/`));
@@ -256,12 +340,23 @@ function scanFile(relPath) {
     }
   });
 
-  return findings;
+  return findings.filter((finding) => {
+    const { allowed, note } = classifyAllowance(finding, lines[finding.line - 1] ?? '');
+    if (note) finding.note = note;
+    return !allowed;
+  });
 }
 
 function main() {
   const files = collectFiles();
   const findings = files.flatMap(scanFile);
+
+  // Colour literals are still the boilerplate's until the design-system prompt
+  // replaces them; the allow file says whether they block or are only reported.
+  const deferred = new Set(
+    ALLOW.colourLiterals === 'report' ? findings.filter(isColourFinding) : []
+  );
+  const blocking = findings.filter((f) => !deferred.has(f));
 
   const traces = findings.filter((f) => f.kind === 'trace');
   const hexes = findings.filter((f) => f.kind === 'hex');
@@ -275,7 +370,9 @@ function main() {
     for (const [file, items] of [...byFile.entries()].sort()) {
       console.log(`\n${file} (${items.length})`);
       for (const item of items) {
-        console.log(`  ${file}:${item.line}: ${item.match}  — ${item.label}`);
+        const suffix = item.note ? `  [${item.note}]` : '';
+        const tag = deferred.has(item) ? ' (deferred)' : '';
+        console.log(`  ${file}:${item.line}: ${item.match}  — ${item.label}${tag}${suffix}`);
       }
     }
   }
@@ -291,6 +388,13 @@ function main() {
   console.log(`brand/legacy traces: ${traces.length}`);
   console.log(`hex colour literals: ${hexes.length}`);
   console.log(`total findings:      ${findings.length}`);
+  if (deferred.size > 0) {
+    console.log(
+      `deferred (colour literals, not blocking): ${deferred.size} — ` +
+        'empty scripts/check-traces.allow.json to make them blocking'
+    );
+  }
+  console.log(`blocking findings:   ${blocking.length}`);
   if (byPattern.size > 0) {
     console.log('\nby pattern:');
     for (const [key, count] of [...byPattern.entries()].sort((a, b) => b[1] - a[1])) {
@@ -311,7 +415,7 @@ function main() {
   if (REPORT_ONLY) {
     process.exit(0);
   }
-  process.exit(findings.length > 0 ? 1 : 0);
+  process.exit(blocking.length > 0 ? 1 : 0);
 }
 
 main();

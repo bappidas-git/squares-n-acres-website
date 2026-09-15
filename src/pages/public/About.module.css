@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1B2A4A 0%, #2D4470 60%, #1B2A4A 100%);
+  background: linear-gradient(135deg, #1b2a4a 0%, #2d4470 60%, #1b2a4a 100%);
   padding: var(--spacing-3xl) var(--spacing-lg);
   text-align: center;
 }
@@ -181,7 +181,9 @@
   padding: var(--spacing-xl);
   text-align: center;
   border: 1px solid var(--color-border);
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base);
 }
 
 .valueCard:hover {
@@ -306,7 +308,9 @@
   padding: var(--spacing-xl) var(--spacing-md);
   background: var(--color-bg-surface);
   border-radius: var(--radius-lg);
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base);
 }
 
 .teamCard:hover {
@@ -428,7 +432,7 @@
 /* ── CTA Section ──────────────────────────────── */
 .ctaSection {
   padding: var(--spacing-3xl) var(--spacing-lg);
-  background: linear-gradient(135deg, #1B2A4A 0%, #2D4470 100%);
+  background: linear-gradient(135deg, #1b2a4a 0%, #2d4470 100%);
   text-align: center;
 }
 

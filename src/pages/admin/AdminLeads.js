@@ -50,7 +50,10 @@ const formatDate = (dateStr, options) => {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return '-';
-  return d.toLocaleDateString('en-IN', options || { day: 'numeric', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString(
+    'en-IN',
+    options || { day: 'numeric', month: 'short', year: 'numeric' }
+  );
 };
 
 const AdminLeads = () => {
@@ -127,13 +130,11 @@ const AdminLeads = () => {
       setLoading(true);
       const params = buildFilterParams();
       const leadsData = await leadService.getAll(params);
-      const sorted = [...leadsData].sort(
-        (a, b) => {
-          const da = new Date(a.createdAt || a.created_at || 0);
-          const db = new Date(b.createdAt || b.created_at || 0);
-          return db - da;
-        }
-      );
+      const sorted = [...leadsData].sort((a, b) => {
+        const da = new Date(a.createdAt || a.created_at || 0);
+        const db = new Date(b.createdAt || b.created_at || 0);
+        return db - da;
+      });
       setLeads(sorted);
       lastLeadCountRef.current = sorted.length;
       setError(null);
@@ -228,7 +229,7 @@ const AdminLeads = () => {
         l.email || '',
         l.phone || '',
         formatSource(l.source),
-        l.propertyId ? (getPropertyTitle(l.propertyId) || '') : '',
+        l.propertyId ? getPropertyTitle(l.propertyId) || '' : '',
         statusConfig[l.status]?.label || l.status,
         (l.message || '').replace(/"/g, '""'),
         formatDate(l.createdAt || l.created_at),
@@ -256,10 +257,7 @@ const AdminLeads = () => {
   // Count new leads
   const newLeadCount = leads.filter((l) => l.status === 'new').length;
 
-  const currentPageData = leads.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
+  const currentPageData = leads.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const hasActiveFilters =
     searchQuery || statusFilter !== 'all' || sourceFilter !== 'all' || dateFrom || dateTo;
@@ -285,13 +283,25 @@ const AdminLeads = () => {
             <Chip
               size="small"
               label={`${leads.length} total`}
-              sx={{ height: 24, fontSize: '0.75rem', fontWeight: 600, bgcolor: '#F3F4F6', color: '#6B7280' }}
+              sx={{
+                height: 24,
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                bgcolor: '#F3F4F6',
+                color: '#6B7280',
+              }}
             />
             {newLeadCount > 0 && (
               <Chip
                 size="small"
                 label={`${newLeadCount} new`}
-                sx={{ height: 24, fontSize: '0.75rem', fontWeight: 600, bgcolor: '#EFF6FF', color: '#3B82F6' }}
+                sx={{
+                  height: 24,
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  bgcolor: '#EFF6FF',
+                  color: '#3B82F6',
+                }}
               />
             )}
           </Box>
@@ -452,7 +462,13 @@ const AdminLeads = () => {
                   onClick={() => setExpandedCard(isExpanded ? null : lead.id)}
                 >
                   <CardContent sx={{ pb: isExpanded ? 2 : '16px !important' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                      }}
+                    >
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
                           {lead.name}
@@ -462,7 +478,10 @@ const AdminLeads = () => {
                         </Typography>
                         <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
                           {formatSource(lead.source)} &middot;{' '}
-                          {formatDate(lead.createdAt || lead.created_at, { day: 'numeric', month: 'short' })}
+                          {formatDate(lead.createdAt || lead.created_at, {
+                            day: 'numeric',
+                            month: 'short',
+                          })}
                         </Typography>
                       </Box>
                       <Chip
@@ -480,16 +499,25 @@ const AdminLeads = () => {
 
                     {isExpanded && (
                       <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #E5E7EB' }}>
-                        <Typography variant="caption" sx={{ color: '#6B7280', display: 'block', mb: 0.5 }}>
+                        <Typography
+                          variant="caption"
+                          sx={{ color: '#6B7280', display: 'block', mb: 0.5 }}
+                        >
                           Phone: {lead.phone}
                         </Typography>
                         {lead.message && (
-                          <Typography variant="caption" sx={{ color: '#6B7280', display: 'block', mb: 1 }}>
+                          <Typography
+                            variant="caption"
+                            sx={{ color: '#6B7280', display: 'block', mb: 1 }}
+                          >
                             "{lead.message}"
                           </Typography>
                         )}
                         {lead.propertyId && (
-                          <Typography variant="caption" sx={{ color: '#C9A86C', display: 'block', mb: 1 }}>
+                          <Typography
+                            variant="caption"
+                            sx={{ color: '#C9A86C', display: 'block', mb: 1 }}
+                          >
                             Property: {getPropertyTitle(lead.propertyId) || `#${lead.propertyId}`}
                           </Typography>
                         )}
@@ -512,7 +540,12 @@ const AdminLeads = () => {
                               e.stopPropagation();
                               setDeleteDialog({ open: true, id: lead.id, name: lead.name });
                             }}
-                            sx={{ borderRadius: 2, fontSize: '0.75rem', borderColor: '#EF4444', color: '#EF4444' }}
+                            sx={{
+                              borderRadius: 2,
+                              fontSize: '0.75rem',
+                              borderColor: '#EF4444',
+                              color: '#EF4444',
+                            }}
                           >
                             Delete
                           </Button>
@@ -550,7 +583,14 @@ const AdminLeads = () => {
                   <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem' }}>
                     Date
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem', textAlign: 'right' }}>
+                  <TableCell
+                    sx={{
+                      fontWeight: 600,
+                      color: '#6B7280',
+                      fontSize: '0.75rem',
+                      textAlign: 'right',
+                    }}
+                  >
                     Actions
                   </TableCell>
                 </TableRow>
@@ -604,7 +644,10 @@ const AdminLeads = () => {
 
                         {/* Contact */}
                         <TableCell>
-                          <Typography variant="body2" sx={{ color: '#6B7280', fontSize: '0.8125rem' }}>
+                          <Typography
+                            variant="body2"
+                            sx={{ color: '#6B7280', fontSize: '0.8125rem' }}
+                          >
                             {lead.email}
                           </Typography>
                           <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
@@ -614,7 +657,10 @@ const AdminLeads = () => {
 
                         {/* Source */}
                         <TableCell>
-                          <Typography variant="body2" sx={{ color: '#6B7280', fontSize: '0.75rem' }}>
+                          <Typography
+                            variant="body2"
+                            sx={{ color: '#6B7280', fontSize: '0.75rem' }}
+                          >
                             {formatSource(lead.source)}
                           </Typography>
                         </TableCell>
@@ -636,7 +682,10 @@ const AdminLeads = () => {
                               {propTitle}
                             </Typography>
                           ) : (
-                            <Typography variant="body2" sx={{ color: '#D1D5DB', fontSize: '0.75rem' }}>
+                            <Typography
+                              variant="body2"
+                              sx={{ color: '#D1D5DB', fontSize: '0.75rem' }}
+                            >
                               --
                             </Typography>
                           )}
@@ -752,7 +801,15 @@ const AdminLeads = () => {
         PaperProps={{ sx: { borderRadius: 2, minWidth: 160, mt: 0.5 } }}
       >
         <Box sx={{ px: 2, py: 1 }}>
-          <Typography variant="caption" sx={{ fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              fontWeight: 600,
+              color: '#9CA3AF',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
             Change Status
           </Typography>
         </Box>
@@ -792,7 +849,8 @@ const AdminLeads = () => {
         <DialogTitle sx={{ fontWeight: 600, color: '#1B2A4A' }}>Delete Lead</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ color: '#6B7280' }}>
-            Are you sure you want to delete the lead from <strong>{deleteDialog.name}</strong>? This action cannot be undone.
+            Are you sure you want to delete the lead from <strong>{deleteDialog.name}</strong>? This
+            action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

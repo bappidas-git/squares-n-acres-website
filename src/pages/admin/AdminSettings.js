@@ -68,12 +68,8 @@ const mergeWithDefaults = (data) => {
     },
     newsletterText: str(data.newsletterText),
     newsletterSubtitle: str(data.newsletterSubtitle),
-    footerGallery: Array.isArray(data.footerGallery)
-      ? data.footerGallery.map((v) => str(v))
-      : [],
-    footerLinkGroups: Array.isArray(data.footerLinkGroups)
-      ? data.footerLinkGroups
-      : [],
+    footerGallery: Array.isArray(data.footerGallery) ? data.footerGallery.map((v) => str(v)) : [],
+    footerLinkGroups: Array.isArray(data.footerLinkGroups) ? data.footerLinkGroups : [],
   };
 };
 
@@ -114,13 +110,16 @@ const AdminSettings = () => {
         const data = await siteSettingsService.get();
         if (!cancelled) setSettings(mergeWithDefaults(data));
       } catch {
-        if (!cancelled) setSnackbar({ open: true, message: 'Failed to load settings', severity: 'error' });
+        if (!cancelled)
+          setSnackbar({ open: true, message: 'Failed to load settings', severity: 'error' });
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
     fetchSettings();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Immutable field updater — uses spread operators instead of
@@ -201,7 +200,16 @@ const AdminSettings = () => {
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 900, mx: 'auto' }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          mb: 3,
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
+      >
         <Box>
           <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#1B2A4A' }}>
             Site Settings
@@ -231,7 +239,10 @@ const AdminSettings = () => {
       </Box>
 
       {/* Tabs */}
-      <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}>
+      <Paper
+        elevation={0}
+        sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}
+      >
         <Tabs
           value={activeTab}
           onChange={(_, v) => setActiveTab(v)}
@@ -250,13 +261,37 @@ const AdminSettings = () => {
             '& .MuiTabs-indicator': { bgcolor: '#C9A86C' },
           }}
         >
-          <Tab icon={<Icon icon="mdi:domain" style={{ fontSize: 18 }} />} iconPosition="start" label="General" />
-          <Tab icon={<Icon icon="mdi:image-outline" style={{ fontSize: 18 }} />} iconPosition="start" label="Hero Section" />
-          <Tab icon={<Icon icon="mdi:share-variant-outline" style={{ fontSize: 18 }} />} iconPosition="start" label="Social Links" />
-          <Tab icon={<Icon icon="mdi:email-newsletter" style={{ fontSize: 18 }} />} iconPosition="start" label="Newsletter" />
-          <Tab icon={<Icon icon="mdi:page-layout-footer" style={{ fontSize: 18 }} />} iconPosition="start" label="Footer" />
+          <Tab
+            icon={<Icon icon="mdi:domain" style={{ fontSize: 18 }} />}
+            iconPosition="start"
+            label="General"
+          />
+          <Tab
+            icon={<Icon icon="mdi:image-outline" style={{ fontSize: 18 }} />}
+            iconPosition="start"
+            label="Hero Section"
+          />
+          <Tab
+            icon={<Icon icon="mdi:share-variant-outline" style={{ fontSize: 18 }} />}
+            iconPosition="start"
+            label="Social Links"
+          />
+          <Tab
+            icon={<Icon icon="mdi:email-newsletter" style={{ fontSize: 18 }} />}
+            iconPosition="start"
+            label="Newsletter"
+          />
+          <Tab
+            icon={<Icon icon="mdi:page-layout-footer" style={{ fontSize: 18 }} />}
+            iconPosition="start"
+            label="Footer"
+          />
           {isAdmin && (
-            <Tab icon={<Icon icon="mdi:account-group-outline" style={{ fontSize: 18 }} />} iconPosition="start" label="User Management" />
+            <Tab
+              icon={<Icon icon="mdi:account-group-outline" style={{ fontSize: 18 }} />}
+              iconPosition="start"
+              label="User Management"
+            />
           )}
         </Tabs>
 
@@ -320,7 +355,7 @@ const AdminSettings = () => {
                 size="small"
                 value={settings.contactInfo?.phone || ''}
                 onChange={(e) => updateField('contactInfo.phone', e.target.value)}
-                placeholder="(555) 123-4567"
+                placeholder="+91 98XXX XXXXX"
                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
             </FieldGroup>
@@ -382,13 +417,30 @@ const AdminSettings = () => {
             </FieldGroup>
 
             {(() => {
-              const mediaUrl = settings.heroText?.backgroundMedia || settings.heroText?.backgroundImage || '';
-              const isVideo = mediaUrl && ['.mp4', '.webm', '.ogg', '.mov'].some((ext) => mediaUrl.toLowerCase().includes(ext));
+              const mediaUrl =
+                settings.heroText?.backgroundMedia || settings.heroText?.backgroundImage || '';
+              const isVideo =
+                mediaUrl &&
+                ['.mp4', '.webm', '.ogg', '.mov'].some((ext) =>
+                  mediaUrl.toLowerCase().includes(ext)
+                );
               if (!mediaUrl) return null;
               return (
                 <Box sx={{ mb: 2 }}>
-                  <Typography sx={{ fontSize: '0.75rem', color: '#6B7280', mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Icon icon={isVideo ? 'mdi:video-outline' : 'mdi:image-outline'} style={{ fontSize: 16 }} />
+                  <Typography
+                    sx={{
+                      fontSize: '0.75rem',
+                      color: '#6B7280',
+                      mb: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                    }}
+                  >
+                    <Icon
+                      icon={isVideo ? 'mdi:video-outline' : 'mdi:image-outline'}
+                      style={{ fontSize: 16 }}
+                    />
                     Detected: {isVideo ? 'Video' : 'Image'}
                   </Typography>
                 </Box>
@@ -409,8 +461,13 @@ const AdminSettings = () => {
 
             {/* Preview */}
             {(() => {
-              const mediaUrl = settings.heroText?.backgroundMedia || settings.heroText?.backgroundImage || '';
-              const isVideo = mediaUrl && ['.mp4', '.webm', '.ogg', '.mov'].some((ext) => mediaUrl.toLowerCase().includes(ext));
+              const mediaUrl =
+                settings.heroText?.backgroundMedia || settings.heroText?.backgroundImage || '';
+              const isVideo =
+                mediaUrl &&
+                ['.mp4', '.webm', '.ogg', '.mov'].some((ext) =>
+                  mediaUrl.toLowerCase().includes(ext)
+                );
               return (
                 <Paper
                   variant="outlined"
@@ -423,11 +480,13 @@ const AdminSettings = () => {
                     position: 'relative',
                     overflow: 'hidden',
                     minHeight: 160,
-                    ...(!isVideo && mediaUrl ? {
-                      backgroundImage: `linear-gradient(rgba(27,42,74,0.7), rgba(27,42,74,0.85)), url(${mediaUrl})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                    } : {}),
+                    ...(!isVideo && mediaUrl
+                      ? {
+                          backgroundImage: `linear-gradient(rgba(27,42,74,0.7), rgba(27,42,74,0.85)), url(${mediaUrl})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                        }
+                      : {}),
                   }}
                 >
                   {isVideo && mediaUrl && (
@@ -453,10 +512,14 @@ const AdminSettings = () => {
                     </Box>
                   )}
                   <Box sx={{ position: 'relative', zIndex: 1 }}>
-                    <Typography sx={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.5)', mb: 1 }}>
+                    <Typography
+                      sx={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.5)', mb: 1 }}
+                    >
                       Hero Preview
                     </Typography>
-                    <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', mb: 0.5 }}>
+                    <Typography
+                      sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', mb: 0.5 }}
+                    >
                       {settings.heroText?.title || 'Hero Title'}
                     </Typography>
                     <Typography sx={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)' }}>
@@ -599,7 +662,16 @@ const AdminSettings = () => {
               <Typography sx={{ fontSize: '0.8125rem', color: '#6B7280' }}>
                 {settings.newsletterSubtitle || 'Subscribe to stay updated'}
               </Typography>
-              <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'center', maxWidth: 400, mx: 'auto' }}>
+              <Box
+                sx={{
+                  mt: 2,
+                  display: 'flex',
+                  gap: 1,
+                  justifyContent: 'center',
+                  maxWidth: 400,
+                  mx: 'auto',
+                }}
+              >
                 <Box
                   sx={{
                     flex: 1,
@@ -620,7 +692,9 @@ const AdminSettings = () => {
                     justifyContent: 'center',
                   }}
                 >
-                  <Typography sx={{ fontSize: '0.75rem', color: '#fff', fontWeight: 600 }}>Subscribe</Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: '#fff', fontWeight: 600 }}>
+                    Subscribe
+                  </Typography>
                 </Box>
               </Box>
             </Paper>
@@ -689,7 +763,9 @@ const AdminSettings = () => {
                 <IconButton
                   size="small"
                   onClick={() => {
-                    updateField('footerGallery', (gallery) => (gallery || []).filter((_, i) => i !== idx));
+                    updateField('footerGallery', (gallery) =>
+                      (gallery || []).filter((_, i) => i !== idx)
+                    );
                   }}
                   sx={{ color: '#EF4444', mt: 0.5 }}
                 >
@@ -716,7 +792,8 @@ const AdminSettings = () => {
               Footer Link Groups
             </Typography>
             <Typography sx={{ fontSize: '0.75rem', color: '#6B7280', mb: 2 }}>
-              Manage the link columns shown in the footer. Each group has a title and a set of links.
+              Manage the link columns shown in the footer. Each group has a title and a set of
+              links.
             </Typography>
 
             {(settings.footerLinkGroups || []).map((group, gIdx) => (
@@ -739,7 +816,9 @@ const AdminSettings = () => {
                   <IconButton
                     size="small"
                     onClick={() => {
-                      updateField('footerLinkGroups', (groups) => (groups || []).filter((_, i) => i !== gIdx));
+                      updateField('footerLinkGroups', (groups) =>
+                        (groups || []).filter((_, i) => i !== gIdx)
+                      );
                     }}
                     sx={{ color: '#EF4444' }}
                   >
@@ -797,7 +876,10 @@ const AdminSettings = () => {
                   onClick={() => {
                     updateField('footerLinkGroups', (groups) => {
                       const updated = JSON.parse(JSON.stringify(groups || []));
-                      updated[gIdx].links = [...(updated[gIdx].links || []), { label: '', path: '/' }];
+                      updated[gIdx].links = [
+                        ...(updated[gIdx].links || []),
+                        { label: '', path: '/' },
+                      ];
                       return updated;
                     });
                   }}
@@ -811,7 +893,10 @@ const AdminSettings = () => {
               size="small"
               startIcon={<Icon icon="mdi:plus" />}
               onClick={() => {
-                updateField('footerLinkGroups', (groups) => [...(groups || []), { title: '', links: [] }]);
+                updateField('footerLinkGroups', (groups) => [
+                  ...(groups || []),
+                  { title: '', links: [] },
+                ]);
               }}
               sx={{ textTransform: 'none', color: '#1B2A4A' }}
             >
@@ -835,10 +920,19 @@ const AdminSettings = () => {
               <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: '#C9A86C', mb: 0.5 }}>
                 {settings.companyName || 'Company Name'}
               </Typography>
-              <Typography sx={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.5)', mb: 1.5, letterSpacing: 1 }}>
+              <Typography
+                sx={{
+                  fontSize: '0.6875rem',
+                  color: 'rgba(255,255,255,0.5)',
+                  mb: 1.5,
+                  letterSpacing: 1,
+                }}
+              >
                 {settings.tagline || 'TAGLINE'}
               </Typography>
-              <Typography sx={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.7)', maxWidth: 300 }}>
+              <Typography
+                sx={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.7)', maxWidth: 300 }}
+              >
                 {settings.companyDescription || 'Company description text goes here'}
               </Typography>
             </Paper>
@@ -864,9 +958,7 @@ const AdminSettings = () => {
             zIndex: 100,
           }}
         >
-          <Typography sx={{ fontSize: '0.8125rem', color: '#6B7280' }}>
-            Unsaved changes
-          </Typography>
+          <Typography sx={{ fontSize: '0.8125rem', color: '#6B7280' }}>Unsaved changes</Typography>
           <Button
             variant="contained"
             size="small"

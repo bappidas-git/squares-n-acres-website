@@ -72,10 +72,7 @@ export const AdminAuthProvider = ({ children }) => {
     [user]
   );
 
-  const getDefaultRouteForUser = useCallback(
-    () => getDefaultRoute(user?.role),
-    [user]
-  );
+  const getDefaultRouteForUser = useCallback(() => getDefaultRoute(user?.role), [user]);
 
   const value = useMemo(
     () => ({
@@ -91,11 +88,7 @@ export const AdminAuthProvider = ({ children }) => {
     [user, loading, login, logout, canAccess, getDefaultRouteForUser]
   );
 
-  return (
-    <AdminAuthContext.Provider value={value}>
-      {children}
-    </AdminAuthContext.Provider>
-  );
+  return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;
 };
 
 export default AdminAuthContext;

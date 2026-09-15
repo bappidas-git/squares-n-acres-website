@@ -13,8 +13,10 @@
  *  - Laravel-migration safe (pure functions, no side effects)
  */
 
-const SITE_NAME = 'HOM Advisory';
-const SITE_URL = 'https://homadvisory.com';
+import { SITE } from '../config/site';
+
+const SITE_NAME = SITE.name;
+const SITE_URL = SITE.url;
 
 // ─── Helpers ──────────────────────────────────────────────────
 
@@ -110,7 +112,18 @@ const generateTitle = (property) => {
  * Includes CTA words for better CTR.
  */
 const generateDescription = (property) => {
-  const { title, developer, configuration, location, dimensionRange, status, possession, price, priceUnit, propertyType } = property;
+  const {
+    title,
+    developer,
+    configuration,
+    location,
+    dimensionRange,
+    status,
+    possession,
+    price,
+    priceUnit,
+    propertyType,
+  } = property;
   const area = location?.area || '';
   const city = location?.city || '';
   const configs = configuration?.length > 0 ? configuration.join(', ') : '';
@@ -126,7 +139,9 @@ const generateDescription = (property) => {
   } else if (area) {
     parts.push(`Discover ${title} in ${area}, ${city}.`);
   } else {
-    parts.push(`Explore ${title} — premium ${typeLabel.toLowerCase()} by ${developer || SITE_NAME}.`);
+    parts.push(
+      `Explore ${title} — premium ${typeLabel.toLowerCase()} by ${developer || SITE_NAME}.`
+    );
   }
 
   // Configuration + size
@@ -195,7 +210,8 @@ const generateKeywords = (property) => {
   if (configuration?.length > 0) {
     // Add first and last config as geo-modified keywords
     const firstConfig = configuration[0];
-    if (area) keywords.add(`${firstConfig} ${typeLabel.replace(/s$/, '')} in ${area.toLowerCase()}`);
+    if (area)
+      keywords.add(`${firstConfig} ${typeLabel.replace(/s$/, '')} in ${area.toLowerCase()}`);
   }
 
   // Status-based
@@ -230,7 +246,18 @@ const generateCanonicalUrl = (property) => {
  *  - BreadcrumbList
  */
 const generateSchemaMarkup = (property) => {
-  const { title, description, location, developer, price, configuration, dimensionRange, gallery, slug, amenities } = property;
+  const {
+    title,
+    description,
+    location,
+    developer,
+    price,
+    configuration,
+    dimensionRange,
+    gallery,
+    slug,
+    amenities,
+  } = property;
   const area = location?.area || '';
   const city = location?.city || '';
   const priceStr = price ? Number(price) : null;
@@ -281,15 +308,17 @@ const generateSchemaMarkup = (property) => {
     about: {
       '@type': 'Residence',
       name: title,
-      numberOfRooms: configuration?.length > 0 ? configuration[0]?.replace(/[^0-9]/g, '') : undefined,
-      floorSize: dimensionRange?.min && dimensionRange?.max
-        ? {
-            '@type': 'QuantitativeValue',
-            minValue: dimensionRange.min,
-            maxValue: dimensionRange.max,
-            unitCode: dimensionRange.unit === 'sqft' ? 'FTK' : 'MTK',
-          }
-        : undefined,
+      numberOfRooms:
+        configuration?.length > 0 ? configuration[0]?.replace(/[^0-9]/g, '') : undefined,
+      floorSize:
+        dimensionRange?.min && dimensionRange?.max
+          ? {
+              '@type': 'QuantitativeValue',
+              minValue: dimensionRange.min,
+              maxValue: dimensionRange.max,
+              unitCode: dimensionRange.unit === 'sqft' ? 'FTK' : 'MTK',
+            }
+          : undefined,
       amenityFeature: amenities?.slice(0, 10).map((a) => ({
         '@type': 'LocationFeatureSpecification',
         name: a.name,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Skeleton, Box } from '@mui/material';
+import { BRAND } from '../../config/site';
 
 /**
  * Branded skeleton loaders matching page layouts.
@@ -62,7 +63,13 @@ export const PropertyDetailSkeleton = () => (
     </Box>
     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mt: 3 }}>
       {Array.from({ length: 4 }).map((_, i) => (
-        <Skeleton key={i} variant="rectangular" height={80} sx={{ borderRadius: '8px' }} animation="wave" />
+        <Skeleton
+          key={i}
+          variant="rectangular"
+          height={80}
+          sx={{ borderRadius: '8px' }}
+          animation="wave"
+        />
       ))}
     </Box>
   </Box>
@@ -132,13 +139,13 @@ export const PageLoader = () => (
     <Box
       component="span"
       sx={{
-        fontFamily: '"Playfair Display", serif',
+        fontFamily: 'var(--font-body)',
         fontSize: '1.1rem',
         color: 'text.secondary',
         fontWeight: 600,
       }}
     >
-      H.O.M Advisory
+      {BRAND.name}
     </Box>
   </Box>
 );

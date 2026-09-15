@@ -3,11 +3,15 @@ import { Box, Typography, TextField, Button, IconButton } from '@mui/material';
 import { Icon } from '@iconify/react';
 import ImageUrlHelperText from '../../../components/admin/ImageUrlHelperText';
 
-const PLACEHOLDER_COVER_PREFIX = 'https://placehold.co/800x600/goldenrod/white?text=';
+const PLACEHOLDER_COVER_PREFIX = 'https://picsum.photos/seed/';
 
 const getDefaultCoverUrl = (title) => {
-  const name = (title || 'Project_Name').replace(/\s+/g, '_');
-  return `${PLACEHOLDER_COVER_PREFIX}${encodeURIComponent(name)}`;
+  const seed =
+    (title || 'project')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'project';
+  return `${PLACEHOLDER_COVER_PREFIX}${seed}/800/600`;
 };
 
 const GalleryTab = ({ formData, updateField, updateListItem, addListItem, removeListItem }) => {
@@ -80,7 +84,10 @@ const GalleryTab = ({ formData, updateField, updateListItem, addListItem, remove
             transition: 'background-color 0.15s',
           }}
         >
-          <Icon icon="mdi:drag-vertical" style={{ fontSize: 20, color: '#D1D5DB', flexShrink: 0 }} />
+          <Icon
+            icon="mdi:drag-vertical"
+            style={{ fontSize: 20, color: '#D1D5DB', flexShrink: 0 }}
+          />
 
           <Box
             sx={{
@@ -102,7 +109,10 @@ const GalleryTab = ({ formData, updateField, updateListItem, addListItem, remove
 
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             {index === 0 && (
-              <Typography variant="caption" sx={{ color: '#C9A86C', fontWeight: 600, fontSize: '0.65rem' }}>
+              <Typography
+                variant="caption"
+                sx={{ color: '#C9A86C', fontWeight: 600, fontSize: '0.65rem' }}
+              >
                 COVER IMAGE
               </Typography>
             )}
@@ -121,7 +131,11 @@ const GalleryTab = ({ formData, updateField, updateListItem, addListItem, remove
           </Box>
 
           {formData.gallery.length > 1 && (
-            <IconButton size="small" onClick={() => removeListItem('gallery', index)} sx={{ color: '#EF4444' }}>
+            <IconButton
+              size="small"
+              onClick={() => removeListItem('gallery', index)}
+              sx={{ color: '#EF4444' }}
+            >
               <Icon icon="mdi:close-circle-outline" style={{ fontSize: 20 }} />
             </IconButton>
           )}

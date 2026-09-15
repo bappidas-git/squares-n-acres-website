@@ -16,7 +16,10 @@ const FaqsTab = ({ formData, updateField }) => {
   };
 
   const removeFaq = (index) => {
-    updateField('faqs', faqs.filter((_, i) => i !== index));
+    updateField(
+      'faqs',
+      faqs.filter((_, i) => i !== index)
+    );
   };
 
   return (
@@ -25,12 +28,15 @@ const FaqsTab = ({ formData, updateField }) => {
         Frequently Asked Questions
       </Typography>
       <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
-        Add custom FAQs for this property. If left empty, default FAQs will be auto-generated from the property data.
+        Add custom FAQs for this property. If left empty, default FAQs will be auto-generated from
+        the property data.
       </Typography>
 
       {faqs.map((faq, index) => (
         <Paper key={index} sx={{ p: 2, borderRadius: 2, border: '1px solid #E5E7EB' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+          <Box
+            sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}
+          >
             <Typography variant="caption" sx={{ fontWeight: 600, color: '#6B7280' }}>
               FAQ #{index + 1}
             </Typography>

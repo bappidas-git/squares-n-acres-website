@@ -69,10 +69,7 @@ const TrendingTopics = () => {
               </div>
               <div className={styles.cardBody}>
                 <h4 className={styles.cardTitle}>{article.title}</h4>
-                <Link
-                  to={`/insights/articles/${article.slug}`}
-                  className={styles.readMore}
-                >
+                <Link to={`/insights/articles/${article.slug}`} className={styles.readMore}>
                   Read More
                 </Link>
               </div>

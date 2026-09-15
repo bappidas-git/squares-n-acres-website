@@ -1,33 +1,33 @@
-/* Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Outfit:wght@300;400;500;600;700&display=swap');
-
 /* CSS Custom Properties — matching MUI theme */
 :root {
   /* Brand Colors */
-  --color-primary: #1B2A4A;
-  --color-primary-light: #2D4470;
-  --color-primary-dark: #111C33;
-  --color-secondary: #C9A86C;
-  --color-secondary-light: #D4BC8E;
-  --color-secondary-dark: #B08E4A;
+  --color-primary: #1b2a4a;
+  --color-primary-light: #2d4470;
+  --color-primary-dark: #111c33;
+  --color-secondary: #c9a86c;
+  --color-secondary-light: #d4bc8e;
+  --color-secondary-dark: #b08e4a;
 
   /* Backgrounds */
-  --color-bg-default: #FFFFFF;
-  --color-bg-surface: #F8F6F3;
-  --color-bg-paper: #FFFFFF;
+  --color-bg-default: #ffffff;
+  --color-bg-surface: #f8f6f3;
+  --color-bg-paper: #ffffff;
 
   /* Text */
-  --color-text-primary: #1B2A4A;
-  --color-text-secondary: #6B7280;
-  --color-text-light: #9CA3AF;
+  --color-text-primary: #1b2a4a;
+  --color-text-secondary: #6b7280;
+  --color-text-light: #9ca3af;
 
   /* Borders */
-  --color-border: #E5E7EB;
+  --color-border: #e5e7eb;
 
   /* Typography */
   --font-heading: 'Playfair Display', 'Georgia', serif;
   --font-body: 'DM Sans', 'Helvetica', 'Arial', sans-serif;
   --font-number: 'Outfit', 'DM Sans', 'Helvetica', sans-serif;
+  /* Non-brand faces: the Google SERP preview mock and code/slug display */
+  --font-serp: arial, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
   /* Spacing */
   --spacing-xs: 4px;
@@ -110,7 +110,8 @@ img {
 }
 
 /* Lists */
-ul, ol {
+ul,
+ol {
   list-style: none;
 }
 
@@ -225,8 +226,12 @@ ul, ol {
 
 /* ─── Shimmer animation for skeleton loaders ─── */
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 /* ─── Mobile-specific overrides ─── */
@@ -235,33 +240,4 @@ ul, ol {
   body {
     overflow-x: hidden;
   }
-}
-
-/* ─── SweetAlert2 Custom Styles ─── */
-.hom-swal-popup {
-  font-family: 'DM Sans', 'Helvetica', 'Arial', sans-serif !important;
-  border-radius: 16px !important;
-  padding: 24px !important;
-}
-
-.hom-swal-title {
-  font-family: 'Playfair Display', 'Georgia', serif !important;
-  font-size: 1.35rem !important;
-  font-weight: 700 !important;
-  color: #1B2A4A !important;
-}
-
-.hom-swal-html {
-  font-family: 'DM Sans', 'Helvetica', 'Arial', sans-serif !important;
-  font-size: 0.9rem !important;
-  color: #6B7280 !important;
-  line-height: 1.6 !important;
-}
-
-.hom-swal-confirm {
-  font-family: 'DM Sans', 'Helvetica', 'Arial', sans-serif !important;
-  font-weight: 600 !important;
-  border-radius: 8px !important;
-  padding: 10px 28px !important;
-  font-size: 0.9rem !important;
 }

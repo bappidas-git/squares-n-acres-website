@@ -3,13 +3,13 @@ import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { useInView } from 'react-intersection-observer';
 import styles from './WhyChoose.module.css';
+import { BRAND } from '../../../config/site';
 
 const features = [
   {
     icon: 'mdi:compass-outline',
     title: 'Expert Guidance',
-    description:
-      'Professional real estate advisors with deep market knowledge.',
+    description: 'Professional real estate advisors with deep market knowledge.',
   },
   {
     icon: 'mdi:star-outline',
@@ -49,10 +49,8 @@ const WhyChoose = () => {
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.5 }}
         >
-          <h2 className={styles.title}>Why Choose H.O.M Advisory</h2>
-          <p className={styles.subtitle}>
-            Your trusted partner in finding the perfect property
-          </p>
+          <h2 className={styles.title}>Why Choose {BRAND.name}</h2>
+          <p className={styles.subtitle}>Your trusted partner in finding the perfect property</p>
         </motion.div>
 
         <div className={styles.grid}>

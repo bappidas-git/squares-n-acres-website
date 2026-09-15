@@ -41,12 +41,14 @@ const PropertyAmenities = ({ amenities = [] }) => {
         </div>
 
         {remainingCount > 0 && (
-          <button
-            className={styles.showMoreBtn}
-            onClick={() => setExpanded(!expanded)}
-          >
-            <Icon icon={expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'} className={styles.showMoreIcon} />
-            {expanded ? 'Show Less' : `Show ${remainingCount} More Amenit${remainingCount > 1 ? 'ies' : 'y'}`}
+          <button className={styles.showMoreBtn} onClick={() => setExpanded(!expanded)}>
+            <Icon
+              icon={expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}
+              className={styles.showMoreIcon}
+            />
+            {expanded
+              ? 'Show Less'
+              : `Show ${remainingCount} More Amenit${remainingCount > 1 ? 'ies' : 'y'}`}
           </button>
         )}
       </motion.div>

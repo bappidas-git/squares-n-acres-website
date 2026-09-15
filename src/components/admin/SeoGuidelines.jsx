@@ -71,7 +71,7 @@ const guidelines = [
       'Include address, geo coordinates, pricing (Offer), and property features (amenities).',
       'Add BreadcrumbList schema to show navigation hierarchy in search results.',
       'Always set @context to "https://schema.org" — this is required for all schema markup.',
-      'Validate your schema using Google\'s Rich Results Test tool.',
+      "Validate your schema using Google's Rich Results Test tool.",
       'Keep schema in sync with the visible page content — mismatches can trigger penalties.',
     ],
   },
@@ -111,7 +111,7 @@ const guidelines = [
     color: '#F97316',
     title: 'Page Speed Importance',
     content: [
-      'Google\'s Core Web Vitals directly impact rankings — fast sites rank higher.',
+      "Google's Core Web Vitals directly impact rankings — fast sites rank higher.",
       'Target under 2.5 seconds for Largest Contentful Paint (LCP).',
       'Optimize images: use WebP format, lazy loading, and responsive srcset.',
       'Minimize JavaScript bundle size — code-split routes and lazy-load components.',
@@ -131,8 +131,8 @@ const guidelines = [
       'Buttons and links should have at least 48x48px touch targets.',
       'Text must be readable without zooming — minimum 16px font size on mobile.',
       'No horizontal scrolling — content must fit the viewport.',
-      'Test every page using Google\'s Mobile-Friendly Test tool.',
-      'Ensure images resize properly and don\'t cause layout shifts on mobile.',
+      "Test every page using Google's Mobile-Friendly Test tool.",
+      "Ensure images resize properly and don't cause layout shifts on mobile.",
     ],
   },
   {
@@ -204,7 +204,7 @@ const guidelines = [
     color: '#4285F4',
     title: 'Why Google Ranks Pages',
     content: [
-      'Google\'s goal is to show the most relevant, trustworthy, and useful result for every query.',
+      "Google's goal is to show the most relevant, trustworthy, and useful result for every query.",
       'Relevance: Does your page content match what the user is searching for?',
       'Authority: Do other reputable sites link to your content?',
       'User Experience: Is your page fast, mobile-friendly, and easy to navigate?',
@@ -253,7 +253,7 @@ const guidelines = [
     color: '#B45309',
     title: 'E-E-A-T: Experience, Expertise, Authoritativeness, Trust',
     content: [
-      'E-E-A-T is Google\'s framework for evaluating content quality — critical for YMYL (Your Money or Your Life) topics like real estate.',
+      "E-E-A-T is Google's framework for evaluating content quality — critical for YMYL (Your Money or Your Life) topics like real estate.",
       'Experience: Show that your team has first-hand experience in the real estate market.',
       'Expertise: Include detailed property specifications, market insights, and professional analysis.',
       'Authoritativeness: Build backlinks from reputable real estate portals, news sites, and industry publications.',
@@ -340,17 +340,15 @@ const SeoGuidelines = () => {
               '&:before': { display: 'none' },
               borderRadius: '8px !important',
               mb: 0.5,
-              border: expanded === guide.id ? `1px solid ${guide.color}20` : '1px solid transparent',
+              border:
+                expanded === guide.id ? `1px solid ${guide.color}20` : '1px solid transparent',
               bgcolor: expanded === guide.id ? `${guide.color}05` : 'transparent',
               '&:hover': { bgcolor: `${guide.color}08` },
             }}
           >
             <AccordionSummary
               expandIcon={
-                <Icon
-                  icon="mdi:chevron-down"
-                  style={{ fontSize: 20, color: '#9CA3AF' }}
-                />
+                <Icon icon="mdi:chevron-down" style={{ fontSize: 20, color: '#9CA3AF' }} />
               }
               sx={{
                 minHeight: 48,
@@ -358,10 +356,7 @@ const SeoGuidelines = () => {
                 '& .MuiAccordionSummary-content': { gap: 1.5, alignItems: 'center', my: 0.75 },
               }}
             >
-              <Icon
-                icon={guide.icon}
-                style={{ fontSize: 20, color: guide.color, flexShrink: 0 }}
-              />
+              <Icon icon={guide.icon} style={{ fontSize: 20, color: guide.color, flexShrink: 0 }} />
               <Typography
                 sx={{
                   fontSize: '0.8125rem',

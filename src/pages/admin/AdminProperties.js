@@ -91,7 +91,12 @@ const AdminProperties = () => {
   const [selected, setSelected] = useState([]);
 
   // Dialog state
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, id: null, title: '', bulk: false });
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    id: null,
+    title: '',
+    bulk: false,
+  });
 
   // Snackbar state
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -159,7 +164,16 @@ const AdminProperties = () => {
 
     setFilteredProperties(result);
     setPage(0);
-  }, [properties, searchQuery, statusFilter, typeFilter, propertyTypeFilter, activeFilter, sortField, sortOrder]);
+  }, [
+    properties,
+    searchQuery,
+    statusFilter,
+    typeFilter,
+    propertyTypeFilter,
+    activeFilter,
+    sortField,
+    sortOrder,
+  ]);
 
   // Toggle active status
   const handleToggleActive = async (id, currentStatus) => {
@@ -243,9 +257,7 @@ const AdminProperties = () => {
   };
 
   const handleSelectOne = (id) => {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
-    );
+    setSelected((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
   };
 
   // Sort handler
@@ -295,7 +307,9 @@ const AdminProperties = () => {
     currentPageIds.some((id) => selected.includes(id)) && !allOnPageSelected;
 
   // Get unique property types from data
-  const propertyTypes = [...new Set(properties.map((p) => p.propertyType || p.property_type).filter(Boolean))];
+  const propertyTypes = [
+    ...new Set(properties.map((p) => p.propertyType || p.property_type).filter(Boolean)),
+  ];
 
   return (
     <Box>
@@ -383,11 +397,7 @@ const AdminProperties = () => {
 
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Type</InputLabel>
-            <Select
-              value={typeFilter}
-              label="Type"
-              onChange={(e) => setTypeFilter(e.target.value)}
-            >
+            <Select value={typeFilter} label="Type" onChange={(e) => setTypeFilter(e.target.value)}>
               <MenuItem value="all">All Types</MenuItem>
               <MenuItem value="sale">Sale</MenuItem>
               <MenuItem value="rent">Rent</MenuItem>
@@ -410,7 +420,11 @@ const AdminProperties = () => {
             </Select>
           </FormControl>
 
-          {(searchQuery || statusFilter !== 'all' || typeFilter !== 'all' || propertyTypeFilter !== 'all' || activeFilter !== 'all') && (
+          {(searchQuery ||
+            statusFilter !== 'all' ||
+            typeFilter !== 'all' ||
+            propertyTypeFilter !== 'all' ||
+            activeFilter !== 'all') && (
             <Button
               size="small"
               variant="text"
@@ -453,7 +467,11 @@ const AdminProperties = () => {
             variant="outlined"
             onClick={handleBulkActivate}
             startIcon={<Icon icon="mdi:check-circle-outline" />}
-            sx={{ borderColor: '#10B981', color: '#10B981', '&:hover': { borderColor: '#059669', bgcolor: '#ECFDF5' } }}
+            sx={{
+              borderColor: '#10B981',
+              color: '#10B981',
+              '&:hover': { borderColor: '#059669', bgcolor: '#ECFDF5' },
+            }}
           >
             Activate
           </Button>
@@ -462,22 +480,33 @@ const AdminProperties = () => {
             variant="outlined"
             onClick={handleBulkDeactivate}
             startIcon={<Icon icon="mdi:close-circle-outline" />}
-            sx={{ borderColor: '#F59E0B', color: '#F59E0B', '&:hover': { borderColor: '#D97706', bgcolor: '#FFFBEB' } }}
+            sx={{
+              borderColor: '#F59E0B',
+              color: '#F59E0B',
+              '&:hover': { borderColor: '#D97706', bgcolor: '#FFFBEB' },
+            }}
           >
             Deactivate
           </Button>
           <Button
             size="small"
             variant="outlined"
-            onClick={() =>
-              setDeleteDialog({ open: true, id: null, title: '', bulk: true })
-            }
+            onClick={() => setDeleteDialog({ open: true, id: null, title: '', bulk: true })}
             startIcon={<Icon icon="mdi:delete-outline" />}
-            sx={{ borderColor: '#EF4444', color: '#EF4444', '&:hover': { borderColor: '#DC2626', bgcolor: '#FEF2F2' } }}
+            sx={{
+              borderColor: '#EF4444',
+              color: '#EF4444',
+              '&:hover': { borderColor: '#DC2626', bgcolor: '#FEF2F2' },
+            }}
           >
             Delete
           </Button>
-          <Button size="small" variant="text" onClick={() => setSelected([])} sx={{ ml: 'auto', color: '#6B7280' }}>
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => setSelected([])}
+            sx={{ ml: 'auto', color: '#6B7280' }}
+          >
             Clear Selection
           </Button>
         </Paper>
@@ -494,148 +523,162 @@ const AdminProperties = () => {
       {isMobile ? (
         /* === Mobile Card View === */
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {loading
-            ? Array.from({ length: 3 }).map((_, i) => (
-                <Card key={i} sx={{ borderRadius: 3 }}>
-                  <CardContent>
-                    <Skeleton width="60%" height={28} />
-                    <Skeleton width="40%" height={20} sx={{ mt: 1 }} />
-                    <Skeleton width="30%" height={20} sx={{ mt: 0.5 }} />
-                  </CardContent>
-                </Card>
-              ))
-            : currentPageData.length === 0 ? (
-                <Paper sx={{ p: 4, borderRadius: 3, textAlign: 'center' }}>
-                  <Icon icon="mdi:home-search-outline" style={{ fontSize: 48, color: '#D1D5DB' }} />
-                  <Typography variant="body1" sx={{ color: '#9CA3AF', mt: 1 }}>
-                    No properties found
-                  </Typography>
-                </Paper>
-              ) : (
-                currentPageData.map((property) => (
-                  <Card key={property.id} sx={{ borderRadius: 3, position: 'relative' }}>
-                    <CardContent sx={{ pb: 1 }}>
-                      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                        <Checkbox
-                          size="small"
-                          checked={selected.includes(property.id)}
-                          onChange={() => handleSelectOne(property.id)}
-                        />
-                        <Box
-                          sx={{
-                            width: 64,
-                            height: 64,
-                            borderRadius: 2,
-                            bgcolor: '#F3F4F6',
-                            backgroundImage: property.gallery?.[0]
-                              ? `url(${property.gallery[0]})`
-                              : 'none',
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            flexShrink: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {!property.gallery?.[0] && (
-                            <Icon icon="mdi:image-outline" style={{ fontSize: 24, color: '#D1D5DB' }} />
-                          )}
-                        </Box>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography
-                            variant="subtitle2"
-                            sx={{ fontWeight: 600, color: '#1B2A4A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                          >
-                            {property.title}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: '#6B7280' }}>
-                            {property.location?.area || property.location_area}, {property.location?.city || property.location_city}
-                          </Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#C9A86C', mt: 0.5 }}>
-                            {formatPrice(property.price)}
-                          </Typography>
-                        </Box>
-                      </Box>
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} sx={{ borderRadius: 3 }}>
+                <CardContent>
+                  <Skeleton width="60%" height={28} />
+                  <Skeleton width="40%" height={20} sx={{ mt: 1 }} />
+                  <Skeleton width="30%" height={20} sx={{ mt: 0.5 }} />
+                </CardContent>
+              </Card>
+            ))
+          ) : currentPageData.length === 0 ? (
+            <Paper sx={{ p: 4, borderRadius: 3, textAlign: 'center' }}>
+              <Icon icon="mdi:home-search-outline" style={{ fontSize: 48, color: '#D1D5DB' }} />
+              <Typography variant="body1" sx={{ color: '#9CA3AF', mt: 1 }}>
+                No properties found
+              </Typography>
+            </Paper>
+          ) : (
+            currentPageData.map((property) => (
+              <Card key={property.id} sx={{ borderRadius: 3, position: 'relative' }}>
+                <CardContent sx={{ pb: 1 }}>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                    <Checkbox
+                      size="small"
+                      checked={selected.includes(property.id)}
+                      onChange={() => handleSelectOne(property.id)}
+                    />
+                    <Box
+                      sx={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 2,
+                        bgcolor: '#F3F4F6',
+                        backgroundImage: property.gallery?.[0]
+                          ? `url(${property.gallery[0]})`
+                          : 'none',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {!property.gallery?.[0] && (
+                        <Icon icon="mdi:image-outline" style={{ fontSize: 24, color: '#D1D5DB' }} />
+                      )}
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{
+                          fontWeight: 600,
+                          color: '#1B2A4A',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {property.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#6B7280' }}>
+                        {property.location?.area || property.location_area},{' '}
+                        {property.location?.city || property.location_city}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 600, color: '#C9A86C', mt: 0.5 }}
+                      >
+                        {formatPrice(property.price)}
+                      </Typography>
+                    </Box>
+                  </Box>
 
-                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1.5, ml: 5 }}>
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1.5, ml: 5 }}>
+                    <Chip
+                      size="small"
+                      label={property.type === 'sale' ? 'Sale' : 'Rent'}
+                      sx={{
+                        height: 22,
+                        fontSize: '0.6875rem',
+                        fontWeight: 600,
+                        bgcolor: property.type === 'sale' ? '#EFF6FF' : '#FEF3C7',
+                        color: property.type === 'sale' ? '#1D4ED8' : '#B45309',
+                      }}
+                    />
+                    <Chip
+                      size="small"
+                      label={statusLabels[property.status] || property.status}
+                      sx={{ height: 22, fontSize: '0.6875rem' }}
+                    />
+                    {(property.tags || []).map((tag) => {
+                      const tc = tagColors[tag] || { bg: '#F3F4F6', color: '#6B7280' };
+                      return (
                         <Chip
+                          key={tag}
                           size="small"
-                          label={property.type === 'sale' ? 'Sale' : 'Rent'}
+                          label={tag}
                           sx={{
                             height: 22,
-                            fontSize: '0.6875rem',
+                            fontSize: '0.625rem',
                             fontWeight: 600,
-                            bgcolor: property.type === 'sale' ? '#EFF6FF' : '#FEF3C7',
-                            color: property.type === 'sale' ? '#1D4ED8' : '#B45309',
+                            bgcolor: tc.bg,
+                            color: tc.color,
                           }}
                         />
-                        <Chip
-                          size="small"
-                          label={statusLabels[property.status] || property.status}
-                          sx={{ height: 22, fontSize: '0.6875rem' }}
-                        />
-                        {(property.tags || []).map((tag) => {
-                          const tc = tagColors[tag] || { bg: '#F3F4F6', color: '#6B7280' };
-                          return (
-                            <Chip
-                              key={tag}
-                              size="small"
-                              label={tag}
-                              sx={{
-                                height: 22,
-                                fontSize: '0.625rem',
-                                fontWeight: 600,
-                                bgcolor: tc.bg,
-                                color: tc.color,
-                              }}
-                            />
-                          );
-                        })}
-                      </Box>
-                    </CardContent>
-                    <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography variant="caption" sx={{ color: '#6B7280' }}>
-                          Active
-                        </Typography>
-                        <Switch
-                          size="small"
-                          checked={property.isActive ?? property.is_active ?? false}
-                          onChange={() => handleToggleActive(property.id, property.isActive ?? property.is_active)}
-                          sx={{
-                            '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
-                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#10B981' },
-                          }}
-                        />
-                      </Box>
-                      <Box>
-                        <IconButton
-                          size="small"
-                          onClick={() => navigate(`/admin/properties/edit/${property.id}`)}
-                          sx={{ color: '#6B7280' }}
-                        >
-                          <Icon icon="mdi:pencil-outline" style={{ fontSize: 18 }} />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            setDeleteDialog({
-                              open: true,
-                              id: property.id,
-                              title: property.title,
-                              bulk: false,
-                            })
-                          }
-                          sx={{ color: '#EF4444' }}
-                        >
-                          <Icon icon="mdi:delete-outline" style={{ fontSize: 18 }} />
-                        </IconButton>
-                      </Box>
-                    </CardActions>
-                  </Card>
-                ))
-              )}
+                      );
+                    })}
+                  </Box>
+                </CardContent>
+                <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography variant="caption" sx={{ color: '#6B7280' }}>
+                      Active
+                    </Typography>
+                    <Switch
+                      size="small"
+                      checked={property.isActive ?? property.is_active ?? false}
+                      onChange={() =>
+                        handleToggleActive(property.id, property.isActive ?? property.is_active)
+                      }
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                          bgcolor: '#10B981',
+                        },
+                      }}
+                    />
+                  </Box>
+                  <Box>
+                    <IconButton
+                      size="small"
+                      onClick={() => navigate(`/admin/properties/edit/${property.id}`)}
+                      sx={{ color: '#6B7280' }}
+                    >
+                      <Icon icon="mdi:pencil-outline" style={{ fontSize: 18 }} />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() =>
+                        setDeleteDialog({
+                          open: true,
+                          id: property.id,
+                          title: property.title,
+                          bulk: false,
+                        })
+                      }
+                      sx={{ color: '#EF4444' }}
+                    >
+                      <Icon icon="mdi:delete-outline" style={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Box>
+                </CardActions>
+              </Card>
+            ))
+          )}
         </Box>
       ) : (
         /* === Desktop Table View === */
@@ -652,7 +695,9 @@ const AdminProperties = () => {
                       onChange={handleSelectAll}
                     />
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem', width: 60 }}>
+                  <TableCell
+                    sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem', width: 60 }}
+                  >
                     Image
                   </TableCell>
                   <SortableHeader field="title">Name</SortableHeader>
@@ -664,191 +709,237 @@ const AdminProperties = () => {
                   <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem' }}>
                     Status
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem', textAlign: 'center' }}>
+                  <TableCell
+                    sx={{
+                      fontWeight: 600,
+                      color: '#6B7280',
+                      fontSize: '0.75rem',
+                      textAlign: 'center',
+                    }}
+                  >
                     Active
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#6B7280', fontSize: '0.75rem', textAlign: 'right' }}>
+                  <TableCell
+                    sx={{
+                      fontWeight: 600,
+                      color: '#6B7280',
+                      fontSize: '0.75rem',
+                      textAlign: 'right',
+                    }}
+                  >
                     Actions
                   </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {loading
-                  ? Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell padding="checkbox"><Skeleton width={20} /></TableCell>
-                        {Array.from({ length: 7 }).map((_, j) => (
-                          <TableCell key={j}><Skeleton /></TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  : currentPageData.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                          <Icon icon="mdi:home-search-outline" style={{ fontSize: 48, color: '#D1D5DB' }} />
-                          <Typography variant="body2" sx={{ color: '#9CA3AF', mt: 1 }}>
-                            No properties found
-                          </Typography>
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell padding="checkbox">
+                        <Skeleton width={20} />
+                      </TableCell>
+                      {Array.from({ length: 7 }).map((_, j) => (
+                        <TableCell key={j}>
+                          <Skeleton />
                         </TableCell>
-                      </TableRow>
-                    )
-                  : currentPageData.map((property) => (
-                      <TableRow
-                        key={property.id}
-                        hover
-                        sx={{
-                          '&:last-child td': { border: 0 },
-                          bgcolor: selected.includes(property.id) ? 'rgba(59,130,246,0.04)' : 'inherit',
-                        }}
-                      >
-                        <TableCell padding="checkbox">
-                          <Checkbox
-                            size="small"
-                            checked={selected.includes(property.id)}
-                            onChange={() => handleSelectOne(property.id)}
-                          />
-                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : currentPageData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                      <Icon
+                        icon="mdi:home-search-outline"
+                        style={{ fontSize: 48, color: '#D1D5DB' }}
+                      />
+                      <Typography variant="body2" sx={{ color: '#9CA3AF', mt: 1 }}>
+                        No properties found
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  currentPageData.map((property) => (
+                    <TableRow
+                      key={property.id}
+                      hover
+                      sx={{
+                        '&:last-child td': { border: 0 },
+                        bgcolor: selected.includes(property.id)
+                          ? 'rgba(59,130,246,0.04)'
+                          : 'inherit',
+                      }}
+                    >
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          size="small"
+                          checked={selected.includes(property.id)}
+                          onChange={() => handleSelectOne(property.id)}
+                        />
+                      </TableCell>
 
-                        {/* Thumbnail */}
-                        <TableCell>
-                          <Box
-                            sx={{
-                              width: 48,
-                              height: 48,
-                              borderRadius: 1.5,
-                              bgcolor: '#F3F4F6',
-                              backgroundImage: property.gallery?.[0]
-                                ? `url(${property.gallery[0]})`
-                                : 'none',
-                              backgroundSize: 'cover',
-                              backgroundPosition: 'center',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
+                      {/* Thumbnail */}
+                      <TableCell>
+                        <Box
+                          sx={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 1.5,
+                            bgcolor: '#F3F4F6',
+                            backgroundImage: property.gallery?.[0]
+                              ? `url(${property.gallery[0]})`
+                              : 'none',
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {!property.gallery?.[0] && (
+                            <Icon
+                              icon="mdi:image-outline"
+                              style={{ fontSize: 20, color: '#D1D5DB' }}
+                            />
+                          )}
+                        </Box>
+                      </TableCell>
+
+                      {/* Name */}
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 600,
+                            color: '#1B2A4A',
+                            maxWidth: 200,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            cursor: 'pointer',
+                            '&:hover': { color: '#C9A86C' },
+                          }}
+                          onClick={() => navigate(`/admin/properties/edit/${property.id}`)}
+                        >
+                          {property.title}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
+                          {property.developer}
+                        </Typography>
+                      </TableCell>
+
+                      {/* Price */}
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: 600, color: '#1B2A4A', whiteSpace: 'nowrap' }}
+                        >
+                          {formatPrice(property.price)}
+                        </Typography>
+                      </TableCell>
+
+                      {/* Type */}
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          label={property.type === 'sale' ? 'Sale' : 'Rent'}
+                          sx={{
+                            height: 22,
+                            fontSize: '0.6875rem',
+                            fontWeight: 600,
+                            bgcolor: property.type === 'sale' ? '#EFF6FF' : '#FEF3C7',
+                            color: property.type === 'sale' ? '#1D4ED8' : '#B45309',
+                          }}
+                        />
+                      </TableCell>
+
+                      {/* Status */}
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          label={statusLabels[property.status] || property.status}
+                          sx={{ height: 22, fontSize: '0.6875rem' }}
+                        />
+                      </TableCell>
+
+                      {/* Active Toggle */}
+                      <TableCell align="center">
+                        <Switch
+                          size="small"
+                          checked={property.isActive ?? property.is_active ?? false}
+                          onChange={() =>
+                            handleToggleActive(property.id, property.isActive ?? property.is_active)
+                          }
+                          sx={{
+                            '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                              bgcolor: '#10B981',
+                            },
+                          }}
+                        />
+                      </TableCell>
+
+                      {/* Actions */}
+                      <TableCell align="right">
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                          <Tooltip title="Edit">
+                            <IconButton
+                              size="small"
+                              onClick={() => navigate(`/admin/properties/edit/${property.id}`)}
+                              sx={{ color: '#6B7280', '&:hover': { color: '#1B2A4A' } }}
+                            >
+                              <Icon icon="mdi:pencil-outline" style={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip
+                            title={
+                              (property.isActive ?? property.is_active) ? 'Deactivate' : 'Activate'
+                            }
                           >
-                            {!property.gallery?.[0] && (
-                              <Icon icon="mdi:image-outline" style={{ fontSize: 20, color: '#D1D5DB' }} />
-                            )}
-                          </Box>
-                        </TableCell>
-
-                        {/* Name */}
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontWeight: 600,
-                              color: '#1B2A4A',
-                              maxWidth: 200,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              cursor: 'pointer',
-                              '&:hover': { color: '#C9A86C' },
-                            }}
-                            onClick={() => navigate(`/admin/properties/edit/${property.id}`)}
-                          >
-                            {property.title}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
-                            {property.developer}
-                          </Typography>
-                        </TableCell>
-
-                        {/* Price */}
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#1B2A4A', whiteSpace: 'nowrap' }}>
-                            {formatPrice(property.price)}
-                          </Typography>
-                        </TableCell>
-
-
-                        {/* Type */}
-                        <TableCell>
-                          <Chip
-                            size="small"
-                            label={property.type === 'sale' ? 'Sale' : 'Rent'}
-                            sx={{
-                              height: 22,
-                              fontSize: '0.6875rem',
-                              fontWeight: 600,
-                              bgcolor: property.type === 'sale' ? '#EFF6FF' : '#FEF3C7',
-                              color: property.type === 'sale' ? '#1D4ED8' : '#B45309',
-                            }}
-                          />
-                        </TableCell>
-
-                        {/* Status */}
-                        <TableCell>
-                          <Chip
-                            size="small"
-                            label={statusLabels[property.status] || property.status}
-                            sx={{ height: 22, fontSize: '0.6875rem' }}
-                          />
-                        </TableCell>
-
-
-                        {/* Active Toggle */}
-                        <TableCell align="center">
-                          <Switch
-                            size="small"
-                            checked={property.isActive ?? property.is_active ?? false}
-                            onChange={() => handleToggleActive(property.id, property.isActive ?? property.is_active)}
-                            sx={{
-                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' },
-                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#10B981' },
-                            }}
-                          />
-                        </TableCell>
-
-                        {/* Actions */}
-                        <TableCell align="right">
-                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                            <Tooltip title="Edit">
-                              <IconButton
-                                size="small"
-                                onClick={() => navigate(`/admin/properties/edit/${property.id}`)}
-                                sx={{ color: '#6B7280', '&:hover': { color: '#1B2A4A' } }}
-                              >
-                                <Icon icon="mdi:pencil-outline" style={{ fontSize: 18 }} />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title={(property.isActive ?? property.is_active) ? 'Deactivate' : 'Activate'}>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleToggleActive(property.id, property.isActive)}
-                                sx={{
-                                  color: (property.isActive ?? property.is_active) ? '#F59E0B' : '#10B981',
-                                  '&:hover': { color: (property.isActive ?? property.is_active) ? '#D97706' : '#059669' },
-                                }}
-                              >
-                                <Icon
-                                  icon={(property.isActive ?? property.is_active) ? 'mdi:eye-off-outline' : 'mdi:eye-outline'}
-                                  style={{ fontSize: 18 }}
-                                />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                              <IconButton
-                                size="small"
-                                onClick={() =>
-                                  setDeleteDialog({
-                                    open: true,
-                                    id: property.id,
-                                    title: property.title,
-                                    bulk: false,
-                                  })
+                            <IconButton
+                              size="small"
+                              onClick={() => handleToggleActive(property.id, property.isActive)}
+                              sx={{
+                                color:
+                                  (property.isActive ?? property.is_active) ? '#F59E0B' : '#10B981',
+                                '&:hover': {
+                                  color:
+                                    (property.isActive ?? property.is_active)
+                                      ? '#D97706'
+                                      : '#059669',
+                                },
+                              }}
+                            >
+                              <Icon
+                                icon={
+                                  (property.isActive ?? property.is_active)
+                                    ? 'mdi:eye-off-outline'
+                                    : 'mdi:eye-outline'
                                 }
-                                sx={{ color: '#EF4444', '&:hover': { color: '#DC2626' } }}
-                              >
-                                <Icon icon="mdi:delete-outline" style={{ fontSize: 18 }} />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                                style={{ fontSize: 18 }}
+                              />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete">
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                setDeleteDialog({
+                                  open: true,
+                                  id: property.id,
+                                  title: property.title,
+                                  bulk: false,
+                                })
+                              }
+                              sx={{ color: '#EF4444', '&:hover': { color: '#DC2626' } }}
+                            >
+                              <Icon icon="mdi:delete-outline" style={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </TableContainer>
@@ -878,9 +969,7 @@ const AdminProperties = () => {
         onClose={() => setDeleteDialog({ open: false, id: null, title: '', bulk: false })}
         PaperProps={{ sx: { borderRadius: 3, maxWidth: 420 } }}
       >
-        <DialogTitle sx={{ fontWeight: 600, color: '#1B2A4A' }}>
-          Confirm Delete
-        </DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, color: '#1B2A4A' }}>Confirm Delete</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ color: '#6B7280' }}>
             {deleteDialog.bulk

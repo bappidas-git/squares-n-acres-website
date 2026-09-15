@@ -20,7 +20,8 @@ const SectionVisibilityTab = ({ formData, updateField }) => {
           Section Visibility
         </Typography>
         <Typography variant="body2" sx={{ color: '#6B7280', mb: 2 }}>
-          Control which sections appear on the property details page. Sections will only render if the toggle is enabled AND the section has valid data.
+          Control which sections appear on the property details page. Sections will only render if
+          the toggle is enabled AND the section has valid data.
         </Typography>
       </Box>
 
@@ -105,7 +106,10 @@ const SectionVisibilityTab = ({ formData, updateField }) => {
           border: '1px solid #FDE68A',
         }}
       >
-        <Typography variant="caption" sx={{ color: '#92400E', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Typography
+          variant="caption"
+          sx={{ color: '#92400E', display: 'flex', alignItems: 'center', gap: 0.5 }}
+        >
           <Icon icon="mdi:information-outline" style={{ fontSize: 16 }} />
           Disabled sections will not appear on the website even if they contain data.
         </Typography>

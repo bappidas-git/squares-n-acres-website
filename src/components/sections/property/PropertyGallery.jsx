@@ -31,22 +31,31 @@ const GalleryMedia = ({ src, alt, className, ...motionProps }) => {
       />
     );
   }
-  return (
-    <motion.img
-      {...motionProps}
-      src={src}
-      alt={alt}
-      className={className}
-    />
-  );
+  return <motion.img {...motionProps} src={src} alt={alt} className={className} />;
 };
 
 const ThumbnailMedia = ({ src, alt, ...props }) => {
   if (isVideoUrl(src)) {
     return (
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <video src={src} muted preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        <Icon icon="mdi:play-circle" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 20, color: '#fff', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />
+        <video
+          src={src}
+          muted
+          preload="metadata"
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+        <Icon
+          icon="mdi:play-circle"
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            fontSize: 20,
+            color: '#fff',
+            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))',
+          }}
+        />
       </div>
     );
   }
@@ -63,10 +72,13 @@ const PropertyGallery = ({ images = [] }) => {
 
   const currentIsVideo = isVideoUrl(gallery[currentIndex]);
 
-  const goTo = useCallback((index) => {
-    setDirection(index > currentIndex ? 1 : -1);
-    setCurrentIndex(index);
-  }, [currentIndex]);
+  const goTo = useCallback(
+    (index) => {
+      setDirection(index > currentIndex ? 1 : -1);
+      setCurrentIndex(index);
+    },
+    [currentIndex]
+  );
 
   const goPrev = useCallback(() => {
     setDirection(-1);
@@ -78,11 +90,14 @@ const PropertyGallery = ({ images = [] }) => {
     setCurrentIndex((prev) => (prev === imageCount - 1 ? 0 : prev + 1));
   }, [imageCount]);
 
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Escape') setLightboxOpen(false);
-    if (e.key === 'ArrowLeft') goPrev();
-    if (e.key === 'ArrowRight') goNext();
-  }, [goPrev, goNext]);
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (e.key === 'Escape') setLightboxOpen(false);
+      if (e.key === 'ArrowLeft') goPrev();
+      if (e.key === 'ArrowRight') goNext();
+    },
+    [goPrev, goNext]
+  );
 
   const slideVariants = {
     enter: (dir) => ({ x: dir > 0 ? 300 : -300, opacity: 0 }),
@@ -130,14 +145,20 @@ const PropertyGallery = ({ images = [] }) => {
             <>
               <button
                 className={`${styles.navBtn} ${styles.navPrev}`}
-                onClick={(e) => { e.stopPropagation(); goPrev(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goPrev();
+                }}
                 aria-label="Previous image"
               >
                 <Icon icon="mdi:chevron-left" />
               </button>
               <button
                 className={`${styles.navBtn} ${styles.navNext}`}
-                onClick={(e) => { e.stopPropagation(); goNext(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goNext();
+                }}
                 aria-label="Next image"
               >
                 <Icon icon="mdi:chevron-right" />

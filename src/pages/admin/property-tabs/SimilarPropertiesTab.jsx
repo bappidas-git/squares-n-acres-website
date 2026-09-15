@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Chip, Paper, CircularProgress, TextField, InputAdornment } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Chip,
+  Paper,
+  CircularProgress,
+  TextField,
+  InputAdornment,
+} from '@mui/material';
 import { Icon } from '@iconify/react';
 import { propertyService } from '../../../services/api';
 
@@ -32,7 +40,10 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
 
   const toggleProperty = (id) => {
     if (selectedIds.includes(id)) {
-      updateField('similarPropertyIds', selectedIds.filter((pid) => pid !== id));
+      updateField(
+        'similarPropertyIds',
+        selectedIds.filter((pid) => pid !== id)
+      );
     } else {
       updateField('similarPropertyIds', [...selectedIds, id]);
     }
@@ -54,7 +65,8 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
         Similar Properties
       </Typography>
       <Typography variant="caption" sx={{ color: '#9CA3AF', mt: -1 }}>
-        Select related properties to show in the "Similar Properties" section. If none selected, the system auto-selects based on type.
+        Select related properties to show in the "Similar Properties" section. If none selected, the
+        system auto-selects based on type.
       </Typography>
 
       {selectedIds.length > 0 && (
@@ -67,7 +79,11 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
                 label={prop?.title || `ID: ${id}`}
                 size="small"
                 onDelete={() => toggleProperty(id)}
-                sx={{ bgcolor: '#1B2A4A', color: '#fff', '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.6)' } }}
+                sx={{
+                  bgcolor: '#1B2A4A',
+                  color: '#fff',
+                  '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.6)' },
+                }}
               />
             );
           })}
@@ -97,7 +113,15 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
           No properties found.
         </Typography>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 400, overflowY: 'auto' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            maxHeight: 400,
+            overflowY: 'auto',
+          }}
+        >
           {filteredProperties.map((prop) => {
             const isSelected = selectedIds.includes(prop.id);
             return (

@@ -16,16 +16,17 @@ const BuilderOverview = ({ developer, developerInfo }) => {
   const logo = developerInfo?.logo || null;
 
   // Only show stats if API provides them — no fallback defaults
-  const stats = (developerInfo?.stats && developerInfo.stats.length > 0)
-    ? developerInfo.stats
-      .filter((s) => s.value && s.label)
-      .map((s) => ({
-        value: Number(s.value) || 0,
-        suffix: s.suffix || '',
-        label: s.label || 'Metric',
-        icon: s.icon || 'mdi:information',
-      }))
-    : [];
+  const stats =
+    developerInfo?.stats && developerInfo.stats.length > 0
+      ? developerInfo.stats
+          .filter((s) => s.value && s.label)
+          .map((s) => ({
+            value: Number(s.value) || 0,
+            suffix: s.suffix || '',
+            label: s.label || 'Metric',
+            icon: s.icon || 'mdi:information',
+          }))
+      : [];
 
   return (
     <section className={styles.section} ref={ref} id="builder">
@@ -43,16 +44,18 @@ const BuilderOverview = ({ developer, developerInfo }) => {
           </div>
           <div className={styles.logoPlaceholder}>
             {logo ? (
-              <img src={logo} alt={`${developerName} logo`} style={{ maxHeight: 48, maxWidth: 120, objectFit: 'contain' }} />
+              <img
+                src={logo}
+                alt={`${developerName} logo`}
+                style={{ maxHeight: 48, maxWidth: 120, objectFit: 'contain' }}
+              />
             ) : (
               <Icon icon="mdi:domain" className={styles.logoIcon} />
             )}
           </div>
         </div>
 
-        {description && (
-          <p className={styles.description}>{description}</p>
-        )}
+        {description && <p className={styles.description}>{description}</p>}
 
         {stats.length > 0 && (
           <div className={styles.statsGrid}>

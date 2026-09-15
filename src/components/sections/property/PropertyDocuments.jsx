@@ -106,10 +106,7 @@ const PropertyDocuments = ({ documents = [], onDownloadClick }) => {
 
         {/* View More / Show Less button */}
         {remainingCount > 0 && (
-          <button
-            className={styles.viewMoreBtn}
-            onClick={() => setExpanded((prev) => !prev)}
-          >
+          <button className={styles.viewMoreBtn} onClick={() => setExpanded((prev) => !prev)}>
             <Icon icon={expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'} />
             {expanded
               ? 'Show Less'

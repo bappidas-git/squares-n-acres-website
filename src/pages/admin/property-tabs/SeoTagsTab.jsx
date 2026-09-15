@@ -5,6 +5,7 @@ import { TAG_OPTIONS } from './constants';
 import ImageUrlHelperText from '../../../components/admin/ImageUrlHelperText';
 import { calculateSeoScore, SEO_LIMITS } from '../../../utils/seoScoring';
 import { generateSeoData } from '../../../utils/seoGenerator';
+import { SITE } from '../../../config/site';
 
 // Note: Tags are also available in Basic Info tab for quick access
 
@@ -23,15 +24,16 @@ const SeoTagsTab = ({ formData, updateField }) => {
   };
 
   const removeKeyword = (keyword) => {
-    updateField('seoKeywords', formData.seoKeywords.filter((k) => k !== keyword));
+    updateField(
+      'seoKeywords',
+      formData.seoKeywords.filter((k) => k !== keyword)
+    );
   };
 
   const toggleTag = (tag) => {
     updateField(
       'tags',
-      formData.tags.includes(tag)
-        ? formData.tags.filter((t) => t !== tag)
-        : [...formData.tags, tag]
+      formData.tags.includes(tag) ? formData.tags.filter((t) => t !== tag) : [...formData.tags, tag]
     );
   };
 
@@ -54,7 +56,8 @@ const SeoTagsTab = ({ formData, updateField }) => {
 
   // Color helpers for character count
   const getTitleLenColor = (len) => {
-    if (len >= SEO_LIMITS.TITLE_OPTIMAL_MIN && len <= SEO_LIMITS.TITLE_OPTIMAL_MAX) return '#10B981';
+    if (len >= SEO_LIMITS.TITLE_OPTIMAL_MIN && len <= SEO_LIMITS.TITLE_OPTIMAL_MAX)
+      return '#10B981';
     if (len > 0 && len <= SEO_LIMITS.TITLE_MAX_LENGTH) return '#F59E0B';
     if (len > SEO_LIMITS.TITLE_MAX_LENGTH) return '#EF4444';
     return '#9CA3AF';
@@ -70,7 +73,15 @@ const SeoTagsTab = ({ formData, updateField }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
       {/* SEO Score + Auto-Generate */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 1,
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
             SEO Settings
@@ -81,8 +92,18 @@ const SeoTagsTab = ({ formData, updateField }) => {
             sx={{
               fontWeight: 600,
               fontSize: '0.6875rem',
-              bgcolor: scoreData.totalScore >= 80 ? '#ECFDF5' : scoreData.totalScore >= 60 ? '#FFFBEB' : '#FEF2F2',
-              color: scoreData.totalScore >= 80 ? '#059669' : scoreData.totalScore >= 60 ? '#D97706' : '#DC2626',
+              bgcolor:
+                scoreData.totalScore >= 80
+                  ? '#ECFDF5'
+                  : scoreData.totalScore >= 60
+                    ? '#FFFBEB'
+                    : '#FEF2F2',
+              color:
+                scoreData.totalScore >= 80
+                  ? '#059669'
+                  : scoreData.totalScore >= 60
+                    ? '#D97706'
+                    : '#DC2626',
             }}
           />
         </Box>
@@ -91,13 +112,21 @@ const SeoTagsTab = ({ formData, updateField }) => {
           label="Auto-Generate SEO"
           clickable
           onClick={handleAutoGenerate}
-          sx={{ fontWeight: 500, bgcolor: '#F3F4F6', color: '#374151', '&:hover': { bgcolor: '#E5E7EB' } }}
+          sx={{
+            fontWeight: 500,
+            bgcolor: '#F3F4F6',
+            color: '#374151',
+            '&:hover': { bgcolor: '#E5E7EB' },
+          }}
         />
       </Box>
 
       {/* Score Breakdown (compact) */}
       {scoreData.issues.length > 0 && (
-        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, border: '1px solid #FEF3C7', bgcolor: '#FFFBEB' }}>
+        <Paper
+          variant="outlined"
+          sx={{ p: 1.5, borderRadius: 2, border: '1px solid #FEF3C7', bgcolor: '#FFFBEB' }}
+        >
           <Typography sx={{ fontSize: '0.6875rem', fontWeight: 600, color: '#D97706', mb: 0.5 }}>
             SEO Improvement Tips ({scoreData.issues.length})
           </Typography>
@@ -107,7 +136,9 @@ const SeoTagsTab = ({ formData, updateField }) => {
             </Typography>
           ))}
           {scoreData.issues.length > 5 && (
-            <Typography sx={{ fontSize: '0.6875rem', color: '#92400E', pl: 1, fontStyle: 'italic' }}>
+            <Typography
+              sx={{ fontSize: '0.6875rem', color: '#92400E', pl: 1, fontStyle: 'italic' }}
+            >
               + {scoreData.issues.length - 5} more suggestions
             </Typography>
           )}
@@ -122,11 +153,19 @@ const SeoTagsTab = ({ formData, updateField }) => {
         fullWidth
         helperText={
           <Box component="span" sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography component="span" sx={{ fontSize: '0.6875rem', color: getTitleLenColor(formData.seoTitle.length) }}>
+            <Typography
+              component="span"
+              sx={{ fontSize: '0.6875rem', color: getTitleLenColor(formData.seoTitle.length) }}
+            >
               {formData.seoTitle.length}/{SEO_LIMITS.TITLE_OPTIMAL_MAX} characters
-              {formData.seoTitle.length >= SEO_LIMITS.TITLE_OPTIMAL_MIN && formData.seoTitle.length <= SEO_LIMITS.TITLE_OPTIMAL_MAX && ' — Optimal'}
-              {formData.seoTitle.length > 0 && formData.seoTitle.length < SEO_LIMITS.TITLE_OPTIMAL_MIN && ` — Add ${SEO_LIMITS.TITLE_OPTIMAL_MIN - formData.seoTitle.length} more chars`}
-              {formData.seoTitle.length > SEO_LIMITS.TITLE_MAX_LENGTH && ' — Too long, Google will truncate'}
+              {formData.seoTitle.length >= SEO_LIMITS.TITLE_OPTIMAL_MIN &&
+                formData.seoTitle.length <= SEO_LIMITS.TITLE_OPTIMAL_MAX &&
+                ' — Optimal'}
+              {formData.seoTitle.length > 0 &&
+                formData.seoTitle.length < SEO_LIMITS.TITLE_OPTIMAL_MIN &&
+                ` — Add ${SEO_LIMITS.TITLE_OPTIMAL_MIN - formData.seoTitle.length} more chars`}
+              {formData.seoTitle.length > SEO_LIMITS.TITLE_MAX_LENGTH &&
+                ' — Too long, Google will truncate'}
             </Typography>
           </Box>
         }
@@ -153,11 +192,19 @@ const SeoTagsTab = ({ formData, updateField }) => {
         rows={3}
         fullWidth
         helperText={
-          <Typography component="span" sx={{ fontSize: '0.6875rem', color: getDescLenColor(formData.seoDescription.length) }}>
+          <Typography
+            component="span"
+            sx={{ fontSize: '0.6875rem', color: getDescLenColor(formData.seoDescription.length) }}
+          >
             {formData.seoDescription.length}/{SEO_LIMITS.DESC_OPTIMAL_MAX} characters
-            {formData.seoDescription.length >= SEO_LIMITS.DESC_OPTIMAL_MIN && formData.seoDescription.length <= SEO_LIMITS.DESC_OPTIMAL_MAX && ' — Optimal'}
-            {formData.seoDescription.length > 0 && formData.seoDescription.length < SEO_LIMITS.DESC_OPTIMAL_MIN && ` — Add ${SEO_LIMITS.DESC_OPTIMAL_MIN - formData.seoDescription.length} more chars`}
-            {formData.seoDescription.length > SEO_LIMITS.DESC_MAX_LENGTH && ' — Too long, Google will truncate'}
+            {formData.seoDescription.length >= SEO_LIMITS.DESC_OPTIMAL_MIN &&
+              formData.seoDescription.length <= SEO_LIMITS.DESC_OPTIMAL_MAX &&
+              ' — Optimal'}
+            {formData.seoDescription.length > 0 &&
+              formData.seoDescription.length < SEO_LIMITS.DESC_OPTIMAL_MIN &&
+              ` — Add ${SEO_LIMITS.DESC_OPTIMAL_MIN - formData.seoDescription.length} more chars`}
+            {formData.seoDescription.length > SEO_LIMITS.DESC_MAX_LENGTH &&
+              ' — Too long, Google will truncate'}
           </Typography>
         }
       />
@@ -182,7 +229,13 @@ const SeoTagsTab = ({ formData, updateField }) => {
         {formData.seoKeywords.length > 0 && (
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1 }}>
             {formData.seoKeywords.map((kw) => (
-              <Chip key={kw} label={kw} size="small" onDelete={() => removeKeyword(kw)} sx={{ bgcolor: '#F3F4F6' }} />
+              <Chip
+                key={kw}
+                label={kw}
+                size="small"
+                onDelete={() => removeKeyword(kw)}
+                sx={{ bgcolor: '#F3F4F6' }}
+              />
             ))}
           </Box>
         )}
@@ -194,7 +247,7 @@ const SeoTagsTab = ({ formData, updateField }) => {
         onChange={(e) => updateField('canonicalUrl', e.target.value)}
         fullWidth
         size="small"
-        placeholder="https://homadvisory.com/properties/property-slug"
+        placeholder={`${SITE.placeholderDomain}/properties/property-slug`}
         helperText="If empty, current URL is auto-used. Set explicitly to prevent duplicate content."
       />
 
@@ -274,11 +327,20 @@ const SeoTagsTab = ({ formData, updateField }) => {
           <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1B2A4A' }}>
             JSON-LD Schema Markup
           </Typography>
-          {formData.schemaMarkup && (
-            validateSchema(formData.schemaMarkup)
-              ? <Chip label="Valid JSON" size="small" sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#ECFDF5', color: '#059669' }} />
-              : <Chip label="Invalid JSON" size="small" sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#FEF2F2', color: '#DC2626' }} />
-          )}
+          {formData.schemaMarkup &&
+            (validateSchema(formData.schemaMarkup) ? (
+              <Chip
+                label="Valid JSON"
+                size="small"
+                sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#ECFDF5', color: '#059669' }}
+              />
+            ) : (
+              <Chip
+                label="Invalid JSON"
+                size="small"
+                sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#FEF2F2', color: '#DC2626' }}
+              />
+            ))}
         </Box>
         <TextField
           value={formData.schemaMarkup}
@@ -292,7 +354,7 @@ const SeoTagsTab = ({ formData, updateField }) => {
               ? 'Invalid JSON format (will still be saved)'
               : 'Use RealEstateListing type with @context, address, and pricing for best rich results'
           }
-          InputProps={{ sx: { fontFamily: 'monospace', fontSize: '0.8125rem' } }}
+          InputProps={{ sx: { fontFamily: 'var(--font-mono)', fontSize: '0.8125rem' } }}
         />
       </Box>
 
@@ -307,7 +369,12 @@ const SeoTagsTab = ({ formData, updateField }) => {
             return (
               <Chip
                 key={tag.value}
-                icon={<Icon icon={tag.icon} style={{ fontSize: 16, color: selected ? tag.color : '#9CA3AF' }} />}
+                icon={
+                  <Icon
+                    icon={tag.icon}
+                    style={{ fontSize: 16, color: selected ? tag.color : '#9CA3AF' }}
+                  />
+                }
                 label={tag.label}
                 clickable
                 onClick={() => toggleTag(tag.value)}

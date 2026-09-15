@@ -5,8 +5,13 @@ import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import { leadService } from '../../services/api';
 import { useToast } from '../../components/common/ToastProvider';
-import { getNameErrorMessage, getEmailErrorMessage, getMobileErrorMessage } from '../../utils/validators';
+import {
+  getNameErrorMessage,
+  getEmailErrorMessage,
+  getMobileErrorMessage,
+} from '../../utils/validators';
 import styles from './Careers.module.css';
+import { BRAND, SITE } from '../../config/site';
 
 /* ── Animated section wrapper ──────────────────── */
 const Section = ({ children, className = '', delay = 0 }) => {
@@ -26,9 +31,21 @@ const Section = ({ children, className = '', delay = 0 }) => {
 
 /* ── Static data ───────────────────────────────── */
 const cultureItems = [
-  { icon: 'mdi:account-group-outline', title: 'Collaborative Environment', desc: 'Work alongside talented professionals who value teamwork, open communication, and shared success.' },
-  { icon: 'mdi:trending-up', title: 'Growth Opportunities', desc: 'Continuous learning programs, mentorship, and clear career paths to help you reach your full potential.' },
-  { icon: 'mdi:lightbulb-on-outline', title: 'Innovation First', desc: 'We encourage fresh ideas and creative approaches to solving real estate challenges.' },
+  {
+    icon: 'mdi:account-group-outline',
+    title: 'Collaborative Environment',
+    desc: 'Work alongside talented professionals who value teamwork, open communication, and shared success.',
+  },
+  {
+    icon: 'mdi:trending-up',
+    title: 'Growth Opportunities',
+    desc: 'Continuous learning programs, mentorship, and clear career paths to help you reach your full potential.',
+  },
+  {
+    icon: 'mdi:lightbulb-on-outline',
+    title: 'Innovation First',
+    desc: 'We encourage fresh ideas and creative approaches to solving real estate challenges.',
+  },
 ];
 
 const positions = [
@@ -67,12 +84,36 @@ const positions = [
 ];
 
 const perks = [
-  { icon: 'mdi:currency-inr', title: 'Competitive Salary', desc: 'Industry-leading compensation with performance bonuses' },
-  { icon: 'mdi:hospital-box-outline', title: 'Health Insurance', desc: 'Comprehensive medical coverage for you and your family' },
-  { icon: 'mdi:school-outline', title: 'Learning Budget', desc: 'Annual allowance for courses, certifications, and conferences' },
-  { icon: 'mdi:clock-outline', title: 'Flexible Hours', desc: 'Work-life balance with flexible scheduling options' },
-  { icon: 'mdi:home-outline', title: 'Work from Home', desc: 'Hybrid work model with remote work flexibility' },
-  { icon: 'mdi:party-popper', title: 'Team Events', desc: 'Regular outings, celebrations, and team-building activities' },
+  {
+    icon: 'mdi:currency-inr',
+    title: 'Competitive Salary',
+    desc: 'Industry-leading compensation with performance bonuses',
+  },
+  {
+    icon: 'mdi:hospital-box-outline',
+    title: 'Health Insurance',
+    desc: 'Comprehensive medical coverage for you and your family',
+  },
+  {
+    icon: 'mdi:school-outline',
+    title: 'Learning Budget',
+    desc: 'Annual allowance for courses, certifications, and conferences',
+  },
+  {
+    icon: 'mdi:clock-outline',
+    title: 'Flexible Hours',
+    desc: 'Work-life balance with flexible scheduling options',
+  },
+  {
+    icon: 'mdi:home-outline',
+    title: 'Work from Home',
+    desc: 'Hybrid work model with remote work flexibility',
+  },
+  {
+    icon: 'mdi:party-popper',
+    title: 'Team Events',
+    desc: 'Regular outings, celebrations, and team-building activities',
+  },
 ];
 
 /* ── Component ─────────────────────────────────── */
@@ -145,8 +186,11 @@ const Careers = () => {
   return (
     <>
       <Helmet>
-        <title>Careers | H.O.M Advisory</title>
-        <meta name="description" content="Join H.O.M Advisory and build a rewarding career in real estate. Explore open positions and be part of Bangalore's leading property advisory firm." />
+        <title>{`Careers | ${SITE.name}`}</title>
+        <meta
+          name="description"
+          content={`Join ${SITE.name} and build a rewarding career in real estate. Explore open positions and be part of Bangalore's leading property advisory firm.`}
+        />
       </Helmet>
 
       <div className={styles.page}>
@@ -175,7 +219,9 @@ const Careers = () => {
           <div className={styles.container}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>Our Culture</h2>
-              <p className={styles.sectionSubtitle}>What makes H.O.M Advisory a great place to work</p>
+              <p className={styles.sectionSubtitle}>
+                What makes {BRAND.name} a great place to work
+              </p>
             </div>
 
             <div className={styles.cultureGrid}>
@@ -227,15 +273,10 @@ const Careers = () => {
                         <span className={styles.metaItem}>
                           <Icon icon="mdi:map-marker-outline" /> {pos.location}
                         </span>
-                        <span className={`${styles.metaItem} ${styles.typeBadge}`}>
-                          {pos.type}
-                        </span>
+                        <span className={`${styles.metaItem} ${styles.typeBadge}`}>{pos.type}</span>
                       </div>
                     </div>
-                    <button
-                      className={styles.applyBtn}
-                      onClick={() => openModal(pos.title)}
-                    >
+                    <button className={styles.applyBtn} onClick={() => openModal(pos.title)}>
                       Apply Now <Icon icon="mdi:arrow-right" />
                     </button>
                   </div>
@@ -300,15 +341,19 @@ const Careers = () => {
                     <Icon icon="mdi:check-circle" className={styles.successIcon} />
                     <h3 className={styles.successTitle}>Application Submitted!</h3>
                     <p className={styles.successText}>
-                      Thank you for applying for <strong>{selectedPosition}</strong>.
-                      We'll review your application and get back to you.
+                      Thank you for applying for <strong>{selectedPosition}</strong>. We'll review
+                      your application and get back to you.
                     </p>
-                    <button className={styles.closeBtn} onClick={closeModal}>Close</button>
+                    <button className={styles.closeBtn} onClick={closeModal}>
+                      Close
+                    </button>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className={styles.modalForm}>
                     <h2 className={styles.modalTitle}>Apply for {selectedPosition}</h2>
-                    <p className={styles.modalSubtitle}>Fill in your details to submit your application.</p>
+                    <p className={styles.modalSubtitle}>
+                      Fill in your details to submit your application.
+                    </p>
 
                     <div className={styles.modalFields}>
                       <div className={styles.modalField}>
@@ -357,16 +402,24 @@ const Careers = () => {
                         >
                           <option value="">Select Position *</option>
                           {positions.map((p) => (
-                            <option key={p.id} value={p.title}>{p.title}</option>
+                            <option key={p.id} value={p.title}>
+                              {p.title}
+                            </option>
                           ))}
                         </select>
-                        {errors.position && <span className={styles.errorText}>{errors.position}</span>}
+                        {errors.position && (
+                          <span className={styles.errorText}>{errors.position}</span>
+                        )}
                       </div>
                       <div className={styles.modalField}>
                         <div className={styles.fileUpload}>
                           <Icon icon="mdi:file-upload-outline" />
                           <span>Upload Resume (PDF, DOC)</span>
-                          <input type="file" accept=".pdf,.doc,.docx" className={styles.fileInput} />
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx"
+                            className={styles.fileInput}
+                          />
                         </div>
                       </div>
                       <div className={styles.modalField}>
@@ -391,7 +444,9 @@ const Careers = () => {
                       {submitting ? (
                         <span className={styles.spinner} />
                       ) : (
-                        <>Submit Application <Icon icon="mdi:send" /></>
+                        <>
+                          Submit Application <Icon icon="mdi:send" />
+                        </>
                       )}
                     </button>
                   </form>

@@ -8,9 +8,10 @@ const ConstructionStatus = ({ status, constructionTimeline }) => {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
   // Require constructionTimeline data from API — no static fallback
-  const milestones = Array.isArray(constructionTimeline) && constructionTimeline.length > 0
-    ? constructionTimeline
-    : null;
+  const milestones =
+    Array.isArray(constructionTimeline) && constructionTimeline.length > 0
+      ? constructionTimeline
+      : null;
 
   if (!milestones) return null;
 
@@ -18,9 +19,7 @@ const ConstructionStatus = ({ status, constructionTimeline }) => {
   const getProgress = () => {
     if (status === 'ready-to-move') return milestones.length;
     // Count completed milestones from API data
-    const completedCount = milestones.filter(
-      (m) => m.status === 'completed'
-    ).length;
+    const completedCount = milestones.filter((m) => m.status === 'completed').length;
     return completedCount;
   };
 
@@ -64,7 +63,11 @@ const ConstructionStatus = ({ status, constructionTimeline }) => {
             <motion.div
               className={styles.connectorFill}
               initial={{ width: 0 }}
-              animate={inView ? { width: `${(Math.max(0, progress - 1) / (milestones.length - 1)) * 100}%` } : {}}
+              animate={
+                inView
+                  ? { width: `${(Math.max(0, progress - 1) / (milestones.length - 1)) * 100}%` }
+                  : {}
+              }
               transition={{ duration: 1.2, delay: 0.3, ease: 'easeOut' }}
             />
           </div>
@@ -72,7 +75,9 @@ const ConstructionStatus = ({ status, constructionTimeline }) => {
           <div className={styles.milestones}>
             {milestones.map((milestone, idx) => {
               const isCompleted = milestone.status === 'completed' || idx < progress;
-              const isCurrent = milestone.status === 'in-progress' || (idx === progress && progress < milestones.length);
+              const isCurrent =
+                milestone.status === 'in-progress' ||
+                (idx === progress && progress < milestones.length);
               return (
                 <motion.div
                   key={milestone.label || idx}
@@ -85,7 +90,10 @@ const ConstructionStatus = ({ status, constructionTimeline }) => {
                     {isCompleted ? (
                       <Icon icon="mdi:check" className={styles.nodeIcon} />
                     ) : (
-                      <Icon icon={milestone.icon || 'mdi:circle-outline'} className={styles.nodeIcon} />
+                      <Icon
+                        icon={milestone.icon || 'mdi:circle-outline'}
+                        className={styles.nodeIcon}
+                      />
                     )}
                   </div>
                   <div className={styles.milestoneInfo}>

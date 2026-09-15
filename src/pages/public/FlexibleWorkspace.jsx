@@ -5,6 +5,7 @@ import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
 import styles from './FlexibleWorkspace.module.css';
+import { SITE } from '../../config/site';
 
 /* ── Animated section wrapper ──────────────────── */
 const Section = ({ children, className = '', delay = 0 }) => {
@@ -24,19 +25,59 @@ const Section = ({ children, className = '', delay = 0 }) => {
 
 /* ── Static data ───────────────────────────────── */
 const workspaceTypes = [
-  { icon: 'mdi:desk', title: 'Hot Desks', desc: 'Flexible day-use desks in premium shared environments — ideal for freelancers and remote workers.' },
-  { icon: 'mdi:door-closed-lock', title: 'Dedicated Desks', desc: 'Your own permanent desk in a shared office — perfect for individuals who need consistency.' },
-  { icon: 'mdi:office-building-outline', title: 'Private Offices', desc: 'Fully furnished private offices for teams of 2 to 50+ with customisable layouts.' },
-  { icon: 'mdi:account-group-outline', title: 'Meeting Rooms', desc: 'Professional meeting and conference rooms available on-demand with AV equipment.' },
-  { icon: 'mdi:domain', title: 'Virtual Offices', desc: 'A prestigious business address with mail handling, call forwarding, and access to meeting rooms.' },
-  { icon: 'mdi:calendar-month-outline', title: 'Day Passes', desc: 'Pay-as-you-go access to coworking spaces — no commitment, full flexibility.' },
+  {
+    icon: 'mdi:desk',
+    title: 'Hot Desks',
+    desc: 'Flexible day-use desks in premium shared environments — ideal for freelancers and remote workers.',
+  },
+  {
+    icon: 'mdi:door-closed-lock',
+    title: 'Dedicated Desks',
+    desc: 'Your own permanent desk in a shared office — perfect for individuals who need consistency.',
+  },
+  {
+    icon: 'mdi:office-building-outline',
+    title: 'Private Offices',
+    desc: 'Fully furnished private offices for teams of 2 to 50+ with customisable layouts.',
+  },
+  {
+    icon: 'mdi:account-group-outline',
+    title: 'Meeting Rooms',
+    desc: 'Professional meeting and conference rooms available on-demand with AV equipment.',
+  },
+  {
+    icon: 'mdi:domain',
+    title: 'Virtual Offices',
+    desc: 'A prestigious business address with mail handling, call forwarding, and access to meeting rooms.',
+  },
+  {
+    icon: 'mdi:calendar-month-outline',
+    title: 'Day Passes',
+    desc: 'Pay-as-you-go access to coworking spaces — no commitment, full flexibility.',
+  },
 ];
 
 const benefits = [
-  { icon: 'mdi:map-marker-outline', title: 'Prime Locations', desc: 'Access workspaces in top business districts across the city.' },
-  { icon: 'mdi:cash-multiple', title: 'Cost Effective', desc: 'Save up to 40% compared to traditional office leases with all-inclusive pricing.' },
-  { icon: 'mdi:arrow-expand-all', title: 'Scale Freely', desc: 'Start with a single desk and scale to a full floor as your team grows.' },
-  { icon: 'mdi:wifi', title: 'Fully Equipped', desc: 'High-speed internet, printing, pantry, and housekeeping — all included.' },
+  {
+    icon: 'mdi:map-marker-outline',
+    title: 'Prime Locations',
+    desc: 'Access workspaces in top business districts across the city.',
+  },
+  {
+    icon: 'mdi:cash-multiple',
+    title: 'Cost Effective',
+    desc: 'Save up to 40% compared to traditional office leases with all-inclusive pricing.',
+  },
+  {
+    icon: 'mdi:arrow-expand-all',
+    title: 'Scale Freely',
+    desc: 'Start with a single desk and scale to a full floor as your team grows.',
+  },
+  {
+    icon: 'mdi:wifi',
+    title: 'Fully Equipped',
+    desc: 'High-speed internet, printing, pantry, and housekeeping — all included.',
+  },
 ];
 
 const leadFields = [
@@ -57,8 +98,20 @@ const leadFields = [
       { value: 'virtual-office', label: 'Virtual Office' },
     ],
   },
-  { name: 'teamSize', label: 'Team Size', type: 'text', required: false, placeholder: 'Number of seats needed (optional)' },
-  { name: 'message', label: 'Requirements', type: 'textarea', required: false, placeholder: 'Any specific requirements...' },
+  {
+    name: 'teamSize',
+    label: 'Team Size',
+    type: 'text',
+    required: false,
+    placeholder: 'Number of seats needed (optional)',
+  },
+  {
+    name: 'message',
+    label: 'Requirements',
+    type: 'textarea',
+    required: false,
+    placeholder: 'Any specific requirements...',
+  },
 ];
 
 /* ── Component ─────────────────────────────────── */
@@ -66,8 +119,11 @@ const FlexibleWorkspace = () => {
   return (
     <>
       <Helmet>
-        <title>Flexible Workspace Solutions | H.O.M Advisory</title>
-        <meta name="description" content="Find flexible workspace solutions — coworking spaces, private offices, meeting rooms, and virtual offices in prime business locations." />
+        <title>{`Flexible Workspace Solutions | ${SITE.name}`}</title>
+        <meta
+          name="description"
+          content="Find flexible workspace solutions — coworking spaces, private offices, meeting rooms, and virtual offices in prime business locations."
+        />
       </Helmet>
 
       <div className={styles.page}>
@@ -85,8 +141,8 @@ const FlexibleWorkspace = () => {
             </span>
             <h1 className={styles.heroTitle}>Workspace That Adapts to You</h1>
             <p className={styles.heroSubtitle}>
-              From hot desks to private offices, find flexible workspace solutions
-              in premium locations designed to fuel productivity and growth.
+              From hot desks to private offices, find flexible workspace solutions in premium
+              locations designed to fuel productivity and growth.
             </p>
           </motion.div>
         </section>
@@ -96,7 +152,9 @@ const FlexibleWorkspace = () => {
           <div className={styles.container}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>Workspace Solutions</h2>
-              <p className={styles.sectionSubtitle}>Choose the workspace model that fits your business needs</p>
+              <p className={styles.sectionSubtitle}>
+                Choose the workspace model that fits your business needs
+              </p>
             </div>
 
             <div className={styles.typesGrid}>
@@ -156,8 +214,8 @@ const FlexibleWorkspace = () => {
               <div className={styles.formInfo}>
                 <h2 className={styles.sectionTitle}>Find Your Workspace</h2>
                 <p className={styles.formInfoText}>
-                  Tell us your requirements and our workspace consultants will connect you
-                  with the best options within 24 hours.
+                  Tell us your requirements and our workspace consultants will connect you with the
+                  best options within 24 hours.
                 </p>
                 <div className={styles.formBenefits}>
                   <div className={styles.benefit}>

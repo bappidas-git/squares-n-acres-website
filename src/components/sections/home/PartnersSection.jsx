@@ -7,12 +7,7 @@ import styles from './PartnersSection.module.css';
 const PartnerCard = ({ partner }) => {
   const content = (
     <>
-      <img
-        src={partner.logo}
-        alt={partner.name}
-        className={styles.partnerLogo}
-        loading="lazy"
-      />
+      <img src={partner.logo} alt={partner.name} className={styles.partnerLogo} loading="lazy" />
       <span className={styles.partnerName}>{partner.name}</span>
     </>
   );

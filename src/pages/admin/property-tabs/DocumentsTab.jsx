@@ -48,16 +48,17 @@ const DocumentsTab = ({ formData, updateListItem, addListItem, removeListItem })
                 '&:hover': { borderColor: '#C9A86C' },
               }}
             >
-              <Icon icon={doc.icon || 'mdi:file-document'} style={{ fontSize: 22, color: '#1B2A4A' }} />
+              <Icon
+                icon={doc.icon || 'mdi:file-document'}
+                style={{ fontSize: 22, color: '#1B2A4A' }}
+              />
             </Box>
 
             <TextField
               size="small"
               label="Document Name"
               value={doc.name}
-              onChange={(e) =>
-                updateListItem('documents', index, { ...doc, name: e.target.value })
-              }
+              onChange={(e) => updateListItem('documents', index, { ...doc, name: e.target.value })}
               sx={{ flex: '1 1 180px' }}
               placeholder="e.g., RERA Certificate"
             />
@@ -65,9 +66,7 @@ const DocumentsTab = ({ formData, updateListItem, addListItem, removeListItem })
               size="small"
               label="Document URL (optional)"
               value={doc.url || ''}
-              onChange={(e) =>
-                updateListItem('documents', index, { ...doc, url: e.target.value })
-              }
+              onChange={(e) => updateListItem('documents', index, { ...doc, url: e.target.value })}
               sx={{ flex: '1 1 200px' }}
               placeholder="https://example.com/doc.pdf"
             />

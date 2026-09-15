@@ -25,7 +25,9 @@
   padding: var(--spacing-md);
   background: var(--color-bg-surface);
   border-radius: var(--radius-md);
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+  transition:
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
   min-width: 0;
   position: relative;
 }

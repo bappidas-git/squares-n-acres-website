@@ -5,6 +5,7 @@ import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
 import styles from './InteriorDesigning.module.css';
+import { SITE } from '../../config/site';
 
 /* ── Animated section wrapper ──────────────────── */
 const Section = ({ children, className = '', delay = 0 }) => {
@@ -63,11 +64,31 @@ const roomCategories = [
 ];
 
 const processSteps = [
-  { icon: 'mdi:chat-processing-outline', title: 'Consultation', desc: 'Share your vision, budget, and preferences in a detailed consultation with our design experts.' },
-  { icon: 'mdi:lightbulb-outline', title: 'Concept', desc: 'We create mood boards, 3D visualizations, and concept designs for your review and feedback.' },
-  { icon: 'mdi:pencil-ruler', title: 'Design', desc: 'Detailed technical drawings, material selections, and a comprehensive design plan is finalized.' },
-  { icon: 'mdi:hammer-wrench', title: 'Execution', desc: 'Our skilled team brings the design to life with quality craftsmanship and project management.' },
-  { icon: 'mdi:key-variant', title: 'Handover', desc: 'Final quality checks, walkthrough, and handover of your beautifully designed space.' },
+  {
+    icon: 'mdi:chat-processing-outline',
+    title: 'Consultation',
+    desc: 'Share your vision, budget, and preferences in a detailed consultation with our design experts.',
+  },
+  {
+    icon: 'mdi:lightbulb-outline',
+    title: 'Concept',
+    desc: 'We create mood boards, 3D visualizations, and concept designs for your review and feedback.',
+  },
+  {
+    icon: 'mdi:pencil-ruler',
+    title: 'Design',
+    desc: 'Detailed technical drawings, material selections, and a comprehensive design plan is finalized.',
+  },
+  {
+    icon: 'mdi:hammer-wrench',
+    title: 'Execution',
+    desc: 'Our skilled team brings the design to life with quality craftsmanship and project management.',
+  },
+  {
+    icon: 'mdi:key-variant',
+    title: 'Handover',
+    desc: 'Final quality checks, walkthrough, and handover of your beautifully designed space.',
+  },
 ];
 
 const galleryItems = [
@@ -161,7 +182,13 @@ const leadFields = [
       { value: 'above-50L', label: 'Above ₹50 Lakhs' },
     ],
   },
-  { name: 'message', label: 'Message', type: 'textarea', required: false, placeholder: 'Tell us about your design vision...' },
+  {
+    name: 'message',
+    label: 'Message',
+    type: 'textarea',
+    required: false,
+    placeholder: 'Tell us about your design vision...',
+  },
 ];
 
 /* ── Component ─────────────────────────────────── */
@@ -172,8 +199,11 @@ const InteriorDesigning = () => {
   return (
     <>
       <Helmet>
-        <title>Interior Designing Services | H.O.M Advisory</title>
-        <meta name="description" content="Transform your home with professional interior design services. From concept to execution, we create beautiful, functional living spaces in Bangalore." />
+        <title>{`Interior Designing Services | ${SITE.name}`}</title>
+        <meta
+          name="description"
+          content="Transform your home with professional interior design services. From concept to execution, we create beautiful, functional living spaces in Bangalore."
+        />
       </Helmet>
 
       <div className={styles.page}>
@@ -202,7 +232,9 @@ const InteriorDesigning = () => {
           <div className={styles.container}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>Our Design Services</h2>
-              <p className={styles.sectionSubtitle}>Expertly designed spaces for every room in your home</p>
+              <p className={styles.sectionSubtitle}>
+                Expertly designed spaces for every room in your home
+              </p>
             </div>
 
             <div className={styles.roomsGrid}>
@@ -234,7 +266,9 @@ const InteriorDesigning = () => {
           <div className={styles.container}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>Our Design Process</h2>
-              <p className={styles.sectionSubtitle}>A streamlined 5-step process from concept to completion</p>
+              <p className={styles.sectionSubtitle}>
+                A streamlined 5-step process from concept to completion
+              </p>
             </div>
 
             <div className={styles.processTimeline}>
@@ -297,7 +331,9 @@ const InteriorDesigning = () => {
           <div className={styles.container}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>Design Packages</h2>
-              <p className={styles.sectionSubtitle}>Choose a package that fits your needs and budget</p>
+              <p className={styles.sectionSubtitle}>
+                Choose a package that fits your needs and budget
+              </p>
             </div>
 
             <div className={styles.packagesGrid}>
@@ -324,7 +360,9 @@ const InteriorDesigning = () => {
                       </li>
                     ))}
                   </ul>
-                  <button className={`${styles.packageBtn} ${pkg.highlighted ? styles.packageBtnPrimary : ''}`}>
+                  <button
+                    className={`${styles.packageBtn} ${pkg.highlighted ? styles.packageBtnPrimary : ''}`}
+                  >
                     Get Started
                   </button>
                 </motion.div>
@@ -340,8 +378,8 @@ const InteriorDesigning = () => {
               <div className={styles.formInfo}>
                 <h2 className={styles.sectionTitle}>Book a Free Consultation</h2>
                 <p className={styles.formInfoText}>
-                  Ready to transform your space? Share your requirements and our design experts
-                  will create a personalized plan just for you.
+                  Ready to transform your space? Share your requirements and our design experts will
+                  create a personalized plan just for you.
                 </p>
                 <div className={styles.formBenefits}>
                   <div className={styles.benefit}>

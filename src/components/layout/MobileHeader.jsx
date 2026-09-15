@@ -50,7 +50,6 @@ const navItems = [
 
 const sideMenuItems = [
   { label: 'View Properties', path: '/properties', icon: 'mdi:home-city-outline' },
-  { label: 'Sign In', path: '/admin/login', icon: 'mdi:login-variant' },
   { label: 'About Us', path: '/about', icon: 'mdi:information-outline' },
   { label: 'Sell/Let Apartment', path: '/sell-let', icon: 'mdi:tag-outline' },
   { label: 'Careers', path: '/careers', icon: 'mdi:briefcase-outline' },

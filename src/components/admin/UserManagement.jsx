@@ -86,10 +86,7 @@ const UserManagement = () => {
     [users]
   );
 
-  const isSelf = useCallback(
-    (userId) => String(userId) === String(currentUser?.id),
-    [currentUser]
-  );
+  const isSelf = useCallback((userId) => String(userId) === String(currentUser?.id), [currentUser]);
 
   const isLastActiveAdmin = useCallback(
     (userId) => {
@@ -161,11 +158,19 @@ const UserManagement = () => {
   // Toggle active status
   const handleToggleActive = async (targetUser) => {
     if (isSelf(targetUser.id)) {
-      setSnackbar({ open: true, message: 'You cannot disable your own account', severity: 'warning' });
+      setSnackbar({
+        open: true,
+        message: 'You cannot disable your own account',
+        severity: 'warning',
+      });
       return;
     }
     if (isLastActiveAdmin(targetUser.id) && targetUser.isActive) {
-      setSnackbar({ open: true, message: 'Cannot disable the last remaining admin', severity: 'warning' });
+      setSnackbar({
+        open: true,
+        message: 'Cannot disable the last remaining admin',
+        severity: 'warning',
+      });
       return;
     }
     try {
@@ -207,7 +212,12 @@ const UserManagement = () => {
   // Open edit modal
   const openEditModal = (targetUser) => {
     setEditingUser(targetUser);
-    setFormData({ name: targetUser.name, email: targetUser.email, password: '', role: targetUser.role });
+    setFormData({
+      name: targetUser.name,
+      email: targetUser.email,
+      password: '',
+      role: targetUser.role,
+    });
     setErrors({});
     setShowPassword(false);
     setModalOpen(true);
@@ -216,11 +226,19 @@ const UserManagement = () => {
   // Open delete dialog
   const openDeleteDialog = (targetUser) => {
     if (isSelf(targetUser.id)) {
-      setSnackbar({ open: true, message: 'You cannot delete your own account', severity: 'warning' });
+      setSnackbar({
+        open: true,
+        message: 'You cannot delete your own account',
+        severity: 'warning',
+      });
       return;
     }
     if (isLastActiveAdmin(targetUser.id)) {
-      setSnackbar({ open: true, message: 'Cannot delete the last remaining admin', severity: 'warning' });
+      setSnackbar({
+        open: true,
+        message: 'Cannot delete the last remaining admin',
+        severity: 'warning',
+      });
       return;
     }
     setDeletingUser(targetUser);
@@ -246,11 +264,16 @@ const UserManagement = () => {
   if (loading) {
     return (
       <Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+        <Box
+          sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}
+        >
           <Skeleton width={200} height={40} />
           <Skeleton width={140} height={40} sx={{ borderRadius: 2 }} />
         </Box>
-        <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}>
+        <Paper
+          elevation={0}
+          sx={{ borderRadius: 2, border: '1px solid #F3F4F6', overflow: 'hidden' }}
+        >
           {[...Array(4)].map((_, i) => (
             <Box key={i} sx={{ px: 3, py: 2, borderBottom: '1px solid #F3F4F6' }}>
               <Skeleton height={40} />
@@ -334,16 +357,29 @@ const UserManagement = () => {
         <Table size={isMobile ? 'small' : 'medium'}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#F9FAFB' }}>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>Name</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                Name
+              </TableCell>
               {!isMobile && (
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>Email</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                  Email
+                </TableCell>
               )}
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>Role</TableCell>
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                Role
+              </TableCell>
+              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                Status
+              </TableCell>
               {!isMobile && (
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>Created</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}>
+                  Created
+                </TableCell>
               )}
-              <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }} align="right">
+              <TableCell
+                sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#6B7280' }}
+                align="right"
+              >
                 Actions
               </TableCell>
             </TableRow>
@@ -352,7 +388,10 @@ const UserManagement = () => {
             {filteredUsers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={isMobile ? 4 : 6} align="center" sx={{ py: 6 }}>
-                  <Icon icon="mdi:account-search-outline" style={{ fontSize: 40, color: '#D1D5DB' }} />
+                  <Icon
+                    icon="mdi:account-search-outline"
+                    style={{ fontSize: 40, color: '#D1D5DB' }}
+                  />
                   <Typography sx={{ fontSize: '0.875rem', color: '#9CA3AF', mt: 1 }}>
                     {searchQuery ? 'No users match your search' : 'No users found'}
                   </Typography>
@@ -395,19 +434,28 @@ const UserManagement = () => {
                             .slice(0, 2)}
                         </Box>
                         <Box>
-                          <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1B2A4A' }}>
+                          <Typography
+                            sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1B2A4A' }}
+                          >
                             {u.name}
                             {self && (
                               <Typography
                                 component="span"
-                                sx={{ fontSize: '0.625rem', color: '#9CA3AF', ml: 0.75, fontWeight: 400 }}
+                                sx={{
+                                  fontSize: '0.625rem',
+                                  color: '#9CA3AF',
+                                  ml: 0.75,
+                                  fontWeight: 400,
+                                }}
                               >
                                 (You)
                               </Typography>
                             )}
                           </Typography>
                           {isMobile && (
-                            <Typography sx={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>{u.email}</Typography>
+                            <Typography sx={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>
+                              {u.email}
+                            </Typography>
                           )}
                         </Box>
                       </Box>
@@ -416,7 +464,9 @@ const UserManagement = () => {
                     {/* Email (desktop) */}
                     {!isMobile && (
                       <TableCell>
-                        <Typography sx={{ fontSize: '0.8125rem', color: '#374151' }}>{u.email}</Typography>
+                        <Typography sx={{ fontSize: '0.8125rem', color: '#374151' }}>
+                          {u.email}
+                        </Typography>
                       </TableCell>
                     )}
 
@@ -443,10 +493,10 @@ const UserManagement = () => {
                           self
                             ? 'Cannot disable yourself'
                             : isLastActiveAdmin(u.id) && u.isActive
-                            ? 'Last admin'
-                            : u.isActive
-                            ? 'Click to disable'
-                            : 'Click to enable'
+                              ? 'Last admin'
+                              : u.isActive
+                                ? 'Click to disable'
+                                : 'Click to enable'
                         }
                       >
                         <span>
@@ -457,7 +507,9 @@ const UserManagement = () => {
                             size="small"
                             sx={{
                               '& .MuiSwitch-switchBase.Mui-checked': { color: '#059669' },
-                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#059669' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                bgcolor: '#059669',
+                              },
                             }}
                           />
                         </span>
@@ -483,13 +535,21 @@ const UserManagement = () => {
                     <TableCell align="right">
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
                         <Tooltip title="Edit user">
-                          <IconButton size="small" onClick={() => openEditModal(u)} sx={{ color: '#3B82F6' }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => openEditModal(u)}
+                            sx={{ color: '#3B82F6' }}
+                          >
                             <Icon icon="mdi:pencil-outline" style={{ fontSize: 18 }} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip
                           title={
-                            self ? 'Cannot delete yourself' : isLastActiveAdmin(u.id) ? 'Last admin' : 'Delete user'
+                            self
+                              ? 'Cannot delete yourself'
+                              : isLastActiveAdmin(u.id)
+                                ? 'Last admin'
+                                : 'Delete user'
                           }
                         >
                           <span>
@@ -579,7 +639,10 @@ const UserManagement = () => {
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton size="small" onClick={() => setShowPassword((p) => !p)} edge="end">
-                    <Icon icon={showPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'} style={{ fontSize: 20 }} />
+                    <Icon
+                      icon={showPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'}
+                      style={{ fontSize: 20 }}
+                    />
                   </IconButton>
                 </InputAdornment>
               ),
@@ -607,7 +670,9 @@ const UserManagement = () => {
             </Select>
             {errors.role && <FormHelperText>{errors.role}</FormHelperText>}
             {editingUser && isSelf(editingUser.id) && (
-              <FormHelperText sx={{ color: '#9CA3AF' }}>You cannot change your own role</FormHelperText>
+              <FormHelperText sx={{ color: '#9CA3AF' }}>
+                You cannot change your own role
+              </FormHelperText>
             )}
           </FormControl>
         </DialogContent>

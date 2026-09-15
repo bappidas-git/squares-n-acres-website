@@ -5,8 +5,14 @@ import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import { leadService } from '../../services/api';
 import { useToast } from '../../components/common/ToastProvider';
-import { getNameErrorMessage, getEmailErrorMessage, getMobileErrorMessage, sanitizeInput } from '../../utils/validators';
+import {
+  getNameErrorMessage,
+  getEmailErrorMessage,
+  getMobileErrorMessage,
+  sanitizeInput,
+} from '../../utils/validators';
 import styles from './Contact.module.css';
+import { BRAND, SITE } from '../../config/site';
 
 /* ── Animated section wrapper ──────────────────── */
 const Section = ({ children, className = '', delay = 0 }) => {
@@ -26,8 +32,18 @@ const Section = ({ children, className = '', delay = 0 }) => {
 
 /* ── Static data ───────────────────────────────── */
 const contactInfo = [
-  { icon: 'mdi:phone-outline', label: 'Phone', value: '+91 98765 43210', href: 'tel:+919876543210' },
-  { icon: 'mdi:email-outline', label: 'Email', value: 'info@homadvisory.com', href: 'mailto:info@homadvisory.com' },
+  {
+    icon: 'mdi:phone-outline',
+    label: 'Phone',
+    value: '+91 98765 43210',
+    href: 'tel:+919876543210',
+  },
+  {
+    icon: 'mdi:email-outline',
+    label: 'Email',
+    value: 'info@squaresnacres.com',
+    href: 'mailto:info@squaresnacres.com',
+  },
   {
     icon: 'mdi:map-marker-outline',
     label: 'Address',
@@ -101,7 +117,7 @@ const Contact = () => {
       setSubmitting(true);
       await leadService.create({ ...formData, source: 'contact' });
       setSubmitted(true);
-      toast.success('Message sent successfully! We\'ll get back to you soon.');
+      toast.success("Message sent successfully! We'll get back to you soon.");
     } catch {
       setSubmitError('Something went wrong. Please try again.');
       toast.error('Failed to send message. Please try again.');
@@ -113,8 +129,11 @@ const Contact = () => {
   return (
     <>
       <Helmet>
-        <title>Contact Us | H.O.M Advisory</title>
-        <meta name="description" content="Get in touch with H.O.M Advisory. Reach out for property inquiries, partnership opportunities, or any questions about real estate in Bangalore." />
+        <title>{`Contact Us | ${SITE.name}`}</title>
+        <meta
+          name="description"
+          content={`Get in touch with ${SITE.name}. Reach out for property inquiries, partnership opportunities, or any questions about real estate in Bangalore.`}
+        />
       </Helmet>
 
       <div className={styles.page}>
@@ -132,8 +151,8 @@ const Contact = () => {
             </span>
             <h1 className={styles.heroTitle}>Contact Us</h1>
             <p className={styles.heroSubtitle}>
-              Have a question or need assistance? We're here to help you every step of the way
-              on your real estate journey.
+              Have a question or need assistance? We're here to help you every step of the way on
+              your real estate journey.
             </p>
           </motion.div>
         </section>
@@ -160,7 +179,9 @@ const Contact = () => {
                 ) : (
                   <form onSubmit={handleSubmit} className={styles.form}>
                     <h2 className={styles.formTitle}>Send us a Message</h2>
-                    <p className={styles.formSubtitle}>Fill out the form below and we'll respond promptly.</p>
+                    <p className={styles.formSubtitle}>
+                      Fill out the form below and we'll respond promptly.
+                    </p>
 
                     <div className={styles.fieldRow}>
                       <div className={styles.field}>
@@ -213,10 +234,14 @@ const Contact = () => {
                         >
                           <option value="">Select Subject *</option>
                           {subjectOptions.map((opt) => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
                           ))}
                         </select>
-                        {errors.subject && <span className={styles.errorText}>{errors.subject}</span>}
+                        {errors.subject && (
+                          <span className={styles.errorText}>{errors.subject}</span>
+                        )}
                       </div>
                     </div>
 
@@ -275,7 +300,9 @@ const Contact = () => {
                       <div>
                         <span className={styles.infoLabel}>{item.label}</span>
                         {item.href ? (
-                          <a href={item.href} className={styles.infoValue}>{item.value}</a>
+                          <a href={item.href} className={styles.infoValue}>
+                            {item.value}
+                          </a>
                         ) : (
                           <span className={styles.infoValue}>{item.value}</span>
                         )}
@@ -329,7 +356,7 @@ const Contact = () => {
             </div>
             <div className={styles.mapContainer}>
               <iframe
-                title="H.O.M Advisory Office Location"
+                title={`${BRAND.name} Office Location`}
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3888.0131!2d77.6070!3d12.9716!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae1670c9b44e6d%3A0xf8dfc3e8517e4fe0!2sBrigade%20Road%2C%20Bangalore!5e0!3m2!1sen!2sin!4v1700000000000"
                 width="100%"
                 height="400"

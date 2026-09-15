@@ -7,8 +7,18 @@
 /* ─── Lead Status Configuration ─── */
 export const LEAD_STATUS_CONFIG = {
   new: { label: 'New', color: '#3B82F6', bg: '#EFF6FF', icon: 'mdi:new-box' },
-  contacted: { label: 'Contacted', color: '#F59E0B', bg: '#FFFBEB', icon: 'mdi:phone-check-outline' },
-  qualified: { label: 'Qualified', color: '#10B981', bg: '#ECFDF5', icon: 'mdi:check-decagram-outline' },
+  contacted: {
+    label: 'Contacted',
+    color: '#F59E0B',
+    bg: '#FFFBEB',
+    icon: 'mdi:phone-check-outline',
+  },
+  qualified: {
+    label: 'Qualified',
+    color: '#10B981',
+    bg: '#ECFDF5',
+    icon: 'mdi:check-decagram-outline',
+  },
   converted: { label: 'Converted', color: '#B45309', bg: '#FEF3C7', icon: 'mdi:handshake-outline' },
   lost: { label: 'Lost', color: '#EF4444', bg: '#FEF2F2', icon: 'mdi:close-circle-outline' },
 };
@@ -48,9 +58,7 @@ export const formatLeadSource = (source) => {
   if (!source) return '--';
   const found = LEAD_SOURCE_OPTIONS.find((s) => s.value === source);
   if (found) return found.label;
-  return source
-    .replace(/[-_]/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return source.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
 /* ─── Article Categories ─── */

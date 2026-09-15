@@ -23,6 +23,7 @@ import {
 import { Icon } from '@iconify/react';
 import { articleService } from '../../services/api';
 import { ARTICLE_CATEGORIES as categories } from '../../config/adminConstants';
+import { SITE } from '../../config/site';
 
 const generateSlug = (title) =>
   title
@@ -47,7 +48,7 @@ const emptyForm = {
   image: '',
   content: '',
   excerpt: '',
-  author: 'H.O.M Advisory Team',
+  author: 'Editorial Team',
   readTime: 5,
   seoTitle: '',
   seoDescription: '',
@@ -66,7 +67,16 @@ const MarkdownHelpModal = ({ open, onClose }) => (
       sx: { borderRadius: 3, maxHeight: '90vh' },
     }}
   >
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2.5, pb: 1.5, borderBottom: '1px solid #E5E7EB' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        p: 2.5,
+        pb: 1.5,
+        borderBottom: '1px solid #E5E7EB',
+      }}
+    >
       <Typography sx={{ fontSize: '1.25rem', fontWeight: 700, color: '#1B2A4A' }}>
         Markdown Writing Guide
       </Typography>
@@ -75,62 +85,164 @@ const MarkdownHelpModal = ({ open, onClose }) => (
       </IconButton>
     </Box>
     <DialogContent sx={{ p: 3 }}>
-      <Box sx={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '0.9rem', color: '#374151', lineHeight: 1.7, '& h3': { fontSize: '1.05rem', fontWeight: 700, color: '#1B2A4A', mt: 3, mb: 1 }, '& h4': { fontSize: '0.95rem', fontWeight: 600, color: '#1B2A4A', mt: 2, mb: 0.75 }, '& code': { bgcolor: '#F3F4F6', px: 0.75, py: 0.25, borderRadius: 1, fontSize: '0.8rem', fontFamily: 'monospace', color: '#D97706' }, '& pre': { bgcolor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 2, p: 2, overflow: 'auto', fontSize: '0.8rem', fontFamily: 'monospace', lineHeight: 1.6, mb: 2, '& code': { bgcolor: 'transparent', p: 0, color: '#374151' } }, '& table': { width: '100%', borderCollapse: 'collapse', mb: 2, '& th': { bgcolor: '#F3F4F6', p: 1, textAlign: 'left', fontSize: '0.8rem', fontWeight: 600, borderBottom: '2px solid #E5E7EB' }, '& td': { p: 1, fontSize: '0.8rem', borderBottom: '1px solid #F3F4F6' } } }}>
-
+      <Box
+        sx={{
+          fontFamily: 'var(--font-body)',
+          fontSize: '0.9rem',
+          color: '#374151',
+          lineHeight: 1.7,
+          '& h3': { fontSize: '1.05rem', fontWeight: 700, color: '#1B2A4A', mt: 3, mb: 1 },
+          '& h4': { fontSize: '0.95rem', fontWeight: 600, color: '#1B2A4A', mt: 2, mb: 0.75 },
+          '& code': {
+            bgcolor: '#F3F4F6',
+            px: 0.75,
+            py: 0.25,
+            borderRadius: 1,
+            fontSize: '0.8rem',
+            fontFamily: 'var(--font-mono)',
+            color: '#D97706',
+          },
+          '& pre': {
+            bgcolor: '#F9FAFB',
+            border: '1px solid #E5E7EB',
+            borderRadius: 2,
+            p: 2,
+            overflow: 'auto',
+            fontSize: '0.8rem',
+            fontFamily: 'var(--font-mono)',
+            lineHeight: 1.6,
+            mb: 2,
+            '& code': { bgcolor: 'transparent', p: 0, color: '#374151' },
+          },
+          '& table': {
+            width: '100%',
+            borderCollapse: 'collapse',
+            mb: 2,
+            '& th': {
+              bgcolor: '#F3F4F6',
+              p: 1,
+              textAlign: 'left',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              borderBottom: '2px solid #E5E7EB',
+            },
+            '& td': { p: 1, fontSize: '0.8rem', borderBottom: '1px solid #F3F4F6' },
+          },
+        }}
+      >
         <Typography variant="body2" sx={{ color: '#6B7280', mb: 3 }}>
-          This editor supports Markdown syntax. Use the following formatting options to create rich article content.
+          This editor supports Markdown syntax. Use the following formatting options to create rich
+          article content.
         </Typography>
 
         <h3>Headings</h3>
-        <p>Use <code>#</code> symbols to create headings. Headings with <code>##</code> appear in the Table of Contents automatically.</p>
-        <pre><code>{`## Section Heading (H2 — appears in TOC)\n### Subsection Heading (H3)`}</code></pre>
+        <p>
+          Use <code>#</code> symbols to create headings. Headings with <code>##</code> appear in the
+          Table of Contents automatically.
+        </p>
+        <pre>
+          <code>{`## Section Heading (H2 — appears in TOC)\n### Subsection Heading (H3)`}</code>
+        </pre>
 
         <h3>Text Formatting</h3>
         <table>
-          <thead><tr><th>Format</th><th>Syntax</th><th>Result</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Format</th>
+              <th>Syntax</th>
+              <th>Result</th>
+            </tr>
+          </thead>
           <tbody>
-            <tr><td>Bold</td><td><code>**bold text**</code></td><td><strong>bold text</strong></td></tr>
-            <tr><td>Italic</td><td><code>*italic text*</code></td><td><em>italic text</em></td></tr>
-            <tr><td>Underline</td><td><code>{'<u>underlined</u>'}</code></td><td><u>underlined</u></td></tr>
+            <tr>
+              <td>Bold</td>
+              <td>
+                <code>**bold text**</code>
+              </td>
+              <td>
+                <strong>bold text</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>Italic</td>
+              <td>
+                <code>*italic text*</code>
+              </td>
+              <td>
+                <em>italic text</em>
+              </td>
+            </tr>
+            <tr>
+              <td>Underline</td>
+              <td>
+                <code>{'<u>underlined</u>'}</code>
+              </td>
+              <td>
+                <u>underlined</u>
+              </td>
+            </tr>
           </tbody>
         </table>
 
         <h3>Lists</h3>
         <h4>Bullet List</h4>
-        <pre><code>{`- First item\n- Second item\n- Third item`}</code></pre>
+        <pre>
+          <code>{`- First item\n- Second item\n- Third item`}</code>
+        </pre>
 
         <h4>Numbered List</h4>
-        <pre><code>{`1. First item\n2. Second item\n3. Third item`}</code></pre>
+        <pre>
+          <code>{`1. First item\n2. Second item\n3. Third item`}</code>
+        </pre>
 
         <h3>Links</h3>
-        <pre><code>{`[Link Text](https://example.com)`}</code></pre>
+        <pre>
+          <code>{`[Link Text](https://example.com)`}</code>
+        </pre>
 
         <h3>Images</h3>
-        <pre><code>{`![Alt text](https://example.com/image.jpg)`}</code></pre>
+        <pre>
+          <code>{`![Alt text](https://example.com/image.jpg)`}</code>
+        </pre>
 
         <h3>Tables</h3>
-        <p>Create tables using pipes <code>|</code> and dashes <code>-</code>:</p>
-        <pre><code>{`| Column 1 | Column 2 | Column 3 |\n|----------|----------|----------|\n| Data 1   | Data 2   | Data 3   |\n| Data 4   | Data 5   | Data 6   |`}</code></pre>
+        <p>
+          Create tables using pipes <code>|</code> and dashes <code>-</code>:
+        </p>
+        <pre>
+          <code>{`| Column 1 | Column 2 | Column 3 |\n|----------|----------|----------|\n| Data 1   | Data 2   | Data 3   |\n| Data 4   | Data 5   | Data 6   |`}</code>
+        </pre>
 
         <h3>Blockquotes</h3>
-        <pre><code>{`> This is a blockquote.\n> It can span multiple lines.`}</code></pre>
+        <pre>
+          <code>{`> This is a blockquote.\n> It can span multiple lines.`}</code>
+        </pre>
 
         <h3>Horizontal Rule</h3>
-        <pre><code>{`---`}</code></pre>
+        <pre>
+          <code>{`---`}</code>
+        </pre>
 
         <h3>Line Breaks</h3>
-        <p>Press <strong>Enter</strong> twice for a new paragraph. Use a blank line between blocks of content for proper spacing.</p>
+        <p>
+          Press <strong>Enter</strong> twice for a new paragraph. Use a blank line between blocks of
+          content for proper spacing.
+        </p>
 
         <Divider sx={{ my: 3 }} />
 
         <h3>Best Writing Practices</h3>
         <Box component="ul" sx={{ pl: 2.5, '& li': { mb: 1 } }}>
           <li>Start with a compelling introduction that hooks the reader.</li>
-          <li>Use <code>##</code> headings to break content into scannable sections.</li>
+          <li>
+            Use <code>##</code> headings to break content into scannable sections.
+          </li>
           <li>Keep paragraphs short (3-4 sentences max) for readability.</li>
           <li>Use bullet points for lists of features, benefits, or steps.</li>
           <li>Include tables for comparison data (e.g., price ranges, area stats).</li>
-          <li>Bold <strong>key terms</strong> and important numbers for emphasis.</li>
+          <li>
+            Bold <strong>key terms</strong> and important numbers for emphasis.
+          </li>
           <li>End with a clear "Key Takeaways" or conclusion section.</li>
           <li>Aim for 800-1500 words for optimal SEO and engagement.</li>
           <li>Add relevant tags after writing to improve discoverability.</li>
@@ -139,6 +251,9 @@ const MarkdownHelpModal = ({ open, onClose }) => (
     </DialogContent>
   </Dialog>
 );
+
+// Host shown in the Google search preview (display form, no scheme).
+const PREVIEW_HOST = SITE.placeholderDomain.replace(/^https?:\/\//, '');
 
 const GooglePreview = ({ title, description }) => (
   <Paper
@@ -152,23 +267,25 @@ const GooglePreview = ({ title, description }) => (
       sx={{
         fontSize: '1.125rem',
         color: '#1a0dab',
-        fontFamily: 'arial, sans-serif',
+        fontFamily: 'var(--font-serp)',
         lineHeight: 1.3,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
       }}
     >
-      {title || 'Article Title — H.O.M Advisory'}
+      {title || `Article Title — ${SITE.name}`}
     </Typography>
-    <Typography sx={{ fontSize: '0.8125rem', color: '#006621', fontFamily: 'arial, sans-serif', mt: 0.25 }}>
-      homadvisory.com/insights/articles/...
+    <Typography
+      sx={{ fontSize: '0.8125rem', color: '#006621', fontFamily: 'var(--font-serp)', mt: 0.25 }}
+    >
+      {PREVIEW_HOST}/insights/articles/...
     </Typography>
     <Typography
       sx={{
         fontSize: '0.8125rem',
         color: '#545454',
-        fontFamily: 'arial, sans-serif',
+        fontFamily: 'var(--font-serp)',
         mt: 0.25,
         display: '-webkit-box',
         WebkitLineClamp: 2,
@@ -176,7 +293,8 @@ const GooglePreview = ({ title, description }) => (
         overflow: 'hidden',
       }}
     >
-      {description || 'Add an SEO description to control how this article appears in search results.'}
+      {description ||
+        'Add an SEO description to control how this article appears in search results.'}
     </Typography>
   </Paper>
 );
@@ -209,7 +327,7 @@ const ArticleForm = () => {
         image: data.image || '',
         content: data.content || '',
         excerpt: data.excerpt || '',
-        author: data.author || 'H.O.M Advisory Team',
+        author: data.author || 'Editorial Team',
         readTime: data.readTime || 5,
         seoTitle: data.seoTitle || '',
         seoDescription: data.seoDescription || '',
@@ -302,7 +420,11 @@ const ArticleForm = () => {
         setSnackbar({ open: true, message: 'Article updated', severity: 'success' });
       } else {
         await articleService.create(payload);
-        setSnackbar({ open: true, message: publish ? 'Article published' : 'Draft saved', severity: 'success' });
+        setSnackbar({
+          open: true,
+          message: publish ? 'Article published' : 'Draft saved',
+          severity: 'success',
+        });
       }
 
       setTimeout(() => navigate('/admin/articles'), 1000);
@@ -395,7 +517,9 @@ const ArticleForm = () => {
               sx={{ borderRadius: 2 }}
             >
               {categories.map((c) => (
-                <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>
+                <MenuItem key={c.value} value={c.value}>
+                  {c.label}
+                </MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -430,7 +554,12 @@ const ArticleForm = () => {
             <Button
               variant="outlined"
               onClick={handleAddTag}
-              sx={{ textTransform: 'none', borderRadius: 2, borderColor: '#D1D5DB', color: '#374151' }}
+              sx={{
+                textTransform: 'none',
+                borderRadius: 2,
+                borderColor: '#D1D5DB',
+                color: '#374151',
+              }}
             >
               Add
             </Button>
@@ -469,7 +598,10 @@ const ArticleForm = () => {
         <Box sx={{ mb: 2.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
             <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151' }}>
-              Content * <Typography component="span" sx={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>(Markdown supported)</Typography>
+              Content *{' '}
+              <Typography component="span" sx={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>
+                (Markdown supported)
+              </Typography>
             </Typography>
             <IconButton
               size="small"
@@ -494,7 +626,7 @@ const ArticleForm = () => {
             onChange={(e) => updateField('content', e.target.value)}
             placeholder="Write your article content here... Markdown is supported."
             InputProps={{
-              sx: { fontFamily: 'monospace', fontSize: '0.875rem' },
+              sx: { fontFamily: 'var(--font-mono)', fontSize: '0.875rem' },
             }}
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
           />
@@ -527,7 +659,8 @@ const ArticleForm = () => {
           Related Articles
         </Typography>
         <Typography sx={{ fontSize: '0.75rem', color: '#9CA3AF', mb: 2 }}>
-          Select articles to show in the "Related Articles" section. If none selected, the system will auto-suggest based on category.
+          Select articles to show in the "Related Articles" section. If none selected, the system
+          will auto-suggest based on category.
         </Typography>
         <Autocomplete
           multiple
@@ -561,12 +694,31 @@ const ArticleForm = () => {
           renderOption={(props, option) => {
             const { key, ...rest } = props;
             return (
-              <Box key={key} component="li" {...rest} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start !important', gap: 0.25, py: 1 }}>
+              <Box
+                key={key}
+                component="li"
+                {...rest}
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start !important',
+                  gap: 0.25,
+                  py: 1,
+                }}
+              >
                 <Typography sx={{ fontSize: '0.8125rem', fontWeight: 500, color: '#374151' }}>
                   {option.title}
                 </Typography>
                 <Typography sx={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>
-                  {option.category ? option.category.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : ''} {option.publishedAt ? `• ${new Date(option.publishedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
+                  {option.category
+                    ? option.category
+                        .split('-')
+                        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                        .join(' ')
+                    : ''}{' '}
+                  {option.publishedAt
+                    ? `• ${new Date(option.publishedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                    : ''}
                 </Typography>
               </Box>
             );
@@ -576,7 +728,8 @@ const ArticleForm = () => {
         />
         {selectedRelatedArticles.length > 0 && (
           <Typography sx={{ fontSize: '0.6875rem', color: '#6B7280' }}>
-            {selectedRelatedArticles.length} article{selectedRelatedArticles.length !== 1 ? 's' : ''} selected
+            {selectedRelatedArticles.length} article
+            {selectedRelatedArticles.length !== 1 ? 's' : ''} selected
           </Typography>
         )}
       </Paper>
@@ -588,7 +741,10 @@ const ArticleForm = () => {
         </Typography>
 
         <Box sx={{ mb: 2.5 }}>
-          <GooglePreview title={form.seoTitle || form.title} description={form.seoDescription || form.excerpt} />
+          <GooglePreview
+            title={form.seoTitle || form.title}
+            description={form.seoDescription || form.excerpt}
+          />
         </Box>
 
         <Box sx={{ mb: 2.5 }}>

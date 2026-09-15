@@ -5,6 +5,7 @@ import { useInView } from 'react-intersection-observer';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
 import styles from './RealEstateAwareness.module.css';
+import { BRAND, SITE } from '../../config/site';
 
 /* ── Animated section wrapper ──────────────────── */
 const Section = ({ children, className = '', delay = 0 }) => {
@@ -28,18 +29,20 @@ const educationalSections = [
     id: 'rera',
     icon: 'mdi:shield-check-outline',
     title: 'Understanding RERA',
-    summary: 'RERA protects homebuyers by regulating the real estate sector. Every project must be registered before sale.',
+    summary:
+      'RERA protects homebuyers by regulating the real estate sector. Every project must be registered before sale.',
     content: [
       'RERA (Real Estate Regulatory Authority) was established under the Real Estate (Regulation and Development) Act, 2016 to protect homebuyers and promote transparency.',
       'Key protections include: mandatory project registration, 70% funds in escrow, carpet area-based pricing, timely delivery with penalties for delays, and a 5-year defect liability period.',
-      'Always verify RERA registration on your state\'s RERA website before investing in any project. In Karnataka, visit rera.karnataka.gov.in.',
+      "Always verify RERA registration on your state's RERA website before investing in any project. In Karnataka, visit rera.karnataka.gov.in.",
     ],
   },
   {
     id: 'registration',
     icon: 'mdi:file-document-edit-outline',
     title: 'Property Registration Process',
-    summary: 'Property registration is mandatory under the Indian Registration Act. It gives legal validity to your ownership.',
+    summary:
+      'Property registration is mandatory under the Indian Registration Act. It gives legal validity to your ownership.',
     content: [
       'Steps: 1) Get the sale deed drafted by a lawyer. 2) Pay stamp duty (varies by state — 5% in Karnataka for properties above Rs 45L). 3) Pay registration charges (1% in Karnataka).',
       '4) Both buyer and seller must visit the Sub-Registrar office with witnesses. 5) Submit documents and biometric verification. 6) Collect the registered sale deed within 2-3 days.',
@@ -50,7 +53,8 @@ const educationalSections = [
     id: 'home-loans',
     icon: 'mdi:bank-outline',
     title: 'Home Loan Basics',
-    summary: 'Home loans make property ownership accessible. Banks finance up to 75-90% of the property value.',
+    summary:
+      'Home loans make property ownership accessible. Banks finance up to 75-90% of the property value.',
     content: [
       'Eligibility factors: Age (21-60 years), income stability, credit score (700+ preferred), existing liabilities, and property value.',
       'Types of interest rates: Fixed (constant EMI, higher initial rate) vs Floating (linked to repo rate, lower initial rate but variable). Most buyers choose floating rates.',
@@ -61,7 +65,8 @@ const educationalSections = [
     id: 'tax-benefits',
     icon: 'mdi:percent-circle-outline',
     title: 'Tax Benefits on Property',
-    summary: 'Homeowners enjoy significant tax benefits under the Income Tax Act. Plan wisely to maximize savings.',
+    summary:
+      'Homeowners enjoy significant tax benefits under the Income Tax Act. Plan wisely to maximize savings.',
     content: [
       'Section 80C: Deduction up to Rs 1.5 lakh per year on home loan principal repayment (including stamp duty and registration charges in the year of purchase).',
       'Section 24(b): Deduction up to Rs 2 lakh per year on home loan interest for self-occupied property. No upper limit for let-out properties.',
@@ -72,7 +77,8 @@ const educationalSections = [
     id: 'stamp-duty',
     icon: 'mdi:stamp',
     title: 'Stamp Duty Guide',
-    summary: 'Stamp duty is a state-levied tax on property transactions. Rates vary by state and property value.',
+    summary:
+      'Stamp duty is a state-levied tax on property transactions. Rates vary by state and property value.',
     content: [
       'Karnataka rates: 2% for properties up to Rs 20L, 3% for Rs 21-45L, 5% for above Rs 45L. Registration is an additional 1%.',
       'Stamp duty is calculated on the higher of: actual transaction value or government guidance value (circle rate).',
@@ -83,7 +89,8 @@ const educationalSections = [
     id: 'documents',
     icon: 'mdi:clipboard-check-outline',
     title: 'Documents Checklist',
-    summary: 'Having the right documents ready ensures a smooth property transaction. Here\'s the complete list.',
+    summary:
+      "Having the right documents ready ensures a smooth property transaction. Here's the complete list.",
     content: [
       'Buyer documents: PAN Card, Aadhaar Card, passport-size photos, bank statements (6 months), salary slips / ITR (3 years), Form 16, and employment letter.',
       'Property documents to verify: Title Deed (ownership chain for 30 years), Encumbrance Certificate (EC), Khata Certificate & Extract, approved building plan, RERA registration, Occupancy Certificate (OC), and Completion Certificate (CC).',
@@ -94,45 +101,72 @@ const educationalSections = [
 
 /* ── Did You Know facts ────────────────────────── */
 const didYouKnowFacts = [
-  { stat: '65,000+', label: 'New residential units launched in Bangalore in 2024', icon: 'mdi:home-city-outline' },
-  { stat: '8-12%', label: 'Average annual property appreciation in top Indian cities', icon: 'mdi:trending-up' },
-  { stat: '70%', label: 'Of project funds must be kept in escrow under RERA', icon: 'mdi:shield-lock-outline' },
-  { stat: '5 Years', label: 'Defect liability period mandated by RERA for builders', icon: 'mdi:wrench-clock' },
-  { stat: '₹3.5L', label: 'Maximum annual tax deduction on home loan interest', icon: 'mdi:cash-multiple' },
+  {
+    stat: '65,000+',
+    label: 'New residential units launched in Bangalore in 2024',
+    icon: 'mdi:home-city-outline',
+  },
+  {
+    stat: '8-12%',
+    label: 'Average annual property appreciation in top Indian cities',
+    icon: 'mdi:trending-up',
+  },
+  {
+    stat: '70%',
+    label: 'Of project funds must be kept in escrow under RERA',
+    icon: 'mdi:shield-lock-outline',
+  },
+  {
+    stat: '5 Years',
+    label: 'Defect liability period mandated by RERA for builders',
+    icon: 'mdi:wrench-clock',
+  },
+  {
+    stat: '₹3.5L',
+    label: 'Maximum annual tax deduction on home loan interest',
+    icon: 'mdi:cash-multiple',
+  },
   { stat: '30 Days', label: 'Typical timeline for home loan processing', icon: 'mdi:timer-sand' },
 ];
 
 /* ── Quiz data ─────────────────────────────────── */
 const quizQuestions = [
   {
-    question: 'What percentage of project funds must a developer keep in an escrow account under RERA?',
+    question:
+      'What percentage of project funds must a developer keep in an escrow account under RERA?',
     options: ['50%', '60%', '70%', '80%'],
     correct: 2,
-    explanation: 'RERA mandates that 70% of project funds collected from buyers must be deposited in a separate escrow account to prevent fund diversion.',
+    explanation:
+      'RERA mandates that 70% of project funds collected from buyers must be deposited in a separate escrow account to prevent fund diversion.',
   },
   {
     question: 'What is the defect liability period under RERA after possession?',
     options: ['1 Year', '2 Years', '3 Years', '5 Years'],
     correct: 3,
-    explanation: 'Under RERA, builders are liable for structural defects for 5 years after possession and must rectify them within 30 days.',
+    explanation:
+      'Under RERA, builders are liable for structural defects for 5 years after possession and must rectify them within 30 days.',
   },
   {
-    question: 'What is the maximum home loan interest deduction under Section 24(b) for self-occupied property?',
+    question:
+      'What is the maximum home loan interest deduction under Section 24(b) for self-occupied property?',
     options: ['₹1 Lakh', '₹1.5 Lakhs', '₹2 Lakhs', 'No Limit'],
     correct: 2,
-    explanation: 'Section 24(b) allows a maximum deduction of Rs 2 lakhs per year on home loan interest for a self-occupied property.',
+    explanation:
+      'Section 24(b) allows a maximum deduction of Rs 2 lakhs per year on home loan interest for a self-occupied property.',
   },
   {
     question: 'What does the Encumbrance Certificate (EC) verify?',
     options: ['Building quality', 'No pending loans or disputes', 'Property age', 'Tax compliance'],
     correct: 1,
-    explanation: 'An Encumbrance Certificate confirms that the property is free from any monetary or legal liabilities such as unpaid loans or mortgages.',
+    explanation:
+      'An Encumbrance Certificate confirms that the property is free from any monetary or legal liabilities such as unpaid loans or mortgages.',
   },
   {
     question: 'What is stamp duty rate in Karnataka for properties above Rs 45 lakhs?',
     options: ['2%', '3%', '5%', '7%'],
     correct: 2,
-    explanation: 'In Karnataka, stamp duty is 5% for properties valued above Rs 45 lakhs, plus 1% registration charge.',
+    explanation:
+      'In Karnataka, stamp duty is 5% for properties valued above Rs 45 lakhs, plus 1% registration charge.',
   },
 ];
 
@@ -217,7 +251,7 @@ const RealEstateAwareness = () => {
   return (
     <>
       <Helmet>
-        <title>Real Estate Awareness | Education & Guides | H.O.M Advisory</title>
+        <title>{`Real Estate Awareness | Education & Guides | ${SITE.name}`}</title>
         <meta
           name="description"
           content="Learn about RERA, property registration, home loans, tax benefits, stamp duty, and essential documents for real estate transactions in India."
@@ -302,7 +336,11 @@ const RealEstateAwareness = () => {
                         onClick={() => toggleSection(section.id)}
                       >
                         {expandedSection === section.id ? 'Show Less' : 'Learn More'}
-                        <Icon icon={expandedSection === section.id ? 'mdi:chevron-up' : 'mdi:chevron-down'} />
+                        <Icon
+                          icon={
+                            expandedSection === section.id ? 'mdi:chevron-up' : 'mdi:chevron-down'
+                          }
+                        />
                       </button>
                     </div>
                   </div>
@@ -344,7 +382,9 @@ const RealEstateAwareness = () => {
                   <div className={styles.quizProgress}>
                     <div
                       className={styles.quizProgressBar}
-                      style={{ width: `${((quizState.current + 1) / quizQuestions.length) * 100}%` }}
+                      style={{
+                        width: `${((quizState.current + 1) / quizQuestions.length) * 100}%`,
+                      }}
                     />
                   </div>
                   <span className={styles.quizCounter}>
@@ -360,7 +400,8 @@ const RealEstateAwareness = () => {
                       const isCorrect = oi === quizQuestions[quizState.current].correct;
                       let optClass = styles.quizOption;
                       if (answered && selected && isCorrect) optClass += ` ${styles.quizCorrect}`;
-                      else if (answered && selected && !isCorrect) optClass += ` ${styles.quizWrong}`;
+                      else if (answered && selected && !isCorrect)
+                        optClass += ` ${styles.quizWrong}`;
                       else if (answered && isCorrect) optClass += ` ${styles.quizCorrect}`;
 
                       return (
@@ -396,7 +437,9 @@ const RealEstateAwareness = () => {
                   )}
                   {quizState.answers[quizState.current] !== undefined && (
                     <button className={styles.quizNextBtn} onClick={nextQuestion}>
-                      {quizState.current < quizQuestions.length - 1 ? 'Next Question' : 'See Results'}
+                      {quizState.current < quizQuestions.length - 1
+                        ? 'Next Question'
+                        : 'See Results'}
                       <Icon icon="mdi:arrow-right" />
                     </button>
                   )}
@@ -440,7 +483,9 @@ const RealEstateAwareness = () => {
             <div className={styles.checklistCard}>
               <div className={styles.checklistProgress}>
                 <div className={styles.checklistProgressInfo}>
-                  <span>{checkedItems.size} of {buyerChecklist.length} completed</span>
+                  <span>
+                    {checkedItems.size} of {buyerChecklist.length} completed
+                  </span>
                   <span>{Math.round((checkedItems.size / buyerChecklist.length) * 100)}%</span>
                 </div>
                 <div className={styles.checklistBar}>
@@ -482,10 +527,13 @@ const RealEstateAwareness = () => {
           <div className={styles.container}>
             <div className={styles.ctaSection}>
               <div className={styles.ctaInfo}>
-                <h2 className={styles.sectionTitle}>Need Help Navigating Your Real Estate Journey?</h2>
+                <h2 className={styles.sectionTitle}>
+                  Need Help Navigating Your Real Estate Journey?
+                </h2>
                 <p className={styles.ctaText}>
-                  Our experienced team at H.O.M Advisory is here to guide you through every step —
-                  from property search and legal verification to home loan processing and registration.
+                  Our experienced team at {BRAND.name} is here to guide you through every step —
+                  from property search and legal verification to home loan processing and
+                  registration.
                 </p>
                 <div className={styles.ctaBenefits}>
                   <div className={styles.ctaBenefit}>
