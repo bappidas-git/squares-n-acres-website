@@ -430,4 +430,12 @@ function main() {
   process.exit(blocking.length > 0 ? 1 : 0);
 }
 
-main();
+if (require.main === module) main();
+
+/**
+ * The pattern list is exported so that `scripts/validate-seed.js` can apply the
+ * same regexes to `db.json` without restating them — two copies would drift,
+ * and a copy in another file would itself be a finding (this file is the one
+ * path the scan skips).
+ */
+module.exports = { TRACE_PATTERNS, ALLOW_LIST, HEX_RE };
