@@ -142,6 +142,12 @@ export function validateBasics(values) {
     add('floorNumber', 'The floor must be a number.');
   }
 
+  // A registration number is the whole point of the switch: "RERA registered"
+  // with nothing beside it is a claim the listing cannot back up.
+  if (values.reraRegistered === true && isBlank(values.reraNumber)) {
+    add('reraNumber', 'Give the RERA registration number, or turn the switch off.');
+  }
+
   const short = String(values.shortDescription ?? '');
   if (short.length > 300) add('shortDescription', 'Keep the summary to 300 characters.');
 
@@ -178,9 +184,9 @@ export function validateLocation(values) {
   checkUrl(add, 'location.mapEmbedUrl', location.mapEmbedUrl, 'The map URL');
 
   (values.nearbyPlaces ?? []).forEach((place, index) => {
-    if (isBlank(place.name) && !isBlank(place.distanceKm)) {
-      add(`nearbyPlaces.${index}.name`, 'Name this place.');
-    }
+    // A row exists because somebody added it, and a row without a name is
+    // dropped on save — so it is refused here rather than lost silently.
+    if (isBlank(place.name)) add(`nearbyPlaces.${index}.name`, 'Name this place.');
     checkNonNegative(add, `nearbyPlaces.${index}.distanceKm`, place.distanceKm, 'The distance');
     checkNonNegative(
       add,
@@ -280,13 +286,16 @@ export function validateUnits(values) {
     const path = `unitConfigurations.${index}`;
     const named = !isBlank(unit.name);
     const measured = !isBlank(unit.superBuiltUpArea) || !isBlank(unit.carpetArea);
-    const priced = !isBlank(unit.price) || unit.priceOnRequest === true;
+    // "On request" is not a price: a row with neither an area nor a figure
+    // prints an empty line in the configuration table (§7 of prompt 19).
+    const priced = !isBlank(unit.price);
     // Any field at all: a row with nothing but a bedroom count would be dropped
     // on save, and silently losing an editor's row is worse than asking for a name.
     const touched =
       named ||
       measured ||
       priced ||
+      unit.priceOnRequest === true ||
       !isBlank(unit.bedrooms) ||
       !isBlank(unit.bathrooms) ||
       !isBlank(unit.availableUnits) ||
@@ -296,7 +305,7 @@ export function validateUnits(values) {
     if (!touched) return;
     if (!named) add(`${path}.name`, 'Name this configuration, e.g. “3 BHK — Type A”.');
     if (!measured && !priced) {
-      add(`${path}.superBuiltUpArea`, 'Give an area or a price for this configuration.');
+      add(`${path}.superBuiltUpArea`, 'Add an area or a price.');
     }
 
     checkNonNegative(add, `${path}.superBuiltUpArea`, unit.superBuiltUpArea, 'The area');
@@ -325,6 +334,11 @@ export function validateMedia(values) {
       );
     }
   });
+
+  const usable = (values.images ?? []).filter((image) => !isBlank(image.url));
+  if (usable.length > 0 && !usable.some((image) => image.isCover === true)) {
+    add('images.0.isCover', 'Choose which photograph is the cover.');
+  }
 
   checkUrl(add, 'videoUrl', values.videoUrl, 'The video URL');
   checkUrl(add, 'virtualTourUrl', values.virtualTourUrl, 'The virtual-tour URL');

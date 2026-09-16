@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 18 — Property form foundation Next prompt: 19
+Last prompt executed: 19 — Property form tabs 1–6 Next prompt: 20
 
 ## Executed prompts
 
@@ -24,7 +24,8 @@ Last prompt executed: 18 — Property form foundation Next prompt: 19
 | 15  | Master data: property types, amenities, badges and banks      | `0cc1afc`                                                                          | 2026-09-16 |
 | 16  | Developers: admin CRUD and the public builder pages           | `da19cb5`                                                                          | 2026-09-16 |
 | 17  | FAQs, testimonials, team and partners: admin and sections     | `4dcf5cd`                                                                          | 2026-09-16 |
-| 18  | Property form foundation: reducer, validators, rail, payload  | HEAD of this branch (a commit cannot contain its own hash — prompt 19 fills it in) | 2026-09-16 |
+| 18  | Property form foundation: reducer, validators, rail, payload  | `c917a9a`                                                                          | 2026-09-16 |
+| 19  | Property form tabs 1–6: basics → media                        | HEAD of this branch (a commit cannot contain its own hash — prompt 20 fills it in) | 2026-09-16 |
 
 ## Baseline (prompt 01)
 
@@ -271,8 +272,8 @@ The boilerplate's own endpoint surface stays inventoried in
 | `src/utils/adapters/legacyArticle.js`          | `toLegacyArticle()` maps `featuredImage.url` → `image`, `category.name`, `author.name` and `readingTimeMinutes` → `readTime` for `AdminArticles` and `ArticleForm`.                                                                                                                                                                                                                                                                                                                | 33 / 34      |
 | `src/components/common/LegacyHtml.jsx`         | Renders CMS-authored HTML (article bodies, FAQ answers) with `dangerouslySetInnerHTML`. Prompt 32 replaces it with `SafeHtml`, sanitising against the allow-list the Tiptap editor writes with.                                                                                                                                                                                                                                                                                    | 32           |
 | Legacy `PropertyForm.jsx` + `property-tabs/*`  | The boilerplate's form (956 lines) and its sixteen tabs are no longer routed — `/admin/properties/add` and `/admin/properties/edit/:id` render `PropertyFormPage` (prompt 18) — but the files stay in place, unreachable, until the last of their fields has a home in the new tabs. Prompt 21 deletes both, with the form half of `toLegacyProperty`.                                                                                                                             | 21           |
-| Basics fields inside a placeholder tab         | `property-form/tabs/BasicsTab.jsx` holds the title, URL, summary, listing type, segment, property type, locality, construction status, availability and possession date **inside** the prompt-19 placeholder alert, because a listing cannot be created without them. Prompt 19 moves them into the real Basics and Location tabs and drops the alert.                                                                                                                             | 19           |
-| Fifteen placeholder property-form tabs         | Every tab but Basics renders `PlaceholderTab` naming the prompt that writes it: Location, Pricing, Area & configuration, Unit configurations and Media in 19; Amenities, Highlights & specifications, Floor plans, Documents, Project & builder and FAQs in 20; Similar properties, Section visibility, Agent and SEO in 21 (the panel itself in 36, D87). The reducer, validators and `toPayload` already cover their fields, so a save never drops what they hold.               | 19–21, 36    |
+| Ten placeholder property-form tabs             | Tabs 1–6 are written (prompt 19). The ten that remain render `PlaceholderTab` naming the prompt that writes each: Amenities, Highlights & specifications, Floor plans, Documents, Project & builder and FAQs in 20; Similar properties, Section visibility, Agent and SEO in 21 (the panel itself in 36, D87). The reducer, validators and `toPayload` already cover their fields, so a save never drops what they hold.                                                           | 20–21, 36    |
+| Description textarea → `RichTextEditor`        | The Basics tab's description is an eight-row `TextareaField` with a live character and word counter. The field stores sanitised HTML (§6.1) and the counters already measure the plain text inside it, so prompt 32 swaps the control for the Tiptap editor without touching the reducer, the validators or the payload.                                                                                                                                                           | 32           |
 | `ArticleForm` saving disabled                  | Its category, author and tag pickers offer hardcoded strings; an article now carries `categoryId`, `authorId`, `tagIds[]`, `featuredImage{}`, `status` and a nested `seo{}`. Loading works through `toLegacyArticle`; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                   | 33           |
 | `AdminSettings` saving disabled                | The screen holds a flattened view of five of the eight §6.13 branches, so writing it back would flatten the record on the server. Reads are live; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                                                                                       | 40           |
 | `AdminSeo` saving disabled                     | SEO now lives in one nested `seo{}` saved through the entity's own PATCH, and the generator still writes boilerplate titles and canonicals (ADD-20/ADD-27). The table reads `GET /admin/seo/overview` live; editing and bulk generation are disabled behind an info `Alert`.                                                                                                                                                                                                       | 36–37        |
@@ -2458,3 +2459,166 @@ its tabs (prompt 21), the Basics fields living inside a placeholder alert
 `PropertyForm saving disabled` is closed — saving works, on the new form.
 
 **Next prompt: 19 — Property form tabs 1–6.**
+
+### Prompt 19 — Property form tabs 1–6: basics, location, pricing, area, units, media (2026-09-16)
+
+**What changed**
+
+Six of the sixteen tabs stopped being placeholders. Prompt 18 built the
+machinery — a reducer holding the §6.1 record, validators keyed by dotted path,
+`fromRecord`/`toPayload`, a rail — and put nine fields inside an alert so a
+listing could be created at all. This prompt writes the fields: everything of
+§6.1 that belongs to Basics, Location, Pricing, Area & configuration, Unit
+configurations and Media now has a control, and the alert is gone.
+
+The tab that decides what the other five show is Basics, and the rules it
+decides by are not written inside it. `fieldRules.js` answers "does this listing
+have bedrooms / a possession date / a plot width / a monthly rent?" for the
+tabs, for the confirm dialogs that clear what no longer applies, and for a unit
+test that never renders anything. A plot has no BHK fields to leave blank and a
+rental has no price range to ignore: the fields are not there.
+
+Three numbers on this form are arithmetic an editor should not have to do. The
+price preview prints exactly what `formatPrice` will print on the card and the
+details page (`₹1.42 Cr onwards`, `₹45,000/month`, `Price on Request`) while it
+is being typed; the per-sq-ft rate follows the price until somebody types their
+own; and a plot's area follows length × width until somebody types their own.
+In all three cases the derived figure is shown and the typed one wins.
+
+**Files added**
+
+| Path                                                        | What it is                                                                                                                                       |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `…/property-form/fieldRules.js`                             | Which fields a listing has: the segment/status/listing-type rules, `priceFieldsFor`, the segment-change patch, the rate and plot-area arithmetic |
+| `…/property-form/tabs/BasicsTab.jsx`                        | Identity, classification, status, the unit, the two descriptions — with the two confirm dialogs                                                  |
+| `…/property-form/tabs/LocationTab.jsx`                      | Locality (searchable + quick create), city, address, coordinates, the map, nearby places                                                         |
+| `…/property-form/tabs/PricingTab.jsx`                       | The fields of one listing type, the live preview, the rate, the other charges                                                                    |
+| `…/property-form/tabs/AreaConfigurationTab.jsx`             | Built areas or plot dimensions, the rooms, the two "this lives elsewhere" notes                                                                  |
+| `…/property-form/tabs/UnitConfigurationsTab.jsx`            | The price table: sortable cards, duplicate, the auto range and "Apply as pricing range"                                                          |
+| `…/property-form/tabs/PropertyTabs.module.css`              | The layouts the six tabs share                                                                                                                   |
+| `…/property-form/tabs/MediaTab.jsx`                         | The gallery, the video with its thumbnail, the virtual tour, the brochure and its gate                                                           |
+| `…/property-form/components/NumberWithUnit.jsx` (+ css)     | A number with `₹` or a unit attached, right-aligned, with the formatted figure underneath                                                        |
+| `…/property-form/components/NearbyPlacesRepeater.jsx`       | The flat `nearbyPlaces` list, shown grouped by category and reordered inside a group                                                             |
+| `…/property-form/components/OtherChargesRepeater.jsx`       | Label / amount / note rows, with the lease clause presets                                                                                        |
+| `…/property-form/components/Repeaters.module.css`           | Shared by the two repeaters                                                                                                                      |
+| `…/property-form/components/ImageGalleryEditor.jsx` (+ css) | The gallery grid: drag and keyboard reorder, the cover radio, alt and caption, "Add multiple URLs", the counters                                 |
+| `…/property-form/components/PricePreview.jsx` (+ css)       | What the public page will print, as it is typed                                                                                                  |
+| `…/property-form/components/MapPinPicker.jsx` (+ css)       | The draggable pin where a Maps key exists, the keyless embed where it does not (D42)                                                             |
+| `…/property-form/components/LocalityQuickCreateDialog.jsx`  | Name / city / zone → `POST /admin/localities`, straight back into the select                                                                     |
+| `src/utils/loadScript.js`                                   | Loads a third-party script once, on demand; a failure rejects rather than throwing into a render                                                 |
+| `…/property-form/__tests__/fieldRules.test.js`              | 24 cases over the visibility rules, the price-field sets, the segment patch and the arithmetic                                                   |
+| `…/property-form/__tests__/PricingTab.test.jsx`             | 18 cases: sale vs rental fields, every preview line, price-on-request, the rate, the charge rows, read-only                                      |
+| `…/property-form/__tests__/ImageGalleryEditor.test.jsx`     | 22 cases: the counters, the cover (including promotion on removal), alt, reorder, both ways of adding, read-only                                 |
+
+**Files changed**
+
+`…/property-form/tabs.js` (the six components wired in; `badgeIds` moves to the
+Basics tab's field list, because that is where the picker is),
+`…/property-form/validators/property.js` (a RERA number when the switch is on; a
+name on every nearby row; "Add an area or a price" for a unit configuration
+priced on request; exactly one cover image), `…/property-form/toPayload.js` (the
+per-sq-ft derivation moves into `fieldRules.derivedPricePerSqft`, so the tab and
+the payload compute one figure), `src/components/admin/MultiSelect.jsx` (a
+read-only picker no longer renders a live × on its chips),
+`docs/PROJECT_STATE.md`, `docs/DECISIONS.md`.
+
+**Files removed**
+
+None. `PlaceholderTab` still serves the ten tabs of prompts 20–21.
+
+**Endpoints**
+
+None added. The locality quick create uses `POST /admin/localities`
+(`masterDataService.localities.create`) and then `refresh('localities')` on
+`MasterDataContext`, so the new record is in every locality list in the session.
+
+**npm / env**
+
+Nothing added. `REACT_APP_GOOGLE_MAPS_KEY` was already in `.env.example`; it is
+read together with `settings.integrations.googleMapsApiKey`, which wins.
+
+**Acceptance checklist**
+
+- [x] Tabs 1–6 carry every §6.1 field of their scope, shown per `fieldRules.js`,
+      and a `PUT` of the form's payload comes back from
+      `GET /api/admin/properties/1` with every one of them intact (checked field
+      by field against the mock, see the QA below).
+- [x] Locality quick create, the map (keyed pin and keyless embed), the price
+      preview, the per-sq-ft auto-compute, the plot-area auto-fill and the
+      gallery's cover/alt/reorder all work in the browser.
+- [x] 64 new unit tests; the suite is 1 064 tests over 42 files.
+- [x] `npm run lint`, `npm run test:ci`, `npm run build:ci` (0 warnings),
+      `npm run check:traces` (0 findings), `npm run smoke` (269/269),
+      `npm run test:mock` (127), `npm run validate:seed` and
+      `npm run check:contrast` all pass.
+- [x] One commit, clean tree.
+
+**Manual QA (headless Chromium, console captured)**
+
+- `/admin/properties/edit/1` at 1360 px: sixteen tabs, the first six rendering
+  fields rather than an alert. Basics lists Title, Project name, URL, Listing
+  type, Segment, Property type, Badges, Construction status, Availability,
+  Possession, RERA registered (+ RERA number), Furnishing, Facing, Ownership,
+  Floor number, Total floors, Short description and Description.
+- Pricing: clearing the range leaves `₹1.5 Cr onwards`; clearing the rate puts
+  it back on the price (`10000`), and changing the price to 18000000 moves it to
+  `12000` and the preview to `₹1.8 Cr onwards`. "Price on request" disables and
+  empties the price and the rate, and the preview reads `Price on Request`; the
+  booking amount stays editable. `+ ₹2,500/month maintenance` and
+  `Stamp duty: ₹7.5 L` print under the headline.
+- Basics → Rent asks "Change this listing to Rent? … the prices this one already
+  holds … will be cleared"; confirming leaves Rent per month, Security deposit
+  and Maintenance, and no Price. Lease calls the same field "Advance" and offers
+  "Add lock-in period" / "Add annual escalation".
+- Basics → Plots & Land asks before clearing, and afterwards Basics has no
+  Furnishing and no floors, and Area has no super built-up area and no bedrooms
+  — only Plot area, Dimension unit, Length and Width. 30 × 40 feet fills 1200
+  sq ft; 30 × 40 metres fills 12 916.68 sq ft; an area typed by hand survives a
+  change of length.
+- Area: a carpet area above the built-up area raises the inline warning
+  ("Carpet ≤ built-up ≤ super built-up is what a buyer expects") without
+  blocking the save.
+- Location: "Metro" adds a row to that group (the heading counts `Metro (2)`);
+  "Add a new locality" → Test Nagar / Bengaluru / East is created, selected and
+  the city fills itself in.
+- Media: pasting two URLs takes the counter to "8 images · 2 missing alt";
+  saving is refused with "Please fix 1 field.", the Media tab badges "1 error in
+  this section" and the alt field carries the message. Describing them and
+  saving again persists across a reload — 8 images, every one described, the
+  cover where it was put. The alt hint on property 1 reads
+  "Describe what is shown. Use: 3 bhk apartment in whitefield", from the SEO
+  focus keyword.
+- Unit configurations: the seeded rows summarise as `₹1.2 Cr`; adding "4 BHK Sky
+  Villa" at 21000000 makes it `₹1.2 Cr – ₹2.1 Cr`, and "Apply as pricing range"
+  writes 12000000/21000000 into Pricing, where the preview follows.
+- The map: with `integrations.googleMapsApiKey` set, the tab injects
+  `https://maps.googleapis.com/maps/api/js?key=…&v=weekly` once and renders the
+  pin container; when that script cannot load it falls back to the embed plus
+  the coordinate fields, raises "The interactive map is unavailable" and toasts
+  "The Google map could not be loaded. Type the coordinates instead — the
+  preview still works." With no key at all it starts on the embed and offers
+  "Use the centre of \<locality\>".
+- 390 px: `scrollWidth === clientWidth` on all six tabs.
+- Signed in as sales: the read-only banner, and not one operable control in any
+  of the six panels (the two that survived — the × on a badge chip — are fixed
+  in `MultiSelect`).
+- Console: no errors and no warnings from these tabs. The only warnings on the
+  admin shell are MUI Grid v2 deprecations from the untouched `Dashboard.js`
+  (prompt 29).
+- Against the API directly: `toPayload` of a record edited across all six tabs
+  → `PUT /admin/properties/1` → 200, and the `GET` that follows returns the RERA
+  number, the furnishing, the floors, the possession month, the badges, the
+  address, the pincode, the six-decimal coordinates, `showExactLocation`, both
+  nearby rows in order with their travel times, the price, the derived
+  `pricePerSqft` of 10000, the range, the other charge, the three areas, the
+  nine configuration fields, both unit configurations (one priced, one on
+  request) and both images with exactly one cover — while `viewCount`,
+  `amenityIds` and the whole `seo` branch are untouched.
+
+**Known issues**
+
+None opened. Two rows left "Pending rewrites" (the Basics fields in a
+placeholder, and five of the fifteen placeholder tabs); one joined it — the
+description textarea that prompt 32 turns into the Tiptap editor.
+
+**Next prompt: 20 — Property form tabs 7–12.**

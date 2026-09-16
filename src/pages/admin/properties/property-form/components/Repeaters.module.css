@@ -1,0 +1,116 @@
+/* The two small repeating lists of prompt 19 — nearby places and other
+   charges. Both are "a handful of short rows", which is a different shape from
+   the gallery grid and from the unit-configuration cards. */
+
+.wrapper {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* One `NEARBY_CATEGORIES` group: a heading, its rows, and its own add button. */
+.group {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.groupHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.groupTitle {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+.groupCount {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.groupActions {
+  margin-left: auto;
+}
+
+/* A row of fields: the name takes the room, the numbers take what is left. */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: end;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .row {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+
+  .chargeRow {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+}
+
+/* The remove button sits on the baseline of the inputs beside it. */
+.rowAction {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: var(--space-1);
+}
+
+.charges {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.chargeRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: end;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.total {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+}
+
+.totalValue {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}

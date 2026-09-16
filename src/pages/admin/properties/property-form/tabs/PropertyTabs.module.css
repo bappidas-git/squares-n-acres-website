@@ -1,0 +1,177 @@
+/* Shared by the six tabs of prompt 19. A tab that needs a layout of its own
+   (the gallery grid, the price card) keeps it with its component. */
+
+/* A field that appears when another field is answered. It is mounted rather
+   than hidden, so nothing is left holding a gap in the grid when it is away. */
+.conditional {
+  animation: reveal var(--transition-base);
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conditional {
+    animation: none;
+  }
+}
+
+/* Two controls that read as one field: a number and its unit. */
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: end;
+}
+
+/* Three or four small numbers side by side (bedrooms, baths, balconies). */
+.counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-4);
+}
+
+/* A block of on/off rooms. */
+.switches {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3) var(--space-5);
+}
+
+/* The live length counter under a description. */
+.counter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.counterWarn {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-warning-dark);
+}
+
+.counterOk {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success-dark);
+}
+
+/* A row of buttons under a section. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.actionsEnd {
+  justify-content: flex-end;
+}
+
+/* One unit configuration, inside the sortable list. */
+.unitCard {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.unitHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.unitTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+.unitGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+@media (min-width: 900px) {
+  .unitGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .unitWide {
+    grid-column: 1 / -1;
+  }
+}
+
+/* "Price range auto: ₹85 L – ₹1.2 Cr" above the Apply button. */
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.summaryText {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.summaryValue {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+/* The price card follows the fields down a desktop screen. */
+.sticky {
+  position: sticky;
+  top: var(--space-6);
+}
+
+@media (max-width: 899.98px) {
+  .sticky {
+    position: static;
+  }
+}
+
+/* A small video thumbnail beside the video URL. */
+.videoPreview {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.videoThumb {
+  flex-shrink: 0;
+  width: 160px;
+}
+
+.videoMeta {
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
