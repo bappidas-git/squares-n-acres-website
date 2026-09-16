@@ -54,6 +54,35 @@ const isPlainObject = (value) =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /**
+ * Settles a collection's `order` after an `order` PATCH (§5.8, D98).
+ *
+ * A reorder sends **one** write — the moved record's new position — and the
+ * API works out what everything else becomes: the collection is sorted by
+ * `order`, ties are broken in favour of the record that was just touched
+ * (newest `updatedAt` first), and the result is renumbered `1..n`.
+ *
+ * That is what lets an editor drag a row while the table is filtered. The
+ * rows on screen are a slice of the collection, so the client can only say
+ * "put it where this other one is" — `order = neighbour.order` to land before
+ * it, `neighbour.order + 1` to land after it — and the records it cannot see
+ * keep their relative positions either way.
+ *
+ * @param {Array<object>} list the collection, mutated in place
+ */
+function renumberOrder(list) {
+  const positioned = [...list].sort((left, right) => {
+    const a = Number.isFinite(Number(left.order)) ? Number(left.order) : 0;
+    const b = Number.isFinite(Number(right.order)) ? Number(right.order) : 0;
+    if (a !== b) return a - b;
+    return String(right.updatedAt ?? '').localeCompare(String(left.updatedAt ?? ''));
+  });
+
+  positioned.forEach((record, index) => {
+    record.order = index + 1;
+  });
+}
+
+/**
  * Normalises a sort shorthand.
  *
  * `'order,name'` sorts ascending by both; `'-propertyCount'` defaults to
@@ -588,6 +617,14 @@ function makeCrudRouter(options) {
         }
 
         store(record, existing);
+
+        // Moving one record moves the collection: a `PATCH { order }` is a
+        // position, and the API is what turns it back into `1..n` (§5.8).
+        if (hasField('order') && body.order !== undefined) {
+          renumberOrder(rows());
+          db.write();
+        }
+
         if (afterSave) afterSave(record, { existing, method: 'PATCH', user: req.user, db });
 
         res.ok(present(record, { admin: true, query: req.query }));
@@ -617,4 +654,4 @@ function makeCrudRouter(options) {
   return router;
 }
 
-module.exports = { makeCrudRouter, parseSortEntry, matchesFilter };
+module.exports = { makeCrudRouter, parseSortEntry, matchesFilter, renumberOrder };

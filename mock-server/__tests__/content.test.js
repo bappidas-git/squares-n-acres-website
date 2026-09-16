@@ -403,6 +403,108 @@ describe('master data', () => {
       assert.deepEqual(check.body.data, { available: false, suggestion: 'whitefield-3' });
     });
   });
+
+  describe('an `order` PATCH', () => {
+    /** The eight seeded FAQs plus two more in the `legal` category (ids 9, 10). */
+    const withThreeLegalFaqs = () =>
+      seedWith({
+        faqs: (rows) => {
+          rows.push(
+            {
+              id: 9,
+              question: 'Who pays the stamp duty on a sale deed?',
+              answer: '<p>The buyer does, unless the agreement says otherwise.</p>',
+              category: 'legal',
+              order: 9,
+              isActive: true,
+              showOnHome: false,
+              propertyTypeId: null,
+              createdAt: '2026-04-09T07:10:00.000Z',
+              updatedAt: '2026-04-09T07:10:00.000Z',
+            },
+            {
+              id: 10,
+              question: 'What is an encumbrance certificate for?',
+              answer: '<p>It lists the charges registered against a property.</p>',
+              category: 'legal',
+              order: 10,
+              isActive: true,
+              showOnHome: false,
+              propertyTypeId: null,
+              createdAt: '2026-04-09T07:10:00.000Z',
+              updatedAt: '2026-04-09T07:10:00.000Z',
+            }
+          );
+        },
+      });
+
+    /** The ids of a collection, in the order the API returns them. */
+    const orderedIds = async (request, token, query) => {
+      const list = await request('GET', `/admin/faqs?perPage=all&sort=order${query ?? ''}`, {
+        token,
+      });
+      return list.body.data.map((faq) => faq.id);
+    };
+
+    it('renumbers the whole collection 1..n', async () => {
+      await withServer({ seed: withThreeLegalFaqs() }, async ({ request, login }) => {
+        const token = await login(ADMIN);
+
+        // Position 3 is where the third FAQ already is: nothing else moves.
+        const patched = await request('PATCH', '/admin/faqs/3', { token, body: { order: 3 } });
+        assert.equal(patched.status, 200);
+
+        const list = await request('GET', '/admin/faqs?perPage=all&sort=order', { token });
+        assert.deepEqual(
+          list.body.data.map((faq) => faq.order),
+          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        );
+      });
+    });
+
+    it('moves a row up within a filtered view and keeps the collection consistent', async () => {
+      await withServer({ seed: withThreeLegalFaqs() }, async ({ request, login }) => {
+        const token = await login(ADMIN);
+
+        // Filtered to `legal` the editor sees 6, 9, 10 and drags the second to
+        // the top: one PATCH, carrying the position of the row it landed on.
+        assert.deepEqual(await orderedIds(request, token, '&category=legal'), [6, 9, 10]);
+        await request('PATCH', '/admin/faqs/9', { token, body: { order: 6 } });
+
+        assert.deepEqual(await orderedIds(request, token, '&category=legal'), [9, 6, 10]);
+        // Everything the filter hid kept its place, and the numbering is dense.
+        assert.deepEqual(await orderedIds(request, token), [1, 2, 3, 4, 5, 9, 6, 7, 8, 10]);
+
+        const all = await request('GET', '/admin/faqs?perPage=all&sort=order', { token });
+        assert.deepEqual(
+          all.body.data.map((faq) => faq.order),
+          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        );
+      });
+    });
+
+    it('moves a row down to the position after the one it landed on', async () => {
+      await withServer({ seed: withThreeLegalFaqs() }, async ({ request, login }) => {
+        const token = await login(ADMIN);
+
+        // `legal` reads 6, 9, 10; the first is dragged past the last.
+        await request('PATCH', '/admin/faqs/6', { token, body: { order: 11 } });
+
+        assert.deepEqual(await orderedIds(request, token, '&category=legal'), [9, 10, 6]);
+        assert.deepEqual(await orderedIds(request, token), [1, 2, 3, 4, 5, 7, 8, 9, 10, 6]);
+      });
+    });
+
+    it('leaves the collection alone when a PATCH does not mention the order', async () => {
+      await withServer({ seed: withThreeLegalFaqs() }, async ({ request, login }) => {
+        const token = await login(ADMIN);
+
+        await request('PATCH', '/admin/faqs/9', { token, body: { showOnHome: true } });
+
+        assert.deepEqual(await orderedIds(request, token), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+      });
+    });
+  });
 });
 
 /* ------------------------------------------------------------------ *

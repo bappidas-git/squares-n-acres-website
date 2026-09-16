@@ -35,3 +35,69 @@
   color: var(--color-text-muted);
   opacity: 0.55;
 }
+
+/* ── The 1–5 star rating input ─────────────────────────────────────── */
+
+.ratingRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.star {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  color: var(--color-border-strong);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.starOn {
+  color: var(--color-warning);
+}
+
+.star:hover {
+  color: var(--color-warning);
+}
+
+/* The radio itself stays in the accessibility tree and keeps the focus ring. */
+.ratingValue {
+  margin-left: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.starInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.starInput:focus-visible + * {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.starLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

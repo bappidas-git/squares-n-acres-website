@@ -1,89 +1,121 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import { useMemo } from 'react';
+import { useReducedMotion } from 'framer-motion';
 
 import masterDataService from '../../../services/masterDataService';
-import styles from './PartnersSection.module.css';
 import useApi from '../../../hooks/useApi';
-import useInView from '../../../hooks/useInView';
+import { Container, LazyImage, Section, SectionHeader } from '../../ui';
+
+import styles from './PartnersSection.module.css';
+
+/** The whole row fits in one page (§8.6 caps a request at 24 items). */
+const PER_PAGE = 24;
 
 /**
- * The partner marquee. `GET /partners` returns active partners in `order`
- * (§5.14); the logos are whatever an editor uploaded.
+ * The partner logos.
+ *
+ * `GET /partners` returns the active partners in `order` (§5.14) and the
+ * `category` prop narrows that to one kind — which is what a CMS `partners`
+ * block passes (prompt 30). Logos are drawn as they are: a brand mark is not
+ * ours to recolour, so there is no greyscale filter on them (§2.2).
+ *
+ * The marquee scrolls; under `prefers-reduced-motion` the same logos are laid
+ * out as a static grid rather than a track that never moves, so nothing is
+ * hidden off-screen (§8.3).
+ *
+ * @param {object} props
+ * @param {string} [props.category] a `PARTNER_CATEGORIES` value
+ * @param {string} [props.title]
+ * @param {string} [props.subtitle]
  */
+export default function PartnersSection({
+  category,
+  title = 'Our partners',
+  subtitle = 'Developers, lenders and specialists we work with',
+}) {
+  const reduceMotion = useReducedMotion();
 
-const PartnerCard = ({ partner }) => {
-  const content = (
-    <>
-      {partner.logoUrl ? (
-        <img
-          src={partner.logoUrl}
-          alt={partner.name}
-          className={styles.partnerLogo}
-          loading="lazy"
-        />
-      ) : null}
-      <span className={styles.partnerName}>{partner.name}</span>
-    </>
+  const params = useMemo(
+    () => ({ perPage: PER_PAGE, sort: 'order', ...(category ? { category } : null) }),
+    [category]
   );
 
-  if (partner.websiteUrl) {
-    return (
-      <a
-        href={partner.websiteUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={styles.partnerCard}
-      >
-        {content}
-      </a>
-    );
-  }
-
-  return <div className={styles.partnerCard}>{content}</div>;
-};
-
-const PartnersSection = () => {
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.15 });
   const { data, loading } = useApi(
-    (signal) => masterDataService.partners.list({ perPage: 24 }, { signal }),
-    [],
+    (signal) => masterDataService.partners.list(params, { signal }),
+    [params],
     { initialData: [] }
   );
 
   const partners = Array.isArray(data) ? data : [];
   if (loading || partners.length === 0) return null;
 
-  // The track is duplicated so the marquee loops without a visible seam.
-  const track = [...partners, ...partners];
+  return (
+    <Section background="surface" spacing="lg">
+      <Container>
+        <SectionHeader title={title} subtitle={subtitle} align="center" />
+
+        {reduceMotion ? (
+          <ul className={styles.grid}>
+            {partners.map((partner) => (
+              <li key={partner.id}>
+                <PartnerCard partner={partner} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className={styles.marqueeWrapper}>
+            {/* The track is duplicated so the loop has no visible seam; the
+                copy is hidden from assistive technology so every partner is
+                announced once. */}
+            <div className={styles.marqueeTrack}>
+              <ul className={styles.run}>
+                {partners.map((partner) => (
+                  <li key={partner.id}>
+                    <PartnerCard partner={partner} />
+                  </li>
+                ))}
+              </ul>
+              <ul className={styles.run} aria-hidden="true">
+                {partners.map((partner) => (
+                  <li key={`echo-${partner.id}`}>
+                    <PartnerCard partner={partner} tabbable={false} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </Container>
+    </Section>
+  );
+}
+
+/** One logo, linked to the partner's own site when there is one. */
+function PartnerCard({ partner, tabbable = true }) {
+  const logo = (
+    <LazyImage
+      src={partner.logoUrl}
+      alt={partner.name}
+      ratio="5/2"
+      fit="contain"
+      className={styles.logo}
+      onErrorFallback={<span className={styles.fallback}>{partner.name}</span>}
+    />
+  );
+
+  if (!partner.websiteUrl) {
+    return <div className={styles.card}>{logo}</div>;
+  }
 
   return (
-    <section className={styles.section} ref={ref}>
-      <div className={styles.container}>
-        <motion.div
-          className={styles.header}
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5 }}
-        >
-          <h2 className={styles.title}>Our partners</h2>
-          <p className={styles.subtitle}>Developers and specialists we work with</p>
-        </motion.div>
-
-        <motion.div
-          className={styles.marqueeWrapper}
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <div className={styles.marqueeTrack}>
-            {track.map((partner, index) => (
-              <PartnerCard key={`${partner.id}-${index}`} partner={partner} />
-            ))}
-          </div>
-        </motion.div>
-      </div>
-    </section>
+    <a
+      className={styles.card}
+      href={partner.websiteUrl}
+      target="_blank"
+      // A partner link is a courtesy, not an endorsement Google should weigh.
+      rel="noopener noreferrer nofollow"
+      tabIndex={tabbable ? undefined : -1}
+    >
+      {logo}
+    </a>
   );
-};
-
-export default PartnersSection;
+}

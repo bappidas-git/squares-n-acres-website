@@ -61,6 +61,37 @@ Query params `page` (1-based, default 1), `perPage` (default 12 public / 20 admi
 
 `POST` creates → **201** + full record. `PUT` replaces the full record (the client always sends the complete record from the form; missing optional fields become their defaults). `PATCH` updates only the provided fields — used by toggles, bulk actions, SEO panel saves, lead status changes, section-visibility toggles, `order` reorders. `DELETE` → 200 `{ data: null, message }`. Bulk: `POST /admin/<resource>/bulk { ids: [], action: 'activate'|'deactivate'|'delete'|'feature'|'unfeature'|'verify'|'unverify'|'publish'|'unpublish'|'assign'|'status', payload? }` → `{ data: { affected: n }, message }` (unsupported action for the resource → 422).
 
+#### Reordering — `PATCH /admin/<resource>/:id { order }` (prompt 17, D98)
+
+Collections with an `order` field (FAQs, testimonials, team members, partners, localities,
+property types, amenities, badges, banks, pages, article categories) are reordered with **one
+write per move**: a `PATCH` on the record that moved, carrying the position it landed on.
+
+The client reads that position off the row the moved record was dropped on, in the list as it
+is on screen — which may be filtered, sorted and paginated:
+
+| Move                              | `order` to send       |
+| --------------------------------- | --------------------- |
+| up (before the row it landed on)  | `neighbour.order`     |
+| down (after the row it landed on) | `neighbour.order + 1` |
+
+The API then settles the collection: it sorts by `order`, breaks a tie in favour of the record
+whose `updatedAt` is newest — the one this `PATCH` just touched — and renumbers everything
+`1..n`. The response is the moved record with its settled `order`.
+
+Two consequences worth stating, because they are the point of the rule:
+
+- **A filtered list reorders correctly.** The client never says what the other records should
+  become, so the records a filter hid keep their relative positions. Sending `order = 12` for a
+  record whose visible neighbour holds 12 places it immediately after that neighbour, wherever
+  the hidden records sit.
+- **`order` is always a dense `1..n` sequence** after any reorder. `GET /admin/<resource>?perPage=all&sort=order`
+  is the check.
+
+A `PATCH` that does not mention `order`, and a `POST`/`PUT` that does, leave the rest of the
+collection alone; only an `order` `PATCH` renumbers. Laravel implements the same rule inside
+the transaction that writes the moved row.
+
 ### 5.9 Slugs
 
 Every public entity has a unique `slug` (lowercase, `[a-z0-9-]`, ≤ 75 chars). Lookup: `GET /<resource>/slug/:slug`. Check: `GET /admin/<resource>/check-slug?slug=&excludeId=` → `{ data: { available: true|false, suggestion } }`. The API auto-generates a slug from the title when the client sends an empty slug and de-duplicates with `-2`, `-3`… A duplicate explicit slug → 409 with `errors.slug`. The entity `slug` and `seo.slug` are always kept identical by the API.

@@ -8,8 +8,16 @@
   gap: var(--space-3);
 }
 
+.reorderHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
 .reorderHint {
   margin: 0;
+  max-width: 80ch;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }

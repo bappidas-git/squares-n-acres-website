@@ -1,47 +1,16 @@
-.section {
-  padding: 64px 0;
-  background: var(--color-bg);
-}
-
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.title {
-  font-family: var(--font-heading);
-  font-size: 2.25rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 8px;
-}
-
-.subtitle {
-  font-family: var(--font-body);
-  font-size: 1rem;
-  color: var(--color-text-muted);
-}
-
-/* Tab Bar */
 .tabBar {
-  margin-bottom: 28px;
+  margin-bottom: var(--space-6);
   overflow: hidden;
 }
 
 .tabScroller {
   display: flex;
-  gap: 6px;
+  justify-content: center;
+  gap: var(--space-2);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding-bottom: 2px;
-  justify-content: center;
 }
 
 .tabScroller::-webkit-scrollbar {
@@ -51,174 +20,66 @@
 .tab {
   display: inline-flex;
   align-items: center;
-  padding: 8px 20px;
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: var(--space-2) var(--space-5);
   border: 1px solid var(--color-border);
-  border-radius: 100px;
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-text-muted);
   font-family: var(--font-body);
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   white-space: nowrap;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast);
 }
 
 .tab:hover {
-  border-color: var(--color-text-muted);
+  border-color: var(--color-border-strong);
   color: var(--color-text);
 }
 
-.tabActive {
-  background: var(--color-text);
-  border-color: var(--color-text);
-  color: var(--color-text-inverse);
-}
-
+.tabActive,
 .tabActive:hover {
-  background: var(--color-text);
-  border-color: var(--color-text);
+  background: var(--color-charcoal);
+  border-color: var(--color-charcoal);
   color: var(--color-text-inverse);
 }
 
-/* FAQ List */
-.faqList {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 200px;
+.list {
+  margin-top: var(--space-2);
 }
 
-.faqItem {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  transition: border-color var(--transition-fast);
-}
-
-.faqItemActive {
-  border-color: var(--color-primary);
-}
-
-.faqQuestion {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 20px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--color-text);
-  text-align: left;
-}
-
-.faqLeft {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-}
-
-.questionIcon {
-  font-size: 20px;
-  color: var(--color-primary-dark);
-  flex-shrink: 0;
-}
-
-.expandIcon {
-  font-size: 20px;
-  color: var(--color-text-muted);
-  flex-shrink: 0;
-  transition: color var(--transition-fast);
-}
-
-.faqItemActive .expandIcon {
-  color: var(--color-primary-dark);
-}
-
-.faqAnswer {
-  overflow: hidden;
-}
-
-.answerInner {
-  padding: 0 20px 16px 50px;
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-  line-height: 1.7;
-}
-
-/* Empty Category State */
-.emptyCategory {
-  text-align: center;
-  padding: 40px 24px;
-}
-
-.emptyIcon {
-  font-size: 40px;
-  color: var(--color-border);
-  margin-bottom: 8px;
-}
-
-.emptyText {
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-}
-
-/* CTA */
 .cta {
+  margin-top: var(--space-8);
   text-align: center;
-  margin-top: 32px;
 }
 
 .ctaLink {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   font-family: var(--font-body);
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-primary-dark);
   text-decoration: none;
-  transition: color var(--transition-fast);
 }
 
 .ctaLink:hover {
-  color: var(--color-primary-dark);
+  text-decoration: underline;
 }
 
 @media (max-width: 599.98px) {
-  .section {
-    padding: 48px 0;
-  }
-
-  .title {
-    font-size: 1.75rem;
-  }
-
   .tabScroller {
     justify-content: flex-start;
-    padding-left: 4px;
-    padding-right: 4px;
   }
 
   .tab {
-    padding: 7px 16px;
-    font-size: 0.8rem;
-  }
-
-  .faqQuestion {
-    padding: 14px 16px;
-    font-size: 0.9rem;
-  }
-
-  .answerInner {
-    padding: 0 16px 14px 46px;
+    padding: var(--space-2) var(--space-4);
   }
 }

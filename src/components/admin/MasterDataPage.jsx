@@ -153,7 +153,9 @@ export function useMasterDataCrud(config) {
  * @param {string} props.config.title
  * @param {string} props.config.singular
  * @param {{list, get?, create, update?, patch, remove, bulk?, checkSlug?}} props.config.service
- * @param {Array<object>} props.config.columns `DataTable` columns
+ * @param {Array<object>} props.config.columns `DataTable` columns; a column's
+ *   `render(row, { patchField, busy, canEdit })` gets the list's own writer, so
+ *   a cell can be a toggle (`showOnHome`) and not only a value
  * @param {Array<object>} [props.config.filters] `FilterBar` fields
  * @param {Array<object>|(record: object|null) => Array<object>} props.config.formFields
  * @param {Record<string, object>} [props.config.schema] a `src/services/schemas` descriptor
@@ -412,22 +414,33 @@ export default function MasterDataPage({ config }) {
   const startEdit = useCallback((row) => (onEdit ? onEdit(row) : setEditing(row)), [onEdit]);
 
   /**
-   * Writes the new positions of the page on screen.
+   * Writes one new position.
    *
-   * The offset is what keeps page two honest: the first row of the second page
-   * is position 20, not position 0, and numbering it 0 would shuffle it to the
-   * top of the collection.
+   * A move is a single `PATCH { order }` on the row that travelled, placing it
+   * where the row it landed on sits: `neighbour.order` to come before it,
+   * `neighbour.order + 1` to come after. The API settles the rest of the
+   * collection back to `1..n` (§5.8, D98).
+   *
+   * Saying "where that one is" rather than "these are the new numbers" is what
+   * makes a drag correct while the table is filtered and on page two alike: the
+   * rows on screen are a slice of the collection, and the records this editor
+   * cannot see keep their relative positions (NEW-23).
    */
-  const reorder = async (next) => {
+  const reorder = async (next, move) => {
+    const row = move?.item;
+    const neighbour = move ? rows[move.to] : null;
+    if (!row || !neighbour) return;
+
+    const anchor = Number(neighbour.order);
     const offset = ((meta?.page ?? 1) - 1) * (meta?.perPage ?? DEFAULT_PER_PAGE);
+    const order = Number.isFinite(anchor)
+      ? move.to < move.from
+        ? anchor
+        : anchor + 1
+      : offset + move.to + 1;
+
     try {
-      await Promise.all(
-        next.map((row, index) =>
-          row.order === offset + index
-            ? Promise.resolve()
-            : service.patch(row.id, { order: offset + index })
-        )
-      );
+      await service.patch(row.id, { order });
       onMutated?.(collectionKey);
       refetch();
     } catch (thrown) {
@@ -496,7 +509,26 @@ export default function MasterDataPage({ config }) {
       });
     }
 
-    return [...columns, ...extra];
+    // A configured column may need to write, not only to read: the "Home"
+    // switch of the FAQ table is a `PATCH { showOnHome }`, the same optimistic
+    // round trip the `Active` column above makes. The list state it needs
+    // lives here, so it is handed to `render` rather than looked up by the
+    // configuration, which has no way to reach it.
+    const declared = columns.map((column) =>
+      column.render
+        ? {
+            ...column,
+            render: (row) =>
+              column.render(row, {
+                patchField,
+                busy: busyIds.includes(String(row.id)),
+                canEdit,
+              }),
+          }
+        : column
+    );
+
+    return [...declared, ...extra];
   }, [columns, activeToggle, featuredToggle, canEdit, busyIds, patchField]);
 
   const rowActions = useCallback(
@@ -531,6 +563,13 @@ export default function MasterDataPage({ config }) {
   // reordering: dragging a row of a list sorted by name would be writing
   // positions nobody can see.
   const reordering = orderable && params.sort === 'order' && !loading && !error && rows.length > 0;
+
+  // What "back to the table" sorts by: the first order the columns offer that
+  // is not the one the drag list is already showing.
+  const tableSort = useMemo(() => {
+    const column = columns.find((entry) => entry.sortable && entry.key !== 'order');
+    return column ? { sort: column.key, order: 'asc' } : null;
+  }, [columns]);
 
   // The group headings belong to one sort — the rows have to arrive grouped for
   // "a new key" to mean "a new group" (§6 of prompt 15).
@@ -633,10 +672,24 @@ export default function MasterDataPage({ config }) {
 
       {reordering ? (
         <div className={styles.reorder}>
-          <p className={styles.reorderHint}>
-            {reorderHint ??
-              'Drag a row, or focus it and press Alt + ↑ / ↓, to change the order they appear in. Sort by anything else to go back to the table.'}
-          </p>
+          <div className={styles.reorderHead}>
+            <p className={styles.reorderHint}>
+              {reorderHint ??
+                'Drag a row, or focus it and press Alt + ↑ / ↓, to change the order they appear in.'}
+            </p>
+            {/* The drag list replaces the table, headers and all, so it owes
+                the editor the way back that a column header would have been. */}
+            {tableSort ? (
+              <Button
+                variant="outline"
+                size="sm"
+                icon={<Icon icon="mdi:table" width="18" height="18" />}
+                onClick={() => setParams(tableSort)}
+              >
+                Back to the table
+              </Button>
+            ) : null}
+          </div>
           <SortableList
             items={rows}
             disabled={!canEdit}

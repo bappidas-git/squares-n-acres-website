@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import Alert from '../ui/Alert';
@@ -14,6 +14,7 @@ import { ICON_ID_PATTERN } from '../../utils/validation';
 import { getIn } from '../../hooks/useForm';
 import {
   DateField,
+  Field,
   NumberField,
   PhoneField,
   SelectField,
@@ -238,6 +239,20 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
         />
       );
 
+    case 'rating':
+      return (
+        <RatingInput
+          label={field.label}
+          required={field.required}
+          hint={field.hint}
+          error={error}
+          disabled={disabled}
+          max={field.max ?? 5}
+          value={Number(value) || 0}
+          onChange={set}
+        />
+      );
+
     case 'tone':
       return (
         <ToneSelect
@@ -354,4 +369,58 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
         />
       );
   }
+}
+
+/**
+ * A 1–5 star rating, as a radio group.
+ *
+ * Stars are how a rating is read on the site, so they are how it is set here
+ * too — but each star is a real radio, so the control is one tab stop, moves
+ * with the arrow keys and announces "4 stars" rather than "button" (§8.3).
+ *
+ * @param {object} props
+ * @param {number} props.value
+ * @param {(value: number) => void} props.onChange
+ * @param {number} [props.max]
+ */
+function RatingInput({ label, hint, error, required, value, onChange, disabled, max = 5 }) {
+  const name = useId();
+  const stars = Array.from({ length: max }, (_, index) => index + 1);
+
+  return (
+    <Field id={name} label={label} hint={hint} error={error} required={required} labelAs="span">
+      {({ hintId, errorId }) => (
+        <span
+          className={styles.ratingRow}
+          role="radiogroup"
+          aria-label={label}
+          aria-describedby={[errorId, hintId].filter(Boolean).join(' ') || undefined}
+        >
+          {stars.map((star) => (
+            <label
+              key={star}
+              className={[styles.star, star <= value ? styles.starOn : ''].join(' ')}
+            >
+              <input
+                type="radio"
+                name={name}
+                value={star}
+                checked={star === value}
+                disabled={disabled}
+                className={styles.starInput}
+                onChange={() => onChange(star)}
+              />
+              <Icon icon={star <= value ? 'mdi:star' : 'mdi:star-outline'} width="28" height="28" />
+              <span className={styles.starLabel}>
+                {star} {star === 1 ? 'star' : 'stars'}
+              </span>
+            </label>
+          ))}
+          <span className={styles.ratingValue} aria-hidden="true">
+            {value}/{max}
+          </span>
+        </span>
+      )}
+    </Field>
+  );
 }

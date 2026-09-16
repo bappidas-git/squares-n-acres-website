@@ -29,7 +29,6 @@ const AdminLeads = lazy(() => import('../pages/admin/AdminLeads'));
 const LeadDetail = lazy(() => import('../pages/admin/LeadDetail'));
 const AdminArticles = lazy(() => import('../pages/admin/AdminArticles'));
 const ArticleForm = lazy(() => import('../pages/admin/ArticleForm'));
-const FaqManager = lazy(() => import('../pages/admin/FaqManager'));
 const LocalitiesPage = lazy(() => import('../pages/admin/master-data/LocalitiesPage'));
 const LocalityFormPage = lazy(() => import('../pages/admin/master-data/LocalityFormPage'));
 const CitiesPage = lazy(() => import('../pages/admin/master-data/CitiesPage'));
@@ -39,7 +38,10 @@ const BadgesPage = lazy(() => import('../pages/admin/master-data/BadgesPage'));
 const DevelopersPage = lazy(() => import('../pages/admin/master-data/DevelopersPage'));
 const DeveloperFormPage = lazy(() => import('../pages/admin/master-data/DeveloperFormPage'));
 const BanksPage = lazy(() => import('../pages/admin/master-data/BanksPage'));
-const AdminPartners = lazy(() => import('../pages/admin/AdminPartners'));
+const FaqsPage = lazy(() => import('../pages/admin/content/FaqsPage'));
+const TestimonialsPage = lazy(() => import('../pages/admin/content/TestimonialsPage'));
+const TeamPage = lazy(() => import('../pages/admin/content/TeamPage'));
+const PartnersPage = lazy(() => import('../pages/admin/content/PartnersPage'));
 const AdminSeo = lazy(() => import('../pages/admin/AdminSeo'));
 const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
 const ProfilePage = lazy(() => import('../pages/admin/settings/ProfilePage'));
@@ -87,7 +89,7 @@ export const ADMIN_ROUTES = [
   soon('pages', 'Pages', ['content', 'view'], 30),
   soon('pages/add', 'Add page', ['content', 'create'], 30),
   soon('pages/edit/:id', 'Edit page', ['content', 'edit'], 30),
-  page('faqs', 'FAQs', ['content', 'view'], <FaqManager />),
+  page('faqs', 'FAQs', ['content', 'view'], <FaqsPage />),
 
   page('master-data/localities', 'Localities', ['masterData', 'view'], <LocalitiesPage />),
   page(
@@ -126,9 +128,9 @@ export const ADMIN_ROUTES = [
   ),
   page('master-data/banks', 'Banks', ['masterData', 'view'], <BanksPage />),
 
-  soon('testimonials', 'Testimonials', ['content', 'view'], 17),
-  soon('team', 'Team', ['content', 'view'], 17),
-  page('partners', 'Partners', ['content', 'view'], <AdminPartners />),
+  page('testimonials', 'Testimonials', ['content', 'view'], <TestimonialsPage />),
+  page('team', 'Team', ['content', 'view'], <TeamPage />),
+  page('partners', 'Partners', ['content', 'view'], <PartnersPage />),
   soon('jobs', 'Jobs', ['content', 'view'], 31),
   soon('jobs/applications', 'Job applications', ['content', 'view'], 31),
   soon('newsletter', 'Newsletter subscribers', ['content', 'view'], 31),
