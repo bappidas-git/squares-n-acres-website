@@ -1,0 +1,296 @@
+/* ---------------- logo box (card, hero) ---------------- */
+
+/*
+ * §6: 120 × 60 with padding, on white, the mark scaled to fit rather than
+ * cropped — a wide wordmark and a square mark both have to read in it.
+ */
+.logoBox {
+  display: block;
+  flex: 0 0 auto;
+  width: 120px;
+  padding: var(--space-2);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.logoBoxLg {
+  width: 152px;
+  padding: var(--space-3);
+  box-shadow: var(--shadow-sm);
+}
+
+.logoImage {
+  display: block;
+  background: transparent;
+}
+
+.logoInitials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+/* ---------------- hero ---------------- */
+
+.hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 280px;
+  padding: var(--space-8) 0 var(--space-6);
+  background: var(--color-charcoal);
+  overflow: hidden;
+}
+
+.heroImage {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+}
+
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  background: var(--color-overlay);
+}
+
+.heroContent {
+  position: relative;
+  color: var(--color-text-inverse);
+}
+
+.heroCrumbs {
+  margin-bottom: var(--space-4);
+}
+
+.heroIdentity {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-5);
+}
+
+.heroText {
+  min-width: 0;
+}
+
+.heroTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-inverse);
+}
+
+.heroMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-5);
+  margin: var(--space-3) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-inverse);
+}
+
+.heroMetaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.heroLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-inverse);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+}
+
+.heroLink:hover {
+  text-decoration: none;
+}
+
+.heroLink:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ---------------- blocks ---------------- */
+
+.block {
+  margin-bottom: var(--space-12);
+}
+
+.block:last-child {
+  margin-bottom: 0;
+}
+
+.blockHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.blockTitle {
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-snug);
+  color: var(--color-text);
+}
+
+.blockLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary-dark);
+  text-decoration: none;
+}
+
+.blockLink:hover {
+  text-decoration: underline;
+}
+
+/* ---------------- stats ---------------- */
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.statCard {
+  height: 100%;
+}
+
+.reraIds {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.reraLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.reraId {
+  font-family: var(--font-body);
+  word-break: break-all;
+}
+
+/* ---------------- projects ---------------- */
+
+.propertyGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+/* ---------------- call to action ---------------- */
+
+.cta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+  gap: var(--space-8);
+  align-items: center;
+  padding: var(--space-8);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.ctaTitle {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-snug);
+  color: var(--color-text);
+}
+
+.ctaText {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--color-text-muted);
+  line-height: var(--line-height-normal);
+}
+
+.ctaForm {
+  width: 100%;
+}
+
+@media (max-width: 1199.98px) {
+  .propertyGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 899.98px) {
+  .hero {
+    min-height: 200px;
+    padding: var(--space-6) 0 var(--space-5);
+  }
+
+  .heroIdentity {
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .heroTitle {
+    font-size: var(--font-size-3xl);
+  }
+
+  /* §6: the stats row wraps to 2 × 2 rather than shrinking to four columns. */
+  .statsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .block {
+    margin-bottom: var(--space-10);
+  }
+
+  .cta {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-6);
+    padding: var(--space-5);
+  }
+}
+
+@media (max-width: 599.98px) {
+  .heroIdentity {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .logoBoxLg {
+    width: 120px;
+    padding: var(--space-2);
+  }
+
+  .propertyGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+}

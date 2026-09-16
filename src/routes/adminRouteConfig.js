@@ -36,6 +36,8 @@ const CitiesPage = lazy(() => import('../pages/admin/master-data/CitiesPage'));
 const PropertyTypesPage = lazy(() => import('../pages/admin/master-data/PropertyTypesPage'));
 const AmenitiesPage = lazy(() => import('../pages/admin/master-data/AmenitiesPage'));
 const BadgesPage = lazy(() => import('../pages/admin/master-data/BadgesPage'));
+const DevelopersPage = lazy(() => import('../pages/admin/master-data/DevelopersPage'));
+const DeveloperFormPage = lazy(() => import('../pages/admin/master-data/DeveloperFormPage'));
 const BanksPage = lazy(() => import('../pages/admin/master-data/BanksPage'));
 const AdminPartners = lazy(() => import('../pages/admin/AdminPartners'));
 const AdminSeo = lazy(() => import('../pages/admin/AdminSeo'));
@@ -109,9 +111,19 @@ export const ADMIN_ROUTES = [
   ),
   page('master-data/amenities', 'Amenities', ['masterData', 'view'], <AmenitiesPage />),
   page('master-data/badges', 'Badges', ['masterData', 'view'], <BadgesPage />),
-  soon('master-data/developers', 'Developers', ['masterData', 'view'], 16),
-  soon('master-data/developers/add', 'Add developer', ['masterData', 'create'], 16),
-  soon('master-data/developers/edit/:id', 'Edit developer', ['masterData', 'edit'], 16),
+  page('master-data/developers', 'Developers', ['masterData', 'view'], <DevelopersPage />),
+  page(
+    'master-data/developers/add',
+    'Add developer',
+    ['masterData', 'create'],
+    <DeveloperFormPage />
+  ),
+  page(
+    'master-data/developers/edit/:id',
+    'Edit developer',
+    ['masterData', 'edit'],
+    <DeveloperFormPage />
+  ),
   page('master-data/banks', 'Banks', ['masterData', 'view'], <BanksPage />),
 
   soon('testimonials', 'Testimonials', ['content', 'view'], 17),
