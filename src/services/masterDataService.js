@@ -37,6 +37,31 @@ const collection = (read, write) => ({
     : {}),
 });
 
+/**
+ * One collection as the admin kit expects a service: `list` is the admin list,
+ * `get` the admin read, and `checkSlug` takes the arguments `SlugField` hands
+ * it rather than a params object.
+ *
+ *   const config = { service: adminCrud(masterDataService.localities), … };
+ *
+ * @param {object} resource one of the collections below
+ */
+export const adminCrud = (resource) => ({
+  list: (params, opts) => resource.adminList(params, opts),
+  get: (id, opts) => resource.adminGet(id, opts),
+  create: (body, opts) => resource.create(body, opts),
+  update: (id, body, opts) => resource.update(id, body, opts),
+  patch: (id, body, opts) => resource.patch(id, body, opts),
+  remove: (id, opts) => resource.remove(id, opts),
+  bulk: (body, opts) => resource.bulk(body, opts),
+  ...(resource.checkSlug
+    ? {
+        checkSlug: (slug, { excludeId, signal } = {}) =>
+          resource.checkSlug({ slug, excludeId }, { signal }),
+      }
+    : {}),
+});
+
 export const localities = collection(endpoints.localities, endpoints.adminLocalities);
 export const cities = collection(endpoints.cities, endpoints.adminCities);
 export const propertyTypes = collection(endpoints.propertyTypes, endpoints.adminPropertyTypes);

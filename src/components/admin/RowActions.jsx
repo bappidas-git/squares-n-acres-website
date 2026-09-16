@@ -8,6 +8,9 @@ import IconButton from '../ui/IconButton';
 
 import styles from './RowActions.module.css';
 
+/** What an `href` action adds: a new tab, without handing it this one. */
+const EXTERNAL = { target: '_blank', rel: 'noopener noreferrer' };
+
 /**
  * The per-row controls of `DataTable`.
  *
@@ -16,9 +19,13 @@ import styles from './RowActions.module.css';
  * Either way every control has a name — `IconButton` requires one and the menu
  * spells it out (§8.3).
  *
+ * An action is a button, a router link (`to`) or an external one (`href`,
+ * opened in a new tab — "View on site" is a different context, not a
+ * navigation away from the record being edited).
+ *
  * @param {object} props
  * @param {Array<{key: string, label: string, icon?: string, onClick?: () => void,
- *   to?: string, danger?: boolean, disabled?: boolean}>} props.actions
+ *   to?: string, href?: string, danger?: boolean, disabled?: boolean}>} props.actions
  * @param {boolean} [props.compact] render the kebab menu
  * @param {string} [props.menuLabel]
  */
@@ -36,6 +43,8 @@ export default function RowActions({ actions = [], compact = false, menuLabel = 
             label={action.label}
             size="sm"
             to={action.disabled ? undefined : action.to}
+            href={action.disabled ? undefined : action.href}
+            {...(action.href ? EXTERNAL : null)}
             disabled={action.disabled || undefined}
             className={action.danger ? styles.danger : undefined}
             onClick={(event) => {
@@ -78,8 +87,10 @@ export default function RowActions({ actions = [], compact = false, menuLabel = 
             key={action.key}
             disableRipple
             disabled={action.disabled}
-            component={action.to ? Link : 'li'}
+            component={action.to ? Link : action.href ? 'a' : 'li'}
             to={action.to}
+            href={action.href}
+            {...(action.href ? EXTERNAL : null)}
             className={action.danger ? styles.dangerItem : undefined}
             onClick={(event) => {
               event.stopPropagation();

@@ -30,7 +30,9 @@ const LeadDetail = lazy(() => import('../pages/admin/LeadDetail'));
 const AdminArticles = lazy(() => import('../pages/admin/AdminArticles'));
 const ArticleForm = lazy(() => import('../pages/admin/ArticleForm'));
 const FaqManager = lazy(() => import('../pages/admin/FaqManager'));
-const AdminNeighborhoods = lazy(() => import('../pages/admin/AdminNeighborhoods'));
+const LocalitiesPage = lazy(() => import('../pages/admin/master-data/LocalitiesPage'));
+const LocalityFormPage = lazy(() => import('../pages/admin/master-data/LocalityFormPage'));
+const CitiesPage = lazy(() => import('../pages/admin/master-data/CitiesPage'));
 const AdminPartners = lazy(() => import('../pages/admin/AdminPartners'));
 const AdminSeo = lazy(() => import('../pages/admin/AdminSeo'));
 const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
@@ -81,10 +83,20 @@ export const ADMIN_ROUTES = [
   soon('pages/edit/:id', 'Edit page', ['content', 'edit'], 30),
   page('faqs', 'FAQs', ['content', 'view'], <FaqManager />),
 
-  page('master-data/localities', 'Localities', ['masterData', 'view'], <AdminNeighborhoods />),
-  soon('master-data/localities/add', 'Add locality', ['masterData', 'create'], 14),
-  soon('master-data/localities/edit/:id', 'Edit locality', ['masterData', 'edit'], 14),
-  soon('master-data/cities', 'Cities', ['masterData', 'view'], 14),
+  page('master-data/localities', 'Localities', ['masterData', 'view'], <LocalitiesPage />),
+  page(
+    'master-data/localities/add',
+    'Add locality',
+    ['masterData', 'create'],
+    <LocalityFormPage />
+  ),
+  page(
+    'master-data/localities/edit/:id',
+    'Edit locality',
+    ['masterData', 'edit'],
+    <LocalityFormPage />
+  ),
+  page('master-data/cities', 'Cities', ['masterData', 'view'], <CitiesPage />),
   soon('master-data/property-types', 'Property types', ['masterData', 'view'], 15),
   soon('master-data/amenities', 'Amenities', ['masterData', 'view'], 15),
   soon('master-data/badges', 'Badges', ['masterData', 'view'], 15),

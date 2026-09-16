@@ -11,12 +11,27 @@ import {
 } from '../../utils/validators';
 import styles from './LeadForm.module.css';
 
+/**
+ * A lead form.
+ *
+ * `hiddenFields` carries the context the visitor never types — the locality of
+ * the guide they are reading, the article they came from — straight into the
+ * `POST /leads` body (§6.7). Prompt 28 unifies every form on the site behind
+ * one component; this is the part of that unification the locality page needs.
+ *
+ * @param {object} props
+ * @param {Array<object>} [props.fields] defaults to name / email / phone
+ * @param {string} [props.source] a `LEAD_SOURCES` value
+ * @param {number|null} [props.propertyId]
+ * @param {object} [props.hiddenFields] merged into the request body
+ */
 const LeadForm = ({
   title = 'Get in Touch',
   subtitle = '',
   fields = [],
   source = 'website',
   propertyId = null,
+  hiddenFields = null,
   className = '',
 }) => {
   const defaultFields = [
@@ -87,6 +102,7 @@ const LeadForm = ({
         ...formData,
         source,
         ...(propertyId ? { propertyId } : {}),
+        ...(hiddenFields ?? {}),
       });
       setSubmitted(true);
       toast.success(response?.message || 'Thank you — we will be in touch shortly.');

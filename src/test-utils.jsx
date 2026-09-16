@@ -5,13 +5,24 @@ import { ThemeProvider } from '@mui/material/styles';
 
 import theme from './theme';
 
-/** Render with the providers every UI-kit component may reach for. */
-export default function renderWith(ui, options) {
+/**
+ * Render with the providers every UI-kit component may reach for.
+ *
+ * `initialEntries` is handed to the `MemoryRouter`, so a screen that reads a
+ * route parameter can be rendered at the URL it belongs to:
+ *
+ *   renderWith(<Routes><Route path="/localities/:slug" … /></Routes>,
+ *     { initialEntries: ['/localities/whitefield'] });
+ *
+ * @param {React.ReactElement} ui
+ * @param {{initialEntries?: string[]}} [options] also accepts RTL's own options
+ */
+export default function renderWith(ui, { initialEntries, ...options } = {}) {
   return render(ui, {
     wrapper: ({ children }) => (
       <HelmetProvider>
         <ThemeProvider theme={theme}>
-          <MemoryRouter>{children}</MemoryRouter>
+          <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
         </ThemeProvider>
       </HelmetProvider>
     ),

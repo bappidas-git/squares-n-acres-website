@@ -1,0 +1,198 @@
+import { Helmet } from 'react-helmet-async';
+
+import LocalityCard from '../../components/sections/locality/LocalityCard';
+import PATHS from '../../routes/paths';
+import masterDataService from '../../services/masterDataService';
+import useApiList from '../../hooks/useApiList';
+import {
+  Breadcrumbs,
+  Button,
+  Container,
+  EmptyState,
+  ErrorState,
+  Pagination,
+  Skeleton,
+} from '../../components/ui';
+import { LOCALITY_ZONES } from '../../config/enums';
+import { SITE } from '../../config/site';
+
+import styles from './Localities.module.css';
+
+/** §8.6 caps a page at 24 items; the whole Bengaluru set fits in one. */
+const PER_PAGE = 24;
+
+const LIST_DEFAULTS = { page: 1, perPage: PER_PAGE, zone: '', sort: 'order' };
+const LIST_PARAM_KEYS = { page: 'int', zone: 'string', sort: 'string' };
+
+/** The order the grid can be read in; `order` is the curated one the API sorts by. */
+const SORT_OPTIONS = [
+  { value: 'order', label: 'Recommended' },
+  { value: 'name', label: 'Name (A–Z)' },
+  { value: 'propertyCount', label: 'Most properties' },
+];
+
+/** A zone the contract knows, or `''` — an unknown one filters nothing (§7). */
+const knownZone = (value) => (LOCALITY_ZONES.values.includes(value) ? value : '');
+
+/**
+ * `/localities` — every neighbourhood we cover, filtered by zone.
+ *
+ * The zone chips and the sort live in the query string (`?zone=east&sort=name`),
+ * so a shared link reproduces the view and the back button walks it back
+ * (§5.6). A `?zone=` the contract does not know is treated as no filter rather
+ * than as a filter matching nothing.
+ *
+ * The `<title>` is a temporary Helmet tag; prompt 38 replaces it with `<Seo>`.
+ */
+export default function Localities() {
+  const { items, meta, loading, error, params, setFilters, setPage, refetch } = useApiList(
+    (listParams, options) =>
+      masterDataService.localities.list(
+        { ...listParams, zone: knownZone(listParams.zone) },
+        options
+      ),
+    { syncToUrl: true, paramKeys: LIST_PARAM_KEYS, defaults: LIST_DEFAULTS }
+  );
+
+  const zone = knownZone(params.zone);
+  const sort = params.sort ?? 'order';
+  const totalPages = meta?.totalPages ?? 1;
+
+  return (
+    <>
+      <Helmet>
+        <title>{`Localities in Bengaluru | ${SITE.name}`}</title>
+        <meta
+          name="description"
+          content="Explore neighbourhoods across Bengaluru: connectivity, prices and lifestyle at a glance."
+        />
+      </Helmet>
+
+      <div className={styles.page}>
+        <header className={styles.header}>
+          <Container>
+            <Breadcrumbs
+              items={[{ label: 'Home', to: PATHS.home }, { label: 'Localities' }]}
+              className={styles.crumbs}
+            />
+            <h1 className={styles.title}>Localities in Bengaluru</h1>
+            <p className={styles.intro}>
+              Explore neighbourhoods across Bengaluru: connectivity, prices and lifestyle at a
+              glance.
+            </p>
+          </Container>
+        </header>
+
+        <Container className={styles.main}>
+          <div className={styles.toolbar}>
+            <div className={styles.chips} role="group" aria-label="Filter by zone">
+              <button
+                type="button"
+                className={`${styles.chip} ${zone === '' ? styles.chipActive : ''}`}
+                aria-pressed={zone === ''}
+                onClick={() => setFilters({ zone: '' })}
+              >
+                All zones
+              </button>
+              {LOCALITY_ZONES.options.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`${styles.chip} ${zone === option.value ? styles.chipActive : ''}`}
+                  aria-pressed={zone === option.value}
+                  onClick={() => setFilters({ zone: option.value })}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            <div className={styles.sort}>
+              <label className={styles.sortLabel} htmlFor="locality-sort">
+                Sort by
+              </label>
+              <select
+                id="locality-sort"
+                className={styles.sortSelect}
+                value={sort}
+                onChange={(event) => setFilters({ sort: event.target.value })}
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {error ? (
+            <ErrorState
+              title="We could not load the localities"
+              text={error.message}
+              onRetry={refetch}
+            />
+          ) : loading ? (
+            <LocalityGridSkeleton />
+          ) : items.length === 0 ? (
+            <EmptyState
+              title="No localities here yet"
+              text={
+                zone
+                  ? 'Nothing is listed in this zone at the moment. Try another one.'
+                  : 'Localities will appear here as soon as they are published.'
+              }
+              action={
+                zone ? (
+                  <Button variant="outline" onClick={() => setFilters({ zone: '' })}>
+                    Show all zones
+                  </Button>
+                ) : null
+              }
+            />
+          ) : (
+            <>
+              <p className={styles.count} aria-live="polite">
+                {meta?.total ?? items.length}{' '}
+                {(meta?.total ?? items.length) === 1 ? 'locality' : 'localities'}
+              </p>
+
+              <div className={styles.grid}>
+                {items.map((locality) => (
+                  <LocalityCard key={locality.id} locality={locality} />
+                ))}
+              </div>
+
+              {totalPages > 1 ? (
+                <Pagination
+                  page={params.page ?? 1}
+                  totalPages={totalPages}
+                  onChange={setPage}
+                  className={styles.pagination}
+                />
+              ) : null}
+            </>
+          )}
+        </Container>
+      </div>
+    </>
+  );
+}
+
+/** The grid, at the size it will be, while the answer is on its way (§8.2). */
+function LocalityGridSkeleton({ count = 8 }) {
+  return (
+    <div className={styles.grid} aria-busy="true" aria-live="polite">
+      {Array.from({ length: count }).map((_, index) => (
+        <div key={index} className={styles.skeletonCard}>
+          <Skeleton variant="rectangular" width="100%" sx={{ aspectRatio: '4/3' }} />
+          <div className={styles.skeletonBody}>
+            <Skeleton variant="text" width="60%" height={26} />
+            <Skeleton variant="text" width="40%" height={22} />
+            <Skeleton variant="text" width="80%" height={20} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
