@@ -112,7 +112,10 @@ module.exports = ({ db, getModel }) => {
    * Public
    * ---------------------------------------------------------------- */
 
-  router.get('/pages/slug/:slug', (req, res, next) => {
+  // A page's slug is a URL path (§6.10): `buyer-assistance/home-loan`. The
+  // `(*)` makes the parameter greedy so the whole remainder of the path is the
+  // slug rather than only its first segment.
+  router.get('/pages/slug/:slug(*)', (req, res, next) => {
     const page = rows().find((row) => row.slug === req.params.slug);
     if (!page) {
       next(notFound());

@@ -10,6 +10,15 @@
  * and gives each test a fresh rate-limit counter, which is what makes the 429
  * of the login and of the lead form testable at all.
  *
+ * The copy is made from **`./fixtures/starter-db.json`**, a frozen copy of the
+ * prompt-06 starter seed, not from the committed `db.json`. The suites pin
+ * exact ids, totals and facet counts — "`?bedrooms=3` returns listings 1 and
+ * 2" — and those assertions describe the *behaviour of the filters*, not the
+ * contents of the shipped dataset. Reading the live seed would make every one
+ * of them fail the moment an editor adds a listing, which is the wrong
+ * failure. The shipped seed is exercised end to end by `npm run smoke`
+ * instead, against a running server.
+ *
  * Node's test runner only collects files whose name says they are tests
  * (`*.test.js`), so this module is a library rather than a suite.
  */
@@ -26,8 +35,13 @@ const defaultConfig = require('../config');
 const { createApp } = require('../app');
 const { getModel } = require('../lib/models');
 
-/** The committed seed, read once and copied per test. */
-const SEED = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'db.json'), 'utf8'));
+/** The frozen starter fixture, read once and copied per test. */
+const SEED = JSON.parse(
+  fs.readFileSync(path.join(__dirname, 'fixtures', 'starter-db.json'), 'utf8')
+);
+
+/** The seed the application actually ships, for the few tests that want it. */
+const LIVE_SEED = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'db.json'), 'utf8'));
 
 /** The three seed accounts (§6.14). */
 const ADMIN = { email: 'admin@squaresnacres.com', password: 'Admin@123' };
@@ -174,6 +188,7 @@ module.exports = {
   silenceRequestLog,
   createTestDb,
   SEED,
+  LIVE_SEED,
   ADMIN,
   MANAGER,
   SALES,
