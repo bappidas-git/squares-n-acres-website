@@ -30,8 +30,14 @@ function CountedValue({ value, enabled }) {
  *
  * @param {object} props
  * @param {object} props.developer a §6.5 record
+ * @param {2|3} [props.headingLevel] the level the block's heading is printed at
+ * @param {string} [props.headingId] unique on the page it is rendered into
  */
-export default function DeveloperStats({ developer }) {
+export default function DeveloperStats({
+  developer,
+  headingLevel = 2,
+  headingId = 'developer-facts',
+}) {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.2 });
 
   const { establishedYear, totalProjects, ongoingProjects, completedProjects, reraIds } = developer;
@@ -59,11 +65,13 @@ export default function DeveloperStats({ developer }) {
 
   if (stats.length === 0 && ids.length === 0) return null;
 
+  const Heading = `h${headingLevel}`;
+
   return (
-    <section className={styles.block} aria-labelledby="developer-facts" ref={ref}>
-      <h2 className={styles.blockTitle} id="developer-facts">
+    <section className={styles.block} aria-labelledby={headingId} ref={ref}>
+      <Heading className={styles.blockTitle} id={headingId}>
         At a glance
-      </h2>
+      </Heading>
 
       {stats.length > 0 ? (
         <div className={styles.statsGrid}>

@@ -68,10 +68,14 @@ describe('the definitions', () => {
 });
 
 describe('what a section needs', () => {
-  it('overview takes a description or highlights', () => {
+  it('overview takes a description or a project-snapshot fact, but not highlights alone', () => {
     expect(has('overview', {})).toBe(false);
     expect(has('overview', { description: '<p>A home.</p>' })).toBe(true);
-    expect(has('overview', { highlights: ['Corner unit'] })).toBe(true);
+    expect(has('overview', { reraNumber: 'PRM/KA/RERA/0000/000' })).toBe(true);
+    expect(has('overview', { project: { totalTowers: 4 } })).toBe(true);
+    // Highlights have a section and a navigation item of their own; on their
+    // own they would leave the Overview section with nothing to print.
+    expect(has('overview', { highlights: ['Corner unit'] })).toBe(false);
   });
 
   it('highlights ignores blank rows', () => {

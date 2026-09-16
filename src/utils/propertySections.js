@@ -33,6 +33,22 @@ const hasNumber = (value) =>
 const BUILDING = ['pre-launch', 'under-construction'];
 
 /**
+ * The project-snapshot facts the Overview section prints beside the
+ * description. Kept in step with `OverviewSection.snapshot()`: a rule that
+ * promises a section the page then cannot fill is the defect this file exists
+ * to prevent (BUG-06).
+ */
+const hasProjectSnapshot = (property) =>
+  hasNumber(property.project?.projectAreaAcres) ||
+  hasNumber(property.project?.totalTowers) ||
+  hasNumber(property.project?.totalUnits) ||
+  filled(property.project?.launchDate) ||
+  filled(property.possessionDate) ||
+  hasNumber(property.ageOfPropertyYears) ||
+  filled(property.reraNumber) ||
+  property.reraRegistered === true;
+
+/**
  * The eighteen sections in the order the public page prints them.
  *
  * `key` is the `sectionVisibility` key of §6.1 — the eighteen of
@@ -54,7 +70,7 @@ export const SECTION_DEFINITIONS = [
     label: 'Overview',
     description: 'The description and the headline facts, at the top of the page.',
     anchor: 'overview',
-    hasData: (property) => filled(property.description) || list(property.highlights).length > 0,
+    hasData: (property) => filled(property.description) || hasProjectSnapshot(property),
   },
   {
     key: 'highlights',

@@ -30,6 +30,9 @@ import styles from './LeadModalTemp.module.css';
  * @param {number|string|null} [props.propertyId]
  * @param {string} [props.propertyTitle] quoted in the message the lead carries
  * @param {object} [props.hiddenFields] merged into the `POST /leads` body
+ * @param {string} [props.message] prefills the message box, e.g. "Price for 3 BHK"
+ * @param {(values: object) => void} [props.onCaptured] runs after the lead is
+ *   filed — what a gated section unlocks itself with
  * @param {{phone?: string, whatsapp?: string}|null} [props.agent]
  */
 export default function LeadModalTemp({
@@ -39,6 +42,8 @@ export default function LeadModalTemp({
   propertyId = null,
   propertyTitle = '',
   hiddenFields = null,
+  message: prefilledMessage = '',
+  onCaptured,
   agent = null,
 }) {
   const { getContact, getWhatsappLink } = useSiteSettings();
@@ -53,9 +58,10 @@ export default function LeadModalTemp({
   const onSuccess = useCallback(
     (values) => {
       leadStorage.save(values, propertyId, source);
+      onCaptured?.(values);
       setDone(true);
     },
-    [propertyId, source]
+    [propertyId, source, onCaptured]
   );
 
   const saved = leadStorage.getUserDetails() ?? {};
@@ -100,6 +106,7 @@ export default function LeadModalTemp({
       type: 'textarea',
       required: false,
       placeholder: 'Anything we should know?',
+      defaultValue: prefilledMessage,
     },
   ];
 

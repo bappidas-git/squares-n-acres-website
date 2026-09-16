@@ -1,0 +1,4 @@
+.accordion {
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+}

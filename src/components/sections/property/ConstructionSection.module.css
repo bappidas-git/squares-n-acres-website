@@ -1,0 +1,170 @@
+.progress {
+  margin-bottom: var(--space-8);
+}
+
+.progressHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.progressLabel {
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.progressValue {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-dark);
+}
+
+.track {
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  transition: width var(--transition-slow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+}
+
+/* ── Timeline ───────────────────────────────────────────────────────────── */
+.timeline {
+  display: grid;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: milestone;
+}
+
+.milestone {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+/* The vertical rule that joins the dots, on every milestone but the last. */
+.milestone:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: calc(-1 * var(--space-5));
+  width: 2px;
+  background: var(--color-border);
+}
+
+.dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--dot-color, var(--color-border-strong));
+  background: var(--dot-bg, var(--color-surface));
+  color: var(--dot-color, var(--color-text-muted));
+}
+
+.body {
+  min-width: 0;
+  padding-bottom: var(--space-1);
+}
+
+.milestoneTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+.milestoneMeta {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.statusText {
+  font-weight: var(--font-weight-medium);
+}
+
+.note {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+}
+
+.photoButton {
+  display: block;
+  width: 180px;
+  max-width: 100%;
+  margin-top: var(--space-3);
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface);
+  cursor: zoom-in;
+}
+
+.photo {
+  width: 100%;
+}
+
+/* From the tablet up the milestones run across the page; the strip scrolls
+   sideways rather than squeezing five milestones into five narrow columns. */
+@media (min-width: 900px) {
+  .timeline {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(200px, 1fr);
+    gap: var(--space-4);
+    overflow-x: auto;
+    padding-bottom: var(--space-3);
+  }
+
+  .milestone {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+
+  .milestone:not(:last-child)::before {
+    left: 32px;
+    right: calc(-1 * var(--space-4));
+    top: 15px;
+    bottom: auto;
+    width: auto;
+    height: 2px;
+  }
+
+  .photoButton {
+    width: 100%;
+  }
+}
+
+.updated {
+  margin: var(--space-6) 0 0;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
