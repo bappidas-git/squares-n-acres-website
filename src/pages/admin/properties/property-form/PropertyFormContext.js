@@ -18,6 +18,7 @@ import { createContext, useContext } from 'react';
  * @property {(path: string, id: number|string) => void} removeItem
  * @property {(path: string, from: number, to: number) => void} moveItem
  * @property {(path: string, id: number|string, patch: object) => void} updateItem
+ * @property {(key: string) => void} goToTab opens another tab — for a field that lives there
  * @property {boolean} disabled true for a sales user — the whole form is read-only (§7)
  * @property {boolean} isNew
  * @property {number|string|null} propertyId

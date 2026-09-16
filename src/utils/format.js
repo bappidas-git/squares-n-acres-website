@@ -135,6 +135,22 @@ export function formatDateTime(value) {
   return formatDate(value, { withTime: true });
 }
 
+/**
+ * `March 2027` in IST — a month and a year, for a possession promise nobody
+ * made to the day.
+ *
+ * @param {string|Date|null} value
+ */
+export function formatMonthYear(value) {
+  const date = parse(value);
+  if (!date) return EMPTY;
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
+
 /** `04:30 pm` in IST — the clock alone, for "Draft saved …" style indicators. */
 export function formatTime(value) {
   const date = parse(value);

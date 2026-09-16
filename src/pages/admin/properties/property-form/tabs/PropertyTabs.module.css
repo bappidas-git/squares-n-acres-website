@@ -175,3 +175,102 @@
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
 }
+
+/* ------------------------------------------------------------------ *
+ * Prompt 20 — highlights, documents, FAQs and the suggestion dialog
+ * ------------------------------------------------------------------ */
+
+/* One text row with a remove button on its baseline. */
+.highlightRow,
+.documentRow,
+.faqHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .documentRow {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 0.8fr) auto;
+  }
+}
+
+.rowAction {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: var(--space-1);
+}
+
+/* A question and its answer, stacked. */
+.faqRow {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* A section that is offered rather than expected — the timeline on a
+   ready-to-move listing. It is marked, never hidden (§4.5 of prompt 20). */
+.optional {
+  border-style: dashed;
+}
+
+/* The preview dialog's list of suggestions. */
+.suggestions {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.suggestion {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.suggestionLabel {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.suggestionCheckbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: var(--space-1);
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.suggestionQuestion {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+.suggestionAnswer {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* An address or a document link inside a summary card. */
+.link {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
+.link:hover {
+  color: var(--color-primary);
+}

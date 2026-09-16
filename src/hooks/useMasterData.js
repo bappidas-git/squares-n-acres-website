@@ -162,6 +162,47 @@ export function useDevelopers({ featuredOnly = false, activeOnly = true } = {}) 
 }
 
 /**
+ * Developers, plus a search over them an `EntityPicker` can take as its
+ * `fetcher`.
+ *
+ * The picker is written against an API `list` (§5.6), but the developer list
+ * is one of the seven `MasterDataContext` already holds (D93): searching it in
+ * the browser answers instantly, costs no request per keystroke, and — because
+ * it reads the same array a `refresh('developers')` rewrites — a record created
+ * from inside a form is findable the moment it exists.
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.activeOnly]
+ * @returns {{developers: Array<object>, search: Function, byId: (id: number|string) => object|null}}
+ */
+export function useDeveloperSearch({ activeOnly = true } = {}) {
+  const developers = useDevelopers({ activeOnly });
+
+  return useMemo(() => {
+    const matches = (record, needle) =>
+      !needle ||
+      String(record.name ?? '')
+        .toLowerCase()
+        .includes(needle) ||
+      String(record.slug ?? '')
+        .toLowerCase()
+        .includes(needle);
+
+    return {
+      developers,
+      /** The shape `EntityPicker` expects of a service `list`. */
+      search: ({ q = '', perPage = 10 } = {}) =>
+        Promise.resolve({
+          data: developers
+            .filter((record) => matches(record, q.trim().toLowerCase()))
+            .slice(0, perPage),
+        }),
+      byId: (id) => developers.find((record) => String(record.id) === String(id)) ?? null,
+    };
+  }, [developers]);
+}
+
+/**
  * Cities, by name — the collection has no `order` of its own (§6.2).
  *
  * @param {object} [options]
