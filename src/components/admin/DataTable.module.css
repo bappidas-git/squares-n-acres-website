@@ -190,6 +190,12 @@
   min-width: 0;
 }
 
+/* The checkbox and the kebab keep their 44 px targets however long the card's
+   title is: only the body between them gives way (§8.1). */
+.card > *:not(.cardBody) {
+  flex: 0 0 auto;
+}
+
 .cardTitle {
   margin: 0;
   font-family: var(--font-heading);

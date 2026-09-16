@@ -58,6 +58,10 @@ const defaultRowId = (row) => row?.id;
  * @param {Array<object>} [props.bulkActions]
  * @param {(key: string, ids: Array<string|number>) => void} [props.onBulkAction]
  * @param {(row: object) => Array<object>} [props.rowActions]
+ * @param {boolean} [props.rowActionsMenu] collapse the row actions into a kebab
+ *   on every width — what a row with more than four of them needs
+ * @param {(row: object) => string} [props.rowActionsLabel] the kebab's accessible
+ *   name, so twenty of them are not twenty buttons called "Row actions"
  * @param {(row: object) => string|number} [props.getRowId]
  * @param {{title: string, text?: string, action?: React.ReactNode}} [props.emptyState]
  * @param {(row: object) => string} [props.rowLink]
@@ -84,6 +88,8 @@ export default function DataTable({
   onBulkAction,
   bulkBusy = false,
   rowActions,
+  rowActionsMenu = false,
+  rowActionsLabel,
   getRowId = defaultRowId,
   emptyState = null,
   rowLink,
@@ -180,11 +186,19 @@ export default function DataTable({
     />
   ) : null;
 
+  // `?page=5` of a two-page list is a real address — a shared link outliving
+  // the rows it pointed at — so the footer says where the reader is rather
+  // than counting a slice that is not there (§7 of prompt 22).
+  const summary =
+    rows.length > 0
+      ? `Showing ${(page - 1) * perPage + 1}–${Math.min(page * perPage, total)} of ${total}`
+      : `Page ${page} of ${totalPages} — no rows on this page`;
+
   const footer =
     total > 0 ? (
       <div className={styles.footer}>
         <p className={styles.summary} aria-live="polite">
-          Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, total)} of {total}
+          {summary}
         </p>
         <Pagination page={page} totalPages={totalPages} onChange={onPageChange} />
         <label className={styles.perPage}>
@@ -247,6 +261,7 @@ export default function DataTable({
                     selected={selected.has(String(id))}
                     onToggle={() => toggleRow(id)}
                     actions={rowActions?.(row) ?? []}
+                    actionsLabel={rowActionsLabel?.(row)}
                     to={rowLink?.(row)}
                     render={mobileCard}
                   />
@@ -411,7 +426,11 @@ export default function DataTable({
 
                       {rowActions ? (
                         <td className={[styles.cell, styles.actionsCell].join(' ')}>
-                          <RowActions actions={rowActions(row)} />
+                          <RowActions
+                            actions={rowActions(row)}
+                            compact={rowActionsMenu}
+                            menuLabel={rowActionsLabel?.(row)}
+                          />
                         </td>
                       ) : null}
                     </TableRow>
@@ -434,7 +453,18 @@ export default function DataTable({
  * it is the last column of the table — then the rest, in order, skipping any
  * marked `mobile: false`.
  */
-function MobileCard({ row, id, columns, selectable, selected, onToggle, actions, to, render }) {
+function MobileCard({
+  row,
+  id,
+  columns,
+  selectable,
+  selected,
+  onToggle,
+  actions,
+  actionsLabel,
+  to,
+  render,
+}) {
   const primary = columns.find((column) => column.primary) ?? columns[0];
   const others = columns.filter((column) => column !== primary && column.mobile !== false);
   const rest = [
@@ -484,7 +514,7 @@ function MobileCard({ row, id, columns, selectable, selected, onToggle, actions,
         )}
       </div>
 
-      <RowActions actions={actions} compact />
+      <RowActions actions={actions} menuLabel={actionsLabel} compact />
     </article>
   );
 }

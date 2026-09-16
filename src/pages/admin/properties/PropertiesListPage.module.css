@@ -1,0 +1,132 @@
+/* Admin → Properties: the list screen, its table cells and its phone cards. */
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The 48 × 36 box every row opens with; the monogram fills it when the
+   listing has no image yet. */
+.cover {
+  width: 48px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-surface-2);
+}
+
+/* Wide enough that a Bengaluru listing title is two lines rather than five,
+   narrow enough that it does not push the numbers off the screen. */
+.titleCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 220px;
+  max-width: 34ch;
+}
+
+.title {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.title:hover,
+.title:focus-visible {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+.meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.price {
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+/* "3 BHK · 1,650 sq ft" is one fact, so it is one line. */
+.config {
+  white-space: nowrap;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-width: 264px;
+}
+
+/* A flag being written: the chip keeps its place and its icon spins. */
+.flagBusy svg {
+  animation: sna-flag-spin 0.8s linear infinite;
+}
+
+@keyframes sna-flag-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flagBusy svg {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+.counts {
+  display: inline-flex;
+  gap: var(--space-1);
+  justify-content: flex-end;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.countsSeparator {
+  color: var(--color-text-muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * Phone cards (≤ 899 px)
+ * ------------------------------------------------------------------ */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* The desktop minimums are for a table cell; a phone card has a phone's width. */
+.card .flags {
+  min-width: 0;
+}
+
+.cardTop {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.cardTop .cover {
+  flex: 0 0 auto;
+  width: 64px;
+}
+
+.cardHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
