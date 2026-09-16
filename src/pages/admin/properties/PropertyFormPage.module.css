@@ -1,0 +1,90 @@
+.loading {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* From 1200 px the rail rides alongside the form and stays with it. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-6);
+  align-items: start;
+  padding-bottom: var(--space-6);
+}
+
+.stacked {
+  display: grid;
+  /* `minmax(0, …)` everywhere a column holds the tab strip: the strip's sixteen
+     tabs do not shrink, so an `auto` track would grow to fit all of them and
+     push the form out from under the rail instead of letting the strip scroll. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  padding-bottom: calc(var(--space-16) + var(--safe-bottom));
+}
+
+.railColumn {
+  position: sticky;
+  /* Clear of the admin topbar, whatever its height. */
+  top: var(--space-6);
+}
+
+.main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+/* The draft banner's two buttons */
+.draftActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* The phone's primary writes, always within thumb's reach */
+.bottomBar {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  gap: var(--space-2);
+  margin: 0 calc(var(--container-padding) * -1) calc(var(--safe-bottom) * -1);
+  padding: var(--space-3) var(--container-padding) calc(var(--space-3) + var(--safe-bottom));
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border);
+}
+
+.bottomBar > * {
+  flex: 1 1 auto;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 1199.98px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .railColumn {
+    position: static;
+  }
+}

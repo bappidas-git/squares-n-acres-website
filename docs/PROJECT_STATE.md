@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 17 — Testimonials, team members, partners and FAQs Next prompt: 18
+Last prompt executed: 18 — Property form foundation Next prompt: 19
 
 ## Executed prompts
 
@@ -23,7 +23,8 @@ Last prompt executed: 17 — Testimonials, team members, partners and FAQs Next 
 | 14  | Localities and cities: admin CRUD, public index and guide     | `b3813a1`                                                                          | 2026-09-16 |
 | 15  | Master data: property types, amenities, badges and banks      | `0cc1afc`                                                                          | 2026-09-16 |
 | 16  | Developers: admin CRUD and the public builder pages           | `da19cb5`                                                                          | 2026-09-16 |
-| 17  | FAQs, testimonials, team and partners: admin and sections     | HEAD of this branch (a commit cannot contain its own hash — prompt 18 fills it in) | 2026-09-16 |
+| 17  | FAQs, testimonials, team and partners: admin and sections     | `4dcf5cd`                                                                          | 2026-09-16 |
+| 18  | Property form foundation: reducer, validators, rail, payload  | HEAD of this branch (a commit cannot contain its own hash — prompt 19 fills it in) | 2026-09-16 |
 
 ## Baseline (prompt 01)
 
@@ -261,33 +262,35 @@ The boilerplate's own endpoint surface stays inventoried in
 
 ## Pending rewrites (temporary adapters that must be removed; owner prompt)
 
-| Item                                           | Why it is temporary                                                                                                                                                                                                                                                                                                                                                                                          | Owner prompt |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ |
-| `test:ci --passWithNoTests`                    | Needed only while `src/` contains no test file; drop the flag once real tests exist.                                                                                                                                                                                                                                                                                                                         | 35           |
-| Header / MobileHeader / BottomNav nav arrays   | The three components still declare the same `navItems` / `sideMenuItems` literals. Prompt 04 restyled and unified their breakpoints but left the data alone, as its §9 requires ("nav data still hardcoded until prompt 27"). Prompt 27 moves it to `src/config/navigation.js`.                                                                                                                              | 27           |
-| 501 on the sitemap / robots / RSS / llms paths | The routes are mounted and mirrored at the root (D21) but answer `501` until prompt 09 generates the documents from `seoSettings` and the seed.                                                                                                                                                                                                                                                              | 09           |
-| `src/utils/adapters/legacyProperty.js`         | `toLegacyProperty()` maps the §6.1 record onto the field names `PropertyDetails`, `PropertyListing`, `PropertyForm`, `AdminProperties`, `SimilarPropertiesTab` and the detail sections still read (`gallery`, `location.area`, `type`, `status`, `price`/`priceUnit`, `configuration` as strings, grouped `constructionSpecs`, legacy `floorPlans`/`nearbyPlaces`/`documents`/`timeline`, flat `seoTitle`…). | 18–26        |
-| `src/utils/adapters/legacyArticle.js`          | `toLegacyArticle()` maps `featuredImage.url` → `image`, `category.name`, `author.name` and `readingTimeMinutes` → `readTime` for `AdminArticles` and `ArticleForm`.                                                                                                                                                                                                                                          | 33 / 34      |
-| `src/components/common/LegacyHtml.jsx`         | Renders CMS-authored HTML (article bodies, FAQ answers) with `dangerouslySetInnerHTML`. Prompt 32 replaces it with `SafeHtml`, sanitising against the allow-list the Tiptap editor writes with.                                                                                                                                                                                                              | 32           |
-| `PropertyForm` saving disabled                 | The sixteen tabs still hold the boilerplate's flat shape and the payload builder wrote snake_case columns that no longer exist. Loading works through `toLegacyProperty`; Save/Publish are disabled behind an info `Alert`.                                                                                                                                                                                  | 18–21        |
-| `ArticleForm` saving disabled                  | Its category, author and tag pickers offer hardcoded strings; an article now carries `categoryId`, `authorId`, `tagIds[]`, `featuredImage{}`, `status` and a nested `seo{}`. Loading works through `toLegacyArticle`; saving is disabled behind an info `Alert`.                                                                                                                                             | 33           |
-| `AdminSettings` saving disabled                | The screen holds a flattened view of five of the eight §6.13 branches, so writing it back would flatten the record on the server. Reads are live; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                 | 40           |
-| `AdminSeo` saving disabled                     | SEO now lives in one nested `seo{}` saved through the entity's own PATCH, and the generator still writes boilerplate titles and canonicals (ADD-20/ADD-27). The table reads `GET /admin/seo/overview` live; editing and bulk generation are disabled behind an info `Alert`.                                                                                                                                 | 36–37        |
-| `LocalityProperties` simple version            | `src/components/sections/locality/LocalityProperties.jsx` asks for one page of six listings and links to the search. The tabbed, server-driven listing engine replaces it (D94).                                                                                                                                                                                                                             | 26           |
-| `LegacyHtml` in `LocalityGuide`                | The locality description is CMS-authored HTML rendered through the temporary `LegacyHtml`; `SafeHtml` replaces it with the editor's allow-list.                                                                                                                                                                                                                                                              | 32           |
-| Locality SEO placeholder card                  | The locality form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through a save untouched in the meantime.                                                                                                                                                                                                                              | 36           |
-| Locality/localities Helmet titles              | `Localities.jsx` and `LocalityDetail.jsx` set `<title>`/`description` through `react-helmet-async`; `<Seo>` replaces both, with the §9.5 templates and the JSON-LD graph.                                                                                                                                                                                                                                    | 38           |
-| `DeveloperProperties` simple version           | `src/components/sections/developer/DeveloperProperties.jsx` asks for one page of twelve listings and links to `/properties?developerId=<id>`. The tabbed, server-driven listing engine replaces it (D94), and the same prompt makes that link filter (the legacy page only knows `?developer=<name>`).                                                                                                       | 26           |
-| `LegacyHtml` in the builder profile            | The developer description on `/builders/:slug` is CMS-authored HTML rendered through the temporary `LegacyHtml`; `SafeHtml` replaces it with the editor's allow-list.                                                                                                                                                                                                                                        | 32           |
-| Developer SEO placeholder card                 | The developer form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched in the meantime.                                                                                                                                                                                                                          | 36           |
-| Builders/builder Helmet titles                 | `Builders.jsx` and `BuilderDetail.jsx` set `<title>`/`description` through `react-helmet-async`, following the §9.5 `developer` template; `<Seo>` replaces both, with the JSON-LD `Organization` + `ItemList` graph (§9.3).                                                                                                                                                                                  | 38           |
-| `PropertyListing` client-side filter and sort  | The page asks for one page of `perPage=100` and narrows, sorts and paginates in the browser through `toLegacyProperty`. The listing engine is server-driven (D94) from prompt 26.                                                                                                                                                                                                                            | 26           |
-| Property-type SEO placeholder card             | The property-type form ends in an `Alert` saying the SEO panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched so nothing is lost meanwhile.                                                                                                                                                                                                                           | 36           |
-| `PropertyFilters` type select                  | The legacy filter panel now reads `usePropertyTypes()` but still keeps its own BHK, price-range, location, status and developer lists and filters in the browser. Prompt 26 replaces the panel with the server-driven one.                                                                                                                                                                                   | 26           |
-| `AmenitiesTab` stores amenity objects          | The property form's amenities tab reads the master list through `useAmenitiesGrouped()` but still stores `{ icon, name, category }` objects on the draft rather than `amenityIds[]`.                                                                                                                                                                                                                         | 20           |
-| `FinanceGuide` bank cards                      | The cards read `useBanks()` and the headline figures are computed from them, but the section is still one 1 800-line component with its own EMI maths and lead form.                                                                                                                                                                                                                                         | 25           |
-| `LegacyHtml` in `FaqAccordion`                 | Every FAQ on the site — the home band, `/insights/faqs`, a property page's questions and the CMS `faq` block — renders its answer through the temporary `LegacyHtml`. `SafeHtml` replaces it with the editor's allow-list, and the same prompt turns the FAQ form's HTML textarea into the editor.                                                                                                           | 32           |
-| `AdminPlaceholderPage` routes                  | Thirteen admin routes of `src/routes/adminRouteConfig.js` render `AdminPlaceholderPage` with the number of the prompt that writes the screen (13–39). Each one disappears when its owner prompt lands; the component itself must not exist after prompt 43.                                                                                                                                                  | 13–39        |
+| Item                                           | Why it is temporary                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Owner prompt |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `test:ci --passWithNoTests`                    | Needed only while `src/` contains no test file; drop the flag once real tests exist.                                                                                                                                                                                                                                                                                                                                                                                               | 35           |
+| Header / MobileHeader / BottomNav nav arrays   | The three components still declare the same `navItems` / `sideMenuItems` literals. Prompt 04 restyled and unified their breakpoints but left the data alone, as its §9 requires ("nav data still hardcoded until prompt 27"). Prompt 27 moves it to `src/config/navigation.js`.                                                                                                                                                                                                    | 27           |
+| 501 on the sitemap / robots / RSS / llms paths | The routes are mounted and mirrored at the root (D21) but answer `501` until prompt 09 generates the documents from `seoSettings` and the seed.                                                                                                                                                                                                                                                                                                                                    | 09           |
+| `src/utils/adapters/legacyProperty.js`         | `toLegacyProperty()` maps the §6.1 record onto the field names `PropertyDetails`, `PropertyListing`, `AdminProperties` and the detail sections still read (`gallery`, `location.area`, `type`, `status`, `price`/`priceUnit`, `configuration` as strings, grouped `constructionSpecs`, legacy `floorPlans`/`nearbyPlaces`/`documents`/`timeline`, flat `seoTitle`…). The property form stopped reading it in prompt 18: `property-form/fromRecord.js` reads the contract directly. | 22–26        |
+| `src/utils/adapters/legacyArticle.js`          | `toLegacyArticle()` maps `featuredImage.url` → `image`, `category.name`, `author.name` and `readingTimeMinutes` → `readTime` for `AdminArticles` and `ArticleForm`.                                                                                                                                                                                                                                                                                                                | 33 / 34      |
+| `src/components/common/LegacyHtml.jsx`         | Renders CMS-authored HTML (article bodies, FAQ answers) with `dangerouslySetInnerHTML`. Prompt 32 replaces it with `SafeHtml`, sanitising against the allow-list the Tiptap editor writes with.                                                                                                                                                                                                                                                                                    | 32           |
+| Legacy `PropertyForm.jsx` + `property-tabs/*`  | The boilerplate's form (956 lines) and its sixteen tabs are no longer routed — `/admin/properties/add` and `/admin/properties/edit/:id` render `PropertyFormPage` (prompt 18) — but the files stay in place, unreachable, until the last of their fields has a home in the new tabs. Prompt 21 deletes both, with the form half of `toLegacyProperty`.                                                                                                                             | 21           |
+| Basics fields inside a placeholder tab         | `property-form/tabs/BasicsTab.jsx` holds the title, URL, summary, listing type, segment, property type, locality, construction status, availability and possession date **inside** the prompt-19 placeholder alert, because a listing cannot be created without them. Prompt 19 moves them into the real Basics and Location tabs and drops the alert.                                                                                                                             | 19           |
+| Fifteen placeholder property-form tabs         | Every tab but Basics renders `PlaceholderTab` naming the prompt that writes it: Location, Pricing, Area & configuration, Unit configurations and Media in 19; Amenities, Highlights & specifications, Floor plans, Documents, Project & builder and FAQs in 20; Similar properties, Section visibility, Agent and SEO in 21 (the panel itself in 36, D87). The reducer, validators and `toPayload` already cover their fields, so a save never drops what they hold.               | 19–21, 36    |
+| `ArticleForm` saving disabled                  | Its category, author and tag pickers offer hardcoded strings; an article now carries `categoryId`, `authorId`, `tagIds[]`, `featuredImage{}`, `status` and a nested `seo{}`. Loading works through `toLegacyArticle`; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                   | 33           |
+| `AdminSettings` saving disabled                | The screen holds a flattened view of five of the eight §6.13 branches, so writing it back would flatten the record on the server. Reads are live; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                                                                                       | 40           |
+| `AdminSeo` saving disabled                     | SEO now lives in one nested `seo{}` saved through the entity's own PATCH, and the generator still writes boilerplate titles and canonicals (ADD-20/ADD-27). The table reads `GET /admin/seo/overview` live; editing and bulk generation are disabled behind an info `Alert`.                                                                                                                                                                                                       | 36–37        |
+| `LocalityProperties` simple version            | `src/components/sections/locality/LocalityProperties.jsx` asks for one page of six listings and links to the search. The tabbed, server-driven listing engine replaces it (D94).                                                                                                                                                                                                                                                                                                   | 26           |
+| `LegacyHtml` in `LocalityGuide`                | The locality description is CMS-authored HTML rendered through the temporary `LegacyHtml`; `SafeHtml` replaces it with the editor's allow-list.                                                                                                                                                                                                                                                                                                                                    | 32           |
+| Locality SEO placeholder card                  | The locality form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through a save untouched in the meantime.                                                                                                                                                                                                                                                                                                    | 36           |
+| Locality/localities Helmet titles              | `Localities.jsx` and `LocalityDetail.jsx` set `<title>`/`description` through `react-helmet-async`; `<Seo>` replaces both, with the §9.5 templates and the JSON-LD graph.                                                                                                                                                                                                                                                                                                          | 38           |
+| `DeveloperProperties` simple version           | `src/components/sections/developer/DeveloperProperties.jsx` asks for one page of twelve listings and links to `/properties?developerId=<id>`. The tabbed, server-driven listing engine replaces it (D94), and the same prompt makes that link filter (the legacy page only knows `?developer=<name>`).                                                                                                                                                                             | 26           |
+| `LegacyHtml` in the builder profile            | The developer description on `/builders/:slug` is CMS-authored HTML rendered through the temporary `LegacyHtml`; `SafeHtml` replaces it with the editor's allow-list.                                                                                                                                                                                                                                                                                                              | 32           |
+| Developer SEO placeholder card                 | The developer form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched in the meantime.                                                                                                                                                                                                                                                                                                | 36           |
+| Builders/builder Helmet titles                 | `Builders.jsx` and `BuilderDetail.jsx` set `<title>`/`description` through `react-helmet-async`, following the §9.5 `developer` template; `<Seo>` replaces both, with the JSON-LD `Organization` + `ItemList` graph (§9.3).                                                                                                                                                                                                                                                        | 38           |
+| `PropertyListing` client-side filter and sort  | The page asks for one page of `perPage=100` and narrows, sorts and paginates in the browser through `toLegacyProperty`. The listing engine is server-driven (D94) from prompt 26.                                                                                                                                                                                                                                                                                                  | 26           |
+| Property-type SEO placeholder card             | The property-type form ends in an `Alert` saying the SEO panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched so nothing is lost meanwhile.                                                                                                                                                                                                                                                                                                 | 36           |
+| `PropertyFilters` type select                  | The legacy filter panel now reads `usePropertyTypes()` but still keeps its own BHK, price-range, location, status and developer lists and filters in the browser. Prompt 26 replaces the panel with the server-driven one.                                                                                                                                                                                                                                                         | 26           |
+| `AmenitiesTab` stores amenity objects          | The **legacy** property form's amenities tab reads the master list through `useAmenitiesGrouped()` but still stores `{ icon, name, category }` objects on its draft rather than `amenityIds[]`. Nothing routes to it since prompt 18 — the new form holds `amenityIds[]` — and prompt 20 writes the replacement tab before prompt 21 deletes this one.                                                                                                                             | 20           |
+| `FinanceGuide` bank cards                      | The cards read `useBanks()` and the headline figures are computed from them, but the section is still one 1 800-line component with its own EMI maths and lead form.                                                                                                                                                                                                                                                                                                               | 25           |
+| `LegacyHtml` in `FaqAccordion`                 | Every FAQ on the site — the home band, `/insights/faqs`, a property page's questions and the CMS `faq` block — renders its answer through the temporary `LegacyHtml`. `SafeHtml` replaces it with the editor's allow-list, and the same prompt turns the FAQ form's HTML textarea into the editor.                                                                                                                                                                                 | 32           |
+| `AdminPlaceholderPage` routes                  | Thirteen admin routes of `src/routes/adminRouteConfig.js` render `AdminPlaceholderPage` with the number of the prompt that writes the screen (13–39). Each one disappears when its owner prompt lands; the component itself must not exist after prompt 43.                                                                                                                                                                                                                        | 13–39        |
 
 ## Known issues (open) — id, description, found by, owner prompt
 
@@ -332,7 +335,7 @@ The boilerplate's own endpoint surface stays inventoried in
 | ADD-19 (settings/users) | `AdminSettings`: `PUT` drops `footerLinks`, tab panels out of order, "Footer Tagline" edits the General `tagline`, hardcoded `role === 'admin'`; `UserManagement`: last-admin guard hole, plaintext passwords echoed, own `ROLES` list. **The `AdminLogin` half is closed in 12 and the `UserManagement` half in 13; only the `AdminSettings` form remains, for prompt 40.** | master spec, confirmed 01 | 40 |
 | ADD-20 | `AdminSeo`: the old domain in previews, "Auto-Generate" writes HOM titles/canonicals/schema, `stats.missing` dead, saving wipes empty fields, no confirmation before bulk overwrite; `ArticleForm`: the boilerplate brand as the default article author, `readTime` not editable, `isTrending/trendingOrder` dropped on PUT, `setTimeout(navigate)` not cleared | master spec, confirmed 01 | 33, 36, 37 |
 | ADD-21 | `AdminProperties` fetches the public `/properties`, toggle omits the `is_active` fallback, `Promise.all` bulk aborts on first failure, per-page select-all; `AdminLeads`/`Dashboard` `p.id === propertyId` string-vs-number → Property column always empty; `Dashboard` "Leads by source" from 10 leads; `FaqManager` reorder wrong under a category filter with two sequential PUTs per swap (**closed in 17**: `FaqManager` is deleted and the reorder is D98's single `PATCH`); `LeadDetail` simulated timeline, `isMobile` unused (**closed in 01**) | master spec, confirmed 01 | 22, 29 |
-| ADD-22 | Property tabs: `DetailsTab` drag issues N state updates per drag-over; `SectionVisibilityTab` toggle asymmetric for `undefined`; `GalleryTab` seeds placeholder-image covers; `NearbyPlacesTab` default type `school` unknown to the public map; index keys everywhere; `SeoTagsTab` old-domain placeholder | master spec, confirmed 01 | 18–21 |
+| ADD-22 | Property tabs: `DetailsTab` drag issues N state updates per drag-over; `SectionVisibilityTab` toggle asymmetric for `undefined`; `GalleryTab` seeds placeholder-image covers; `NearbyPlacesTab` default type `school` unknown to the public map; index keys everywhere; `SeoTagsTab` old-domain placeholder. **Prompt 18 settles the structural half for the new form**: every repeating row carries a stable id (`tmp-<n>` until the API assigns one), so no list is keyed by its index and a move is one `LIST_MOVE`; `fromRecord` fills all eighteen `sectionVisibility` keys, so a toggle is never reading `undefined`; `makeNearbyPlace` defaults to `other`; and nothing seeds an image. The tabs that render these fields are written in 19–21, which is when the row closes. | master spec, confirmed 01 | 18–21 |
 | ADD-27 | `seoScoring.js`/`seoGenerator.js`: HOM site name/URL constants, generic CTA-word scoring, schema string stored in the record | master spec, confirmed 01 | 36 |
 
 ### New defects found by this audit
@@ -2320,3 +2323,138 @@ temporary `LegacyHtml`, which is now in "Pending rewrites" under its own row —
 into the editor.
 
 **Next prompt: 18 — Property form foundation.**
+
+### Prompt 18 — Property form foundation: reducer, validators, rail, autosave, payload (2026-09-16)
+
+**What changed**
+
+`/admin/properties/add` and `/admin/properties/edit/:id` are a new screen. The
+boilerplate's `PropertyForm.jsx` held the HOM shape in `useState`, autosaved
+every thirty seconds whether or not anything had changed, and has had saving
+disabled since prompt 11 because its payload builder wrote snake_case columns
+that no longer exist. What replaces it is an architecture rather than a screen:
+a reducer that owns the §6.1 record, section validators keyed by dotted path,
+`fromRecord`/`toPayload` as the only two places the contract is translated, and
+a shell of sixteen tabs with a status rail beside them.
+
+The point of the split is that prompts 19–21 write **fields**, not plumbing. A
+tab reads `values`, writes through `setField`/`addItem`/`removeItem`/`moveItem`/
+`updateItem`, and renders `errors[path]`; it knows nothing about the route, the
+draft, the API or the rail. Every field of §6.1 is already carried — the reducer
+holds it, the validators check it and `toPayload` sends it — so the fifteen tabs
+that are still placeholders lose nothing when a listing is saved through them.
+
+Saving works end to end today for the fields the shell owns: a listing created
+from the Basics fields alone reaches the API, and the `PUT` that replaces a
+seeded property returns a record byte-identical to the one it started from
+except for `updatedAt`/`updatedBy` (verified against the mock, see the QA below).
+
+**Files added**
+
+| Path                                                      | What it is                                                                                                                       |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `src/pages/admin/properties/PropertyFormPage.jsx` (+ css) | The route: the fetch, the four states of §8.2, the header, the layout                                                            |
+| `…/property-form/initialState.js`                         | `createInitialState()` (every key of §6.1) and the ten row factories, with `tmp-<n>` ids                                         |
+| `…/property-form/reducer.js`                              | Twelve actions with creators; `createFormState({ propertyId, record })`                                                          |
+| `…/property-form/usePropertyForm.js`                      | The hook: dirty tracking, the draft, the unsaved guard, `save`/`duplicate`/`remove`, 422/409 mapping, tab jumps                  |
+| `…/property-form/fromRecord.js`                           | Admin record → form values: defaults filled, embeds dropped, lists sorted and renumbered                                         |
+| `…/property-form/toPayload.js`                            | Form values → the write body: tmp ids and empty rows gone, `''` → `null`, one cover, `order` 1..n, `seo.slug` mirrored           |
+| `…/property-form/validators/property.js`                  | The seventeen validators of §4.4, including `validateForActivation` (blockers + warnings)                                        |
+| `…/property-form/validators/index.js`                     | The barrel, `validateAll` and `validateSection`                                                                                  |
+| `…/property-form/completeness.js`                         | `computeCompleteness` — fourteen weighted items totalling 100 — and `completenessTone`                                           |
+| `…/property-form/tabs.js`                                 | The sixteen-tab registry (key, label, icon, component, validator, field prefixes) + `groupErrorsByTab` / `firstTabWithErrors`    |
+| `…/property-form/PropertyFormShell.jsx`                   | Draft banner, tab strip, panels, rail placement, the phone's sticky Save bar                                                     |
+| `…/property-form/StatusRail.jsx` (+ css)                  | Status switches, availability, priority, the meter and its checklist, the address, "Last saved", the save menu, duplicate/delete |
+| `…/property-form/DraftBanner.jsx`                         | "Restore unsaved draft from 5 minutes ago?" — Restore / Discard                                                                  |
+| `…/property-form/PropertyFormContext.js`                  | What a tab is given; `usePropertyFormContext()`                                                                                  |
+| `…/property-form/tabs/PlaceholderTab.jsx`                 | The alert naming the prompt that writes a tab                                                                                    |
+| `…/property-form/tabs/BasicsTab.jsx`                      | The shell-owned fields, inside that alert until prompt 19                                                                        |
+| `…/property-form/__tests__/*.test.js`                     | 102 cases across reducer, `toPayload`, `fromRecord`, validators and completeness                                                 |
+
+**Files changed**
+
+`src/routes/adminRouteConfig.js` (both property routes → `PropertyFormPage`),
+`src/utils/format.js` (`formatTime`, for the rail's "Draft saved 10:42"),
+`docs/PROJECT_STATE.md`, `docs/DECISIONS.md`.
+
+**Files removed**
+
+`src/pages/admin/AddProperty.js` and `src/pages/admin/EditProperty.js` — two
+wrappers whose whole body was `<PropertyForm propertyId={id} />`. The legacy
+`PropertyForm.jsx` and `property-tabs/*` stay on disk, unrouted, until prompt 21.
+
+**Endpoints**
+
+None added. The form consumes `GET/POST/PUT/DELETE /admin/properties`,
+`POST /admin/properties/:id/duplicate` and `GET /admin/properties/check-slug`.
+Storage: `sna_property_draft:<id|new>` (§4.2), written every 10 s while dirty.
+
+**npm / env**
+
+Nothing added.
+
+**Acceptance checklist**
+
+- [x] The sixteen-tab shell, the rail, autosave with a restore banner, the
+      unsaved guard, the completeness meter and the save/duplicate/delete flows
+      all work against the mock; a create redirects to `/admin/properties/edit/<id>`
+      and a `PUT` keeps `viewCount`, `enquiryCount` and `publishedAt`.
+- [x] Reducer, `toPayload`, `fromRecord`, validators and completeness are unit
+      tested (102 cases; the suite is 1 000 tests over 39 files).
+- [x] Sales open the form read-only — banner, disabled controls, no actions, no
+      autosave. Activation blockers refuse a publication and jump to the tab
+      holding the first one. A 409 paints the slug field with the free variant.
+- [x] `npm run lint`, `npm run test:ci`, `npm run build:ci` (0 warnings),
+      `npm run check:traces` (0 findings) and `npm run smoke` (269/269) pass, as
+      do `npm run test:mock` (127) and `npm run validate:seed`, untouched though
+      they are.
+- [x] One commit, clean tree.
+
+**Manual QA (headless Chromium, console captured)**
+
+- `/admin/properties/add` at 1360 px: one `<h1>` "Add property", breadcrumb
+  Properties › Add property, sixteen tabs in the §4.6 order, the rail beside the
+  form. Saving an empty form toasts "Please fix 4 fields." and badges Basics (3)
+  and Location (1); the strip's red counts name exactly the fields refused.
+- Typing a title fills the slug (`qa-prompt-eighteen-listing`) while it is
+  locked. Turning "Published on site" on with no images leaves the switch off,
+  toasts "This listing is not ready to publish…" and opens Basics on the first
+  blocker. "Save as inactive" then creates the listing: the URL becomes
+  `/admin/properties/edit/41`, the heading becomes "Edit: …" and the rail reads
+  "Last saved 0 seconds ago".
+- Editing the title and waiting ten seconds writes
+  `sna_property_draft:41`; a reload offers "Unsaved changes were found in this
+  browser" and Restore puts the edited title back. Saving clears the key.
+- Duplicate opens the copy at `/edit/42` titled "… (Copy)", inactive; Delete
+  confirms and returns to `/admin/properties`. `/admin/properties/edit/99999`
+  renders "Property not found" with a link back.
+- `/admin/properties/edit/1` (a complete seeded listing): the meter reads 100 %
+  and the checklist 14 of 14, "View on site" links to
+  `/properties/lakeview-heights-3-bhk-apartment-in-whitefield`, and the publish
+  switch turns off and on again without complaint. ←/→/Home/End move the tabs.
+- A slug that is already taken: the field says "Already taken." with
+  "Use “…-2”" before the save, and the 409 that follows paints the field with
+  "The slug has already been taken. Try “lakeview-heights-3-bhk-whitefield-2”."
+  and badges Basics.
+- 390 px: `scrollWidth === clientWidth`, the rail is a "Status & actions"
+  accordion above a horizontally scrolling tab strip, and Save / Save as
+  inactive sit in the sticky bottom bar.
+- Signed in as sales: the "Read-only access" banner, every control disabled, no
+  Save, Duplicate or Delete, and no draft written.
+- Console: no errors or warnings from the app (the only entries are the
+  deliberate 404 of the missing-property check, the 409 of the slug clash, and
+  the sandbox's TLS refusals for the Cloudinary and Iconify hosts).
+- Against the API directly: `POST` with `toPayload(basics only)` → 201 inactive
+  with zeroed counters; `PUT` of `toPayload(fromRecord(record))` on the seeded
+  property 1 → 200, and the record that comes back is identical to the one that
+  went in apart from `updatedAt`/`updatedBy` — images, unit configurations,
+  FAQs, specifications, amenity ids and the whole `seo` branch included.
+
+**Known issues**
+
+None opened. Three rows joined "Pending rewrites": the unrouted legacy form and
+its tabs (prompt 21), the Basics fields living inside a placeholder alert
+(prompt 19), and the fifteen placeholder tabs (19–21, with the SEO panel in 36).
+`PropertyForm saving disabled` is closed — saving works, on the new form.
+
+**Next prompt: 19 — Property form tabs 1–6.**
