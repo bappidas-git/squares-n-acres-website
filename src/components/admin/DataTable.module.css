@@ -1,0 +1,247 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* The table scrolls, never the page (§6 of prompt 13). */
+.scroller {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.headCell {
+  height: 44px;
+  padding: 0 var(--space-4);
+  white-space: nowrap;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-transform: inherit;
+  letter-spacing: inherit;
+}
+
+.sortButton:hover {
+  color: var(--color-text);
+}
+
+.sortIcon {
+  display: inline-flex;
+  opacity: 0.35;
+  transition: opacity var(--transition-fast);
+}
+
+.sortIconActive {
+  opacity: 1;
+  color: var(--color-primary-dark);
+}
+
+.cell {
+  height: 48px;
+  padding: 0 var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.row {
+  transition: background var(--transition-fast);
+}
+
+.row:hover {
+  background: var(--color-surface);
+}
+
+.rowSelected,
+.rowSelected:hover {
+  background: var(--color-primary-light);
+}
+
+.rowClickable {
+  cursor: pointer;
+}
+
+.checkboxCell {
+  width: 48px;
+  padding-left: var(--space-3);
+  padding-right: 0;
+}
+
+.actionsCell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.hideBelowSm,
+.hideBelowMd,
+.hideBelowLg {
+  display: table-cell;
+}
+
+@media (max-width: 599.98px) {
+  .hideBelowSm {
+    display: none;
+  }
+}
+
+@media (max-width: 899.98px) {
+  .hideBelowMd {
+    display: none;
+  }
+}
+
+@media (max-width: 1199.98px) {
+  .hideBelowLg {
+    display: none;
+  }
+}
+
+.stateCell {
+  padding: 0;
+  border-bottom: 0;
+}
+
+/* ---------------- footer ---------------- */
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-1) 0;
+}
+
+.summary {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.perPage {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.perPageSelect {
+  height: 36px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------------- mobile cards ---------------- */
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardSelected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.cardBody {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+  overflow-wrap: anywhere;
+}
+
+.cardTitleLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardTitleLink:hover {
+  text-decoration: underline;
+}
+
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.cardMetaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.cardMetaLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.cardMetaItem dd {
+  margin: 0;
+}
+
+/* The design system has no global visually-hidden utility and `global.css` is
+   off-limits here, so the table carries its own. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

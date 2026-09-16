@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, Typography, TextField, Button, IconButton } from '@mui/material';
 import { Icon } from '@iconify/react';
-import ImageUrlHelperText from '../../../components/admin/ImageUrlHelperText';
+import { ImageHint } from '../../../components/admin/ImageField';
 
 const PLACEHOLDER_COVER_PREFIX = 'https://picsum.photos/seed/';
 
@@ -132,7 +132,7 @@ const GalleryTab = ({ formData, updateField, updateListItem, addListItem, remove
                   : updateListItem('gallery', index, e.target.value)
               }
             />
-            <ImageUrlHelperText fieldType="gallery" />
+            <ImageHint hint="gallery" />
           </Box>
 
           {formData.gallery.length > 1 && (

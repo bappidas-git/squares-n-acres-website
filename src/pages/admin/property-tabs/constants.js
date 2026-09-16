@@ -80,14 +80,14 @@ export const AMENITY_CATEGORIES = {
       { icon: 'mdi:cctv', name: 'CCTV Surveillance' },
       { icon: 'mdi:fire-extinguisher', name: 'Fire Safety' },
       { icon: 'mdi:gate', name: 'Gated Community' },
-      { icon: 'mdi:intercom', name: 'Video Door Phone' },
+      { icon: 'mdi:doorbell-video', name: 'Video Door Phone' },
     ],
   },
   convenience: {
     label: 'Convenience',
-    icon: 'mdi:car-parking',
+    icon: 'mdi:parking',
     items: [
-      { icon: 'mdi:car-parking', name: 'Covered Parking' },
+      { icon: 'mdi:parking', name: 'Covered Parking' },
       { icon: 'mdi:lightning-bolt', name: 'Power Backup' },
       { icon: 'mdi:water-pump', name: 'Water Supply' },
       { icon: 'mdi:elevator', name: 'High-Speed Elevators' },

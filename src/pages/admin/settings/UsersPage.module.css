@@ -1,0 +1,17 @@
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+.you {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}

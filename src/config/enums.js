@@ -256,14 +256,14 @@ const SECTION_VISIBILITY_KEYS = [
  * ------------------------------------------------------------------ */
 
 const AMENITY_CATEGORIES = makeEnum([
-  { value: 'basic', label: 'Basic' },
-  { value: 'lifestyle', label: 'Lifestyle' },
-  { value: 'safety', label: 'Safety & Security' },
-  { value: 'sports', label: 'Sports' },
-  { value: 'kids', label: 'Kids' },
-  { value: 'eco', label: 'Eco-friendly' },
-  { value: 'convenience', label: 'Convenience' },
-  { value: 'commercial', label: 'Commercial' },
+  { value: 'basic', label: 'Basic', icon: 'mdi:flash-outline' },
+  { value: 'lifestyle', label: 'Lifestyle', icon: 'mdi:sofa-outline' },
+  { value: 'safety', label: 'Safety & Security', icon: 'mdi:shield-check-outline' },
+  { value: 'sports', label: 'Sports', icon: 'mdi:basketball' },
+  { value: 'kids', label: 'Kids', icon: 'mdi:teddy-bear' },
+  { value: 'eco', label: 'Eco-friendly', icon: 'mdi:leaf' },
+  { value: 'convenience', label: 'Convenience', icon: 'mdi:cart-outline' },
+  { value: 'commercial', label: 'Commercial', icon: 'mdi:store-outline' },
 ]);
 
 /** Badge colours are tone names, never hex (§6.4). */

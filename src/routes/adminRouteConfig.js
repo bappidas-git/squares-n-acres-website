@@ -35,6 +35,7 @@ const AdminPartners = lazy(() => import('../pages/admin/AdminPartners'));
 const AdminSeo = lazy(() => import('../pages/admin/AdminSeo'));
 const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
 const ProfilePage = lazy(() => import('../pages/admin/settings/ProfilePage'));
+const UsersPage = lazy(() => import('../pages/admin/settings/UsersPage'));
 
 /** A screen that exists. */
 const page = (path, title, permission, element) => ({ path, title, permission, element });
@@ -107,7 +108,7 @@ export const ADMIN_ROUTES = [
   soon('seo/guide', 'SEO guide', ['seo', 'view'], 37),
 
   page('settings', 'Site settings', ['settings', 'view'], <AdminSettings />),
-  soon('settings/users', 'Users', ['users', 'view'], 13),
+  page('settings/users', 'Users', ['users', 'view'], <UsersPage />),
 
   page('profile', 'My profile', ['profile', 'view'], <ProfilePage />),
   // Reachable by any signed-in role: it is the answer to a route they may not

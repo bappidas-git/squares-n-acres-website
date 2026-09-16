@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography, TextField, Button, IconButton, Paper } from '@mui/material';
 import { Icon } from '@iconify/react';
 import IconPicker from '../../../components/admin/IconPicker';
-import ImageUrlHelperText from '../../../components/admin/ImageUrlHelperText';
+import { ImageHint } from '../../../components/admin/ImageField';
 
 const DeveloperTab = ({ formData, updateField }) => {
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
@@ -73,7 +73,7 @@ const DeveloperTab = ({ formData, updateField }) => {
           size="small"
           placeholder="https://example.com/developer-logo.png"
         />
-        <ImageUrlHelperText fieldType="developerLogo" />
+        <ImageHint hint="logo" />
       </Box>
 
       {/* Stats */}
