@@ -135,6 +135,13 @@ export function formatDateTime(value) {
   return formatDate(value, { withTime: true });
 }
 
+/** `04:30 pm` in IST — the clock alone, for "Draft saved …" style indicators. */
+export function formatTime(value) {
+  const date = parse(value);
+  if (!date) return EMPTY;
+  return new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', ...TIME_PARTS }).format(date);
+}
+
 /** `3 hours ago`, `2 days ago` — `date-fns` does the arithmetic (D22). */
 export function formatRelative(value) {
   const date = parse(value);
@@ -167,6 +174,7 @@ const format = {
   formatDate,
   formatDateTime,
   formatNumber,
+  formatTime,
   formatPhoneForTel,
   formatPrice,
   formatPriceRange,
