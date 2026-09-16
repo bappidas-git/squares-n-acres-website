@@ -117,7 +117,7 @@ export default function PropertyFormShell({ form }) {
               const Tab = tab.component;
               return (
                 <AdminTabPanel key={tab.key} tabKey={tab.key} value={activeTab}>
-                  <Tab prompt={tab.prompt} label={tab.label} note={tab.note} />
+                  <Tab />
                 </AdminTabPanel>
               );
             })}

@@ -42,6 +42,9 @@ export const HIGHLIGHT_MAX_LENGTH = 140;
 export const FAQ_QUESTION_MIN = 10;
 export const FAQ_QUESTION_MAX = 200;
 
+/** A phrase, not a paragraph — the analyser of prompt 36 matches it in the text. */
+export const FOCUS_KEYWORD_MAX = 120;
+
 /**
  * Script tags in an answer.
  *
@@ -522,13 +525,27 @@ export function validateSimilar(values, { propertyId } = {}) {
       add('similarPropertyIds', 'A listing cannot be similar to itself.');
     }
   }
+  if (new Set(ids.map(String)).size !== ids.length) {
+    add('similarPropertyIds', 'The same listing is chosen twice.');
+  }
 
   return errors;
 }
 
-export function validateVisibility() {
-  // Eighteen booleans: any combination is a valid page (D86).
-  return {};
+export function validateVisibility(values) {
+  const { errors, add } = collector();
+  const visibility = values.sectionVisibility ?? {};
+
+  // Eighteen booleans: any combination is a valid page (D86). What is refused
+  // is a key that is neither — the toggle writes `true`/`false` explicitly, so
+  // anything else reached the record from somewhere the form does not own.
+  for (const [key, value] of Object.entries(visibility)) {
+    if (value !== true && value !== false) {
+      add(`sectionVisibility.${key}`, 'A section is either shown or hidden.');
+    }
+  }
+
+  return errors;
 }
 
 export function validateAgent(values) {
@@ -562,6 +579,9 @@ export function validateSeo(values) {
   if (String(seo.title ?? '').length > 200) add('seo.title', 'Keep the title to 200 characters.');
   if (String(seo.description ?? '').length > 320) {
     add('seo.description', 'Keep the description to 320 characters.');
+  }
+  if (String(seo.focusKeyword ?? '').length > FOCUS_KEYWORD_MAX) {
+    add('seo.focusKeyword', `Keep the focus keyword to ${FOCUS_KEYWORD_MAX} characters.`);
   }
   checkUrl(add, 'seo.canonicalUrl', seo.canonicalUrl, 'The canonical URL');
 
@@ -634,6 +654,17 @@ export function validateForActivation(values) {
   }
   if (values.project?.developerId && isBlank(values.reraNumber)) {
     warn('rera', 'A project listing has no RERA number.');
+  }
+
+  // Every field of `agent` is optional (§6.1) and a listing may lean on the
+  // team member it names, so this is a warning rather than a refusal: what it
+  // catches is the switch turned on over nothing at all.
+  const agent = values.agent ?? {};
+  const reachable = [agent.name, agent.phone, agent.whatsapp, agent.email].some(
+    (value) => !isBlank(value)
+  );
+  if (agent.showOnListing === true && !reachable && isBlank(agent.teamMemberId)) {
+    warn('agent', 'Contact details are switched on, but the listing carries none.');
   }
 
   return { errors, warnings };

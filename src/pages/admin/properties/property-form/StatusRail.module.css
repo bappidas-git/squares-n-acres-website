@@ -279,3 +279,25 @@
     transition: none;
   }
 }
+
+/* The keyboard hint under the save buttons. */
+.shortcut {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.kbd {
+  padding: 1px var(--space-1);
+  border: 1px solid var(--color-border-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+}

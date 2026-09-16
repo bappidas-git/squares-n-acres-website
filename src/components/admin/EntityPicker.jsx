@@ -31,8 +31,11 @@ const sameId = (left, right) => String(left) === String(right);
  * @param {boolean} [props.multiple]
  * @param {number} [props.max]
  * @param {(record: object) => React.ReactNode} [props.renderOption]
+ * @param {(record: object, index: number) => React.ReactNode} [props.renderSelected] a chosen row,
+ *   for the pickers whose choices are cards rather than a name (similar properties)
  * @param {boolean} [props.orderable] drag the chosen records into order
  * @param {Array<object>} [props.selectedRecords] known records for the current ids
+ * @param {React.ReactNode} [props.action] rendered beside the search box
  */
 export default function EntityPicker({
   label = 'Records',
@@ -43,11 +46,13 @@ export default function EntityPicker({
   multiple = true,
   max,
   renderOption,
+  renderSelected,
   orderable = false,
   selectedRecords = [],
   placeholder = 'Search…',
   hint,
   error,
+  action,
   disabled = false,
 }) {
   const id = useId();
@@ -122,7 +127,11 @@ export default function EntityPicker({
     return record?.[labelKey] ?? record?.title ?? record?.name ?? `#${recordId}`;
   };
 
-  const chosen = ids.map((entry) => ({ id: entry, label: labelOf(entry) }));
+  const chosen = ids.map((entry) => ({
+    id: entry,
+    label: labelOf(entry),
+    record: knownRef.current.get(String(entry)) ?? null,
+  }));
 
   return (
     <div className={styles.field}>
@@ -164,6 +173,8 @@ export default function EntityPicker({
         {searching ? <span className={styles.searching}>Searching…</span> : null}
       </div>
 
+      {action ? <div className={styles.action}>{action}</div> : null}
+
       {open && query.trim() && !searching ? (
         <ul className={styles.results} id={`${id}-results`} role="listbox">
           {results.length === 0 ? (
@@ -201,10 +212,20 @@ export default function EntityPicker({
             label={`${label}, in order`}
             disabled={disabled}
             onReorder={(next) => emit(next.map((item) => item.id))}
-            renderItem={(item) => (
+            renderItem={(item, index) => (
               <span className={styles.orderedRow}>
-                <span>{item.label}</span>
-                <button type="button" className={styles.remove} onClick={() => remove(item.id)}>
+                {renderSelected ? (
+                  renderSelected(item.record ?? { id: item.id }, index)
+                ) : (
+                  <span>{item.label}</span>
+                )}
+                <button
+                  type="button"
+                  className={styles.remove}
+                  disabled={disabled}
+                  aria-label={`Remove ${item.label}`}
+                  onClick={() => remove(item.id)}
+                >
                   Remove
                 </button>
               </span>

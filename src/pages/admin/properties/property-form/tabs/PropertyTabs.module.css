@@ -274,3 +274,145 @@
 .link:hover {
   color: var(--color-primary);
 }
+
+/* ------------------------------------------------------------------ *
+ * Prompt 21 — similar properties, section visibility, agent, SEO
+ * ------------------------------------------------------------------ */
+
+/* One listing, in the search results and in the chosen list alike. */
+.similarCard {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-width: 0;
+  text-align: left;
+}
+
+.similarThumb {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+}
+
+.similarThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.similarBody {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.similarTitle {
+  overflow: hidden;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.similarMeta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* The eighteen toggles. A row is 56 px tall before its hint wraps. */
+.visibilityList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.visibilityRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 56px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+@media (min-width: 700px) {
+  .visibilityRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+.visibilitySwitch {
+  min-width: 0;
+}
+
+.visibilityChip {
+  justify-self: start;
+}
+
+@media (min-width: 700px) {
+  .visibilityChip {
+    justify-self: end;
+  }
+}
+
+/* The agent card, as the public page will print it. */
+.agentPreview {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.agentPreviewBody {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.agentPreviewName {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+.agentPreviewList {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  list-style: none;
+}
+
+.agentPreviewList li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  overflow-wrap: anywhere;
+}
+
+.agentPreviewNote {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}

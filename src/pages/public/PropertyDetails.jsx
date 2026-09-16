@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
@@ -11,8 +11,10 @@ import { PropertyDetailSkeleton } from '../../components/common/SkeletonLoaders'
 import { useToast } from '../../components/common/ToastProvider';
 import { validateLeadForm } from '../../utils/validators';
 import { leadStorage } from '../../utils/leadStorage';
+import PATHS from '../../routes/paths';
 import { SITE } from '../../config/site';
 import { isCanceled } from '../../services/apiError';
+import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import PropertyGallery from '../../components/sections/property/PropertyGallery';
 import PropertyOverview from '../../components/sections/property/PropertyOverview';
 import PropertySpecs from '../../components/sections/property/PropertySpecs';
@@ -79,8 +81,19 @@ const getRequestReceivedMessage = (type, config) => {
   return messages[type] || messages.brochure;
 };
 
+/** `?preview=admin` — what the property form's "Preview" link appends (§5.10). */
+const PREVIEW_TOKEN = 'admin';
+
 const PropertyDetails = () => {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const { isAuthenticated } = useAdminAuth();
+
+  // Properties carry no preview token of their own (articles and pages do,
+  // D28): an unpublished listing is readable at `?preview=admin` **and only**
+  // while somebody is signed in to the admin, through the admin endpoint. A
+  // visitor who copies the URL is answered by the public route, which 404s.
+  const previewing = searchParams.get('preview') === PREVIEW_TOKEN && isAuthenticated;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const toast = useToast();
@@ -152,8 +165,11 @@ const PropertyDetails = () => {
     setLoading(true);
     setError(false);
 
-    propertyService
-      .getBySlug(slug, { signal: controller.signal })
+    const read = previewing
+      ? propertyService.adminGetBySlug(slug, { signal: controller.signal })
+      : propertyService.getBySlug(slug, { signal: controller.signal });
+
+    read
       .then(({ data }) => {
         // TEMPORARY: this page still reads the boilerplate's field names.
         // `toLegacyProperty` bridges them until prompts 23–25 rewrite it.
@@ -168,7 +184,7 @@ const PropertyDetails = () => {
 
     window.scrollTo(0, 0);
     return () => controller.abort();
-  }, [slug]);
+  }, [slug, previewing]);
 
   // Check sessionStorage on mount and when property changes
   // Use per-property check so lead form appears on each new property page
@@ -594,6 +610,8 @@ const PropertyDetails = () => {
 
   const savedUserDetails = getSavedUserDetails();
 
+  const unpublished = previewing && property.isActive === false;
+
   return (
     <>
       <Helmet>
@@ -606,7 +624,14 @@ const PropertyDetails = () => {
         {property.seoKeywords?.length > 0 && (
           <meta name="keywords" content={property.seoKeywords.join(', ')} />
         )}
-        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+        <meta
+          name="robots"
+          content={
+            previewing
+              ? 'noindex, nofollow'
+              : 'index, follow, max-image-preview:large, max-snippet:-1'
+          }
+        />
 
         {/* Canonical URL — always set to prevent duplicate content */}
         <link
@@ -662,6 +687,20 @@ const PropertyDetails = () => {
           <script type="application/ld+json">{property.schemaMarkup}</script>
         )}
       </Helmet>
+
+      {previewing ? (
+        <div className={styles.previewBanner} role="status">
+          <Icon icon="mdi:eye-outline" aria-hidden="true" />
+          <span>
+            {unpublished
+              ? 'Admin preview — this property is not published. Visitors see a 404 at this address.'
+              : 'Admin preview — this property is published; visitors see the same page.'}
+          </span>
+          <Link to={PATHS.adminPropertyEdit(property.id)} className={styles.previewLink}>
+            Back to the form
+          </Link>
+        </div>
+      ) : null}
 
       {/* Download Lead Capture Modal */}
       <AnimatePresence>

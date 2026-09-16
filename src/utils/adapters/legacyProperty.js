@@ -2,21 +2,22 @@
  * TEMPORARY — the bridge between the contract record of §6.1 and the field
  * names the un-rewritten property screens still read.
  *
- * `PropertyDetails`, `PropertyListing`, `PropertyForm`, the admin property
- * table and the thirteen detail sections were written against the boilerplate's
- * shape (`gallery`, `location.area`, `type`, `status`, `priceUnit`,
- * `configuration` as strings…). Prompts 18–26 rewrite them against the real
- * shape and delete this file; until then every one of those screens fetches
- * through `toLegacyProperty()` so the pages render real data instead of empty
- * states.
+ * `PropertyDetails`, `PropertyListing`, the admin property table and the
+ * thirteen detail sections were written against the boilerplate's shape
+ * (`gallery`, `location.area`, `type`, `status`, `priceUnit`, `configuration`
+ * as strings…). Prompts 22–26 rewrite them against the real shape and delete
+ * this file; until then each of those screens reads through
+ * `toLegacyProperty()` so the pages render real data instead of empty states.
  *
- * Nothing writes through this adapter: saving a property is disabled until
- * prompts 18–21 build the real form payload.
+ * **Nothing writes through this adapter.** Prompt 21 finished the property form,
+ * which speaks §6.1 throughout, and the form-only mappings the boilerplate's
+ * `PropertyForm.jsx` needed (`publishStatus`, `propertyTypeName`, `statusLabel`,
+ * `category`) went with it.
  *
- * Registered in `docs/PROJECT_STATE.md` → "Pending rewrites" (owners 18–26).
+ * Registered in `docs/PROJECT_STATE.md` → "Pending rewrites" (owners 22–26).
  */
 
-import { CONSTRUCTION_STATUS, NEARBY_CATEGORIES, SPEC_GROUPS } from '../../config/enums';
+import { NEARBY_CATEGORIES, SPEC_GROUPS } from '../../config/enums';
 
 /** `nearbyPlaces[].category` (§6.17) back to the old `type` buckets. */
 const NEARBY_TYPE = {
@@ -177,6 +178,24 @@ const legacyNearbyPlaces = (property) =>
       : NEARBY_CATEGORIES.labelOf?.(place?.category) || '',
   }));
 
+/**
+ * `highlights` (strings, §6.1) in the `{ name, description, icon }` shape the
+ * old "Property Highlights" section reads — the half of D40 the adapter owed
+ * it. A highlight written "Corner unit — two balconies" keeps the clause after
+ * the dash as the tooltip, which is how the boilerplate's records were written.
+ */
+const legacySpecialities = (property) =>
+  list(property.highlights)
+    .filter((entry) => String(entry ?? '').trim() !== '')
+    .map((entry) => {
+      const [name, ...rest] = String(entry).split(/\s+[—–-]\s+/);
+      return {
+        name: name.trim(),
+        description: rest.join(' — ').trim(),
+        icon: 'mdi:check-circle-outline',
+      };
+    });
+
 /** `{ name, url, icon }`. */
 const legacyDocuments = (property) =>
   list(property.documents).map((doc) => ({
@@ -250,12 +269,8 @@ export function toLegacyProperty(property) {
       .filter(Boolean),
     type: property.listingType ?? '',
     status: property.constructionStatus ?? '',
-    statusLabel: CONSTRUCTION_STATUS.labelOf?.(property.constructionStatus) || '',
     propertyType: property.propertyType?.slug ?? '',
     propertyTypeId: property.propertyTypeId ?? property.propertyType?.id ?? null,
-    propertyTypeName: property.propertyType?.name ?? '',
-    category: property.segment ?? '',
-    publishStatus: property.isActive ? 'published' : 'draft',
 
     price,
     priceUnit,
@@ -284,7 +299,7 @@ export function toLegacyProperty(property) {
       : null,
 
     amenities: list(property.amenities),
-    specialities: [],
+    specialities: legacySpecialities(property),
     specifications: legacySpecifications(property),
     constructionSpecs: legacyConstructionSpecs(property),
     floorPlans: legacyFloorPlans(property),
@@ -304,10 +319,6 @@ export function toLegacyProperty(property) {
         .map((badge) => badge?.slug)
         .filter(Boolean),
     ],
-
-    isActive: property.isActive !== false,
-    createdAt: property.createdAt ?? null,
-    updatedAt: property.updatedAt ?? null,
   };
 }
 

@@ -42,7 +42,7 @@ export default function StatusRail({ form, collapsible = false }) {
     draftSavedAt,
     completeness,
     warnings,
-    publicUrl,
+    viewUrl,
     setField,
     setActive,
     save,
@@ -53,7 +53,10 @@ export default function StatusRail({ form, collapsible = false }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const working = saving || busy;
   const tone = completenessTone(completeness.percent);
-  const liveUrl = values.isActive && !isNew ? publicUrl : null;
+  const published = values.isActive === true;
+  // An unpublished listing has no public page, so the link is the admin
+  // preview of it instead — and it exists only once the record has been saved.
+  const openUrl = isNew ? null : viewUrl;
 
   const body = (
     <>
@@ -171,23 +174,32 @@ export default function StatusRail({ form, collapsible = false }) {
           <span className={styles.urlBase}>/properties/</span>
           {values.slug || <span className={styles.urlEmpty}>not set yet</span>}
         </p>
-        {liveUrl ? (
-          <Button
-            variant="outline"
-            size="sm"
-            href={liveUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            icon={<Icon icon="mdi:open-in-new" width="16" height="16" />}
-          >
-            View on site
-          </Button>
+        {openUrl ? (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              href={openUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              icon={
+                <Icon
+                  icon={published ? 'mdi:open-in-new' : 'mdi:eye-outline'}
+                  width="16"
+                  height="16"
+                />
+              }
+            >
+              {published ? 'View on site' : 'Preview'}
+            </Button>
+            {published ? null : (
+              <p className={styles.note}>
+                Only you see this — the page answers 404 to everybody else until it is published.
+              </p>
+            )}
+          </>
         ) : (
-          <p className={styles.note}>
-            {isNew
-              ? 'The public page exists once the listing is saved.'
-              : 'The public page is live once the listing is published.'}
-          </p>
+          <p className={styles.note}>The page exists once the listing is saved.</p>
         )}
       </section>
 
@@ -212,7 +224,16 @@ export default function StatusRail({ form, collapsible = false }) {
             Actions
           </h2>
 
-          <SaveMenu save={save} working={working} isNew={isNew} />
+          <SaveMenu save={save} working={working} isNew={isNew} published={published} />
+
+          <p className={styles.shortcut}>
+            <kbd className={styles.kbd}>Ctrl</kbd>
+            <span aria-hidden="true">/</span>
+            <kbd className={styles.kbd}>⌘</kbd>
+            <span>+</span>
+            <kbd className={styles.kbd}>S</kbd>
+            <span>saves without leaving the tab.</span>
+          </p>
 
           {isNew ? null : (
             <div className={styles.secondary}>
@@ -283,7 +304,7 @@ export default function StatusRail({ form, collapsible = false }) {
  * genuinely different ones — publish-then-look, and store-without-publishing —
  * behind a menu (decision logged in `docs/DECISIONS.md`).
  */
-function SaveMenu({ save, working, isNew }) {
+function SaveMenu({ save, working, isNew, published }) {
   const [open, setOpen] = useState(false);
   const wrapper = useRef(null);
 
@@ -340,8 +361,13 @@ function SaveMenu({ save, working, isNew }) {
             className={styles.menuItem}
             onClick={() => run('view')}
           >
-            <Icon icon="mdi:open-in-new" width="16" height="16" aria-hidden="true" />
-            Save &amp; view on site
+            <Icon
+              icon={published ? 'mdi:open-in-new' : 'mdi:eye-outline'}
+              width="16"
+              height="16"
+              aria-hidden="true"
+            />
+            {published ? 'Save & view on site' : 'Save & preview'}
           </button>
           <button
             type="button"

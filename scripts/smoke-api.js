@@ -722,6 +722,9 @@ async function targetedChecks() {
     ? (await api('GET', `/admin/properties/${fixtureId}`, { token: admin })).json?.data
     : null;
 
+  // The slug of the fixture the block below switches off, for the admin preview.
+  let inactiveSlug = null;
+
   if (stored) {
     const patched = await api('PATCH', `/admin/properties/${stored.id}`, {
       token: admin,
@@ -758,6 +761,7 @@ async function targetedChecks() {
     });
     const hidden = await api('GET', `/properties/slug/${replaced.json?.data?.slug}`);
     check('slug.404-for-inactive', hidden.status === 404, `got ${hidden.status}`);
+    inactiveSlug = replaced.json?.data?.slug ?? null;
   }
 
   const threeBhk = await api('GET', '/properties?bedrooms=3&perPage=50');
@@ -821,6 +825,37 @@ async function targetedChecks() {
     slugCheck.json?.data?.available === false && Boolean(slugCheck.json?.data?.suggestion),
     JSON.stringify(slugCheck.json?.data)
   );
+
+  // The admin preview of an unpublished listing (§5.10): the public route says
+  // 404 and the admin route by the same slug answers with the record.
+  const bySlug = await api('GET', '/admin/properties/slug/lakeview-heights-3-bhk-whitefield', {
+    token: admin,
+  });
+  check(
+    'admin-slug.reads-by-slug',
+    bySlug.status === 200 && bySlug.json?.data?.slug === 'lakeview-heights-3-bhk-whitefield',
+    `got ${bySlug.status}`
+  );
+
+  const bySlugAnonymous = await api(
+    'GET',
+    '/admin/properties/slug/lakeview-heights-3-bhk-whitefield'
+  );
+  check(
+    'admin-slug.401-without-token',
+    bySlugAnonymous.status === 401,
+    `got ${bySlugAnonymous.status}`
+  );
+
+  if (inactiveSlug) {
+    // The block above switched this fixture off, so it is the unpublished one.
+    const preview = await api('GET', `/admin/properties/slug/${inactiveSlug}`, { token: admin });
+    check(
+      'admin-slug.previews-inactive',
+      preview.status === 200 && preview.json?.data?.isActive === false,
+      `got ${preview.status}`
+    );
+  }
 
   const duplicate = await api('POST', '/admin/properties/1/duplicate', { token: admin });
   check(
