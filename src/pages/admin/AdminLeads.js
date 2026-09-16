@@ -40,12 +40,23 @@ import useDebounce from '../../hooks/useDebounce';
 import { useLeadNotifications } from '../../contexts/LeadNotificationsContext';
 import { useToast } from '../../components/common/ToastProvider';
 import { toneStyles } from '../../components/ui/tones';
-import {
-  LEAD_STATUS_CONFIG as statusConfig,
-  LEAD_STATUS_OPTIONS as statusOptions,
-  LEAD_SOURCE_OPTIONS as sourceOptions,
-  formatLeadSource as formatSource,
-} from '../../config/adminConstants';
+import { LEAD_SOURCES, LEAD_STATUS } from '../../config/enums';
+
+/**
+ * The lead vocabulary, from the one place that owns it (§6.17).
+ *
+ * This screen is rewritten in prompt 29; until then it reads `LEAD_STATUS` and
+ * `LEAD_SOURCES` in the shape it already speaks — a map by value, an ordered
+ * list of values, and a label for any source a record carries.
+ */
+const statusConfig = Object.fromEntries(
+  LEAD_STATUS.entries.map(({ value, ...rest }) => [value, rest])
+);
+const statusOptions = LEAD_STATUS.values;
+const formatSource = LEAD_SOURCES.labelOfAny;
+
+/** The source filter, with the "everything" entry the select needs first. */
+const sourceOptions = [{ value: 'all', label: 'All Sources' }, ...LEAD_SOURCES.options];
 
 // Safe date formatting — never shows "Invalid Date"
 const formatDate = (dateStr, options) => {

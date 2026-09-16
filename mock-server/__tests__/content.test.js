@@ -299,6 +299,49 @@ describe('master data', () => {
     });
   });
 
+  it('counts the listings that carry an amenity, a badge and a property type', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const amenity = await request('GET', '/admin/amenities/1', { token });
+      const badge = await request('GET', '/admin/badges/1', { token });
+      const type = await request('GET', '/admin/property-types/1', { token });
+
+      for (const answer of [amenity, badge, type]) {
+        assert.equal(typeof answer.body.data.propertyCount, 'number');
+      }
+      assert.ok(amenity.body.data.propertyCount >= 1, 'the seed puts amenity 1 on a listing');
+
+      // Only live listings count: hiding one takes it off every counter.
+      await request('PATCH', '/admin/properties/1', { token, body: { isActive: false } });
+
+      const after = await request('GET', '/admin/amenities/1', { token });
+      assert.equal(after.body.data.propertyCount, amenity.body.data.propertyCount - 1);
+    });
+  });
+
+  it('reports what a delete would refuse over, on request (`withUsage`)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const quiet = await request('GET', '/admin/property-types/1', { token });
+      assert.ok(!('usedBy' in quiet.body.data), 'the usage list is opt-in');
+
+      const asked = await request('GET', '/admin/property-types/1?withUsage=true', { token });
+      assert.ok(Array.isArray(asked.body.data.usedBy));
+      assert.ok(asked.body.data.usedBy.some((usage) => usage.type === 'property'));
+
+      // The same answer the 409 of a delete would have carried.
+      const refused = await request('DELETE', '/admin/property-types/1', { token });
+      assert.equal(refused.status, 409);
+      assert.deepEqual(refused.body.data.usedBy, asked.body.data.usedBy);
+
+      // A resource nothing can depend on has nothing to report.
+      const bank = await request('GET', '/admin/banks/1?withUsage=true', { token });
+      assert.ok(!('usedBy' in bank.body.data));
+    });
+  });
+
   it('deletes a bank without complaint — nothing depends on one', async () => {
     await withServer(async ({ request, login }) => {
       const token = await login(ADMIN);

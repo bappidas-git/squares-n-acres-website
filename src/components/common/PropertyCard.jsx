@@ -4,17 +4,17 @@ import { Link } from 'react-router-dom';
 
 import PATHS from '../../routes/paths';
 import styles from './PropertyCard.module.css';
-import { Area, Price } from '../ui';
+import { Area, Chip, Price } from '../ui';
 import { CONSTRUCTION_STATUS } from '../../config/enums';
 import { EMPTY, formatBhk } from '../../utils/format';
-import { toneStyles } from '../ui/tones';
 
 /**
  * One property, as the listing, the featured row and the similar row show it.
  *
  * It reads the contract record of §6.1 directly: the cover comes from
- * `images[].isCover`, the badges are master data with their own tone and icon,
- * and the price knows whether it is a sale or a monthly rent (D33).
+ * `images[].isCover`, the badges are the master-data records the API embeds —
+ * each painted from its own tone token by `ui/Chip` (§2.4, §6.4) — and the
+ * price knows whether it is a sale or a monthly rent (D33).
  *
  * What the boilerplate card did and this one does not: no autoplaying videos
  * in a grid, no per-card image carousel, and no heart button that forgot what
@@ -76,35 +76,22 @@ const PropertyCard = memo(({ property }) => {
 
         {badges.length > 0 || property.isVerified ? (
           <div className={styles.tagStrip}>
-            {badges.map((badge) => {
-              const tone = toneStyles(badge.color || 'neutral');
-              return (
-                <span
-                  key={badge.id}
-                  className={styles.tag}
-                  style={{
-                    background: tone.background,
-                    color: tone.color,
-                    borderColor: tone.border,
-                  }}
-                >
-                  {badge.icon ? <Icon icon={badge.icon} style={{ fontSize: 12 }} /> : null}
-                  {badge.name}
-                </span>
-              );
-            })}
-            {property.isVerified ? (
-              <span
-                className={styles.tag}
-                style={{
-                  background: toneStyles('success').background,
-                  color: toneStyles('success').color,
-                  borderColor: toneStyles('success').border,
-                }}
+            {badges.map((badge) => (
+              <Chip
+                key={badge.id}
+                tone={badge.color || 'neutral'}
+                icon={badge.icon ? <Icon icon={badge.icon} width="12" height="12" /> : null}
               >
-                <Icon icon="mdi:shield-check-outline" style={{ fontSize: 12 }} />
+                {badge.name}
+              </Chip>
+            ))}
+            {property.isVerified ? (
+              <Chip
+                tone="success"
+                icon={<Icon icon="mdi:shield-check-outline" width="12" height="12" />}
+              >
                 Verified
-              </span>
+              </Chip>
             ) : null}
           </div>
         ) : null}

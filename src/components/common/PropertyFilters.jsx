@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import styles from './PropertyFilters.module.css';
+import { usePropertyTypes } from '../../hooks/useMasterData';
 
 const BHK_OPTIONS = ['1 BHK', '2 BHK', '3 BHK', '4 BHK', '4.5 BHK', '5+ BHK'];
 
@@ -24,11 +25,6 @@ const PRICE_RANGES = [
   { label: '₹1Cr - 2Cr', min: 10000000, max: 20000000 },
   { label: '₹2Cr - 5Cr', min: 20000000, max: 50000000 },
   { label: '₹5Cr+', min: 50000000, max: Infinity },
-];
-
-const PROPERTY_TYPES = [
-  { label: 'Apartment', value: 'apartment' },
-  { label: 'Villa', value: 'villa' },
 ];
 
 const POSSESSION_STATUSES = [
@@ -69,6 +65,14 @@ const PropertyFilters = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  // The two hardcoded types this panel used to offer are now the seventeen of
+  // §6.3, read from the master-data context (D93). The select speaks ids, which
+  // is the vocabulary `GET /properties` filters on (§5.7).
+  const propertyTypes = usePropertyTypes();
+  const propertyTypeOptions = useMemo(
+    () => propertyTypes.map((type) => ({ value: String(type.id), label: type.name })),
+    [propertyTypes]
+  );
   const [searchParams, setSearchParams] = useSearchParams();
   const [panelOpen, setPanelOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -192,11 +196,14 @@ const PropertyFilters = ({
       filters.locations.forEach((l) => chips.push({ key: 'locations', value: l, label: l }));
     }
     if (filters.propertyType && !preFilters.propertyType) {
-      const pt = PROPERTY_TYPES.find((t) => t.value === filters.propertyType);
+      const type = propertyTypes.find(
+        (entry) =>
+          String(entry.id) === String(filters.propertyType) || entry.slug === filters.propertyType
+      );
       chips.push({
         key: 'propertyType',
         value: filters.propertyType,
-        label: pt?.label || filters.propertyType,
+        label: type?.name || filters.propertyType,
       });
     }
     if (filters.status && !preFilters.status) {
@@ -215,7 +222,7 @@ const PropertyFilters = ({
       });
     }
     return chips;
-  }, [filters, preFilters]);
+  }, [filters, preFilters, propertyTypes]);
 
   const togglePanel = () => {
     if (isMobile) {
@@ -322,7 +329,7 @@ const PropertyFilters = ({
                 sx={selectSx}
               >
                 <MenuItem value="">All Types</MenuItem>
-                {PROPERTY_TYPES.map((pt) => (
+                {propertyTypeOptions.map((pt) => (
                   <MenuItem key={pt.value} value={pt.value}>
                     {pt.label}
                   </MenuItem>
@@ -411,7 +418,7 @@ const PropertyFilters = ({
                         sx={selectSx}
                       >
                         <MenuItem value="">All Types</MenuItem>
-                        {PROPERTY_TYPES.map((pt) => (
+                        {propertyTypeOptions.map((pt) => (
                           <MenuItem key={pt.value} value={pt.value}>
                             {pt.label}
                           </MenuItem>

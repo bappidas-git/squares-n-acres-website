@@ -48,25 +48,57 @@ const TYPE_LABEL = {
  * better, it makes them wrong, so the API refuses and names what is in the way.
  * This dialog turns that list into links: unlink them, come back, delete.
  *
+ * The same list answers a second question — "are you sure?" — for a change the
+ * API *does* allow but that reaches further than the form suggests: moving a
+ * property type to another segment. Pass `onConfirm` and it becomes a confirm
+ * over the usages instead of a dead end.
+ *
  * @param {object} props
  * @param {boolean} props.open
  * @param {() => void} props.onClose
  * @param {string} props.title the record the admin tried to delete
  * @param {string} [props.message] the API's message
  * @param {Array<{type: string, id: number|string, title: string}>} props.usedBy
+ * @param {string} [props.heading] the dialog's own title
+ * @param {string} [props.hint] the line under the list
+ * @param {() => void} [props.onConfirm] renders the confirm button
+ * @param {string} [props.confirmLabel]
+ * @param {boolean} [props.loading]
  */
-export default function DeleteGuardDialog({ open, onClose, title, message, usedBy = [] }) {
+export default function DeleteGuardDialog({
+  open,
+  onClose,
+  title,
+  message,
+  usedBy = [],
+  heading = 'Still in use',
+  hint = 'Remove the reference on each record above, then delete this one.',
+  onConfirm,
+  confirmLabel = 'Continue',
+  loading = false,
+}) {
   return (
     <Modal
       open={open}
       onClose={onClose}
       size="sm"
       mobile="fullscreen"
-      title="Still in use"
+      title={heading}
       footer={
-        <Button variant="primary" onClick={onClose}>
-          Got it
-        </Button>
+        onConfirm ? (
+          <>
+            <Button variant="ghost" onClick={onClose} disabled={loading}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={onConfirm} loading={loading}>
+              {confirmLabel}
+            </Button>
+          </>
+        ) : (
+          <Button variant="primary" onClick={onClose}>
+            Got it
+          </Button>
+        )
       }
     >
       <p className={styles.lead}>
@@ -96,9 +128,7 @@ export default function DeleteGuardDialog({ open, onClose, title, message, usedB
         </ul>
       ) : null}
 
-      <p className={styles.hint}>
-        Remove the reference on each record above, then delete this one.
-      </p>
+      {hint ? <p className={styles.hint}>{hint}</p> : null}
     </Modal>
   );
 }

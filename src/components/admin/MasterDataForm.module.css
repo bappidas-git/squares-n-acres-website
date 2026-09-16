@@ -29,3 +29,9 @@
 .formError {
   margin: 0;
 }
+
+/* The id in the box is not an icon this app can draw. */
+.iconUnknown {
+  color: var(--color-text-muted);
+  opacity: 0.55;
+}

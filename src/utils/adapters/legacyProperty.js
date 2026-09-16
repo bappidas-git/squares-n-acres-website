@@ -252,6 +252,7 @@ export function toLegacyProperty(property) {
     status: property.constructionStatus ?? '',
     statusLabel: CONSTRUCTION_STATUS.labelOf?.(property.constructionStatus) || '',
     propertyType: property.propertyType?.slug ?? '',
+    propertyTypeId: property.propertyTypeId ?? property.propertyType?.id ?? null,
     propertyTypeName: property.propertyType?.name ?? '',
     category: property.segment ?? '',
     publishStatus: property.isActive ? 'published' : 'draft',

@@ -20,6 +20,8 @@ export const INDIAN_MOBILE_PATTERN = /^(\+91)?[6-9]\d{9}$/;
 export const SLUG_PATTERN = /^[a-z0-9-]+$/;
 export const URL_PATTERN = /^https?:\/\/[^\s]+$/i;
 export const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+/** An Iconify MDI id — the only icon vocabulary the app uses (§3.1). */
+export const ICON_ID_PATTERN = /^mdi:[a-z0-9-]+$/;
 
 const isPlainObject = (value) =>
   typeof value === 'object' && value !== null && !Array.isArray(value);

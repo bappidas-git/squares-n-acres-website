@@ -33,6 +33,10 @@ const FaqManager = lazy(() => import('../pages/admin/FaqManager'));
 const LocalitiesPage = lazy(() => import('../pages/admin/master-data/LocalitiesPage'));
 const LocalityFormPage = lazy(() => import('../pages/admin/master-data/LocalityFormPage'));
 const CitiesPage = lazy(() => import('../pages/admin/master-data/CitiesPage'));
+const PropertyTypesPage = lazy(() => import('../pages/admin/master-data/PropertyTypesPage'));
+const AmenitiesPage = lazy(() => import('../pages/admin/master-data/AmenitiesPage'));
+const BadgesPage = lazy(() => import('../pages/admin/master-data/BadgesPage'));
+const BanksPage = lazy(() => import('../pages/admin/master-data/BanksPage'));
 const AdminPartners = lazy(() => import('../pages/admin/AdminPartners'));
 const AdminSeo = lazy(() => import('../pages/admin/AdminSeo'));
 const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
@@ -97,13 +101,18 @@ export const ADMIN_ROUTES = [
     <LocalityFormPage />
   ),
   page('master-data/cities', 'Cities', ['masterData', 'view'], <CitiesPage />),
-  soon('master-data/property-types', 'Property types', ['masterData', 'view'], 15),
-  soon('master-data/amenities', 'Amenities', ['masterData', 'view'], 15),
-  soon('master-data/badges', 'Badges', ['masterData', 'view'], 15),
+  page(
+    'master-data/property-types',
+    'Property types',
+    ['masterData', 'view'],
+    <PropertyTypesPage />
+  ),
+  page('master-data/amenities', 'Amenities', ['masterData', 'view'], <AmenitiesPage />),
+  page('master-data/badges', 'Badges', ['masterData', 'view'], <BadgesPage />),
   soon('master-data/developers', 'Developers', ['masterData', 'view'], 16),
   soon('master-data/developers/add', 'Add developer', ['masterData', 'create'], 16),
   soon('master-data/developers/edit/:id', 'Edit developer', ['masterData', 'edit'], 16),
-  soon('master-data/banks', 'Banks', ['masterData', 'view'], 15),
+  page('master-data/banks', 'Banks', ['masterData', 'view'], <BanksPage />),
 
   soon('testimonials', 'Testimonials', ['content', 'view'], 17),
   soon('team', 'Team', ['content', 'view'], 17),

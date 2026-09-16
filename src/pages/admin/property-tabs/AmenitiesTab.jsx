@@ -17,9 +17,19 @@ import {
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import IconPicker from '../../../components/admin/IconPicker';
-import { AMENITY_CATEGORIES } from './constants';
+import { AMENITY_CATEGORIES } from '../../../config/enums';
+import { useAmenitiesGrouped } from '../../../hooks/useMasterData';
 
+/**
+ * The amenities tab of the property form.
+ *
+ * The tick list is master data now (§6.4): whatever the admin has made active,
+ * grouped by category, in its order — not the five hardcoded groups this tab
+ * used to carry. What it stores is unchanged until prompt 20 moves the form to
+ * `amenityIds`.
+ */
 const AmenitiesTab = ({ formData, updateField }) => {
+  const groups = useAmenitiesGrouped();
   const [customDialog, setCustomDialog] = useState(false);
   const [customAmenity, setCustomAmenity] = useState({
     name: '',
@@ -42,12 +52,10 @@ const AmenitiesTab = ({ formData, updateField }) => {
 
   const isSelected = (name) => formData.amenities.some((a) => a.name === name);
 
-  const customAmenities = formData.amenities.filter(
-    (a) =>
-      !Object.values(AMENITY_CATEGORIES).some((cat) =>
-        cat.items.some((item) => item.name === a.name)
-      )
-  );
+  // Anything ticked that the master list no longer offers — an amenity typed
+  // into the dialog below, or one an editor has since deleted.
+  const known = new Set(groups.flatMap((group) => group.items.map((item) => item.name)));
+  const customAmenities = formData.amenities.filter((amenity) => !known.has(amenity.name));
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -66,30 +74,33 @@ const AmenitiesTab = ({ formData, updateField }) => {
         </Button>
       </Box>
 
-      {Object.entries(AMENITY_CATEGORIES).map(([catKey, category]) => (
-        <Paper key={catKey} sx={{ p: 2, borderRadius: 2 }}>
+      {groups.map((group) => (
+        <Paper key={group.category} sx={{ p: 2, borderRadius: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-            <Icon
-              icon={category.icon}
-              style={{ fontSize: 20, color: 'var(--color-primary-dark)' }}
-            />
+            <Icon icon={group.icon} style={{ fontSize: 20, color: 'var(--color-primary-dark)' }} />
             <Typography
               variant="subtitle2"
               sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}
             >
-              {category.label}
+              {group.label}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            {category.items.map((amenity) => {
+            {group.items.map((amenity) => {
               const selected = isSelected(amenity.name);
               return (
                 <Chip
-                  key={amenity.name}
+                  key={amenity.id}
                   icon={<Icon icon={amenity.icon} style={{ fontSize: 16 }} />}
                   label={amenity.name}
                   clickable
-                  onClick={() => toggleAmenity({ ...amenity, category: catKey })}
+                  onClick={() =>
+                    toggleAmenity({
+                      icon: amenity.icon,
+                      name: amenity.name,
+                      category: group.category,
+                    })
+                  }
                   sx={{
                     fontWeight: 500,
                     bgcolor: selected ? 'var(--color-charcoal)' : 'var(--color-surface)',
@@ -177,9 +188,9 @@ const AmenitiesTab = ({ formData, updateField }) => {
               label="Category"
               onChange={(e) => setCustomAmenity((prev) => ({ ...prev, category: e.target.value }))}
             >
-              {Object.entries(AMENITY_CATEGORIES).map(([key, cat]) => (
-                <MenuItem key={key} value={key}>
-                  {cat.label}
+              {AMENITY_CATEGORIES.options.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
                 </MenuItem>
               ))}
             </Select>

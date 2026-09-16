@@ -1,7 +1,8 @@
 /**
  * Semantic "tones" replace the colour literals that used to live in data
- * constants (`adminConstants.js`, `TAG_OPTIONS`, role maps, score bands…).
- * A record stores a tone name; the component asks for its styles.
+ * constants (`TAG_OPTIONS`, role maps, score bands…) and the hex values a
+ * badge used to carry. A record stores a tone name; the component asks for
+ * its styles.
  */
 
 export const TONES = ['neutral', 'primary', 'success', 'warning', 'error', 'info'];

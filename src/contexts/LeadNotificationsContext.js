@@ -13,7 +13,6 @@ import leadService from '../services/leadService';
 import storage from '../utils/storage';
 import { Button } from '../components/ui';
 import { LEAD_SOURCES } from '../config/enums';
-import { formatLeadSource } from '../config/adminConstants';
 import { useToast } from '../components/common/ToastProvider';
 
 /**
@@ -49,7 +48,7 @@ export const useLeadNotifications = () => {
 };
 
 /** The canonical label first; an older stored value still reads sensibly. */
-const sourceLabel = (source) => LEAD_SOURCES.labelOf(source) || formatLeadSource(source);
+const sourceLabel = (source) => LEAD_SOURCES.labelOfAny(source);
 
 export const LeadNotificationsProvider = ({ children }) => {
   const toast = useToast();

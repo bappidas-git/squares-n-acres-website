@@ -77,21 +77,6 @@ video.image {
   flex-wrap: wrap;
 }
 
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-family: var(--font-body);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  border: 1px solid;
-  backdrop-filter: blur(4px);
-  white-space: nowrap;
-}
-
 .heartBtn {
   position: absolute;
   top: 12px;

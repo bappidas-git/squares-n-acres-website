@@ -285,14 +285,14 @@ const LOCALITY_ZONES = makeEnum([
 ]);
 
 const FAQ_CATEGORIES = makeEnum([
-  { value: 'buying', label: 'Buying' },
-  { value: 'selling', label: 'Selling' },
-  { value: 'renting', label: 'Renting' },
-  { value: 'home-loan', label: 'Home Loans' },
-  { value: 'legal', label: 'Legal' },
-  { value: 'rera', label: 'RERA' },
-  { value: 'nri', label: 'NRI' },
-  { value: 'general', label: 'General' },
+  { value: 'buying', label: 'Buying', tone: 'success' },
+  { value: 'selling', label: 'Selling', tone: 'warning' },
+  { value: 'renting', label: 'Renting', tone: 'primary' },
+  { value: 'home-loan', label: 'Home Loans', tone: 'info' },
+  { value: 'legal', label: 'Legal', tone: 'error' },
+  { value: 'rera', label: 'RERA', tone: 'error' },
+  { value: 'nri', label: 'NRI', tone: 'info' },
+  { value: 'general', label: 'General', tone: 'neutral' },
 ]);
 
 const PARTNER_CATEGORIES = makeEnum([
@@ -308,13 +308,18 @@ const PARTNER_CATEGORIES = makeEnum([
  * ------------------------------------------------------------------ */
 
 const LEAD_STATUS = makeEnum([
-  { value: 'new', label: 'New', tone: 'info' },
-  { value: 'contacted', label: 'Contacted', tone: 'warning' },
-  { value: 'qualified', label: 'Qualified', tone: 'info' },
-  { value: 'site-visit', label: 'Site Visit', tone: 'primary' },
-  { value: 'negotiation', label: 'Negotiation', tone: 'warning' },
-  { value: 'converted', label: 'Converted', tone: 'success' },
-  { value: 'lost', label: 'Lost', tone: 'error' },
+  { value: 'new', label: 'New', tone: 'info', icon: 'mdi:new-box' },
+  { value: 'contacted', label: 'Contacted', tone: 'warning', icon: 'mdi:phone-check-outline' },
+  { value: 'qualified', label: 'Qualified', tone: 'info', icon: 'mdi:check-decagram-outline' },
+  {
+    value: 'site-visit',
+    label: 'Site Visit',
+    tone: 'primary',
+    icon: 'mdi:map-marker-check-outline',
+  },
+  { value: 'negotiation', label: 'Negotiation', tone: 'warning', icon: 'mdi:handshake-outline' },
+  { value: 'converted', label: 'Converted', tone: 'success', icon: 'mdi:check-circle-outline' },
+  { value: 'lost', label: 'Lost', tone: 'error', icon: 'mdi:close-circle-outline' },
 ]);
 
 /** The funnel, in order; `lost` is terminal and sits outside it. */
@@ -389,6 +394,26 @@ const LEGACY_LEAD_SOURCE_MAP = {
   detailed_pricing: 'price-request',
   'bank-eligibility-check': 'bank-eligibility',
   'financial-assessment': 'financial-assessment',
+};
+
+/**
+ * The label of any lead source, including the legacy values of D20 and anything
+ * an older record still carries: the canonical label first, then the legacy
+ * map, then a title-cased fallback — so a lead never renders as
+ * `flexible_workspace`.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+LEAD_SOURCES.labelOfAny = (value) => {
+  if (!value) return '';
+  const canonical = LEGACY_LEAD_SOURCE_MAP[value] ?? value;
+  return (
+    LEAD_SOURCES.labelOf(canonical) ||
+    String(value)
+      .replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+  );
 };
 
 const LEAD_ACTIVITY_TYPES = makeEnum([

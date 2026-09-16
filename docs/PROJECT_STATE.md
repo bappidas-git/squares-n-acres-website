@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 14 — Localities and cities: admin CRUD and public locality pages Next prompt: 15
+Last prompt executed: 15 — Master data: property types, amenities, badges and banks Next prompt: 16
 
 ## Executed prompts
 
@@ -20,7 +20,8 @@ Last prompt executed: 14 — Localities and cities: admin CRUD and public locali
 | 11  | Frontend data layer, hooks, contexts and page rewiring        | `d60193e`                                                                          | 2026-09-16 |
 | 12  | Auth, admin shell, RBAC routes, notifications and profile     | `d6128b5`                                                                          | 2026-09-16 |
 | 13  | Admin UI kit, `MasterDataPage`, users page, IconPicker fixes  | `651a8cc`                                                                          | 2026-09-16 |
-| 14  | Localities and cities: admin CRUD, public index and guide     | HEAD of this branch (a commit cannot contain its own hash — prompt 15 fills it in) | 2026-09-16 |
+| 14  | Localities and cities: admin CRUD, public index and guide     | `b3813a1`                                                                          | 2026-09-16 |
+| 15  | Master data: property types, amenities, badges and banks      | HEAD of this branch (a commit cannot contain its own hash — prompt 16 fills it in) | 2026-09-16 |
 
 ## Baseline (prompt 01)
 
@@ -275,7 +276,11 @@ The boilerplate's own endpoint surface stays inventoried in
 | Locality SEO placeholder card                  | The locality form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through a save untouched in the meantime.                                                                                                                                                                                                                              | 36           |
 | Locality/localities Helmet titles              | `Localities.jsx` and `LocalityDetail.jsx` set `<title>`/`description` through `react-helmet-async`; `<Seo>` replaces both, with the §9.5 templates and the JSON-LD graph.                                                                                                                                                                                                                                    | 38           |
 | `PropertyListing` client-side filter and sort  | The page asks for one page of `perPage=100` and narrows, sorts and paginates in the browser through `toLegacyProperty`. The listing engine is server-driven (D94) from prompt 26.                                                                                                                                                                                                                            | 26           |
-| `AdminPlaceholderPage` routes                  | Twenty-six admin routes of `src/routes/adminRouteConfig.js` render `AdminPlaceholderPage` with the number of the prompt that writes the screen (13–39). Each one disappears when its owner prompt lands; the component itself must not exist after prompt 43.                                                                                                                                                | 13–39        |
+| Property-type SEO placeholder card             | The property-type form ends in an `Alert` saying the SEO panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched so nothing is lost meanwhile.                                                                                                                                                                                                                           | 36           |
+| `PropertyFilters` type select                  | The legacy filter panel now reads `usePropertyTypes()` but still keeps its own BHK, price-range, location, status and developer lists and filters in the browser. Prompt 26 replaces the panel with the server-driven one.                                                                                                                                                                                   | 26           |
+| `AmenitiesTab` stores amenity objects          | The property form's amenities tab reads the master list through `useAmenitiesGrouped()` but still stores `{ icon, name, category }` objects on the draft rather than `amenityIds[]`.                                                                                                                                                                                                                         | 20           |
+| `FinanceGuide` bank cards                      | The cards read `useBanks()` and the headline figures are computed from them, but the section is still one 1 800-line component with its own EMI maths and lead form.                                                                                                                                                                                                                                         | 25           |
+| `AdminPlaceholderPage` routes                  | Eighteen admin routes of `src/routes/adminRouteConfig.js` render `AdminPlaceholderPage` with the number of the prompt that writes the screen (13–39). Each one disappears when its owner prompt lands; the component itself must not exist after prompt 43.                                                                                                                                                  | 13–39        |
 
 ## Known issues (open) — id, description, found by, owner prompt
 
@@ -284,7 +289,7 @@ The boilerplate's own endpoint surface stays inventoried in
 | Id                        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Found by                  | Owner prompt                |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | --------------------------- |
 | BUG-01                    | Every write uses `PUT` with partial payloads (11 call sites across property/lead/article/FAQ/neighborhood/partner/user toggles) **Prompt 11 moved every write it touched to the right verb**: toggles, reorders and lead-status changes use `PATCH`, bulk actions use `POST /admin/<resource>/bulk`, and `PUT` is reserved for a full-record form save. The row closes when prompts 18–40 confirm the remaining forms.                                                                                                                                                                                                                               | master spec, confirmed 01 | 11, 14–22, 29, 33, 40       |
-| BUG-05                    | PropertyDetails renders sections with defaults/placeholders (`DEFAULT_BANKS`, `'—'`, `Document`, "Map view available on live version")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | master spec, confirmed 01 | 23–25                       |
+| BUG-05 (partially closed) | PropertyDetails renders sections with defaults/placeholders (`DEFAULT_BANKS`, `'—'`, `Document`, "Map view available on live version"). **The bank half is closed in 15**: `DEFAULT_BANKS` — six real brands with invented rates — is deleted with `src/config/adminConstants.js`, `FinanceGuide` reads `useBanks()`, and with no active bank the section hides itself instead of inventing lenders. The remaining placeholders belong to 23–25.                                                                                                                                                                                                     | master spec, confirmed 01 | 23–25                       |
 | BUG-06                    | `StickyNav` ignores toggles; `visibleSections` logic duplicated; "Construction" targets `construction-specs`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | master spec, confirmed 01 | 23                          |
 | BUG-07 (server side done) | `SimilarProperties` ignores `similarPropertyIds` and fetches by type. **Prompt 08 built the endpoint**: `GET /properties/:id/similar` answers with the editor's picks first (skipping inactive ones) and fills to six by listing type and locality or property type; the component moves onto it in 25 **Closed on the client in 11**: `SimilarProperties` calls `GET /properties/:id/similar`.                                                                                                                                                                                                                                                      | master spec, confirmed 01 | 08, 25                      |
 | BUG-08                    | `brochureUrl`, `floorPlanPdfUrl`, `documents[].url` never delivered after lead capture                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | master spec, confirmed 01 | 25, 28                      |
@@ -300,28 +305,28 @@ The boilerplate's own endpoint surface stays inventoried in
 
 ### Additional defects of `00_MASTER_CONTEXT.md` §11
 
-| Id                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Found by                                                                                                                                            | Owner prompt                                    |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| ADD-01                  | `.env` committed with the Cloudways URL; no `.env.example`; README links a non-existent `API_DOCUMENTATION.md`; README says Node 16+                                                                                                                                                                                                                                                                                                                                                                                                                                       | master spec, confirmed 01                                                                                                                           | 02                                              |
-| ADD-02                  | `dev` script equals `start` (no json-server anywhere); `devDependencies` empty; no ESLint/Prettier config beyond CRA                                                                                                                                                                                                                                                                                                                                                                                                                                                       | master spec                                                                                                                                         | 01 (tooling half **closed**), 06 (`dev`/`mock`) |
-| ADD-03                  | `public/index.html` references a non-existent `favicon.ico`; `robots.txt` allows everything with no sitemap; no `manifest.json`                                                                                                                                                                                                                                                                                                                                                                                                                                            | master spec, confirmed 01                                                                                                                           | 02                                              |
-| ADD-04                  | `@mui/icons-material` and `web-vitals` are unused dependencies (0 imports each)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | master spec, confirmed 01                                                                                                                           | 03, 41                                          |
-| ADD-06 (partial)        | **Closed in 04:** the three scroll-hide copies (now `useScrollDirection`; `useThrottledScroll` stays for `BackToTop`), the 13 local `Section` components (now `ui/Section`), and `tagColors` vs `TAG_OPTIONS` (`PropertyCard` reads `TAG_OPTIONS` tones). **Still open:** the five `formatPrice` and three `formatDate` copies still exist at their call sites — `src/utils/format.js` is the single implementation but the call sites move to it with the data hooks; `GooglePreview` ×2, `getTitleLenColor` ×2 and `leadStatusConfig` in `Dashboard`; nav data (BUG-20). | master spec, confirmed 01                                                                                                                           | 11, 27, 36                                      |
-| ADD-09                  | `LeadForm` ignores `required:false`, has no `<label>`s, no `onSuccess`, posts unsanitised values; `NewsletterSection` validation is `includes('@')`, fails silently, shows a false reCAPTCHA notice                                                                                                                                                                                                                                                                                                                                                                        | master spec, confirmed 01                                                                                                                           | 28                                              |
-| ADD-10                  | `PropertyCard`: price unit printed twice, `liked` not persisted, `imageLoaded` never reset, timer leak, imports `TAG_OPTIONS` from `pages/admin`, autoplaying videos in grids **Closed in 11 except the shortlist**: the card was rewritten against the contract shape — one price, no autoplaying video, no per-card carousel, no unpersisted `liked`, no import from `pages/admin`. The shortlist arrives with its own storage in prompt 26.                                                                                                                             | master spec, confirmed 01                                                                                                                           | 26                                              |
-| ADD-11                  | `PropertyFilters`: `clearFilters` wipes every query param, `50000000-Infinity` in URLs, the 4th location silently ignored, only apartment/villa types, desktop applies live but mobile needs Apply                                                                                                                                                                                                                                                                                                                                                                         | master spec, confirmed 01                                                                                                                           | 26                                              |
-| ADD-12                  | `PropertyDetails`: 30 `useState`s (spec said 24), four copy-pasted modal state machines, `handleOpenLeadForm` dead → **the enquiry modal is unreachable**, `EnquiryForm` mounted three times, `dimensionRange` chip always renders, modals without `role="dialog"`/focus trap, `og:site_name` hardcoded to the boilerplate brand                                                                                                                                                                                                                                           | master spec, confirmed 01                                                                                                                           | 23–25, 28                                       |
-| ADD-13                  | `FinanceGuide` (1 808 lines): typo "Home Finance Clearity", hardcoded "8.35 % / 48 Hrs / Up to 90 % / 0.5 % + GST", six real bank brands, score ignores 6 collected fields, success shown even when the POST fails, `document.body.style.overflow` mutation                                                                                                                                                                                                                                                                                                                | master spec, confirmed 01                                                                                                                           | 25                                              |
-| ADD-14                  | `ConstructionStatus` progress → `Infinity%`/`NaN%` with one milestone; `BuilderOverview` self-nullifies for description-only developers; `PropertySpecs` legacy-object branch unreachable and `specificationsArray` prop dead                                                                                                                                                                                                                                                                                                                                              | master spec, confirmed 01                                                                                                                           | 24                                              |
-| ADD-15                  | `HeroSection`: `role="combobox"` without `aria-controls` (**closed in 01**), "View all results" shown with zero suggestions, video/input refs unused; `QuickActions` links `type=lease`                                                                                                                                                                                                                                                                                                                                                                                    | master spec, confirmed 01                                                                                                                           | 27                                              |
-| ADD-16                  | `ArticleDetail` Markdown renderer: duplicate tables on every `\ **Closed in 11**: the article body is CMS-authored HTML rendered through `LegacyHtml`, and the breadcrumb now goes Home → Articles → category.                                                                                                                                                                                                                                                                                                                                                             | `line, ordered lists rendered as`<ul>`, only `**bold**`inline, breadcrumb "Insights" and "Articles" to the same URL;`Articles` state not URL-synced | master spec, confirmed 01                       | 32, 34 |
-| ADD-17                  | `Contact`: five `#` social links opening new tabs, generic Brigade Road map with a fabricated `!4v1700000000000`, US-format phone in FAQs `(555) 123-4567`                                                                                                                                                                                                                                                                                                                                                                                                                 | master spec, confirmed 01                                                                                                                           | 30, 31                                          |
-| ADD-18                  | `Careers`: résumé file input has no `name`/`onChange`, form never reset, modal without dialog semantics; `InteriorDesigning` room cards and "Get Started" buttons do nothing; `LegalAssistance`/`RealEstateAwareness` encode conflicting Karnataka stamp-duty figures                                                                                                                                                                                                                                                                                                      | master spec, confirmed 01                                                                                                                           | 30, 31                                          |
-| ADD-19 (settings/users) | `AdminSettings`: `PUT` drops `footerLinks`, tab panels out of order, "Footer Tagline" edits the General `tagline`, hardcoded `role === 'admin'`; `UserManagement`: last-admin guard hole, plaintext passwords echoed, own `ROLES` list. **The `AdminLogin` half is closed in 12 and the `UserManagement` half in 13; only the `AdminSettings` form remains, for prompt 40.**                                                                                                                                                                                               | master spec, confirmed 01                                                                                                                           | 40                                              |
-| ADD-20                  | `AdminSeo`: the old domain in previews, "Auto-Generate" writes HOM titles/canonicals/schema, `stats.missing` dead, saving wipes empty fields, no confirmation before bulk overwrite; `ArticleForm`: the boilerplate brand as the default article author, `readTime` not editable, `isTrending/trendingOrder` dropped on PUT, `setTimeout(navigate)` not cleared                                                                                                                                                                                                            | master spec, confirmed 01                                                                                                                           | 33, 36, 37                                      |
-| ADD-21                  | `AdminProperties` fetches the public `/properties`, toggle omits the `is_active` fallback, `Promise.all` bulk aborts on first failure, per-page select-all; `AdminLeads`/`Dashboard` `p.id === propertyId` string-vs-number → Property column always empty; `Dashboard` "Leads by source" from 10 leads; `FaqManager` reorder wrong under a category filter with two sequential PUTs per swap; `LeadDetail` simulated timeline, `isMobile` unused (**closed in 01**)                                                                                                       | master spec, confirmed 01                                                                                                                           | 17, 22, 29                                      |
-| ADD-22                  | Property tabs: `DetailsTab` drag issues N state updates per drag-over; `SectionVisibilityTab` toggle asymmetric for `undefined`; `GalleryTab` seeds placeholder-image covers; `NearbyPlacesTab` default type `school` unknown to the public map; index keys everywhere; `SeoTagsTab` old-domain placeholder                                                                                                                                                                                                                                                                | master spec, confirmed 01                                                                                                                           | 18–21                                           |
-| ADD-27                  | `seoScoring.js`/`seoGenerator.js`: HOM site name/URL constants, generic CTA-word scoring, schema string stored in the record                                                                                                                                                                                                                                                                                                                                                                                                                                               | master spec, confirmed 01                                                                                                                           | 36                                              |
+| Id | Description | Found by | Owner prompt |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------ |
+| ADD-01 | `.env` committed with the Cloudways URL; no `.env.example`; README links a non-existent `API_DOCUMENTATION.md`; README says Node 16+ | master spec, confirmed 01 | 02 |
+| ADD-02 | `dev` script equals `start` (no json-server anywhere); `devDependencies` empty; no ESLint/Prettier config beyond CRA | master spec | 01 (tooling half **closed**), 06 (`dev`/`mock`) |
+| ADD-03 | `public/index.html` references a non-existent `favicon.ico`; `robots.txt` allows everything with no sitemap; no `manifest.json` | master spec, confirmed 01 | 02 |
+| ADD-04 | `@mui/icons-material` and `web-vitals` are unused dependencies (0 imports each) | master spec, confirmed 01 | 03, 41 |
+| ADD-06 (partial) | **Closed in 04:** the three scroll-hide copies (now `useScrollDirection`; `useThrottledScroll` stays for `BackToTop`), the 13 local `Section` components (now `ui/Section`), and `tagColors` vs `TAG_OPTIONS` (`PropertyCard` reads `TAG_OPTIONS` tones). **Still open:** the five `formatPrice` and three `formatDate` copies still exist at their call sites — `src/utils/format.js` is the single implementation but the call sites move to it with the data hooks; `GooglePreview` ×2, `getTitleLenColor` ×2 and `leadStatusConfig` in `Dashboard`; nav data (BUG-20). | master spec, confirmed 01 | 11, 27, 36 |
+| ADD-09 | `LeadForm` ignores `required:false`, has no `<label>`s, no `onSuccess`, posts unsanitised values; `NewsletterSection` validation is `includes('@')`, fails silently, shows a false reCAPTCHA notice | master spec, confirmed 01 | 28 |
+| ADD-10 | `PropertyCard`: price unit printed twice, `liked` not persisted, `imageLoaded` never reset, timer leak, imports `TAG_OPTIONS` from `pages/admin`, autoplaying videos in grids **Closed in 11 except the shortlist**: the card was rewritten against the contract shape — one price, no autoplaying video, no per-card carousel, no unpersisted `liked`, no import from `pages/admin`. The shortlist arrives with its own storage in prompt 26. | master spec, confirmed 01 | 26 |
+| ADD-11 | `PropertyFilters`: `clearFilters` wipes every query param, `50000000-Infinity` in URLs, the 4th location silently ignored, only apartment/villa types, desktop applies live but mobile needs Apply | master spec, confirmed 01 | 26 |
+| ADD-12 | `PropertyDetails`: 30 `useState`s (spec said 24), four copy-pasted modal state machines, `handleOpenLeadForm` dead → **the enquiry modal is unreachable**, `EnquiryForm` mounted three times, `dimensionRange` chip always renders, modals without `role="dialog"`/focus trap, `og:site_name` hardcoded to the boilerplate brand | master spec, confirmed 01 | 23–25, 28 |
+| ADD-13 | `FinanceGuide` (1 808 lines): typo "Home Finance Clearity", hardcoded "8.35 % / 48 Hrs / Up to 90 % / 0.5 % + GST", six real bank brands, score ignores 6 collected fields, success shown even when the POST fails, `document.body.style.overflow` mutation | master spec, confirmed 01 | 25 |
+| ADD-14 | `ConstructionStatus` progress → `Infinity%`/`NaN%` with one milestone; `BuilderOverview` self-nullifies for description-only developers; `PropertySpecs` legacy-object branch unreachable and `specificationsArray` prop dead | master spec, confirmed 01 | 24 |
+| ADD-15 | `HeroSection`: `role="combobox"` without `aria-controls` (**closed in 01**), "View all results" shown with zero suggestions, video/input refs unused; `QuickActions` links `type=lease` | master spec, confirmed 01 | 27 |
+| ADD-16 | `ArticleDetail` Markdown renderer: duplicate tables on every `\ **Closed in 11**: the article body is CMS-authored HTML rendered through `LegacyHtml`, and the breadcrumb now goes Home → Articles → category.                                                                                                                                                                                                                                                                                                                                                             | `line, ordered lists rendered as`<ul>`, only `**bold**`inline, breadcrumb "Insights" and "Articles" to the same URL;`Articles` state not URL-synced | master spec, confirmed 01 | 32, 34 |
+| ADD-17 | `Contact`: five `#` social links opening new tabs, generic Brigade Road map with a fabricated `!4v1700000000000`, US-format phone in FAQs `(555) 123-4567` | master spec, confirmed 01 | 30, 31 |
+| ADD-18 | `Careers`: résumé file input has no `name`/`onChange`, form never reset, modal without dialog semantics; `InteriorDesigning` room cards and "Get Started" buttons do nothing; `LegalAssistance`/`RealEstateAwareness` encode conflicting Karnataka stamp-duty figures | master spec, confirmed 01 | 30, 31 |
+| ADD-19 (settings/users) | `AdminSettings`: `PUT` drops `footerLinks`, tab panels out of order, "Footer Tagline" edits the General `tagline`, hardcoded `role === 'admin'`; `UserManagement`: last-admin guard hole, plaintext passwords echoed, own `ROLES` list. **The `AdminLogin` half is closed in 12 and the `UserManagement` half in 13; only the `AdminSettings` form remains, for prompt 40.** | master spec, confirmed 01 | 40 |
+| ADD-20 | `AdminSeo`: the old domain in previews, "Auto-Generate" writes HOM titles/canonicals/schema, `stats.missing` dead, saving wipes empty fields, no confirmation before bulk overwrite; `ArticleForm`: the boilerplate brand as the default article author, `readTime` not editable, `isTrending/trendingOrder` dropped on PUT, `setTimeout(navigate)` not cleared | master spec, confirmed 01 | 33, 36, 37 |
+| ADD-21 | `AdminProperties` fetches the public `/properties`, toggle omits the `is_active` fallback, `Promise.all` bulk aborts on first failure, per-page select-all; `AdminLeads`/`Dashboard` `p.id === propertyId` string-vs-number → Property column always empty; `Dashboard` "Leads by source" from 10 leads; `FaqManager` reorder wrong under a category filter with two sequential PUTs per swap; `LeadDetail` simulated timeline, `isMobile` unused (**closed in 01**) | master spec, confirmed 01 | 17, 22, 29 |
+| ADD-22 | Property tabs: `DetailsTab` drag issues N state updates per drag-over; `SectionVisibilityTab` toggle asymmetric for `undefined`; `GalleryTab` seeds placeholder-image covers; `NearbyPlacesTab` default type `school` unknown to the public map; index keys everywhere; `SeoTagsTab` old-domain placeholder | master spec, confirmed 01 | 18–21 |
+| ADD-27 | `seoScoring.js`/`seoGenerator.js`: HOM site name/URL constants, generic CTA-word scoring, schema string stored in the record | master spec, confirmed 01 | 36 |
 
 ### New defects found by this audit
 
@@ -986,16 +991,16 @@ and the SEO document routes answer 501 until prompt 09 (both listed under "Pendi
 
 **Files added**
 
-| Path                                  | What it is                                                                                |
-| ------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `mock-server/lib/tokens.js`           | `createTokenStore({db, config})` — issue / resolve / revoke / purge over `apiTokens`      |
-| `mock-server/lib/password.js`         | `verify()` and `store()` — plain comparison on the mock, one place to replace with a hash |
-| `mock-server/lib/routePermissions.js` | `resolvePermission(path, method)` — an admin path and method → an area and action of §7   |
-| `mock-server/middleware/auth.js`      | `requireAuth` — `Bearer` → `req.user` (no password) + `req.token`; 401 with one message   |
-| `mock-server/middleware/role.js`      | `role(...roles)`, `can(area, action)` and `adminPermission()` — the matrix, 403           |
-| `mock-server/routes/auth.js`          | `POST /auth/login` (throttled 10/min), `logout`, `GET                                     | PUT /auth/profile`, `PUT /auth/password` |
-| `mock-server/routes/users.js`         | `/admin/users` list, create, read, replace, patch, delete and bulk, with the safety rules |
-| `mock-server/__tests__/auth.test.js`  | 24 `node:test` cases over `createApp()` on a temp copy of the seed — `npm run test:mock`  |
+| Path | What it is |
+| ------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `mock-server/lib/tokens.js` | `createTokenStore({db, config})` — issue / resolve / revoke / purge over `apiTokens` |
+| `mock-server/lib/password.js` | `verify()` and `store()` — plain comparison on the mock, one place to replace with a hash |
+| `mock-server/lib/routePermissions.js` | `resolvePermission(path, method)` — an admin path and method → an area and action of §7 |
+| `mock-server/middleware/auth.js` | `requireAuth` — `Bearer` → `req.user` (no password) + `req.token`; 401 with one message |
+| `mock-server/middleware/role.js` | `role(...roles)`, `can(area, action)` and `adminPermission()` — the matrix, 403 |
+| `mock-server/routes/auth.js` | `POST /auth/login` (throttled 10/min), `logout`, `GET                                     | PUT /auth/profile`, `PUT /auth/password` |
+| `mock-server/routes/users.js` | `/admin/users` list, create, read, replace, patch, delete and bulk, with the safety rules |
+| `mock-server/__tests__/auth.test.js` | 24 `node:test` cases over `createApp()` on a temp copy of the seed — `npm run test:mock` |
 
 **Files changed**
 
@@ -1180,29 +1185,29 @@ seed is still the six-property starter fixture — prompt 10 replaces it, and th
 
 **Files added**
 
-| Path                                    | What it is                                                                                               |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `mock-server/lib/crud.js`               | `makeCrudRouter()` — the eight endpoints twenty resources share, written once                            |
-| `mock-server/lib/usage.js`              | `findUsages()` / `findMediaUsages()` / `describeUsages()` — the delete guard of D88                      |
-| `mock-server/lib/previewTokens.js`      | 24-hour in-memory draft tokens (D28)                                                                     |
-| `mock-server/lib/html.js`               | `stripHtml`, `wordCount`, `readingTime`                                                                  |
-| `mock-server/lib/articleFilters.js`     | Publication visibility, the `scheduled` promotion, the public filters and sorts                          |
-| `mock-server/lib/dashboard.js`          | The whole §6.16 payload, with the sales scope of D15                                                     |
-| `mock-server/lib/sitemapBuilder.js`     | `PUBLIC_PATHS`, the five `<urlset>` builders, the index, RSS, robots and `llms.txt`                      |
-| `mock-server/routes/masterData.js`      | Fourteen collections configured on the factory: filters, embeds, counters, delete guards                 |
-| `mock-server/routes/articles.js`        | The public blog, `trending`, the preview token, and the admin CRUD with the derived fields               |
-| `mock-server/routes/pages.js`           | The CMS: block ids, `order` renumbering, the `<script` rejection, preview tokens                         |
-| `mock-server/routes/media.js`           | The library: inferred `provider`/`type`/`format`, `usedIn`                                               |
-| `mock-server/routes/settings.js`        | `GET /settings`, `GET                                                                                    | PUT /admin/settings` and the known-keys deep merge             |
-| `mock-server/routes/seo.js`             | `GET /seo/settings`, `GET                                                                                | PUT /admin/seo/settings`, the overview, the `llms.txt` preview |
-| `mock-server/routes/dashboard.js`       | `GET /admin/dashboard`                                                                                   |
-| `mock-server/routes/newsletter.js`      | Subscribe with dedupe and honeypot, the admin list, the CSV export                                       |
-| `mock-server/routes/jobs.js`            | The open-role rule, `apply`, the admin openings and the application triage                               |
-| `mock-server/routes/redirects.js`       | The public list, `resolve`, the loop/chain validation, `import` and `export`                             |
-| `mock-server/routes/sitemap.js`         | The nine SEO files, served at `/api/...` and mirrored at the root                                        |
+| Path | What it is |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `mock-server/lib/crud.js` | `makeCrudRouter()` — the eight endpoints twenty resources share, written once |
+| `mock-server/lib/usage.js` | `findUsages()` / `findMediaUsages()` / `describeUsages()` — the delete guard of D88 |
+| `mock-server/lib/previewTokens.js` | 24-hour in-memory draft tokens (D28) |
+| `mock-server/lib/html.js` | `stripHtml`, `wordCount`, `readingTime` |
+| `mock-server/lib/articleFilters.js` | Publication visibility, the `scheduled` promotion, the public filters and sorts |
+| `mock-server/lib/dashboard.js` | The whole §6.16 payload, with the sales scope of D15 |
+| `mock-server/lib/sitemapBuilder.js` | `PUBLIC_PATHS`, the five `<urlset>` builders, the index, RSS, robots and `llms.txt` |
+| `mock-server/routes/masterData.js` | Fourteen collections configured on the factory: filters, embeds, counters, delete guards |
+| `mock-server/routes/articles.js` | The public blog, `trending`, the preview token, and the admin CRUD with the derived fields |
+| `mock-server/routes/pages.js` | The CMS: block ids, `order` renumbering, the `<script` rejection, preview tokens |
+| `mock-server/routes/media.js` | The library: inferred `provider`/`type`/`format`, `usedIn` |
+| `mock-server/routes/settings.js` | `GET /settings`, `GET                                                                                    | PUT /admin/settings` and the known-keys deep merge |
+| `mock-server/routes/seo.js` | `GET /seo/settings`, `GET                                                                                | PUT /admin/seo/settings`, the overview, the `llms.txt` preview |
+| `mock-server/routes/dashboard.js` | `GET /admin/dashboard` |
+| `mock-server/routes/newsletter.js` | Subscribe with dedupe and honeypot, the admin list, the CSV export |
+| `mock-server/routes/jobs.js` | The open-role rule, `apply`, the admin openings and the application triage |
+| `mock-server/routes/redirects.js` | The public list, `resolve`, the loop/chain validation, `import` and `export` |
+| `mock-server/routes/sitemap.js` | The nine SEO files, served at `/api/...` and mirrored at the root |
 | `mock-server/__tests__/content.test.js` | 36 cases — articles, previews, master data, pages, settings, SEO, dashboard, newsletter, jobs, redirects |
-| `mock-server/__tests__/sitemap.test.js` | 16 cases — the index, the five children, the overrides, robots, RSS, `llms.txt`, the root mirrors        |
-| `scripts/smoke-api.js`                  | Walks `allEndpoints()` against a running server and checks the behaviours behind the status codes        |
+| `mock-server/__tests__/sitemap.test.js` | 16 cases — the index, the five children, the overrides, robots, RSS, `llms.txt`, the root mirrors |
+| `scripts/smoke-api.js` | Walks `allEndpoints()` against a running server and checks the behaviours behind the status codes |
 
 **Files changed**
 
@@ -1244,16 +1249,16 @@ both `/api/...` and the root. Plus four operational paths outside the registry:
 
 **Verification**
 
-| Command                 | Result                                                                                                                                                                                                                                   |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run test:mock`     | **117 tests, 117 pass, 0 fail** (was 64 before this prompt)                                                                                                                                                                              |
-| `npm run smoke`         | **269/269 checks pass, 0 failures** — 235 registry endpoints + 34 targeted assertions                                                                                                                                                    |
-| `npm run lint`          | 0 errors, 0 warnings; `check:endpoints` 185 files scanned, 0 blocking findings                                                                                                                                                           |
-| `npm run test:ci`       | 10 suites, 573 tests, all pass                                                                                                                                                                                                           |
-| `npm run build:ci`      | Compiled, no warnings                                                                                                                                                                                                                    |
-| `npm run check:traces`  | 360 files scanned, 0 findings                                                                                                                                                                                                            |
-| `npm run validate:seed` | `db.json is valid.`                                                                                                                                                                                                                      |
-| ADD-26                  | `db.json`: mixed `leads[].propertyId`, `.mp4` in a property gallery, hardcoded `neighborhoods.propertyCount`, `(555) 123-4567`, off-scope Mumbai article, lorem-ipsum "Test Article" and Guwahati "Test Property", `faqs[6]` double `??` | 10 — `db.json` is regenerated from `scripts/seed/`: lead `propertyId` is always an integer, no video sits in a gallery, `propertyCount` is computed rather than stored, the phone numbers are synthetic Indian mobiles, and there is no off-scope, lorem-ipsum or test record left. `npm run validate:seed` now enforces the §10 quality rules as well as the types. |
+| Command | Result |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run test:mock` | **117 tests, 117 pass, 0 fail** (was 64 before this prompt) |
+| `npm run smoke` | **269/269 checks pass, 0 failures** — 235 registry endpoints + 34 targeted assertions |
+| `npm run lint` | 0 errors, 0 warnings; `check:endpoints` 185 files scanned, 0 blocking findings |
+| `npm run test:ci` | 10 suites, 573 tests, all pass |
+| `npm run build:ci` | Compiled, no warnings |
+| `npm run check:traces` | 360 files scanned, 0 findings |
+| `npm run validate:seed` | `db.json is valid.` |
+| ADD-26 | `db.json`: mixed `leads[].propertyId`, `.mp4` in a property gallery, hardcoded `neighborhoods.propertyCount`, `(555) 123-4567`, off-scope Mumbai article, lorem-ipsum "Test Article" and Guwahati "Test Property", `faqs[6]` double `??` | 10 — `db.json` is regenerated from `scripts/seed/`: lead `propertyId` is always an integer, no video sits in a gallery, `propertyCount` is computed rather than stored, the phone numbers are synthetic Indian mobiles, and there is no off-scope, lorem-ipsum or test record left. `npm run validate:seed` now enforces the §10 quality rules as well as the types. |
 
 The smoke run was repeated twice against the same server: the second run passes identically
 and leaves nothing behind but the `apiTokens` its logins created and the one `propertyViews`
@@ -1915,3 +1920,142 @@ BUG-10's `?area=` half is closed. Nothing new was found. The "Updated" column of
 the localities table is display-only: the contract's locality sorts are
 `order|name|propertyCount` (§6.2, `mock-server/schemas/models.js`), and a header
 that sorts by nothing is worse than a header that does not offer to.
+
+### Prompt 15 — Master data: property types, amenities, badges and banks (2026-09-16)
+
+**What changed**
+
+The four collections the rest of the site reads — property types, amenities,
+badges and banks — are manageable at last, and the public site reads them from
+the context instead of from constants in the bundle. `src/config/adminConstants.js`
+is gone with them, and with it `DEFAULT_BANKS`, which named six real banks
+(HDFC, SBI, Axis, ICICI, Kotak, LIC Housing) and gave each of them an invented
+interest rate on every property page.
+
+**Files added**
+
+| Path                                                              | What it is                                                                                                                                       |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/pages/admin/master-data/masterDataConfigs.js` (+ css)        | The four `MasterDataPage` configurations, and the cells they share                                                                               |
+| `src/pages/admin/master-data/PropertyTypesPage.jsx`               | `/admin/master-data/property-types`                                                                                                              |
+| `src/pages/admin/master-data/AmenitiesPage.jsx`                   | `/admin/master-data/amenities`                                                                                                                   |
+| `src/pages/admin/master-data/BadgesPage.jsx`                      | `/admin/master-data/badges`                                                                                                                      |
+| `src/pages/admin/master-data/BanksPage.jsx`                       | `/admin/master-data/banks`                                                                                                                       |
+| `src/hooks/useMasterData.js`                                      | `usePropertyTypes`, `useAmenitiesGrouped`, `useAmenities`, `useBadgeMap`, `useBanks`, `useLocalities`, `useDevelopers`, `useCities`, `toOptions` |
+| `src/hooks/__tests__/useMasterData.test.js`                       | 17 cases: order, segment, grouping, the inactive ones, no provider                                                                               |
+| `src/pages/admin/master-data/__tests__/masterDataConfigs.test.js` | 56 cases: every config against its write schema, plus the rules                                                                                  |
+
+**Files changed**
+
+`mock-server/lib/crud.js` (`?withUsage=true` on `GET /admin/<resource>/:id`),
+`mock-server/routes/masterData.js` (`propertyCount` + `sort=propertyCount` for
+amenities and badges), `mock-server/__tests__/content.test.js` (two suites),
+`src/services/endpoints.js` (`withUsage` on the `adminResource` read),
+`src/contexts/MasterDataContext.js` (`refresh(collection)`),
+`src/components/admin/MasterDataPage.jsx` (`subtitle`, `formFooter`, `groupBy` /
+`groupSort`, `reorderHint`, `confirmSave`, `onMutated(config.key)`),
+`src/components/admin/DataTable.jsx` (+ css — `groupBy` heading rows),
+`src/components/admin/DeleteGuardDialog.jsx` (an optional confirm),
+`src/components/admin/MasterDataForm.jsx` (+ css — the icon placeholder),
+`src/routes/adminRouteConfig.js` (four screens off the placeholder),
+`src/config/enums.js` (`LEAD_STATUS` icons, `FAQ_CATEGORIES` tones,
+`LEAD_SOURCES.labelOfAny`), `src/utils/validation.js` (`ICON_ID_PATTERN`),
+`src/components/common/PropertyCard.jsx` (+ css — badges through `ui/Chip`),
+`src/components/common/PropertyFilters.jsx`, `src/pages/public/PropertyListing.jsx`,
+`src/utils/adapters/legacyProperty.js` (`propertyTypeId`),
+`src/components/sections/property/FinanceGuide.jsx` (+ css),
+`src/pages/admin/property-tabs/AmenitiesTab.jsx` + `constants.js`,
+`src/pages/admin/AdminLeads.js`, `LeadDetail.js`, `FaqManager.jsx`,
+`AdminArticles.js`, `ArticleForm.jsx`,
+`src/components/layout/NotificationsMenu.jsx`,
+`src/contexts/LeadNotificationsContext.js`, `src/components/ui/tones.js`,
+`.prettierignore`, `docs/*`.
+
+**Files removed**
+
+`src/config/adminConstants.js`. Everything in it now lives where §6.17 says it
+should: `LEAD_STATUS_CONFIG`/`LEAD_STATUS_OPTIONS` → `LEAD_STATUS` (which gained
+an `icon` per entry), `formatLeadSource`/`LEAD_SOURCE_OPTIONS` →
+`LEAD_SOURCES.labelOfAny` and `LEAD_SOURCES.options`, `FAQ_CATEGORIES` +
+`FAQ_CATEGORY_TONES` → `FAQ_CATEGORIES` (which gained a `tone` per entry),
+`ARTICLE_CATEGORIES` → `articleService.categories()`, and `DEFAULT_BANKS` →
+the `banks` collection. The five-group `AMENITY_CATEGORIES` of
+`property-tabs/constants.js` went with them.
+
+**Endpoints**
+
+None added. `GET /admin/<resource>/:id` accepts `withUsage=true` on every
+resource the CRUD factory serves, answering with the `usedBy` list a 409 would
+have carried; `/admin/amenities` and `/admin/badges` now compute `propertyCount`
+and accept `sort=propertyCount`. Both are in `src/services/endpoints.js` and
+`docs/API_CONTRACT.md`.
+
+**npm / env**
+
+Nothing added. `.prettierignore` gained `docs/archive/`.
+
+**Acceptance checklist**
+
+- [x] The four screens list, filter, sort, reorder, toggle, create, edit, delete
+      and bulk end to end — verified through `GET /api/admin/<collection>` after
+      every write, and the collections end the run at their seed totals (17 types,
+      46 amenities, 8 badges, 6 banks).
+- [x] Delete guards render their usages (9 listings for "New Launch", 40 for
+      "Power Backup", 16 for "Apartments"); the segment-change confirm quotes
+      "Used by 16 properties" and cancelling leaves `segment: residential`.
+- [x] Card badges, the listing's type select, the finance bank cards and the
+      property form's amenities all read master data; `grep -rn DEFAULT_BANKS src`
+      → 0.
+- [x] `npm run lint`, `npm run test:ci` (857 tests, 29 suites), `npm run build:ci`
+      (0 warnings), `npm run check:traces` (0 findings), `npm run validate:seed`,
+      `npm run test:mock` (123 tests) and `npm run smoke` (269/269) all pass.
+- [x] One commit, clean tree.
+
+**Manual QA (Chromium, 1280 px and 390 px, console open)**
+
+- `/admin/master-data/amenities` opens on the grouped table: a
+  `<th scope="colgroup">` per category, 46 rows, an icon, the slug under the
+  name, a category chip and the listing count. Creating "Pet Park" with the icon
+  `DOG` is refused under the field ("Use an Iconify MDI id in lower case, like
+  mdi:home-city-outline") and the preview shows the muted placeholder; `mdi:dog`
+  saves, the slug having followed the name to `pet-park`. `?category=kids` leaves
+  one group and one row, the row switch turns it inactive on the server, and the
+  public `GET /amenities?category=kids` stops returning it. Deleting it says so.
+- `/admin/master-data/badges` shows the tone swatch, the badge as a card will
+  render it, the slug, the icon id, the count and the order. Deleting "New Launch"
+  answers 409 and the guard lists the nine listings with links to their admin
+  pages.
+- `/admin/master-data/property-types` opens as the reorder list (17 rows, each
+  with its icon, segment and count) because `order` is the default sort; sorting
+  by anything else brings the table back. Editing "Apartments" shows the SEO
+  placeholder, and changing its segment to Commercial asks first — "Used by 16
+  properties — each keeps its own segment, so any that should move have to be
+  edited too" — with the sixteen listed. Cancelling leaves the record untouched.
+- `/admin/master-data/banks` shows the logo, the name over its fee note, the rate
+  range, the tenure and the LTV. Saving 9 % from / 8 % up to is refused on the
+  field; 8.35–8.95 saves.
+- A property type created in the admin appears in `/properties`' type select in
+  the same session without a reload — the `sna_master_data_cache` entry is
+  rewritten by the write (D93). The select lists all seventeen types, not the two
+  hardcoded ones.
+- A property page's "Bank Loan Assistance" tab shows the six seed banks with
+  their own rates, max loans and fee notes, and the banner and the two tiles read
+  "8.35 % p.a." and "Up to 90 %" off those records instead of asserting them.
+- 390 px: `scrollWidth === clientWidth === 390` on all four screens; the tables
+  become cards with the category heading between them.
+- Console: nothing on any of the four screens or on the property page.
+  (`/admin/dashboard` still logs the MUI Grid v2 deprecations — pre-existing,
+  prompt 29.)
+
+**Known issues**
+
+BUG-05's bank half is closed. Two notes rather than new defects: the admin
+amenities table groups its categories in the API's alphabetical order
+(`sort=category` is a string sort on the field) while the public site groups them
+in `AMENITY_CATEGORIES` order — the contract's sort, not a defect of the screen;
+and three legacy admin screens (`AdminArticles`, `FaqManager`, `AdminSeo`) still
+carry `rgba(201,168,108,0.04)` — the HOM gold as a row hover — which
+`check:traces` does not catch because it only scans hex literals (owners 33, 17,
+37).
+
+**Next prompt: 16 — Developers / builders.**

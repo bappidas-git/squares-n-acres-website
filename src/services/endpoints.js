@@ -115,6 +115,10 @@ const adminResource = ({
   auth = 'manager',
   readAuth = auth,
   query = {},
+  // `withUsage` is served by the CRUD factory of the mock; the two resources
+  // with a hand-written router (properties, users) have no delete guard and so
+  // nothing to report.
+  withUsage = true,
   example = 1,
 }) => {
   const entry = (action, extra) => ({
@@ -147,6 +151,9 @@ const adminResource = ({
       method: 'GET',
       path: `${path}/:id`,
       auth: readAuth,
+      // `withUsage=true` adds `usedBy` — what a delete would refuse over — so a
+      // form can warn before a change instead of after it (D88).
+      query: withUsage ? { withUsage: 'bool' } : {},
       description: `Read one ${singular} with every admin field`,
       response,
     }),
@@ -930,6 +937,7 @@ const adminProperties = {
     plural: 'properties',
     schema: 'property',
     response: 'Property',
+    withUsage: false,
     // Sales may read the admin list (read-only) but never write (§7).
     readAuth: 'user',
     query: {
@@ -1495,6 +1503,7 @@ const adminUsers = adminResource({
   schema: 'user',
   response: 'User',
   slugged: false,
+  withUsage: false,
   auth: 'admin',
   query: { role: enumOf(ROLES) },
 });
