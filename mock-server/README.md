@@ -14,6 +14,7 @@ npm run mock:reset    # restore the runtime db from db.json
 npm run dev           # mock + React dev server together
 npm run validate:seed # check db.json against the data model
 npm run test:mock     # the mock's own tests (node --test, no framework)
+npm run smoke         # walk every endpoint of the registry (needs a running mock)
 ```
 
 ## Environment
@@ -381,6 +382,206 @@ a path: Node 22 no longer expands a directory given to `--test`, and Node 20
 does not expand a glob, so the directory to run _from_ is the one form that
 works on both.
 
+## Content, master data, SEO and the files
+
+Prompt 09 completed the catalogue: **every endpoint of §5.14 now has a
+hand-written owner**, and the generic JSON Server router is a fallback for the
+spellings the contract never named (see _Adding a collection_ below).
+
+### The routers
+
+| Router                 | Owns                                                                                                                                            |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `routes/auth.js`       | `/auth/*`                                                                                                                                       |
+| `routes/users.js`      | `/admin/users`                                                                                                                                  |
+| `routes/properties.js` | `/properties*`, `/admin/properties*`                                                                                                            |
+| `routes/leads.js`      | `/leads`, `/admin/leads*`                                                                                                                       |
+| `routes/masterData.js` | localities, cities, property types, amenities, badges, developers, banks, article categories, tags, authors, FAQs, testimonials, team, partners |
+| `routes/articles.js`   | `/articles*`, `/admin/articles*`                                                                                                                |
+| `routes/pages.js`      | `/pages/slug/:slug`, `/admin/pages*`                                                                                                            |
+| `routes/media.js`      | `/admin/media*`                                                                                                                                 |
+| `routes/settings.js`   | `/settings`, `/admin/settings`                                                                                                                  |
+| `routes/seo.js`        | `/seo/settings`, `/admin/seo/*`                                                                                                                 |
+| `routes/dashboard.js`  | `/admin/dashboard`                                                                                                                              |
+| `routes/newsletter.js` | `/newsletter/subscribe`, `/admin/newsletter-subscribers*`                                                                                       |
+| `routes/jobs.js`       | `/jobs*`, `/admin/jobs*`, `/admin/job-applications*`                                                                                            |
+| `routes/redirects.js`  | `/redirects*`, `/admin/redirects*`                                                                                                              |
+| `routes/sitemap.js`    | `/sitemap*.xml`, `/robots.txt`, `/rss.xml`, `/llms.txt` — and their root mirrors                                                                |
+
+### Public routes
+
+```
+GET  /api/localities           zone, cityId, isFeatured, q; sort order|name|propertyCount
+GET  /api/localities/slug/:slug
+GET  /api/cities               GET /api/cities/slug/:slug
+GET  /api/property-types       segment                  GET /api/property-types/slug/:slug
+GET  /api/amenities            category                 GET /api/amenities/slug/:slug
+GET  /api/badges               GET /api/badges/slug/:slug
+GET  /api/developers           isFeatured, q            GET /api/developers/slug/:slug
+GET  /api/banks                active, sorted by order  GET /api/banks/slug/:slug
+GET  /api/article-categories   with articleCount        GET /api/article-categories/slug/:slug
+GET  /api/article-tags         with articleCount        GET /api/article-tags/slug/:slug
+GET  /api/authors              never with an e-mail     GET /api/authors/slug/:slug
+GET  /api/faqs                 category, showOnHome, propertyTypeId
+GET  /api/testimonials         isFeatured
+GET  /api/team                 showOnAbout              GET /api/team/slug/:slug
+GET  /api/partners             category
+GET  /api/articles             categoryId|categorySlug, tagId|tagSlug, authorId|authorSlug,
+                               q, isFeatured, ids; sort newest|popular
+GET  /api/articles/slug/:slug  ?preview=<token> for a draft; counts one read per hour
+GET  /api/articles/trending    the six most-read
+GET  /api/pages/slug/:slug     ?preview=<token> for a draft
+GET  /api/jobs                 active and not past closesAt, newest first
+GET  /api/jobs/slug/:slug      readable after it closes, with isOpen:false
+POST /api/jobs/:id/apply       throttled, honeypot, 404 "This opening is closed."
+GET  /api/settings             everything except the leads branch
+GET  /api/seo/settings         the whole singleton
+GET  /api/redirects            active rules as { fromPath, toPath, statusCode }
+GET  /api/redirects/resolve    ?path=… — the one place hits are counted
+POST /api/newsletter/subscribe throttled, honeypot, 200 "Already subscribed" for a known address
+GET  /api/sitemap.xml          + sitemap-properties|localities|developers|articles|pages.xml
+GET  /api/robots.txt  /api/rss.xml  /api/llms.txt
+```
+
+Every one of those files is also served at the root — `/sitemap.xml`,
+`/robots.txt`, `/rss.xml`, `/llms.txt` — which is where Nginx proxies them in
+production (D21). `mock-server/app.js` rewrites the root path onto `/api`, so
+there is one implementation and not two.
+
+### Admin routes
+
+Each of the master-data, article, page, media, job, redirect and subscriber
+resources answers the same shape (§5.14):
+
+```
+GET    /api/admin/<resource>             perPage=all, isActive, the resource's filters
+POST   /api/admin/<resource>
+GET    /api/admin/<resource>/:id
+PUT    /api/admin/<resource>/:id         replaces; omitted optional fields become defaults
+PATCH  /api/admin/<resource>/:id         changes only what it sends
+DELETE /api/admin/<resource>/:id         409 with data.usedBy when something still points at it
+POST   /api/admin/<resource>/bulk        activate|deactivate|delete (+ feature|unfeature, …)
+GET    /api/admin/<resource>/check-slug  ?slug=&excludeId=
+```
+
+and these add their own:
+
+```
+GET  /api/admin/dashboard                  §6.16; sales sees their own lead figures
+GET  /api/admin/articles/:id/preview-token 24-hour link to a draft (D28)
+GET  /api/admin/pages/:id/preview-token
+POST /api/admin/articles/bulk              publish | unpublish | archive | feature | unfeature | delete
+POST /api/admin/pages/bulk                 publish | unpublish | delete
+GET  /api/admin/media?withUsage=true       adds usedIn to every row
+GET  /api/admin/job-applications           jobId, status, q; embeds the job
+GET  /api/admin/newsletter-subscribers/export   CSV with a BOM
+GET  /api/admin/redirects/export           CSV with a BOM
+POST /api/admin/redirects/import           { rows: [...] } → { created, updated, skipped }
+GET, PUT /api/admin/settings               PUT deep-merges the known keys only
+GET, PUT /api/admin/seo/settings
+GET  /api/admin/seo/overview               type, q, scoreBand, index, perPage=all
+GET  /api/admin/seo/llms-preview           the generated llms.txt, unsaved
+```
+
+### The rules worth knowing
+
+| Area         | Rule                                                                                                                                                                                                                                                                                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Articles     | An article is public when `status` says published **or** `scheduled` **and** `publishedAt` has arrived; a read settles a due `scheduled` article to `published`. A save derives `contentText`, `wordCount` and `readingTimeMinutes`, sets `publishedAt` the first time it goes live and never moves it again, and refuses `scheduled` without a future date (422). |
+| Counters     | `propertyCount` counts **active** listings; `articleCount` counts published ones. Both are computed per request, so they are filterable and sortable and can never go stale.                                                                                                                                                                                       |
+| Delete guard | Deleting master data that something still names answers 409 with `errors.id` and `data.usedBy` (D88). Only a **named** reference counts: a `team` block with an empty `memberIds` renders everybody but names nobody. A bank has no dependants and always deletes.                                                                                                 |
+| Pages        | Blocks get ids on save and their `order` is renumbered `1…n`. A `<script` in a `richText` or `html` block answers 422 on `blocks.<n>.data.html`.                                                                                                                                                                                                                   |
+| Settings     | `PUT /admin/settings` and `PUT /admin/seo/settings` merge **known keys only** — unknown keys are dropped — descend into objects and **replace** arrays. `settings.edit` is an admin permission, so a manager reads and gets 403 on save.                                                                                                                           |
+| Redirects    | `fromPath` starts with `/` and is unique; a rule may not point at itself or at another active rule's `fromPath` (422). `import` upserts by `fromPath` and skips a row it cannot use.                                                                                                                                                                               |
+| Sitemaps     | Built from `seoSettings.sitemap` with per-entity `seo.sitemap` overrides: `include:false` drops a record, `priority`/`changefreq` override the defaults, and `excludeUrls` drops a path or an absolute URL. Properties carry up to five `<image:image>` entries and none when there are no images.                                                                 |
+| llms.txt     | `seoSettings.llmsTxt` when it is not empty, otherwise generated from the data (§9.8). `GET /admin/seo/llms-preview` shows what "regenerate from data" would write.                                                                                                                                                                                                 |
+| Preview      | `?preview=<token>` opens one draft for 24 hours. The tokens live in memory, so a restart ends every preview link — and `<Seo>` renders every previewed page `noindex,nofollow`.                                                                                                                                                                                    |
+
+## Adding a collection
+
+Twenty resources are the same eight endpoints, so they are written once in
+`mock-server/lib/crud.js` and configured per resource. A new plain collection
+is an entry in `mock-server/routes/masterData.js`:
+
+```js
+{
+  basePath: 'awards',                 // /awards and /admin/awards
+  collection: 'awards',               // the db.json key and the schemas/models.js descriptor
+  schema: 'award',                    // src/services/schemas — award.create/.update/.patch
+  needs: ['properties'],              // collections `afterRead` resolves ids against
+  noun: { one: 'award', many: 'awards' },
+  deleteGuard: 'award',               // a finder in mock-server/lib/usage.js, or false
+  afterRead: (record, { collections }) => ({ ...record, propertyCount: … }),
+  publicFilters: { category: { field: 'category' } },
+  sorts: { order: 'order,name', name: 'name' },
+  defaultSort: 'order',
+}
+```
+
+Four things have to exist alongside it, and the checks say so when they do not:
+
+1. a descriptor in `mock-server/schemas/models.js` (`npm run validate:seed` reads it);
+2. `award.create` / `award.update` / `award.patch` in `src/services/schemas`;
+3. the resource in `mock-server/lib/routePermissions.js`, or every admin call is a 403;
+4. its entries in `src/services/endpoints.js`, or `npm run smoke` never exercises it.
+
+A resource that needs more than the factory gives — a filter that compares
+something computed, a save that derives a field, a publication rule — writes its
+own router and mounts the factory for the rest, the way
+`mock-server/routes/articles.js` does:
+
+```js
+router.get('/articles/trending', …);            // the part that is its own
+router.use(makeCrudRouter({ …, publicPath: false, beforeSave: deriveFromContent }));
+```
+
+The hooks the factory offers, in the order it calls them: `beforeValidate(body)`
+(ids and inferred values a client is not expected to send), `beforeSave(record)`
+(what a save derives), `afterSave(record)` (including bulk actions),
+`afterRead(record, { admin, collections, query, list })` (embeds and counters),
+`publicTransform(record)`, `listShape(record, { admin })`, `beforeDelete(record)`
+and `deleteGuard`. `routes` narrows the endpoint set for a resource whose
+contract stops short — job applications have no `PUT`.
+
+The generic JSON Server router still answers two things, and nothing the
+contract names: the camelCase spellings of the kebab-case paths
+(`/api/propertyTypes`), and a detail read by id where the contract gives only a
+slug lookup (`/api/localities/1`). `GENERIC_COLLECTIONS` in
+`mock-server/middleware/publicScope.js` names them.
+
+## Smoke tests
+
+```
+npm run mock     # one terminal
+npm run smoke    # another
+```
+
+`scripts/smoke-api.js` walks **`src/services/endpoints.js`** — the registry the
+frontend calls through — and exercises every entry against a running server: it
+logs in as each role, creates a fixture for every writable resource, sends each
+endpoint the smallest valid request with the least privileged token that should
+be allowed, and asserts the status and the envelope of §5.2. Then it checks the
+behaviours a status code cannot show (a `PATCH` that left the other fields
+alone, `bedrooms=3` returning only 3-BHK listings, a CSV that starts with a BOM,
+a preview token that opens a draft, a 409 that lists what is in the way) and
+deletes everything it created.
+
+Walking the registry is the point: an endpoint the frontend believes in but the
+API does not have fails here, and so does one the API has but the registry never
+declared.
+
+```
+node scripts/smoke-api.js --baseUrl=https://api.example.com/api --verbose
+node scripts/smoke-api.js --email=… --password=… --managerEmail=… --salesEmail=…
+```
+
+It needs a **running** server, so it is deliberately **not** part of
+`npm run check:all`. It uses `fetch` over whatever TLS Node trusts and never
+touches `NODE_TLS_REJECT_UNAUTHORIZED`: a base URL with a self-signed
+certificate is out of scope. Two runs inside the same minute legitimately hit
+the ten-public-writes-a-minute limit of §5.11; the script waits the window out
+once rather than weakening the rule.
+
 ## Layout
 
 ```
@@ -390,30 +591,25 @@ mock-server/
 ├─ db.js                # runtime db, lowdb helpers, ensureRuntimeDb()
 ├─ reset.js             # npm run mock:reset
 ├─ config.js            # MOCK_* environment variables
-├─ routes/              # index.js + auth, users, properties, leads (09 adds more)
+├─ routes/              # index.js + auth, users, properties, leads, masterData,
+│                       # articles, pages, media, settings, seo, dashboard,
+│                       # newsletter, jobs, redirects, sitemap
 ├─ middleware/          # auth, role, envelope, errors, timestamps, validate,
 │                       # queryTranslate, publicScope, requestLog, rateLimit
-├─ lib/                 # tokens, password, routePermissions, propertyFilters,
-│                       # leadFilters, facets, activities, viewCounter, ids,
-│                       # paginate, sort, filters, slug, embed, scope, enums,
-│                       # models, xml, csv
+├─ lib/                 # crud (the CRUD factory), usage (the delete guard),
+│                       # previewTokens, dashboard, sitemapBuilder, html,
+│                       # tokens, password, routePermissions, propertyFilters,
+│                       # leadFilters, articleFilters, facets, activities,
+│                       # viewCounter, ids, paginate, sort, filters, slug,
+│                       # embed, scope, enums, models, xml, csv
 ├─ schemas/models.js    # the collection descriptors (§6)
 ├─ __tests__/           # npm run test:mock
 └─ .runtime/db.json     # git-ignored working copy
 ```
 
-## What is not here yet
+## What the React app does not use yet
 
-The article, CMS, SEO, settings and dashboard business rules arrive with
-prompt 09, and so do the sitemap, robots, RSS and `llms.txt` documents — served
-both at `/api/...` and at the root, as Nginx will proxy them (D21) — which
-answer `501 { "message": "Not implemented until prompt 09" }` until then.
-Their routes (`/articles/slug/:slug`, `/articles/trending`, `/admin/dashboard`,
-`/admin/seo/overview`, …) answer 404 today because only the generic CRUD router
-stands behind them; they are authenticated and role-checked already, so a
-`/admin/...` path answers 401 or 403 before it answers 404.
-
-The React app does not call any of this yet: the services still use the
+The API is complete; the frontend is not. The services still use the
 boilerplate's paths and payload shapes (prompt 11), and the admin panel cannot
-sign in until `AdminAuthContext` is rewritten (prompt 12). Until then the API
-is exercised with `curl` and `npm run test:mock`.
+sign in until `AdminAuthContext` is rewritten (prompt 12). Until then the API is
+exercised with `curl`, `npm run test:mock` and `npm run smoke`.

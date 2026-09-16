@@ -631,6 +631,19 @@ none; `ipAddress` and `userAgent` are stored but returned to admins only.
 | DELETE | `/admin/users/:id`      | admin           | Delete a user; 409 when it is still in use                          | —                                                                                        | —                    | `Null`               | 409 with `data.usedBy` when the record is still referenced       |
 | POST   | `/admin/users/bulk`     | admin           | Apply one action to several users                                   | —                                                                                        | `bulk`               | `BulkResult`         | activate · deactivate · delete (plus the resource’s own actions) |
 
+#### Operational endpoints (outside the registry)
+
+Four endpoints exist on the API but not in `src/services/endpoints.js`, because no screen
+of the frontend calls them: the SPA resolves redirects in the browser (D30) and the other
+three are tools. They are part of the contract the Laravel implementation follows.
+
+| Method | Path                      | Auth/role       | Purpose                                                                    | Query  | Body                                           | Response                                     |
+| ------ | ------------------------- | --------------- | -------------------------------------------------------------------------- | ------ | ---------------------------------------------- | -------------------------------------------- |
+| GET    | `/redirects/resolve`      | public          | Resolve one path and count the hit; used by the smoke test and by QA       | `path` | —                                              | `{ data: { fromPath, toPath, statusCode } }` |
+| POST   | `/admin/redirects/import` | admin · manager | Upsert redirects by `fromPath`; an unusable row is counted and skipped     | —      | `{ rows: [{ fromPath, toPath, statusCode }] }` | `{ data: { created, updated, skipped } }`    |
+| GET    | `/admin/redirects/export` | admin · manager | CSV of the whole redirect table                                            | —      | —                                              | `Csv`                                        |
+| GET    | `/admin/seo/llms-preview` | admin · manager | The `llms.txt` that "regenerate from data" would write, without storing it | —      | —                                              | `{ data: { llmsTxt } }`                      |
+
 ---
 
 ## Response shapes
@@ -791,10 +804,12 @@ and `statusCode`.
 
 ### `SeoSettings`
 
-`seoSettings` (§6.14). The public subset keeps `siteUrl`, `separator`, `titleTemplates`,
-`defaults`, `knowledgeGraph`, `verification`, `breadcrumbs`, `noindex`, `customHeadHtml`
-and `customBodyEndHtml`; `robotsTxt`, `llmsTxt` and `sitemap` are admin-only (they are
-served as files).
+`seoSettings` (§6.14), **in full** on both endpoints. The public site renders the title
+templates, the knowledge graph, the verification tags and `customHeadHtml` itself, the
+`robotsTxt` and `llmsTxt` documents are already public at `/robots.txt` and `/llms.txt`,
+and the `sitemap` branch only describes files a crawler can fetch — so there is nothing
+in the model to withhold, and a subset would be a rule nobody could justify later
+(prompt 09 §4.8).
 
 ### `DashboardData`
 
@@ -941,3 +956,291 @@ At most five of each; `q` must be at least two characters.
 
 Not enveloped. `Csv` is UTF-8 with a BOM and a `Content-Disposition: attachment` header;
 `Xml` is `text/xml`; `Text` is `text/plain`.
+
+---
+
+## Captured examples
+
+Recorded from the mock (`npm run mock`) against the committed seed, with long branches
+trimmed where the shape repeats. The counts are the starter seed's; the shapes are the
+contract's.
+
+### `GET /settings`
+
+The public subset: everything except the `leads` branch (§6.13).
+
+```jsonc
+{
+  "data": {
+    "general": {
+      "siteName": "Squares N Acres",
+      "tagline": "Property advisory for Bengaluru",
+      "logoUrl": "https://res.cloudinary.com/dn9gyaiik/image/upload/v1789465788/sna-logo_o09ugt.png",
+      "siteUrl": "https://www.squaresnacres.com",
+      "defaultLanguage": "en-IN",
+      "contactEmail": "info@squaresnacres.com",
+      "contactPhone": "9880000001",
+      "whatsappNumber": "9880000001",
+      "address": {
+        "line1": "[Office address to be provided]",
+        "line2": null,
+        "locality": null,
+        "city": "Bengaluru",
+        "state": "Karnataka",
+        "pincode": "560001",
+        "country": "India",
+      },
+      "workingHours": [
+        {
+          "days": "Monday to Saturday",
+          "hours": "9:30 am – 6:30 pm",
+        },
+        {
+          "days": "Sunday",
+          "hours": "By appointment",
+        },
+      ],
+    },
+    "hero": {
+      "title": "Find the right property in Bengaluru",
+      "searchTabs": ["sale", "rent", "lease", "commercial", "plots"],
+      "stats": [],
+    },
+    "navigation": {
+      "headerCtaLabel": "Post Requirement",
+      "headerCtaHref": "#post-requirement",
+      "showCallButton": true,
+      "showWhatsappButton": true,
+    },
+    "social": {
+      "facebook": null,
+      "instagram": null,
+      "linkedin": null,
+      "youtube": null,
+      "x": null,
+      "pinterest": null,
+    },
+    "footer": {
+      "aboutText": "Squares N Acres is a property advisory based in Bengaluru. We list what we have seen, verify what we publish, and stay with our clients through the whole transaction.",
+      "showNewsletter": true,
+      "showGallery": false,
+    },
+    "newsletter": {
+      "enabled": true,
+      "title": "Property insight, once a month",
+      "subtitle": "Locality notes, new launches and practical guidance. No spam, unsubscribe anytime.",
+      "successMessage": "Thank you — please check your inbox to confirm the subscription.",
+    },
+    "integrations": {
+      "googleAnalyticsId": null,
+      "googleTagManagerId": null,
+      "facebookPixelId": null,
+      "googleMapsApiKey": null,
+      "cloudinaryCloudName": null,
+      "cloudinaryUploadPreset": null,
+      "recaptchaSiteKey": null,
+    },
+    "updatedAt": "2026-09-10T09:00:00.000Z",
+  },
+}
+```
+
+### `GET /admin/dashboard`
+
+```jsonc
+{
+  "data": {
+    "stats": {
+      "propertiesTotal": 6,
+      "propertiesActive": 6,
+      "propertiesFeatured": 3,
+      "propertiesInactive": 0,
+      "leadsTotal": 6,
+      "leadsNew": 1,
+      "leadsToday": 0,
+      "leadsThisMonth": 3,
+      "leadsLastMonth": 1,
+      "conversionRate": 16.7,
+      "articlesPublished": 3,
+      "articlesDraft": 0,
+      "viewsThisMonth": 0,
+      "enquiriesThisMonth": 3,
+      "subscribers": 2,
+    },
+    "trends": {
+      "leadsByDay": [
+        {
+          "date": "2026-09-15",
+          "count": 0,
+        },
+        {
+          "date": "2026-09-16",
+          "count": 0,
+        },
+      ],
+      "leadsBySource": [
+        {
+          "source": "property-enquiry",
+          "count": 1,
+        },
+        {
+          "source": "brochure-download",
+          "count": 1,
+        },
+      ],
+      "leadsByStatus": [
+        {
+          "status": "new",
+          "count": 1,
+        },
+        {
+          "status": "contacted",
+          "count": 1,
+        },
+      ],
+      "viewsByDay": [
+        {
+          "date": "2026-09-15",
+          "count": 0,
+        },
+        {
+          "date": "2026-09-16",
+          "count": 0,
+        },
+      ],
+    },
+    "recentLeads": [
+      {
+        "id": 1,
+        "name": "Ananya Rao",
+        "phone": "9876500001",
+        "source": "property-enquiry",
+        "status": "new",
+        "propertyId": 1,
+        "property": {
+          "id": 1,
+          "title": "Lakeview Heights — 3 BHK Apartments in Whitefield",
+          "slug": "lakeview-heights-3-bhk-whitefield",
+        },
+        "createdAt": "2026-09-08T11:20:00.000Z",
+        "assignedTo": null,
+      },
+    ],
+    "topProperties": [
+      {
+        "id": 1,
+        "title": "Lakeview Heights — 3 BHK Apartments in Whitefield",
+        "slug": "lakeview-heights-3-bhk-whitefield",
+        "viewCount": 184,
+        "enquiryCount": 12,
+      },
+      {
+        "id": 3,
+        "title": "Cauvery Green Villas — 4 BHK Villas in Yelahanka",
+        "slug": "cauvery-green-villas-yelahanka",
+        "viewCount": 142,
+        "enquiryCount": 9,
+      },
+    ],
+    "seoHealth": {
+      "averageScore": 0,
+      "good": 0,
+      "ok": 0,
+      "poor": 0,
+      "missingFocusKeyword": 0,
+      "missingMetaDescription": 0,
+    },
+    "upcomingFollowUps": [
+      {
+        "id": 4,
+        "name": "Rahul Menon",
+        "followUpAt": "2026-09-16T05:30:00.000Z",
+        "status": "site-visit",
+        "assignedTo": 2,
+        "assignedUser": "Manager User",
+      },
+    ],
+  },
+}
+```
+
+`leadsByDay` and `viewsByDay` always hold 30 entries and `leadsByStatus` always holds all
+seven statuses, so a chart never has to guess at a missing day or a missing rung.
+
+### `GET /admin/seo/overview?type=property&perPage=2`
+
+```jsonc
+{
+  "data": [
+    {
+      "id": 1,
+      "type": "property",
+      "title": "Lakeview Heights — 3 BHK Apartments in Whitefield",
+      "slug": "lakeview-heights-3-bhk-whitefield",
+      "url": "https://www.squaresnacres.com/properties/lakeview-heights-3-bhk-whitefield",
+      "seo": {
+        "focusKeyword": "3 bhk apartments in whitefield",
+        "title": "",
+        "description": "Ready-to-move 2 and 3 BHK apartments at Lakeview Heights, Whitefield, Bengaluru — clubhouse, pool, covered parking and Purple Line metro access.",
+        "score": null,
+        "scoreBand": "none",
+        "robots": {
+          "index": true,
+          "follow": true,
+        },
+      },
+      "isActive": true,
+      "status": null,
+      "updatedAt": "2026-09-10T09:00:00.000Z",
+    },
+  ],
+  "meta": {
+    "page": 1,
+    "perPage": 2,
+    "total": 6,
+    "totalPages": 3,
+  },
+}
+```
+
+### `GET /sitemap.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>https://www.squaresnacres.com/sitemap-properties.xml</loc>
+    <lastmod>2026-09-10T09:00:00.000Z</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://www.squaresnacres.com/sitemap-localities.xml</loc>
+    <lastmod>2026-09-10T09:00:00.000Z</lastmod>
+  </sitemap>
+  <!-- …developers, articles, pages -->
+</sitemapindex>
+```
+
+Each child sitemap is a `<urlset>` of the same shape; `sitemap-properties.xml` adds
+`<image:image>` entries (up to five per listing) under the Google image namespace.
+
+### `GET /robots.txt`
+
+```text
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /shortlist
+Disallow: /*?preview=
+Disallow: /*?q=
+
+…
+Sitemap: https://www.squaresnacres.com/sitemap.xml
+Sitemap: https://www.squaresnacres.com/sitemap-properties.xml
+Sitemap: https://www.squaresnacres.com/sitemap-localities.xml
+Sitemap: https://www.squaresnacres.com/sitemap-developers.xml
+Sitemap: https://www.squaresnacres.com/sitemap-articles.xml
+Sitemap: https://www.squaresnacres.com/sitemap-pages.xml
+```
+
+`%siteurl%` is replaced from `seoSettings.siteUrl` at serve time and one `Sitemap:` line
+is appended per child sitemap.
