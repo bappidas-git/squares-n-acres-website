@@ -10,6 +10,7 @@ import { SITE } from '../../../../config/site';
 import { setIn } from '../../../../hooks/useForm';
 import { useNavigationGuard } from '../../../../contexts/NavigationGuardContext';
 import { useToast } from '../../../../components/common/ToastProvider';
+import { PREVIEW_QUERY, publicUrlOf, viewPathOf, viewUrlOf } from '../publicUrl';
 import { DEFAULT_TAB, firstTabWithErrors, groupErrorsByTab, tabByKey } from './tabs';
 import { computeCompleteness } from './completeness';
 import { validateAll as runAllValidators, validateForActivation } from './validators';
@@ -22,25 +23,17 @@ export const AUTOSAVE_INTERVAL_MS = 10000;
 /** `sna_property_draft:<id|new>` — one draft per listing, per browser (§4.2). */
 export const draftKey = (propertyId) => `sna_property_draft:${propertyId ?? 'new'}`;
 
-/** The query that lets a signed-in admin open an unpublished page (§5.10). */
-export const PREVIEW_QUERY = '?preview=admin';
-
-/** The public address of a listing, for "View on site" and "Save & view". */
-export const publicUrlOf = (slug) => `${SITE.url}${PATHS.propertyDetails(slug)}`;
-
 /**
  * Where "Save & view" goes.
  *
  * A published listing has a public page; an unpublished one answers 404 to
  * everybody, so an editor is sent to the admin preview of it instead — the
  * route reads the record through `GET /admin/properties/slug/:slug` while they
- * are signed in (decision logged in `docs/DECISIONS.md`).
+ * are signed in (decision logged in `docs/DECISIONS.md`). The addresses live
+ * in `../publicUrl`, which the property list links through as well, and are
+ * re-exported here for the form's own callers.
  */
-export const viewPathOf = (slug, isActive) =>
-  `${PATHS.propertyDetails(slug)}${isActive ? '' : PREVIEW_QUERY}`;
-
-/** The same address, absolute, for a link that opens in a new tab. */
-export const viewUrlOf = (slug, isActive) => `${SITE.url}${viewPathOf(slug, isActive)}`;
+export { PREVIEW_QUERY, publicUrlOf, viewPathOf, viewUrlOf };
 
 const errorCount = (errors) => Object.keys(errors).length;
 

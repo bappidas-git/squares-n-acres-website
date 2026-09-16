@@ -22,7 +22,7 @@ import { can, hasRouteAccess } from '../config/rbac';
  */
 
 const Dashboard = lazy(() => import('../pages/admin/Dashboard'));
-const AdminProperties = lazy(() => import('../pages/admin/AdminProperties'));
+const PropertiesListPage = lazy(() => import('../pages/admin/properties/PropertiesListPage'));
 const PropertyFormPage = lazy(() => import('../pages/admin/properties/PropertyFormPage'));
 const AdminLeads = lazy(() => import('../pages/admin/AdminLeads'));
 const LeadDetail = lazy(() => import('../pages/admin/LeadDetail'));
@@ -70,7 +70,7 @@ const soon = (path, title, permission, owner) => ({
 export const ADMIN_ROUTES = [
   page('dashboard', 'Dashboard', ['dashboard', 'view'], <Dashboard />),
 
-  page('properties', 'Properties', ['properties', 'view'], <AdminProperties />),
+  page('properties', 'Properties', ['properties', 'view'], <PropertiesListPage />),
   page('properties/add', 'Add property', ['properties', 'create'], <PropertyFormPage />),
   // Sales open the form read-only (§7), so editing is gated on `view`.
   page('properties/edit/:id', 'Edit property', ['properties', 'view'], <PropertyFormPage />),

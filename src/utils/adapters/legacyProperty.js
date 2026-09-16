@@ -2,19 +2,20 @@
  * TEMPORARY — the bridge between the contract record of §6.1 and the field
  * names the un-rewritten property screens still read.
  *
- * `PropertyDetails`, `PropertyListing`, the admin property table and the
- * thirteen detail sections were written against the boilerplate's shape
- * (`gallery`, `location.area`, `type`, `status`, `priceUnit`, `configuration`
- * as strings…). Prompts 22–26 rewrite them against the real shape and delete
- * this file; until then each of those screens reads through
- * `toLegacyProperty()` so the pages render real data instead of empty states.
+ * `PropertyDetails`, `PropertyListing` and the thirteen detail sections were
+ * written against the boilerplate's shape (`gallery`, `location.area`, `type`,
+ * `status`, `priceUnit`, `configuration` as strings…). Prompts 23–26 rewrite
+ * them against the real shape and delete this file; until then each of those
+ * screens reads through `toLegacyProperty()` so the pages render real data
+ * instead of empty states.
  *
- * **Nothing writes through this adapter.** Prompt 21 finished the property form,
- * which speaks §6.1 throughout, and the form-only mappings the boilerplate's
- * `PropertyForm.jsx` needed (`publishStatus`, `propertyTypeName`, `statusLabel`,
- * `category`) went with it.
+ * **Nothing writes through this adapter**, and nothing in the admin reads
+ * through it any more: prompt 21 finished the property form and prompt 22
+ * rebuilt the property table on the contract shape, so the form-only mappings
+ * (`publishStatus`, `propertyTypeName`, `statusLabel`, `category`) and the
+ * admin-list ones (`toLegacyProperties()`, `tags`) went with them.
  *
- * Registered in `docs/PROJECT_STATE.md` → "Pending rewrites" (owners 22–26).
+ * Registered in `docs/PROJECT_STATE.md` → "Pending rewrites" (owners 23–26).
  */
 
 import { NEARBY_CATEGORIES, SPEC_GROUPS } from '../../config/enums';
@@ -312,18 +313,7 @@ export function toLegacyProperty(property) {
 
     sections: legacySections(property),
     ...legacySeo(property),
-
-    tags: [
-      ...(property.isFeatured ? ['featured'] : []),
-      ...list(property.badges)
-        .map((badge) => badge?.slug)
-        .filter(Boolean),
-    ],
   };
 }
-
-/** `toLegacyProperty` over a list, dropping anything unusable. */
-export const toLegacyProperties = (properties) =>
-  list(properties).map(toLegacyProperty).filter(Boolean);
 
 export default toLegacyProperty;
