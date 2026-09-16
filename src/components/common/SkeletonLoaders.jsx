@@ -57,30 +57,102 @@ export const PropertyGridSkeleton = ({ count = 6 }) => (
   </Box>
 );
 
+/**
+ * Mirrors the property details shell: the breadcrumb, the 16/9 gallery with its
+ * thumbnail column, the title lines, the price card and the key-facts grid, in
+ * the same two-column proportions the page uses above 1200px. A skeleton that
+ * does not match its page is a layout shift waiting to happen (ADD-24).
+ */
 export const PropertyDetailSkeleton = () => (
-  <Box sx={{ maxWidth: 1200, mx: 'auto', px: 2, py: 3 }}>
-    <Skeleton variant="text" width={200} height={20} animation="wave" />
-    <Skeleton
-      variant="rectangular"
-      width="100%"
-      sx={{ aspectRatio: '16/9', borderRadius: '12px', mt: 2 }}
-      animation="wave"
-    />
-    <Box sx={{ mt: 3 }}>
-      <Skeleton variant="text" width="60%" height={40} animation="wave" />
-      <Skeleton variant="text" width="30%" height={28} animation="wave" />
-      <Skeleton variant="text" width="40%" height={24} animation="wave" />
+  <Box
+    aria-busy="true"
+    aria-live="polite"
+    sx={{ maxWidth: 'var(--container-max)', mx: 'auto', px: 'var(--container-padding)', py: 3 }}
+  >
+    <Skeleton variant="text" width={280} height={20} animation="wave" />
+
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 132px' },
+        gap: 1.5,
+        mt: 2,
+      }}
+    >
+      <Skeleton
+        variant="rectangular"
+        width="100%"
+        sx={{ aspectRatio: { xs: '4/3', md: '16/9' }, borderRadius: 'var(--radius-lg)' }}
+        animation="wave"
+      />
+      <Box
+        sx={{
+          display: { xs: 'none', md: 'grid' },
+          gridTemplateRows: 'repeat(3, 1fr)',
+          gap: 1,
+        }}
+      >
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton
+            key={i}
+            variant="rectangular"
+            sx={{ aspectRatio: '4/3', borderRadius: 'var(--radius-md)' }}
+            animation="wave"
+          />
+        ))}
+      </Box>
     </Box>
-    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mt: 3 }}>
-      {Array.from({ length: 4 }).map((_, i) => (
-        <Skeleton
-          key={i}
-          variant="rectangular"
-          height={80}
-          sx={{ borderRadius: '8px' }}
-          animation="wave"
-        />
-      ))}
+
+    <Box sx={{ mt: 3 }}>
+      <Skeleton variant="text" width="65%" height={40} animation="wave" />
+      <Skeleton variant="text" width="35%" height={24} animation="wave" sx={{ mt: 1 }} />
+      <Skeleton variant="text" width="45%" height={20} animation="wave" />
+    </Box>
+
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 8fr) minmax(320px, 4fr)' },
+        gap: 3,
+        mt: 3,
+      }}
+    >
+      <Box>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: 'repeat(2, 1fr)',
+              sm: 'repeat(3, 1fr)',
+              md: 'repeat(4, 1fr)',
+            },
+            gap: 2,
+          }}
+        >
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} variant="text" height={56} animation="wave" />
+          ))}
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1, mt: 3 }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton
+              key={i}
+              variant="rectangular"
+              width={112}
+              height={40}
+              sx={{ borderRadius: 'var(--radius-full)' }}
+              animation="wave"
+            />
+          ))}
+        </Box>
+      </Box>
+
+      <Skeleton
+        variant="rectangular"
+        height={340}
+        sx={{ borderRadius: 'var(--radius-lg)' }}
+        animation="wave"
+      />
     </Box>
   </Box>
 );

@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 
 import theme from './theme';
+import ToastProvider from './components/common/ToastProvider';
+import { ShortlistProvider } from './contexts/ShortlistContext';
 
 /**
  * Render with the providers every UI-kit component may reach for.
@@ -22,7 +24,11 @@ export default function renderWith(ui, { initialEntries, ...options } = {}) {
     wrapper: ({ children }) => (
       <HelmetProvider>
         <ThemeProvider theme={theme}>
-          <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
+          <MemoryRouter initialEntries={initialEntries}>
+            <ToastProvider>
+              <ShortlistProvider>{children}</ShortlistProvider>
+            </ToastProvider>
+          </MemoryRouter>
         </ThemeProvider>
       </HelmetProvider>
     ),

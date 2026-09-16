@@ -1,535 +1,78 @@
 .page {
-  min-height: 60vh;
-  padding-bottom: var(--space-12);
+  padding-top: var(--space-4);
+  /* The mobile contact bar is fixed over the page; nothing may hide behind it. */
+  padding-bottom: calc(var(--space-16) + var(--safe-bottom));
 }
 
-.container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 var(--space-6);
+@media (min-width: 900px) {
+  .page {
+    padding-top: var(--space-6);
+    padding-bottom: var(--space-16);
+  }
 }
 
-/* Breadcrumb */
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: var(--space-4) 0;
-  font-family: var(--font-body);
-  font-size: 0.8rem;
+.crumbs {
+  margin-bottom: var(--space-4);
 }
 
-.breadcrumbLink {
-  color: var(--color-text-muted);
-  text-decoration: none;
-  transition: color var(--transition-fast);
+.stateWrap {
+  padding: var(--space-16) 0;
 }
 
-.breadcrumbLink:hover {
-  color: var(--color-primary-dark);
-}
-
-.breadcrumbSep {
-  font-size: 1rem;
-  color: var(--color-text-muted);
-}
-
-.breadcrumbCurrent {
-  color: var(--color-text);
-  font-weight: 500;
-}
-
-/* Download Buttons below gallery */
-.downloadButtons {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
-  margin-bottom: var(--space-2);
-}
-
-.downloadBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 24px;
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  border: none;
-  flex: 1;
-  justify-content: center;
-}
-
-.downloadBtn svg {
-  font-size: 1.1rem;
-}
-
-.downloadBrochure {
-  background: var(--color-primary);
-  color: var(--color-text-inverse);
-}
-
-.downloadBrochure:hover {
-  background: var(--color-primary-dark);
-}
-
-.downloadFloorPlan {
-  background: var(--color-primary);
-  color: var(--color-text-inverse);
-}
-
-.downloadFloorPlan:hover {
-  background: var(--color-primary-dark);
-}
-
-/* Layout */
+/* ── Layout ─────────────────────────────────────────────────────────────── */
 .layout {
   display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: var(--space-8);
-  margin-top: var(--space-6);
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  margin-top: var(--space-2);
 }
 
-.mainContent {
+.main {
   min-width: 0;
 }
 
-.sidebarCol {
-  position: sticky;
-  top: 135px;
-  max-height: calc(100vh - 100px);
-  overflow-y: auto;
-  scrollbar-width: none;
+/* Below the desktop grid the price card belongs directly under the gallery and
+   its title, which is where the visitor is looking — not after the sections. */
+.aside {
+  order: -1;
+  min-width: 0;
 }
 
-.sidebarCol::-webkit-scrollbar {
-  display: none;
-}
-
-/* Property Header */
-.propertyHeader {
-  padding-bottom: var(--space-6);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.headerTop {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-4);
-  margin-bottom: var(--space-2);
-}
-
-.propertyName {
-  font-family: var(--font-heading);
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: var(--space-1);
-  line-height: 1.2;
-}
-
-.badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-body);
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.badgeSale {
-  background: var(--color-primary-tint);
-  color: var(--color-primary-dark);
-}
-
-.badgeRent {
-  background: var(--color-surface-2);
-  color: var(--color-primary-dark);
-}
-
-.priceBlock {
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.price {
-  font-family: var(--font-heading);
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--color-text);
-  letter-spacing: 0.3px;
-}
-
-.priceUnit {
-  display: block;
-  font-family: var(--font-body);
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-}
-
-.locationRow {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  margin-bottom: var(--space-4);
-}
-
-.locationIcon {
-  font-size: 1.1rem;
-  color: var(--color-primary-dark);
-}
-
-/* Quick info chips */
-.quickChips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-6);
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.chip svg {
-  font-size: 1rem;
-  color: var(--color-primary-dark);
-}
-
-/* CTA Buttons */
-.headerActions {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.ctaPrimary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 20px;
-  background: var(--color-primary);
-  color: var(--color-text-inverse);
-  border: none;
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
-.ctaPrimary:hover {
-  background: var(--color-primary-dark);
-}
-
-.ctaSecondary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 20px;
-  background: var(--color-primary);
-  color: var(--color-text-inverse);
-  border: none;
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
-.ctaSecondary:hover {
-  background: var(--color-primary-dark);
-}
-
-.shareBtn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 10px 16px;
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.shareBtn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary-dark);
-}
-
-/* Error / 404 */
-.errorPage {
-  min-height: 60vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: var(--space-12);
-}
-
-.errorIcon {
-  font-size: 4rem;
-  color: var(--color-text-muted);
-  margin-bottom: var(--space-6);
-}
-
-.errorTitle {
-  font-family: var(--font-heading);
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: var(--space-2);
-}
-
-.errorText {
-  font-family: var(--font-body);
-  font-size: 1rem;
-  color: var(--color-text-muted);
-  margin-bottom: var(--space-6);
-}
-
-.errorBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 24px;
-  background: var(--color-primary);
-  color: var(--color-text-inverse);
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: background var(--transition-fast);
-}
-
-.errorBtn:hover {
-  background: var(--color-primary-dark);
-  color: var(--color-text-inverse);
-}
-
-/* Skeleton */
-.skeletonBreadcrumb {
-  padding: var(--space-4) 0;
-}
-
-/* Modal overlay for lead form */
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-modal);
-  background: var(--color-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-6);
-}
-
-.modalContent {
-  position: relative;
-  width: 100%;
-  max-width: 420px;
-  background: var(--color-bg);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  box-shadow: var(--shadow-lg);
-}
-
-.modalClose {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  padding: 4px;
-}
-
-/* Modal Title */
-.modalTitle {
-  font-family: var(--font-heading);
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: var(--space-4);
-  padding-right: var(--space-8);
-}
-
-/* Thank you state in modal */
-.thankYou {
-  text-align: center;
-  padding: var(--space-8) var(--space-4);
-}
-
-.thankYouIcon {
-  font-size: 3.5rem;
-  color: var(--color-success-dark);
-  margin-bottom: var(--space-4);
-}
-
-.thankYouTitle {
-  font-family: var(--font-heading);
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: var(--space-2);
-}
-
-.thankYouText {
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-  margin-bottom: var(--space-6);
-}
-
-.thankYouClose {
-  padding: 10px 24px;
-  background: var(--color-primary);
-  color: var(--color-text-inverse);
-  border: none;
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
-.thankYouClose:hover {
-  background: var(--color-primary-dark);
-}
-
-/* Pricing modal header */
-.pricingModalHeader {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
-  padding-right: var(--space-8);
-}
-
-.pricingModalIcon {
-  font-size: 2rem;
-  color: var(--color-primary-dark);
-  flex-shrink: 0;
-  background: var(--color-surface);
-  padding: 10px;
-  border-radius: var(--radius-md);
-}
-
-/* Responsive */
-@media (max-width: 899.98px) {
+@media (min-width: 1200px) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 8fr) minmax(320px, 4fr);
+    align-items: start;
   }
 
-  .sidebarCol {
-    display: none;
-  }
-
-  .propertyName {
-    font-size: 1.5rem;
-  }
-
-  .price {
-    font-size: 1.35rem;
-  }
-
-  .downloadButtons {
-    flex-direction: row;
+  .aside {
+    order: 0;
+    position: sticky;
+    top: calc(var(--header-height) + var(--space-4));
   }
 }
 
-@media (max-width: 599.98px) {
-  .container {
-    padding: 0 var(--space-4);
-  }
-
-  .headerTop {
-    flex-direction: column;
-  }
-
-  .priceBlock {
-    text-align: left;
-  }
-
-  .propertyName {
-    font-size: 1.35rem;
-  }
-
-  .price {
-    font-size: 1.25rem;
-  }
-
-  .headerActions {
-    flex-direction: column;
-  }
-
-  .ctaPrimary,
-  .ctaSecondary {
-    justify-content: center;
-    width: 100%;
-  }
-
-  .shareBtn {
-    justify-content: center;
-    width: 100%;
-  }
-
-  .downloadButtons {
-    flex-direction: column;
-  }
-
-  .downloadBtn {
-    width: 100%;
-  }
+/* ── Sections ───────────────────────────────────────────────────────────── */
+.section {
+  scroll-margin-top: calc(var(--header-height) + var(--space-16));
 }
 
-/* The band an admin sees over an unpublished listing (`?preview=admin`). */
+.section:not(:empty) {
+  padding-top: var(--space-6);
+}
+
+/* ── Admin preview banner ───────────────────────────────────────────────── */
 .previewBanner {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-sticky);
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-3);
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
   padding: var(--space-3) var(--container-padding);
   background: var(--color-warning-bg);
-  border-bottom: 1px solid var(--color-warning);
   color: var(--color-warning-dark);
+  font-family: var(--font-body);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   text-align: center;
 }
 
@@ -539,5 +82,5 @@
 }
 
 .previewLink:hover {
-  color: var(--color-text);
+  color: var(--color-charcoal);
 }

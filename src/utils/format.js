@@ -184,6 +184,33 @@ export function formatPhoneForTel(value) {
   return `+${digits}`;
 }
 
+/**
+ * The digits `wa.me` wants: an international number with no `+` and no spaces.
+ * `98765 43210` -> `919876543210`.
+ *
+ * A number stored the way a person types it — ten digits, no country code — is
+ * a dead `wa.me` link, which is why this goes through `formatPhoneForTel`
+ * rather than simply stripping the punctuation.
+ *
+ * @param {string|number|null} value
+ * @returns {string} `''` when there is no plausible number
+ */
+export function formatWhatsappNumber(value) {
+  return formatPhoneForTel(value).replace(/^\+/, '');
+}
+
+/**
+ * A `https://wa.me/<number>?text=<message>` link, or `''` without a number.
+ *
+ * @param {string|number|null} number
+ * @param {string} [message]
+ */
+export function whatsappLink(number, message) {
+  const digits = formatWhatsappNumber(number);
+  if (!digits) return '';
+  return `https://wa.me/${digits}${message ? `?text=${encodeURIComponent(message)}` : ''}`;
+}
+
 const format = {
   formatArea,
   formatBhk,
@@ -195,6 +222,8 @@ const format = {
   formatPrice,
   formatPriceRange,
   formatRelative,
+  formatWhatsappNumber,
+  whatsappLink,
 };
 
 export default format;

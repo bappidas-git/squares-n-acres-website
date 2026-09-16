@@ -13,6 +13,7 @@ import { AdminAuthProvider } from '../contexts/AdminAuthContext';
 import { MasterDataProvider } from '../contexts/MasterDataContext';
 import { NavigationGuardProvider } from '../contexts/NavigationGuardContext';
 import { PageLoader } from '../components/common/SkeletonLoaders';
+import { ShortlistProvider } from '../contexts/ShortlistContext';
 import { SiteSettingsProvider } from '../contexts/SiteSettingsContext';
 import ToastProvider from '../components/common/ToastProvider';
 
@@ -39,9 +40,11 @@ const AppShell = () => (
       <MasterDataProvider>
         <AdminAuthProvider>
           <NavigationGuardProvider>
-            <Suspense fallback={<PageLoader />}>
-              <Outlet />
-            </Suspense>
+            <ShortlistProvider>
+              <Suspense fallback={<PageLoader />}>
+                <Outlet />
+              </Suspense>
+            </ShortlistProvider>
           </NavigationGuardProvider>
         </AdminAuthProvider>
       </MasterDataProvider>

@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 import { toneStyles } from '../ui/tones';
@@ -18,7 +19,11 @@ import styles from './ToastProvider.module.css';
  *
  * At most three toasts are visible at a time — older ones drop off the top, so
  * a burst of API errors cannot cover the screen. The region is `aria-live`
- * polite, which announces each toast without stealing focus (§8.3).
+ * polite, which announces each toast without stealing focus (§8.3), and it is
+ * portalled to `document.body`: a `position: fixed` element inside a
+ * transformed ancestor — the page transition of `MainLayout`, a sticky column
+ * — is positioned against that ancestor rather than the viewport, and its
+ * `--z-toast` means nothing outside its stacking context.
  */
 
 const ToastContext = createContext(null);
@@ -96,39 +101,44 @@ const ToastProvider = ({ children }) => {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className={styles.region} role="status" aria-live="polite" aria-atomic="false">
-        <AnimatePresence initial={false}>
-          {toasts.map((toast) => {
-            const palette = toneStyles(TONE_BY_SEVERITY[toast.severity] || 'info');
-            return (
-              <motion.div
-                key={toast.id}
-                layout={!reducedMotion}
-                initial={offscreen}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={offscreen}
-                transition={{ duration: reducedMotion ? 0 : 0.2 }}
-                className={styles.toast}
-                style={{
-                  background: palette.background,
-                  borderColor: palette.border,
-                  color: palette.color,
-                }}
-              >
-                <span className={styles.message}>{toast.message}</span>
-                <button
-                  type="button"
-                  className={styles.close}
-                  onClick={() => removeToast(toast.id)}
-                  aria-label="Dismiss notification"
-                >
-                  &times;
-                </button>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
+      {typeof document === 'undefined'
+        ? null
+        : createPortal(
+            <div className={styles.region} role="status" aria-live="polite" aria-atomic="false">
+              <AnimatePresence initial={false}>
+                {toasts.map((toast) => {
+                  const palette = toneStyles(TONE_BY_SEVERITY[toast.severity] || 'info');
+                  return (
+                    <motion.div
+                      key={toast.id}
+                      layout={!reducedMotion}
+                      initial={offscreen}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={offscreen}
+                      transition={{ duration: reducedMotion ? 0 : 0.2 }}
+                      className={styles.toast}
+                      style={{
+                        background: palette.background,
+                        borderColor: palette.border,
+                        color: palette.color,
+                      }}
+                    >
+                      <span className={styles.message}>{toast.message}</span>
+                      <button
+                        type="button"
+                        className={styles.close}
+                        onClick={() => removeToast(toast.id)}
+                        aria-label="Dismiss notification"
+                      >
+                        &times;
+                      </button>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>,
+            document.body
+          )}
     </ToastContext.Provider>
   );
 };

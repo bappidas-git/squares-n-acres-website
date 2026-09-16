@@ -91,4 +91,11 @@ describe('PropertyCard', () => {
     const { container } = renderWith(<PropertyCard property={null} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('carries a shortlist heart that says what pressing it would do', () => {
+    renderWith(<PropertyCard property={property} />);
+
+    const heart = screen.getByRole('button', { name: `Save to shortlist — ${property.title}` });
+    expect(heart).toHaveAttribute('aria-pressed', 'false');
+  });
 });
