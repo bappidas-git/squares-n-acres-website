@@ -11,16 +11,30 @@ import { getVisibleSections } from '../../utils/propertySections';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { useBanks } from '../../hooks/useMasterData';
 import { useCssVar } from '../../hooks/useCssVar';
+// `NotFound` leads the component imports because `BuilderDetail` imports it
+// before the developer sections too, and `mini-css-extract-plugin` refuses to
+// emit a stylesheet whose modules two chunks disagree about the order of.
+import NotFound from './NotFound';
+import AmenitiesSection from '../../components/sections/property/AmenitiesSection';
+import BuilderSection from '../../components/sections/property/BuilderSection';
+import ConstructionSection from '../../components/sections/property/ConstructionSection';
+import FaqsSection from '../../components/sections/property/FaqsSection';
+import FloorPlansSection from '../../components/sections/property/FloorPlansSection';
+import GallerySection from '../../components/sections/property/GallerySection';
+import HighlightsSection from '../../components/sections/property/HighlightsSection';
 import KeyFacts from '../../components/sections/property/KeyFacts';
 import LeadModalTemp from '../../components/sections/property/LeadModalTemp';
+import LocationSection, { NearbySection } from '../../components/sections/property/LocationSection';
 import MobileCtaBar from '../../components/sections/property/MobileCtaBar';
-import NotFound from './NotFound';
+import OverviewSection from '../../components/sections/property/OverviewSection';
 import PATHS from '../../routes/paths';
 import PriceCard from '../../components/sections/property/PriceCard';
 import PropertyGallery from '../../components/sections/property/PropertyGallery';
 import SectionNav, { sectionElementId } from '../../components/sections/property/SectionNav';
 import SectionPlaceholder from '../../components/sections/property/SectionPlaceholder';
+import SpecificationsSection from '../../components/sections/property/SpecificationsSection';
 import TitleBlock from '../../components/sections/property/TitleBlock';
+import UnitConfigurationsSection from '../../components/sections/property/UnitConfigurationsSection';
 import propertyService from '../../services/propertyService';
 import recentlyViewed from '../../utils/recentlyViewed';
 import useApi from '../../hooks/useApi';
@@ -31,8 +45,43 @@ import styles from './PropertyDetails.module.css';
 /** `?preview=admin` — what the property form's "Preview" link appends (§5.10). */
 const PREVIEW_TOKEN = 'admin';
 
-/** Which prompt writes each section's content; the placeholder says so. */
-const SECTION_OWNER = { documents: 25, finance: 25, similar: 25, enquiry: 25 };
+/**
+ * The component each `sectionVisibility` key is printed by (prompt 24).
+ *
+ * A key absent from this map has no section component yet; the page renders the
+ * wrapper the navigation scrolls to and, in development only, a note saying
+ * which prompt writes it.
+ */
+const SECTION_COMPONENTS = {
+  overview: OverviewSection,
+  highlights: HighlightsSection,
+  unitConfigurations: UnitConfigurationsSection,
+  specifications: SpecificationsSection,
+  amenities: AmenitiesSection,
+  floorPlans: FloorPlansSection,
+  gallery: GallerySection,
+  construction: ConstructionSection,
+  builder: BuilderSection,
+  nearby: NearbySection,
+  location: LocationSection,
+  faqs: FaqsSection,
+};
+
+/**
+ * Which prompt writes the content of a key that has no component yet.
+ *
+ * `video` and `virtualTour` are already on the page — the gallery at the top
+ * shows them as tabs — so what remains for them is the navigation, not the
+ * content; prompt 25 owns the last four sections and deletes the placeholder.
+ */
+const SECTION_OWNER = {
+  video: 25,
+  virtualTour: 25,
+  documents: 25,
+  finance: 25,
+  similar: 25,
+  enquiry: 25,
+};
 
 /** The listing index a property belongs to: `/buy`, `/rent` or `/lease`. */
 const LISTING_PATH = { sale: PATHS.buy, rent: PATHS.rent, lease: PATHS.lease };
@@ -46,12 +95,16 @@ const pixels = (value, fallback) => {
 /**
  * One property, at `/properties/:slug`.
  *
- * This is the page's **shell**: the gallery and its lightbox, the title, the
- * price card, the key facts, the navigation over the sections the listing
- * actually has, and the mobile contact bar. The sections themselves are filled
- * in by prompts 24 and 25 — until then each visible section is an empty
- * wrapper with a development-only note inside it, so the navigation has
- * something to scroll to and a visitor is never shown an empty card.
+ * The shell — the gallery and its lightbox, the title, the price card, the key
+ * facts, the navigation over the sections this listing actually has and the
+ * mobile contact bar — wraps the content sections, each of which renders only
+ * when `getVisibleSections` says the listing both switched it on and has
+ * something to put in it (BUG-06). Nothing on this page has a default value:
+ * a section with no data is a section that is not here, and is not in the
+ * navigation either (BUG-05).
+ *
+ * The four sections prompt 25 owns still render an empty wrapper with a
+ * development-only note in it, so the navigation has something to scroll to.
  *
  * An unpublished listing is readable at `?preview=admin` while somebody is
  * signed in to the admin, through the admin endpoint (prompt 21); the public
@@ -225,19 +278,27 @@ const PropertyDetails = () => {
 
             <SectionNav sections={visibleSections} offset={headerHeight} />
 
-            {visibleSections.map((section) => (
-              <section
-                key={section.key}
-                id={sectionElementId(section.key)}
-                className={styles.section}
-                aria-label={section.label}
-              >
-                <SectionPlaceholder
-                  label={section.label}
-                  prompt={SECTION_OWNER[section.key] ?? 24}
-                />
-              </section>
-            ))}
+            {visibleSections.map((section, index) => {
+              const Section = SECTION_COMPONENTS[section.key];
+              // Bands alternate so two long lists of facts never run together.
+              const background = index % 2 === 1 ? 'surface' : 'bg';
+
+              return Section ? (
+                <Section key={section.key} property={property} background={background} />
+              ) : (
+                <section
+                  key={section.key}
+                  id={sectionElementId(section.key)}
+                  className={styles.section}
+                  aria-label={section.label}
+                >
+                  <SectionPlaceholder
+                    label={section.label}
+                    prompt={SECTION_OWNER[section.key] ?? 25}
+                  />
+                </section>
+              );
+            })}
           </div>
 
           <div className={styles.aside}>

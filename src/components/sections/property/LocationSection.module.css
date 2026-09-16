@@ -1,0 +1,115 @@
+/* ── Location ───────────────────────────────────────────────────────────── */
+.address {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+}
+
+.addressIcon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  color: var(--color-primary-dark);
+}
+
+.map {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+@media (max-width: 599.98px) {
+  .map {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+.note {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.guide {
+  margin-top: var(--space-4);
+}
+
+/* ── Nearby ─────────────────────────────────────────────────────────────── */
+.nearbyGroups {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+}
+
+@media (min-width: 600px) {
+  .nearbyGroups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .nearbyGroups {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.nearbyGroup {
+  min-width: 0;
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+.groupIcon {
+  width: 20px;
+  height: 20px;
+  color: var(--color-primary-dark);
+}
+
+.places {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.place {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+}
+
+.place:last-child {
+  border-bottom: 0;
+}
+
+.placeName {
+  min-width: 0;
+  color: var(--color-text);
+}
+
+.placeDistance {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
