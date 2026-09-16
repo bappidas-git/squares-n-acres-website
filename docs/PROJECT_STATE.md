@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 09 — Mock server: content, master data, SEO, sitemaps and smoke tests Next prompt: 10
+Last prompt executed: 10 — Full Bangalore seed data and seed guide Next prompt: 11
 
 ## Executed prompts
 
@@ -15,7 +15,8 @@ Last prompt executed: 09 — Mock server: content, master data, SEO, sitemaps an
 | 06  | Mock server core, runtime db, envelope and starter seed       | `1a2ce23`                                                                          | 2026-09-15 |
 | 07  | Auth tokens, RBAC middleware, users CRUD and profile          | `2383116`                                                                          | 2026-09-15 |
 | 08  | Property search and lead pipeline on the mock                 | `71e0727`                                                                          | 2026-09-15 |
-| 09  | Mock content, master data, SEO, sitemaps and smoke tests      | HEAD of this branch (a commit cannot contain its own hash — prompt 10 fills it in) | 2026-09-16 |
+| 09  | Mock content, master data, SEO, sitemaps and smoke tests      | `92df3cb`                                                                          | 2026-09-16 |
+| 10  | Full Bangalore seed data and seed guide                       | HEAD of this branch (a commit cannot contain its own hash — prompt 11 fills it in) | 2026-09-16 |
 
 ## Baseline (prompt 01)
 
@@ -189,6 +190,7 @@ The renormalisation is therefore invisible in the diff.
 | `check:contrast`        | `node scripts/contrast-check.js`                                                                | 04                           |
 | `check:endpoints`       | `node scripts/check-endpoints.js`                                                               | 05                           |
 | `validate:seed`         | `node scripts/validate-seed.js`                                                                 | 06                           |
+| `seed:build`            | `node scripts/seed/build-seed.js`                                                               | 10                           |
 | `smoke`                 | `node scripts/smoke-api.js` (needs a running mock; deliberately outside `check:all`)            | 09                           |
 | `check:all`             | `… lint && test:ci && test:mock && build:ci && check:traces && validate:seed && check:contrast` | 01 (extended in 04, 06, 07)  |
 
@@ -274,7 +276,7 @@ The boilerplate's own endpoint surface stays inventoried in
 | BUG-08                    | `brochureUrl`, `floorPlanPdfUrl`, `documents[].url` never delivered after lead capture                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | master spec, confirmed 01 | 25, 28                      |
 | BUG-09 (contract defined) | Lead sources inconsistent (21 values in `src/` vs `adminConstants` vs `AdminLayout.formatSource`). **Prompt 05 froze `LEAD_SOURCES` (29 values) and `LEGACY_LEAD_SOURCE_MAP` (24 old values)** in `src/config/enums.js`, tested in `enums.test.js`. The forms still send the old values; **Prompt 08 applies `LEGACY_LEAD_SOURCE_MAP` on `POST /leads`**, so an old bundle's `property_enquiry` is stored as `property-enquiry` and an unknown value is a 422. The seed converts its own rows in 10, the forms move in 28 and the CRM labels in 29.                    | master spec, confirmed 01 | 10, 28, 29 (contract: 05 ✔) |
 | BUG-10                    | `NotFound` → `?search=` vs listing `?q=`; `QuickActions` → `type=lease` unsupported; `?area=` only a hidden client-side filter                                                                                                                                                                                                                                                                                                                                                                                                                                         | master spec, confirmed 01 | 26, 27, 43                  |
-| BUG-11                    | Hardcoded content on About, Contact, FAQs, HomeLoan, LegalAssistance, InteriorDesigning, Careers, Partnership, SellLet, FlexibleWorkspace, DirectLeaseRetails, RealEstateAwareness, WhyChoose, HowItWorks, Dashboard trends, footer defaults, `SeoGuidelines`                                                                                                                                                                                                                                                                                                          | master spec, confirmed 01 | 27, 29, 30, 31, 37, 40      |
+| BUG-11                    | Hardcoded content on About, Contact, FAQs, HomeLoan, LegalAssistance, InteriorDesigning, Careers, Partnership, SellLet, FlexibleWorkspace, DirectLeaseRetails, RealEstateAwareness, WhyChoose, HowItWorks, Dashboard trends, footer defaults, `SeoGuidelines` **Data side prepared in 10:** every one of those pages is now a seeded CMS record with its blocks, so prompts 27–31 render data rather than JSX.                                                                                                                                                         | master spec, confirmed 01 | 27, 29, 30, 31, 37, 40      |
 | BUG-14 (server side done) | Token expiry never enforced; login writes both storages; logout incomplete; 401 redirect for public calls. **Prompt 07 closed the server half**: a token carries `expiresAt` from `MOCK_TOKEN_TTL_HOURS`, an expired or revoked one answers 401 and is deleted, logout revokes, a password change revokes the user's other tokens and a deactivated account loses its sessions. The client half — one storage, the expiry timer, the auto-logout toast and no 401 redirect on public calls — is prompts 11 and 12.                                                     | master spec, confirmed 01 | 11, 12                      |
 | BUG-15 (frontend)         | Careers résumé upload dead; no spam protection; newsletter no dedupe and a false reCAPTCHA notice. **Closed on the server in 09:** `POST /jobs/:id/apply`, `POST /newsletter/subscribe` and `POST /leads` are throttled to ten a minute per IP and honour the `website` honeypot, a known address answers "Already subscribed" and an unsubscribed one is revived, and a résumé travels as a URL (D12). The forms themselves arrive with 28 and 31.                                                                                                                    | master spec, confirmed 01 | 28, 31                      |
 | BUG-16 (residual)         | Filter logic duplicated between `PropertyListing` and `PropertyFilters`. All the dead code named in the row is gone (01: unused variables; 03: `adminService`, `visitService`, `PropertyDetail.js`, `AnimatedSection.jsx`, the unreachable enquiry modal, five dead CSS class blocks, two dead props, `stats.missing`).                                                                                                                                                                                                                                                | master spec, confirmed 01 | 26                          |
@@ -309,7 +311,6 @@ The boilerplate's own endpoint surface stays inventoried in
 | ADD-21           | `AdminProperties` fetches the public `/properties`, toggle omits the `is_active` fallback, `Promise.all` bulk aborts on first failure, per-page select-all; `AdminLeads`/`Dashboard` `p.id === propertyId` string-vs-number → Property column always empty; `Dashboard` "Leads by source" from 10 leads; `FaqManager` reorder wrong under a category filter with two sequential PUTs per swap; `LeadDetail` simulated timeline, `isMobile` unused (**closed in 01**)                                                                                                       | master spec, confirmed 01 | 17, 22, 29                                                                                                                                                                                                                                                                                                                                                   |
 | ADD-22           | Property tabs: `DetailsTab` drag issues N state updates per drag-over; `SectionVisibilityTab` toggle asymmetric for `undefined`; `GalleryTab` seeds placeholder-image covers; `NearbyPlacesTab` default type `school` unknown to the public map; index keys everywhere; `SeoTagsTab` old-domain placeholder                                                                                                                                                                                                                                                                | master spec, confirmed 01 | 18–21                                                                                                                                                                                                                                                                                                                                                        |
 | ADD-23           | `IconPicker`: 17 invalid MDI ids (all verified present), tiles not keyboard-operable, search ignores the category                                                                                                                                                                                                                                                                                                                                                                                                                                                          | master spec, confirmed 01 | 13                                                                                                                                                                                                                                                                                                                                                           |
-| ADD-26           | `db.json`: mixed `leads[].propertyId`, `.mp4` in a property gallery, hardcoded `neighborhoods.propertyCount`, `(555) 123-4567`, off-scope Mumbai article, lorem-ipsum "Test Article" and Guwahati "Test Property", `faqs[6]` double `??`                                                                                                                                                                                                                                                                                                                                   | master spec, confirmed 01 | 10                                                                                                                                                                                                                                                                                                                                                           |
 | ADD-27           | `seoScoring.js`/`seoGenerator.js`: HOM site name/URL constants, generic CTA-word scoring, schema string stored in the record                                                                                                                                                                                                                                                                                                                                                                                                                                               | master spec, confirmed 01 | 36                                                                                                                                                                                                                                                                                                                                                           |
 | ADD-28 (partial) | **Closed in 04** (§9 asked for these three): the active parent group collapses again (`??` instead of `                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |                           | `, so an explicit collapse wins over the active state), the mobile drawer renders the brand once, and `PAGE_TITLES`covers every registered admin route including`/admin/partners`, with regex patterns for the three parameterised ones. **Still open:** the new-lead toast still navigates on click (now a `useToast`call), and`.notificationDot` dead CSS. | master spec, confirmed 01 | 12  |
 
@@ -1224,15 +1225,16 @@ both `/api/...` and the root. Plus four operational paths outside the registry:
 
 **Verification**
 
-| Command                 | Result                                                                                |
-| ----------------------- | ------------------------------------------------------------------------------------- |
-| `npm run test:mock`     | **117 tests, 117 pass, 0 fail** (was 64 before this prompt)                           |
-| `npm run smoke`         | **269/269 checks pass, 0 failures** — 235 registry endpoints + 34 targeted assertions |
-| `npm run lint`          | 0 errors, 0 warnings; `check:endpoints` 185 files scanned, 0 blocking findings        |
-| `npm run test:ci`       | 10 suites, 573 tests, all pass                                                        |
-| `npm run build:ci`      | Compiled, no warnings                                                                 |
-| `npm run check:traces`  | 360 files scanned, 0 findings                                                         |
-| `npm run validate:seed` | `db.json is valid.`                                                                   |
+| Command                 | Result                                                                                                                                                                                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run test:mock`     | **117 tests, 117 pass, 0 fail** (was 64 before this prompt)                                                                                                                                                                              |
+| `npm run smoke`         | **269/269 checks pass, 0 failures** — 235 registry endpoints + 34 targeted assertions                                                                                                                                                    |
+| `npm run lint`          | 0 errors, 0 warnings; `check:endpoints` 185 files scanned, 0 blocking findings                                                                                                                                                           |
+| `npm run test:ci`       | 10 suites, 573 tests, all pass                                                                                                                                                                                                           |
+| `npm run build:ci`      | Compiled, no warnings                                                                                                                                                                                                                    |
+| `npm run check:traces`  | 360 files scanned, 0 findings                                                                                                                                                                                                            |
+| `npm run validate:seed` | `db.json is valid.`                                                                                                                                                                                                                      |
+| ADD-26                  | `db.json`: mixed `leads[].propertyId`, `.mp4` in a property gallery, hardcoded `neighborhoods.propertyCount`, `(555) 123-4567`, off-scope Mumbai article, lorem-ipsum "Test Article" and Guwahati "Test Property", `faqs[6]` double `??` | 10 — `db.json` is regenerated from `scripts/seed/`: lead `propertyId` is always an integer, no video sits in a gallery, `propertyCount` is computed rather than stored, the phone numbers are synthetic Indian mobiles, and there is no off-scope, lorem-ipsum or test record left. `npm run validate:seed` now enforces the §10 quality rules as well as the types. |
 
 The smoke run was repeated twice against the same server: the second run passes identically
 and leaves nothing behind but the `apiTokens` its logins created and the one `propertyViews`
@@ -1258,3 +1260,121 @@ throttle, the newsletter dedupe, `/articles/trending` and the FAQ filters all wo
 open for the components that consume them (27, 28, 31, 34). The React app still calls the
 boilerplate's paths (prompt 11) and cannot sign in (prompt 12), so the API is exercised with
 `curl`, `npm run test:mock` and `npm run smoke`.
+
+### Prompt 10 — Full Bangalore seed data (`db.json`) and seed guide (2026-09-16)
+
+**What changed**
+
+`db.json` is no longer hand-written. It is generated by `npm run seed:build`
+from `scripts/seed/`, and it now holds the complete dataset of §10 rather than
+the six-listing starter fixture of prompt 06.
+
+**Files added**
+
+| Path                                             | What it is                                                                            |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `scripts/seed/build-seed.js`                     | Assembles every collection, derives `media`, checks the result, writes the file       |
+| `scripts/seed/lib/rng.js`                        | mulberry32 with a fixed seed; named child generators per collection                   |
+| `scripts/seed/lib/dates.js`                      | `GENERATED_AT` and every relative-date helper                                         |
+| `scripts/seed/lib/stamps.js`                     | `createdAt` / `updatedAt` spread over 180 days                                        |
+| `scripts/seed/lib/seo.js`                        | The §9.6 object and the 120–160 character description fitter                          |
+| `scripts/seed/lib/media.js`                      | The media registry: minting a URL registers its record                                |
+| `scripts/seed/lib/text.js`                       | ₹ and area formatting (D33), HTML paragraph helpers                                   |
+| `scripts/seed/lib/property.js`                   | Expands a property spec into the full §6.1 record                                     |
+| `scripts/seed/data/*.js` (23 modules)            | The data: localities, properties, articles, pages, leads, settings, …                 |
+| `mock-server/__tests__/fixtures/starter-db.json` | The frozen prompt-06 seed the mock suites read                                        |
+| `mock-server/__tests__/seed.test.js`             | Four cases over the **shipped** seed: reserved slugs, the path slug, sizes, dashboard |
+
+**Files changed**
+
+- `db.json` — regenerated in full (1.4 MB).
+- `scripts/validate-seed.js` — the §10 quality rules, the path-slug rule for CMS
+  pages, an asset scan that matches `mock-server/lib/usage.js`, the collection
+  counts, and a non-blocking warning channel.
+- `mock-server/routes/pages.js` — `slug/:slug(*)` so a page slug containing a
+  slash resolves (the prompt's manual QA case).
+- `mock-server/__tests__/helpers.js` — reads the frozen fixture; exports
+  `LIVE_SEED` for the new suite.
+- `package.json` — `"seed:build": "node scripts/seed/build-seed.js"`.
+- `docs/SEED_GUIDE.md` — rewritten: contents, how to regenerate, the rules, what
+  is fictional versus placeholder, how to add a property, an article or a page.
+- `docs/DECISIONS.md`, `docs/PROJECT_STATE.md` — 19 decision records and this report.
+
+**Counts (`npm run validate:seed`)**
+
+| Collection        | Count | Collection            | Count  |
+| ----------------- | ----- | --------------------- | ------ |
+| properties        | 40    | testimonials          | 8      |
+| localities        | 20    | teamMembers           | 6      |
+| cities            | 1     | partners              | 6      |
+| propertyTypes     | 17    | pages                 | 15     |
+| amenities         | 46    | jobOpenings           | 4      |
+| badges            | 8     | jobApplications       | 3      |
+| developers        | 8     | media                 | 389    |
+| banks             | 6     | redirects             | 3      |
+| leads             | 45    | newsletterSubscribers | 12     |
+| articles          | 12    | adminUsers            | 3      |
+| articleCategories | 4     | siteSettings          | object |
+| articleTags       | 15    | seoSettings           | object |
+| authors           | 3     | apiTokens             | 0      |
+| faqs              | 20    | propertyViews         | 0      |
+
+Of the 40 properties: **38 active, 2 drafts**, 10 featured, 20 verified, all 17
+property types, all three listing types, all four construction statuses and all
+twenty localities. Of the 12 articles: 10 published (838–1 154 words each), 1
+scheduled for 2026-10-31, 1 draft. The 45 leads cover all 29 sources and all
+seven statuses, with 15 assigned to sales, 5 to the manager and 25 unassigned.
+
+**Generation date: 2026-09-16T09:00:00.000Z.** Every relative date is measured
+from that instant, which is what makes the build deterministic; the validator
+warns once the scheduled article's date has drifted into the past.
+
+**Verification**
+
+| Command                  | Result                                                                 |
+| ------------------------ | ---------------------------------------------------------------------- |
+| `npm run seed:build`     | Written twice, byte-identical (`diff` empty)                           |
+| `npm run validate:seed`  | `db.json is valid.` — 0 errors, 0 warnings                             |
+| `npm run smoke`          | **269/269 checks pass**, 0 failures                                    |
+| `npm run test:mock`      | **121 tests, 121 pass** (was 117; the new seed suite adds 4)           |
+| `npm run lint`           | 0 errors, 0 warnings; `check:endpoints` 185 files, 0 blocking findings |
+| `npm run test:ci`        | 10 suites, 573 tests, all pass                                         |
+| `npm run build:ci`       | Compiled, no warnings                                                  |
+| `npm run check:traces`   | 391 files scanned, 0 findings                                          |
+| `grep -c picsum db.json` | 807 (> 200 required)                                                   |
+| File size                | 1.4 MB (< 4 MB required)                                               |
+
+Manual QA, against a running mock: `GET /api/properties?localityId=1&bedrooms=3`
+returns the Whitefield 3-BHK only; `GET /api/articles?categorySlug=legal-rera`
+returns the RERA, khata and stamp-duty pieces; `GET
+/api/pages/slug/buyer-assistance/home-loan` resolves after the route fix; `GET
+/api/admin/dashboard` shows 21 of 30 days with leads, 29 sources, five top
+properties and eight upcoming follow-ups.
+
+The un-migrated React app was loaded at `/` in headless Chromium: it renders
+(seven children under `#root`, full page content) with **no uncaught
+exception**. The console errors it logs are the known ones — the boilerplate
+service still calling `/neighborhoods/active` and `/partners/active`, which do
+not exist (NEW-27, prompt 11).
+
+**Decisions worth carrying forward**
+
+- The seed is generated and deterministic. Edit `scripts/seed/data/*`, run
+  `npm run seed:build`, never edit `db.json`.
+- A data module holds what a person must decide; everything implied is derived.
+  That is what keeps forty listings consistent.
+- `enquiryCount` is **at least** the number of leads naming a property, not
+  equal to it: the counter is a lifetime total, `leads` is a ninety-day window.
+- The mock's unit suites read a frozen fixture, not the shipped seed; the
+  shipped seed is covered by `seed.test.js` and by `npm run smoke`.
+- CMS page slugs are URL paths, and the pages route matches them greedily.
+
+**Known issues**
+
+`ADD-26` is closed: the seed's mixed types, off-scope records and test rows are
+gone, and the validator now enforces the §10 quality rules rather than only the
+field types. The data half of `BUG-11` is prepared — every hardcoded page of the
+boilerplate is a seeded CMS record with its blocks — and the components that
+read them land in prompts 27–31. The React app still uses the boilerplate's
+shapes and endpoints (prompt 11), so the new data is exercised through
+`curl`, `npm run test:mock` and `npm run smoke` rather than through the UI.
