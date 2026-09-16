@@ -1,0 +1,18 @@
+.inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.danger {
+  color: var(--color-error-dark);
+}
+
+.dangerItem {
+  color: var(--color-error-dark);
+}
+
+.menuIcon {
+  margin-right: var(--space-2);
+  flex-shrink: 0;
+}

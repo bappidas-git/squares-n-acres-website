@@ -1,30 +1,39 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  TextField,
-  Box,
-  Typography,
-  IconButton,
-  InputAdornment,
-  Chip,
-  CircularProgress,
-} from '@mui/material';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 
-const ICON_CATEGORIES = {
+import Button from '../ui/Button';
+import Chip from '../ui/Chip';
+import IconButton from '../ui/IconButton';
+import Modal from '../ui/Modal';
+import { AMENITY_CATEGORIES, NEARBY_CATEGORIES } from '../../config/enums';
+
+import styles from './IconPicker.module.css';
+
+/** What a usable Iconify MDI id looks like (§11 item 23). */
+export const ICON_ID_PATTERN = /^mdi:[a-z0-9-]+$/;
+
+/**
+ * The curated icon library.
+ *
+ * Every id was checked against the live Iconify MDI set on 2026-09-16: the
+ * three that no longer exist (`mdi:apartment`, `mdi:intercom`,
+ * `mdi:car-parking`) and the three that were only aliases (`mdi:mountain`,
+ * `mdi:restaurant`, `mdi:bricks`) are gone, replaced by canonical ids that
+ * render — a blank tile is a broken promise, not a style (ADD-23).
+ */
+export const ICON_CATEGORIES = {
   'Real Estate': [
     'mdi:home',
     'mdi:home-outline',
     'mdi:home-city',
+    'mdi:home-city-outline',
     'mdi:home-group',
     'mdi:home-modern',
     'mdi:home-automation',
     'mdi:office-building',
+    'mdi:office-building-outline',
     'mdi:domain',
     'mdi:city-variant',
-    'mdi:apartment',
     'mdi:floor-plan',
     'mdi:door',
     'mdi:window-open',
@@ -50,6 +59,7 @@ const ICON_CATEGORIES = {
     'mdi:basketball',
     'mdi:tennis',
     'mdi:badminton',
+    'mdi:racquetball',
     'mdi:cricket',
     'mdi:football',
     'mdi:table-tennis',
@@ -66,19 +76,22 @@ const ICON_CATEGORIES = {
     'mdi:book-open-variant',
     'mdi:grill-outline',
     'mdi:baby-carriage',
+    'mdi:teddy-bear',
     'mdi:dog',
     'mdi:paw',
     'mdi:palm-tree',
+    'mdi:sofa-outline',
   ],
   'Safety & Security': [
     'mdi:shield-check',
+    'mdi:shield-check-outline',
     'mdi:shield-star',
     'mdi:shield-lock',
     'mdi:security',
     'mdi:cctv',
     'mdi:fire-extinguisher',
     'mdi:alarm-light',
-    'mdi:intercom',
+    'mdi:doorbell-video',
     'mdi:video-outline',
     'mdi:bell-ring',
     'mdi:eye',
@@ -86,24 +99,26 @@ const ICON_CATEGORIES = {
   ],
   Infrastructure: [
     'mdi:lightning-bolt',
+    'mdi:flash-outline',
     'mdi:water-pump',
     'mdi:gas-cylinder',
     'mdi:ev-station',
     'mdi:wifi',
     'mdi:satellite-variant',
-    'mdi:car-parking',
     'mdi:parking',
+    'mdi:car-multiple',
     'mdi:pipe',
     'mdi:solar-panel',
     'mdi:battery-charging',
     'mdi:power-plug',
     'mdi:water',
-    'mdi:water-pump',
+    'mdi:water-outline',
     'mdi:trash-can',
     'mdi:recycle',
   ],
   'Nature & Environment': [
     'mdi:tree',
+    'mdi:tree-outline',
     'mdi:flower',
     'mdi:leaf',
     'mdi:sprout',
@@ -114,7 +129,7 @@ const ICON_CATEGORIES = {
     'mdi:weather-sunny',
     'mdi:white-balance-sunny',
     'mdi:earth',
-    'mdi:mountain',
+    'mdi:image-filter-hdr',
   ],
   'Transport & Location': [
     'mdi:map-marker',
@@ -126,6 +141,7 @@ const ICON_CATEGORIES = {
     'mdi:car',
     'mdi:bus',
     'mdi:train',
+    'mdi:train-variant',
     'mdi:airplane',
     'mdi:road-variant',
     'mdi:highway',
@@ -134,7 +150,9 @@ const ICON_CATEGORIES = {
   ],
   'Education & Health': [
     'mdi:school',
+    'mdi:school-outline',
     'mdi:hospital',
+    'mdi:hospital-box-outline',
     'mdi:medical-bag',
     'mdi:stethoscope',
     'mdi:pill',
@@ -146,29 +164,31 @@ const ICON_CATEGORIES = {
   ],
   'Shopping & Dining': [
     'mdi:shopping',
+    'mdi:shopping-outline',
     'mdi:cart',
+    'mdi:cart-outline',
     'mdi:store',
+    'mdi:store-outline',
     'mdi:food',
     'mdi:food-fork-drink',
     'mdi:silverware-fork-knife',
+    'mdi:silverware',
     'mdi:coffee',
     'mdi:glass-cocktail',
-    'mdi:restaurant',
     'mdi:storefront',
   ],
   'Documents & Files': [
     'mdi:file-document',
     'mdi:file-document-check',
+    'mdi:file-document-outline',
     'mdi:file-certificate',
     'mdi:file-pdf-box',
     'mdi:file-image',
     'mdi:file-chart',
     'mdi:clipboard-text',
     'mdi:clipboard-list-outline',
-    'mdi:book-open-variant',
     'mdi:folder',
     'mdi:folder-open',
-    'mdi:file-document-outline',
     'mdi:certificate',
   ],
   Construction: [
@@ -176,10 +196,13 @@ const ICON_CATEGORIES = {
     'mdi:shovel',
     'mdi:hammer',
     'mdi:wrench',
+    'mdi:screwdriver',
     'mdi:format-paint',
     'mdi:hard-hat',
-    'mdi:bricks',
+    'mdi:account-hard-hat',
+    'mdi:texture-box',
     'mdi:bulldozer',
+    'mdi:excavator',
     'mdi:ruler',
     'mdi:ruler-square',
     'mdi:tape-measure',
@@ -190,6 +213,7 @@ const ICON_CATEGORIES = {
     'mdi:cash',
     'mdi:credit-card',
     'mdi:bank',
+    'mdi:bank-outline',
     'mdi:chart-line',
     'mdi:trending-up',
     'mdi:calculator',
@@ -228,334 +252,239 @@ const ICON_CATEGORIES = {
     'mdi:emoticon-happy',
     'mdi:emoticon-cool',
   ],
+  // Two quick categories straight off the enums, so the icon an admin picks for
+  // an amenity or a nearby place is the icon the public site already draws for
+  // that category (§6.17).
+  'Amenity categories': AMENITY_CATEGORIES.entries.map((entry) => entry.icon),
+  'Nearby places': NEARBY_CATEGORIES.entries.map((entry) => entry.icon),
 };
 
-const ALL_ICONS = Object.values(ICON_CATEGORIES).flat();
+export const ALL_ICONS = [...new Set(Object.values(ICON_CATEGORIES).flat())];
 
+const ALL = 'All';
+const CATEGORIES = [ALL, ...Object.keys(ICON_CATEGORIES)];
 const ICONS_PER_PAGE = 60;
 
-const IconPicker = ({ open, onClose, onSelect, currentIcon = '' }) => {
+/**
+ * Picks an Iconify MDI id.
+ *
+ * Every tile is a real `<button>` with a name, a pressed state and a place in a
+ * roving tab order, so the grid is as usable from the keyboard as it is with a
+ * mouse (§8.3). Search narrows **within the active category** — searching
+ * "home" inside Finance used to silently jump back to everything (ADD-23).
+ *
+ * @param {object} props
+ * @param {boolean} props.open
+ * @param {() => void} props.onClose
+ * @param {(icon: string) => void} props.onSelect
+ * @param {string} [props.currentIcon]
+ */
+export default function IconPicker({ open, onClose, onSelect, currentIcon = '' }) {
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [customIcon, setCustomIcon] = useState('');
+  const [category, setCategory] = useState(ALL);
+  const [custom, setCustom] = useState('');
   const [visibleCount, setVisibleCount] = useState(ICONS_PER_PAGE);
+  const [focusedIndex, setFocusedIndex] = useState(0);
+
   const gridRef = useRef(null);
-  const searchInputRef = useRef(null);
+  const searchRef = useRef(null);
 
   useEffect(() => {
-    if (open) {
-      setSearch('');
-      setActiveCategory('All');
-      setCustomIcon('');
-      setVisibleCount(ICONS_PER_PAGE);
-      setTimeout(() => searchInputRef.current?.focus(), 100);
-    }
+    if (!open) return;
+    setSearch('');
+    setCategory(ALL);
+    setCustom('');
+    setVisibleCount(ICONS_PER_PAGE);
+    setFocusedIndex(0);
   }, [open]);
 
-  const filteredIcons = useMemo(() => {
-    let icons = activeCategory === 'All' ? ALL_ICONS : ICON_CATEGORIES[activeCategory] || [];
+  const icons = useMemo(() => {
+    const pool = category === ALL ? ALL_ICONS : (ICON_CATEGORIES[category] ?? []);
+    const query = search.trim().toLowerCase();
+    const found = query ? pool.filter((icon) => icon.toLowerCase().includes(query)) : pool;
+    return [...new Set(found)];
+  }, [category, search]);
 
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      icons = ALL_ICONS.filter((icon) => icon.toLowerCase().includes(q));
-    }
+  const visible = useMemo(() => icons.slice(0, visibleCount), [icons, visibleCount]);
 
-    return [...new Set(icons)];
-  }, [search, activeCategory]);
-
-  const visibleIcons = useMemo(
-    () => filteredIcons.slice(0, visibleCount),
-    [filteredIcons, visibleCount]
-  );
-
-  const handleScroll = useCallback(() => {
-    const el = gridRef.current;
-    if (!el) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
-      setVisibleCount((prev) => Math.min(prev + ICONS_PER_PAGE, filteredIcons.length));
-    }
-  }, [filteredIcons.length]);
-
-  const handleSelect = useCallback(
-    (iconName) => {
-      onSelect(iconName);
-      onClose();
+  const choose = useCallback(
+    (icon) => {
+      onSelect?.(icon);
+      onClose?.();
     },
     [onSelect, onClose]
   );
 
-  const handleCustomSubmit = useCallback(() => {
-    if (customIcon.trim()) {
-      handleSelect(customIcon.trim());
-    }
-  }, [customIcon, handleSelect]);
+  /** The number of tiles per row, read from the grid the browser laid out. */
+  const columnCount = () => {
+    const grid = gridRef.current;
+    if (!grid || typeof window === 'undefined') return 1;
+    const template = window.getComputedStyle(grid).gridTemplateColumns;
+    return Math.max(template.split(' ').filter(Boolean).length, 1);
+  };
 
-  const categories = ['All', ...Object.keys(ICON_CATEGORIES)];
+  const moveFocus = (index) => {
+    const next = Math.max(0, Math.min(index, visible.length - 1));
+    setFocusedIndex(next);
+    gridRef.current?.querySelectorAll('[data-icon-tile]')[next]?.focus();
+  };
+
+  const onGridKeyDown = (event, index) => {
+    const columns = columnCount();
+    const moves = {
+      ArrowRight: index + 1,
+      ArrowLeft: index - 1,
+      ArrowDown: index + columns,
+      ArrowUp: index - columns,
+      Home: 0,
+      End: visible.length - 1,
+    };
+
+    if (!(event.key in moves)) return;
+    event.preventDefault();
+    moveFocus(moves[event.key]);
+  };
+
+  const onScroll = () => {
+    const el = gridRef.current?.parentElement;
+    if (!el) return;
+    if (el.scrollTop + el.clientHeight < el.scrollHeight - 50) return;
+    setVisibleCount((current) => Math.min(current + ICONS_PER_PAGE, icons.length));
+  };
+
+  const customIsValid = ICON_ID_PATTERN.test(custom.trim());
 
   return (
-    <Dialog
+    <Modal
       open={open}
       onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{
-        sx: { borderRadius: 3, height: '80vh', maxHeight: 700 },
-      }}
+      size="md"
+      mobile="fullscreen"
+      title="Select icon"
+      description="Choose one from the library, or type any Iconify MDI id."
+      footer={
+        <div className={styles.footer}>
+          <span className={styles.count}>
+            {icons.length} {icons.length === 1 ? 'icon' : 'icons'}
+          </span>
+          {currentIcon ? (
+            <span className={styles.current}>
+              Current:
+              <Icon icon={currentIcon} width="20" height="20" aria-hidden="true" />
+              <code>{currentIcon}</code>
+            </span>
+          ) : null}
+        </div>
+      }
     >
-      <DialogTitle
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          pb: 1,
-          borderBottom: '1px solid var(--color-border)',
-        }}
-      >
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: 'var(--color-charcoal)' }}>
-            Select Icon
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
-            Choose from library or enter a custom Iconify name
-          </Typography>
-        </Box>
-        <IconButton onClick={onClose} size="small">
-          <Icon icon="mdi:close" />
-        </IconButton>
-      </DialogTitle>
-
-      <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Search & Custom Input */}
-        <Box sx={{ px: 3, pt: 2, pb: 1 }}>
-          <TextField
-            inputRef={searchInputRef}
-            size="small"
-            fullWidth
-            placeholder="Search icons... (e.g., home, car, star)"
+      <div className={styles.controls}>
+        <label className={styles.srOnly} htmlFor="icon-picker-search">
+          Search icons
+        </label>
+        <span className={styles.searchBox}>
+          <Icon icon="mdi:magnify" width="18" height="18" aria-hidden="true" />
+          <input
+            id="icon-picker-search"
+            ref={searchRef}
+            type="search"
+            className={styles.input}
+            placeholder="Search icons — home, car, star…"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
+            onChange={(event) => {
+              setSearch(event.target.value);
               setVisibleCount(ICONS_PER_PAGE);
-              if (e.target.value) setActiveCategory('All');
-            }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Icon icon="mdi:magnify" style={{ color: 'var(--color-text-muted)' }} />
-                </InputAdornment>
-              ),
-              endAdornment: search && (
-                <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setSearch('')}>
-                    <Icon
-                      icon="mdi:close-circle"
-                      style={{ fontSize: 18, color: 'var(--color-text-muted)' }}
-                    />
-                  </IconButton>
-                </InputAdornment>
-              ),
+              setFocusedIndex(0);
             }}
           />
-
-          {/* Custom icon input */}
-          <Box sx={{ display: 'flex', gap: 1, mt: 1.5, alignItems: 'center' }}>
-            <TextField
-              size="small"
-              placeholder="Or type custom: mdi:icon-name"
-              value={customIcon}
-              onChange={(e) => setCustomIcon(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleCustomSubmit();
-                }
-              }}
-              sx={{ flex: 1 }}
-              InputProps={{
-                startAdornment: customIcon && (
-                  <InputAdornment position="start">
-                    <Icon
-                      icon={customIcon}
-                      style={{ fontSize: 20, color: 'var(--color-charcoal)' }}
-                    />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <IconButton
-              size="small"
-              onClick={handleCustomSubmit}
-              disabled={!customIcon.trim()}
-              sx={{
-                bgcolor: customIcon.trim() ? 'var(--color-charcoal)' : 'var(--color-surface)',
-                color: customIcon.trim() ? 'var(--color-text-inverse)' : 'var(--color-text-muted)',
-                '&:hover': {
-                  bgcolor: customIcon.trim() ? 'var(--color-charcoal)' : 'var(--color-surface-2)',
-                },
-              }}
-            >
-              <Icon icon="mdi:check" />
+          {search ? (
+            <IconButton label="Clear search" size="sm" onClick={() => setSearch('')}>
+              <Icon icon="mdi:close" width="16" height="16" />
             </IconButton>
-          </Box>
-        </Box>
+          ) : null}
+        </span>
 
-        {/* Category chips */}
-        <Box
-          sx={{
-            px: 3,
-            py: 1,
-            display: 'flex',
-            gap: 0.5,
-            flexWrap: 'nowrap',
-            overflowX: 'auto',
-            borderBottom: '1px solid var(--color-surface)',
-            '&::-webkit-scrollbar': { height: 4 },
-            '&::-webkit-scrollbar-thumb': { bgcolor: 'var(--color-surface-2)', borderRadius: 2 },
-          }}
-        >
-          {categories.map((cat) => (
-            <Chip
-              key={cat}
-              label={cat}
-              size="small"
-              clickable
-              onClick={() => {
-                setActiveCategory(cat);
-                setSearch('');
-                setVisibleCount(ICONS_PER_PAGE);
-              }}
-              sx={{
-                flexShrink: 0,
-                fontWeight: 500,
-                fontSize: '0.75rem',
-                bgcolor: activeCategory === cat ? 'var(--color-charcoal)' : 'var(--color-surface)',
-                color:
-                  activeCategory === cat ? 'var(--color-text-inverse)' : 'var(--color-text-muted)',
-                '&:hover': {
-                  bgcolor:
-                    activeCategory === cat ? 'var(--color-charcoal)' : 'var(--color-surface-2)',
-                },
+        <div className={styles.customRow}>
+          <label className={styles.srOnly} htmlFor="icon-picker-custom">
+            Custom Iconify id
+          </label>
+          <span className={styles.customBox}>
+            <span className={styles.customPreview} aria-hidden="true">
+              {customIsValid ? <Icon icon={custom.trim()} width="20" height="20" /> : null}
+            </span>
+            <input
+              id="icon-picker-custom"
+              type="text"
+              className={styles.input}
+              placeholder="mdi:icon-name"
+              value={custom}
+              aria-invalid={custom && !customIsValid ? true : undefined}
+              aria-describedby="icon-picker-custom-hint"
+              onChange={(event) => setCustom(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                if (customIsValid) choose(custom.trim());
               }}
             />
-          ))}
-        </Box>
+          </span>
+          <Button size="sm" disabled={!customIsValid} onClick={() => choose(custom.trim())}>
+            Use
+          </Button>
+        </div>
+        <p className={styles.hint} id="icon-picker-custom-hint">
+          {custom && !customIsValid
+            ? 'An id looks like mdi:home-city-outline — lowercase letters, numbers and hyphens.'
+            : 'Any id from the Iconify MDI set works, e.g. mdi:home-city-outline.'}
+        </p>
 
-        {/* Icon grid */}
-        <Box
-          ref={gridRef}
-          onScroll={handleScroll}
-          sx={{
-            flex: 1,
-            overflowY: 'auto',
-            px: 3,
-            py: 2,
-          }}
-        >
-          {visibleIcons.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 6 }}>
-              <Icon
-                icon="mdi:magnify-close"
-                style={{ fontSize: 48, color: 'var(--color-text-muted)' }}
-              />
-              <Typography variant="body2" sx={{ color: 'var(--color-text-muted)', mt: 1 }}>
-                No icons found. Try a different search or use the custom input above.
-              </Typography>
-            </Box>
-          ) : (
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
-                gap: 1,
+        <div className={styles.categories}>
+          {CATEGORIES.map((entry) => (
+            <Chip
+              key={entry}
+              tone={entry === category ? 'primary' : 'neutral'}
+              selected={entry === category}
+              onClick={() => {
+                setCategory(entry);
+                setVisibleCount(ICONS_PER_PAGE);
+                setFocusedIndex(0);
               }}
             >
-              {visibleIcons.map((iconName) => (
-                <Box
-                  key={iconName}
-                  onClick={() => handleSelect(iconName)}
-                  title={iconName}
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    p: 1,
-                    borderRadius: 2,
-                    cursor: 'pointer',
-                    border:
-                      currentIcon === iconName
-                        ? '2px solid var(--color-primary)'
-                        : '1px solid transparent',
-                    bgcolor: currentIcon === iconName ? 'var(--color-warning-bg)' : 'transparent',
-                    transition: 'all 0.15s',
-                    '&:hover': {
-                      bgcolor: 'var(--color-surface)',
-                      border: '1px solid var(--color-border)',
-                    },
-                  }}
-                >
-                  <Icon icon={iconName} style={{ fontSize: 28, color: 'var(--color-charcoal)' }} />
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontSize: '0.6rem',
-                      color: 'var(--color-text-muted)',
-                      textAlign: 'center',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      width: '100%',
-                    }}
-                  >
-                    {iconName.replace('mdi:', '')}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-          )}
+              {entry}
+            </Chip>
+          ))}
+        </div>
+      </div>
 
-          {visibleCount < filteredIcons.length && (
-            <Box sx={{ textAlign: 'center', py: 2 }}>
-              <CircularProgress size={24} sx={{ color: 'var(--color-primary-dark)' }} />
-            </Box>
-          )}
-        </Box>
-
-        {/* Footer with count */}
-        <Box
-          sx={{
-            px: 3,
-            py: 1,
-            borderTop: '1px solid var(--color-border)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
-            {filteredIcons.length} icons available
-          </Typography>
-          {currentIcon && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="caption" sx={{ color: 'var(--color-text-muted)' }}>
-                Current:
-              </Typography>
-              <Icon
-                icon={currentIcon}
-                style={{ fontSize: 20, color: 'var(--color-primary-dark)' }}
-              />
-              <Typography
-                variant="caption"
-                sx={{ color: 'var(--color-charcoal)', fontWeight: 600 }}
+      <div className={styles.gridScroller} onScroll={onScroll}>
+        {visible.length === 0 ? (
+          <p className={styles.noResults}>
+            No icon in {category === ALL ? 'the library' : category} matches “{search.trim()}”. Try
+            another category, or type the id above.
+          </p>
+        ) : (
+          <div className={styles.grid} ref={gridRef} role="group" aria-label="Icons">
+            {visible.map((icon, index) => (
+              <button
+                key={icon}
+                type="button"
+                data-icon-tile
+                className={[styles.tile, icon === currentIcon ? styles.tileActive : '']
+                  .filter(Boolean)
+                  .join(' ')}
+                aria-label={icon}
+                aria-pressed={icon === currentIcon}
+                tabIndex={index === focusedIndex ? 0 : -1}
+                onFocus={() => setFocusedIndex(index)}
+                onKeyDown={(event) => onGridKeyDown(event, index)}
+                onClick={() => choose(icon)}
               >
-                {currentIcon}
-              </Typography>
-            </Box>
-          )}
-        </Box>
-      </DialogContent>
-    </Dialog>
+                <Icon icon={icon} width="26" height="26" aria-hidden="true" />
+                <span className={styles.tileLabel}>{icon.replace('mdi:', '')}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </Modal>
   );
-};
-
-export default IconPicker;
+}

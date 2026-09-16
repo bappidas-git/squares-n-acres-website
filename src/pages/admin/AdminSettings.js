@@ -12,9 +12,10 @@ import {
   IconButton,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
+import { Link } from 'react-router-dom';
+import PATHS from '../../routes/paths';
 import settingsService from '../../services/settingsService';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
-import UserManagement from '../../components/admin/UserManagement';
 import { Alert } from '../../components/ui';
 import { useToast } from '../../components/common/ToastProvider';
 
@@ -116,9 +117,6 @@ const AdminSettings = () => {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
-
-  // Tab index for User Management (last tab, admin-only)
-  const USER_MGMT_TAB = 5;
 
   useEffect(() => {
     let cancelled = false;
@@ -222,7 +220,26 @@ const AdminSettings = () => {
             Global website configuration
           </Typography>
         </Box>
-        {activeTab !== USER_MGMT_TAB && (
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+          {/* Users moved out of this screen into their own page in prompt 13;
+              the link keeps them one click from where they used to be. */}
+          {isAdmin && (
+            <Button
+              component={Link}
+              to={PATHS.adminUsers}
+              variant="outlined"
+              startIcon={<Icon icon="mdi:account-group-outline" />}
+              sx={{
+                textTransform: 'none',
+                borderRadius: 2,
+                px: 3,
+                color: 'var(--color-charcoal)',
+                borderColor: 'var(--color-border-strong)',
+              }}
+            >
+              Users
+            </Button>
+          )}
           <Button
             variant="contained"
             startIcon={<Icon icon="mdi:content-save-outline" />}
@@ -241,20 +258,18 @@ const AdminSettings = () => {
           >
             Save settings
           </Button>
-        )}
+        </Box>
       </Box>
 
-      {activeTab !== USER_MGMT_TAB ? (
-        <Alert
-          tone="info"
-          title="Settings editing is being rebuilt (prompt 40)"
-          style={{ marginBottom: 'var(--space-4)' }}
-        >
-          These fields show the live settings, flattened into the previous shape. Saving stays
-          switched off until the screen is rebuilt around the current branches — general, hero,
-          navigation, social, footer, newsletter and integrations.
-        </Alert>
-      ) : null}
+      <Alert
+        tone="info"
+        title="Settings editing is being rebuilt (prompt 40)"
+        style={{ marginBottom: 'var(--space-4)' }}
+      >
+        These fields show the live settings, flattened into the previous shape. Saving stays
+        switched off until the screen is rebuilt around the current branches — general, hero,
+        navigation, social, footer, newsletter and integrations.
+      </Alert>
 
       {/* Tabs */}
       <Paper
@@ -304,13 +319,6 @@ const AdminSettings = () => {
             iconPosition="start"
             label="Footer"
           />
-          {isAdmin && (
-            <Tab
-              icon={<Icon icon="mdi:account-group-outline" style={{ fontSize: 18 }} />}
-              iconPosition="start"
-              label="User Management"
-            />
-          )}
         </Tabs>
 
         <Box sx={{ p: 3 }}>
@@ -757,13 +765,6 @@ const AdminSettings = () => {
               </Box>
             </Paper>
           </TabPanel>
-
-          {/* User Management Tab (Admin only) */}
-          {isAdmin && (
-            <TabPanel value={activeTab} index={USER_MGMT_TAB}>
-              <UserManagement />
-            </TabPanel>
-          )}
 
           {/* Footer Tab */}
           <TabPanel value={activeTab} index={4}>

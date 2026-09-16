@@ -120,6 +120,44 @@ export const PageHeroSkeleton = () => (
 );
 
 /**
+ * The admin table's loading state (§8.4): the same row height and the same
+ * column count as the table it stands in, so the rows do not jump when the
+ * answer arrives.
+ *
+ * @param {object} props
+ * @param {number} [props.rows]
+ * @param {number} [props.columns]
+ */
+export const TableSkeleton = ({ rows = 6, columns = 5 }) => (
+  <Box role="status" aria-busy="true" aria-live="polite" aria-label="Loading rows">
+    {Array.from({ length: rows }).map((_, row) => (
+      <Box
+        key={row}
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${columns}, 1fr)`,
+          gap: 2,
+          alignItems: 'center',
+          height: 48,
+          px: 2,
+          borderBottom: '1px solid var(--color-border)',
+        }}
+      >
+        {Array.from({ length: columns }).map((__, column) => (
+          <Skeleton
+            key={column}
+            variant="text"
+            height={20}
+            animation="wave"
+            width={column === 0 ? '80%' : '60%'}
+          />
+        ))}
+      </Box>
+    ))}
+  </Box>
+);
+
+/**
  * Branded page loading spinner for Suspense fallback.
  */
 /** The Suspense fallback: the monogram, a spinner ring and a live status. */

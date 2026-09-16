@@ -1,0 +1,28 @@
+.filters {
+  margin-bottom: var(--space-4);
+}
+
+.reorder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.reorderHint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.reorderRow {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.starOn {
+  color: var(--color-warning);
+}
+
+.starOff {
+  color: var(--color-text-muted);
+}

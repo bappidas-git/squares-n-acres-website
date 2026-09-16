@@ -180,6 +180,7 @@ export function toApiError(error) {
       status: response.status,
       message: payload.message || error.message || GENERIC_MESSAGE,
       errors: normalizeFieldErrors(payload.errors),
+      data: payload.data ?? null,
       original: error,
     });
   }

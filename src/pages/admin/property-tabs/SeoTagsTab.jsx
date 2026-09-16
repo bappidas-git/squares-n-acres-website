@@ -3,7 +3,7 @@ import { Box, Typography, TextField, Chip, InputAdornment, Paper } from '@mui/ma
 import { Icon } from '@iconify/react';
 import { TAG_OPTIONS } from './constants';
 import { toneStyles } from '../../../components/ui/tones';
-import ImageUrlHelperText from '../../../components/admin/ImageUrlHelperText';
+import { ImageHint } from '../../../components/admin/ImageField';
 import { calculateSeoScore, SEO_LIMITS } from '../../../utils/seoScoring';
 import { generateSeoData } from '../../../utils/seoGenerator';
 import { SITE } from '../../../config/site';
@@ -316,7 +316,7 @@ const SeoTagsTab = ({ formData, updateField }) => {
               placeholder="Defaults to first gallery image if empty"
               helperText="Recommended size: 1200x630px for optimal social sharing"
             />
-            <ImageUrlHelperText fieldType="ogImage" />
+            <ImageHint hint="og" />
           </Box>
         </Box>
       </Paper>

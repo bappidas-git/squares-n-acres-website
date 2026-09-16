@@ -1,0 +1,31 @@
+.form {
+  margin-bottom: 0;
+}
+
+.iconField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.iconRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.iconPreview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-charcoal);
+}
+
+.formError {
+  margin: 0;
+}

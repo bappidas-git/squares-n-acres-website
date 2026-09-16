@@ -9,7 +9,7 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
-import ImageUrlHelperText from '../../../components/admin/ImageUrlHelperText';
+import { ImageHint } from '../../../components/admin/ImageField';
 
 const FloorPlansTab = ({ formData, updateField, updateListItem, addListItem, removeListItem }) => {
   return (
@@ -125,7 +125,7 @@ const FloorPlansTab = ({ formData, updateField, updateListItem, addListItem, rem
                 fullWidth
                 placeholder="https://picsum.photos/seed/floor-plan/600/400"
               />
-              <ImageUrlHelperText fieldType="floorPlan" />
+              <ImageHint hint="floorPlan" />
             </Box>
           </Box>
         </Paper>
