@@ -6,7 +6,6 @@ import Header from './Header';
 import MobileHeader from './MobileHeader';
 import Footer from './Footer';
 import BottomNav from './BottomNav';
-import NewsletterSection from '../common/NewsletterSection';
 import ScrollToTop from '../common/ScrollToTop';
 import BackToTop from '../common/BackToTop';
 import styles from './MainLayout.module.css';
@@ -50,8 +49,7 @@ const MainLayout = ({ children }) => {
         </AnimatePresence>
       </main>
 
-      {/* Newsletter + Footer */}
-      <NewsletterSection />
+      {/* Footer — it renders the newsletter band when settings enable it */}
       <Footer />
 
       {/* Back to Top button */}

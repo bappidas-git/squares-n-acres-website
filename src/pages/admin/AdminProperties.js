@@ -37,7 +37,8 @@ import {
   useTheme,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
-import { propertyService } from '../../services/api';
+import propertyService from '../../services/propertyService';
+import { toLegacyProperties } from '../../utils/adapters/legacyProperty';
 import { useToast } from '../../components/common/ToastProvider';
 
 // Tag color config
@@ -99,15 +100,19 @@ const AdminProperties = () => {
     bulk: false,
   });
 
-  // Fetch properties
+  /**
+   * The admin list, not the public one (ADD-21): it includes inactive records.
+   * The rows still read the boilerplate's field names, so they go through
+   * `toLegacyProperty` until prompt 22 rewrites this table.
+   */
   const fetchProperties = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await propertyService.getAll();
-      setProperties(Array.isArray(data) ? data : []);
+      const { data } = await propertyService.adminList({ perPage: 100 });
+      setProperties(toLegacyProperties(data));
       setError(null);
-    } catch {
-      setError('Failed to load properties. Please try again.');
+    } catch (thrown) {
+      setError(thrown?.message || 'Failed to load properties. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -176,7 +181,7 @@ const AdminProperties = () => {
   // Toggle active status
   const handleToggleActive = async (id, currentStatus) => {
     try {
-      await propertyService.update(id, { is_active: !currentStatus });
+      await propertyService.patch(id, { isActive: !currentStatus });
       setProperties((prev) =>
         prev.map((p) => (p.id === id ? { ...p, isActive: !currentStatus } : p))
       );
@@ -190,12 +195,12 @@ const AdminProperties = () => {
   const handleDelete = async () => {
     try {
       if (deleteDialog.bulk) {
-        await Promise.all(selected.map((id) => propertyService.delete(id)));
+        await propertyService.bulk({ ids: selected, action: 'delete' });
         setProperties((prev) => prev.filter((p) => !selected.includes(p.id)));
         setSelected([]);
         toast.success(`${selected.length} properties deleted successfully`);
       } else {
-        await propertyService.delete(deleteDialog.id);
+        await propertyService.remove(deleteDialog.id);
         setProperties((prev) => prev.filter((p) => p.id !== deleteDialog.id));
         setSelected((prev) => prev.filter((id) => id !== deleteDialog.id));
         toast.success('Property deleted successfully');
@@ -210,7 +215,7 @@ const AdminProperties = () => {
   // Bulk actions
   const handleBulkActivate = async () => {
     try {
-      await Promise.all(selected.map((id) => propertyService.update(id, { is_active: true })));
+      await propertyService.bulk({ ids: selected, action: 'activate' });
       setProperties((prev) =>
         prev.map((p) => (selected.includes(p.id) ? { ...p, isActive: true } : p))
       );
@@ -223,7 +228,7 @@ const AdminProperties = () => {
 
   const handleBulkDeactivate = async () => {
     try {
-      await Promise.all(selected.map((id) => propertyService.update(id, { is_active: false })));
+      await propertyService.bulk({ ids: selected, action: 'deactivate' });
       setProperties((prev) =>
         prev.map((p) => (selected.includes(p.id) ? { ...p, isActive: false } : p))
       );

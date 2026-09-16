@@ -29,10 +29,31 @@ import {
 import { Icon } from '@iconify/react';
 import seoService from '../../services/seoService';
 import { calculateSeoScore, getQuickScore, SEO_LIMITS } from '../../utils/seoScoring';
-import { generateSeoData } from '../../utils/seoGenerator';
 import SeoGuidelines from '../../components/admin/SeoGuidelines';
 import { SITE } from '../../config/site';
+import { Alert } from '../../components/ui';
 import { useToast } from '../../components/common/ToastProvider';
+
+/** One `/admin/seo/overview` row (§5.14) under the names this table reads. */
+const toRow = (row) => ({
+  id: row.id,
+  propertyId: row.id,
+  title: row.title,
+  slug: row.slug,
+  url: row.url,
+  isActive: row.isActive,
+  updatedAt: row.updatedAt,
+  seoTitle: row.seo?.title || '',
+  seoDescription: row.seo?.description || '',
+  seoKeywords: [row.seo?.focusKeyword, ...(row.seo?.secondaryKeywords ?? [])].filter(Boolean),
+  canonicalUrl: row.seo?.canonicalUrl || '',
+  ogTitle: row.seo?.og?.title || '',
+  ogDescription: row.seo?.og?.description || '',
+  ogImage: row.seo?.og?.imageUrl || '',
+  twitterCard: row.seo?.twitter?.card || 'summary_large_image',
+  schemaMarkup: row.seo?.schema?.custom || '',
+  location: { area: '', city: '' },
+});
 
 // ─── Score Bar Component ──────────────────────────────────────
 const SeoScoreBar = ({ score, grade }) => {
@@ -261,18 +282,21 @@ const AdminSeo = () => {
     schemaMarkup: '',
   });
   const [keywordInput, setKeywordInput] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [bulkGenerating, setBulkGenerating] = useState(false);
   const [showGuidelines, setShowGuidelines] = useState(false);
 
-  // ─── Fetch Properties via SEO Service ─────────────────────
+  /**
+   * `GET /admin/seo/overview?type=property` answers with the lightweight SEO
+   * rows of §5.14. They are shown through the flat field names this table was
+   * written for; prompts 36–37 replace the screen with the real SEO panel and
+   * dashboard.
+   */
   const fetchProperties = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await seoService.getAllProperties();
-      setProperties(Array.isArray(data) ? data : []);
-    } catch {
-      toast.error('Failed to load properties');
+      const { data } = await seoService.overview({ type: 'property', perPage: 'all' });
+      setProperties((Array.isArray(data) ? data : []).map(toRow));
+    } catch (thrown) {
+      toast.error(thrown?.message || 'Failed to load the SEO overview');
     } finally {
       setLoading(false);
     }
@@ -335,29 +359,13 @@ const AdminSeo = () => {
     setEditDialogOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!editProperty) return;
-    setSaving(true);
-    try {
-      const propertyId = editProperty.propertyId || editProperty.id;
-      await seoService.updatePropertySeo(propertyId, editForm);
-      setProperties((prev) =>
-        prev.map((p) => ((p.propertyId || p.id) === propertyId ? { ...p, ...editForm } : p))
-      );
-      toast.success('SEO data saved successfully');
-      setEditDialogOpen(false);
-    } catch {
-      toast.error('Failed to save SEO data');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAutoGenerate = () => {
-    if (!editProperty) return;
-    const generated = generateSeoData(editProperty);
-    setEditForm(generated);
-  };
+  /**
+   * Saving is switched off until prompts 36–37. An entity's SEO now lives in
+   * one nested `seo{}` object saved through the entity's own PATCH (§9.6), and
+   * the generator this screen calls still writes the boilerplate's titles and
+   * canonicals (ADD-20/ADD-27).
+   */
+  const savingDisabled = true;
 
   const handleAddKeyword = () => {
     const kw = keywordInput.trim().toLowerCase();
@@ -375,29 +383,6 @@ const AdminSeo = () => {
       ...prev,
       seoKeywords: prev.seoKeywords.filter((k) => k !== kw),
     }));
-  };
-
-  // ─── Bulk Auto-Generate ───────────────────────────────────
-  const handleBulkAutoGenerate = async () => {
-    setBulkGenerating(true);
-    try {
-      const updates = await seoService.bulkAutoGenerate(properties, calculateSeoScore);
-      if (updates.length === 0) {
-        toast.info('All properties already have complete SEO data');
-      } else {
-        setProperties((prev) =>
-          prev.map((p) => {
-            const u = updates.find((upd) => upd.id === p.id);
-            return u ? { ...p, ...u } : p;
-          })
-        );
-        toast.success(`Auto-generated SEO for ${updates.length} properties`);
-      }
-    } catch {
-      toast.error('Failed to auto-generate SEO data');
-    } finally {
-      setBulkGenerating(false);
-    }
   };
 
   // ─── Title / Description length color helpers ─────────────
@@ -490,8 +475,7 @@ const AdminSeo = () => {
           <Button
             variant="contained"
             startIcon={<Icon icon="mdi:auto-fix" />}
-            onClick={handleBulkAutoGenerate}
-            disabled={bulkGenerating || loading}
+            disabled={savingDisabled}
             sx={{
               bgcolor: 'var(--color-charcoal)',
               textTransform: 'none',
@@ -500,10 +484,19 @@ const AdminSeo = () => {
               '&:hover': { bgcolor: 'var(--color-charcoal)' },
             }}
           >
-            {bulkGenerating ? 'Generating...' : 'Auto-Generate Missing SEO'}
+            Auto-generate missing SEO
           </Button>
         </Box>
       </Box>
+
+      <Alert
+        tone="info"
+        title="SEO editing is being rebuilt (prompts 36–37)"
+        style={{ marginBottom: 'var(--space-4)' }}
+      >
+        This table reads the live SEO overview. Editing stays switched off until the SEO panel is
+        rebuilt: an entity&apos;s SEO is now one nested object saved with the entity itself.
+      </Alert>
 
       {/* SEO Guidelines Panel (Collapsible) */}
       <Collapse in={showGuidelines}>
@@ -899,10 +892,10 @@ const AdminSeo = () => {
             <Button
               size="small"
               startIcon={<Icon icon="mdi:auto-fix" />}
-              onClick={handleAutoGenerate}
+              disabled={savingDisabled}
               sx={{ textTransform: 'none', fontSize: '0.75rem' }}
             >
-              Auto-Generate
+              Auto-generate
             </Button>
             <IconButton size="small" onClick={() => setEditDialogOpen(false)}>
               <Icon icon="mdi:close" />
@@ -1228,8 +1221,7 @@ const AdminSeo = () => {
           </Button>
           <Button
             variant="contained"
-            onClick={handleSave}
-            disabled={saving}
+            disabled={savingDisabled}
             sx={{
               textTransform: 'none',
               bgcolor: 'var(--color-charcoal)',
@@ -1238,7 +1230,7 @@ const AdminSeo = () => {
               '&:hover': { bgcolor: 'var(--color-charcoal)' },
             }}
           >
-            {saving ? 'Saving...' : 'Save SEO Data'}
+            Save SEO data
           </Button>
         </DialogActions>
       </Dialog>

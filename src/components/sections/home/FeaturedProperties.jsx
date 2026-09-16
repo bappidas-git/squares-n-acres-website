@@ -1,19 +1,24 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Icon } from '@iconify/react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import useInView from '../../../hooks/useInView';
-import { Icon } from '@iconify/react';
-import { propertyService } from '../../../services/api';
+
+import PATHS from '../../../routes/paths';
 import PropertyCard from '../../common/PropertyCard';
+import propertyService from '../../../services/propertyService';
 import styles from './FeaturedProperties.module.css';
+import useApi from '../../../hooks/useApi';
+import useInView from '../../../hooks/useInView';
+import { ErrorState } from '../../ui';
 
 const AUTO_SCROLL_SPEED = 0.5;
 const PAUSE_AFTER_MANUAL = 3000;
 const SCROLL_STEP_FACTOR = 0.85; // fraction of viewport to scroll per arrow click
 
+/** The home row shows eight (D23); the API has already sorted them (§5.14). */
+const FEATURED_PARAMS = { perPage: 8 };
+
 const FeaturedProperties = () => {
-  const [properties, setProperties] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -28,24 +33,15 @@ const FeaturedProperties = () => {
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, scrollLeft: 0 });
 
-  useEffect(() => {
-    const fetchProperties = async () => {
-      try {
-        const data = await propertyService.getFeatured();
-        // Safety filter: ensure only active, published properties are displayed
-        setProperties(
-          (Array.isArray(data) ? data : []).filter(
-            (p) => !!p.isActive && p.publishStatus !== 'draft'
-          )
-        );
-      } catch {
-        setProperties([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProperties();
-  }, []);
+  const { data, loading, error, refetch } = useApi(
+    (signal) => propertyService.featured(FEATURED_PARAMS, { signal }),
+    [],
+    {
+      initialData: [],
+    }
+  );
+
+  const properties = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
   // Determine if auto-scroll is needed based on content vs viewport width
   const evaluateScrollNeed = useCallback(() => {
@@ -243,11 +239,17 @@ const FeaturedProperties = () => {
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.5 }}
         >
-          <h2 className={styles.title}>Featured Properties</h2>
-          <p className={styles.subtitle}>Explore our handpicked selection of premium properties</p>
+          <h2 className={styles.title}>Featured properties</h2>
+          <p className={styles.subtitle}>A handpicked selection from our current inventory</p>
         </motion.div>
 
-        {loading ? (
+        {error && !loading ? (
+          <ErrorState
+            title="We could not load the featured properties"
+            text={error.message}
+            onRetry={refetch}
+          />
+        ) : loading ? (
           <div className={styles.loading}>
             <div className={styles.spinner} />
           </div>
@@ -311,8 +313,8 @@ const FeaturedProperties = () => {
         )}
 
         <div className={styles.cta}>
-          <Link to="/properties" className={styles.ctaBtn}>
-            View All Properties
+          <Link to={PATHS.properties} className={styles.ctaBtn}>
+            View all properties
             <Icon icon="mdi:arrow-right" />
           </Link>
         </div>

@@ -1,22 +1,41 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { faqService } from '../../services/api';
-import LeadForm from '../../components/common/LeadForm';
-import { Section } from '../../components/ui';
-import styles from './FAQs.module.css';
-import { SITE } from '../../config/site';
 
-const FAQ_CATEGORIES = [
-  { value: 'all', label: 'All', icon: 'mdi:view-grid-outline' },
-  { value: 'buying', label: 'Buying', icon: 'mdi:home-search-outline' },
-  { value: 'selling', label: 'Selling', icon: 'mdi:tag-outline' },
-  { value: 'renting', label: 'Renting', icon: 'mdi:key-outline' },
-  { value: 'home-loan', label: 'Home Loans', icon: 'mdi:bank-outline' },
-  { value: 'legal', label: 'Legal', icon: 'mdi:scale-balance' },
-  { value: 'general', label: 'General', icon: 'mdi:information-outline' },
+import LeadForm from '../../components/common/LeadForm';
+import LegacyHtml from '../../components/common/LegacyHtml';
+import masterDataService from '../../services/masterDataService';
+import styles from './FAQs.module.css';
+import useApiList from '../../hooks/useApiList';
+import { ErrorState, Section } from '../../components/ui';
+import { FAQ_CATEGORIES as CATEGORY_ENUM } from '../../config/enums';
+import { SITE } from '../../config/site';
+import { formatPhoneForTel } from '../../utils/format';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
+
+/** One icon per category of §6.17; the labels come from the enum. */
+const CATEGORY_ICONS = {
+  buying: 'mdi:home-search-outline',
+  selling: 'mdi:tag-outline',
+  renting: 'mdi:key-outline',
+  'home-loan': 'mdi:bank-outline',
+  legal: 'mdi:scale-balance',
+  rera: 'mdi:file-certificate-outline',
+  nri: 'mdi:earth',
+  general: 'mdi:information-outline',
+};
+
+const TABS = [
+  { value: '', label: 'All', icon: 'mdi:view-grid-outline' },
+  ...CATEGORY_ENUM.options.map((option) => ({
+    ...option,
+    icon: CATEGORY_ICONS[option.value] ?? 'mdi:help-circle-outline',
+  })),
 ];
+
+const LIST_DEFAULTS = { page: 1, perPage: 100, category: '', q: '' };
+const LIST_PARAM_KEYS = { category: 'string', q: 'string' };
 
 const FaqItem = ({ faq, isOpen, onToggle, index }) => (
   <motion.div
@@ -45,7 +64,7 @@ const FaqItem = ({ faq, isOpen, onToggle, index }) => (
           exit={{ height: 0, opacity: 0 }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
         >
-          <p>{faq.answer}</p>
+          <LegacyHtml html={faq.answer} />
         </motion.div>
       )}
     </AnimatePresence>
@@ -66,63 +85,42 @@ const contactFields = [
 ];
 
 const FAQs = () => {
-  const [faqs, setFaqs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
   const [openFaqId, setOpenFaqId] = useState(null);
+  const { getContact, getWhatsappLink } = useSiteSettings();
+  const contact = getContact();
 
-  useEffect(() => {
-    const fetchFaqs = async () => {
-      try {
-        const data = await faqService.getAll({ isActive: true });
-        setFaqs(data);
-      } catch {
-        // FAQs fetch failed — UI shows empty state
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchFaqs();
-  }, []);
-
-  const filtered = useMemo(() => {
-    let result = faqs;
-    if (activeCategory !== 'all') {
-      result = result.filter((f) => f.category === activeCategory);
+  const { items, loading, error, params, setFilters, refetch } = useApiList(
+    (listParams, options) => masterDataService.faqs.list(listParams, options),
+    {
+      syncToUrl: true,
+      paramKeys: LIST_PARAM_KEYS,
+      defaults: LIST_DEFAULTS,
+      debounceMs: 300,
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (f) => f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q)
-      );
-    }
-    return result;
-  }, [faqs, activeCategory, searchQuery]);
+  );
 
-  // Group FAQs by category
+  const activeCategory = params.category ?? '';
+
+  /** Without a category tab the list is grouped, so the page stays scannable. */
   const groupedFaqs = useMemo(() => {
-    if (activeCategory !== 'all') {
-      return [{ category: activeCategory, items: filtered }];
-    }
-    const groups = {};
-    filtered.forEach((faq) => {
-      if (!groups[faq.category]) groups[faq.category] = [];
-      groups[faq.category].push(faq);
+    if (activeCategory) return [{ category: activeCategory, items }];
+
+    const groups = new Map();
+    items.forEach((faq) => {
+      if (!groups.has(faq.category)) groups.set(faq.category, []);
+      groups.get(faq.category).push(faq);
     });
-    return Object.entries(groups).map(([category, items]) => ({ category, items }));
-  }, [filtered, activeCategory]);
+    return [...groups.entries()].map(([category, rows]) => ({ category, items: rows }));
+  }, [items, activeCategory]);
 
-  const toggleFaq = useCallback((id) => setOpenFaqId((prev) => (prev === id ? null : id)), []);
+  const toggleFaq = useCallback(
+    (id) => setOpenFaqId((previous) => (previous === id ? null : id)),
+    []
+  );
 
-  const handleCategoryChange = (cat) => {
-    setActiveCategory(cat);
+  const handleCategoryChange = (category) => {
+    setFilters({ category });
     setOpenFaqId(null);
-  };
-
-  const formatCategoryLabel = (cat) => {
-    const found = FAQ_CATEGORIES.find((c) => c.value === cat);
-    return found ? found.label : cat.charAt(0).toUpperCase() + cat.slice(1);
   };
 
   return (
@@ -162,43 +160,55 @@ const FAQs = () => {
             {/* Search */}
             <div className={styles.searchBar}>
               <Icon icon="mdi:magnify" className={styles.searchIcon} />
+              <label className={styles.srOnly} htmlFor="faq-search">
+                Search questions
+              </label>
               <input
+                id="faq-search"
                 type="text"
-                placeholder="Search for a question..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
+                placeholder="Search for a question"
+                value={params.q ?? ''}
+                onChange={(event) => {
+                  setFilters({ q: event.target.value });
                   setOpenFaqId(null);
                 }}
                 className={styles.searchInput}
               />
-              {searchQuery && (
+              {params.q ? (
                 <button
                   className={styles.clearSearch}
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => setFilters({ q: '' })}
                   aria-label="Clear search"
+                  type="button"
                 >
                   <Icon icon="mdi:close" />
                 </button>
-              )}
+              ) : null}
             </div>
 
             {/* Category Tabs */}
             <div className={styles.categoryTabs}>
-              {FAQ_CATEGORIES.map((cat) => (
+              {TABS.map((tab) => (
                 <button
-                  key={cat.value}
-                  className={`${styles.tab} ${activeCategory === cat.value ? styles.tabActive : ''}`}
-                  onClick={() => handleCategoryChange(cat.value)}
+                  key={tab.value || 'all'}
+                  className={`${styles.tab} ${activeCategory === tab.value ? styles.tabActive : ''}`}
+                  onClick={() => handleCategoryChange(tab.value)}
+                  type="button"
                 >
-                  <Icon icon={cat.icon} />
-                  <span>{cat.label}</span>
+                  <Icon icon={tab.icon} />
+                  <span>{tab.label}</span>
                 </button>
               ))}
             </div>
 
             {/* FAQ List */}
-            {loading ? (
+            {error ? (
+              <ErrorState
+                title="We could not load the questions"
+                text={error.message}
+                onRetry={refetch}
+              />
+            ) : loading ? (
               <div className={styles.loadingState}>
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className={styles.skeletonItem}>
@@ -209,19 +219,21 @@ const FAQs = () => {
                   </div>
                 ))}
               </div>
-            ) : filtered.length === 0 ? (
+            ) : items.length === 0 ? (
               <div className={styles.emptyState}>
                 <Icon icon="mdi:help-circle-outline" className={styles.emptyIcon} />
-                <h3>No questions found</h3>
-                <p>Try a different search term or category.</p>
+                <h2>No questions found</h2>
+                <p>Try a different search term, or another category.</p>
               </div>
             ) : (
               <div className={styles.faqGroups}>
                 {groupedFaqs.map((group) => (
                   <div key={group.category} className={styles.faqGroup}>
-                    {activeCategory === 'all' && (
-                      <h3 className={styles.groupTitle}>{formatCategoryLabel(group.category)}</h3>
-                    )}
+                    {!activeCategory ? (
+                      <h2 className={styles.groupTitle}>
+                        {CATEGORY_ENUM.labelOf(group.category) || group.category}
+                      </h2>
+                    ) : null}
                     <div className={styles.faqList}>
                       {group.items.map((faq, i) => (
                         <FaqItem
@@ -245,40 +257,54 @@ const FAQs = () => {
           <div className={styles.container}>
             <div className={styles.contactSection}>
               <div className={styles.contactInfo}>
-                <h2 className={styles.contactTitle}>Can't find your answer?</h2>
+                <h2 className={styles.contactTitle}>Still have questions?</h2>
                 <p className={styles.contactText}>
-                  Our real estate experts are here to help. Submit your question and we'll get back
-                  to you with a detailed answer.
+                  Send it over and an advisor will come back to you with a proper answer rather than
+                  a brochure.
                 </p>
                 <div className={styles.contactMethods}>
-                  <div className={styles.contactMethod}>
-                    <Icon icon="mdi:phone-outline" className={styles.contactMethodIcon} />
-                    <div>
-                      <span className={styles.contactMethodLabel}>Call Us</span>
-                      <span className={styles.contactMethodValue}>+91 98XXX XXXXX</span>
-                    </div>
-                  </div>
-                  <div className={styles.contactMethod}>
-                    <Icon icon="mdi:email-outline" className={styles.contactMethodIcon} />
-                    <div>
-                      <span className={styles.contactMethodLabel}>Email Us</span>
-                      <span className={styles.contactMethodValue}>info@squaresnacres.com</span>
-                    </div>
-                  </div>
-                  <div className={styles.contactMethod}>
-                    <Icon icon="mdi:whatsapp" className={styles.contactMethodIcon} />
-                    <div>
-                      <span className={styles.contactMethodLabel}>WhatsApp</span>
-                      <span className={styles.contactMethodValue}>Chat with us</span>
-                    </div>
-                  </div>
+                  {contact.phone ? (
+                    <a
+                      className={styles.contactMethod}
+                      href={`tel:${formatPhoneForTel(contact.phone)}`}
+                    >
+                      <Icon icon="mdi:phone-outline" className={styles.contactMethodIcon} />
+                      <span>
+                        <span className={styles.contactMethodLabel}>Call us</span>
+                        <span className={styles.contactMethodValue}>{contact.phone}</span>
+                      </span>
+                    </a>
+                  ) : null}
+                  {contact.email ? (
+                    <a className={styles.contactMethod} href={`mailto:${contact.email}`}>
+                      <Icon icon="mdi:email-outline" className={styles.contactMethodIcon} />
+                      <span>
+                        <span className={styles.contactMethodLabel}>Email us</span>
+                        <span className={styles.contactMethodValue}>{contact.email}</span>
+                      </span>
+                    </a>
+                  ) : null}
+                  {contact.whatsappNumber ? (
+                    <a
+                      className={styles.contactMethod}
+                      href={getWhatsappLink()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Icon icon="mdi:whatsapp" className={styles.contactMethodIcon} />
+                      <span>
+                        <span className={styles.contactMethodLabel}>WhatsApp</span>
+                        <span className={styles.contactMethodValue}>Chat with us</span>
+                      </span>
+                    </a>
+                  ) : null}
                 </div>
               </div>
               <LeadForm
-                title="Ask Your Question"
-                subtitle="We typically respond within 24 hours"
+                title="Ask your question"
+                subtitle="We answer as soon as we can"
                 fields={contactFields}
-                source="faq_contact"
+                source="contact-page"
               />
             </div>
           </div>

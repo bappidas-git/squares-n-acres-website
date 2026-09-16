@@ -18,7 +18,9 @@ import {
 import { Icon } from '@iconify/react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { useCssVars } from '../../hooks/useCssVar';
-import { propertyService, leadService, articleService, dashboardService } from '../../services/api';
+import dashboardService from '../../services/dashboardService';
+import { EMPTY } from '../../utils/format';
+import { LEAD_SOURCES, LEAD_STATUS } from '../../config/enums';
 
 // Animated counter hook
 const useAnimatedCount = (target, duration = 1200) => {
@@ -328,84 +330,35 @@ const Dashboard = () => {
     websiteVisits: 0,
   });
   const [recentLeads, setRecentLeads] = useState([]);
-  const [properties, setProperties] = useState([]);
+  const [trends, setTrends] = useState(null);
 
+  /**
+   * One call (§6.16). The old dashboard fetched the whole properties, leads and
+   * articles collections and recomputed every figure in the browser (NEW-24);
+   * the API now answers with the aggregates, the trends and the recent rows,
+   * already scoped to the signed-in role.
+   */
   const fetchDashboardData = useCallback(async () => {
     try {
-      // Try unified dashboard API first (production-ready)
-      try {
-        const dashData = await dashboardService.get();
-        if (dashData && dashData.totalProperties !== undefined) {
-          setStats({
-            totalProperties: dashData.totalProperties || 0,
-            activeProperties: dashData.activeProperties || 0,
-            inactiveProperties: dashData.inactiveProperties || 0,
-            totalLeads: dashData.totalLeads || 0,
-            newLeads7Days: dashData.newLeads7Days || 0,
-            totalArticles: dashData.totalArticles || 0,
-            publishedArticles: dashData.publishedArticles || 0,
-            draftArticles: dashData.draftArticles || 0,
-            websiteVisits: dashData.websiteVisits || 0,
-          });
-          setRecentLeads(dashData.recentLeads || []);
-          setProperties(dashData.propertiesByStatus || []);
-          setLoading(false);
-          return;
-        }
-      } catch {
-        // Dashboard API not available — fallback to individual calls
-      }
-
-      // Fallback: fetch from individual endpoints
-      const results = await Promise.allSettled([
-        propertyService.getAll(),
-        leadService.getAll(),
-        articleService.getAll(),
-      ]);
-
-      const allProperties = results[0].status === 'fulfilled' ? results[0].value : [];
-      const allLeads = results[1].status === 'fulfilled' ? results[1].value : [];
-      const allArticles = results[2].status === 'fulfilled' ? results[2].value : [];
-
-      // Properties stats
-      const activeProps = allProperties.filter((p) => p.isActive);
-      const inactiveProps = allProperties.filter((p) => !p.isActive);
-
-      // Lead stats — new leads in last 7 days
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const newLeads7 = allLeads.filter(
-        (l) => l.createdAt && new Date(l.createdAt) >= sevenDaysAgo
-      );
-
-      // Article stats
-      const published = allArticles.filter((a) => a.isActive);
-      const drafts = allArticles.filter((a) => !a.isActive);
+      setLoading(true);
+      const { data } = await dashboardService.get();
+      const figures = data?.stats ?? {};
 
       setStats({
-        totalProperties: allProperties.length,
-        activeProperties: activeProps.length,
-        inactiveProperties: inactiveProps.length,
-        totalLeads: allLeads.length,
-        newLeads7Days: newLeads7.length,
-        totalArticles: allArticles.length,
-        publishedArticles: published.length,
-        draftArticles: drafts.length,
-        websiteVisits: 0,
+        totalProperties: figures.propertiesTotal ?? 0,
+        activeProperties: figures.propertiesActive ?? 0,
+        inactiveProperties: figures.propertiesInactive ?? 0,
+        totalLeads: figures.leadsTotal ?? 0,
+        newLeads7Days: figures.leadsThisMonth ?? 0,
+        totalArticles: (figures.articlesPublished ?? 0) + (figures.articlesDraft ?? 0),
+        publishedArticles: figures.articlesPublished ?? 0,
+        draftArticles: figures.articlesDraft ?? 0,
+        websiteVisits: figures.viewsThisMonth ?? 0,
       });
-
-      setRecentLeads(
-        [...allLeads]
-          .sort((a, b) => {
-            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return (isNaN(dateB) ? 0 : dateB) - (isNaN(dateA) ? 0 : dateA);
-          })
-          .slice(0, 10)
-      );
-      setProperties(allProperties);
+      setRecentLeads(Array.isArray(data?.recentLeads) ? data.recentLeads : []);
+      setTrends(data?.trends ?? null);
     } catch {
-      // Load failed — the dashboard renders its empty state
+      // The dashboard renders its empty state when the call fails.
     } finally {
       setLoading(false);
     }
@@ -423,47 +376,30 @@ const Dashboard = () => {
     day: 'numeric',
   });
 
-  // Lead source data for chart
-  const leadsBySource = recentLeads.reduce((acc, lead) => {
-    const src = lead.source || 'unknown';
-    const label = src
-      .replace(/-/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-      .replace('page', '')
-      .trim();
-    acc[label] = (acc[label] || 0) + 1;
-    return acc;
-  }, {});
-
-  const sourceBarData = Object.entries(leadsBySource).map(([label, value], i) => ({
-    label: label.length > 10 ? label.slice(0, 10) + '...' : label,
-    value,
-    color: seriesColors[i % seriesColors.length],
+  // Lead sources, counted by the API over every lead rather than the last ten.
+  const sourceBarData = (trends?.leadsBySource ?? []).slice(0, 8).map((row, index) => ({
+    label: LEAD_SOURCES.labelOf(row.source) || row.source,
+    value: row.count,
+    color: seriesColors[index % seriesColors.length],
   }));
 
-  // Property status data for donut
-  const propertyStatusData = [
-    {
-      label: 'Ready to Move',
-      value: properties.filter((p) => p.status === 'ready-to-move').length,
-      color: successColor,
-    },
-    {
-      label: 'Under Construction',
-      value: properties.filter((p) => p.status === 'under-construction').length,
-      color: warningColor,
-    },
-    {
-      label: 'Pre-launch',
-      value: properties.filter((p) => p.status === 'pre-launch').length,
-      color: infoColor,
-    },
-  ];
+  // `trends.leadsByStatus` is the whole pipeline, not a sample of it.
+  const leadStatusTotals = trends?.leadsByStatus ?? [];
+  const leadStatusTotal = leadStatusTotals.reduce((sum, row) => sum + (row.count ?? 0), 0);
 
-  const getPropertyTitle = (propertyId) => {
-    const prop = properties.find((p) => p.id === propertyId);
-    return prop ? prop.title : '—';
+  const statusColors = {
+    new: infoColor,
+    contacted: warningColor,
+    qualified: successColor,
   };
+
+  const leadStatusData = leadStatusTotals.map((row) => ({
+    label: LEAD_STATUS.labelOf(row.status) || row.status,
+    value: row.count ?? 0,
+    color: statusColors[row.status] ?? seriesColors[0],
+  }));
+
+  const getPropertyTitle = (lead) => lead?.property?.title ?? EMPTY;
 
   return (
     <Box>
@@ -608,11 +544,11 @@ const Dashboard = () => {
               variant="subtitle2"
               sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mb: 1.5 }}
             >
-              Properties by Status
+              Leads by status
             </Typography>
-            {properties.length > 0 ? (
+            {leadStatusData.length > 0 ? (
               <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <DonutChart data={propertyStatusData} size={130} />
+                <DonutChart data={leadStatusData} size={130} />
               </Box>
             ) : (
               <Box
@@ -644,15 +580,16 @@ const Dashboard = () => {
                 variant="subtitle2"
                 sx={{ fontWeight: 600, color: 'var(--color-charcoal)' }}
               >
-                Lead Status Overview
+                Lead pipeline
               </Typography>
             </Box>
-            {recentLeads.length > 0 ? (
+            {leadStatusTotal > 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {Object.entries(leadStatusConfig).map(([key, cfg]) => {
-                  const count = recentLeads.filter((l) => l.status === key).length;
-                  const pct =
-                    recentLeads.length > 0 ? Math.round((count / recentLeads.length) * 100) : 0;
+                {leadStatusData.map((row) => {
+                  const key = row.label;
+                  const cfg = { label: row.label, color: row.color };
+                  const count = row.value;
+                  const pct = Math.round((count / leadStatusTotal) * 100);
                   return (
                     <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                       <Box
@@ -908,7 +845,7 @@ const Dashboard = () => {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {lead.propertyId ? getPropertyTitle(lead.propertyId) : '—'}
+                        {getPropertyTitle(lead)}
                       </TableCell>
                       <TableCell>
                         <Chip

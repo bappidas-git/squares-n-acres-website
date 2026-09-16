@@ -181,6 +181,16 @@
   color: var(--color-text-muted);
 }
 
+.copyright p {
+  margin: 0;
+}
+
+/* The editor's legal line, above the copyright. */
+.disclaimer {
+  max-width: 68ch;
+  margin: 0 auto var(--space-2);
+}
+
 /* Tablet */
 @media (max-width: 899.98px) {
   .footerTop {

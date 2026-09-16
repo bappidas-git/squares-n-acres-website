@@ -135,3 +135,23 @@
     width: 100%;
   }
 }
+
+/* Inline validation, below the form. */
+.error {
+  margin: var(--space-3) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+}
+
+/* A label the screen reader reads and the layout never shows. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

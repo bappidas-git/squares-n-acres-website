@@ -5,7 +5,7 @@ import QuickActions from '../../components/sections/home/QuickActions';
 import WhyChoose from '../../components/sections/home/WhyChoose';
 import HowItWorks from '../../components/sections/home/HowItWorks';
 import FeaturedProperties from '../../components/sections/home/FeaturedProperties';
-import ExploreNeighborhoods from '../../components/sections/home/ExploreNeighborhoods';
+import ExploreLocalities from '../../components/sections/home/ExploreLocalities';
 import FaqSection from '../../components/sections/home/FaqSection';
 import PartnersSection from '../../components/sections/home/PartnersSection';
 import TrendingTopics from '../../components/sections/home/TrendingTopics';
@@ -29,7 +29,7 @@ const Home = () => {
         <WhyChoose />
         <HowItWorks />
         <FeaturedProperties />
-        <ExploreNeighborhoods />
+        <ExploreLocalities />
         <FaqSection />
         <PartnersSection />
         <TrendingTopics />

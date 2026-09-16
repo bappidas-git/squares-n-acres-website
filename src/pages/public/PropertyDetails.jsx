@@ -4,12 +4,15 @@ import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { SwipeableDrawer, useMediaQuery, useTheme } from '@mui/material';
-import { propertyService, leadService } from '../../services/api';
+import leadService from '../../services/leadService';
+import propertyService from '../../services/propertyService';
+import toLegacyProperty from '../../utils/adapters/legacyProperty';
 import { PropertyDetailSkeleton } from '../../components/common/SkeletonLoaders';
 import { useToast } from '../../components/common/ToastProvider';
 import { validateLeadForm } from '../../utils/validators';
 import { leadStorage } from '../../utils/leadStorage';
 import { SITE } from '../../config/site';
+import { isCanceled } from '../../services/apiError';
 import PropertyGallery from '../../components/sections/property/PropertyGallery';
 import PropertyOverview from '../../components/sections/property/PropertyOverview';
 import PropertySpecs from '../../components/sections/property/PropertySpecs';
@@ -145,24 +148,26 @@ const PropertyDetails = () => {
   }, [getSavedUserDetails]);
 
   useEffect(() => {
-    const fetchProperty = async () => {
-      try {
-        setLoading(true);
-        setError(false);
-        const data = await propertyService.getBySlug(slug);
-        if (!data) {
-          setError(true);
-        } else {
-          setProperty(data);
-        }
-      } catch {
-        setError(true);
-      } finally {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(false);
+
+    propertyService
+      .getBySlug(slug, { signal: controller.signal })
+      .then(({ data }) => {
+        // TEMPORARY: this page still reads the boilerplate's field names.
+        // `toLegacyProperty` bridges them until prompts 23–25 rewrite it.
+        setProperty(toLegacyProperty(data));
         setLoading(false);
-      }
-    };
-    fetchProperty();
+      })
+      .catch((thrown) => {
+        if (isCanceled(thrown)) return;
+        setError(true);
+        setLoading(false);
+      });
+
     window.scrollTo(0, 0);
+    return () => controller.abort();
   }, [slug]);
 
   // Check sessionStorage on mount and when property changes
@@ -245,7 +250,7 @@ const PropertyDetails = () => {
       try {
         setDownloadSubmitting(true);
         const source =
-          downloadModal.type === 'brochure' ? 'brochure_download' : 'floorplan_download';
+          downloadModal.type === 'brochure' ? 'brochure-download' : 'floor-plan-request';
         await leadService.create({
           ...downloadFormData,
           propertyId: property?.id || null,
@@ -309,7 +314,7 @@ const PropertyDetails = () => {
         await leadService.create({
           ...docFormData,
           propertyId: property?.id || null,
-          source: 'document_download',
+          source: 'document-request',
           message: `Requested document: ${docModal.docName}`,
         });
         saveLeadToSession(docFormData, property?.id, 'document_download');
@@ -370,7 +375,7 @@ const PropertyDetails = () => {
         await leadService.create({
           ...pricingFormData,
           propertyId: property?.id || null,
-          source: 'detailed_pricing',
+          source: 'price-request',
           message: `Requested detailed pricing for ${pricingModal.config} — ${property?.title || ''}`,
         });
         saveLeadToSession(pricingFormData, property?.id, 'detailed_pricing');
@@ -428,7 +433,7 @@ const PropertyDetails = () => {
         await leadService.create({
           ...floorPlanRequestFormData,
           propertyId: property?.id || null,
-          source: 'floorplan_request',
+          source: 'floor-plan-request',
           message: `Requested floor plan details for ${property?.title || ''}`,
         });
         saveLeadToSession(floorPlanRequestFormData, property?.id, 'floorplan_request');

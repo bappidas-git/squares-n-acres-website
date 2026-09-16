@@ -27,13 +27,16 @@ import {
   IconButton,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
-import { faqService } from '../../services/api';
+import masterDataService from '../../services/masterDataService';
 import { useToast } from '../../components/common/ToastProvider';
 import { toneStyles } from '../../components/ui/tones';
 import {
   FAQ_CATEGORIES as faqCategories,
   FAQ_CATEGORY_TONES as categoryTones,
 } from '../../config/adminConstants';
+
+/** FAQs are master data (§6.9); the CRUD lives with the rest of it. */
+const faqService = masterDataService.faqs;
 
 const emptyFaq = {
   question: '',
@@ -60,13 +63,11 @@ const FaqManager = () => {
   const fetchFaqs = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await faqService.getAll();
-      const sorted = (Array.isArray(data) ? data : []).sort(
-        (a, b) => (a.order || 0) - (b.order || 0)
-      );
-      setFaqs(sorted);
-    } catch {
-      toast.error('Failed to load FAQs');
+      // The admin list includes inactive FAQs and is already ordered (§5.14).
+      const { data } = await faqService.adminList({ perPage: 100, sort: 'order' });
+      setFaqs(Array.isArray(data) ? data : []);
+    } catch (thrown) {
+      toast.error(thrown?.message || 'Failed to load FAQs');
     } finally {
       setLoading(false);
     }
@@ -105,21 +106,21 @@ const FaqManager = () => {
     setSaving(true);
     try {
       if (editingFaq) {
-        const updated = await faqService.update(editingFaq.id, form);
+        const { data: updated } = await faqService.update(editingFaq.id, form);
         setFaqs((prev) =>
           prev
-            .map((f) => (f.id === editingFaq.id ? { ...f, ...updated } : f))
+            .map((f) => (f.id === editingFaq.id ? updated : f))
             .sort((a, b) => (a.order || 0) - (b.order || 0))
         );
         toast.success('FAQ updated');
       } else {
-        const created = await faqService.create(form);
+        const { data: created } = await faqService.create(form);
         setFaqs((prev) => [...prev, created].sort((a, b) => (a.order || 0) - (b.order || 0)));
         toast.success('FAQ added');
       }
       setDialogOpen(false);
-    } catch {
-      toast.error('Failed to save FAQ');
+    } catch (thrown) {
+      toast.error(thrown?.message || 'Failed to save FAQ');
     } finally {
       setSaving(false);
     }
@@ -127,7 +128,7 @@ const FaqManager = () => {
 
   const handleToggleActive = async (faq) => {
     try {
-      await faqService.update(faq.id, { isActive: !faq.isActive });
+      await faqService.patch(faq.id, { isActive: !faq.isActive });
       setFaqs((prev) => prev.map((f) => (f.id === faq.id ? { ...f, isActive: !f.isActive } : f)));
       toast.success(`FAQ ${!faq.isActive ? 'activated' : 'deactivated'}`);
     } catch {
@@ -139,7 +140,7 @@ const FaqManager = () => {
     const { faq } = deleteDialog;
     if (!faq) return;
     try {
-      await faqService.delete(faq.id);
+      await faqService.remove(faq.id);
       setFaqs((prev) => prev.filter((f) => f.id !== faq.id));
       toast.success('FAQ deleted');
     } catch {
@@ -150,14 +151,18 @@ const FaqManager = () => {
   };
 
   const handleMoveOrder = async (faq, direction) => {
+    // Indices are taken against the full list, never the filtered view (NEW-23).
     const currentIndex = faqs.findIndex((f) => f.id === faq.id);
     const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (swapIndex < 0 || swapIndex >= faqs.length) return;
+    if (currentIndex < 0 || swapIndex < 0 || swapIndex >= faqs.length) return;
 
     const swapFaq = faqs[swapIndex];
     try {
-      await faqService.update(faq.id, { order: swapFaq.order });
-      await faqService.update(swapFaq.id, { order: faq.order });
+      // Two PATCHes, not two PUTs: only `order` changes (BUG-01).
+      await Promise.all([
+        faqService.patch(faq.id, { order: swapFaq.order }),
+        faqService.patch(swapFaq.id, { order: faq.order }),
+      ]);
       setFaqs((prev) => {
         const updated = [...prev];
         const tempOrder = updated[currentIndex].order;

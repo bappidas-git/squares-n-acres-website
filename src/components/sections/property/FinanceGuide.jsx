@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import useInView from '../../../hooks/useInView';
-import { leadService } from '../../../services/api';
+import leadService from '../../../services/leadService';
 import {
   getNameErrorMessage,
   getEmailErrorMessage,
@@ -450,7 +450,7 @@ const FinanceGuide = ({
           phone: modalFormData.phone,
           email: modalFormData.email || '',
           propertyId: property?.id || null,
-          source: 'bank-eligibility-check',
+          source: 'bank-eligibility',
           message: `Bank Eligibility Check — ${eligibilityModal.bank?.name} | Score: ${score}/100 | Occupation: ${modalFormData.occupation} | Monthly Income: ${modalFormData.monthlyIncome === 'exact' ? '₹' + modalFormData.exactMonthlyIncome : modalFormData.monthlyIncome} | Credit: ${modalFormData.creditScore} | EMI: ${modalFormData.existingEmi}${modalFormData.emiTenure ? ' (Tenure: ' + modalFormData.emiTenure + ')' : ''} | Employment: ${modalFormData.employmentYears} yrs | Down Payment: ${modalFormData.downPayment}% | Co-applicant: ${modalFormData.hasCoApplicant || 'No'}${modalFormData.coApplicantIncome ? ' (Income: ' + modalFormData.coApplicantIncome + ')' : ''}`,
           assessmentData: {
             score,

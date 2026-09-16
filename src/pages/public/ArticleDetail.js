@@ -1,181 +1,61 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Link, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { articleService } from '../../services/api';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+
 import LeadForm from '../../components/common/LeadForm';
+import LegacyHtml from '../../components/common/LegacyHtml';
+import PATHS from '../../routes/paths';
+import articleService from '../../services/articleService';
 import styles from './ArticleDetail.module.css';
+import useApi from '../../hooks/useApi';
+import { ErrorState } from '../../components/ui';
 import { SITE } from '../../config/site';
+import { formatDate } from '../../utils/format';
 
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString('en-IN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
+/**
+ * One article.
+ *
+ * The body arrives as HTML from the CMS (§6.8), so it is rendered as HTML
+ * through `LegacyHtml` instead of the boilerplate's hand-written Markdown
+ * renderer — which duplicated tables on every `|` line and turned ordered
+ * lists into bullets (ADD-16). Prompt 32 replaces `LegacyHtml` with `SafeHtml`.
+ *
+ * Related articles come from the editor's own `relatedArticleIds` through
+ * `GET /articles?ids=`, which returns them in the given order.
+ */
 
-function formatCategory(cat) {
-  return cat
-    .split('-')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
-}
+const HEADING_PATTERN = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
 
-function parseHeadings(content) {
-  const headingRegex = /^##\s+(.+)$/gm;
+/** Slugs a heading's text the same way the anchors below do. */
+const headingId = (text) =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
+/** The `<h2>`s of the body, for the table of contents. */
+function parseHeadings(html) {
+  if (!html) return [];
   const headings = [];
-  let match;
-  while ((match = headingRegex.exec(content)) !== null) {
-    const id = match[1]
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-    headings.push({ id, text: match[1] });
+  let match = HEADING_PATTERN.exec(html);
+  while (match !== null) {
+    const text = match[1].replace(/<[^>]+>/g, '').trim();
+    if (text) headings.push({ id: headingId(text), text });
+    match = HEADING_PATTERN.exec(html);
   }
+  HEADING_PATTERN.lastIndex = 0;
   return headings;
 }
 
-function renderContent(content) {
-  const lines = content.split('\n');
-  const elements = [];
-  let listItems = [];
-
-  const flushList = () => {
-    if (listItems.length > 0) {
-      elements.push(
-        <ul key={`ul-${elements.length}`} className={styles.contentList}>
-          {listItems.map((li, i) => (
-            <li key={i}>{li}</li>
-          ))}
-        </ul>
-      );
-      listItems = [];
-    }
-  };
-
-  lines.forEach((line, i) => {
-    const trimmed = line.trim();
-
-    if (!trimmed) {
-      flushList();
-      return;
-    }
-
-    // Heading h2
-    if (trimmed.startsWith('## ')) {
-      flushList();
-      const text = trimmed.replace(/^##\s+/, '');
-      const id = text
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '');
-      elements.push(
-        <h2 key={`h2-${i}`} id={id} className={styles.contentH2}>
-          {text}
-        </h2>
-      );
-      return;
-    }
-
-    // Heading h3
-    if (trimmed.startsWith('### ')) {
-      flushList();
-      const text = trimmed.replace(/^###\s+/, '');
-      elements.push(
-        <h3 key={`h3-${i}`} className={styles.contentH3}>
-          {text}
-        </h3>
-      );
-      return;
-    }
-
-    // List item
-    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-      listItems.push(renderInlineFormatting(trimmed.replace(/^[-*]\s+/, '')));
-      return;
-    }
-
-    // Numbered list
-    if (/^\d+\.\s/.test(trimmed)) {
-      listItems.push(renderInlineFormatting(trimmed.replace(/^\d+\.\s+/, '')));
-      return;
-    }
-
-    // Table (simple handling)
-    if (trimmed.startsWith('|')) {
-      flushList();
-      // Collect table rows
-      const tableLines = [];
-      let j = i;
-      while (j < lines.length && lines[j].trim().startsWith('|')) {
-        tableLines.push(lines[j].trim());
-        j++;
-      }
-      if (tableLines.length >= 2) {
-        const headerCells = tableLines[0]
-          .split('|')
-          .filter(Boolean)
-          .map((c) => c.trim());
-        const bodyRows = tableLines.slice(2).map((row) =>
-          row
-            .split('|')
-            .filter(Boolean)
-            .map((c) => c.trim())
-        );
-        elements.push(
-          <div key={`table-${i}`} className={styles.tableWrapper}>
-            <table className={styles.contentTable}>
-              <thead>
-                <tr>
-                  {headerCells.map((cell, ci) => (
-                    <th key={ci}>{cell}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {bodyRows.map((row, ri) => (
-                  <tr key={ri}>
-                    {row.map((cell, ci) => (
-                      <td key={ci}>{cell}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-      }
-      return;
-    }
-
-    // Skip table separator rows
-    if (/^\|[-|:\s]+\|$/.test(trimmed)) {
-      return;
-    }
-
-    // Regular paragraph
-    flushList();
-    elements.push(
-      <p key={`p-${i}`} className={styles.contentParagraph}>
-        {renderInlineFormatting(trimmed)}
-      </p>
-    );
-  });
-
-  flushList();
-  return elements;
-}
-
-function renderInlineFormatting(text) {
-  // Simple bold handling: **text**
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i}>{part.slice(2, -2)}</strong>;
-    }
-    return part;
+/** Gives every `<h2>` the id its table-of-contents link points at. */
+function withHeadingIds(html) {
+  if (!html) return html;
+  return html.replace(/<h2([^>]*)>([\s\S]*?)<\/h2>/gi, (full, attrs, inner) => {
+    if (/\bid=/.test(attrs)) return full;
+    const text = inner.replace(/<[^>]+>/g, '').trim();
+    return `<h2${attrs} id="${headingId(text)}">${inner}</h2>`;
   });
 }
 
@@ -183,7 +63,7 @@ const shareLinks = (title, url) => [
   {
     name: 'WhatsApp',
     icon: 'mdi:whatsapp',
-    url: `https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`,
+    url: `https://wa.me/?text=${encodeURIComponent(`${title} ${url}`)}`,
     color: 'var(--color-whatsapp)',
   },
   {
@@ -193,7 +73,7 @@ const shareLinks = (title, url) => [
     color: 'var(--color-facebook)',
   },
   {
-    name: 'Twitter',
+    name: 'X',
     icon: 'mdi:twitter',
     url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`,
     color: 'var(--color-x)',
@@ -208,59 +88,34 @@ const shareLinks = (title, url) => [
 
 const ArticleDetail = () => {
   const { slug } = useParams();
-  const [article, setArticle] = useState(null);
-  const [relatedArticles, setRelatedArticles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+  const preview = searchParams.get('preview') || undefined;
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    const fetchArticle = async () => {
-      try {
-        setLoading(true);
-        const data = await articleService.getBySlug(slug);
-        setArticle(data);
-        if (data) {
-          // Use admin-selected related articles if available
-          if (data.relatedArticleIds && data.relatedArticleIds.length > 0) {
-            try {
-              const selected = await articleService.getByIds(data.relatedArticleIds);
-              const activeRelated = selected.filter((a) => a.isActive !== false);
-              setRelatedArticles(activeRelated.slice(0, 3));
-            } catch {
-              // Fallback to category-based if getByIds fails
-              setRelatedArticles(await getFallbackRelated(data));
-            }
-          } else {
-            // Fallback: auto-suggest based on category
-            setRelatedArticles(await getFallbackRelated(data));
-          }
-        }
-      } catch {
-        // Article fetch failed — UI shows error state
-      } finally {
-        setLoading(false);
-      }
-    };
+  const {
+    data: article,
+    loading,
+    error,
+    refetch,
+  } = useApi(
+    (signal) => articleService.getBySlug(slug, preview ? { preview } : undefined, { signal }),
+    [slug, preview]
+  );
 
-    const getFallbackRelated = async (data) => {
-      const all = await articleService.getAll({ isActive: true });
-      const related = all
-        .filter((a) => a.id !== data.id && a.category === data.category)
-        .slice(0, 3);
-      if (related.length < 3) {
-        const extra = all
-          .filter((a) => a.id !== data.id && !related.find((r) => r.id === a.id))
-          .slice(0, 3 - related.length);
-        related.push(...extra);
-      }
-      return related;
-    };
+  const relatedIds = useMemo(
+    () => (Array.isArray(article?.relatedArticleIds) ? article.relatedArticleIds : []),
+    [article]
+  );
 
-    fetchArticle();
-    window.scrollTo(0, 0);
-  }, [slug]);
+  const { data: related } = useApi(
+    (signal) => articleService.list({ ids: relatedIds, perPage: relatedIds.length }, { signal }),
+    [relatedIds],
+    { enabled: relatedIds.length > 0, initialData: [] }
+  );
 
-  const headings = useMemo(() => (article ? parseHeadings(article.content) : []), [article]);
+  const headings = useMemo(() => parseHeadings(article?.content), [article]);
+  const body = useMemo(() => withHeadingIds(article?.content), [article]);
+  const relatedArticles = (Array.isArray(related) ? related : []).slice(0, 3);
 
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
 
@@ -270,7 +125,7 @@ const ArticleDetail = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
+      // Clipboard access can be refused; the share buttons still work.
     }
   };
 
@@ -284,138 +139,152 @@ const ArticleDetail = () => {
     );
   }
 
+  if (error && error.status !== 404) {
+    return (
+      <div className={styles.page}>
+        <ErrorState title="We could not load this article" text={error.message} onRetry={refetch} />
+      </div>
+    );
+  }
+
   if (!article) {
     return (
       <div className={styles.page}>
         <div className={styles.notFound}>
           <Icon icon="mdi:file-alert-outline" className={styles.notFoundIcon} />
-          <h2>Article Not Found</h2>
-          <p>The article you're looking for doesn't exist or has been removed.</p>
-          <Link to="/insights/articles" className={styles.backLink}>
-            <Icon icon="mdi:arrow-left" /> Back to Articles
+          <h1>Article not found</h1>
+          <p>This article does not exist, or it is no longer published.</p>
+          <Link to={PATHS.articles} className={styles.backLink}>
+            <Icon icon="mdi:arrow-left" /> Back to articles
           </Link>
         </div>
       </div>
     );
   }
 
+  const image = article.featuredImage ?? {};
+
   return (
     <>
       <Helmet>
-        <title>{`${article.seoTitle || article.title} | ${SITE.name}`}</title>
-        <meta name="description" content={article.seoDescription || article.excerpt} />
-        <meta property="og:title" content={article.seoTitle || article.title} />
-        <meta property="og:description" content={article.seoDescription || article.excerpt} />
-        <meta property="og:image" content={article.image} />
+        <title>{`${article.seo?.title || article.title} | ${SITE.name}`}</title>
+        <meta name="description" content={article.seo?.description || article.excerpt} />
+        <meta property="og:title" content={article.seo?.title || article.title} />
+        <meta property="og:description" content={article.seo?.description || article.excerpt} />
+        {image.url ? <meta property="og:image" content={image.url} /> : null}
         <meta property="og:type" content="article" />
       </Helmet>
 
       <div className={styles.page}>
-        {/* Breadcrumb */}
-        <nav className={styles.breadcrumb}>
+        <nav className={styles.breadcrumb} aria-label="Breadcrumb">
           <div className={styles.breadcrumbInner}>
-            <Link to="/">Home</Link>
+            <Link to={PATHS.home}>Home</Link>
             <Icon icon="mdi:chevron-right" />
-            <Link to="/insights/articles">Insights</Link>
-            <Icon icon="mdi:chevron-right" />
-            <Link to="/insights/articles">Articles</Link>
+            <Link to={PATHS.articles}>Articles</Link>
+            {article.category?.slug ? (
+              <>
+                <Icon icon="mdi:chevron-right" />
+                <Link to={PATHS.articleCategory(article.category.slug)}>
+                  {article.category.name}
+                </Link>
+              </>
+            ) : null}
             <Icon icon="mdi:chevron-right" />
             <span>{article.title}</span>
           </div>
         </nav>
 
-        {/* Featured Image */}
-        <motion.div
-          className={styles.featuredImage}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <img src={article.image} alt={article.title} />
-        </motion.div>
+        {image.url ? (
+          <motion.div
+            className={styles.featuredImage}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <img src={image.url} alt={image.alt || article.title} />
+          </motion.div>
+        ) : null}
 
-        {/* Content Layout */}
         <div className={styles.articleLayout}>
-          {/* TOC Sidebar (desktop) */}
-          {headings.length > 0 && (
+          {headings.length > 0 ? (
             <aside className={styles.tocSidebar}>
               <div className={styles.tocCard}>
-                <h4 className={styles.tocTitle}>Table of Contents</h4>
+                <h2 className={styles.tocTitle}>On this page</h2>
                 <nav className={styles.tocNav}>
-                  {headings.map((h) => (
-                    <a key={h.id} href={`#${h.id}`} className={styles.tocLink}>
-                      {h.text}
+                  {headings.map((heading) => (
+                    <a key={heading.id} href={`#${heading.id}`} className={styles.tocLink}>
+                      {heading.text}
                     </a>
                   ))}
                 </nav>
               </div>
             </aside>
-          )}
+          ) : null}
 
-          {/* Main Article Content */}
           <motion.article
             className={styles.articleMain}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            {/* Meta */}
             <div className={styles.articleMeta}>
-              <span className={styles.categoryBadge}>{formatCategory(article.category)}</span>
+              {article.category?.name ? (
+                <span className={styles.categoryBadge}>{article.category.name}</span>
+              ) : null}
               <span className={styles.metaItem}>
                 <Icon icon="mdi:calendar-outline" />
                 {formatDate(article.publishedAt)}
               </span>
-              <span className={styles.metaItem}>
-                <Icon icon="mdi:account-outline" />
-                {article.author}
-              </span>
-              {article.readTime && (
+              {article.author?.name ? (
+                <span className={styles.metaItem}>
+                  <Icon icon="mdi:account-outline" />
+                  {article.author.name}
+                </span>
+              ) : null}
+              {article.readingTimeMinutes ? (
                 <span className={styles.metaItem}>
                   <Icon icon="mdi:clock-outline" />
-                  {article.readTime} min read
+                  {article.readingTimeMinutes} min read
                 </span>
-              )}
+              ) : null}
             </div>
 
             <h1 className={styles.articleTitle}>{article.title}</h1>
 
-            {/* Article body */}
-            <div className={styles.articleContent}>{renderContent(article.content)}</div>
+            <LegacyHtml className={styles.articleContent} html={body} />
 
-            {/* Tags */}
-            {article.tags && article.tags.length > 0 && (
+            {Array.isArray(article.tags) && article.tags.length > 0 ? (
               <div className={styles.tags}>
                 <Icon icon="mdi:tag-outline" />
                 {article.tags.map((tag) => (
-                  <span key={tag} className={styles.tag}>
-                    {tag}
-                  </span>
+                  <Link key={tag.id} to={PATHS.articleTag(tag.slug)} className={styles.tag}>
+                    {tag.name}
+                  </Link>
                 ))}
               </div>
-            )}
+            ) : null}
 
-            {/* Share */}
             <div className={styles.shareSection}>
               <span className={styles.shareLabel}>Share this article:</span>
               <div className={styles.shareButtons}>
-                {shareLinks(article.title, currentUrl).map((s) => (
+                {shareLinks(article.title, currentUrl).map((share) => (
                   <a
-                    key={s.name}
-                    href={s.url}
+                    key={share.name}
+                    href={share.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.shareBtn}
-                    title={`Share on ${s.name}`}
-                    style={{ '--share-color': s.color }}
+                    title={`Share on ${share.name}`}
+                    style={{ '--share-color': share.color }}
                   >
-                    <Icon icon={s.icon} />
+                    <Icon icon={share.icon} />
                   </a>
                 ))}
                 <button
                   className={styles.shareBtn}
                   onClick={handleCopyLink}
                   title="Copy link"
+                  type="button"
                   style={{ '--share-color': 'var(--color-text-muted)' }}
                 >
                   <Icon icon={copied ? 'mdi:check' : 'mdi:link-variant'} />
@@ -423,47 +292,53 @@ const ArticleDetail = () => {
               </div>
             </div>
 
-            {/* CTA */}
             <div className={styles.ctaSection}>
               <div className={styles.ctaInfo}>
-                <h3>Want expert guidance?</h3>
+                <h2>Want to talk it through?</h2>
                 <p>
-                  Our real estate advisors are here to help you make informed decisions. Get
-                  personalized advice tailored to your needs.
+                  Tell us what you are looking for and an advisor will come back with a shortlist
+                  and the trade-offs of each option.
                 </p>
               </div>
               <LeadForm
-                title="Contact Our Experts"
-                subtitle="We'll get back to you within 24 hours"
-                source="article_detail"
+                title="Speak to an advisor"
+                subtitle="We will be in touch as soon as we can"
+                source="article"
                 className={styles.ctaForm}
               />
             </div>
           </motion.article>
         </div>
 
-        {/* Related Articles */}
-        {relatedArticles.length > 0 && (
+        {relatedArticles.length > 0 ? (
           <section className={styles.relatedSection}>
             <div className={styles.relatedInner}>
-              <h2 className={styles.relatedTitle}>Related Articles</h2>
+              <h2 className={styles.relatedTitle}>Related articles</h2>
               <div className={styles.relatedGrid}>
-                {relatedArticles.map((a, i) => (
+                {relatedArticles.map((item, index) => (
                   <motion.div
-                    key={a.id}
+                    key={item.id}
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: i * 0.1, duration: 0.4 }}
+                    transition={{ delay: index * 0.1, duration: 0.4 }}
                   >
-                    <Link to={`/insights/articles/${a.slug}`} className={styles.relatedCard}>
+                    <Link to={PATHS.article(item.slug)} className={styles.relatedCard}>
                       <div className={styles.relatedImage}>
-                        <img src={a.image} alt={a.title} loading="lazy" />
+                        {item.featuredImage?.url ? (
+                          <img
+                            src={item.featuredImage.url}
+                            alt={item.featuredImage.alt || item.title}
+                            loading="lazy"
+                          />
+                        ) : null}
                       </div>
                       <div className={styles.relatedBody}>
-                        <span className={styles.relatedCategory}>{formatCategory(a.category)}</span>
-                        <h4 className={styles.relatedCardTitle}>{a.title}</h4>
-                        <span className={styles.relatedDate}>{formatDate(a.publishedAt)}</span>
+                        {item.category?.name ? (
+                          <span className={styles.relatedCategory}>{item.category.name}</span>
+                        ) : null}
+                        <h3 className={styles.relatedCardTitle}>{item.title}</h3>
+                        <span className={styles.relatedDate}>{formatDate(item.publishedAt)}</span>
                       </div>
                     </Link>
                   </motion.div>
@@ -471,7 +346,7 @@ const ArticleDetail = () => {
               </div>
             </div>
           </section>
-        )}
+        ) : null}
       </div>
     </>
   );

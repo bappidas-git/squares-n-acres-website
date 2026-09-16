@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -12,9 +12,10 @@ import {
   IconButton,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
-import { siteSettingsService } from '../../services/api';
+import settingsService from '../../services/settingsService';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import UserManagement from '../../components/admin/UserManagement';
+import { Alert } from '../../components/ui';
 import { useToast } from '../../components/common/ToastProvider';
 
 // Default settings structure — ensures every field exists so inputs are
@@ -40,35 +41,53 @@ const str = (val) => (val != null ? String(val) : '');
 // Build a complete settings object from (possibly partial / nullable) API data.
 // Every field is explicitly mapped so that null values from the API never
 // override the empty-string defaults and never reach TextField `value` props.
+/**
+ * The contract settings singleton (§6.13) shown through the field names this
+ * screen was built for. It is read-only until prompt 40 rebuilds the screen
+ * around the real branches (`general`, `hero`, `navigation`, `social`,
+ * `footer`, `newsletter`, `integrations`, `leads`).
+ */
 const mergeWithDefaults = (data) => {
   if (!data || typeof data !== 'object') return { ...DEFAULT_SETTINGS };
+
+  const general = data.general ?? {};
+  const address = general.address ?? {};
+  const hero = data.hero ?? {};
+  const social = data.social ?? {};
+  const footer = data.footer ?? {};
+  const newsletter = data.newsletter ?? {};
+
   return {
-    companyName: str(data.companyName),
-    tagline: str(data.tagline),
-    companySubtitle: str(data.companySubtitle),
-    companyDescription: str(data.companyDescription),
+    companyName: str(general.siteName),
+    tagline: str(general.tagline),
+    companySubtitle: '',
+    companyDescription: str(footer.aboutText),
     contactInfo: {
-      email: str(data.contactInfo?.email),
-      phone: str(data.contactInfo?.phone),
-      address: str(data.contactInfo?.address),
+      email: str(general.contactEmail),
+      phone: str(general.contactPhone),
+      address: [address.line1, address.line2, address.city, address.state, address.pincode]
+        .filter(Boolean)
+        .join(', '),
     },
     heroText: {
-      title: str(data.heroText?.title),
-      subtitle: str(data.heroText?.subtitle),
-      backgroundMedia: str(data.heroText?.backgroundMedia),
-      backgroundImage: str(data.heroText?.backgroundImage),
+      title: str(hero.title),
+      subtitle: str(hero.subtitle),
+      backgroundMedia: str(hero.backgroundVideoUrl),
+      backgroundImage: str(hero.backgroundImageUrl),
     },
     socialLinks: {
-      instagram: str(data.socialLinks?.instagram),
-      facebook: str(data.socialLinks?.facebook),
-      twitter: str(data.socialLinks?.twitter),
-      linkedin: str(data.socialLinks?.linkedin),
-      youtube: str(data.socialLinks?.youtube),
+      instagram: str(social.instagram),
+      facebook: str(social.facebook),
+      twitter: str(social.x),
+      linkedin: str(social.linkedin),
+      youtube: str(social.youtube),
     },
-    newsletterText: str(data.newsletterText),
-    newsletterSubtitle: str(data.newsletterSubtitle),
-    footerGallery: Array.isArray(data.footerGallery) ? data.footerGallery.map((v) => str(v)) : [],
-    footerLinkGroups: Array.isArray(data.footerLinkGroups) ? data.footerLinkGroups : [],
+    newsletterText: str(newsletter.title),
+    newsletterSubtitle: str(newsletter.subtitle),
+    footerGallery: Array.isArray(footer.galleryImageUrls)
+      ? footer.galleryImageUrls.map((value) => str(value))
+      : [],
+    footerLinkGroups: Array.isArray(footer.columns) ? footer.columns : [],
   };
 };
 
@@ -96,9 +115,7 @@ const AdminSettings = () => {
 
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
-  const [hasChanges, setHasChanges] = useState(false);
 
   // Tab index for User Management (last tab, admin-only)
   const USER_MGMT_TAB = 5;
@@ -108,10 +125,10 @@ const AdminSettings = () => {
     const fetchSettings = async () => {
       setLoading(true);
       try {
-        const data = await siteSettingsService.get();
+        const { data } = await settingsService.admin();
         if (!cancelled) setSettings(mergeWithDefaults(data));
-      } catch {
-        if (!cancelled) toast.error('Failed to load settings');
+      } catch (thrown) {
+        if (!cancelled) toast.error(thrown?.message || 'Failed to load settings');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -158,30 +175,14 @@ const AdminSettings = () => {
       obj[lastKey] = typeof valueOrFn === 'function' ? valueOrFn(obj[lastKey]) : valueOrFn;
       return updated;
     });
-    setHasChanges(true);
   }, []);
 
-  // Keep a ref that always points at the latest settings so the save
-  // handler can read the most-recent value even across async boundaries.
-  const settingsRef = useRef(settings);
-  settingsRef.current = settings;
-
-  const handleSave = useCallback(async () => {
-    setSaving(true);
-    try {
-      await siteSettingsService.update(settingsRef.current);
-      // Do NOT overwrite local state with the API response — the local
-      // state is the source of truth.  Replacing it would discard any
-      // keystrokes the user made while the save request was in-flight and
-      // could re-introduce null values from the server.
-      toast.success('Settings saved successfully');
-      setHasChanges(false);
-    } catch {
-      toast.error('Failed to save settings');
-    } finally {
-      setSaving(false);
-    }
-  }, [toast]);
+  /**
+   * Saving is switched off until prompt 40. `PUT /admin/settings` deep-merges
+   * the branches of §6.13; this screen holds a flattened view of five of them,
+   * so writing it back would flatten the record on the server.
+   */
+  const savingDisabled = true;
 
   if (loading) {
     return (
@@ -218,15 +219,14 @@ const AdminSettings = () => {
             Site Settings
           </Typography>
           <Typography sx={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', mt: 0.5 }}>
-            Manage global website configuration
+            Global website configuration
           </Typography>
         </Box>
         {activeTab !== USER_MGMT_TAB && (
           <Button
             variant="contained"
             startIcon={<Icon icon="mdi:content-save-outline" />}
-            onClick={handleSave}
-            disabled={saving || !hasChanges}
+            disabled={savingDisabled}
             sx={{
               bgcolor: 'var(--color-charcoal)',
               textTransform: 'none',
@@ -239,10 +239,22 @@ const AdminSettings = () => {
               },
             }}
           >
-            {saving ? 'Saving...' : 'Save Settings'}
+            Save settings
           </Button>
         )}
       </Box>
+
+      {activeTab !== USER_MGMT_TAB ? (
+        <Alert
+          tone="info"
+          title="Settings editing is being rebuilt (prompt 40)"
+          style={{ marginBottom: 'var(--space-4)' }}
+        >
+          These fields show the live settings, flattened into the previous shape. Saving stays
+          switched off until the screen is rebuilt around the current branches — general, hero,
+          navigation, social, footer, newsletter and integrations.
+        </Alert>
+      ) : null}
 
       {/* Tabs */}
       <Paper
@@ -996,44 +1008,6 @@ const AdminSettings = () => {
           </TabPanel>
         </Box>
       </Paper>
-
-      {/* Floating Save Button (if changes exist, hidden on User Management tab) */}
-      {hasChanges && activeTab !== USER_MGMT_TAB && (
-        <Paper
-          elevation={4}
-          sx={{
-            position: 'fixed',
-            bottom: 24,
-            right: 24,
-            p: 2,
-            borderRadius: 3,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            bgcolor: 'var(--color-bg)',
-            border: '1px solid var(--color-surface)',
-            zIndex: 100,
-          }}
-        >
-          <Typography sx={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
-            Unsaved changes
-          </Typography>
-          <Button
-            variant="contained"
-            size="small"
-            onClick={handleSave}
-            disabled={saving}
-            sx={{
-              bgcolor: 'var(--color-charcoal)',
-              textTransform: 'none',
-              borderRadius: 2,
-              '&:hover': { bgcolor: 'var(--color-charcoal)' },
-            }}
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
-        </Paper>
-      )}
     </Box>
   );
 };

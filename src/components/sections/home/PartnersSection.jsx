@@ -1,21 +1,35 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import useInView from '../../../hooks/useInView';
-import { partnerService } from '../../../services/api';
+
+import masterDataService from '../../../services/masterDataService';
 import styles from './PartnersSection.module.css';
+import useApi from '../../../hooks/useApi';
+import useInView from '../../../hooks/useInView';
+
+/**
+ * The partner marquee. `GET /partners` returns active partners in `order`
+ * (§5.14); the logos are whatever an editor uploaded.
+ */
 
 const PartnerCard = ({ partner }) => {
   const content = (
     <>
-      <img src={partner.logo} alt={partner.name} className={styles.partnerLogo} loading="lazy" />
+      {partner.logoUrl ? (
+        <img
+          src={partner.logoUrl}
+          alt={partner.name}
+          className={styles.partnerLogo}
+          loading="lazy"
+        />
+      ) : null}
       <span className={styles.partnerName}>{partner.name}</span>
     </>
   );
 
-  if (partner.website) {
+  if (partner.websiteUrl) {
     return (
       <a
-        href={partner.website}
+        href={partner.websiteUrl}
         target="_blank"
         rel="noopener noreferrer"
         className={styles.partnerCard}
@@ -29,29 +43,18 @@ const PartnerCard = ({ partner }) => {
 };
 
 const PartnersSection = () => {
-  const [partners, setPartners] = useState([]);
-  const [loading, setLoading] = useState(true);
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.15 });
+  const { data, loading } = useApi(
+    (signal) => masterDataService.partners.list({ perPage: 24 }, { signal }),
+    [],
+    { initialData: [] }
+  );
 
-  useEffect(() => {
-    const fetchPartners = async () => {
-      try {
-        const data = await partnerService.getActive();
-        setPartners(data);
-      } catch {
-        setPartners([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPartners();
-  }, []);
+  const partners = Array.isArray(data) ? data : [];
+  if (loading || partners.length === 0) return null;
 
-  if (loading) return null;
-  if (!partners.length) return null;
-
-  // Duplicate partners for seamless infinite marquee loop
-  const displayPartners = [...partners, ...partners];
+  // The track is duplicated so the marquee loops without a visible seam.
+  const track = [...partners, ...partners];
 
   return (
     <section className={styles.section} ref={ref}>
@@ -62,8 +65,8 @@ const PartnersSection = () => {
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.5 }}
         >
-          <h2 className={styles.title}>Our Partners</h2>
-          <p className={styles.subtitle}>Trusted developers we work with</p>
+          <h2 className={styles.title}>Our partners</h2>
+          <p className={styles.subtitle}>Developers and specialists we work with</p>
         </motion.div>
 
         <motion.div
@@ -73,8 +76,8 @@ const PartnersSection = () => {
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <div className={styles.marqueeTrack}>
-            {displayPartners.map((partner, idx) => (
-              <PartnerCard key={`${partner.id}-${idx}`} partner={partner} />
+            {track.map((partner, index) => (
+              <PartnerCard key={`${partner.id}-${index}`} partner={partner} />
             ))}
           </div>
         </motion.div>
