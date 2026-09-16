@@ -6,7 +6,24 @@ import { Icon } from '@iconify/react';
 import styles from './NotFound.module.css';
 import { SITE } from '../../config/site';
 
-const NotFound = () => {
+/**
+ * The 404 page — the route fallback, and what a public detail page renders
+ * when the API answers 404 for the slug in the address.
+ *
+ * `title` and `subtitle` let a page say what was not found ("Property not
+ * found") instead of the generic sentence; everything else — the search box,
+ * the actions and the quick links — is the same page either way.
+ *
+ * @param {object} props
+ * @param {string} [props.title]
+ * @param {string} [props.subtitle]
+ * @param {string} [props.description] the meta description
+ */
+const NotFound = ({
+  title = 'Page Not Found',
+  subtitle = "The page you're looking for doesn't exist or has been moved. Don't worry — let's help you find your way.",
+  description = "The page you're looking for doesn't exist. Browse our properties or return to the homepage.",
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
@@ -20,11 +37,9 @@ const NotFound = () => {
   return (
     <>
       <Helmet>
-        <title>{`Page Not Found | ${SITE.name}`}</title>
-        <meta
-          name="description"
-          content="The page you're looking for doesn't exist. Browse our properties or return to the homepage."
-        />
+        <title>{`${title} | ${SITE.name}`}</title>
+        <meta name="description" content={description} />
+        <meta name="robots" content="noindex, follow" />
       </Helmet>
 
       <div className={styles.page}>
@@ -47,11 +62,8 @@ const NotFound = () => {
             <span className={styles.digit}>4</span>
           </div>
 
-          <h1 className={styles.title}>Page Not Found</h1>
-          <p className={styles.subtitle}>
-            The page you're looking for doesn't exist or has been moved. Don't worry — let's help
-            you find your way.
-          </p>
+          <h1 className={styles.title}>{title}</h1>
+          <p className={styles.subtitle}>{subtitle}</p>
 
           {/* Search Bar */}
           <form onSubmit={handleSearch} className={styles.searchForm}>

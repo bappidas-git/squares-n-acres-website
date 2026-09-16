@@ -1,0 +1,33 @@
+.done {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  text-align: center;
+}
+
+.doneIcon {
+  font-size: 3rem;
+  color: var(--color-success);
+}
+
+.doneTitle {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.doneText {
+  margin: 0;
+  max-width: 38ch;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.doneActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}

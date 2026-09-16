@@ -1,267 +1,341 @@
-import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Suspense, lazy, useCallback, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
+
+import { LazyImage, Tabs } from '../../ui';
+import { track } from '../../../utils/analytics';
+import useBreakpoint from '../../../hooks/useBreakpoint';
+
 import styles from './PropertyGallery.module.css';
 
-const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov'];
+const PropertyLightbox = lazy(() => import('./PropertyLightbox'));
 
-const isVideoUrl = (url) => {
-  if (!url) return false;
+/** How far a finger has to travel before it counts as a swipe. */
+const SWIPE_THRESHOLD = 48;
+
+/**
+ * The embeddable form of a walkthrough address, or `null` when it is neither a
+ * YouTube page, a Vimeo page nor a file a browser can play (§7: a video the
+ * page cannot show is a tab that is not offered).
+ *
+ * @param {string|null} url
+ * @returns {{kind: 'iframe'|'file', src: string}|null}
+ */
+export function videoSource(url) {
+  const raw = String(url ?? '').trim();
+  if (!raw) return null;
+
+  let parsed;
   try {
-    const pathname = new URL(url).pathname.toLowerCase();
-    return VIDEO_EXTENSIONS.some((ext) => pathname.endsWith(ext));
+    parsed = new URL(raw);
   } catch {
-    return VIDEO_EXTENSIONS.some((ext) => url.toLowerCase().includes(ext));
+    return null;
   }
-};
 
-const GalleryMedia = ({ src, alt, className, ...motionProps }) => {
-  if (isVideoUrl(src)) {
-    return (
-      <motion.video
-        {...motionProps}
-        className={className}
-        src={src}
-        controls
-        playsInline
-        muted
-        preload="metadata"
-        style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-        onClick={(e) => e.stopPropagation()}
-      />
-    );
+  const host = parsed.hostname.replace(/^www\./, '');
+
+  if (host === 'youtu.be') {
+    const id = parsed.pathname.slice(1);
+    return id ? { kind: 'iframe', src: `https://www.youtube-nocookie.com/embed/${id}` } : null;
   }
-  return <motion.img {...motionProps} src={src} alt={alt} className={className} />;
-};
 
-const ThumbnailMedia = ({ src, alt, ...props }) => {
-  if (isVideoUrl(src)) {
-    return (
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <video
-          src={src}
-          muted
-          preload="metadata"
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-        <Icon
-          icon="mdi:play-circle"
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            fontSize: 20,
-            color: 'var(--color-text-inverse)',
-            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))',
-          }}
-        />
-      </div>
-    );
+  if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
+    const id = parsed.searchParams.get('v') || parsed.pathname.split('/').filter(Boolean).pop();
+    if (!id) return null;
+    return { kind: 'iframe', src: `https://www.youtube-nocookie.com/embed/${id}` };
   }
-  return <img src={src} alt={alt} {...props} />;
-};
 
-const PropertyGallery = ({ images = [] }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  if (host === 'vimeo.com' || host === 'player.vimeo.com') {
+    const id = parsed.pathname.split('/').filter(Boolean).pop();
+    return /^\d+$/.test(id ?? '')
+      ? { kind: 'iframe', src: `https://player.vimeo.com/video/${id}` }
+      : null;
+  }
+
+  if (/\.(mp4|webm|ogv)$/i.test(parsed.pathname)) return { kind: 'file', src: raw };
+
+  return null;
+}
+
+/** The images in the order the page shows them: the cover first, then `order`. */
+export function orderedImages(images) {
+  const rows = (Array.isArray(images) ? images : []).filter((image) => image?.url);
+  return [...rows].sort((left, right) => {
+    if (Boolean(left.isCover) !== Boolean(right.isCover)) return left.isCover ? -1 : 1;
+    return (left.order ?? 0) - (right.order ?? 0);
+  });
+}
+
+/**
+ * The photographs, the walkthrough and the tour of one listing.
+ *
+ * Photographs are a cover with a thumbnail strip beside it (below it on a
+ * phone); the arrow keys move between them and `Enter` opens the full-screen
+ * lightbox, which is a separate chunk (D7). The video and the tour are offered
+ * as tabs only when the listing carries one **and** its section is switched on
+ * — a tab that opens on nothing is worse than no tab.
+ *
+ * A listing with no photograph at all gets the monogram placeholder rather than
+ * a blank box, so the page never has a hole where the gallery should be.
+ *
+ * @param {object} props
+ * @param {Array<{id: number, url: string, alt?: string, caption?: string, order?: number,
+ *   isCover?: boolean}>} props.images
+ * @param {string} props.title the listing's title — the alt text falls back to it
+ * @param {string|null} [props.videoUrl]
+ * @param {string|null} [props.virtualTourUrl]
+ * @param {boolean} [props.showVideo] the `video` section's visibility
+ * @param {boolean} [props.showVirtualTour] the `virtualTour` section's visibility
+ * @param {number|string} [props.propertyId] carried by the `gallery_open` event
+ */
+export default function PropertyGallery({
+  images,
+  title = '',
+  videoUrl = null,
+  virtualTourUrl = null,
+  showVideo = true,
+  showVirtualTour = true,
+  propertyId,
+}) {
+  const photos = useMemo(() => orderedImages(images), [images]);
+  const { isMobile } = useBreakpoint();
+  const [index, setIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [direction, setDirection] = useState(0);
+  const touchStart = useRef(null);
+  const stageRef = useRef(null);
 
-  const gallery = images;
-  const imageCount = gallery.length;
+  const count = photos.length;
+  const current = photos[Math.min(index, Math.max(count - 1, 0))] ?? null;
 
-  const currentIsVideo = isVideoUrl(gallery[currentIndex]);
+  // A phone is held upright: a 4/3 cover fills more of it than a 16/9 one (§6).
+  const stageRatio = isMobile ? '4/3' : '16/9';
+  const video = showVideo ? videoSource(videoUrl) : null;
+  const tour = showVirtualTour && String(virtualTourUrl ?? '').trim() ? virtualTourUrl : null;
 
-  const goTo = useCallback(
-    (index) => {
-      setDirection(index > currentIndex ? 1 : -1);
-      setCurrentIndex(index);
+  const go = useCallback(
+    (next) => {
+      if (count === 0) return;
+      setIndex(((next % count) + count) % count);
     },
-    [currentIndex]
+    [count]
   );
 
-  const goPrev = useCallback(() => {
-    setDirection(-1);
-    setCurrentIndex((prev) => (prev === 0 ? imageCount - 1 : prev - 1));
-  }, [imageCount]);
+  const openLightbox = useCallback(() => {
+    if (count === 0) return;
+    setLightboxOpen(true);
+    track('gallery_open', { propertyId });
+  }, [count, propertyId]);
 
-  const goNext = useCallback(() => {
-    setDirection(1);
-    setCurrentIndex((prev) => (prev === imageCount - 1 ? 0 : prev + 1));
-  }, [imageCount]);
+  const closeLightbox = useCallback(() => {
+    setLightboxOpen(false);
+    // The library restores focus to whatever opened it; the stage is what the
+    // arrow keys then move, so it is where focus belongs.
+    stageRef.current?.focus();
+  }, []);
 
-  const handleKeyDown = useCallback(
-    (e) => {
-      if (e.key === 'Escape') setLightboxOpen(false);
-      if (e.key === 'ArrowLeft') goPrev();
-      if (e.key === 'ArrowRight') goNext();
-    },
-    [goPrev, goNext]
-  );
-
-  const slideVariants = {
-    enter: (dir) => ({ x: dir > 0 ? 300 : -300, opacity: 0 }),
-    center: { x: 0, opacity: 1 },
-    exit: (dir) => ({ x: dir > 0 ? -300 : 300, opacity: 0 }),
+  const onStageKeyDown = (event) => {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      go(index - 1);
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      go(index + 1);
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openLightbox();
+    }
   };
 
-  // Render nothing when no images exist — no placeholder fallback
-  if (!imageCount) return null;
+  const onTouchStart = (event) => {
+    touchStart.current = event.touches[0]?.clientX ?? null;
+  };
 
-  return (
-    <>
-      <div className={styles.gallery}>
+  const onTouchEnd = (event) => {
+    if (touchStart.current === null) return;
+    const travelled = (event.changedTouches[0]?.clientX ?? 0) - touchStart.current;
+    touchStart.current = null;
+    if (Math.abs(travelled) < SWIPE_THRESHOLD) return;
+    go(index + (travelled < 0 ? 1 : -1));
+  };
+
+  const slides = useMemo(
+    () =>
+      photos.map((photo) => ({
+        src: photo.url,
+        alt: photo.alt || title,
+        description: photo.caption || undefined,
+      })),
+    [photos, title]
+  );
+
+  const photosPanel =
+    count === 0 ? (
+      <div className={styles.empty}>
+        <LazyImage src="" alt="" ratio={stageRatio} className={styles.stageImage} />
+        <p className={styles.emptyText}>Photographs of this property are on their way.</p>
+      </div>
+    ) : (
+      <div className={styles.photos}>
         <div
-          className={styles.mainImage}
-          onClick={() => !currentIsVideo && setLightboxOpen(true)}
-          style={currentIsVideo ? { cursor: 'default' } : undefined}
+          className={styles.stage}
+          ref={stageRef}
+          role="button"
+          tabIndex={0}
+          aria-label={`${title || 'Property'} — photograph ${index + 1} of ${count}. Press Enter to view full screen.`}
+          onClick={openLightbox}
+          onKeyDown={onStageKeyDown}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
         >
-          <AnimatePresence custom={direction} mode="wait">
-            <GalleryMedia
-              key={currentIndex}
-              src={gallery[currentIndex]}
-              alt={`Property view ${currentIndex + 1}`}
-              className={styles.image}
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-            />
-          </AnimatePresence>
+          <LazyImage
+            src={current?.url}
+            alt={current?.alt || title}
+            ratio={stageRatio}
+            sizes="(min-width: 900px) 60vw, 100vw"
+            loading={index === 0 ? 'eager' : 'lazy'}
+            fetchPriority={index === 0 ? 'high' : undefined}
+            className={styles.stageImage}
+          />
 
-          <div className={styles.counter}>
-            {currentIndex + 1} / {gallery.length}
-          </div>
+          <span className={styles.counter}>
+            {index + 1} / {count}
+          </span>
 
-          {!currentIsVideo && (
-            <button className={styles.expandBtn} aria-label="View fullscreen">
-              <Icon icon="mdi:fullscreen" />
-            </button>
-          )}
-
-          {gallery.length > 1 && (
+          {count > 1 ? (
             <>
               <button
-                className={`${styles.navBtn} ${styles.navPrev}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  goPrev();
+                type="button"
+                className={`${styles.arrow} ${styles.arrowPrev}`}
+                aria-label="Previous photograph"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  go(index - 1);
                 }}
-                aria-label="Previous image"
               >
-                <Icon icon="mdi:chevron-left" />
+                <Icon icon="mdi:chevron-left" aria-hidden="true" />
               </button>
               <button
-                className={`${styles.navBtn} ${styles.navNext}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  goNext();
+                type="button"
+                className={`${styles.arrow} ${styles.arrowNext}`}
+                aria-label="Next photograph"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  go(index + 1);
                 }}
-                aria-label="Next image"
               >
-                <Icon icon="mdi:chevron-right" />
+                <Icon icon="mdi:chevron-right" aria-hidden="true" />
               </button>
             </>
-          )}
+          ) : null}
+
+          <button
+            type="button"
+            className={styles.viewAll}
+            onClick={(event) => {
+              event.stopPropagation();
+              openLightbox();
+            }}
+          >
+            <Icon icon="mdi:image-multiple-outline" aria-hidden="true" />
+            {count === 1 ? 'View photo' : `View all ${count} photos`}
+          </button>
         </div>
 
-        {gallery.length > 1 && (
-          <div className={styles.thumbnails}>
-            {gallery.map((img, idx) => (
-              <button
-                key={idx}
-                className={`${styles.thumb} ${idx === currentIndex ? styles.thumbActive : ''}`}
-                onClick={() => goTo(idx)}
-                aria-label={`View ${isVideoUrl(img) ? 'video' : 'image'} ${idx + 1}`}
-              >
-                <ThumbnailMedia src={img} alt={`Thumbnail ${idx + 1}`} loading="lazy" />
-              </button>
+        {count > 1 ? (
+          <ul className={styles.thumbs} aria-label="Photographs">
+            {photos.map((photo, position) => (
+              <li key={photo.id ?? photo.url}>
+                <button
+                  type="button"
+                  className={`${styles.thumb} ${position === index ? styles.thumbActive : ''}`}
+                  aria-label={`Photograph ${position + 1}`}
+                  aria-current={position === index ? 'true' : undefined}
+                  onClick={() => go(position)}
+                >
+                  <LazyImage
+                    src={photo.url}
+                    alt=""
+                    ratio="4/3"
+                    sizes="120px"
+                    className={styles.thumbImage}
+                  />
+                </button>
+              </li>
             ))}
-          </div>
-        )}
-
-        {/* Mobile dots */}
-        {gallery.length > 1 && (
-          <div className={styles.dots}>
-            {gallery.map((_, idx) => (
-              <span
-                key={idx}
-                className={`${styles.dot} ${idx === currentIndex ? styles.dotActive : ''}`}
-                onClick={() => goTo(idx)}
-              />
-            ))}
-          </div>
-        )}
+          </ul>
+        ) : null}
       </div>
+    );
 
-      {/* Lightbox */}
-      <AnimatePresence>
-        {lightboxOpen && (
-          <motion.div
-            className={styles.lightbox}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setLightboxOpen(false)}
-            onKeyDown={handleKeyDown}
-            tabIndex={0}
-            role="dialog"
-            aria-label="Image gallery"
-          >
-            <button
-              className={styles.lightboxClose}
-              onClick={() => setLightboxOpen(false)}
-              aria-label="Close gallery"
-            >
-              <Icon icon="mdi:close" />
-            </button>
+  const items = [
+    { value: 'photos', label: `Photos${count ? ` (${count})` : ''}`, content: photosPanel },
+  ];
 
-            <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
-              <AnimatePresence custom={direction} mode="wait">
-                <GalleryMedia
-                  key={currentIndex}
-                  src={gallery[currentIndex]}
-                  alt={`Property view ${currentIndex + 1}`}
-                  className={styles.lightboxImage}
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.3 }}
-                />
-              </AnimatePresence>
+  if (video) {
+    items.push({
+      value: 'video',
+      label: 'Video',
+      content: (
+        <div className={styles.frame}>
+          {video.kind === 'file' ? (
+            <video className={styles.media} src={video.src} controls preload="metadata">
+              <track kind="captions" />
+            </video>
+          ) : (
+            <iframe
+              className={styles.media}
+              src={video.src}
+              title={`${title} — video walkthrough`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              loading="lazy"
+            />
+          )}
+        </div>
+      ),
+    });
+  }
 
-              <div className={styles.lightboxCounter}>
-                {currentIndex + 1} / {gallery.length}
-              </div>
+  if (tour) {
+    items.push({
+      value: 'tour',
+      label: 'Virtual tour',
+      content: (
+        <div className={styles.frame}>
+          <iframe
+            className={styles.media}
+            src={tour}
+            title={`${title} — virtual tour`}
+            allowFullScreen
+            loading="lazy"
+          />
+        </div>
+      ),
+    });
+  }
 
-              {gallery.length > 1 && (
-                <>
-                  <button
-                    className={`${styles.lightboxNav} ${styles.lightboxPrev}`}
-                    onClick={goPrev}
-                    aria-label="Previous"
-                  >
-                    <Icon icon="mdi:chevron-left" />
-                  </button>
-                  <button
-                    className={`${styles.lightboxNav} ${styles.lightboxNext}`}
-                    onClick={goNext}
-                    aria-label="Next"
-                  >
-                    <Icon icon="mdi:chevron-right" />
-                  </button>
-                </>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+  return (
+    <section className={styles.gallery} aria-label="Property media">
+      {items.length > 1 ? (
+        <Tabs items={items} label="Property media" variant="pills" />
+      ) : (
+        photosPanel
+      )}
+
+      {lightboxOpen ? (
+        <Suspense
+          fallback={
+            <span className={styles.lightboxLoading} role="status" aria-label="Loading gallery" />
+          }
+        >
+          <PropertyLightbox
+            open={lightboxOpen}
+            index={index}
+            slides={slides}
+            onClose={closeLightbox}
+            onIndexChange={setIndex}
+          />
+        </Suspense>
+      ) : null}
+    </section>
   );
-};
-
-export default PropertyGallery;
+}

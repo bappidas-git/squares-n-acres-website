@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { BRAND, SITE } from '../config/site';
-import { formatPhoneForTel } from '../utils/format';
+import { formatPhoneForTel, whatsappLink } from '../utils/format';
 import { isCanceled } from '../services/apiError';
 import seoService from '../services/seoService';
 import settingsService from '../services/settingsService';
@@ -22,14 +22,6 @@ const SiteSettingsContext = createContext(null);
 
 const readCache = () => storage.getItem(CACHE_KEY, null, { session: true });
 const writeCache = (value) => storage.setItem(CACHE_KEY, value, { session: true });
-
-/** `https://wa.me/919800000000?text=…` from any way a number may be written. */
-const whatsappLink = (number, message) => {
-  const digits = String(number ?? '').replace(/\D/g, '');
-  if (!digits) return '';
-  const text = message ? `?text=${encodeURIComponent(message)}` : '';
-  return `https://wa.me/${digits}${text}`;
-};
 
 export const SiteSettingsProvider = ({ children }) => {
   const cached = useMemo(readCache, []);

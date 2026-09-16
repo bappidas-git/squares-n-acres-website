@@ -49,9 +49,28 @@
 }
 
 .navIcon {
+  position: relative;
   display: flex;
   align-items: center;
   font-size: 22px;
+}
+
+/* The shortlist count. `aria-hidden`: the link's accessible name carries it. */
+.badge {
+  position: absolute;
+  top: -6px;
+  left: 12px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  line-height: 18px;
+  text-align: center;
 }
 
 .navLabel {

@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import { Link } from 'react-router-dom';
 
 import PATHS from '../../routes/paths';
+import ShortlistButton from './ShortlistButton';
 import styles from './PropertyCard.module.css';
 import { Area, Chip, Price } from '../ui';
 import { CONSTRUCTION_STATUS } from '../../config/enums';
@@ -17,9 +18,9 @@ import { EMPTY, formatBhk } from '../../utils/format';
  * price knows whether it is a sale or a monthly rent (D33).
  *
  * What the boilerplate card did and this one does not: no autoplaying videos
- * in a grid, no per-card image carousel, and no heart button that forgot what
- * it was told — the shortlist arrives with its own storage in prompt 26
- * (ADD-10).
+ * in a grid and no per-card image carousel. The heart is `ShortlistButton`,
+ * which writes through `ShortlistContext` into `sna_shortlist` — the
+ * boilerplate's remembered nothing (ADD-10).
  */
 
 const LISTING_BADGE = {
@@ -73,6 +74,13 @@ const PropertyCard = memo(({ property }) => {
         )}
 
         <span className={`${styles.badge} ${styles[listing.className]}`}>{listing.label}</span>
+
+        <ShortlistButton
+          propertyId={property.id}
+          title={property.title}
+          onImage
+          className={styles.heart}
+        />
 
         {badges.length > 0 || property.isVerified ? (
           <div className={styles.tagStrip}>

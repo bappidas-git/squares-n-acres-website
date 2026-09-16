@@ -43,6 +43,9 @@ const filled = (values) =>
  * @param {string} [props.source] a `LEAD_SOURCES` value
  * @param {number|null} [props.propertyId]
  * @param {object} [props.hiddenFields] merged into the request body
+ * @param {(values: object) => void} [props.onSuccess] called with the typed
+ *   answers once `POST /leads` has accepted them, so a host can remember the
+ *   visitor's details or show a success panel of its own (ADD-09)
  */
 const LeadForm = ({
   title = 'Get in Touch',
@@ -51,6 +54,7 @@ const LeadForm = ({
   source = 'website',
   propertyId = null,
   hiddenFields = null,
+  onSuccess,
   className = '',
 }) => {
   const defaultFields = [
@@ -125,6 +129,7 @@ const LeadForm = ({
       });
       setSubmitted(true);
       toast.success(response?.message || 'Thank you — we will be in touch shortly.');
+      onSuccess?.(filled(formData));
     } catch (error) {
       setErrors((previous) => ({
         ...previous,

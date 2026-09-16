@@ -9,6 +9,8 @@ import {
   formatPrice,
   formatPriceRange,
   formatRelative,
+  formatWhatsappNumber,
+  whatsappLink,
 } from './format';
 
 describe('formatPrice', () => {
@@ -126,5 +128,27 @@ describe('formatPhoneForTel', () => {
     expect(formatPhoneForTel(null)).toBe('');
     expect(formatPhoneForTel('')).toBe('');
     expect(formatPhoneForTel('n/a')).toBe('');
+  });
+});
+
+describe('whatsapp', () => {
+  it('adds the country code a bare ten-digit number is missing', () => {
+    // `wa.me/9876543210` is a dead link; the seed stores team numbers this way.
+    expect(formatWhatsappNumber('9876543210')).toBe('919876543210');
+    expect(formatWhatsappNumber('+91 98765 43210')).toBe('919876543210');
+    expect(formatWhatsappNumber('919876543210')).toBe('919876543210');
+  });
+
+  it('builds a wa.me link with the message encoded', () => {
+    expect(whatsappLink('9876543210', 'Hi, I am interested in A & B')).toBe(
+      'https://wa.me/919876543210?text=Hi%2C%20I%20am%20interested%20in%20A%20%26%20B'
+    );
+    expect(whatsappLink('9876543210')).toBe('https://wa.me/919876543210');
+  });
+
+  it('is an empty string without a number, so the button is not rendered', () => {
+    expect(formatWhatsappNumber(null)).toBe('');
+    expect(whatsappLink(null, 'Hello')).toBe('');
+    expect(whatsappLink('', 'Hello')).toBe('');
   });
 });
