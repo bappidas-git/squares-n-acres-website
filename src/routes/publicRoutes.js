@@ -7,8 +7,9 @@ import MainLayout from '../components/layout/MainLayout';
  * The public website's routes (D11: every boilerplate URL keeps working).
  *
  * Moved out of `routes/index.js` in prompt 12 so that the admin table can grow
- * without the file becoming unreadable. Prompt 14 added the two locality URLs;
- * prompts 16, 30, 31 and 34 add the builders, CMS, careers and article routes.
+ * without the file becoming unreadable. Prompt 14 added the two locality URLs
+ * and prompt 16 the two builder ones; prompts 30, 31 and 34 add the CMS,
+ * careers and article routes.
  */
 
 const Home = lazy(() => import('../pages/public/Home'));
@@ -16,6 +17,8 @@ const PropertyListing = lazy(() => import('../pages/public/PropertyListing'));
 const PropertyDetails = lazy(() => import('../pages/public/PropertyDetails'));
 const Localities = lazy(() => import('../pages/public/Localities'));
 const LocalityDetail = lazy(() => import('../pages/public/LocalityDetail'));
+const Builders = lazy(() => import('../pages/public/Builders'));
+const BuilderDetail = lazy(() => import('../pages/public/BuilderDetail'));
 const PreLaunch = lazy(() => import('../pages/public/PreLaunch'));
 const UnderConstruction = lazy(() => import('../pages/public/UnderConstruction'));
 const ReadyToMove = lazy(() => import('../pages/public/ReadyToMove'));
@@ -47,6 +50,9 @@ const PUBLIC_PAGES = [
 
   ['/localities', Localities],
   ['/localities/:slug', LocalityDetail],
+
+  ['/builders', Builders],
+  ['/builders/:slug', BuilderDetail],
 
   ['/buy/pre-launch', PreLaunch],
   ['/buy/under-construction', UnderConstruction],

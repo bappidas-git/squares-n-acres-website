@@ -12,15 +12,34 @@ import {
 import styles from './LeadForm.module.css';
 
 /**
+ * The typed answers, trimmed, with the untouched optional boxes left out.
+ *
+ * An empty optional field is not an empty value the API can store: §6.7 types
+ * `email` as an e-mail and `message` as a string, and `''` fails both, so a
+ * lead whose e-mail box was never filled in came back 422 instead of being
+ * filed. A key that is absent takes the schema's own default (`null`).
+ */
+const filled = (values) =>
+  Object.fromEntries(
+    Object.entries(values)
+      .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
+      .filter(([, value]) => value !== '' && value !== null && value !== undefined)
+  );
+
+/**
  * A lead form.
  *
  * `hiddenFields` carries the context the visitor never types — the locality of
  * the guide they are reading, the article they came from — straight into the
- * `POST /leads` body (§6.7). Prompt 28 unifies every form on the site behind
- * one component; this is the part of that unification the locality page needs.
+ * `POST /leads` body (§6.7), and a field may carry a `defaultValue` the visitor
+ * starts from and can edit, which is how the builder page opens its message box
+ * on "Interested in projects by …". Prompt 28 unifies every form on the site
+ * behind one component; these are the parts of that unification the locality
+ * and builder pages need.
  *
  * @param {object} props
- * @param {Array<object>} [props.fields] defaults to name / email / phone
+ * @param {Array<object>} [props.fields] defaults to name / email / phone;
+ *   `{ name, label, type, required?, placeholder?, options?, defaultValue? }`
  * @param {string} [props.source] a `LEAD_SOURCES` value
  * @param {number|null} [props.propertyId]
  * @param {object} [props.hiddenFields] merged into the request body
@@ -50,7 +69,7 @@ const LeadForm = ({
 
   const initialValues = {};
   formFields.forEach((f) => {
-    initialValues[f.name] = '';
+    initialValues[f.name] = f.defaultValue ?? '';
   });
 
   const toast = useToast();
@@ -99,7 +118,7 @@ const LeadForm = ({
     try {
       setSubmitting(true);
       const response = await leadService.create({
-        ...formData,
+        ...filled(formData),
         source,
         ...(propertyId ? { propertyId } : {}),
         ...(hiddenFields ?? {}),

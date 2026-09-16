@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 15 — Master data: property types, amenities, badges and banks Next prompt: 16
+Last prompt executed: 16 — Developers (builders): admin CRUD and the public builder pages Next prompt: 17
 
 ## Executed prompts
 
@@ -21,7 +21,8 @@ Last prompt executed: 15 — Master data: property types, amenities, badges and 
 | 12  | Auth, admin shell, RBAC routes, notifications and profile     | `d6128b5`                                                                          | 2026-09-16 |
 | 13  | Admin UI kit, `MasterDataPage`, users page, IconPicker fixes  | `651a8cc`                                                                          | 2026-09-16 |
 | 14  | Localities and cities: admin CRUD, public index and guide     | `b3813a1`                                                                          | 2026-09-16 |
-| 15  | Master data: property types, amenities, badges and banks      | HEAD of this branch (a commit cannot contain its own hash — prompt 16 fills it in) | 2026-09-16 |
+| 15  | Master data: property types, amenities, badges and banks      | `0cc1afc`                                                                          | 2026-09-16 |
+| 16  | Developers: admin CRUD and the public builder pages           | HEAD of this branch (a commit cannot contain its own hash — prompt 17 fills it in) | 2026-09-16 |
 
 ## Baseline (prompt 01)
 
@@ -275,6 +276,10 @@ The boilerplate's own endpoint surface stays inventoried in
 | `LegacyHtml` in `LocalityGuide`                | The locality description is CMS-authored HTML rendered through the temporary `LegacyHtml`; `SafeHtml` replaces it with the editor's allow-list.                                                                                                                                                                                                                                                              | 32           |
 | Locality SEO placeholder card                  | The locality form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through a save untouched in the meantime.                                                                                                                                                                                                                              | 36           |
 | Locality/localities Helmet titles              | `Localities.jsx` and `LocalityDetail.jsx` set `<title>`/`description` through `react-helmet-async`; `<Seo>` replaces both, with the §9.5 templates and the JSON-LD graph.                                                                                                                                                                                                                                    | 38           |
+| `DeveloperProperties` simple version           | `src/components/sections/developer/DeveloperProperties.jsx` asks for one page of twelve listings and links to `/properties?developerId=<id>`. The tabbed, server-driven listing engine replaces it (D94), and the same prompt makes that link filter (the legacy page only knows `?developer=<name>`).                                                                                                       | 26           |
+| `LegacyHtml` in the builder profile            | The developer description on `/builders/:slug` is CMS-authored HTML rendered through the temporary `LegacyHtml`; `SafeHtml` replaces it with the editor's allow-list.                                                                                                                                                                                                                                        | 32           |
+| Developer SEO placeholder card                 | The developer form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched in the meantime.                                                                                                                                                                                                                          | 36           |
+| Builders/builder Helmet titles                 | `Builders.jsx` and `BuilderDetail.jsx` set `<title>`/`description` through `react-helmet-async`, following the §9.5 `developer` template; `<Seo>` replaces both, with the JSON-LD `Organization` + `ItemList` graph (§9.3).                                                                                                                                                                                  | 38           |
 | `PropertyListing` client-side filter and sort  | The page asks for one page of `perPage=100` and narrows, sorts and paginates in the browser through `toLegacyProperty`. The listing engine is server-driven (D94) from prompt 26.                                                                                                                                                                                                                            | 26           |
 | Property-type SEO placeholder card             | The property-type form ends in an `Alert` saying the SEO panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched so nothing is lost meanwhile.                                                                                                                                                                                                                           | 36           |
 | `PropertyFilters` type select                  | The legacy filter panel now reads `usePropertyTypes()` but still keeps its own BHK, price-range, location, status and developer lists and filters in the browser. Prompt 26 replaces the panel with the server-driven one.                                                                                                                                                                                   | 26           |
@@ -330,31 +335,33 @@ The boilerplate's own endpoint surface stays inventoried in
 
 ### New defects found by this audit
 
-| Id     | Description                                                                                                                                                                                                                                                 | Found by | Owner prompt               |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------- |
-| NEW-01 | `config/rbac.js` has no `/admin/settings/users` entry and no per-area permission matrix; `AdminSettings` uses `role === 'admin'` and `UserManagement` its own `ROLES` array                                                                                 | 01       | 12                         |
-| NEW-02 | `routes/index.js` limits `/admin/seo` and `/admin/settings` to `admin` only; §7 of the master context gives both to `admin` **and** `manager`                                                                                                               | 01       | 12                         |
-| NEW-03 | Navigation/role data lives in three places: `rbac.NAV_ITEMS`, `AdminLayout.pageTitles` and the `<Route>` declarations                                                                                                                                       | 01       | 12                         |
-| NEW-04 | `slick-carousel` is a dependency but its CSS is never imported, so the `SimilarProperties` slider renders unstyled                                                                                                                                          | 01       | 03, 25                     |
-| NEW-05 | `?area=` is a hidden client-side substring filter: no chip, no way to remove it in the UI, wiped by "Clear filters". **Nothing links to it since 14** (localities are addressed by `?localityId=`); the parameter itself goes when the listing engine lands | 01       | 26                         |
-| NEW-06 | `PropertyFilters.clearFilters()` replaces the query string with an empty one, dropping `q`, `sort` and `page` too                                                                                                                                           | 01       | 26                         |
-| NEW-08 | `GalleryTab` carried the repository's only `eslint-disable` comment                                                                                                                                                                                         | 01       | **closed in 01**           |
-| NEW-09 | `SectionVisibilityTab` reads `!== false` but writes `!value`, so the first toggle of an `undefined` key is a no-op on screen                                                                                                                                | 01       | 21                         |
-| NEW-10 | `AdminSettings` renders `TabPanel index={4}` after `index={5}`, so the JSX order no longer matches the `<Tab>` order                                                                                                                                        | 01       | 40                         |
-| NEW-11 | `AdminSettings.mergeWithDefaults` omits `footerLinks`, so every save drops that `db.json` key                                                                                                                                                               | 01       | 40                         |
-| NEW-15 | `useThrottledScroll` has a single consumer (`BackToTop`); Header, MobileHeader, BottomNav and StickyNav each re-implement scroll handling                                                                                                                   | 01       | 04                         |
-| NEW-17 | `global.css` loads Google Fonts through a render-blocking CSS `@import` instead of a `<link>` in `index.html`                                                                                                                                               | 01       | 02, 04                     |
-| NEW-18 | `public/robots.txt` is the CRA default with no `Sitemap:`; `index.html` has no manifest, no OG tags, and a `theme-color` in the boilerplate navy                                                                                                            | 01       | 02                         |
-| NEW-20 | No test file exists anywhere (119 files checked, 0 matches), so `test:ci` needs `--passWithNoTests` until the first tests land                                                                                                                              | 01       | partially closed in 01; 35 |
-| NEW-22 | `AdminLeads` CSV export is built in the browser: no UTF-8 BOM, the Property column uses the broken id lookup, newlines inside `message` break rows                                                                                                          | 01       | 29                         |
-| NEW-23 | `FaqManager` reorder writes two sequential `PUT`s and computes `swapIndex` against the filtered array **Half closed in 11**: the reorder is two `PATCH`es issued together and the indices are taken against the full list, not the filtered view.           | 01       | 17                         |
-| NEW-28 | `src/pages/public/RealEstateAwareness.js` uses `mdi:stamp`, which is not in the Iconify MDI set — the tile renders blank. Found while verifying every icon id of prompt 13.                                                                                 | 13       | 31                         |
-| NEW-29 | `db.json` seeds `icon: "mdi:home-check-outline"`, which is not in the Iconify MDI set. `db.json` is off-limits to prompt 13 (§12 guardrails), so the seed keeps a blank icon until its owner prompt fixes it.                                               | 13       | 15                         |
+| Id     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Found by | Owner prompt               |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------- |
+| NEW-01 | `config/rbac.js` has no `/admin/settings/users` entry and no per-area permission matrix; `AdminSettings` uses `role === 'admin'` and `UserManagement` its own `ROLES` array                                                                                                                                                                                                                                                                                                       | 01       | 12                         |
+| NEW-02 | `routes/index.js` limits `/admin/seo` and `/admin/settings` to `admin` only; §7 of the master context gives both to `admin` **and** `manager`                                                                                                                                                                                                                                                                                                                                     | 01       | 12                         |
+| NEW-03 | Navigation/role data lives in three places: `rbac.NAV_ITEMS`, `AdminLayout.pageTitles` and the `<Route>` declarations                                                                                                                                                                                                                                                                                                                                                             | 01       | 12                         |
+| NEW-04 | `slick-carousel` is a dependency but its CSS is never imported, so the `SimilarProperties` slider renders unstyled                                                                                                                                                                                                                                                                                                                                                                | 01       | 03, 25                     |
+| NEW-05 | `?area=` is a hidden client-side substring filter: no chip, no way to remove it in the UI, wiped by "Clear filters". **Nothing links to it since 14** (localities are addressed by `?localityId=`); the parameter itself goes when the listing engine lands                                                                                                                                                                                                                       | 01       | 26                         |
+| NEW-06 | `PropertyFilters.clearFilters()` replaces the query string with an empty one, dropping `q`, `sort` and `page` too                                                                                                                                                                                                                                                                                                                                                                 | 01       | 26                         |
+| NEW-08 | `GalleryTab` carried the repository's only `eslint-disable` comment                                                                                                                                                                                                                                                                                                                                                                                                               | 01       | **closed in 01**           |
+| NEW-09 | `SectionVisibilityTab` reads `!== false` but writes `!value`, so the first toggle of an `undefined` key is a no-op on screen                                                                                                                                                                                                                                                                                                                                                      | 01       | 21                         |
+| NEW-10 | `AdminSettings` renders `TabPanel index={4}` after `index={5}`, so the JSX order no longer matches the `<Tab>` order                                                                                                                                                                                                                                                                                                                                                              | 01       | 40                         |
+| NEW-11 | `AdminSettings.mergeWithDefaults` omits `footerLinks`, so every save drops that `db.json` key                                                                                                                                                                                                                                                                                                                                                                                     | 01       | 40                         |
+| NEW-15 | `useThrottledScroll` has a single consumer (`BackToTop`); Header, MobileHeader, BottomNav and StickyNav each re-implement scroll handling                                                                                                                                                                                                                                                                                                                                         | 01       | 04                         |
+| NEW-17 | `global.css` loads Google Fonts through a render-blocking CSS `@import` instead of a `<link>` in `index.html`                                                                                                                                                                                                                                                                                                                                                                     | 01       | 02, 04                     |
+| NEW-18 | `public/robots.txt` is the CRA default with no `Sitemap:`; `index.html` has no manifest, no OG tags, and a `theme-color` in the boilerplate navy                                                                                                                                                                                                                                                                                                                                  | 01       | 02                         |
+| NEW-20 | No test file exists anywhere (119 files checked, 0 matches), so `test:ci` needs `--passWithNoTests` until the first tests land                                                                                                                                                                                                                                                                                                                                                    | 01       | partially closed in 01; 35 |
+| NEW-22 | `AdminLeads` CSV export is built in the browser: no UTF-8 BOM, the Property column uses the broken id lookup, newlines inside `message` break rows                                                                                                                                                                                                                                                                                                                                | 01       | 29                         |
+| NEW-23 | `FaqManager` reorder writes two sequential `PUT`s and computes `swapIndex` against the filtered array **Half closed in 11**: the reorder is two `PATCH`es issued together and the indices are taken against the full list, not the filtered view.                                                                                                                                                                                                                                 | 01       | 17                         |
+| NEW-28 | `src/pages/public/RealEstateAwareness.js` uses `mdi:stamp`, which is not in the Iconify MDI set — the tile renders blank. Found while verifying every icon id of prompt 13.                                                                                                                                                                                                                                                                                                       | 13       | 31                         |
+| NEW-29 | `db.json` seeds `icon: "mdi:home-check-outline"`, which is not in the Iconify MDI set. `db.json` is off-limits to prompt 13 (§12 guardrails), so the seed keeps a blank icon until its owner prompt fixes it.                                                                                                                                                                                                                                                                     | 13       | 15                         |
+| NEW-30 | `useCountUp` figures are still at their start value when a page is rendered by a browser that never delivers a second animation frame — headless Chrome with `--virtual-time-budget` grants exactly one. Every counted statistic (`DeveloperStats`, `BuilderOverview`, and the home figures of 27) therefore prerenders as `0`. The prerenderer must emulate `prefers-reduced-motion: reduce`, which makes `useCountUp` jump straight to the value; a real browser is unaffected. | 16       | 41                         |
 
 ## Known issues (closed)
 
 | Id                 | Description                                                                                                                                                                                                                                                                                                                                                                                                       | Closed by                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NEW-31             | `LeadForm` sent every box it rendered, so an optional e-mail nobody filled in travelled as `""` and `POST /leads` answered 422 ("The email must be a valid email address"). Every CTA with an optional e-mail was affected, the locality one of prompt 14 included.                                                                                                                                               | 16 — `LeadForm` trims what was typed and leaves the empty boxes out of the body, so an absent key takes the schema's own default (§6.7). Verified in the browser: the builder CTA files a lead with `email: null` where before it was refused, and the filled-in case is unchanged.                                                                           |
 | ADD-07 (pollers)   | Two 30-second pollers on `GET /admin/leads` (`AdminLayout` and `AdminLeads`), each downloading the whole collection.                                                                                                                                                                                                                                                                                              | 12 — One poller: `LeadNotificationsContext`, mounted inside `AdminLayout`, asks for `status=new&perPage=5&sort=createdAt&order=desc` every 30 s and pauses while `document.hidden`. `AdminLeads` refetches when `lastUpdatedAt` changes and has no interval of its own (D45/D55). Verified in the browser: one GET per 30 s, none while the tab is hidden.    |
 | ADD-19 (login)     | `AdminLogin`: "Remember me" is a no-op and the seed passwords sit in a commented block.                                                                                                                                                                                                                                                                                                                           | 12 — The checkbox is gone (sessions always last the token TTL) and the page prints no credentials. The `AdminSettings` / `UserManagement` half of the row stays open as ADD-19 (settings/users).                                                                                                                                                              |
 | ADD-19 (users)     | `UserManagement`: the last-admin guard read `isActive === undefined` as active, the component kept its own `ROLES` list and its own Snackbar, and the table paginated nothing.                                                                                                                                                                                                                                    | 13 — Replaced by `/admin/settings/users` on `MasterDataPage`. Every safety rule now comes from the API's 422 (§7) instead of a second, weaker copy in the browser; roles come from `enums.ROLES`; the toast is the one `ToastProvider` (D54); the list pages, sorts and filters on the server.                                                                |
@@ -2058,4 +2065,124 @@ carry `rgba(201,168,108,0.04)` — the HOM gold as a row hover — which
 `check:traces` does not catch because it only scans hex literals (owners 33, 17,
 37).
 
-**Next prompt: 16 — Developers / builders.**
+### Prompt 16 — Developers (builders): admin CRUD and the public builder pages (2026-09-16)
+
+**What changed**
+
+Builders became a module. The admin gets a list that filters, reorders and
+toggles, and a form page wide enough for a profile — the logo, the cover, the
+counts, the RERA registrations and the highlights — and the public site gets
+`/builders` and `/builders/:slug`, so the eight fictional developers in the seed
+have somewhere to be read rather than only being a foreign key on a property.
+
+Only the name is required, which is what the property form's quick-create needs
+in prompt 20: `POST /admin/developers { "name": "Test Builders" }` already
+answers 201 with the slug generated and every other field at its default, so no
+schema had to be relaxed.
+
+**Files added**
+
+| Path                                                                 | What it is                                                                  |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `src/pages/admin/master-data/DevelopersPage.jsx` (+ css)             | The list: filters, drag reorder, star/active toggles, bulk, delete guard    |
+| `src/pages/admin/master-data/DeveloperFormPage.jsx` (+ css)          | Add/edit on their own routes: Basics, Facts, Highlights, Status, SEO note   |
+| `src/pages/public/Builders.jsx` (+ css)                              | `/builders`: a search and a sort in the URL, the card grid, the states      |
+| `src/pages/public/BuilderDetail.jsx` (+ css)                         | `/builders/:slug`: hero, figures, profile, projects, CTA                    |
+| `src/components/sections/developer/DeveloperCard.jsx` (+ css)        | One card, two variants — the index grid and the home row (27)               |
+| `src/components/sections/developer/DeveloperLogo.jsx`                | The white logo box, with the builder's initials when there is no logo       |
+| `src/components/sections/developer/DeveloperHero.jsx`                | Cover, logo, the page's one `<h1>`, headquarters and the website link       |
+| `src/components/sections/developer/DeveloperStats.jsx`               | Established / total / ongoing / completed as `StatCard`s, RERA ids as chips |
+| `src/components/sections/developer/DeveloperProperties.jsx`          | **temporary** — twelve listings and a link to the search (prompt 26)        |
+| `src/components/sections/developer/DeveloperCta.jsx`                 | `LeadForm`, source `developer-page`, the page and the builder carried in    |
+| `src/components/sections/developer/DeveloperSections.module.css`     | The sections' shared styles                                                 |
+| `src/components/sections/developer/index.js`                         | The barrel the detail page imports                                          |
+| `src/components/sections/developer/__tests__/DeveloperCard.test.jsx` | 9 cases: both variants, the empty fields, zero projects, the initials box   |
+| `src/pages/public/__tests__/BuilderDetail.test.jsx`                  | 7 cases: every section, the name-only builder, the lead, 404, the failure   |
+
+**Files changed**
+
+`routes/publicRoutes.js` (two URLs), `routes/adminRouteConfig.js` (three screens
+off the placeholder), `components/common/LeadForm.jsx` (a field may carry a
+`defaultValue`; empty optional boxes are left out of the body — NEW-31),
+`docs/*`. `routes/paths.js` already carried `builders` / `builder(slug)` /
+`adminDevelopers*`, as prompt 14 left it.
+
+**Files removed**
+
+None.
+
+**Endpoints**
+
+None added. The screens consume `GET /developers`, `GET /developers/slug/:slug`,
+`GET /properties?developerId=`, `POST /leads` and the `/admin/developers*` CRUD,
+bulk and `check-slug` of §5.14.
+
+**npm / env**
+
+Nothing added.
+
+**Acceptance checklist**
+
+- [x] Admin: create, edit, reorder, toggle, bulk and delete work end to end
+      against the mock — verified through the API after each write (`order`
+      rewritten by a drag, `isFeatured` by the star, the public list re-sorted).
+- [x] Minimal create succeeds: `POST /admin/developers { name }` → 201,
+      `slug: "test-builders"`, `propertyCount: 0`, every other field defaulted.
+- [x] Deleting `aurelia-estates` answers 409 and the guard lists its eight
+      listings; deleting a builder with none is allowed.
+- [x] `/builders` renders the eight seed builders with their project counts and
+      featured badges; `?q=test` narrows to one and `?sort=name` reorders.
+- [x] `/builders/aurelia-estates` renders the hero, the figures, the RERA chip,
+      the profile, the highlights, twelve projects with "View all 8 projects"
+      and the CTA; the CTA filed lead #46 with `source: developer-page`,
+      `pageSlug: aurelia-estates`-style slug and the prefilled message.
+- [x] `npm run lint`, `npm run test:ci` (873 tests, 31 suites), `npm run build:ci`
+      (0 warnings), `npm run check:traces` (0 findings), `npm run validate:seed`
+      and `npm run smoke` (269/269) all pass. `test:mock` was not needed — no
+      schema changed.
+- [x] One commit, clean tree.
+
+**Manual QA (headless Chromium, 1280 px and 390 px, console captured)**
+
+- `/builders`: one `<h1>`, "8 builders", four columns of cards, each with the
+  logo box, the name, "N projects" and two lines of summary. The sort select
+  writes `?sort=name`; the search box writes `?q=` after a 300 ms pause and
+  `?q=test` leaves one card.
+- `/builders/aurelia-estates`: breadcrumbs Home › Builders › Aurelia Estates, the
+  charcoal hero with the logo box and the headquarters, "At a glance" with
+  Established 2004 and the three counts, the RERA registration as a chip, "About
+  Aurelia Estates" with the four highlights beside it, "Projects by Aurelia
+  Estates" with "View all 8 projects" → `/properties?developerId=1`, and the CTA.
+- A builder created from a name alone (`Test Builders`) renders the hero with its
+  initials in the logo box, no "At a glance", no profile, no projects — and the
+  CTA, which is never hidden. Submitting it filed the lead; deleting the builder
+  afterwards was allowed.
+- The website link carries `rel="noopener noreferrer nofollow"` and
+  `target="_blank"`. (`noopener` alone is an ESLint warning `build:ci` treats as
+  an error, so the pair the rest of the site uses is what it carries.)
+- 390 px: `scrollWidth === clientWidth` on both pages, the figures wrap to 2 × 2,
+  the RERA chip wraps to its own line, the card grid is one column.
+- `/admin/master-data/developers` opens as the reorder list (eight rows, each
+  with its headquarters and count) because `order` is the default sort; sorting
+  by name brings the table back — Logo, Name (with the slug and the
+  headquarters), Projects, Established, Updated, Featured, Active.
+- The form shows all five sections and loads the seed record intact; the slug
+  field reports "This URL is available", the short description counts 115/300,
+  and the SEO note says the panel arrives in prompt 36.
+- Console: nothing but React's own "Download the React DevTools" notice on either
+  public page.
+
+**Known issues**
+
+NEW-31 (`LeadForm` refused a lead whose optional e-mail box was empty) was found
+here and is closed here; it was refusing leads on the locality CTA too. NEW-30 is
+new and belongs to prompt 41: a counted figure is still at zero in a render that
+never gets a second animation frame, so the prerenderer has to emulate
+`prefers-reduced-motion: reduce`. Two notes rather than defects: the "Updated"
+column is display-only, because the contract's developer sorts are
+`order|name|propertyCount` (§6.5, `mock-server/schemas/models.js`) and a header
+that sorts by nothing is worse than a header that does not offer to; and
+`/properties?developerId=` does not filter yet — the legacy listing only knows
+`?developer=<name>` — which prompt 26 fixes with the rest of the engine.
+
+**Next prompt: 17 — Testimonials, team, partners and FAQs.**

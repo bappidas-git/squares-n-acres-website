@@ -1,0 +1,131 @@
+.page {
+  padding-bottom: var(--space-16);
+}
+
+.stateWrap {
+  padding: var(--space-16) 0;
+}
+
+.body {
+  padding-top: var(--space-10);
+}
+
+.lede {
+  margin: 0 0 var(--space-8);
+  max-width: 72ch;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-normal);
+}
+
+.about {
+  margin-bottom: var(--space-12);
+}
+
+.aboutTitle {
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-snug);
+  color: var(--color-text);
+}
+
+.aboutLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.prose {
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-normal);
+}
+
+.prose p {
+  margin: 0 0 var(--space-4);
+}
+
+.prose p:last-child {
+  margin-bottom: 0;
+}
+
+.prose h2,
+.prose h3 {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  margin: var(--space-6) 0 var(--space-2);
+}
+
+.prose ul,
+.prose ol {
+  margin: 0 0 var(--space-4);
+  padding-left: var(--space-6);
+}
+
+.prose a {
+  color: var(--color-primary-dark);
+}
+
+.highlights {
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.highlightsTitle {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.highlightList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.highlightItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-snug);
+  color: var(--color-text);
+}
+
+.highlightIcon {
+  flex-shrink: 0;
+  color: var(--color-success-dark);
+}
+
+@media (max-width: 899.98px) {
+  .body {
+    padding-top: var(--space-8);
+  }
+
+  .lede {
+    margin-bottom: var(--space-6);
+    font-size: var(--font-size-md);
+  }
+
+  .about {
+    margin-bottom: var(--space-10);
+  }
+
+  .aboutTitle {
+    font-size: var(--font-size-2xl);
+  }
+
+  .aboutLayout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-6);
+  }
+}
