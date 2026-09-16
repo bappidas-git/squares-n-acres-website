@@ -61,6 +61,7 @@ export function useMasterDataCrud(config) {
     filters = [],
     defaultSort = { field: 'createdAt', order: 'desc' },
     paramKeys: extraParamKeys,
+    onMutated,
   } = config;
 
   const toast = useToast();
@@ -113,6 +114,7 @@ export function useMasterDataCrud(config) {
 
       try {
         await service.patch(row.id, { [field]: value });
+        onMutated?.();
       } catch (thrown) {
         setOverrides((current) => {
           const { [id]: _reverted, ...rest } = current;
@@ -123,7 +125,7 @@ export function useMasterDataCrud(config) {
         setBusyIds((current) => current.filter((entry) => entry !== id));
       }
     },
-    [service, toast]
+    [service, toast, onMutated]
   );
 
   return {
@@ -156,13 +158,18 @@ export function useMasterDataCrud(config) {
  * @param {Record<string, object>} [props.config.schema] a `src/services/schemas` descriptor
  * @param {Record<string, object>} [props.config.createSchema] when create differs from update
  * @param {'dialog'|'page'} [props.config.formMode]
+ * @param {() => void} [props.config.onCreate] navigate instead of opening the form
+ * @param {(row: object) => void} [props.config.onEdit] navigate instead of opening the form
  * @param {{field: string, order: 'asc'|'desc'}} [props.config.defaultSort]
- * @param {boolean} [props.config.orderable] drag to reorder, saved as `order`
+ * @param {boolean} [props.config.orderable] drag to reorder while sorted by `order`
+ * @param {(row: object) => React.ReactNode} [props.config.renderOrderItem] the reorder row
  * @param {boolean} [props.config.activeToggle]
  * @param {boolean} [props.config.featuredToggle]
  * @param {Array<object>} [props.config.bulkActions]
  * @param {boolean} [props.config.usageGuard] render the 409 dialog (D88)
  * @param {boolean} [props.config.canEdit] false renders the screen read-only
+ * @param {() => void} [props.config.onMutated] after every successful write —
+ *   `MasterDataContext.refresh` for the collections the public site caches
  * @param {(row: object) => Array<object>} [props.config.extraRowActions]
  * @param {(values: object, row: object|null) => object} [props.config.toPayload]
  * @param {(row: object) => object} [props.config.toFormValues]
@@ -178,7 +185,11 @@ export default function MasterDataPage({ config }) {
     schema,
     createSchema,
     formMode = 'dialog',
+    onCreate,
+    onEdit,
+    onMutated,
     orderable = false,
+    renderOrderItem,
     activeToggle = true,
     featuredToggle = false,
     bulkActions = [],
@@ -279,6 +290,7 @@ export default function MasterDataPage({ config }) {
     if (!saved) return;
     toast.success(`${capitalise(singular)} ${editing?.id ? 'updated' : 'created'}.`);
     setEditing(null);
+    onMutated?.();
     refetch();
   };
 
@@ -290,6 +302,7 @@ export default function MasterDataPage({ config }) {
       toast.success(`${capitalise(singular)} deleted.`);
       setDeleting(null);
       setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
+      onMutated?.();
       refetch();
     } catch (thrown) {
       // 409 is not a failure to report as one: it is a list of what to unlink
@@ -320,6 +333,7 @@ export default function MasterDataPage({ config }) {
       const { message } = await service.bulk({ ids, action });
       toast.success(message || `${ids.length} records updated.`);
       setSelectedIds([]);
+      onMutated?.();
       refetch();
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'The bulk action could not be applied.'));
@@ -328,13 +342,34 @@ export default function MasterDataPage({ config }) {
     }
   };
 
+  /**
+   * Opening the form.
+   *
+   * A screen whose add and edit screens are real URLs — localities, and the
+   * modules that follow it — passes `onCreate` / `onEdit` and navigates; every
+   * other screen edits in place, in the dialog or on the same route.
+   */
+  const startCreate = useCallback(() => (onCreate ? onCreate() : setEditing({})), [onCreate]);
+  const startEdit = useCallback((row) => (onEdit ? onEdit(row) : setEditing(row)), [onEdit]);
+
+  /**
+   * Writes the new positions of the page on screen.
+   *
+   * The offset is what keeps page two honest: the first row of the second page
+   * is position 20, not position 0, and numbering it 0 would shuffle it to the
+   * top of the collection.
+   */
   const reorder = async (next) => {
+    const offset = ((meta?.page ?? 1) - 1) * (meta?.perPage ?? DEFAULT_PER_PAGE);
     try {
       await Promise.all(
         next.map((row, index) =>
-          row.order === index ? Promise.resolve() : service.patch(row.id, { order: index })
+          row.order === offset + index
+            ? Promise.resolve()
+            : service.patch(row.id, { order: offset + index })
         )
       );
+      onMutated?.();
       refetch();
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'The new order could not be saved.'));
@@ -413,7 +448,7 @@ export default function MasterDataPage({ config }) {
               key: 'edit',
               label: `Edit ${labelOf(row, columns)}`,
               icon: 'mdi:pencil-outline',
-              onClick: () => setEditing(row),
+              onClick: () => startEdit(row),
             },
           ]
         : []),
@@ -430,8 +465,13 @@ export default function MasterDataPage({ config }) {
           ]
         : []),
     ],
-    [canEdit, columns, extraRowActions]
+    [canEdit, columns, extraRowActions, startEdit]
   );
+
+  // Reordering replaces the table only while the list is in the order it is
+  // reordering: dragging a row of a list sorted by name would be writing
+  // positions nobody can see.
+  const reordering = orderable && params.sort === 'order' && !loading && !error && rows.length > 0;
 
   const activeFilterCount = filters.reduce(
     (count, filter) => count + (isFilterSet(params, filter) ? 1 : 0),
@@ -479,10 +519,7 @@ export default function MasterDataPage({ config }) {
         count={meta?.total}
         actions={
           canEdit ? (
-            <Button
-              icon={<Icon icon="mdi:plus" width="18" height="18" />}
-              onClick={() => setEditing({})}
-            >
+            <Button icon={<Icon icon="mdi:plus" width="18" height="18" />} onClick={startCreate}>
               Add {singular}
             </Button>
           ) : null
@@ -501,10 +538,11 @@ export default function MasterDataPage({ config }) {
         </div>
       ) : null}
 
-      {orderable && !loading && !error && rows.length > 0 ? (
+      {reordering ? (
         <div className={styles.reorder}>
           <p className={styles.reorderHint}>
-            Drag a row, or focus it and press Alt + ↑ / ↓, to change the order they appear in.
+            Drag a row, or focus it and press Alt + ↑ / ↓, to change the order they appear in. Sort
+            by anything else to go back to the table.
           </p>
           <SortableList
             items={rows}
@@ -512,7 +550,11 @@ export default function MasterDataPage({ config }) {
             label={`${title}, in order`}
             getLabel={(row) => labelOf(row, columns)}
             onReorder={reorder}
-            renderItem={(row) => <span className={styles.reorderRow}>{labelOf(row, columns)}</span>}
+            renderItem={(row) => (
+              <span className={styles.reorderRow}>
+                {renderOrderItem ? renderOrderItem(row) : labelOf(row, columns)}
+              </span>
+            )}
           />
         </div>
       ) : (
@@ -547,7 +589,7 @@ export default function MasterDataPage({ config }) {
                   Reset filters
                 </Button>
               ) : canEdit ? (
-                <Button onClick={() => setEditing({})}>Add {singular}</Button>
+                <Button onClick={startCreate}>Add {singular}</Button>
               ) : null,
           }}
         />

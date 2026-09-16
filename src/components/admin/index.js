@@ -7,6 +7,13 @@
  * together from one configuration object.
  *
  *   import { DataTable, MasterDataPage, PageHeader } from '../../components/admin';
+ *
+ * The exports are alphabetical, which is **not** the order `MasterDataPage`
+ * reaches for the same components. A screen that pulls several of them without
+ * pulling `MasterDataPage` — an editor on its own route, like
+ * `LocalityFormPage` — should therefore import the files it needs directly, in
+ * `MasterDataPage`'s order: two admin chunks holding the same CSS in two orders
+ * is a `mini-css-extract-plugin` conflict, and `build:ci` treats it as an error.
  */
 
 export { default as AdminPlaceholderPage } from './AdminPlaceholderPage';

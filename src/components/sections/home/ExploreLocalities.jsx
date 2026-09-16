@@ -1,8 +1,8 @@
 import React from 'react';
-import { Icon } from '@iconify/react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
+import LocalityCard from '../locality/LocalityCard';
 import PATHS from '../../../routes/paths';
 import styles from './ExploreLocalities.module.css';
 import useInView from '../../../hooks/useInView';
@@ -13,7 +13,9 @@ import { useMasterData } from '../../../contexts/MasterDataContext';
  * fetching, so the home page asks for the locality list once no matter how
  * many sections need it.
  *
- * The cards link to `/localities/<slug>`; that route arrives in prompt 14.
+ * The card is `LocalityCard` in its compact variant — the same component the
+ * `/localities` grid uses — so a change to how a locality is presented happens
+ * once (prompt 14).
  */
 
 const cardVariants = {
@@ -55,30 +57,15 @@ const ExploreLocalities = () => {
               animate={inView ? 'visible' : 'hidden'}
               variants={cardVariants}
             >
-              <Link to={PATHS.locality(locality.slug)} className={styles.card}>
-                {locality.heroImageUrl ? (
-                  <img
-                    src={locality.heroImageUrl}
-                    alt=""
-                    className={styles.cardImage}
-                    loading="lazy"
-                    aria-hidden="true"
-                  />
-                ) : null}
-                <div className={styles.cardOverlay} />
-                <div className={styles.cardContent}>
-                  <h3 className={styles.cardName}>{locality.name}</h3>
-                  {locality.propertyCount != null ? (
-                    <span className={styles.cardCount}>
-                      <Icon icon="mdi:home-group" className={styles.countIcon} />
-                      {locality.propertyCount}{' '}
-                      {locality.propertyCount === 1 ? 'property' : 'properties'}
-                    </span>
-                  ) : null}
-                </div>
-              </Link>
+              <LocalityCard locality={locality} variant="compact" />
             </motion.div>
           ))}
+        </div>
+
+        <div className={styles.footer}>
+          <Link to={PATHS.localities} className={styles.allLink}>
+            View all localities
+          </Link>
         </div>
       </div>
     </section>

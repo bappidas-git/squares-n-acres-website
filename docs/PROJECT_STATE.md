@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 13 — Admin UI kit: DataTable, FilterBar, useForm, fields, MasterDataPage, users page Next prompt: 14
+Last prompt executed: 14 — Localities and cities: admin CRUD and public locality pages Next prompt: 15
 
 ## Executed prompts
 
@@ -19,7 +19,8 @@ Last prompt executed: 13 — Admin UI kit: DataTable, FilterBar, useForm, fields
 | 10  | Full Bangalore seed data and seed guide                       | `bdaeaa9`                                                                          | 2026-09-16 |
 | 11  | Frontend data layer, hooks, contexts and page rewiring        | `d60193e`                                                                          | 2026-09-16 |
 | 12  | Auth, admin shell, RBAC routes, notifications and profile     | `d6128b5`                                                                          | 2026-09-16 |
-| 13  | Admin UI kit, `MasterDataPage`, users page, IconPicker fixes  | HEAD of this branch (a commit cannot contain its own hash — prompt 14 fills it in) | 2026-09-16 |
+| 13  | Admin UI kit, `MasterDataPage`, users page, IconPicker fixes  | `651a8cc`                                                                          | 2026-09-16 |
+| 14  | Localities and cities: admin CRUD, public index and guide     | HEAD of this branch (a commit cannot contain its own hash — prompt 15 fills it in) | 2026-09-16 |
 
 ## Baseline (prompt 01)
 
@@ -269,7 +270,10 @@ The boilerplate's own endpoint surface stays inventoried in
 | `ArticleForm` saving disabled                  | Its category, author and tag pickers offer hardcoded strings; an article now carries `categoryId`, `authorId`, `tagIds[]`, `featuredImage{}`, `status` and a nested `seo{}`. Loading works through `toLegacyArticle`; saving is disabled behind an info `Alert`.                                                                                                                                             | 33           |
 | `AdminSettings` saving disabled                | The screen holds a flattened view of five of the eight §6.13 branches, so writing it back would flatten the record on the server. Reads are live; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                 | 40           |
 | `AdminSeo` saving disabled                     | SEO now lives in one nested `seo{}` saved through the entity's own PATCH, and the generator still writes boilerplate titles and canonicals (ADD-20/ADD-27). The table reads `GET /admin/seo/overview` live; editing and bulk generation are disabled behind an info `Alert`.                                                                                                                                 | 36–37        |
-| `ExploreLocalities` link target                | The featured-locality cards link to `/localities/<slug>`, a route that does not exist yet, so those links 404 until the locality pages ship.                                                                                                                                                                                                                                                                 | 14           |
+| `LocalityProperties` simple version            | `src/components/sections/locality/LocalityProperties.jsx` asks for one page of six listings and links to the search. The tabbed, server-driven listing engine replaces it (D94).                                                                                                                                                                                                                             | 26           |
+| `LegacyHtml` in `LocalityGuide`                | The locality description is CMS-authored HTML rendered through the temporary `LegacyHtml`; `SafeHtml` replaces it with the editor's allow-list.                                                                                                                                                                                                                                                              | 32           |
+| Locality SEO placeholder card                  | The locality form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through a save untouched in the meantime.                                                                                                                                                                                                                              | 36           |
+| Locality/localities Helmet titles              | `Localities.jsx` and `LocalityDetail.jsx` set `<title>`/`description` through `react-helmet-async`; `<Seo>` replaces both, with the §9.5 templates and the JSON-LD graph.                                                                                                                                                                                                                                    | 38           |
 | `PropertyListing` client-side filter and sort  | The page asks for one page of `perPage=100` and narrows, sorts and paginates in the browser through `toLegacyProperty`. The listing engine is server-driven (D94) from prompt 26.                                                                                                                                                                                                                            | 26           |
 | `AdminPlaceholderPage` routes                  | Twenty-six admin routes of `src/routes/adminRouteConfig.js` render `AdminPlaceholderPage` with the number of the prompt that writes the screen (13–39). Each one disappears when its owner prompt lands; the component itself must not exist after prompt 43.                                                                                                                                                | 13–39        |
 
@@ -285,7 +289,7 @@ The boilerplate's own endpoint surface stays inventoried in
 | BUG-07 (server side done) | `SimilarProperties` ignores `similarPropertyIds` and fetches by type. **Prompt 08 built the endpoint**: `GET /properties/:id/similar` answers with the editor's picks first (skipping inactive ones) and fills to six by listing type and locality or property type; the component moves onto it in 25 **Closed on the client in 11**: `SimilarProperties` calls `GET /properties/:id/similar`.                                                                                                                                                                                                                                                      | master spec, confirmed 01 | 08, 25                      |
 | BUG-08                    | `brochureUrl`, `floorPlanPdfUrl`, `documents[].url` never delivered after lead capture                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | master spec, confirmed 01 | 25, 28                      |
 | BUG-09 (contract defined) | Lead sources inconsistent (21 values in `src/` vs `adminConstants` vs `AdminLayout.formatSource`). **Prompt 05 froze `LEAD_SOURCES` (29 values) and `LEGACY_LEAD_SOURCE_MAP` (24 old values)** in `src/config/enums.js`, tested in `enums.test.js`. The forms still send the old values; **Prompt 08 applies `LEGACY_LEAD_SOURCE_MAP` on `POST /leads`**, so an old bundle's `property_enquiry` is stored as `property-enquiry` and an unknown value is a 422. The seed converts its own rows in 10, the forms move in 28 and the CRM labels in 29.                                                                                                  | master spec, confirmed 01 | 10, 28, 29 (contract: 05 ✔) |
-| BUG-10                    | `NotFound` → `?search=` vs listing `?q=`; `QuickActions` → `type=lease` unsupported; `?area=` only a hidden client-side filter                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | master spec, confirmed 01 | 26, 27, 43                  |
+| BUG-10                    | `NotFound` → `?search=` vs listing `?q=`; `QuickActions` → `type=lease` unsupported. **The `?area=` half is closed in 14**: localities are first-class pages (`/localities`, `/localities/:slug`), the home strip and the guide link to them by slug, and the listing link they carry is the contract's own `?localityId=`                                                                                                                                                                                                                                                                                                                           | master spec, confirmed 01 | 26, 27, 43                  |
 | BUG-11                    | Hardcoded content on About, Contact, FAQs, HomeLoan, LegalAssistance, InteriorDesigning, Careers, Partnership, SellLet, FlexibleWorkspace, DirectLeaseRetails, RealEstateAwareness, WhyChoose, HowItWorks, Dashboard trends, footer defaults, `SeoGuidelines` **Data side prepared in 10:** every one of those pages is now a seeded CMS record with its blocks, so prompts 27–31 render data rather than JSX.                                                                                                                                                                                                                                       | master spec, confirmed 01 | 27, 29, 30, 31, 37, 40      |
 | BUG-15 (frontend)         | Careers résumé upload dead; no spam protection; newsletter no dedupe and a false reCAPTCHA notice. **Closed on the server in 09:** `POST /jobs/:id/apply`, `POST /newsletter/subscribe` and `POST /leads` are throttled to ten a minute per IP and honour the `website` honeypot, a known address answers "Already subscribed" and an unsubscribed one is revived, and a résumé travels as a URL (D12). The forms themselves arrive with 28 and 31.                                                                                                                                                                                                  | master spec, confirmed 01 | 28, 31                      |
 | BUG-16 (residual)         | Filter logic duplicated between `PropertyListing` and `PropertyFilters`. All the dead code named in the row is gone (01: unused variables; 03: `adminService`, `visitService`, `PropertyDetail.js`, `AnimatedSection.jsx`, the unreachable enquiry modal, five dead CSS class blocks, two dead props, `stats.missing`).                                                                                                                                                                                                                                                                                                                              | master spec, confirmed 01 | 26                          |
@@ -321,26 +325,26 @@ The boilerplate's own endpoint surface stays inventoried in
 
 ### New defects found by this audit
 
-| Id     | Description                                                                                                                                                                                                                                       | Found by | Owner prompt               |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------- |
-| NEW-01 | `config/rbac.js` has no `/admin/settings/users` entry and no per-area permission matrix; `AdminSettings` uses `role === 'admin'` and `UserManagement` its own `ROLES` array                                                                       | 01       | 12                         |
-| NEW-02 | `routes/index.js` limits `/admin/seo` and `/admin/settings` to `admin` only; §7 of the master context gives both to `admin` **and** `manager`                                                                                                     | 01       | 12                         |
-| NEW-03 | Navigation/role data lives in three places: `rbac.NAV_ITEMS`, `AdminLayout.pageTitles` and the `<Route>` declarations                                                                                                                             | 01       | 12                         |
-| NEW-04 | `slick-carousel` is a dependency but its CSS is never imported, so the `SimilarProperties` slider renders unstyled                                                                                                                                | 01       | 03, 25                     |
-| NEW-05 | `?area=` is a hidden client-side substring filter: no chip, no way to remove it in the UI, wiped by "Clear filters"                                                                                                                               | 01       | 26                         |
-| NEW-06 | `PropertyFilters.clearFilters()` replaces the query string with an empty one, dropping `q`, `sort` and `page` too                                                                                                                                 | 01       | 26                         |
-| NEW-08 | `GalleryTab` carried the repository's only `eslint-disable` comment                                                                                                                                                                               | 01       | **closed in 01**           |
-| NEW-09 | `SectionVisibilityTab` reads `!== false` but writes `!value`, so the first toggle of an `undefined` key is a no-op on screen                                                                                                                      | 01       | 21                         |
-| NEW-10 | `AdminSettings` renders `TabPanel index={4}` after `index={5}`, so the JSX order no longer matches the `<Tab>` order                                                                                                                              | 01       | 40                         |
-| NEW-11 | `AdminSettings.mergeWithDefaults` omits `footerLinks`, so every save drops that `db.json` key                                                                                                                                                     | 01       | 40                         |
-| NEW-15 | `useThrottledScroll` has a single consumer (`BackToTop`); Header, MobileHeader, BottomNav and StickyNav each re-implement scroll handling                                                                                                         | 01       | 04                         |
-| NEW-17 | `global.css` loads Google Fonts through a render-blocking CSS `@import` instead of a `<link>` in `index.html`                                                                                                                                     | 01       | 02, 04                     |
-| NEW-18 | `public/robots.txt` is the CRA default with no `Sitemap:`; `index.html` has no manifest, no OG tags, and a `theme-color` in the boilerplate navy                                                                                                  | 01       | 02                         |
-| NEW-20 | No test file exists anywhere (119 files checked, 0 matches), so `test:ci` needs `--passWithNoTests` until the first tests land                                                                                                                    | 01       | partially closed in 01; 35 |
-| NEW-22 | `AdminLeads` CSV export is built in the browser: no UTF-8 BOM, the Property column uses the broken id lookup, newlines inside `message` break rows                                                                                                | 01       | 29                         |
-| NEW-23 | `FaqManager` reorder writes two sequential `PUT`s and computes `swapIndex` against the filtered array **Half closed in 11**: the reorder is two `PATCH`es issued together and the indices are taken against the full list, not the filtered view. | 01       | 17                         |
-| NEW-28 | `src/pages/public/RealEstateAwareness.js` uses `mdi:stamp`, which is not in the Iconify MDI set — the tile renders blank. Found while verifying every icon id of prompt 13.                                                                       | 13       | 31                         |
-| NEW-29 | `db.json` seeds `icon: "mdi:home-check-outline"`, which is not in the Iconify MDI set. `db.json` is off-limits to prompt 13 (§12 guardrails), so the seed keeps a blank icon until its owner prompt fixes it.                                     | 13       | 15                         |
+| Id     | Description                                                                                                                                                                                                                                                 | Found by | Owner prompt               |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------- |
+| NEW-01 | `config/rbac.js` has no `/admin/settings/users` entry and no per-area permission matrix; `AdminSettings` uses `role === 'admin'` and `UserManagement` its own `ROLES` array                                                                                 | 01       | 12                         |
+| NEW-02 | `routes/index.js` limits `/admin/seo` and `/admin/settings` to `admin` only; §7 of the master context gives both to `admin` **and** `manager`                                                                                                               | 01       | 12                         |
+| NEW-03 | Navigation/role data lives in three places: `rbac.NAV_ITEMS`, `AdminLayout.pageTitles` and the `<Route>` declarations                                                                                                                                       | 01       | 12                         |
+| NEW-04 | `slick-carousel` is a dependency but its CSS is never imported, so the `SimilarProperties` slider renders unstyled                                                                                                                                          | 01       | 03, 25                     |
+| NEW-05 | `?area=` is a hidden client-side substring filter: no chip, no way to remove it in the UI, wiped by "Clear filters". **Nothing links to it since 14** (localities are addressed by `?localityId=`); the parameter itself goes when the listing engine lands | 01       | 26                         |
+| NEW-06 | `PropertyFilters.clearFilters()` replaces the query string with an empty one, dropping `q`, `sort` and `page` too                                                                                                                                           | 01       | 26                         |
+| NEW-08 | `GalleryTab` carried the repository's only `eslint-disable` comment                                                                                                                                                                                         | 01       | **closed in 01**           |
+| NEW-09 | `SectionVisibilityTab` reads `!== false` but writes `!value`, so the first toggle of an `undefined` key is a no-op on screen                                                                                                                                | 01       | 21                         |
+| NEW-10 | `AdminSettings` renders `TabPanel index={4}` after `index={5}`, so the JSX order no longer matches the `<Tab>` order                                                                                                                                        | 01       | 40                         |
+| NEW-11 | `AdminSettings.mergeWithDefaults` omits `footerLinks`, so every save drops that `db.json` key                                                                                                                                                               | 01       | 40                         |
+| NEW-15 | `useThrottledScroll` has a single consumer (`BackToTop`); Header, MobileHeader, BottomNav and StickyNav each re-implement scroll handling                                                                                                                   | 01       | 04                         |
+| NEW-17 | `global.css` loads Google Fonts through a render-blocking CSS `@import` instead of a `<link>` in `index.html`                                                                                                                                               | 01       | 02, 04                     |
+| NEW-18 | `public/robots.txt` is the CRA default with no `Sitemap:`; `index.html` has no manifest, no OG tags, and a `theme-color` in the boilerplate navy                                                                                                            | 01       | 02                         |
+| NEW-20 | No test file exists anywhere (119 files checked, 0 matches), so `test:ci` needs `--passWithNoTests` until the first tests land                                                                                                                              | 01       | partially closed in 01; 35 |
+| NEW-22 | `AdminLeads` CSV export is built in the browser: no UTF-8 BOM, the Property column uses the broken id lookup, newlines inside `message` break rows                                                                                                          | 01       | 29                         |
+| NEW-23 | `FaqManager` reorder writes two sequential `PUT`s and computes `swapIndex` against the filtered array **Half closed in 11**: the reorder is two `PATCH`es issued together and the indices are taken against the full list, not the filtered view.           | 01       | 17                         |
+| NEW-28 | `src/pages/public/RealEstateAwareness.js` uses `mdi:stamp`, which is not in the Iconify MDI set — the tile renders blank. Found while verifying every icon id of prompt 13.                                                                                 | 13       | 31                         |
+| NEW-29 | `db.json` seeds `icon: "mdi:home-check-outline"`, which is not in the Iconify MDI set. `db.json` is off-limits to prompt 13 (§12 guardrails), so the seed keeps a blank icon until its owner prompt fixes it.                                               | 13       | 15                         |
 
 ## Known issues (closed)
 
@@ -1783,3 +1787,131 @@ ADD-23 is closed and the `UserManagement` half of ADD-19 is closed; the
 `AdminSettings` form half stays open for prompt 40. Two new rows: NEW-28
 (`mdi:stamp` on the public awareness page, owner 31) and NEW-29
 (`mdi:home-check-outline` in `db.json`, which §12 puts out of reach here).
+
+### Prompt 14 — Localities and cities: admin CRUD, public index and guide (2026-09-16)
+
+**What changed**
+
+Localities became a module instead of a row in a table. The admin gets a list
+that filters, reorders and toggles, and a form page wide enough for a guide —
+the description, the coordinates, the highlights, the connectivity pairs and the
+pincodes — plus a small cities screen behind the same kit. The public site gets
+`/localities` and `/localities/:slug`, so the home strip's links resolve for the
+first time. `AdminNeighborhoods.js`, which knew four of a locality's twenty
+fields, is gone.
+
+**Files added**
+
+| Path                                                               | What it is                                                               |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `src/pages/admin/master-data/LocalitiesPage.jsx` (+ css)           | The list: filters, drag reorder, star/active toggles, bulk, delete guard |
+| `src/pages/admin/master-data/LocalityFormPage.jsx` (+ css)         | Add/edit on their own routes: five sections, map preview, repeaters      |
+| `src/pages/admin/master-data/CitiesPage.jsx`                       | Name, state, slug, active — the kit's dialog, with the 409 guard         |
+| `src/pages/public/Localities.jsx` (+ css)                          | `/localities`: zone chips and a sort in the URL, cards, states           |
+| `src/pages/public/LocalityDetail.jsx` (+ css)                      | `/localities/:slug`: hero, guide, connectivity, trend, map, CTA          |
+| `src/components/sections/locality/LocalityCard.jsx` (+ css)        | One card, two variants — the index grid and the home strip               |
+| `src/components/sections/locality/LocalityHero.jsx`                | Image, breadcrumbs, the page's one `<h1>`, three key figures             |
+| `src/components/sections/locality/LocalityGuide.jsx`               | The description (through `LegacyHtml`) and the checked highlights        |
+| `src/components/sections/locality/LocalityConnectivity.jsx`        | The `{label, value}` pairs as a definition list                          |
+| `src/components/sections/locality/LocalityProperties.jsx`          | **temporary** — six listings and a link to the search (prompt 26)        |
+| `src/components/sections/locality/LocalityCta.jsx`                 | `LeadForm`, source `locality-page`, the locality in the requirement      |
+| `src/components/sections/locality/LocalitySections.module.css`     | The guide's shared styles                                                |
+| `src/components/sections/locality/index.js`                        | The barrel the detail page imports                                       |
+| `src/components/common/MapEmbed.jsx` (+ css)                       | A map from `lat,lng` with no key (D42), and its "no coordinates" box     |
+| `src/pages/public/__tests__/LocalityDetail.test.jsx`               | 6 cases: every section, the thin locality, 404, the failure state        |
+| `src/components/sections/locality/__tests__/LocalityCard.test.jsx` | 8 cases: both variants, the empty fields, the monogram box               |
+
+**Files changed**
+
+`routes/publicRoutes.js` (two URLs), `routes/adminRouteConfig.js` (four screens
+off the placeholder), `components/sections/home/ExploreLocalities.jsx` (+ css —
+now `LocalityCard` and a "View all localities" link), `components/common/LeadForm.jsx`
+(`hiddenFields`), `services/masterDataService.js` (`adminCrud`),
+`components/admin/MasterDataPage.jsx` (`onCreate` / `onEdit` / `onMutated` /
+`renderOrderItem`, reordering gated on `sort=order`, page-aware `order` values),
+`components/admin/RowActions.jsx` (`href` actions open in a new tab),
+`components/admin/index.js` (a note on import order), `src/test-utils.jsx`
+(`initialEntries`).
+
+**Files removed**
+
+`src/pages/admin/AdminNeighborhoods.js` — every capability it had is on the new
+screens: the image is an `ImageField` with a preview, the city is a select over
+`MasterDataContext.cities` rather than a free-text name match, the active toggle
+is the kit's optimistic switch, and delete now explains itself instead of
+toasting the 409.
+
+**Endpoints**
+
+None added. The screens consume `GET /localities`, `GET /localities/slug/:slug`,
+`GET /cities`, `GET /properties?localityId=`, `POST /leads` and the
+`/admin/localities*` + `/admin/cities*` CRUD, bulk and `check-slug` of §5.14.
+
+**npm / env**
+
+Nothing added.
+
+**Acceptance checklist**
+
+- [x] Admin: create, edit, reorder, toggle and delete work end to end against
+      the mock — verified in the runtime db through `GET /api/admin/localities/1`
+      after each write (coordinates, highlights, order, `isFeatured`).
+- [x] Public: `/localities?zone=east` filters to five; `/localities/whitefield`
+      renders the hero, the guide, connectivity, the trend note, the map, three
+      listings with "View all 3 properties" and the CTA; a lead submitted there
+      arrives as `{ source: 'locality-page', requirement: { localityId: 1 } }`.
+- [x] `AdminNeighborhoods.js` deleted; the home strip's links resolve.
+- [x] `npm run lint`, `npm run test:ci` (784 tests, 27 suites), `npm run build:ci`
+      (0 warnings), `npm run check:traces` (0 findings), `npm run validate:seed`
+      and `npm run smoke` (269/269) all pass; no console message of any kind on
+      the four new screens at 1280 px or 390 px.
+- [x] One commit, clean tree.
+
+**Manual QA (Chromium, 1280 px and 390 px, console open)**
+
+- `/localities`: 20 cards, one `<h1>`, "20 localities". "East Bengaluru" writes
+  `?zone=east` and leaves five cards, all east; the sort select writes
+  `?sort=name` and Bellandur comes first; `?zone=unknown` shows all twenty
+  rather than none (§7).
+- `/localities/whitefield`: `<h1>` "Properties in Whitefield", breadcrumbs Home ›
+  Localities › Whitefield, then About / Connectivity / Price trend / the map /
+  Properties in Whitefield / the CTA. The map iframe is
+  `…maps?q=12.9698,77.75&z=15&output=embed` (no key, D42). Three listings and
+  "View all 3 properties" → `/properties?localityId=1`.
+- The CTA filed lead #46: `source: locality-page`, `requirement.localityId: 1`,
+  phone normalised to `+91…`; the form swaps to its thank-you panel and toasts.
+- An unknown slug and an inactive locality both render the 404 page; the admin
+  still opens the inactive one.
+- `/admin/master-data/localities`: sorted by `order` it is the reorder list —
+  two "Move up" presses put Electronic City on top and a reload reads
+  `Electronic City:0, Whitefield:1, Sarjapur Road:2` from the API. Sorting by
+  name brings the table back (Image, Name, Zone, Avg ₹/sq ft, Properties,
+  Updated, Featured, Active, Actions). The star toggles `isFeatured` on the
+  server, `?zone=east` leaves five rows, and "View on site" is a real link to
+  `/localities/<slug>` with `target="_blank"`.
+- Deleting Whitefield (three listings point at it) answers 409 and the guard
+  dialog lists them with links to their admin pages; deleting Bengaluru on the
+  cities screen lists all twenty localities the same way (D88).
+- The form: changing the coordinates and leaving the field moves the preview to
+  `…q=12.9,77.6…`; adding a highlight, moving it up and saving writes exactly
+  that, and `seo.focusKeyword` survives the `PUT` untouched. Naming a new
+  locality "Whitefield" shows "Already taken" under the slug before the save and,
+  on the save, "The slug has already been taken. Try “whitefield-2”." under the
+  same field. Creating lands on `…/edit/21`; "Save & view" lands on the public
+  page; leaving a dirty form asks first and "Stay on this page" keeps the URL.
+- Unfeaturing Devanahalli in the admin removes it from the home strip on the
+  next visit — the master-data cache (D93) is refreshed by the write.
+- 390 px: `scrollWidth === clientWidth === 390` on all four screens; the zone
+  chips scroll sideways; the hero is 320 px on the desktop and 220 px minimum on
+  a phone (285 px with all three figures); the admin table becomes cards; the
+  form's actions sit in a sticky bar above the safe area and the header's copy
+  of them is hidden, so only one "Save" is reachable.
+- Console: nothing on any of the new screens. (`/admin/dashboard` still logs the
+  MUI Grid v2 deprecations — pre-existing, prompt 29.)
+
+**Known issues**
+
+BUG-10's `?area=` half is closed. Nothing new was found. The "Updated" column of
+the localities table is display-only: the contract's locality sorts are
+`order|name|propertyCount` (§6.2, `mock-server/schemas/models.js`), and a header
+that sorts by nothing is worse than a header that does not offer to.
