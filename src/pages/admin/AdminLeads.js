@@ -37,6 +37,7 @@ import {
 import { Icon } from '@iconify/react';
 import leadService from '../../services/leadService';
 import useDebounce from '../../hooks/useDebounce';
+import { useLeadNotifications } from '../../contexts/LeadNotificationsContext';
 import { useToast } from '../../components/common/ToastProvider';
 import { toneStyles } from '../../components/ui/tones';
 import {
@@ -95,8 +96,10 @@ const AdminLeads = () => {
   // Export loading state
   const [exporting, setExporting] = useState(false);
 
-  // Polling ref for new lead count
-  const lastLeadCountRef = useRef(0);
+  // The single poller (D45/D55) lives in `LeadNotificationsContext`; this
+  // screen only reacts to it.
+  const { lastUpdatedAt } = useLeadNotifications();
+  const seenUpdateRef = useRef(lastUpdatedAt);
 
   // Build filter params object for API calls
   // The filter names the API reads (§5.14); `q`, not `search`.
@@ -114,9 +117,8 @@ const AdminLeads = () => {
   const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, meta } = await leadService.adminList(buildFilterParams());
+      const { data } = await leadService.adminList(buildFilterParams());
       setLeads(Array.isArray(data) ? data : []);
-      lastLeadCountRef.current = meta?.total ?? 0;
       setError(null);
     } catch (thrown) {
       setError(thrown?.message || 'Failed to load leads. Please try again.');
@@ -131,25 +133,14 @@ const AdminLeads = () => {
     setPage(0);
   }, [fetchLeads]);
 
-  // Polling for new leads every 30 seconds
+  // Every poll of `LeadNotificationsContext` moves `lastUpdatedAt`; that is the
+  // signal to refresh the table. The toast for a genuinely new lead belongs to
+  // the context, so it fires once per lead however many screens are open.
   useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        // One cheap call: `meta.total` is the count, the rows are not needed.
-        const { meta } = await leadService.adminList({ ...buildFilterParams(), perPage: 1 });
-        const total = meta?.total ?? 0;
-        if (total > lastLeadCountRef.current) {
-          const newCount = total - lastLeadCountRef.current;
-          lastLeadCountRef.current = total;
-          fetchLeads();
-          toast.info(`${newCount} new lead${newCount > 1 ? 's' : ''} received`);
-        }
-      } catch {
-        // A failed poll is not worth interrupting the user for.
-      }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [buildFilterParams, fetchLeads, toast]);
+    if (lastUpdatedAt === seenUpdateRef.current) return;
+    seenUpdateRef.current = lastUpdatedAt;
+    fetchLeads();
+  }, [lastUpdatedAt, fetchLeads]);
 
   // The API embeds `lead.property = { id, title, slug }` (§5.5).
   const getPropertyTitle = (lead) => lead?.property?.title ?? null;

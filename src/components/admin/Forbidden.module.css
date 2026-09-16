@@ -1,0 +1,26 @@
+.forbidden {
+  min-height: 60vh;
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.monogram {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  padding: var(--space-1);
+}
+
+.code {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-primary-dark);
+  line-height: var(--line-height-tight);
+}

@@ -1,120 +1,32 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { Box, CircularProgress, Typography, Button, Paper } from '@mui/material';
-import { Icon } from '@iconify/react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+
+import PATHS from '../../routes/paths';
+import { PageLoader } from '../common/SkeletonLoaders';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 
 /**
- * 403 Forbidden page — shown when user is authenticated but lacks role access.
- */
-const Forbidden = () => {
-  const { getDefaultRoute } = useAdminAuth();
-
-  return (
-    <Box
-      sx={{
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        p: 3,
-      }}
-    >
-      <Paper
-        elevation={0}
-        sx={{
-          textAlign: 'center',
-          maxWidth: 440,
-          p: { xs: 3, sm: 5 },
-          borderRadius: 3,
-          bgcolor: 'transparent',
-        }}
-      >
-        <Box
-          sx={{
-            width: 72,
-            height: 72,
-            borderRadius: '50%',
-            bgcolor: 'rgba(239,68,68,0.08)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            mx: 'auto',
-            mb: 3,
-          }}
-        >
-          <Icon
-            icon="mdi:shield-lock-outline"
-            style={{ fontSize: 36, color: 'var(--color-error-dark)' }}
-          />
-        </Box>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: 'var(--color-charcoal)', mb: 1 }}>
-          403
-        </Typography>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--color-charcoal)', mb: 1 }}>
-          Access Denied
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'var(--color-text-muted)', mb: 3 }}>
-          You don't have permission to access this page. Please contact your administrator if you
-          believe this is an error.
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          href={getDefaultRoute()}
-          sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 600 }}
-          startIcon={<Icon icon="mdi:arrow-left" style={{ fontSize: 18 }} />}
-        >
-          Go to Dashboard
-        </Button>
-      </Paper>
-    </Box>
-  );
-};
-
-/**
- * ProtectedRoute — guards admin routes.
+ * The authentication gate of the admin panel (§7, guard 1).
  *
- * Usage:
- *   <ProtectedRoute>                          → Requires authentication only
- *   <ProtectedRoute allowedRoles={['admin']}> → Requires authentication + role
+ * While the stored session is being restored nothing is decided yet — the
+ * loader holds the screen, because redirecting first and restoring second is
+ * what makes a reload bounce a signed-in user to the login page. An anonymous
+ * visitor is sent to the login screen with the location they asked for, so
+ * signing in lands them where they were going.
  *
- * Behavior:
- *   1. Loading         → Spinner
- *   2. Not logged in   → Redirect to /admin/login
- *   3. Wrong role      → Show 403 Forbidden
- *   4. Authorized      → Render children
+ * Roles are not its business: `RoleRoute` does that, one level in.
+ *
+ * @param {object} props
+ * @param {React.ReactNode} [props.children] renders `<Outlet />` when omitted
  */
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { isAuthenticated, loading, role } = useAdminAuth();
+export default function ProtectedRoute({ children }) {
+  const { status } = useAdminAuth();
   const location = useLocation();
 
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: 'var(--color-surface)',
-        }}
-      >
-        <CircularProgress sx={{ color: 'primary.main' }} />
-      </Box>
-    );
+  if (status === 'loading') return <PageLoader />;
+
+  if (status !== 'authenticated') {
+    return <Navigate to={PATHS.adminLogin} state={{ from: location }} replace />;
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" state={{ from: location }} replace />;
-  }
-
-  // Role check: if allowedRoles is provided, verify user's role
-  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(role)) {
-    return <Forbidden />;
-  }
-
-  return children;
-};
-
-export default ProtectedRoute;
+  return children ?? <Outlet />;
+}
