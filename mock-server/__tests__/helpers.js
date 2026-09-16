@@ -75,7 +75,7 @@ function createTestDb(file) {
  *
  * @param {{tokenTtlHours?: number, seed?: object}} [options] `seed` replaces
  *   the committed fixture for tests that need a different starting state
- * @returns {Promise<{request: Function, login: Function, db: object, close: Function}>}
+ * @returns {Promise<{request: Function, login: Function, db: object, origin: string, close: Function}>}
  */
 async function startServer({ tokenTtlHours = 24, seed = SEED } = {}) {
   const file = path.join(os.tmpdir(), `sna-mock-${randomUUID()}.json`);
@@ -89,7 +89,8 @@ async function startServer({ tokenTtlHours = 24, seed = SEED } = {}) {
   const server = await new Promise((resolve) => {
     const listening = app.listen(0, '127.0.0.1', () => resolve(listening));
   });
-  const base = `http://127.0.0.1:${server.address().port}/api`;
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const base = `${origin}/api`;
 
   /**
    * One request against the running mock.
@@ -135,6 +136,8 @@ async function startServer({ tokenTtlHours = 24, seed = SEED } = {}) {
     request,
     login,
     db,
+    /** The server's root, for the SEO files the mock also mirrors there (D21). */
+    origin,
     close: () => new Promise((resolve) => server.close(resolve)),
   };
 }

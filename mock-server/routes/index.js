@@ -17,6 +17,17 @@ const customRouters = [
   require('./users'),
   require('./properties'),
   require('./leads'),
+  require('./masterData'),
+  require('./articles'),
+  require('./pages'),
+  require('./media'),
+  require('./settings'),
+  require('./seo'),
+  require('./dashboard'),
+  require('./newsletter'),
+  require('./jobs'),
+  require('./redirects'),
+  require('./sitemap'),
 ];
 
 module.exports = customRouters;

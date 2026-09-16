@@ -9,8 +9,8 @@
  *   CORS → JSON body (5 MB) → request log → optional latency → envelope helpers
  *   → `/api/health`
  *   → bearer token + role matrix     (`/api/admin/*` and the private `/auth/*`)
- *   → custom routers            (prompts 07–09; hand-written routes win)
- *   → sitemap / robots / RSS / llms  (prompt 09; 501 placeholders for now)
+ *   → custom routers            (prompts 07–09; hand-written routes win,
+ *                                and `routes/sitemap.js` answers the SEO files)
  *   → admin prefix → query translation → public scoping → validation
  *   → ids & timestamps → generic DELETE → JSON Server's CRUD router
  *   → 404 → error handler
@@ -115,7 +115,8 @@ function createApp({ router, config = defaultConfig, db = dbModule } = {}) {
   if (config.delayMs > 0) app.use(delay(config.delayMs));
   app.use(envelope);
 
-  // Root mirrors: `/sitemap.xml` is answered by `/api/sitemap.xml` (D21).
+  // Root mirrors: `/sitemap.xml` is rewritten onto `/api/sitemap.xml`, so the
+  // sitemap router below answers both spellings from one implementation (D21).
   app.use((req, res, next) => {
     if (req.method === 'GET' && SEO_FILE_RE.test(req.path)) req.url = `/api${req.url}`;
     next();
@@ -133,11 +134,6 @@ function createApp({ router, config = defaultConfig, db = dbModule } = {}) {
   app.use(PRIVATE_AUTH_PATHS, authenticate);
 
   for (const createRouter of customRouters) app.use('/api', createRouter(deps));
-
-  // Implemented by prompt 09, from `seoSettings` and the seed's own data.
-  app.get(/^\/api\/(sitemap-?[a-z0-9-]*\.xml|robots\.txt|rss\.xml|llms\.txt)$/, (req, res) => {
-    res.status(501).json({ message: 'Not implemented until prompt 09' });
-  });
 
   app.use(
     '/api',

@@ -10,18 +10,24 @@
 /**
  * An HTTP failure with a status, a human-readable message and, for a 422, the
  * per-field messages.
+ *
+ * A few failures also carry `data`: the 409 of a master-data delete returns
+ * `data.usedBy` so the admin panel can list what is still pointing at the
+ * record instead of only saying that something is (§5.14, D88).
  */
 class ApiError extends Error {
   /**
    * @param {number} status
    * @param {string} message
    * @param {Record<string, string[]>} [errors]
+   * @param {object} [data] extra payload rendered alongside `message`
    */
-  constructor(status, message, errors) {
+  constructor(status, message, errors, data) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.errors = errors ?? null;
+    this.data = data ?? null;
   }
 }
 
@@ -29,7 +35,7 @@ const badRequest = (message = 'Bad request', errors) => new ApiError(400, messag
 const unauthorized = (message = 'Unauthenticated.') => new ApiError(401, message);
 const forbidden = (message = 'This action is unauthorized.') => new ApiError(403, message);
 const notFound = (message = 'Not found') => new ApiError(404, message);
-const conflict = (message, errors) => new ApiError(409, message, errors);
+const conflict = (message, errors, data) => new ApiError(409, message, errors, data);
 const validation = (errors, message = 'The given data was invalid.') =>
   new ApiError(422, message, errors);
 const tooManyRequests = (message = 'Too many requests. Please try again in a minute.') =>
@@ -63,6 +69,7 @@ function errorHandler(error, req, res, _next) {
 
   const body = { message: known.message };
   if (known.errors) body.errors = known.errors;
+  if (known.data) body.data = known.data;
   res.status(known.status).json(body);
 }
 
