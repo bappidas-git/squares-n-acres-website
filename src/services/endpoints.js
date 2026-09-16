@@ -1252,7 +1252,7 @@ const adminTestimonials = adminResource({
   schema: 'testimonial',
   response: 'Testimonial',
   slugged: false,
-  query: { isFeatured: 'bool' },
+  query: { isFeatured: 'bool', isSample: 'bool' },
 });
 
 const adminTeam = adminResource({

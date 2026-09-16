@@ -18,7 +18,9 @@ const defaultId = (item, index) => item?.id ?? index;
  *
  * @param {object} props
  * @param {Array<object>} props.items
- * @param {(items: Array<object>) => void} props.onReorder the whole list, in its new order
+ * @param {(items: Array<object>, move: {from: number, to: number, item: object}) => void}
+ *   props.onReorder the whole list in its new order, plus the one move that got
+ *   it there — a caller that writes positions needs to know which row travelled
  * @param {(item: object, index: number) => React.ReactNode} props.renderItem
  * @param {(item: object, index: number) => string|number} [props.getId]
  * @param {(item: object, index: number) => string} [props.getLabel] used in the announcement
@@ -46,7 +48,7 @@ export default function SortableList({
     const next = [...items];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
-    onReorder?.(next);
+    onReorder?.(next, { from, to, item: moved });
     setAnnouncement(`${nameOf(moved, from)} moved to position ${to + 1} of ${items.length}.`);
 
     if (!focus) return;

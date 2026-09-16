@@ -1,38 +1,9 @@
-.section {
-  padding: 64px 0;
-  background: var(--color-surface);
-}
+/* ── Marquee — CSS-driven infinite scroll ─────────────────────────── */
 
-.container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.title {
-  font-family: var(--font-heading);
-  font-size: 2.25rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 8px;
-}
-
-.subtitle {
-  font-family: var(--font-body);
-  font-size: 1rem;
-  color: var(--color-text-muted);
-}
-
-/* ── Marquee — CSS-driven infinite scroll ─── */
 .marqueeWrapper {
-  overflow: hidden;
   position: relative;
   width: 100%;
+  overflow: hidden;
   -webkit-mask-image: linear-gradient(
     to right,
     transparent 0%,
@@ -45,13 +16,20 @@
 
 .marqueeTrack {
   display: flex;
-  gap: 24px;
   width: max-content;
   animation: marqueeScroll 30s linear infinite;
   will-change: transform;
 }
 
-/* Pause on hover — desktop only */
+.run {
+  display: flex;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0 var(--space-3);
+  list-style: none;
+}
+
+/* Pause on hover — desktop only. */
 @media (hover: hover) {
   .marqueeWrapper:hover .marqueeTrack {
     animation-play-state: paused;
@@ -67,88 +45,81 @@
   }
 }
 
-.partnerCard {
+/* ── The static arrangement (reduced motion) ──────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ── One logo ─────────────────────────────────────────────────────── */
+
+.card {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   min-width: 160px;
-  padding: 20px 24px;
+  height: 80px;
+  padding: var(--space-4) var(--space-5);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+  background: var(--color-bg);
   text-decoration: none;
   transition:
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
-  background: var(--color-bg);
-  flex-shrink: 0;
 }
 
-.partnerCard:hover {
+.card:hover {
   border-color: var(--color-primary);
   box-shadow: var(--shadow-sm);
 }
 
-.partnerLogo {
-  max-height: 40px;
-  max-width: 120px;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  filter: grayscale(100%);
-  opacity: 0.7;
-  transition:
-    filter var(--transition-base),
-    opacity var(--transition-base);
+/* A brand mark is never recoloured or dimmed (§2.2): no filters here. */
+.logo {
+  width: 112px;
+  height: 44px;
 }
 
-.partnerCard:hover .partnerLogo {
-  filter: grayscale(0%);
-  opacity: 1;
-}
-
-.partnerName {
-  font-family: var(--font-body);
-  font-size: 0.8rem;
-  font-weight: 600;
+/* The name, when the logo cannot be drawn: two lines at most, then an
+   ellipsis — the card keeps its height whatever the partner is called. */
+.fallback {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  width: 100%;
+  padding: 0 var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
   color: var(--color-text-muted);
   text-align: center;
 }
 
-/* ── Tablet ── */
 @media (max-width: 899.98px) {
   .marqueeTrack {
     animation-duration: 25s;
   }
 }
 
-/* ── Mobile ── */
 @media (max-width: 599.98px) {
-  .section {
-    padding: 48px 0;
+  .run {
+    gap: var(--space-4);
   }
 
-  .title {
-    font-size: 1.75rem;
-  }
-
-  .marqueeTrack {
-    gap: 16px;
-    animation-duration: 20s;
-  }
-
-  .partnerCard {
-    min-width: 130px;
-    padding: 16px 20px;
-  }
-
-  .partnerLogo {
-    max-width: 100px;
+  .card {
+    min-width: 132px;
+    height: 72px;
+    padding: var(--space-3) var(--space-4);
   }
 }
 
-/* ── Respect reduced motion ── */
+/* The JS renders the grid instead, but a print or a no-JS paint stays still. */
 @media (prefers-reduced-motion: reduce) {
   .marqueeTrack {
     animation: none;

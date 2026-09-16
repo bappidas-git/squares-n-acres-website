@@ -230,7 +230,12 @@ const RESOURCES = [
       showOnHome: { field: 'showOnHome', type: 'bool' },
       propertyTypeId: { field: 'propertyTypeId' },
     },
-    sorts: { order: 'order,question', question: 'question', category: 'category,order' },
+    sorts: {
+      order: 'order,question',
+      question: 'question',
+      category: 'category,order',
+      updatedAt: '-updatedAt',
+    },
     defaultSort: 'order',
   },
 
@@ -241,7 +246,16 @@ const RESOURCES = [
     noun: { one: 'testimonial', many: 'testimonials' },
     deleteGuard: 'testimonial',
     publicFilters: { isFeatured: { field: 'isFeatured', type: 'bool' } },
-    sorts: { order: 'order,name', rating: '-rating', createdAt: '-createdAt' },
+    // Sample records are seeded placeholders (D41): the public site drops them
+    // in a production build, and this is how an editor finds them to replace.
+    adminFilters: { isSample: { field: 'isSample', type: 'bool' } },
+    sorts: {
+      order: 'order,name',
+      name: 'name',
+      rating: '-rating',
+      createdAt: '-createdAt',
+      updatedAt: '-updatedAt',
+    },
     defaultSort: 'order',
   },
 
