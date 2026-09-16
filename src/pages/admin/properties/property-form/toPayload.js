@@ -82,8 +82,12 @@ const KEEP_ROW = {
   floorPlans: (r) => filled(r.title, r.imageUrl),
   documents: (r) => filled(r.title, r.url),
   nearbyPlaces: (r) => filled(r.name),
-  specifications: (r) => filled(r.label, r.value),
-  constructionSpecs: (r) => filled(r.label, r.value),
+  // A specification needs **both** halves: the shared schema requires a value
+  // (`src/services/schemas/property.js`), so a row that only carries a label —
+  // what "Add standard rows" lays out — is scaffolding inside the form, not a
+  // record. The repeater says so under the list.
+  specifications: (r) => filled(r.label) && filled(r.value),
+  constructionSpecs: (r) => filled(r.label) && filled(r.value),
   constructionTimeline: (r) => filled(r.milestone),
   faqs: (r) => filled(r.question, r.answer),
   otherCharges: (r) => filled(r.label) || anyNumber(r.amount),

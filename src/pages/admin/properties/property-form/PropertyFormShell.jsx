@@ -54,22 +54,6 @@ export default function PropertyFormShell({ form }) {
     discardDraft,
   } = form;
 
-  const api = {
-    state,
-    dispatch,
-    values,
-    errors,
-    setField,
-    setFields,
-    addItem,
-    removeItem,
-    moveItem,
-    updateItem,
-    disabled: readOnly,
-    isNew,
-    propertyId,
-  };
-
   const strip = TABS.map((tab) => ({
     key: tab.key,
     label: tab.label,
@@ -82,6 +66,26 @@ export default function PropertyFormShell({ form }) {
     if (key === activeTab) return;
     validateTab(activeTab);
     setActiveTab(key);
+  };
+
+  const api = {
+    state,
+    dispatch,
+    values,
+    errors,
+    setField,
+    setFields,
+    addItem,
+    removeItem,
+    moveItem,
+    updateItem,
+    // A field that lives on another tab is reached by a link rather than by a
+    // second copy of the control: Documents points at the brochure on Media,
+    // Project & builder at the RERA switch on Basics.
+    goToTab: changeTab,
+    disabled: readOnly,
+    isNew,
+    propertyId,
   };
 
   const rail = <StatusRail form={form} collapsible={!beside} />;

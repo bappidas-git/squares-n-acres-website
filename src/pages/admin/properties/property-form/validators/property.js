@@ -34,6 +34,23 @@ export const AMENITY_WARN_COUNT = 8;
 /** The contract's cap on the editor's similar-property picks (§6.1). */
 export const SIMILAR_MAX = 6;
 
+/** How many highlights a listing may carry, and how long one may be (§4.2 of prompt 20). */
+export const HIGHLIGHTS_MAX = 12;
+export const HIGHLIGHT_MAX_LENGTH = 140;
+
+/** A question short enough to read and long enough to be one. */
+export const FAQ_QUESTION_MIN = 10;
+export const FAQ_QUESTION_MAX = 200;
+
+/**
+ * Script tags in an answer.
+ *
+ * Sanitising the whole allow-list is prompt 32's job; refusing the one thing
+ * that turns an answer into code is this prompt's, because the answer reaches
+ * the public page through `dangerouslySetInnerHTML` until then.
+ */
+const SCRIPT_PATTERN = /<\s*\/?\s*script\b|<\s*iframe\b|\son[a-z]+\s*=|javascript:/i;
+
 const isBlank = (value) => value === null || value === undefined || String(value).trim() === '';
 
 const isNumber = (value) =>
@@ -356,22 +373,30 @@ export function validateAmenities() {
 export function validateHighlights(values) {
   const { errors, add } = collector();
 
-  (values.highlights ?? []).forEach((highlight, index) => {
-    if (String(highlight ?? '').length > 200) {
-      add(`highlights.${index}`, 'Keep a highlight to 200 characters.');
+  const highlights = values.highlights ?? [];
+  if (highlights.length > HIGHLIGHTS_MAX) {
+    add('highlights', `Keep the list to ${HIGHLIGHTS_MAX} highlights.`);
+  }
+
+  highlights.forEach((highlight, index) => {
+    if (String(highlight ?? '').length > HIGHLIGHT_MAX_LENGTH) {
+      add(`highlights.${index}`, `Keep a highlight to ${HIGHLIGHT_MAX_LENGTH} characters.`);
     }
   });
 
-  const halves = (rows, field) =>
+  // A value with nothing naming it is meaningless, so it is refused. A label
+  // with nothing under it is merely unfinished — which is the whole point of
+  // "Add standard rows", and an editor must be able to save the scaffolding
+  // before the developer has sent the sheet that fills it in.
+  const named = (rows, field) =>
     (rows ?? []).forEach((spec, index) => {
-      const hasLabel = !isBlank(spec.label);
-      const hasValue = !isBlank(spec.value);
-      if (hasLabel && !hasValue) add(`${field}.${index}.value`, 'Give this specification a value.');
-      if (!hasLabel && hasValue) add(`${field}.${index}.label`, 'Give this specification a label.');
+      if (isBlank(spec.label) && !isBlank(spec.value)) {
+        add(`${field}.${index}.label`, 'Give this specification a label.');
+      }
     });
 
-  halves(values.specifications, 'specifications');
-  halves(values.constructionSpecs, 'constructionSpecs');
+  named(values.specifications, 'specifications');
+  named(values.constructionSpecs, 'constructionSpecs');
 
   return errors;
 }
@@ -461,12 +486,25 @@ export function validateFaqs(values) {
 
   (values.faqs ?? []).forEach((faq, index) => {
     const path = `faqs.${index}`;
-    const hasQuestion = !isBlank(faq.question);
+    const question = String(faq.question ?? '').trim();
+    const hasQuestion = question !== '';
     const hasAnswer = !isBlank(plainText(faq.answer));
     if (!hasQuestion && !hasAnswer) return;
 
     if (!hasQuestion) add(`${path}.question`, 'Write the question.');
+    else if (question.length < FAQ_QUESTION_MIN) {
+      add(`${path}.question`, `A question needs at least ${FAQ_QUESTION_MIN} characters.`);
+    } else if (question.length > FAQ_QUESTION_MAX) {
+      add(`${path}.question`, `Keep a question to ${FAQ_QUESTION_MAX} characters.`);
+    }
+
     if (!hasAnswer) add(`${path}.answer`, 'Write the answer.');
+    else if (SCRIPT_PATTERN.test(String(faq.answer ?? ''))) {
+      add(
+        `${path}.answer`,
+        'An answer may hold formatting, not code — remove the script, the iframe or the event handler.'
+      );
+    }
   });
 
   return errors;

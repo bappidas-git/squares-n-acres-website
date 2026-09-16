@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 19 — Property form tabs 1–6 Next prompt: 20
+Last prompt executed: 20 — Property form tabs 7–12 Next prompt: 21
 
 ## Executed prompts
 
@@ -25,7 +25,8 @@ Last prompt executed: 19 — Property form tabs 1–6 Next prompt: 20
 | 16  | Developers: admin CRUD and the public builder pages           | `da19cb5`                                                                          | 2026-09-16 |
 | 17  | FAQs, testimonials, team and partners: admin and sections     | `4dcf5cd`                                                                          | 2026-09-16 |
 | 18  | Property form foundation: reducer, validators, rail, payload  | `c917a9a`                                                                          | 2026-09-16 |
-| 19  | Property form tabs 1–6: basics → media                        | HEAD of this branch (a commit cannot contain its own hash — prompt 20 fills it in) | 2026-09-16 |
+| 19  | Property form tabs 1–6: basics → media                        | `44122e1`                                                                          | 2026-09-16 |
+| 20  | Property form tabs 7–12: amenities → FAQs                     | HEAD of this branch (a commit cannot contain its own hash — prompt 21 fills it in) | 2026-09-16 |
 
 ## Baseline (prompt 01)
 
@@ -272,7 +273,8 @@ The boilerplate's own endpoint surface stays inventoried in
 | `src/utils/adapters/legacyArticle.js`          | `toLegacyArticle()` maps `featuredImage.url` → `image`, `category.name`, `author.name` and `readingTimeMinutes` → `readTime` for `AdminArticles` and `ArticleForm`.                                                                                                                                                                                                                                                                                                                | 33 / 34      |
 | `src/components/common/LegacyHtml.jsx`         | Renders CMS-authored HTML (article bodies, FAQ answers) with `dangerouslySetInnerHTML`. Prompt 32 replaces it with `SafeHtml`, sanitising against the allow-list the Tiptap editor writes with.                                                                                                                                                                                                                                                                                    | 32           |
 | Legacy `PropertyForm.jsx` + `property-tabs/*`  | The boilerplate's form (956 lines) and its sixteen tabs are no longer routed — `/admin/properties/add` and `/admin/properties/edit/:id` render `PropertyFormPage` (prompt 18) — but the files stay in place, unreachable, until the last of their fields has a home in the new tabs. Prompt 21 deletes both, with the form half of `toLegacyProperty`.                                                                                                                             | 21           |
-| Ten placeholder property-form tabs             | Tabs 1–6 are written (prompt 19). The ten that remain render `PlaceholderTab` naming the prompt that writes each: Amenities, Highlights & specifications, Floor plans, Documents, Project & builder and FAQs in 20; Similar properties, Section visibility, Agent and SEO in 21 (the panel itself in 36, D87). The reducer, validators and `toPayload` already cover their fields, so a save never drops what they hold.                                                           | 20–21, 36    |
+| Four placeholder property-form tabs            | Tabs 1–12 are written (prompts 19 and 20). The four that remain render `PlaceholderTab` naming the prompt that writes each: Similar properties, Section visibility, Agent and SEO in 21 (the panel itself in 36, D87). The reducer, validators and `toPayload` already cover their fields, so a save never drops what they hold.                                                                                                                                                   | 21, 36       |
+| FAQ answers textarea → `RichTextEditor`        | The FAQs tab's answer is a four-row `TextareaField` holding HTML, refused only by a regex when it carries a script, an iframe or an event handler (D66). Prompt 32 swaps the control for the Tiptap editor and the regex for the real sanitiser; the field, the validator key and the payload do not move.                                                                                                                                                                         | 32           |
 | Description textarea → `RichTextEditor`        | The Basics tab's description is an eight-row `TextareaField` with a live character and word counter. The field stores sanitised HTML (§6.1) and the counters already measure the plain text inside it, so prompt 32 swaps the control for the Tiptap editor without touching the reducer, the validators or the payload.                                                                                                                                                           | 32           |
 | `ArticleForm` saving disabled                  | Its category, author and tag pickers offer hardcoded strings; an article now carries `categoryId`, `authorId`, `tagIds[]`, `featuredImage{}`, `status` and a nested `seo{}`. Loading works through `toLegacyArticle`; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                   | 33           |
 | `AdminSettings` saving disabled                | The screen holds a flattened view of five of the eight §6.13 branches, so writing it back would flatten the record on the server. Reads are live; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                                                                                       | 40           |
@@ -288,7 +290,7 @@ The boilerplate's own endpoint surface stays inventoried in
 | `PropertyListing` client-side filter and sort  | The page asks for one page of `perPage=100` and narrows, sorts and paginates in the browser through `toLegacyProperty`. The listing engine is server-driven (D94) from prompt 26.                                                                                                                                                                                                                                                                                                  | 26           |
 | Property-type SEO placeholder card             | The property-type form ends in an `Alert` saying the SEO panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched so nothing is lost meanwhile.                                                                                                                                                                                                                                                                                                 | 36           |
 | `PropertyFilters` type select                  | The legacy filter panel now reads `usePropertyTypes()` but still keeps its own BHK, price-range, location, status and developer lists and filters in the browser. Prompt 26 replaces the panel with the server-driven one.                                                                                                                                                                                                                                                         | 26           |
-| `AmenitiesTab` stores amenity objects          | The **legacy** property form's amenities tab reads the master list through `useAmenitiesGrouped()` but still stores `{ icon, name, category }` objects on its draft rather than `amenityIds[]`. Nothing routes to it since prompt 18 — the new form holds `amenityIds[]` — and prompt 20 writes the replacement tab before prompt 21 deletes this one.                                                                                                                             | 20           |
+| `AmenitiesTab` stores amenity objects          | The **legacy** property form's amenities tab reads the master list through `useAmenitiesGrouped()` but still stores `{ icon, name, category }` objects on its draft rather than `amenityIds[]`. Nothing routes to it since prompt 18, and prompt 20 wrote the replacement (`property-form/tabs/AmenitiesTab.jsx`, which writes `amenityIds[]` and nothing else); prompt 21 deletes this one with the rest of `property-tabs/*`.                                                    | 21           |
 | `FinanceGuide` bank cards                      | The cards read `useBanks()` and the headline figures are computed from them, but the section is still one 1 800-line component with its own EMI maths and lead form.                                                                                                                                                                                                                                                                                                               | 25           |
 | `LegacyHtml` in `FaqAccordion`                 | Every FAQ on the site — the home band, `/insights/faqs`, a property page's questions and the CMS `faq` block — renders its answer through the temporary `LegacyHtml`. `SafeHtml` replaces it with the editor's allow-list, and the same prompt turns the FAQ form's HTML textarea into the editor.                                                                                                                                                                                 | 32           |
 | `AdminPlaceholderPage` routes                  | Thirteen admin routes of `src/routes/adminRouteConfig.js` render `AdminPlaceholderPage` with the number of the prompt that writes the screen (13–39). Each one disappears when its owner prompt lands; the component itself must not exist after prompt 43.                                                                                                                                                                                                                        | 13–39        |
@@ -341,26 +343,27 @@ The boilerplate's own endpoint surface stays inventoried in
 
 ### New defects found by this audit
 
-| Id     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Found by | Owner prompt               |
-| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------- |
-| NEW-01 | `config/rbac.js` has no `/admin/settings/users` entry and no per-area permission matrix; `AdminSettings` uses `role === 'admin'` and `UserManagement` its own `ROLES` array                                                                                                                                                                                                                                                                                                       | 01       | 12                         |
-| NEW-02 | `routes/index.js` limits `/admin/seo` and `/admin/settings` to `admin` only; §7 of the master context gives both to `admin` **and** `manager`                                                                                                                                                                                                                                                                                                                                     | 01       | 12                         |
-| NEW-03 | Navigation/role data lives in three places: `rbac.NAV_ITEMS`, `AdminLayout.pageTitles` and the `<Route>` declarations                                                                                                                                                                                                                                                                                                                                                             | 01       | 12                         |
-| NEW-04 | `slick-carousel` is a dependency but its CSS is never imported, so the `SimilarProperties` slider renders unstyled                                                                                                                                                                                                                                                                                                                                                                | 01       | 03, 25                     |
-| NEW-05 | `?area=` is a hidden client-side substring filter: no chip, no way to remove it in the UI, wiped by "Clear filters". **Nothing links to it since 14** (localities are addressed by `?localityId=`); the parameter itself goes when the listing engine lands                                                                                                                                                                                                                       | 01       | 26                         |
-| NEW-06 | `PropertyFilters.clearFilters()` replaces the query string with an empty one, dropping `q`, `sort` and `page` too                                                                                                                                                                                                                                                                                                                                                                 | 01       | 26                         |
-| NEW-08 | `GalleryTab` carried the repository's only `eslint-disable` comment                                                                                                                                                                                                                                                                                                                                                                                                               | 01       | **closed in 01**           |
-| NEW-09 | `SectionVisibilityTab` reads `!== false` but writes `!value`, so the first toggle of an `undefined` key is a no-op on screen                                                                                                                                                                                                                                                                                                                                                      | 01       | 21                         |
-| NEW-10 | `AdminSettings` renders `TabPanel index={4}` after `index={5}`, so the JSX order no longer matches the `<Tab>` order                                                                                                                                                                                                                                                                                                                                                              | 01       | 40                         |
-| NEW-11 | `AdminSettings.mergeWithDefaults` omits `footerLinks`, so every save drops that `db.json` key                                                                                                                                                                                                                                                                                                                                                                                     | 01       | 40                         |
-| NEW-15 | `useThrottledScroll` has a single consumer (`BackToTop`); Header, MobileHeader, BottomNav and StickyNav each re-implement scroll handling                                                                                                                                                                                                                                                                                                                                         | 01       | 04                         |
-| NEW-17 | `global.css` loads Google Fonts through a render-blocking CSS `@import` instead of a `<link>` in `index.html`                                                                                                                                                                                                                                                                                                                                                                     | 01       | 02, 04                     |
-| NEW-18 | `public/robots.txt` is the CRA default with no `Sitemap:`; `index.html` has no manifest, no OG tags, and a `theme-color` in the boilerplate navy                                                                                                                                                                                                                                                                                                                                  | 01       | 02                         |
-| NEW-20 | No test file exists anywhere (119 files checked, 0 matches), so `test:ci` needs `--passWithNoTests` until the first tests land                                                                                                                                                                                                                                                                                                                                                    | 01       | partially closed in 01; 35 |
-| NEW-22 | `AdminLeads` CSV export is built in the browser: no UTF-8 BOM, the Property column uses the broken id lookup, newlines inside `message` break rows                                                                                                                                                                                                                                                                                                                                | 01       | 29                         |
-| NEW-28 | `src/pages/public/RealEstateAwareness.js` uses `mdi:stamp`, which is not in the Iconify MDI set — the tile renders blank. Found while verifying every icon id of prompt 13.                                                                                                                                                                                                                                                                                                       | 13       | 31                         |
-| NEW-29 | `db.json` seeds `icon: "mdi:home-check-outline"`, which is not in the Iconify MDI set. `db.json` is off-limits to prompt 13 (§12 guardrails), so the seed keeps a blank icon until its owner prompt fixes it.                                                                                                                                                                                                                                                                     | 13       | 15                         |
-| NEW-30 | `useCountUp` figures are still at their start value when a page is rendered by a browser that never delivers a second animation frame — headless Chrome with `--virtual-time-budget` grants exactly one. Every counted statistic (`DeveloperStats`, `BuilderOverview`, and the home figures of 27) therefore prerenders as `0`. The prerenderer must emulate `prefers-reduced-motion: reduce`, which makes `useCountUp` jump straight to the value; a real browser is unaffected. | 16       | 41                         |
+| Id     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Found by | Owner prompt               |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------- |
+| NEW-01 | `config/rbac.js` has no `/admin/settings/users` entry and no per-area permission matrix; `AdminSettings` uses `role === 'admin'` and `UserManagement` its own `ROLES` array                                                                                                                                                                                                                                                                                                                                                                                      | 01       | 12                         |
+| NEW-02 | `routes/index.js` limits `/admin/seo` and `/admin/settings` to `admin` only; §7 of the master context gives both to `admin` **and** `manager`                                                                                                                                                                                                                                                                                                                                                                                                                    | 01       | 12                         |
+| NEW-03 | Navigation/role data lives in three places: `rbac.NAV_ITEMS`, `AdminLayout.pageTitles` and the `<Route>` declarations                                                                                                                                                                                                                                                                                                                                                                                                                                            | 01       | 12                         |
+| NEW-04 | `slick-carousel` is a dependency but its CSS is never imported, so the `SimilarProperties` slider renders unstyled                                                                                                                                                                                                                                                                                                                                                                                                                                               | 01       | 03, 25                     |
+| NEW-05 | `?area=` is a hidden client-side substring filter: no chip, no way to remove it in the UI, wiped by "Clear filters". **Nothing links to it since 14** (localities are addressed by `?localityId=`); the parameter itself goes when the listing engine lands                                                                                                                                                                                                                                                                                                      | 01       | 26                         |
+| NEW-06 | `PropertyFilters.clearFilters()` replaces the query string with an empty one, dropping `q`, `sort` and `page` too                                                                                                                                                                                                                                                                                                                                                                                                                                                | 01       | 26                         |
+| NEW-08 | `GalleryTab` carried the repository's only `eslint-disable` comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | 01       | **closed in 01**           |
+| NEW-09 | `SectionVisibilityTab` reads `!== false` but writes `!value`, so the first toggle of an `undefined` key is a no-op on screen                                                                                                                                                                                                                                                                                                                                                                                                                                     | 01       | 21                         |
+| NEW-10 | `AdminSettings` renders `TabPanel index={4}` after `index={5}`, so the JSX order no longer matches the `<Tab>` order                                                                                                                                                                                                                                                                                                                                                                                                                                             | 01       | 40                         |
+| NEW-11 | `AdminSettings.mergeWithDefaults` omits `footerLinks`, so every save drops that `db.json` key                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | 01       | 40                         |
+| NEW-15 | `useThrottledScroll` has a single consumer (`BackToTop`); Header, MobileHeader, BottomNav and StickyNav each re-implement scroll handling                                                                                                                                                                                                                                                                                                                                                                                                                        | 01       | 04                         |
+| NEW-17 | `global.css` loads Google Fonts through a render-blocking CSS `@import` instead of a `<link>` in `index.html`                                                                                                                                                                                                                                                                                                                                                                                                                                                    | 01       | 02, 04                     |
+| NEW-18 | `public/robots.txt` is the CRA default with no `Sitemap:`; `index.html` has no manifest, no OG tags, and a `theme-color` in the boilerplate navy                                                                                                                                                                                                                                                                                                                                                                                                                 | 01       | 02                         |
+| NEW-20 | No test file exists anywhere (119 files checked, 0 matches), so `test:ci` needs `--passWithNoTests` until the first tests land                                                                                                                                                                                                                                                                                                                                                                                                                                   | 01       | partially closed in 01; 35 |
+| NEW-22 | `AdminLeads` CSV export is built in the browser: no UTF-8 BOM, the Property column uses the broken id lookup, newlines inside `message` break rows                                                                                                                                                                                                                                                                                                                                                                                                               | 01       | 29                         |
+| NEW-28 | `src/pages/public/RealEstateAwareness.js` uses `mdi:stamp`, which is not in the Iconify MDI set — the tile renders blank. Found while verifying every icon id of prompt 13.                                                                                                                                                                                                                                                                                                                                                                                      | 13       | 31                         |
+| NEW-29 | `db.json` seeds `icon: "mdi:home-check-outline"`, which is not in the Iconify MDI set. `db.json` is off-limits to prompt 13 (§12 guardrails), so the seed keeps a blank icon until its owner prompt fixes it.                                                                                                                                                                                                                                                                                                                                                    | 13       | 15                         |
+| NEW-31 | `SlugField` follows the title whenever it mounts with an empty `value`, and the property form mounts its tabs in the render **before** the reducer's `LOAD` effect runs — so opening an existing listing and saving it rewrites the slug from the title (`aurelia-park-residences-2-bhk-sarjapur-road` became `aurelia-park-residences-2-bhk-apartment-in-sarjapur-road`), changing a live URL. The same mount order affects the locality, developer, property-type and article forms. Prompt 20 left the shared component alone; the fix belongs with the form. | 20       | 21                         |
+| NEW-30 | `useCountUp` figures are still at their start value when a page is rendered by a browser that never delivers a second animation frame — headless Chrome with `--virtual-time-budget` grants exactly one. Every counted statistic (`DeveloperStats`, `BuilderOverview`, and the home figures of 27) therefore prerenders as `0`. The prerenderer must emulate `prefers-reduced-motion: reduce`, which makes `useCountUp` jump straight to the value; a real browser is unaffected.                                                                                | 16       | 41                         |
 
 ## Known issues (closed)
 
@@ -2622,3 +2625,164 @@ placeholder, and five of the fifteen placeholder tabs); one joined it — the
 description textarea that prompt 32 turns into the Tiptap editor.
 
 **Next prompt: 20 — Property form tabs 7–12.**
+
+### Prompt 20 — Property form tabs 7–12: amenities, highlights & specifications, floor plans, documents, project & builder, FAQs (2026-09-16)
+
+**What changed**
+
+Six more tabs stopped being placeholders. Prompt 19 wrote the fields a listing
+is described by; these six are the lists it is made of — what it offers, what
+it is built from, what a buyer downloads, who built it and what they will ask.
+Four of them are repeating lists, and all four had the same two problems in the
+boilerplate: a drag that rewrote every row, and a blank list with no way to
+start.
+
+So each list has a way to start that is not typing. The construction
+specifications lay themselves out from a preset of twenty-one labels; the
+timeline lays itself out from five milestones; the floor plans generate
+themselves from the unit configurations that already carry a drawing; the
+highlights can be split out of the short description; and the FAQs can be
+written from the listing itself. Every one of them adds only what is missing,
+says how many that is, and disappears when there is nothing left to add.
+
+The FAQ generator is the one that writes prose, so it is the one with a rule:
+**an answer never claims more than the record holds.** A listing with no price
+says the price is on request; a project with no possession date says no date
+has been announced; a listing with no amenities is not asked what amenities it
+offers. `suggestFaqs` is pure, the dialog previews exactly what it would add
+with a checkbox each, and nothing is written until somebody has read it.
+
+**Files added**
+
+| Path                                                           | What it is                                                                                                    |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `…/property-form/suggestFaqs.js`                               | Six questions written out of the record, deduplicated against what is already asked; pure, `<p>` HTML answers |
+| `…/property-form/tabs/AmenitiesTab.jsx` (+ css)                | Grouped chips with a search, a tri-state select-all per group, the counts, the master-data link               |
+| `…/property-form/tabs/HighlightsSpecificationsTab.jsx`         | Highlights, the specifications repeater, the construction repeater and its twenty-one-row preset              |
+| `…/property-form/tabs/FloorPlansTab.jsx`                       | The drawing cards, and "Generate from unit configurations"                                                    |
+| `…/property-form/tabs/DocumentsTab.jsx`                        | The brochure summary with a link to Media, and the document rows with their gate                              |
+| `…/property-form/tabs/ProjectBuilderTab.jsx`                   | The developer picker and quick create, the project figures, the approvals, the timeline and the progress      |
+| `…/property-form/tabs/FaqsTab.jsx`                             | Question and answer rows, and the suggestion dialog                                                           |
+| `…/property-form/components/SpecificationsRepeater.jsx` (+css) | One grouped `{group,label,value,icon?}` list, used twice; sticky group headings, one `moveItem` per drag      |
+| `…/property-form/components/TimelineRepeater.jsx` (+ css)      | Milestone rows with a status dot, the presets, "Auto from milestones" and the progress bar                    |
+| `…/property-form/components/DeveloperQuickCreateDialog.jsx`    | Name + website → `POST /admin/developers`, straight back into the picker; duplicates refused inline           |
+| `…/property-form/__tests__/suggestFaqs.test.js`                | 30 cases: every branch's wording, the five-item limit, the dedupe, the escaping                               |
+| `…/property-form/__tests__/AmenitiesTab.test.jsx`              | 17 cases: the writes, the order, the counts, the tri-state header, the search, the tab order, read-only       |
+| `…/property-form/__tests__/TimelineRepeater.test.jsx`          | 16 cases: the arithmetic, the disabled button at zero, the presets, the rows                                  |
+| `…/property-form/__tests__/floorPlansFromUnits.test.js`        | 10 cases: what becomes a plan, and the two rules that stop a second press duplicating it                      |
+
+**Files changed**
+
+`…/property-form/tabs.js` (the six components wired in; the `prompt:` markers
+gone), `…/property-form/validators/property.js` (highlights capped at 12 × 140
+characters; a FAQ question 10–200 characters; a script, an iframe, an `on…=`
+handler or a `javascript:` URL in an answer refused; a specification label
+without a value no longer an error), `…/property-form/validators/index.js` (the
+four new constants re-exported), `…/property-form/toPayload.js` (a
+specification row needs both halves to be sent — the schema requires a value),
+`…/property-form/PropertyFormShell.jsx` + `PropertyFormContext.js` (`goToTab`),
+`src/hooks/useMasterData.js` (`useDeveloperSearch`), `src/utils/format.js`
+(`formatMonthYear`), `docs/PROJECT_STATE.md`, `docs/DECISIONS.md`.
+
+**Files removed**
+
+None. `PlaceholderTab` still serves the four tabs of prompt 21.
+
+**Endpoints**
+
+None added. The developer quick create uses `POST /admin/developers`
+(`masterDataService.developers.create`) and then `refresh('developers')`.
+
+**npm / env**
+
+Nothing added.
+
+**Acceptance checklist**
+
+- [x] Tabs 7–12 carry every §6.1 field of their scope, and a save comes back
+      from `GET /api/admin/properties/2` with every one of them intact (the
+      JSON is quoted in the QA below).
+- [x] Every preset and generator works and is idempotent: the construction
+      rows, the standard milestones, the floor-plan generator, the highlight
+      import and the FAQ suggestions all add only what is missing and say how
+      many that is.
+- [x] Developer quick create works, and a duplicate name is refused inline.
+- [x] 73 new unit tests (30 + 17 + 16 + 10); the suite is 1 137 tests over 46
+      files.
+- [x] `npm run lint`, `npm run test:ci`, `npm run build:ci` (0 warnings),
+      `npm run check:traces` (0 findings) and `npm run smoke` (269/269) pass.
+- [x] One commit, clean tree.
+
+**Manual QA (headless Chromium over CDP, console captured)**
+
+- `/admin/properties/edit/2` at 1360 px: sixteen tabs, the first twelve
+  rendering fields rather than an alert.
+- Amenities: the eight groups with their counts ("4 of 5 selected"); searching
+  `pool` leaves Lifestyle and Kids with Swimming Pool and Kids' Pool and hides
+  the other six groups; `helipad` says so. "Select all in Lifestyle" takes the
+  total from 18 to 21 and leaves the Sports header indeterminate; unticking one
+  of a full group puts its own header back to indeterminate. The footer link is
+  `/admin/master-data/amenities`, `target="_blank" rel="noreferrer"`.
+- Highlights: ↓ moves a highlight and the list follows; "Add highlight" stops
+  at 12 of 12; on property 1, a three-sentence summary makes the button read
+  "From short description (3)" and adds "Corner unit with two balconies",
+  "Khata transferred and the loan is pre-approved" and "1.2 km from the metro"
+  — the decimal does not split a sentence — after which it reads (0) and is
+  disabled. Property 2's one-sentence, 152-character summary makes it read (0)
+  from the start.
+- Specifications: "Add standard rows (17)" takes the construction list from 8
+  rows to 25 across 9 groups; the four labels the seed already had are not
+  repeated. Two rows filled in, the rest left blank: the counter reads "15 rows
+  have no value yet and are not saved", the save is accepted, and the record
+  comes back with 10 rows — the eight seeded plus
+  `structure · RCC framed structure = Filled by QA one` and
+  `flooring · Living / Dining = Filled by QA two`.
+- Floor plans: with the three seeded plans present the generator is offered for
+  three unit configurations; removing one and pressing it adds the missing
+  drawings and the button then says "Nothing left to generate", so a second
+  press cannot duplicate.
+- Documents: the brochure card prints the attached URL and "A visitor gives
+  their details before downloading it", with "Change it on Media". Adding
+  "Price list — March 2027" (type `price-list`, gate off) makes the counter
+  read "4 documents · 3 behind the lead form, 1 open", and the record comes
+  back with `{title:"Price list — March 2027", type:"price-list",
+leadGated:false, order:4}`.
+- Project & builder: "Add new developer" → Test Developers (+ website) is
+  created, selected, and the card reads "Edit Test Developers in master data";
+  trying "test developers" again keeps the dialog open with "A developer called
+  “test developers” already exists…"; a website without a scheme is refused the
+  same way. Taking RERA out of `reraRegistered` while it is listed as an
+  approval raises the warning with "Open Basics"; putting the switch back takes
+  it away.
+- The timeline: clearing it disables "Auto from milestones (0%)"; "Add standard
+  milestones" lays out the five; marking two of five completed makes the button
+  read 40 % and pressing it writes 40 into the field and the bar.
+- FAQs: "Generate suggested FAQs" offers five of the six (the configuration
+  question falls outside the limit), each with its answer; unticking two and
+  pressing "Add selected (3)" takes the list from 5 to 8, and the record comes
+  back with them at orders 6–8. An answer carrying `<script>` and a
+  three-character question are both refused ("Please fix 2 fields.", the FAQs
+  tab badged "2 errors in this section").
+- Save and reload: 21 amenities, 10 construction specifications, 4 documents,
+  Test Developers, the timeline statuses, 40 % and 8 questions all come back.
+- The public page (legacy layout) renders every section from the new data:
+  Property Amenities (including the three added), Floor Plans & Pricing,
+  Property Documents (the new price list behind "View 2 More Documents"),
+  Construction Specifications, Construction Status, "Test Developers" and
+  "FAQs About This Project". No console errors.
+- 390 px: `scrollWidth === clientWidth` on all six tabs.
+- Signed in as sales: not one operable control in any of the six panels — the
+  only enabled button is "Change it on Media", which changes tab rather than
+  the record.
+- Console: no errors and no warnings from these tabs. The only warnings on the
+  admin shell are the MUI Grid v2 deprecations from the untouched `Dashboard.js`
+  (prompt 29).
+
+**Known issues**
+
+NEW-31 opened: `SlugField` rewrites an existing listing's slug from its title
+because the form's tabs mount one render before the record reaches the reducer.
+It is a shared admin-kit component used by five forms, so prompt 20 left it
+alone; prompt 21 owns the fix.
+
+**Next prompt: 21 — Property form tabs 13–16 and publish.**

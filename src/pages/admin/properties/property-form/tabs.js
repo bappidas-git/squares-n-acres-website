@@ -35,12 +35,18 @@ import {
   validateUnits,
   validateVisibility,
 } from './validators';
+import AmenitiesTab from './tabs/AmenitiesTab';
 import AreaConfigurationTab from './tabs/AreaConfigurationTab';
 import BasicsTab from './tabs/BasicsTab';
+import DocumentsTab from './tabs/DocumentsTab';
+import FaqsTab from './tabs/FaqsTab';
+import FloorPlansTab from './tabs/FloorPlansTab';
+import HighlightsSpecificationsTab from './tabs/HighlightsSpecificationsTab';
 import LocationTab from './tabs/LocationTab';
 import MediaTab from './tabs/MediaTab';
 import PlaceholderTab from './tabs/PlaceholderTab';
 import PricingTab from './tabs/PricingTab';
+import ProjectBuilderTab from './tabs/ProjectBuilderTab';
 import UnitConfigurationsTab from './tabs/UnitConfigurationsTab';
 
 /**
@@ -137,54 +143,48 @@ export const TABS = [
     key: 'amenities',
     label: 'Amenities',
     icon: 'mdi:dumbbell',
-    component: PlaceholderTab,
+    component: AmenitiesTab,
     validator: validateAmenities,
-    prompt: 20,
     fields: ['amenityIds'],
   },
   {
     key: 'highlights',
     label: 'Highlights & specifications',
     icon: 'mdi:star-outline',
-    component: PlaceholderTab,
+    component: HighlightsSpecificationsTab,
     validator: validateHighlights,
-    prompt: 20,
     fields: ['highlights', 'specifications', 'constructionSpecs'],
   },
   {
     key: 'floorPlans',
     label: 'Floor plans',
     icon: 'mdi:floor-plan',
-    component: PlaceholderTab,
+    component: FloorPlansTab,
     validator: validateFloorPlans,
-    prompt: 20,
     fields: ['floorPlans'],
   },
   {
     key: 'documents',
     label: 'Documents',
     icon: 'mdi:file-document-outline',
-    component: PlaceholderTab,
+    component: DocumentsTab,
     validator: validateDocuments,
-    prompt: 20,
     fields: ['documents'],
   },
   {
     key: 'project',
     label: 'Project & builder',
     icon: 'mdi:office-building-outline',
-    component: PlaceholderTab,
+    component: ProjectBuilderTab,
     validator: validateProject,
-    prompt: 20,
     fields: ['project', 'constructionTimeline', 'constructionProgressPercent'],
   },
   {
     key: 'faqs',
     label: 'FAQs',
     icon: 'mdi:comment-question-outline',
-    component: PlaceholderTab,
+    component: FaqsTab,
     validator: validateFaqs,
-    prompt: 20,
     fields: ['faqs'],
   },
   {

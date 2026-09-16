@@ -47,7 +47,17 @@ export {
   validateVisibility,
 };
 
-export { DESCRIPTION_MIN, SIMILAR_MAX, TITLE_MIN, plainText, wordCount } from './property';
+export {
+  DESCRIPTION_MIN,
+  FAQ_QUESTION_MAX,
+  FAQ_QUESTION_MIN,
+  HIGHLIGHTS_MAX,
+  HIGHLIGHT_MAX_LENGTH,
+  SIMILAR_MAX,
+  TITLE_MIN,
+  plainText,
+  wordCount,
+} from './property';
 
 /** Every section validator, in tab order. */
 export const SECTION_VALIDATORS = [

@@ -1,0 +1,132 @@
+/* The construction timeline and its percentage (prompt 20 §4.5). */
+
+.wrapper {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.row {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.rowHead {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* The status, as a colour before it is a word (§6 of prompt 20). */
+.dot {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+}
+
+.rowTitle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+.rowStatus {
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.rowHead > :last-child {
+  margin-left: auto;
+}
+
+.rowGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+@media (min-width: 900px) {
+  .rowGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rowWide {
+    grid-column: 1 / -1;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* The percentage, its button and the bar that reads it back. */
+.progress {
+  display: grid;
+  gap: var(--space-3);
+  align-items: end;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+@media (min-width: 900px) {
+  .progress {
+    grid-template-columns: minmax(0, 200px) auto minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+}
+
+.barRow {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding-bottom: var(--space-2);
+}
+
+.bar {
+  flex: 1;
+  height: 10px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  transition: width var(--transition-base);
+}
+
+.barValue {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barFill {
+    transition: none;
+  }
+}
