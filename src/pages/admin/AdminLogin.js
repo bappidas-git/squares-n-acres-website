@@ -1,226 +1,164 @@
-import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  FormControlLabel,
-  Checkbox,
-  Alert,
-  InputAdornment,
-  IconButton,
-} from '@mui/material';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Icon } from '@iconify/react';
-import { useAdminAuth } from '../../contexts/AdminAuthContext';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+import PATHS from '../../routes/paths';
+import { Alert, Button, IconButton, Logo, TextField } from '../../components/ui';
 import { BRAND } from '../../config/site';
+import { GENERIC_MESSAGE } from '../../services/apiError';
+import { canAccessAdminRoute } from '../../routes/adminRouteConfig';
+import { useAdminAuth } from '../../contexts/AdminAuthContext';
+
+import styles from './AdminLogin.module.css';
+
+/**
+ * The only way into the admin panel (D24).
+ *
+ * There is no "Remember me": §5.4 persists every session for the token's TTL
+ * and enforces the expiry client-side, so the checkbox could only have lied.
+ * Seed credentials are never printed on the page.
+ *
+ * `useForm` arrives in prompt 13; until then the two fields are local state.
+ */
+
+const INVALID_CREDENTIALS = 'Invalid email or password.';
+const RATE_LIMITED = 'Too many attempts. Try again in a minute.';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isAuthenticated } = useAdminAuth();
+  const { login, isAuthenticated, role } = useAdminAuth();
 
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    remember: false,
-  });
+  const [values, setValues] = useState({ email: '', password: '' });
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [formError, setFormError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const from = location.state?.from?.pathname || '/admin/dashboard';
-  // Ensure we never redirect back to login page itself
-  const redirectTo = from === '/admin/login' ? '/admin/dashboard' : from;
+  const from = location.state?.from;
 
-  // Redirect if already authenticated
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      navigate(redirectTo, { replace: true });
-    }
-  }, [isAuthenticated, navigate, redirectTo]);
+  /**
+   * Back to where the session was interrupted — but only when this role may
+   * open it; otherwise the dashboard, which every role can (D32).
+   */
+  const destinationFor = useCallback(
+    (forRole) => {
+      const pathname = from?.pathname;
+      if (!pathname || pathname === PATHS.adminLogin) return PATHS.adminDashboard;
+      if (!canAccessAdminRoute(forRole, pathname)) return PATHS.adminDashboard;
+      return { pathname, search: from.search || '', hash: from.hash || '' };
+    },
+    [from]
+  );
 
-  const handleChange = (e) => {
-    const { name, value, checked, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-    if (error) setError('');
+  useEffect(() => {
+    if (isAuthenticated && role) navigate(destinationFor(role), { replace: true });
+  }, [isAuthenticated, role, destinationFor, navigate]);
+
+  const handleChange = (field) => (event) => {
+    const { value } = event.target;
+    setValues((previous) => ({ ...previous, [field]: value }));
+    setFieldErrors((previous) =>
+      previous[field] ? { ...previous, [field]: undefined } : previous
+    );
+    if (formError) setFormError('');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setFormError('');
+    setFieldErrors({});
     setSubmitting(true);
 
     try {
-      await login(formData.email, formData.password, formData.remember);
-      navigate(redirectTo, { replace: true });
-    } catch (err) {
-      const message = err?.message || 'Invalid email or password. Please try again.';
-      setError(message);
-    } finally {
+      await login(values.email.trim(), values.password);
+      // The redirect is the effect above: it runs as soon as the session lands.
+    } catch (error) {
+      if (error?.status === 401) setFormError(INVALID_CREDENTIALS);
+      else if (error?.status === 429) setFormError(RATE_LIMITED);
+      else if (error?.status === 422) {
+        setFieldErrors({
+          email: error.fieldError?.('email'),
+          password: error.fieldError?.('password'),
+        });
+        if (!error.errors || Object.keys(error.errors).length === 0) setFormError(error.message);
+      } else setFormError(error?.message || GENERIC_MESSAGE);
       setSubmitting(false);
     }
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'var(--color-surface)',
-        p: 2,
-      }}
-    >
-      <Paper
-        elevation={3}
-        sx={{
-          width: '100%',
-          maxWidth: 440,
-          p: { xs: 3, sm: 5 },
-          borderRadius: 3,
-        }}
-      >
-        {/* Logo & Title */}
-        <Box sx={{ textAlign: 'center', mb: 4 }}>
-          <Box
-            sx={{
-              width: 56,
-              height: 56,
-              borderRadius: 2,
-              bgcolor: 'primary.main',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              mx: 'auto',
-              mb: 2,
-            }}
-          >
-            <Icon
-              icon="mdi:shield-lock-outline"
-              style={{ fontSize: 28, color: 'var(--color-primary-dark)' }}
-            />
-          </Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.main' }}>
-            {BRAND.name}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Admin Panel — Sign in to continue
-          </Typography>
-        </Box>
+    <div className={styles.page}>
+      <Helmet>
+        <title>{`Sign in | ${BRAND.name}`}</title>
+        <meta name="robots" content="noindex,nofollow" />
+      </Helmet>
 
-        {/* Error Message */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
-            {error}
+      <main className={styles.card}>
+        <div className={styles.brand}>
+          <Logo variant="wordmark" height={56} />
+          <p className={styles.caption}>Admin panel</p>
+        </div>
+
+        <h1 className={styles.heading}>Sign in</h1>
+
+        {formError ? (
+          <Alert tone="error" className={styles.alert}>
+            {formError}
           </Alert>
-        )}
+        ) : null}
 
-        {/* Login Form */}
-        <Box component="form" onSubmit={handleSubmit} noValidate>
+        <form className={styles.form} onSubmit={handleSubmit} noValidate>
           <TextField
-            fullWidth
-            label="Email Address"
-            name="email"
+            label="Email address"
             type="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            autoComplete="email"
+            name="email"
+            autoComplete="username"
             autoFocus
-            sx={{ mb: 2.5 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Icon
-                    icon="mdi:email-outline"
-                    style={{ fontSize: 20, color: 'var(--color-text-muted)' }}
-                  />
-                </InputAdornment>
-              ),
-            }}
-          />
-
-          <TextField
-            fullWidth
-            label="Password"
-            name="password"
-            type={showPassword ? 'text' : 'password'}
-            value={formData.password}
-            onChange={handleChange}
             required
-            autoComplete="current-password"
-            sx={{ mb: 2 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Icon
-                    icon="mdi:lock-outline"
-                    style={{ fontSize: 20, color: 'var(--color-text-muted)' }}
-                  />
-                </InputAdornment>
-              ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    edge="end"
-                    size="small"
-                  >
-                    <Icon
-                      icon={showPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'}
-                      style={{ fontSize: 20, color: 'var(--color-text-muted)' }}
-                    />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
+            value={values.email}
+            onChange={handleChange('email')}
+            error={fieldErrors.email}
           />
 
-          <FormControlLabel
-            control={
-              <Checkbox
-                name="remember"
-                checked={formData.remember}
-                onChange={handleChange}
-                size="small"
-                sx={{
-                  color: 'grey.400',
-                  '&.Mui-checked': { color: 'primary.main' },
-                }}
+          <div className={styles.passwordRow}>
+            <TextField
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              autoComplete="current-password"
+              required
+              value={values.password}
+              onChange={handleChange('password')}
+              error={fieldErrors.password}
+              fieldClassName={styles.passwordField}
+            />
+            <IconButton
+              label={showPassword ? 'Hide password' : 'Show password'}
+              className={styles.passwordToggle}
+              onClick={() => setShowPassword((previous) => !previous)}
+            >
+              <Icon
+                icon={showPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'}
+                width={20}
+                height={20}
               />
-            }
-            label={
-              <Typography variant="body2" color="text.secondary">
-                Remember me
-              </Typography>
-            }
-            sx={{ mb: 3 }}
-          />
+            </IconButton>
+          </div>
 
           <Button
-            fullWidth
             type="submit"
-            variant="contained"
-            color="primary"
-            size="large"
-            disabled={submitting || !formData.email || !formData.password}
-            sx={{
-              py: 1.5,
-              fontSize: '1rem',
-              fontWeight: 600,
-            }}
+            fullWidth
+            size="lg"
+            loading={submitting}
+            disabled={!values.email || !values.password}
           >
-            {submitting ? 'Signing in...' : 'Sign In'}
+            {submitting ? 'Signing in…' : 'Sign in'}
           </Button>
-        </Box>
-      </Paper>
-    </Box>
+        </form>
+      </main>
+    </div>
   );
 };
 
