@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { leadService } from '../../services/api';
+import leadService from '../../services/leadService';
 import { useToast } from '../../components/common/ToastProvider';
 import {
   getNameErrorMessage,
@@ -100,7 +100,7 @@ const Contact = () => {
     if (!validate()) return;
     try {
       setSubmitting(true);
-      await leadService.create({ ...formData, source: 'contact' });
+      await leadService.create({ ...formData, source: 'contact-page' });
       setSubmitted(true);
       toast.success("Message sent successfully! We'll get back to you soon.");
     } catch {

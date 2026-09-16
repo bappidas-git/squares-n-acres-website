@@ -1,16 +1,27 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSearchParams, useLocation } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { propertyService } from '../../services/api';
+import { motion } from 'framer-motion';
+import { useLocation, useSearchParams } from 'react-router-dom';
+
 import PropertyCard from '../../components/common/PropertyCard';
 import PropertyFilters from '../../components/common/PropertyFilters';
-import { PropertyGridSkeleton } from '../../components/common/SkeletonLoaders';
+import propertyService from '../../services/propertyService';
 import styles from './PropertyListing.module.css';
+import toLegacyProperty from '../../utils/adapters/legacyProperty';
+import { PropertyGridSkeleton } from '../../components/common/SkeletonLoaders';
 import { SITE } from '../../config/site';
+import { isCanceled } from '../../services/apiError';
+import { useMasterData } from '../../contexts/MasterDataContext';
 
 const ITEMS_PER_PAGE = 9;
+
+/**
+ * Prompt 26 makes this page server-driven (D94). Until then it asks for one
+ * page of the contract's maximum size and does the narrowing in the browser,
+ * which is the behaviour the filter panel was written against.
+ */
+const MAX_PER_PAGE = 100;
 
 const PRICE_RANGES_MAP = {
   '0-5000000': { min: 0, max: 5000000 },
@@ -50,19 +61,20 @@ const ROUTE_CONFIG = {
     title: 'Apartments for Rent',
     subtitle: 'Find the perfect apartment to rent from our premium collection',
     seoTitle: `Apartments for Rent | ${SITE.name}`,
-    preFilters: { propertyType: 'apartment', type: 'rent' },
+    preFilters: { propertyType: 'apartments', type: 'rent' },
   },
   '/rent/villas': {
     title: 'Villas for Rent',
     subtitle: 'Explore luxurious villas available for rent',
     seoTitle: `Villas for Rent | ${SITE.name}`,
-    preFilters: { propertyType: 'villa', type: 'rent' },
+    preFilters: { propertyType: 'villas', type: 'rent' },
   },
 };
 
 const PropertyListing = ({ routePath }) => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { bySlug } = useMasterData();
 
   const currentPath = routePath || location.pathname;
   const baseConfig = ROUTE_CONFIG[currentPath] || ROUTE_CONFIG['/properties'];
@@ -121,52 +133,48 @@ const PropertyListing = ({ routePath }) => {
   const [filters, setFilters] = useState(initFilters);
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || '');
 
-  // Fetch all properties
-  const fetchProperties = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  // The route's pre-filters (`type`, `status`, `propertyType` — the vocabulary
+  // the filter panel still speaks) translated into the contract names of §5.7.
+  const requestParams = useMemo(() => {
+    const params = { perPage: MAX_PER_PAGE };
+    const { type, status, propertyType } = config.preFilters;
 
-      const params = { is_active: true };
+    const listingType = type || searchParams.get('type');
+    if (listingType) params.listingType = listingType;
+    if (status) params.constructionStatus = status;
 
-      // Apply pre-filters as API params (use snake_case for Laravel backend)
-      if (config.preFilters.type) {
-        params.type = config.preFilters.type;
-      }
-      if (config.preFilters.status) {
-        params.status = config.preFilters.status;
-      }
-      if (config.preFilters.propertyType) {
-        params.property_type = config.preFilters.propertyType;
-      }
+    const typeSlug = propertyType || searchParams.get('propertyType');
+    const typeId = typeSlug ? bySlug('propertyTypes', typeSlug)?.id : null;
+    if (typeId) params.propertyTypeId = typeId;
 
-      // Apply type filter from URL param (used by category cards on homepage)
-      const urlType = searchParams.get('type');
-      if (urlType && !config.preFilters.type) {
-        params.type = urlType;
-      }
+    const q = searchParams.get('q');
+    if (q) params.q = q;
 
-      // Search query from URL
-      const q = searchParams.get('q');
-      if (q) {
-        params.q = q;
-      }
+    return params;
+  }, [config.preFilters, searchParams, bySlug]);
 
-      // Area filter from URL (from neighborhood links)
-      // Handled via client-side filtering for backend-agnostic compatibility
-
-      const data = await propertyService.getAll(params);
-      setAllProperties(data);
-    } catch {
-      setError('Failed to load properties. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [config.preFilters, searchParams]);
+  const [refreshToken, setRefreshToken] = useState(0);
+  const refetch = useCallback(() => setRefreshToken((token) => token + 1), []);
 
   useEffect(() => {
-    fetchProperties();
-  }, [fetchProperties]);
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+
+    propertyService
+      .list(requestParams, { signal: controller.signal })
+      .then(({ data }) => {
+        setAllProperties(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch((thrown) => {
+        if (isCanceled(thrown)) return;
+        setError(thrown.message);
+        setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [requestParams, refreshToken]);
 
   // Re-init filters when route changes
   useEffect(() => {
@@ -174,127 +182,108 @@ const PropertyListing = ({ routePath }) => {
     setPage(1);
   }, [currentPath, initFilters]);
 
+  /**
+   * Each row keeps both views of the same property: `record` is what the API
+   * sent and what `PropertyCard` renders, `legacy` is the adapter's shape that
+   * this page's filter and sort code still speaks. Prompt 26 deletes `legacy`.
+   */
+  const rows = useMemo(
+    () => allProperties.map((record) => ({ record, legacy: toLegacyProperty(record) })),
+    [allProperties]
+  );
+
+  const legacyProperties = useMemo(() => rows.map((row) => row.legacy), [rows]);
+
   // Client-side filtering
-  const filteredProperties = useMemo(() => {
-    let result = [...allProperties];
+  const filteredRows = useMemo(() => {
+    let result = rows;
 
-    // Safety filter: always exclude inactive and non-published properties regardless of backend response
-    result = result.filter((p) => !!p.isActive && p.publishStatus !== 'draft');
-
-    // Safety filter: enforce status pre-filter even if backend didn't filter
-    if (config.preFilters.status) {
-      result = result.filter((p) => p.status === config.preFilters.status);
-    }
-
-    // Safety filter: enforce propertyType pre-filter even if backend didn't filter
-    if (config.preFilters.propertyType) {
-      result = result.filter(
-        (p) => (p.propertyType || p.property_type) === config.preFilters.propertyType
-      );
-    }
-
-    // Safety filter: enforce type pre-filter even if backend didn't filter
-    if (config.preFilters.type) {
-      result = result.filter((p) => p.type === config.preFilters.type);
-    }
-
-    // Area filter from URL (from neighborhood links) — client-side for backend-agnostic compatibility
     const area = searchParams.get('area');
     if (area) {
-      result = result.filter((p) =>
-        (p.location?.area || p.location_area || '').toLowerCase().includes(area.toLowerCase())
+      result = result.filter((row) =>
+        (row.legacy.location?.area || '').toLowerCase().includes(area.toLowerCase())
       );
     }
 
-    // BHK filter
     if (filters.bhk && filters.bhk.length > 0) {
-      result = result.filter((p) => {
-        if (!Array.isArray(p.configuration)) return false;
-        return filters.bhk.some((bhk) =>
-          p.configuration.some(
-            (c) => c && typeof c === 'string' && c.toLowerCase().includes(bhk.toLowerCase())
+      result = result.filter((row) =>
+        filters.bhk.some((bhk) =>
+          row.legacy.configuration.some((config_) =>
+            String(config_).toLowerCase().includes(String(bhk).toLowerCase())
           )
-        );
-      });
-    }
-
-    // Price range filter
-    if (filters.priceRange) {
-      const range = PRICE_RANGES_MAP[filters.priceRange];
-      if (range) {
-        result = result.filter((p) => p.price >= range.min && p.price < range.max);
-      }
-    }
-
-    // Location filter
-    if (filters.locations && filters.locations.length > 0) {
-      result = result.filter((p) =>
-        filters.locations.some((loc) =>
-          (p.location?.area || p.location_area || '').toLowerCase().includes(loc.toLowerCase())
         )
       );
     }
 
-    // Property type filter (only if not already a pre-filter)
+    if (filters.priceRange) {
+      const range = PRICE_RANGES_MAP[filters.priceRange];
+      if (range) {
+        result = result.filter(
+          (row) => row.legacy.price >= range.min && row.legacy.price < range.max
+        );
+      }
+    }
+
+    if (filters.locations && filters.locations.length > 0) {
+      result = result.filter((row) =>
+        filters.locations.some((locality) =>
+          (row.legacy.location?.area || '').toLowerCase().includes(locality.toLowerCase())
+        )
+      );
+    }
+
     if (filters.propertyType && !config.preFilters.propertyType) {
-      result = result.filter((p) => (p.propertyType || p.property_type) === filters.propertyType);
+      result = result.filter((row) => row.legacy.propertyType === filters.propertyType);
     }
 
-    // Status filter (only if not already a pre-filter)
     if (filters.status && !config.preFilters.status) {
-      result = result.filter((p) => p.status === filters.status);
+      result = result.filter((row) => row.legacy.status === filters.status);
     }
 
-    // Developer filter
     if (filters.developer) {
-      result = result.filter((p) =>
-        p.developer?.toLowerCase().includes(filters.developer.toLowerCase())
+      result = result.filter((row) =>
+        row.legacy.developer?.toLowerCase().includes(filters.developer.toLowerCase())
       );
     }
 
     return result;
-  }, [allProperties, filters, config.preFilters, searchParams]);
+  }, [rows, filters, config.preFilters, searchParams]);
 
   // Sorting
-  const sortedProperties = useMemo(() => {
-    const sorted = [...filteredProperties];
+  const sortedRows = useMemo(() => {
+    const sorted = [...filteredRows];
+    const time = (value) => (value ? new Date(value).getTime() || 0 : 0);
+
     switch (sortBy) {
       case 'price-asc':
-        sorted.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+        sorted.sort((a, b) => (Number(a.legacy.price) || 0) - (Number(b.legacy.price) || 0));
         break;
       case 'price-desc':
-        sorted.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+        sorted.sort((a, b) => (Number(b.legacy.price) || 0) - (Number(a.legacy.price) || 0));
         break;
       case 'newest':
-        sorted.sort((a, b) => {
-          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return (isNaN(dateB) ? 0 : dateB) - (isNaN(dateA) ? 0 : dateA);
-        });
+        sorted.sort((a, b) => time(b.record.publishedAt) - time(a.record.publishedAt));
         break;
       case 'possession':
-        sorted.sort((a, b) => {
-          const dateA = a.specifications?.possessionDate
-            ? new Date(a.specifications.possessionDate)
-            : new Date('2099-01-01');
-          const dateB = b.specifications?.possessionDate
-            ? new Date(b.specifications.possessionDate)
-            : new Date('2099-01-01');
-          return dateA - dateB;
-        });
+        sorted.sort(
+          (a, b) =>
+            (time(a.record.possessionDate) || Infinity) -
+            (time(b.record.possessionDate) || Infinity)
+        );
         break;
       default:
         break;
     }
     return sorted;
-  }, [filteredProperties, sortBy]);
+  }, [filteredRows, sortBy]);
 
   // Pagination
-  const paginatedProperties = useMemo(() => {
-    return sortedProperties.slice(0, page * ITEMS_PER_PAGE);
-  }, [sortedProperties, page]);
+  const paginatedRows = useMemo(
+    () => sortedRows.slice(0, page * ITEMS_PER_PAGE),
+    [sortedRows, page]
+  );
 
-  const hasMore = paginatedProperties.length < sortedProperties.length;
+  const hasMore = paginatedRows.length < sortedRows.length;
 
   const handleLoadMore = () => {
     setLoadingMore(true);
@@ -360,8 +349,8 @@ const PropertyListing = ({ routePath }) => {
         <div className={styles.container}>
           {/* Filters */}
           <PropertyFilters
-            properties={allProperties}
-            totalCount={sortedProperties.length}
+            properties={legacyProperties}
+            totalCount={sortedRows.length}
             filters={filters}
             onFiltersChange={handleFiltersChange}
             sortBy={sortBy}
@@ -377,14 +366,14 @@ const PropertyListing = ({ routePath }) => {
             <div className={styles.errorState}>
               <Icon icon="mdi:alert-circle-outline" className={styles.errorIcon} />
               <p className={styles.emptyTitle}>{error}</p>
-              <button className={styles.retryBtn} onClick={fetchProperties} type="button">
-                Try Again
+              <button className={styles.retryBtn} onClick={refetch} type="button">
+                Try again
               </button>
             </div>
           )}
 
           {/* Empty State */}
-          {!loading && !error && sortedProperties.length === 0 && (
+          {!loading && !error && sortedRows.length === 0 && (
             <div className={styles.emptyState}>
               <Icon icon="mdi:home-search-outline" className={styles.emptyIcon} />
               <h3 className={styles.emptyTitle}>No properties found</h3>
@@ -399,18 +388,18 @@ const PropertyListing = ({ routePath }) => {
           )}
 
           {/* Property Grid */}
-          {!loading && !error && sortedProperties.length > 0 && (
+          {!loading && !error && sortedRows.length > 0 && (
             <>
               <div className={styles.propertyGrid}>
-                {paginatedProperties.map((property, index) => (
+                {paginatedRows.map((row, index) => (
                   <motion.div
-                    key={property.id}
+                    key={row.record.id}
                     custom={index % ITEMS_PER_PAGE}
                     variants={cardVariants}
                     initial="hidden"
                     animate="visible"
                   >
-                    <PropertyCard property={property} />
+                    <PropertyCard property={row.record} />
                   </motion.div>
                 ))}
               </div>

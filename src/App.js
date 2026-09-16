@@ -6,6 +6,8 @@ import { HelmetProvider } from 'react-helmet-async';
 import theme from './theme';
 import AppRoutes from './routes';
 import { AdminAuthProvider } from './contexts/AdminAuthContext';
+import { MasterDataProvider } from './contexts/MasterDataContext';
+import { SiteSettingsProvider } from './contexts/SiteSettingsContext';
 import ToastProvider from './components/common/ToastProvider';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import './assets/styles/global.css';
@@ -18,9 +20,13 @@ const App = () => {
           <CssBaseline />
           <BrowserRouter>
             <ToastProvider>
-              <AdminAuthProvider>
-                <AppRoutes />
-              </AdminAuthProvider>
+              <SiteSettingsProvider>
+                <MasterDataProvider>
+                  <AdminAuthProvider>
+                    <AppRoutes />
+                  </AdminAuthProvider>
+                </MasterDataProvider>
+              </SiteSettingsProvider>
             </ToastProvider>
           </BrowserRouter>
         </ThemeProvider>

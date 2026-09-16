@@ -19,7 +19,9 @@ import {
   Autocomplete,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
-import { articleService } from '../../services/api';
+import articleService from '../../services/articleService';
+import toLegacyArticle, { toLegacyArticles } from '../../utils/adapters/legacyArticle';
+import { Alert } from '../../components/ui';
 import { ARTICLE_CATEGORIES as categories } from '../../config/adminConstants';
 import { SITE } from '../../config/site';
 import { useToast } from '../../components/common/ToastProvider';
@@ -329,7 +331,6 @@ const ArticleForm = () => {
   const [form, setForm] = useState(emptyForm);
   const [tagInput, setTagInput] = useState('');
   const [loading, setLoading] = useState(isEditing);
-  const [saving, setSaving] = useState(false);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [markdownHelpOpen, setMarkdownHelpOpen] = useState(false);
   const [allArticles, setAllArticles] = useState([]);
@@ -339,26 +340,27 @@ const ArticleForm = () => {
     if (!id) return;
     setLoading(true);
     try {
-      const data = await articleService.getById(id);
+      const { data: record } = await articleService.adminGet(id);
+      const data = toLegacyArticle(record) ?? {};
       setForm({
         title: data.title || '',
         slug: data.slug || '',
-        category: data.category || 'market-trends',
+        category: data.categorySlug || '',
         tags: data.tags || [],
         image: data.image || '',
         content: data.content || '',
         excerpt: data.excerpt || '',
-        author: data.author || 'Editorial Team',
+        author: data.author || '',
         readTime: data.readTime || 5,
-        seoTitle: data.seoTitle || '',
-        seoDescription: data.seoDescription || '',
+        seoTitle: record?.seo?.title || '',
+        seoDescription: record?.seo?.description || '',
         isActive: data.isActive ?? false,
         publishedAt: data.publishedAt || new Date().toISOString(),
-        relatedArticleIds: data.relatedArticleIds || [],
+        relatedArticleIds: record?.relatedArticleIds || [],
       });
       setSlugManuallyEdited(true);
-    } catch {
-      toast.error('Failed to load article');
+    } catch (thrown) {
+      toast.error(thrown?.message || 'Failed to load article');
     } finally {
       setLoading(false);
     }
@@ -367,8 +369,8 @@ const ArticleForm = () => {
   // Fetch all articles for the Related Articles selector
   const fetchAllArticles = useCallback(async () => {
     try {
-      const data = await articleService.getAll();
-      setAllArticles(Array.isArray(data) ? data : []);
+      const { data } = await articleService.adminList({ perPage: 100 });
+      setAllArticles(toLegacyArticles(data));
     } catch {
       setAllArticles([]);
       toast.warning('Could not load related articles');
@@ -415,42 +417,15 @@ const ArticleForm = () => {
     setForm((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }));
   };
 
-  const handleSave = async (publish = false) => {
-    if (!form.title.trim()) {
-      toast.error('Title is required');
-      return;
-    }
-    if (!form.content.trim()) {
-      toast.error('Content is required');
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const payload = {
-        ...form,
-        slug: form.slug || generateSlug(form.title),
-        excerpt: form.excerpt || generateExcerpt(form.content),
-        isActive: publish ? true : form.isActive,
-        publishedAt: publish && !form.isActive ? new Date().toISOString() : form.publishedAt,
-        relatedArticleIds: selectedRelatedArticles.map((a) => a.id),
-      };
-
-      if (isEditing) {
-        await articleService.update(id, payload);
-        toast.success('Article updated');
-      } else {
-        await articleService.create(payload);
-        toast.success(publish ? 'Article published' : 'Draft saved');
-      }
-
-      setTimeout(() => navigate('/admin/articles'), 1000);
-    } catch {
-      toast.error('Failed to save article');
-    } finally {
-      setSaving(false);
-    }
-  };
+  /**
+   * Saving is disabled while this form still speaks the boilerplate's shape.
+   * An article now carries `categoryId`, `authorId`, `tagIds[]`,
+   * `featuredImage{}`, `status` and a nested `seo{}` (§6.8), and the pickers
+   * here offer hardcoded category and author strings that no longer exist.
+   * Prompt 33 rebuilds the form against the contract; sending this payload in
+   * the meantime would silently drop most of what an editor typed.
+   */
+  const savingDisabled = true;
 
   if (loading) {
     return (
@@ -849,7 +824,12 @@ const ArticleForm = () => {
 
       {/* Action Buttons */}
       <Paper elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid var(--color-surface)' }}>
-        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        <Alert tone="info" title="Article saving is being rebuilt (prompt 33)">
+          This form still uses the previous article shape. It loads and previews the real record,
+          but saving stays switched off until the editor and its category, author and tag pickers
+          are rebuilt against the current API.
+        </Alert>
+        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', flexWrap: 'wrap', mt: 2 }}>
           <Button
             onClick={() => navigate('/admin/articles')}
             sx={{ textTransform: 'none', color: 'var(--color-text-muted)' }}
@@ -858,8 +838,7 @@ const ArticleForm = () => {
           </Button>
           <Button
             variant="outlined"
-            onClick={() => handleSave(false)}
-            disabled={saving}
+            disabled={savingDisabled}
             startIcon={<Icon icon="mdi:content-save-outline" />}
             sx={{
               textTransform: 'none',
@@ -868,12 +847,11 @@ const ArticleForm = () => {
               color: 'var(--color-text)',
             }}
           >
-            {saving ? 'Saving...' : 'Save Draft'}
+            Save draft
           </Button>
           <Button
             variant="contained"
-            onClick={() => handleSave(true)}
-            disabled={saving}
+            disabled={savingDisabled}
             startIcon={<Icon icon="mdi:publish" />}
             sx={{
               textTransform: 'none',
@@ -883,7 +861,7 @@ const ArticleForm = () => {
               '&:hover': { bgcolor: 'var(--color-charcoal)' },
             }}
           >
-            {saving ? 'Publishing...' : isEditing ? 'Update & Publish' : 'Publish'}
+            {isEditing ? 'Update and publish' : 'Publish'}
           </Button>
         </Box>
       </Paper>

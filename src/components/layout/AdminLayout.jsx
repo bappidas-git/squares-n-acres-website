@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
-import { leadService } from '../../services/api';
+import leadService from '../../services/leadService';
 import { getNavItemsForRole } from '../../config/rbac';
 import { useToast } from '../common/ToastProvider';
 import styles from './AdminLayout.module.css';
@@ -94,28 +94,29 @@ const AdminLayout = () => {
   const lastLeadCountRef = useRef(0);
   const isInitialFetchRef = useRef(true);
 
-  // Fetch leads and update counts
+  /**
+   * The badge count is `meta.total` of the `new` leads and the dropdown shows
+   * the five most recent — both server-side, so the browser no longer downloads
+   * the whole lead collection every thirty seconds (NEW-24). Prompt 12 moves
+   * this to `LeadNotificationsContext` as the single poller (D45/D55).
+   */
   const fetchLeads = useCallback(async () => {
     try {
-      const leads = await leadService.getAll();
-      const allLeads = Array.isArray(leads) ? leads : [];
-      const newCount = allLeads.filter((l) => l.status === 'new').length;
-      setNewLeadCount(newCount);
+      const [unread, recent] = await Promise.all([
+        leadService.adminList({ status: 'new', perPage: 1 }),
+        leadService.adminList({ perPage: 5, sort: 'createdAt', order: 'desc' }),
+      ]);
 
-      // Store recent leads (newest 5) for notification dropdown
-      const sorted = [...allLeads]
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 5);
+      const newCount = unread?.meta?.total ?? 0;
+      const sorted = Array.isArray(recent?.data) ? recent.data : [];
+
+      setNewLeadCount(newCount);
       setRecentLeads(sorted);
 
-      // Detect new leads (not on initial fetch)
-      if (!isInitialFetchRef.current && allLeads.length > lastLeadCountRef.current) {
-        const newestLead = sorted[0];
-        if (newestLead) {
-          toast.info(`New lead from ${formatSource(newestLead.source)}: ${newestLead.name}`);
-        }
+      if (!isInitialFetchRef.current && newCount > lastLeadCountRef.current && sorted[0]) {
+        toast.info(`New lead from ${formatSource(sorted[0].source)}: ${sorted[0].name}`);
       }
-      lastLeadCountRef.current = allLeads.length;
+      lastLeadCountRef.current = newCount;
       isInitialFetchRef.current = false;
     } catch {
       setNewLeadCount(0);

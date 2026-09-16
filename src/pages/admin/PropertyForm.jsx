@@ -16,7 +16,9 @@ import {
   IconButton,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
-import { propertyService } from '../../services/api';
+import propertyService from '../../services/propertyService';
+import toLegacyProperty from '../../utils/adapters/legacyProperty';
+import { Alert } from '../../components/ui';
 import { useToast } from '../../components/common/ToastProvider';
 import {
   TAB_CONFIG,
@@ -54,7 +56,6 @@ const PropertyForm = ({ propertyId = null }) => {
   const [formData, setFormData] = useState(getDefaultFormData());
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(isEdit);
-  const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
 
@@ -66,73 +67,15 @@ const PropertyForm = ({ propertyId = null }) => {
     const loadProperty = async () => {
       try {
         setLoading(true);
-        // Fetch property and SEO data in parallel (SEO may be stored separately)
-        const [property, seoData] = await Promise.all([
-          propertyService.getById(propertyId),
-          propertyService.getSeo(propertyId).catch(() => null),
-        ]);
+        // One call; the SEO branch lives on the record itself now (§9.6).
+        // `toLegacyProperty` maps it onto the flat names these tabs read,
+        // until prompts 18–21 rebuild the form against the contract.
+        const { data } = await propertyService.adminGet(propertyId);
+        const property = toLegacyProperty(data);
         if (!property) {
           toast.error('Property not found');
           navigate('/admin/properties');
           return;
-        }
-
-        // Merge SEO data from the separate /seo/property endpoint if the
-        // main property response didn't include it. Use empty-string-aware
-        // checks so that "" from normalization doesn't block the merge.
-        if (seoData) {
-          const seoNested =
-            seoData.data && typeof seoData.data === 'object' ? seoData.data : seoData;
-          if (!property.seoTitle) {
-            property.seoTitle =
-              seoNested.meta_title ||
-              seoNested.title ||
-              seoNested.seo_title ||
-              seoNested.seoTitle ||
-              '';
-          }
-          if (!property.seoDescription) {
-            property.seoDescription =
-              seoNested.meta_description ||
-              seoNested.description ||
-              seoNested.seo_description ||
-              seoNested.seoDescription ||
-              '';
-          }
-          if (!property.seoKeywords || !property.seoKeywords.length) {
-            const kw = seoNested.keywords || seoNested.seo_keywords || seoNested.seoKeywords;
-            property.seoKeywords = Array.isArray(kw)
-              ? kw
-              : typeof kw === 'string' && kw.trim()
-                ? kw
-                    .split(',')
-                    .map((k) => k.trim())
-                    .filter(Boolean)
-                : [];
-          }
-          if (!property.canonicalUrl) {
-            property.canonicalUrl = seoNested.canonical_url || seoNested.canonicalUrl || '';
-          }
-          if (!property.ogTitle) {
-            property.ogTitle = seoNested.og_title || seoNested.ogTitle || '';
-          }
-          if (!property.ogDescription) {
-            property.ogDescription = seoNested.og_description || seoNested.ogDescription || '';
-          }
-          if (!property.ogImage) {
-            property.ogImage = seoNested.og_image || seoNested.ogImage || '';
-          }
-          if (!property.twitterCard || property.twitterCard === 'summary_large_image') {
-            property.twitterCard =
-              seoNested.twitter_card ||
-              seoNested.twitterCard ||
-              property.twitterCard ||
-              'summary_large_image';
-          }
-          if (!property.schemaMarkup) {
-            const sm = seoNested.schema_markup || seoNested.schemaMarkup;
-            property.schemaMarkup = typeof sm === 'string' ? sm : sm ? JSON.stringify(sm) : '';
-          }
         }
 
         // normalizePropertyResponse already handles specifications normalization
@@ -418,175 +361,16 @@ const PropertyForm = ({ propertyId = null }) => {
     }
   }, [formData.title, slugManuallyEdited]);
 
-  // ---- Validation ----
-  const validate = () => {
-    const errs = {};
-    if (!formData.title.trim()) errs.title = 'Property name is required';
-    if (!formData.slug.trim()) errs.slug = 'Slug is required';
-    if (!formData.price || Number(formData.price) <= 0) errs.price = 'Valid price is required';
-    if (!formData.developer.trim()) errs.developer = 'Developer name is required';
-    if (!formData.location.area.trim()) errs['location.area'] = 'Area is required';
-    if (!formData.location.city.trim()) errs['location.city'] = 'City is required';
-    if (!formData.description.trim()) errs.description = 'Description is required';
-    setErrors(errs);
-
-    // Navigate to the tab containing the first error
-    const errorKeys = Object.keys(errs);
-    if (errorKeys.length > 0) {
-      const firstError = errorKeys[0];
-      if (['title', 'slug', 'price', 'developer'].includes(firstError)) setActiveTab(1);
-      else if (firstError === 'description' || firstError.startsWith('location')) setActiveTab(2);
-    }
-
-    return Object.keys(errs).length === 0;
-  };
-
-  // ---- Build API payload ----
-  // The Laravel backend expects snake_case field names for direct
-  // properties-table columns (e.g. property_type, location_area).
-  // Nested relation arrays (amenities, floorPlans, etc.) are kept
-  // in camelCase as the API documentation specifies.
-  const buildPayload = () => {
-    // Send specifications as array to preserve icons; also include
-    // an object-format copy for backward-compatible backends.
-    const specsArray = formData.specifications
-      .filter((s) => s.key.trim())
-      .map((s) => ({
-        key: s.key.trim(),
-        value: isNaN(Number(s.value)) ? s.value : Number(s.value),
-        icon: s.icon || '',
-      }));
-
-    // Filter empty FAQs
-    const validFaqs = formData.faqs.filter((f) => f.question.trim() && f.answer.trim());
-
-    // Filter developer stats
-    const devStats = (formData.developerInfo?.stats || [])
-      .filter((s) => s.value && s.label.trim())
-      .map((s) => ({ ...s, value: Number(s.value) || 0 }));
-
-    const filteredConstructionSpecs = Object.fromEntries(
-      Object.entries(formData.constructionSpecs)
-        .filter(
-          ([, items]) =>
-            Array.isArray(items) && items.some((item) => item.area.trim() && item.spec.trim())
-        )
-        .map(([key, items]) => [key, items.filter((item) => item.area.trim() && item.spec.trim())])
-    );
-
-    return {
-      title: formData.title.trim(),
-      slug: formData.slug.trim(),
-      type: formData.type,
-      property_type: formData.propertyType,
-      category: formData.category || formData.propertyType,
-      status: formData.status,
-      sections: formData.sections || getDefaultSections(),
-      price: Number(formData.price),
-      price_unit: formData.priceUnit,
-      developer: formData.developer.trim(),
-      description: formData.description.trim(),
-      highlights: formData.highlights.filter((h) => h.trim()),
-      // Flat location fields for Laravel backend
-      location_area: formData.location.area.trim(),
-      location_city: formData.location.city.trim(),
-      location_state: formData.location.state.trim(),
-      location_lat: formData.location.lat ? Number(formData.location.lat) : null,
-      location_lng: formData.location.lng ? Number(formData.location.lng) : null,
-      location_address: formData.location.address?.trim() || '',
-      configuration: formData.configuration,
-      // Flat dimension fields for Laravel backend
-      dimension_min: formData.dimensionRange.min ? Number(formData.dimensionRange.min) : null,
-      dimension_max: formData.dimensionRange.max ? Number(formData.dimensionRange.max) : null,
-      dimension_unit: formData.dimensionRange.unit,
-      possession: formData.possession,
-      specifications: specsArray,
-      amenities: formData.amenities,
-      floorPlans: formData.floorPlans.filter((fp) => fp.config.trim()),
-      gallery: formData.gallery.filter((g) => g.trim()),
-      nearbyPlaces: formData.nearbyPlaces.filter((np) => np.name.trim()),
-      brochure_url: formData.brochureUrl?.trim() || '',
-      floor_plan_pdf_url: formData.floorPlanPdfUrl?.trim() || '',
-      specialities: formData.specialities.filter((s) => s.name.trim()),
-      documents: formData.documents.filter((d) => d.name.trim()),
-      constructionSpecs: filteredConstructionSpecs,
-      constructionTimeline: formData.constructionTimeline.filter((t) => t.label.trim()),
-      developerInfo: {
-        name: formData.developerInfo?.name || formData.developer.trim(),
-        description: formData.developerInfo?.description?.trim() || '',
-        logo: formData.developerInfo?.logo?.trim() || '',
-        stats: devStats,
-      },
-      faqs: validFaqs,
-      similarPropertyIds: formData.similarPropertyIds,
-      // SEO fields — snake_case to match backend conventions
-      meta_title: formData.seoTitle.trim(),
-      meta_description: formData.seoDescription.trim(),
-      keywords: formData.seoKeywords,
-      og_title: formData.ogTitle?.trim() || '',
-      og_description: formData.ogDescription?.trim() || '',
-      og_image: formData.ogImage?.trim() || '',
-      twitter_card: formData.twitterCard || 'summary_large_image',
-      canonical_url: formData.canonicalUrl?.trim() || '',
-      schema_markup: formData.schemaMarkup.trim(),
-      tags: formData.tags,
-      is_active: formData.isActive,
-    };
-  };
-
-  // ---- Save handlers ----
-  const handleSave = async (publish = true) => {
-    if (!validate()) {
-      toast.error('Please fix the errors before saving');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      const payload = buildPayload();
-      payload.publish_status = publish ? 'published' : 'draft';
-      payload.is_active = publish;
-
-      if (isEdit) {
-        // Update property and sync SEO data to the dedicated endpoint
-        const seoPayload = {
-          meta_title: payload.meta_title,
-          meta_description: payload.meta_description,
-          keywords: payload.keywords,
-          og_title: payload.og_title,
-          og_description: payload.og_description,
-          og_image: payload.og_image,
-          twitter_card: payload.twitter_card,
-          canonical_url: payload.canonical_url,
-          schema_markup: payload.schema_markup,
-        };
-        await Promise.all([
-          propertyService.update(propertyId, payload),
-          // Also push to the dedicated SEO endpoint (fire-and-forget)
-          propertyService.updateSeo(propertyId, seoPayload).catch(() => {}),
-        ]);
-        toast.success('Property updated successfully');
-      } else {
-        await propertyService.create(payload);
-        localStorage.removeItem(DRAFT_STORAGE_KEY);
-        toast.success(publish ? 'Property published successfully' : 'Property saved as draft');
-      }
-
-      setTimeout(() => navigate('/admin/properties'), 1200);
-    } catch (err) {
-      // Show specific backend validation errors when available
-      const backendErrors = err?.response?.data?.errors;
-      if (backendErrors) {
-        const messages = Object.values(backendErrors).flat().join('. ');
-        toast.error(messages || 'Validation failed. Please check all fields.');
-      } else {
-        const msg = err?.response?.data?.message || 'Failed to save property. Please try again.';
-        toast.error(msg);
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
+  /**
+   * Saving is switched off while this form still speaks the boilerplate's
+   * shape. A property now carries `pricing{}`, `area{}`, `location{localityId}`,
+   * `unitConfigurations[]`, `amenityIds[]`, `badgeIds[]`, `sectionVisibility{}`
+   * and a nested `seo{}` (§6.1); the payload this form used to build wrote
+   * snake_case columns that no longer exist, so sending it would quietly lose
+   * most of a listing.
+   * Prompts 18–21 rebuild the sixteen tabs and the payload together.
+   */
+  const savingDisabled = true;
 
   // ---- Tab renderers ----
   const sharedProps = {
@@ -685,32 +469,33 @@ const PropertyForm = ({ propertyId = null }) => {
             </Button>
             <Button
               variant="outlined"
-              onClick={() => handleSave(false)}
-              disabled={saving}
+              disabled={savingDisabled}
               startIcon={<Icon icon="mdi:content-save-outline" />}
               sx={{ borderRadius: 2 }}
             >
-              Save as Draft
+              Save as draft
             </Button>
             <Button
               variant="contained"
               color="primary"
-              onClick={() => handleSave(true)}
-              disabled={saving}
-              startIcon={
-                saving ? (
-                  <CircularProgress size={18} sx={{ color: 'var(--color-text-inverse)' }} />
-                ) : (
-                  <Icon icon="mdi:check" />
-                )
-              }
+              disabled={savingDisabled}
+              startIcon={<Icon icon="mdi:check" />}
               sx={{ borderRadius: 2 }}
             >
-              {isEdit ? 'Update & Publish' : 'Publish'}
+              {isEdit ? 'Update and publish' : 'Publish'}
             </Button>
           </Box>
         )}
       </Box>
+
+      <Alert
+        tone="info"
+        title="Property saving is being rebuilt (prompts 18–21)"
+        style={{ marginBottom: 'var(--space-4)' }}
+      >
+        This form still uses the previous property shape. It loads and shows the real listing, but
+        saving stays switched off until the sixteen tabs are rebuilt against the current API.
+      </Alert>
 
       {isMobile ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -849,28 +634,16 @@ const PropertyForm = ({ propertyId = null }) => {
           >
             Cancel
           </Button>
-          <Button
-            variant="outlined"
-            onClick={() => handleSave(false)}
-            disabled={saving}
-            sx={{ borderRadius: 2, flex: 1 }}
-          >
+          <Button variant="outlined" disabled={savingDisabled} sx={{ borderRadius: 2, flex: 1 }}>
             Draft
           </Button>
           <Button
             variant="contained"
             color="primary"
-            onClick={() => handleSave(true)}
-            disabled={saving}
+            disabled={savingDisabled}
             sx={{ borderRadius: 2, flex: 1 }}
           >
-            {saving ? (
-              <CircularProgress size={20} sx={{ color: 'var(--color-text-inverse)' }} />
-            ) : isEdit ? (
-              'Update'
-            ) : (
-              'Publish'
-            )}
+            {isEdit ? 'Update' : 'Publish'}
           </Button>
         </Paper>
       )}

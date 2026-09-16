@@ -30,7 +30,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
-import { userService } from '../../services/api';
+import userService from '../../services/userService';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { useToast } from '../common/ToastProvider';
 import { toneStyles } from '../ui/tones';
@@ -67,10 +67,10 @@ const UserManagement = () => {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await userService.getAll();
-      setUsers(data);
-    } catch {
-      toast.error('Failed to load users');
+      const { data } = await userService.list({ perPage: 100 });
+      setUsers(Array.isArray(data) ? data : []);
+    } catch (thrown) {
+      toast.error(thrown?.message || 'Failed to load users');
     } finally {
       setLoading(false);
     }
@@ -139,7 +139,8 @@ const UserManagement = () => {
       if (editingUser && !payload.password) delete payload.password;
 
       if (editingUser) {
-        await userService.update(editingUser.id, payload);
+        // PATCH: an edit that leaves the password blank must not clear it.
+        await userService.patch(editingUser.id, payload);
         toast.success('User updated successfully');
       } else {
         await userService.create({ ...payload, isActive: true });
@@ -148,8 +149,14 @@ const UserManagement = () => {
       setModalOpen(false);
       setEditingUser(null);
       fetchUsers();
-    } catch {
-      toast.error('Failed to save user');
+    } catch (thrown) {
+      setErrors((previous) => ({
+        ...previous,
+        ...Object.fromEntries(
+          Object.entries(thrown?.errors ?? {}).map(([field, messages]) => [field, messages[0]])
+        ),
+      }));
+      toast.error(thrown?.message || 'Failed to save user');
     } finally {
       setSaving(false);
     }
@@ -166,11 +173,11 @@ const UserManagement = () => {
       return;
     }
     try {
-      await userService.update(targetUser.id, { isActive: !targetUser.isActive });
+      await userService.patch(targetUser.id, { isActive: !targetUser.isActive });
       toast.success(`User ${targetUser.isActive ? 'disabled' : 'enabled'} successfully`);
       fetchUsers();
-    } catch {
-      toast.error('Failed to update user status');
+    } catch (thrown) {
+      toast.error(thrown?.message || 'Failed to update user status');
     }
   };
 
@@ -178,7 +185,7 @@ const UserManagement = () => {
   const handleDelete = async () => {
     if (!deletingUser) return;
     try {
-      await userService.delete(deletingUser.id);
+      await userService.remove(deletingUser.id);
       setDeleteDialogOpen(false);
       setDeletingUser(null);
       toast.success('User deleted successfully');

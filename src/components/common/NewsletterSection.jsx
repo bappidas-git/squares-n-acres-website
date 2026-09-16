@@ -1,49 +1,51 @@
-import React, { useState, useEffect } from 'react';
-import { newsletterService, leadService, siteSettingsService } from '../../services/api';
-import { useToast } from './ToastProvider';
-import styles from './NewsletterSection.module.css';
+import React, { useState } from 'react';
 
-const DEFAULT_HEADING = 'Get latest real estate updates in your inbox';
+import newsletterService from '../../services/newsletterService';
+import styles from './NewsletterSection.module.css';
+import { getEmailErrorMessage, sanitizeInput } from '../../utils/validators';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
+import { useToast } from './ToastProvider';
+
+/**
+ * The newsletter band. Copy comes from `siteSettings.newsletter`; the address
+ * goes to `POST /newsletter/subscribe`, which answers 200 with "Already
+ * subscribed" for a duplicate rather than an error (§5.14) — so a second
+ * attempt reads as a success, not a failure (BUG-15/ADD-09).
+ *
+ * The reCAPTCHA notice only appears when a site key is actually configured;
+ * the boilerplate showed it unconditionally, which was untrue.
+ */
 
 const NewsletterSection = () => {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [heading, setHeading] = useState(DEFAULT_HEADING);
-  const [subtitle, setSubtitle] = useState('');
+  const { settings } = useSiteSettings();
   const toast = useToast();
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const data = await siteSettingsService.get();
-        if (data?.newsletterText) setHeading(data.newsletterText);
-        if (data?.newsletterSubtitle) setSubtitle(data.newsletterSubtitle);
-      } catch {
-        // Silently fall back to defaults
-      }
-    };
-    fetchSettings();
-  }, []);
+  const [email, setEmail] = useState('');
+  const [fieldError, setFieldError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const copy = settings?.newsletter ?? {};
+  const hasRecaptcha = Boolean(settings?.integrations?.recaptchaSiteKey);
 
-    if (!email || !email.includes('@')) return;
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
+    const value = sanitizeInput(email);
+    const message = getEmailErrorMessage(value, true);
+    if (message) {
+      setFieldError(message);
+      return;
+    }
+
+    setFieldError('');
     setLoading(true);
     try {
-      // Subscribe to newsletter mailing list
-      await newsletterService.subscribe(email);
-      // Also capture as a lead so it appears in Admin → Leads
-      try {
-        await leadService.create({ email, source: 'newsletter' });
-      } catch {
-        // Lead capture is secondary — don't block the success flow
-      }
+      const response = await newsletterService.subscribe({ email: value, source: 'newsletter' });
       setEmail('');
-      toast.success('Successfully subscribed to our newsletter!');
-    } catch {
-      toast.error('Something went wrong. Please try again.');
+      toast.success(response?.message || copy.successMessage || 'Thank you for subscribing.');
+    } catch (error) {
+      setFieldError(error?.fieldError?.('email') ?? '');
+      toast.error(error?.message ?? 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -52,21 +54,28 @@ const NewsletterSection = () => {
   return (
     <section className={styles.newsletter}>
       <div className={styles.inner}>
-        <h2 className={styles.heading}>{heading}</h2>
-        {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
+        <h2 className={styles.heading}>{copy.title || 'Property insight, once a month'}</h2>
+        {copy.subtitle ? <p className={styles.subtitle}>{copy.subtitle}</p> : null}
 
-        <form className={styles.form} onSubmit={handleSubmit}>
+        <form className={styles.form} onSubmit={handleSubmit} noValidate>
           <div className={styles.inputWrapper}>
+            <label className={styles.srOnly} htmlFor="newsletter-email">
+              Email address
+            </label>
             <input
+              id="newsletter-email"
               type="email"
-              placeholder="Email Address*"
+              placeholder="Email address"
               className={styles.input}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              onChange={(event) => {
+                setEmail(event.target.value);
+                if (fieldError) setFieldError('');
+              }}
               inputMode="email"
               autoComplete="email"
-              aria-label="Email address"
+              aria-invalid={fieldError ? 'true' : undefined}
+              aria-describedby={fieldError ? 'newsletter-email-error' : undefined}
             />
           </div>
           <button type="submit" className={styles.submitBtn} disabled={loading}>
@@ -74,17 +83,25 @@ const NewsletterSection = () => {
           </button>
         </form>
 
-        <p className={styles.disclaimer}>
-          This site is protected by reCAPTCHA and the Google{' '}
-          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">
-            Privacy Notice
-          </a>{' '}
-          and{' '}
-          <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">
-            Terms of Service
-          </a>{' '}
-          apply.
-        </p>
+        {fieldError ? (
+          <p className={styles.error} id="newsletter-email-error" role="alert">
+            {fieldError}
+          </p>
+        ) : null}
+
+        {hasRecaptcha ? (
+          <p className={styles.disclaimer}>
+            This site is protected by reCAPTCHA and the Google{' '}
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">
+              Privacy Notice
+            </a>{' '}
+            and{' '}
+            <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">
+              Terms of Service
+            </a>{' '}
+            apply.
+          </p>
+        ) : null}
       </div>
     </section>
   );

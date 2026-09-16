@@ -16,7 +16,7 @@ import {
   Divider,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
-import { leadService, propertyService } from '../../services/api';
+import leadService from '../../services/leadService';
 import { useToast } from '../../components/common/ToastProvider';
 import { toneStyles } from '../../components/ui/tones';
 import {
@@ -58,7 +58,7 @@ const LeadDetail = () => {
     if (!leadData) return [];
     const events = [];
 
-    const createdDate = leadData.createdAt || leadData.created_at;
+    const createdDate = leadData.createdAt;
     const updatedDate = leadData.updatedAt || leadData.updated_at;
 
     // Lead created event
@@ -77,7 +77,7 @@ const LeadDetail = () => {
         type: 'note',
         text: 'Note added',
         detail: note.text,
-        date: note.addedAt || note.added_at || note.created_at,
+        date: note.createdAt,
         icon: 'mdi:note-edit-outline',
         color: 'var(--color-primary-dark)',
       });
@@ -104,29 +104,20 @@ const LeadDetail = () => {
     return events;
   }, []);
 
-  // Fetch lead data
+  // One call: the API embeds `property` and `assignedUser` on the lead (§5.5).
   const fetchLead = useCallback(async () => {
     try {
       setLoading(true);
-      const leadData = await leadService.getById(id);
-      setLead(leadData);
-
-      if (leadData.propertyId) {
-        try {
-          const propData = await propertyService.getById(leadData.propertyId);
-          setProperty(propData);
-        } catch {
-          setProperty(null);
-          toast.warning('Could not load linked property details');
-        }
-      }
+      const { data } = await leadService.adminGet(id);
+      setLead(data);
+      setProperty(data?.property ?? null);
       setError(null);
-    } catch {
-      setError('Failed to load lead details. Please try again.');
+    } catch (thrown) {
+      setError(thrown?.message || 'Failed to load lead details. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [id, toast]);
+  }, [id]);
 
   useEffect(() => {
     fetchLead();
@@ -137,10 +128,8 @@ const LeadDetail = () => {
     if (!lead || lead.status === newStatus) return;
     setUpdatingStatus(true);
     try {
-      await leadService.update(lead.id, { status: newStatus });
-      // Refetch full lead to get accurate updated data
-      const freshLead = await leadService.getById(lead.id);
-      setLead(freshLead);
+      const { data } = await leadService.patch(lead.id, { status: newStatus });
+      setLead(data);
       toast.success(`Status updated to ${statusConfig[newStatus].label}`);
     } catch {
       toast.error('Failed to update status');
@@ -154,23 +143,11 @@ const LeadDetail = () => {
     if (!noteText.trim() || !lead) return;
     setAddingNote(true);
     try {
-      await leadService.addNote(lead.id, noteText.trim());
-      // Optimistically append the note so Notes + Timeline update instantly
-      const optimisticNote = { text: noteText.trim(), addedAt: new Date().toISOString() };
-      setLead((prev) => ({
-        ...prev,
-        notes: [...(prev.notes || []), optimisticNote],
-        updatedAt: new Date().toISOString(),
-      }));
+      // The endpoint answers with the whole lead, notes included (§5.14).
+      const { data } = await leadService.addNote(lead.id, noteText.trim());
+      setLead(data);
       setNoteText('');
       toast.success('Note added successfully');
-      // Refetch in the background to reconcile with server data
-      try {
-        const freshLead = await leadService.getById(lead.id);
-        setLead(freshLead);
-      } catch {
-        // Keep optimistic update if background refetch fails
-      }
     } catch {
       toast.error('Failed to add note');
     } finally {
@@ -501,7 +478,7 @@ const LeadDetail = () => {
                     variant="caption"
                     sx={{ fontWeight: 500, color: 'var(--color-text-muted)' }}
                   >
-                    {formatDate(lead.createdAt || lead.created_at)}
+                    {formatDate(lead.createdAt)}
                   </Typography>
                 </Box>
                 <Box>
@@ -676,8 +653,8 @@ const LeadDetail = () => {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 {[...lead.notes]
                   .sort((a, b) => {
-                    const da = new Date(a.addedAt || a.added_at || a.created_at || 0);
-                    const db = new Date(b.addedAt || b.added_at || b.created_at || 0);
+                    const da = new Date(a.createdAt || 0);
+                    const db = new Date(b.createdAt || 0);
                     return db - da;
                   })
                   .map((note, i) => (
@@ -700,7 +677,7 @@ const LeadDetail = () => {
                         variant="caption"
                         sx={{ color: 'var(--color-text-muted)', mt: 0.5, display: 'block' }}
                       >
-                        {formatDate(note.addedAt || note.added_at || note.created_at)}
+                        {formatDate(note.createdAt)}
                       </Typography>
                     </Box>
                   ))}

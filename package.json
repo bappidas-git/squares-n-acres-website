@@ -107,7 +107,6 @@
     "overrides": [
       {
         "files": [
-          "src/services/api.js",
           "src/services/http.js"
         ],
         "rules": {
@@ -130,7 +129,7 @@
   },
   "jest": {
     "transformIgnorePatterns": [
-      "node_modules/(?!(yet-another-react-lightbox)/)"
+      "node_modules/(?!(yet-another-react-lightbox|@iconify/react)/)"
     ]
   },
   "browserslist": {

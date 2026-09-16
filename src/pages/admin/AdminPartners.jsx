@@ -22,16 +22,36 @@ import {
   IconButton,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
-import { partnerService } from '../../services/api';
+import masterDataService from '../../services/masterDataService';
+import { PARTNER_CATEGORIES } from '../../config/enums';
 import { useToast } from '../../components/common/ToastProvider';
+
+const partnerService = masterDataService.partners;
 
 const emptyPartner = {
   name: '',
   logo: '',
   website: '',
+  category: PARTNER_CATEGORIES.values[0],
   order: 1,
   isActive: true,
 };
+
+/** The contract names are `logoUrl` and `websiteUrl` (§6.9). */
+const toRow = (partner) => ({
+  ...partner,
+  logo: partner.logoUrl || '',
+  website: partner.websiteUrl || '',
+});
+
+const toPayload = (form) => ({
+  name: form.name.trim(),
+  logoUrl: form.logo.trim(),
+  websiteUrl: form.website.trim() || null,
+  category: form.category,
+  order: Number(form.order) || 0,
+  isActive: form.isActive,
+});
 
 const AdminPartners = () => {
   const toast = useToast();
@@ -49,10 +69,10 @@ const AdminPartners = () => {
   const fetchPartners = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await partnerService.getAll();
-      setPartners(Array.isArray(data) ? data : []);
-    } catch {
-      toast.error('Failed to load partners');
+      const { data } = await partnerService.adminList({ perPage: 100, sort: 'order' });
+      setPartners((Array.isArray(data) ? data : []).map(toRow));
+    } catch (thrown) {
+      toast.error(thrown?.message || 'Failed to load partners');
     } finally {
       setLoading(false);
     }
@@ -74,6 +94,7 @@ const AdminPartners = () => {
       name: partner.name || '',
       logo: partner.logo || '',
       website: partner.website || '',
+      category: partner.category || PARTNER_CATEGORIES.values[0],
       order: partner.order || 1,
       isActive: partner.isActive ?? true,
     });
@@ -89,21 +110,23 @@ const AdminPartners = () => {
     setSaving(true);
     try {
       if (editingPartner) {
-        const updated = await partnerService.update(editingPartner.id, form);
+        const { data: updated } = await partnerService.update(editingPartner.id, toPayload(form));
         setPartners((prev) =>
           prev
-            .map((p) => (p.id === editingPartner.id ? { ...p, ...updated } : p))
+            .map((p) => (p.id === editingPartner.id ? toRow(updated) : p))
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
         );
         toast.success('Partner updated');
       } else {
-        const created = await partnerService.create(form);
-        setPartners((prev) => [...prev, created].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+        const { data: created } = await partnerService.create(toPayload(form));
+        setPartners((prev) =>
+          [...prev, toRow(created)].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        );
         toast.success('Partner added');
       }
       setDialogOpen(false);
-    } catch {
-      toast.error('Failed to save partner');
+    } catch (thrown) {
+      toast.error(thrown?.message || 'Failed to save partner');
     } finally {
       setSaving(false);
     }
@@ -111,7 +134,7 @@ const AdminPartners = () => {
 
   const handleToggleActive = async (partner) => {
     try {
-      await partnerService.update(partner.id, { isActive: !partner.isActive });
+      await partnerService.patch(partner.id, { isActive: !partner.isActive });
       setPartners((prev) =>
         prev.map((p) => (p.id === partner.id ? { ...p, isActive: !p.isActive } : p))
       );
@@ -125,7 +148,7 @@ const AdminPartners = () => {
     const { partner } = deleteDialog;
     if (!partner) return;
     try {
-      await partnerService.delete(partner.id);
+      await partnerService.remove(partner.id);
       setPartners((prev) => prev.filter((p) => p.id !== partner.id));
       toast.success('Partner deleted');
     } catch {

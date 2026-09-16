@@ -9,7 +9,8 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
-import { propertyService } from '../../../services/api';
+import propertyService from '../../../services/propertyService';
+import { toLegacyProperties } from '../../../utils/adapters/legacyProperty';
 
 const formatPrice = (price) => {
   if (price >= 10000000) return `₹${(price / 10000000).toFixed(2)} Cr`;
@@ -27,8 +28,8 @@ const SimilarPropertiesTab = ({ formData, updateField, propertyId }) => {
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const data = await propertyService.getAll({ isActive: true });
-        setAllProperties(data.filter((p) => p.id !== propertyId));
+        const { data } = await propertyService.adminList({ isActive: true, perPage: 100 });
+        setAllProperties(toLegacyProperties(data).filter((p) => p.id !== propertyId));
       } catch {
         setAllProperties([]);
       } finally {

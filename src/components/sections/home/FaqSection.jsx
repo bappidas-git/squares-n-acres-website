@@ -1,104 +1,81 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import useInView from '../../../hooks/useInView';
-import { faqService } from '../../../services/api';
-import styles from './FaqSection.module.css';
+import { Link } from 'react-router-dom';
 
-const FaqItem = ({ faq, isOpen, onToggle }) => {
-  return (
-    <div className={`${styles.faqItem} ${isOpen ? styles.faqItemActive : ''}`}>
-      <button className={styles.faqQuestion} onClick={onToggle} aria-expanded={isOpen}>
-        <div className={styles.faqLeft}>
-          <Icon icon="mdi:help-circle-outline" className={styles.questionIcon} />
-          <span>{faq.question}</span>
-        </div>
-        <Icon icon={isOpen ? 'mdi:minus' : 'mdi:plus'} className={styles.expandIcon} />
-      </button>
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            className={styles.faqAnswer}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-          >
-            <div className={styles.answerInner}>{faq.answer}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
+import LegacyHtml from '../../common/LegacyHtml';
+import PATHS from '../../../routes/paths';
+import masterDataService from '../../../services/masterDataService';
+import styles from './FaqSection.module.css';
+import useApi from '../../../hooks/useApi';
+import useInView from '../../../hooks/useInView';
+import { FAQ_CATEGORIES } from '../../../config/enums';
+
+/**
+ * The home FAQ block. `GET /faqs?showOnHome=true` decides what appears here,
+ * so an editor curates the home selection instead of the component fetching
+ * everything and filtering in the browser (BUG-18).
+ */
+
+const FaqItem = ({ faq, isOpen, onToggle }) => (
+  <div className={`${styles.faqItem} ${isOpen ? styles.faqItemActive : ''}`}>
+    <button className={styles.faqQuestion} onClick={onToggle} aria-expanded={isOpen} type="button">
+      <div className={styles.faqLeft}>
+        <Icon icon="mdi:help-circle-outline" className={styles.questionIcon} />
+        <span>{faq.question}</span>
+      </div>
+      <Icon icon={isOpen ? 'mdi:minus' : 'mdi:plus'} className={styles.expandIcon} />
+    </button>
+    <AnimatePresence initial={false}>
+      {isOpen ? (
+        <motion.div
+          className={styles.faqAnswer}
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
+        >
+          <LegacyHtml className={styles.answerInner} html={faq.answer} />
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  </div>
+);
+
+const HOME_FAQ_PARAMS = { showOnHome: true, perPage: 24, sort: 'order' };
 
 const FaqSection = () => {
-  const [faqs, setFaqs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState('general');
-  const [openId, setOpenId] = useState(null);
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.15 });
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [openId, setOpenId] = useState(null);
 
-  useEffect(() => {
-    const fetchFaqs = async () => {
-      try {
-        const data = await faqService.getAll({ isActive: true });
-        const activeFaqs = (Array.isArray(data) ? data : []).filter((f) => f.isActive !== false);
-        setFaqs(activeFaqs);
-      } catch {
-        setFaqs([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchFaqs();
-  }, []);
+  const { data, loading } = useApi(
+    (signal) => masterDataService.faqs.list(HOME_FAQ_PARAMS, { signal }),
+    [],
+    { initialData: [] }
+  );
 
-  // Derive categories dynamically from API data
+  const faqs = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+
+  /** The categories present in the answer set, in the enum's own order. */
   const categories = useMemo(() => {
-    const catSet = new Map();
-    faqs.forEach((faq) => {
-      if (faq.category && !catSet.has(faq.category)) {
-        const label = faq.category.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-        catSet.set(faq.category, label);
-      }
-    });
-
-    // Ensure "general" comes first if it exists
-    const entries = Array.from(catSet.entries());
-    entries.sort((a, b) => {
-      if (a[0] === 'general') return -1;
-      if (b[0] === 'general') return 1;
-      return a[1].localeCompare(b[1]);
-    });
-
-    return entries.map(([value, label]) => ({ value, label }));
+    const present = new Set(faqs.map((faq) => faq.category).filter(Boolean));
+    return FAQ_CATEGORIES.options.filter((option) => present.has(option.value));
   }, [faqs]);
 
-  // Set default tab to "general" if available, else first category
-  useEffect(() => {
-    if (categories.length > 0 && !categories.find((c) => c.value === activeCategory)) {
-      setActiveCategory(categories[0].value);
-    }
-  }, [categories, activeCategory]);
+  const current =
+    categories.find((option) => option.value === activeCategory)?.value ??
+    categories[0]?.value ??
+    null;
 
-  // Filter FAQs by active category
-  const filteredFaqs = useMemo(() => {
-    return faqs.filter((faq) => faq.category === activeCategory);
-  }, [faqs, activeCategory]);
+  const visible = current ? faqs.filter((faq) => faq.category === current) : faqs;
 
-  const handleTabChange = (category) => {
-    setActiveCategory(category);
+  if (loading || faqs.length === 0) return null;
+
+  const selectCategory = (value) => {
+    setActiveCategory(value);
     setOpenId(null);
   };
-
-  const handleToggle = (id) => {
-    setOpenId((prev) => (prev === id ? null : id));
-  };
-
-  if (loading) return null;
-  if (!faqs.length) return null;
 
   return (
     <section className={styles.section} ref={ref}>
@@ -109,14 +86,13 @@ const FaqSection = () => {
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.5 }}
         >
-          <h2 className={styles.title}>Frequently Asked Questions</h2>
+          <h2 className={styles.title}>Frequently asked questions</h2>
           <p className={styles.subtitle}>
-            Get answers to common questions about buying and selling properties
+            The questions buyers, sellers and tenants ask us most often
           </p>
         </motion.div>
 
-        {/* Category Tabs */}
-        {categories.length > 1 && (
+        {categories.length > 1 ? (
           <motion.div
             className={styles.tabBar}
             initial={{ opacity: 0, y: 10 }}
@@ -124,23 +100,20 @@ const FaqSection = () => {
             transition={{ duration: 0.4, delay: 0.15 }}
           >
             <div className={styles.tabScroller}>
-              {categories.map((cat) => (
+              {categories.map((option) => (
                 <button
-                  key={cat.value}
-                  className={`${styles.tab} ${
-                    activeCategory === cat.value ? styles.tabActive : ''
-                  }`}
-                  onClick={() => handleTabChange(cat.value)}
+                  key={option.value}
+                  className={`${styles.tab} ${current === option.value ? styles.tabActive : ''}`}
+                  onClick={() => selectCategory(option.value)}
                   type="button"
                 >
-                  {cat.label}
+                  {option.label}
                 </button>
               ))}
             </div>
           </motion.div>
-        )}
+        ) : null}
 
-        {/* FAQ List */}
         <motion.div
           className={styles.faqList}
           initial={{ opacity: 0, y: 20 }}
@@ -149,34 +122,27 @@ const FaqSection = () => {
         >
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeCategory}
+              key={current ?? 'all'}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
             >
-              {filteredFaqs.length > 0 ? (
-                filteredFaqs.map((faq) => (
-                  <FaqItem
-                    key={faq.id}
-                    faq={faq}
-                    isOpen={openId === faq.id}
-                    onToggle={() => handleToggle(faq.id)}
-                  />
-                ))
-              ) : (
-                <div className={styles.emptyCategory}>
-                  <Icon icon="mdi:help-circle-outline" className={styles.emptyIcon} />
-                  <p className={styles.emptyText}>No FAQs available in this category yet.</p>
-                </div>
-              )}
+              {visible.map((faq) => (
+                <FaqItem
+                  key={faq.id}
+                  faq={faq}
+                  isOpen={openId === faq.id}
+                  onToggle={() => setOpenId((previous) => (previous === faq.id ? null : faq.id))}
+                />
+              ))}
             </motion.div>
           </AnimatePresence>
         </motion.div>
 
         <div className={styles.cta}>
-          <Link to="/insights/faqs" className={styles.ctaLink}>
-            View All FAQs
+          <Link to={PATHS.faqs} className={styles.ctaLink}>
+            View all FAQs
             <Icon icon="mdi:arrow-right" />
           </Link>
         </div>

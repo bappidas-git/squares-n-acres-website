@@ -1,48 +1,34 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { Icon } from '@iconify/react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Icon } from '@iconify/react';
-import useInView from '../../../hooks/useInView';
-import { propertyService } from '../../../services/api';
+
+import PATHS from '../../../routes/paths';
 import PropertyCard from '../../common/PropertyCard';
-import { Carousel } from '../../ui';
+import propertyService from '../../../services/propertyService';
 import styles from './SimilarProperties.module.css';
+import useApi from '../../../hooks/useApi';
+import useInView from '../../../hooks/useInView';
+import { Carousel } from '../../ui';
 
+/**
+ * The similar row. `GET /properties/:id/similar` answers with the editor's own
+ * `similarPropertyIds` first and tops the list up to six by locality and type
+ * (§5.14) — the old component ignored the editor's picks and simply refetched
+ * everything of the same listing type (BUG-07).
+ */
 const SimilarProperties = ({ currentProperty }) => {
-  const [properties, setProperties] = useState([]);
-  const [loading, setLoading] = useState(true);
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
+  const id = currentProperty?.id ?? null;
 
-  useEffect(() => {
-    if (!currentProperty?.type) {
-      setLoading(false);
-      return;
-    }
-    const fetchSimilar = async () => {
-      try {
-        const data = await propertyService.getAll({
-          type: currentProperty.type,
-          is_active: true,
-          per_page: 6,
-        });
-        const filtered = Array.isArray(data) ? data : [];
-        setProperties(
-          filtered
-            .filter(
-              (p) => p.id !== currentProperty.id && !!p.isActive && p.publishStatus !== 'draft'
-            )
-            .slice(0, 4)
-        );
-      } catch {
-        setProperties([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSimilar();
-  }, [currentProperty]);
+  const { data, loading } = useApi(
+    (signal) => propertyService.similar(id, undefined, { signal }),
+    [id],
+    { enabled: Boolean(id), initialData: [] }
+  );
 
-  if (!currentProperty || loading || properties.length === 0) return null;
+  const properties = Array.isArray(data) ? data : [];
+  if (!id || loading || properties.length === 0) return null;
 
   return (
     <section className={styles.section} ref={ref} id="similar">
@@ -52,9 +38,9 @@ const SimilarProperties = ({ currentProperty }) => {
         transition={{ duration: 0.5 }}
       >
         <div className={styles.header}>
-          <h2 className={styles.title}>Similar Properties Near You</h2>
-          <Link to="/properties" className={styles.viewAll}>
-            View All <Icon icon="mdi:arrow-right" />
+          <h2 className={styles.title}>Similar properties nearby</h2>
+          <Link to={PATHS.properties} className={styles.viewAll}>
+            View all <Icon icon="mdi:arrow-right" />
           </Link>
         </div>
 

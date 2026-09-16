@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { leadService } from '../../../services/api';
+import leadService from '../../../services/leadService';
 import { useToast } from '../../common/ToastProvider';
 import { validateLeadForm } from '../../../utils/validators';
 import styles from './EnquiryForm.module.css';
@@ -55,7 +55,7 @@ const EnquiryForm = ({ property, isMobile = false, savedUserDetails, onLeadCaptu
       await leadService.create({
         ...formData,
         propertyId: property?.id || null,
-        source: 'property_enquiry',
+        source: 'property-enquiry',
       });
       setSubmitted(true);
       toast.success('Enquiry submitted! Our team will contact you soon.');

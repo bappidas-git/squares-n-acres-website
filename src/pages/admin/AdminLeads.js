@@ -35,7 +35,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
-import { leadService, propertyService } from '../../services/api';
+import leadService from '../../services/leadService';
 import useDebounce from '../../hooks/useDebounce';
 import { useToast } from '../../components/common/ToastProvider';
 import { toneStyles } from '../../components/ui/tones';
@@ -65,7 +65,6 @@ const AdminLeads = () => {
 
   // Data state
   const [leads, setLeads] = useState([]);
-  const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -100,9 +99,10 @@ const AdminLeads = () => {
   const lastLeadCountRef = useRef(0);
 
   // Build filter params object for API calls
+  // The filter names the API reads (§5.14); `q`, not `search`.
   const buildFilterParams = useCallback(() => {
-    const params = {};
-    if (debouncedSearch) params.search = debouncedSearch;
+    const params = { perPage: 100, sort: 'createdAt', order: 'desc' };
+    if (debouncedSearch) params.q = debouncedSearch;
     if (statusFilter !== 'all') params.status = statusFilter;
     if (sourceFilter !== 'all') params.source = sourceFilter;
     if (dateFrom) params.from = dateFrom;
@@ -110,35 +110,16 @@ const AdminLeads = () => {
     return params;
   }, [debouncedSearch, statusFilter, sourceFilter, dateFrom, dateTo]);
 
-  // Fetch properties once on mount (separate from leads)
-  useEffect(() => {
-    const fetchProperties = async () => {
-      try {
-        const propsData = await propertyService.getAll();
-        setProperties(propsData);
-      } catch {
-        // Properties are optional for display — silent fail
-      }
-    };
-    fetchProperties();
-  }, []);
-
-  // Fetch leads with API-driven filters
+  // Fetch leads with API-driven filters; the API sorts and embeds `property`.
   const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
-      const params = buildFilterParams();
-      const leadsData = await leadService.getAll(params);
-      const sorted = [...leadsData].sort((a, b) => {
-        const da = new Date(a.createdAt || a.created_at || 0);
-        const db = new Date(b.createdAt || b.created_at || 0);
-        return db - da;
-      });
-      setLeads(sorted);
-      lastLeadCountRef.current = sorted.length;
+      const { data, meta } = await leadService.adminList(buildFilterParams());
+      setLeads(Array.isArray(data) ? data : []);
+      lastLeadCountRef.current = meta?.total ?? 0;
       setError(null);
-    } catch {
-      setError('Failed to load leads. Please try again.');
+    } catch (thrown) {
+      setError(thrown?.message || 'Failed to load leads. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -154,32 +135,29 @@ const AdminLeads = () => {
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        // Poll without filters to detect any new leads across the system
-        const allLeads = await leadService.getAll();
-        if (allLeads.length > lastLeadCountRef.current) {
-          const newCount = allLeads.length - lastLeadCountRef.current;
-          lastLeadCountRef.current = allLeads.length;
-          // Re-fetch with current filters to update the display
+        // One cheap call: `meta.total` is the count, the rows are not needed.
+        const { meta } = await leadService.adminList({ ...buildFilterParams(), perPage: 1 });
+        const total = meta?.total ?? 0;
+        if (total > lastLeadCountRef.current) {
+          const newCount = total - lastLeadCountRef.current;
+          lastLeadCountRef.current = total;
           fetchLeads();
           toast.info(`${newCount} new lead${newCount > 1 ? 's' : ''} received`);
         }
       } catch {
-        // silent fail for polling
+        // A failed poll is not worth interrupting the user for.
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [fetchLeads, toast]);
+  }, [buildFilterParams, fetchLeads, toast]);
 
-  // Get property title by id
-  const getPropertyTitle = (propertyId) => {
-    const prop = properties.find((p) => p.id === propertyId);
-    return prop ? prop.title : null;
-  };
+  // The API embeds `lead.property = { id, title, slug }` (§5.5).
+  const getPropertyTitle = (lead) => lead?.property?.title ?? null;
 
   // Status change handler
   const handleStatusChange = async (leadId, newStatus) => {
     try {
-      await leadService.update(leadId, { status: newStatus });
+      await leadService.patch(leadId, { status: newStatus });
       setLeads((prev) =>
         prev.map((l) =>
           l.id === leadId ? { ...l, status: newStatus, updatedAt: new Date().toISOString() } : l
@@ -196,7 +174,7 @@ const AdminLeads = () => {
   // Delete handler
   const handleDelete = async () => {
     try {
-      await leadService.delete(deleteDialog.id);
+      await leadService.remove(deleteDialog.id);
       setLeads((prev) => prev.filter((l) => l.id !== deleteDialog.id));
       toast.success('Lead deleted successfully');
     } catch {
@@ -211,8 +189,7 @@ const AdminLeads = () => {
     setExporting(true);
     try {
       // Fetch filtered leads from API (not from local state)
-      const params = buildFilterParams();
-      const exportData = await leadService.getAll(params);
+      const { data: exportData } = await leadService.adminList(buildFilterParams());
 
       const headers = ['Name', 'Email', 'Phone', 'Source', 'Property', 'Status', 'Message', 'Date'];
       const rows = exportData.map((l) => [
@@ -220,7 +197,7 @@ const AdminLeads = () => {
         l.email || '',
         l.phone || '',
         formatSource(l.source),
-        l.propertyId ? getPropertyTitle(l.propertyId) || '' : '',
+        getPropertyTitle(l) || '',
         statusConfig[l.status]?.label || l.status,
         (l.message || '').replace(/"/g, '""'),
         formatDate(l.createdAt || l.created_at),
@@ -521,7 +498,7 @@ const AdminLeads = () => {
                             variant="caption"
                             sx={{ color: 'var(--color-primary-dark)', display: 'block', mb: 1 }}
                           >
-                            Property: {getPropertyTitle(lead.propertyId) || `#${lead.propertyId}`}
+                            Property: {getPropertyTitle(lead) || `#${lead.propertyId}`}
                           </Typography>
                         )}
                         <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
@@ -640,7 +617,7 @@ const AdminLeads = () => {
                 ) : (
                   currentPageData.map((lead) => {
                     const sCfg = statusConfig[lead.status] || statusConfig.new;
-                    const propTitle = lead.propertyId ? getPropertyTitle(lead.propertyId) : null;
+                    const propTitle = getPropertyTitle(lead);
                     return (
                       <TableRow
                         key={lead.id}

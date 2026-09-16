@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { leadService } from '../../services/api';
+import leadService from '../../services/leadService';
 import { useToast } from '../../components/common/ToastProvider';
 import {
   getNameErrorMessage,

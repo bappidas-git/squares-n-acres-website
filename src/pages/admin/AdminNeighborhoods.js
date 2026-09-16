@@ -22,19 +22,27 @@ import {
   IconButton,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
-import { neighborhoodService } from '../../services/api';
+import masterDataService from '../../services/masterDataService';
+import { useMasterData } from '../../contexts/MasterDataContext';
 import { useToast } from '../../components/common/ToastProvider';
+
+/**
+ * Neighbourhoods are `localities` in the contract (D13). This screen reads and
+ * writes the real collection through a small field mapping; prompt 14 replaces
+ * it with the full locality editor (zone, description, guide content, SEO).
+ */
+const localityService = masterDataService.localities;
 
 const emptyNeighborhood = {
   name: '',
   image: '',
-  propertyCount: 0,
   city: '',
   isActive: true,
 };
 
 const AdminNeighborhoods = () => {
   const toast = useToast();
+  const { cities } = useMasterData();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -49,10 +57,16 @@ const AdminNeighborhoods = () => {
   const fetchNeighborhoods = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await neighborhoodService.getAll();
-      setNeighborhoods(Array.isArray(data) ? data : []);
-    } catch {
-      toast.error('Failed to load neighborhoods');
+      const { data } = await localityService.adminList({ perPage: 100, sort: 'name' });
+      setNeighborhoods(
+        (Array.isArray(data) ? data : []).map((locality) => ({
+          ...locality,
+          image: locality.heroImageUrl || '',
+          city: locality.city?.name || '',
+        }))
+      );
+    } catch (thrown) {
+      toast.error(thrown?.message || 'Failed to load localities');
     } finally {
       setLoading(false);
     }
@@ -73,7 +87,6 @@ const AdminNeighborhoods = () => {
     setForm({
       name: item.name || '',
       image: item.image || '',
-      propertyCount: item.propertyCount ?? 0,
       city: item.city || '',
       isActive: item.isActive !== false,
     });
@@ -94,26 +107,30 @@ const AdminNeighborhoods = () => {
 
     setSaving(true);
     try {
+      // `propertyCount` is computed by the API and never sent (§5.5).
+      const cityName = form.city.trim().toLowerCase();
+      const city = cities.find((row) => row.name.toLowerCase() === cityName) ?? cities[0] ?? null;
+
       const payload = {
         name: form.name.trim(),
-        image: form.image.trim(),
-        propertyCount: Number(form.propertyCount) || 0,
-        city: form.city.trim(),
+        heroImageUrl: form.image.trim(),
         isActive: form.isActive,
+        ...(city ? { cityId: city.id } : {}),
       };
 
       if (editingItem) {
-        await neighborhoodService.update(editingItem.id, payload);
-        toast.success('Neighborhood updated successfully');
+        // PATCH, so the locality's guide copy and SEO branch survive the save.
+        await localityService.patch(editingItem.id, payload);
+        toast.success('Locality updated');
       } else {
-        await neighborhoodService.create(payload);
-        toast.success('Neighborhood created successfully');
+        await localityService.create(payload);
+        toast.success('Locality created');
       }
 
       handleClose();
       fetchNeighborhoods();
-    } catch {
-      toast.error('Failed to save neighborhood');
+    } catch (thrown) {
+      toast.error(thrown?.message || 'Failed to save locality');
     } finally {
       setSaving(false);
     }
@@ -124,21 +141,22 @@ const AdminNeighborhoods = () => {
     if (!item) return;
 
     try {
-      await neighborhoodService.delete(item.id);
-      toast.success('Neighborhood deleted');
+      await localityService.remove(item.id);
+      toast.success('Locality deleted');
       setDeleteDialog({ open: false, item: null });
       fetchNeighborhoods();
-    } catch {
-      toast.error('Failed to delete neighborhood');
+    } catch (thrown) {
+      // A locality still used by a property answers 409 with the usages (D88).
+      toast.error(thrown?.message || 'Failed to delete locality');
     }
   };
 
   const handleToggleActive = async (item) => {
     try {
-      await neighborhoodService.update(item.id, { isActive: !item.isActive });
+      await localityService.patch(item.id, { isActive: !item.isActive });
       fetchNeighborhoods();
-    } catch {
-      toast.error('Failed to update status');
+    } catch (thrown) {
+      toast.error(thrown?.message || 'Failed to update status');
     }
   };
 
@@ -443,18 +461,6 @@ const AdminNeighborhoods = () => {
                 }}
               />
             )}
-
-            <TextField
-              label="Property Count"
-              size="small"
-              fullWidth
-              type="number"
-              value={form.propertyCount}
-              onChange={(e) => updateForm('propertyCount', e.target.value)}
-              inputProps={{ min: 0 }}
-              helperText="Number of properties in this neighborhood"
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-            />
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Switch

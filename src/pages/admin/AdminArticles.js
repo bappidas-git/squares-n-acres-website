@@ -30,7 +30,8 @@ import {
   IconButton,
 } from '@mui/material';
 import { Icon } from '@iconify/react';
-import { articleService } from '../../services/api';
+import articleService from '../../services/articleService';
+import { toLegacyArticles } from '../../utils/adapters/legacyArticle';
 import { useToast } from '../../components/common/ToastProvider';
 import { toneStyles } from '../../components/ui/tones';
 import {
@@ -56,13 +57,18 @@ const AdminArticles = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, article: null });
 
+  /**
+   * The admin list includes drafts and scheduled pieces. The rows still read
+   * the boilerplate's flat field names, so `toLegacyArticle` bridges them
+   * until prompt 33 rewrites this screen.
+   */
   const fetchArticles = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await articleService.getAll();
-      setArticles(Array.isArray(data) ? data : []);
-    } catch {
-      toast.error('Failed to load articles');
+      const { data } = await articleService.adminList({ perPage: 100 });
+      setArticles(toLegacyArticles(data));
+    } catch (thrown) {
+      toast.error(thrown?.message || 'Failed to load articles');
     } finally {
       setLoading(false);
     }
@@ -101,9 +107,10 @@ const AdminArticles = () => {
 
   const handleTogglePublish = async (article) => {
     try {
-      await articleService.update(article.id, { isActive: !article.isActive });
+      const status = article.isActive ? 'draft' : 'published';
+      await articleService.patch(article.id, { status });
       setArticles((prev) =>
-        prev.map((a) => (a.id === article.id ? { ...a, isActive: !a.isActive } : a))
+        prev.map((a) => (a.id === article.id ? { ...a, status, isActive: !a.isActive } : a))
       );
       toast.success(`Article ${!article.isActive ? 'published' : 'unpublished'}`);
     } catch {
@@ -112,16 +119,13 @@ const AdminArticles = () => {
   };
 
   const handleToggleTrending = async (article) => {
-    const nowTrending = !article.isTrending;
-    // When marking as trending, assign next order; when unmarking, clear order
-    const trendingOrder = nowTrending
-      ? Math.max(0, ...articles.filter((a) => a.isTrending).map((a) => a.trendingOrder ?? 0)) + 1
-      : null;
+    // Trending is `isFeatured` in the contract; the order is the API's (§6.8).
+    const nowTrending = !article.isFeatured;
     try {
-      await articleService.update(article.id, { isTrending: nowTrending, trendingOrder });
+      await articleService.patch(article.id, { isFeatured: nowTrending });
       setArticles((prev) =>
         prev.map((a) =>
-          a.id === article.id ? { ...a, isTrending: nowTrending, trendingOrder } : a
+          a.id === article.id ? { ...a, isFeatured: nowTrending, isTrending: nowTrending } : a
         )
       );
       toast.success(nowTrending ? 'Article marked as trending' : 'Article removed from trending');
@@ -134,7 +138,7 @@ const AdminArticles = () => {
     const { article } = deleteDialog;
     if (!article) return;
     try {
-      await articleService.delete(article.id);
+      await articleService.remove(article.id);
       setArticles((prev) => prev.filter((a) => a.id !== article.id));
       toast.success('Article deleted');
     } catch {
@@ -341,9 +345,9 @@ const AdminArticles = () => {
                         textTransform: 'capitalize',
                       }}
                     />
-                    {article.isTrending && (
+                    {article.isFeatured && (
                       <Chip
-                        label={`Trending #${article.trendingOrder ?? ''}`}
+                        label="Trending"
                         size="small"
                         sx={{
                           fontSize: '0.625rem',
@@ -386,10 +390,10 @@ const AdminArticles = () => {
                       sx={{
                         textTransform: 'none',
                         fontSize: '0.75rem',
-                        color: article.isTrending ? 'var(--color-warning-dark)' : undefined,
+                        color: article.isFeatured ? 'var(--color-warning-dark)' : undefined,
                       }}
                     >
-                      {article.isTrending ? 'Untrend' : 'Trend'}
+                      {article.isFeatured ? 'Untrend' : 'Trend'}
                     </Button>
                     <Button
                       size="small"
@@ -515,7 +519,7 @@ const AdminArticles = () => {
                       </TableCell>
                       <TableCell align="center">
                         <Switch
-                          checked={!!article.isTrending}
+                          checked={!!article.isFeatured}
                           onChange={() => handleToggleTrending(article)}
                           size="small"
                           sx={{
@@ -530,12 +534,12 @@ const AdminArticles = () => {
                         <Typography
                           sx={{
                             fontSize: '0.625rem',
-                            color: article.isTrending
+                            color: article.isFeatured
                               ? 'var(--color-warning-dark)'
                               : 'var(--color-text-muted)',
                           }}
                         >
-                          {article.isTrending ? `#${article.trendingOrder ?? ''}` : 'No'}
+                          {article.isFeatured ? 'Yes' : 'No'}
                         </Typography>
                       </TableCell>
                       <TableCell>

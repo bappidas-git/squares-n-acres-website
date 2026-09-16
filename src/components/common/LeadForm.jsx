@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { leadService } from '../../services/api';
+import leadService from '../../services/leadService';
 import { useToast } from './ToastProvider';
 import {
   getNameErrorMessage,
@@ -83,16 +83,22 @@ const LeadForm = ({
 
     try {
       setSubmitting(true);
-      await leadService.create({
+      const response = await leadService.create({
         ...formData,
         source,
         ...(propertyId ? { propertyId } : {}),
       });
       setSubmitted(true);
-      toast.success('Request submitted successfully!');
-    } catch {
-      setSubmitError('Something went wrong. Please try again.');
-      toast.error('Failed to submit. Please try again.');
+      toast.success(response?.message || 'Thank you — we will be in touch shortly.');
+    } catch (error) {
+      setErrors((previous) => ({
+        ...previous,
+        ...Object.fromEntries(
+          Object.entries(error?.errors ?? {}).map(([field, messages]) => [field, messages[0]])
+        ),
+      }));
+      setSubmitError(error?.message || 'Something went wrong. Please try again.');
+      toast.error(error?.message || 'Failed to submit. Please try again.');
     } finally {
       setSubmitting(false);
     }
