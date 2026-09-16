@@ -66,6 +66,7 @@ const AUTH_PATHS = [
 
 const ADMIN_NAMED_PATHS = [
   'GET /admin/dashboard',
+  'GET /admin/properties/slug/:slug',
   'POST /admin/properties/:id/duplicate',
   'GET /admin/leads',
   'GET /admin/leads/:id',
@@ -248,6 +249,7 @@ describe('coverage of the endpoint catalogue', () => {
 describe('the documented examples', () => {
   it('uses the slugs prompt 10 seeds', () => {
     expect(endpoints.properties.bySlug.example).toBe('lakeview-heights-3-bhk-whitefield');
+    expect(endpoints.adminProperties.bySlug.example).toBe('lakeview-heights-3-bhk-whitefield');
     expect(endpoints.articles.bySlug.example).toBe('karnataka-rera-guide-for-homebuyers');
     expect(endpoints.localities.bySlug.example).toBe('whitefield');
     expect(endpoints.developers.bySlug.example).toBe('aurelia-estates');

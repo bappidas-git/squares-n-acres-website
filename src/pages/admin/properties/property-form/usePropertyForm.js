@@ -22,8 +22,25 @@ export const AUTOSAVE_INTERVAL_MS = 10000;
 /** `sna_property_draft:<id|new>` — one draft per listing, per browser (§4.2). */
 export const draftKey = (propertyId) => `sna_property_draft:${propertyId ?? 'new'}`;
 
+/** The query that lets a signed-in admin open an unpublished page (§5.10). */
+export const PREVIEW_QUERY = '?preview=admin';
+
 /** The public address of a listing, for "View on site" and "Save & view". */
 export const publicUrlOf = (slug) => `${SITE.url}${PATHS.propertyDetails(slug)}`;
+
+/**
+ * Where "Save & view" goes.
+ *
+ * A published listing has a public page; an unpublished one answers 404 to
+ * everybody, so an editor is sent to the admin preview of it instead — the
+ * route reads the record through `GET /admin/properties/slug/:slug` while they
+ * are signed in (decision logged in `docs/DECISIONS.md`).
+ */
+export const viewPathOf = (slug, isActive) =>
+  `${PATHS.propertyDetails(slug)}${isActive ? '' : PREVIEW_QUERY}`;
+
+/** The same address, absolute, for a link that opens in a new tab. */
+export const viewUrlOf = (slug, isActive) => `${SITE.url}${viewPathOf(slug, isActive)}`;
 
 const errorCount = (errors) => Object.keys(errors).length;
 
@@ -266,8 +283,9 @@ export default function usePropertyForm({
    * Saves the listing.
    *
    * @param {'save'|'continue'|'view'|'inactive'} [mode]
-   *   `continue` is `save` under another label; `view` opens the public page
-   *   afterwards; `inactive` switches the listing off first, which is how an
+   *   `continue` is `save` under another label; `view` opens the page
+   *   afterwards — the public one, or the admin preview when the listing is not
+   *   published; `inactive` switches the listing off first, which is how an
    *   unfinished listing gets stored without meeting the activation rules.
    * @returns {Promise<object|false>} the saved record, or `false`
    */
@@ -290,6 +308,7 @@ export default function usePropertyForm({
       }
 
       const payload = toPayload(candidate);
+      const wasPublished = current.state.initial?.isActive === true;
       dispatch(actions.setSaving(true));
 
       try {
@@ -302,7 +321,7 @@ export default function usePropertyForm({
         storage.removeItem(draftKey(current.propertyId));
         setDraftOffer(null);
         setDraftSavedAt(null);
-        toast.success(current.propertyId ? 'Property saved.' : 'Property created.');
+        toast.success(savedMessage(mode, saved, wasPublished));
 
         // A created listing moves to its own URL, replacing the add route so
         // Back does not offer to create it a second time.
@@ -311,11 +330,11 @@ export default function usePropertyForm({
         }
 
         if (mode === 'view' && saved?.slug) {
-          const url = publicUrlOf(saved.slug);
-          const opened = window.open(url, '_blank', 'noopener,noreferrer');
+          const path = viewPathOf(saved.slug, saved.isActive === true);
+          const opened = window.open(`${SITE.url}${path}`, '_blank', 'noopener,noreferrer');
           // A blocked pop-up must not swallow the action: the tab it could not
           // open becomes a navigation in this one.
-          if (!opened) setRedirect({ to: PATHS.propertyDetails(saved.slug), replace: false });
+          if (!opened) setRedirect({ to: path, replace: false });
         }
 
         return saved;
@@ -329,6 +348,26 @@ export default function usePropertyForm({
     },
     [applyServerErrors, collectErrors, toast]
   );
+
+  // Ctrl/Cmd+S saves rather than offering to save the HTML of the page. The
+  // handler reads `save` through the ref so it is registered once (§8.3).
+  const saveRef = useRef(save);
+  saveRef.current = save;
+
+  useEffect(() => {
+    if (readOnly) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key !== 's' && event.key !== 'S') return;
+      if (!event.ctrlKey && !event.metaKey) return;
+      if (event.altKey || event.shiftKey) return;
+      event.preventDefault();
+      saveRef.current('save');
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [readOnly]);
 
   /** `POST /admin/properties/:id/duplicate` → the copy's own form (§5.14). */
   const duplicate = useCallback(async () => {
@@ -426,7 +465,26 @@ export default function usePropertyForm({
     discardDraft,
     clearDraft,
     publicUrl: values.slug ? publicUrlOf(values.slug) : null,
+    /** Where "View on site" / "Preview" goes — the preview link while unpublished. */
+    viewUrl: values.slug ? viewUrlOf(values.slug, values.isActive === true) : null,
   };
+}
+
+/**
+ * What a save says it did.
+ *
+ * "Property published" is the one that matters: an editor who flipped the
+ * switch and pressed Save wants to be told the page is live, not that a record
+ * was written.
+ *
+ * @param {'save'|'continue'|'view'|'inactive'} mode
+ * @param {object|null} saved the record the API returned
+ * @param {boolean} wasPublished whether it was live before this save
+ */
+function savedMessage(mode, saved, wasPublished) {
+  if (mode === 'inactive' || saved?.isActive === false) return 'Saved as inactive.';
+  if (saved?.isActive === true && !wasPublished) return 'Property published.';
+  return 'Property saved.';
 }
 
 /**

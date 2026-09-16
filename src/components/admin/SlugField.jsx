@@ -17,7 +17,9 @@ export const CHECK_DEBOUNCE_MS = 500;
  * While the slug is locked it follows the title — which is what a new record
  * wants. The moment it is edited (or unlocked), it stops following: a slug that
  * has been published is a URL, and rewriting it because someone fixed a typo in
- * the title would break every link to it.
+ * the title would break every link to it. A slug that **arrives** in `value`
+ * from outside — a record reaching a form whose fields mounted a render before
+ * it did — counts as edited for the same reason (NEW-31).
  *
  * Availability is asked of the API, debounced, with the answer rendered as one
  * of four states: idle, checking, free, taken (+ the suggestion to take).
@@ -51,18 +53,41 @@ export default function SlugField({
   const [status, setStatus] = useState({ state: 'idle' });
 
   // Read by the "follow the title" effect without making it depend on them:
-  // it must run when the title changes and at no other time.
+  // it must run when the title or the value changes and at no other time.
   const latest = useRef({});
   latest.current = { locked, value, onChange };
+
+  // The last slug this field wrote. Anything else that turns up in `value`
+  // arrived from outside — most often a record reaching a form whose fields
+  // mounted a render earlier, which is exactly when the title changes too
+  // (NEW-31).
+  const written = useRef(value);
+
+  /** Writes a slug and remembers it, so the write is not read back as external. */
+  const write = (next) => {
+    written.current = next;
+    onChange?.(next);
+  };
 
   // Follow the title while locked, and never write a value that is already
   // there — an identical write would report a pristine form as dirty.
   useEffect(() => {
     const current = latest.current;
+
+    // A slug that came from somewhere else is a live URL, not a draft: the
+    // field stops following the title rather than overwriting it.
+    if (current.value && current.value !== written.current) {
+      written.current = current.value;
+      setLocked(false);
+      return;
+    }
     if (!current.locked) return;
+
     const next = slugify(source);
-    if (next !== current.value) current.onChange?.(next);
-  }, [source]);
+    if (next === current.value) return;
+    written.current = next;
+    current.onChange?.(next);
+  }, [source, value]);
 
   const check = useCallback(
     (slug) => {
@@ -114,13 +139,13 @@ export default function SlugField({
 
   const edit = (next) => {
     setLocked(false);
-    onChange?.(toSlugInput(next));
+    write(toSlugInput(next));
   };
 
   // Typing may leave a trailing separator behind; leaving the field tidies it.
   const normalise = () => {
     const tidy = slugify(value);
-    if (tidy !== value) onChange?.(tidy);
+    if (tidy !== value) write(tidy);
   };
 
   const errorId = error ? `${id}-error` : undefined;
@@ -160,7 +185,7 @@ export default function SlugField({
               return;
             }
             setLocked(true);
-            onChange?.(slugify(source));
+            write(slugify(source));
           }}
           disabled={disabled}
         >
@@ -199,7 +224,7 @@ export default function SlugField({
                 size="sm"
                 onClick={() => {
                   setLocked(false);
-                  onChange?.(status.suggestion);
+                  write(status.suggestion);
                 }}
               >
                 Use “{status.suggestion}”

@@ -41,6 +41,14 @@ export const adminList = (params, opts) =>
 export const adminGet = (id, opts) =>
   http.request(endpoints.adminProperties.get, { pathParams: { id }, ...opts });
 
+/**
+ * The same record by slug — what the admin preview of an unpublished listing
+ * reads, because a public URL carries no id (§5.10; the admin-preview decision is in
+ * `docs/DECISIONS.md`).
+ */
+export const adminGetBySlug = (slug, opts) =>
+  http.request(endpoints.adminProperties.bySlug, { pathParams: { slug }, ...opts });
+
 export const create = (body, opts) =>
   http.request(endpoints.adminProperties.create, { body, ...opts });
 
@@ -72,6 +80,7 @@ const propertyService = {
   suggestions,
   adminList,
   adminGet,
+  adminGetBySlug,
   create,
   update,
   patch,

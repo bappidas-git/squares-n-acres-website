@@ -35,6 +35,7 @@ import {
   validateUnits,
   validateVisibility,
 } from './validators';
+import AgentTab from './tabs/AgentTab';
 import AmenitiesTab from './tabs/AmenitiesTab';
 import AreaConfigurationTab from './tabs/AreaConfigurationTab';
 import BasicsTab from './tabs/BasicsTab';
@@ -44,9 +45,11 @@ import FloorPlansTab from './tabs/FloorPlansTab';
 import HighlightsSpecificationsTab from './tabs/HighlightsSpecificationsTab';
 import LocationTab from './tabs/LocationTab';
 import MediaTab from './tabs/MediaTab';
-import PlaceholderTab from './tabs/PlaceholderTab';
 import PricingTab from './tabs/PricingTab';
 import ProjectBuilderTab from './tabs/ProjectBuilderTab';
+import SectionVisibilityTab from './tabs/SectionVisibilityTab';
+import SeoPlaceholderTab from './tabs/SeoPlaceholderTab';
+import SimilarPropertiesTab from './tabs/SimilarPropertiesTab';
 import UnitConfigurationsTab from './tabs/UnitConfigurationsTab';
 
 /**
@@ -57,8 +60,6 @@ import UnitConfigurationsTab from './tabs/UnitConfigurationsTab';
  *   component: React.ComponentType,
  *   validator: Function,
  *   fields: string[],   // dotted prefixes this tab owns
- *   prompt?: number,    // the prompt that writes the real tab
- *   note?: string,
  * }>}
  */
 export const TABS = [
@@ -191,37 +192,32 @@ export const TABS = [
     key: 'similar',
     label: 'Similar properties',
     icon: 'mdi:compare-horizontal',
-    component: PlaceholderTab,
+    component: SimilarPropertiesTab,
     validator: validateSimilar,
-    prompt: 21,
     fields: ['similarPropertyIds'],
   },
   {
     key: 'visibility',
     label: 'Section visibility',
     icon: 'mdi:eye-outline',
-    component: PlaceholderTab,
+    component: SectionVisibilityTab,
     validator: validateVisibility,
-    prompt: 21,
     fields: ['sectionVisibility'],
   },
   {
     key: 'agent',
     label: 'Agent',
     icon: 'mdi:account-tie-outline',
-    component: PlaceholderTab,
+    component: AgentTab,
     validator: validateAgent,
-    prompt: 21,
     fields: ['agent'],
   },
   {
     key: 'seo',
     label: 'SEO',
     icon: 'mdi:magnify',
-    component: PlaceholderTab,
+    component: SeoPlaceholderTab,
     validator: validateSeo,
-    prompt: 21,
-    note: 'Prompt 21 mounts the panel in this tab and prompt 36 writes it. The listing’s SEO branch is carried through every save meanwhile, so nothing is lost.',
     fields: ['seo'],
   },
 ];

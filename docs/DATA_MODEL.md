@@ -65,7 +65,7 @@ Column legend: **Type** · **Null** (Y/N) · **Default** · **Enum/notes**. Ever
 | `constructionProgressPercent` | int | Y | null | 0–100 |
 | `faqs` | object[] | N | `[]` | `{ id, question, answer (HTML), order }` |
 | `similarPropertyIds` | int[] | N | `[]` | max 6, ordered |
-| `sectionVisibility` | object | N | all true | keys `overview, highlights, specifications, amenities, unitConfigurations, floorPlans, gallery, video, virtualTour, documents, construction, builder, nearby, location, finance, faqs, similar, enquiry` (bool each) |
+| `sectionVisibility` | object | N | all true | keys `overview, highlights, specifications, amenities, unitConfigurations, floorPlans, gallery, video, virtualTour, documents, construction, builder, nearby, location, finance, faqs, similar, enquiry` (bool each). The labels, the order the page prints them in and the data each one needs are `src/utils/propertySections.js` (`SECTION_DEFINITIONS`); a section renders only when its key is not `false` **and** `hasData()` is true |
 | `agent` | object | N | `{showOnListing:false}` | `{ teamMemberId?, name?, phone?, whatsapp?, email?, photoUrl?, showOnListing }` |
 | `seo` | object | N | §9.6 defaults | §9.6 |
 | `isActive` | bool | N | false | |

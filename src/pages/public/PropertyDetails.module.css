@@ -513,3 +513,31 @@
     width: 100%;
   }
 }
+
+/* The band an admin sees over an unpublished listing (`?preview=admin`). */
+.previewBanner {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--container-padding);
+  background: var(--color-warning-bg);
+  border-bottom: 1px solid var(--color-warning);
+  color: var(--color-warning-dark);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+}
+
+.previewLink {
+  color: var(--color-warning-dark);
+  text-decoration: underline;
+}
+
+.previewLink:hover {
+  color: var(--color-text);
+}

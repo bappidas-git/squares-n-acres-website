@@ -323,6 +323,45 @@ describe('/admin/properties', () => {
     });
   });
 
+  it('reads a listing by slug whether or not it is published', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const slug = 'lakeview-heights-3-bhk-whitefield';
+
+      const found = await request('GET', `/admin/properties/slug/${slug}`, { token });
+      assert.equal(found.status, 200);
+      assert.equal(found.body.data.id, 1);
+      assert.ok(found.body.data.createdBy !== undefined, 'the admin fields are there');
+
+      await request('PATCH', '/admin/properties/1', { token, body: { isActive: false } });
+
+      const hidden = await request('GET', `/properties/slug/${slug}`);
+      assert.equal(hidden.status, 404, 'the public route still hides it');
+
+      const preview = await request('GET', `/admin/properties/slug/${slug}`, { token });
+      assert.equal(preview.status, 200, 'the admin route does not');
+      assert.equal(preview.body.data.isActive, false);
+
+      const missing = await request('GET', '/admin/properties/slug/nothing-here', { token });
+      assert.equal(missing.status, 404);
+
+      const anonymous = await request('GET', `/admin/properties/slug/${slug}`);
+      assert.equal(anonymous.status, 401, 'no token, no preview');
+    });
+  });
+
+  it('lets a sales user read the admin slug route but not write (§7)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(SALES);
+      const found = await request(
+        'GET',
+        '/admin/properties/slug/lakeview-heights-3-bhk-whitefield',
+        { token }
+      );
+      assert.equal(found.status, 200);
+    });
+  });
+
   it('replaces the whole record on PUT and only the keys sent on PATCH', async () => {
     await withServer(async ({ request, login }) => {
       const token = await login(ADMIN);

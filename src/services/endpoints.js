@@ -947,6 +947,20 @@ const adminProperties = {
       createdBy: 'int',
     },
   }),
+  // The admin read by slug, not by id: a public URL is all the preview link
+  // carries, and an inactive listing answers 404 on the public route (§5.10).
+  bySlug: {
+    key: 'adminProperties.bySlug',
+    method: 'GET',
+    path: '/admin/properties/slug/:slug',
+    auth: 'user',
+    module: 'properties',
+    description: 'Read one property by slug with every admin field, active or not',
+    query: {},
+    body: null,
+    response: 'Property',
+    example: 'lakeview-heights-3-bhk-whitefield',
+  },
   duplicate: {
     key: 'adminProperties.duplicate',
     method: 'POST',

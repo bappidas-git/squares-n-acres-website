@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 
+import masterDataService from '../services/masterDataService';
+import useApi from './useApi';
 import { AMENITY_CATEGORIES } from '../config/enums';
 import { useMasterData } from '../contexts/MasterDataContext';
 
@@ -219,6 +221,40 @@ export function useCities({ activeOnly = true } = {}) {
         .sort((left, right) => String(left.name ?? '').localeCompare(String(right.name ?? ''))),
     [cities, activeOnly]
   );
+}
+
+/**
+ * The team, fetched when a screen asks for it (§6.9).
+ *
+ * Team members are **not** one of the seven collections `MasterDataContext`
+ * loads at start-up (D93): one admin tab and one public section read them,
+ * against a list every visitor would otherwise download. So this hook is an
+ * ordinary `useApi` call with the four states of §8.2, and `enabled` lets a
+ * screen hold it back until the panel that needs it is open.
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.enabled] skip the request while false
+ * @param {boolean} [options.activeOnly] `GET /team` returns only active members
+ * @returns {{members: Array<object>, loading: boolean, error: object|null,
+ *            byId: (id: number|string) => object|null, refetch: Function}}
+ */
+export function useTeamMembers({ enabled = true, activeOnly = true } = {}) {
+  const { data, loading, error, refetch } = useApi(
+    (signal) => masterDataService.team.list({ perPage: 100 }, { signal }),
+    [],
+    { enabled, initialData: [] }
+  );
+
+  return useMemo(() => {
+    const members = arrange(Array.isArray(data) ? data : [], activeOnly);
+    return {
+      members,
+      loading,
+      error,
+      byId: (id) => members.find((record) => String(record.id) === String(id)) ?? null,
+      refetch,
+    };
+  }, [data, activeOnly, loading, error, refetch]);
 }
 
 /** `[{ value: id, label: name }]` — master data as a `<select>` reads it. */

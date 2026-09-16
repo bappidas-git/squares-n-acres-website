@@ -444,6 +444,16 @@ module.exports = ({ db, getModel }) => {
     }
   });
 
+  // Before `/admin/properties/:id`, or `slug` is read as an id (§5.9).
+  router.get('/admin/properties/slug/:slug', (req, res, next) => {
+    const property = rows().find((row) => row.slug === req.params.slug);
+    if (!property) {
+      next(notFound());
+      return;
+    }
+    res.ok(present(property, { admin: true }));
+  });
+
   router.get('/admin/properties/check-slug', (req, res) => {
     const slug = String(first(req.query.slug) ?? '');
     const excludeId = first(req.query.excludeId) ?? null;
