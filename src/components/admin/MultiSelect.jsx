@@ -118,7 +118,10 @@ export default function MultiSelect({
               <Chip
                 key={key}
                 tone="primary"
-                onDelete={onDelete}
+                // A read-only form still renders the chips; MUI's `getTagProps`
+                // hands back its remove handler either way, so the × is dropped
+                // here rather than left as the one live control on the screen.
+                onDelete={disabled ? undefined : onDelete}
                 deleteLabel={`Remove ${option.label}`}
                 {...rest}
               >

@@ -1,0 +1,82 @@
+.group {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.group:focus-within {
+  border-color: var(--color-focus);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.invalid {
+  border-color: var(--color-error);
+}
+
+.off {
+  background: var(--color-surface);
+}
+
+.prefix,
+.suffix {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+
+.prefix {
+  border-right: 1px solid var(--color-border);
+}
+
+.suffix {
+  border-left: 1px solid var(--color-border);
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  text-align: right;
+  background: transparent;
+  border: 0;
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* Spinners steal room from long rupee figures and mis-fire on a trackpad. */
+.input::-webkit-outer-spin-button,
+.input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.readout {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary-dark);
+}

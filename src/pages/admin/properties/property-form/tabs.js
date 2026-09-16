@@ -35,8 +35,13 @@ import {
   validateUnits,
   validateVisibility,
 } from './validators';
+import AreaConfigurationTab from './tabs/AreaConfigurationTab';
 import BasicsTab from './tabs/BasicsTab';
+import LocationTab from './tabs/LocationTab';
+import MediaTab from './tabs/MediaTab';
 import PlaceholderTab from './tabs/PlaceholderTab';
+import PricingTab from './tabs/PricingTab';
+import UnitConfigurationsTab from './tabs/UnitConfigurationsTab';
 
 /**
  * @type {Array<{
@@ -57,7 +62,6 @@ export const TABS = [
     icon: 'mdi:information-outline',
     component: BasicsTab,
     validator: validateBasics,
-    prompt: 19,
     fields: [
       'title',
       'slug',
@@ -78,6 +82,9 @@ export const TABS = [
       'reraRegistered',
       'description',
       'shortDescription',
+      // The badge picker sits on Basics (prompt 19 §4.1), so a message about it
+      // has to open Basics — the Amenities tab keeps `amenityIds` alone.
+      'badgeIds',
       // The rail's own switches: their messages have to land somewhere the
       // editor can open, and this is the tab they belong to.
       'isActive',
@@ -90,45 +97,40 @@ export const TABS = [
     key: 'location',
     label: 'Location',
     icon: 'mdi:map-marker-outline',
-    component: PlaceholderTab,
+    component: LocationTab,
     validator: validateLocation,
-    prompt: 19,
     fields: ['location', 'nearbyPlaces'],
   },
   {
     key: 'pricing',
     label: 'Pricing',
     icon: 'mdi:currency-inr',
-    component: PlaceholderTab,
+    component: PricingTab,
     validator: validatePricing,
-    prompt: 19,
     fields: ['pricing'],
   },
   {
     key: 'area',
     label: 'Area & configuration',
     icon: 'mdi:ruler-square',
-    component: PlaceholderTab,
+    component: AreaConfigurationTab,
     validator: validateArea,
-    prompt: 19,
     fields: ['area', 'configuration'],
   },
   {
     key: 'units',
     label: 'Unit configurations',
     icon: 'mdi:table-large',
-    component: PlaceholderTab,
+    component: UnitConfigurationsTab,
     validator: validateUnits,
-    prompt: 19,
     fields: ['unitConfigurations'],
   },
   {
     key: 'media',
     label: 'Media',
     icon: 'mdi:image-multiple-outline',
-    component: PlaceholderTab,
+    component: MediaTab,
     validator: validateMedia,
-    prompt: 19,
     fields: ['images', 'videoUrl', 'virtualTourUrl', 'brochureUrl', 'brochureLeadGated'],
   },
   {
@@ -138,7 +140,7 @@ export const TABS = [
     component: PlaceholderTab,
     validator: validateAmenities,
     prompt: 20,
-    fields: ['amenityIds', 'badgeIds'],
+    fields: ['amenityIds'],
   },
   {
     key: 'highlights',

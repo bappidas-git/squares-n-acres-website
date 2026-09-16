@@ -22,6 +22,7 @@
  * never discards what the SEO panel (prompt 36) wrote.
  */
 
+import { derivedPricePerSqft } from './fieldRules';
 import { isTmpId } from './initialState';
 
 /** A trimmed string, `''` when there is nothing. */
@@ -91,9 +92,6 @@ const KEEP_ROW = {
 /** One list of `source`, without the rows nobody filled in. */
 const rowsOf = (source, key) => list(source?.[key]).filter((row) => KEEP_ROW[key](row));
 
-/** The area a price per sq ft would be computed against (D33). */
-const sellableArea = (area) => num(area?.superBuiltUpArea) ?? num(area?.carpetArea);
-
 /**
  * @param {object} values the form's values
  * @returns {object} the request body
@@ -103,12 +101,9 @@ export default function toPayload(values = {}) {
   const area = values.area ?? {};
   const pricing = values.pricing ?? {};
 
-  const price = num(pricing.price);
-  const perSqftArea = sellableArea(area);
-  // Editable, so it is only ever derived when the editor left it empty (D33).
-  const pricePerSqft =
-    num(pricing.pricePerSqft) ??
-    (price !== null && perSqftArea ? Math.round(price / perSqftArea) : null);
+  // Editable, so it is only ever derived when the editor left it empty (D33);
+  // `fieldRules` owns the arithmetic, so the Pricing tab shows the same figure.
+  const pricePerSqft = num(pricing.pricePerSqft) ?? derivedPricePerSqft(values);
 
   const images = ordered(
     withCover(
@@ -227,7 +222,7 @@ export default function toPayload(values = {}) {
     ),
 
     pricing: {
-      price,
+      price: num(pricing.price),
       priceOnRequest: bool(pricing.priceOnRequest),
       priceRangeMin: num(pricing.priceRangeMin),
       priceRangeMax: num(pricing.priceRangeMax),
