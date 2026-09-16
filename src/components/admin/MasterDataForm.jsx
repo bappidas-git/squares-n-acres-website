@@ -10,6 +10,7 @@ import ImageField from './ImageField';
 import MultiSelect from './MultiSelect';
 import SlugField from './SlugField';
 import ToneSelect from './ToneSelect';
+import { ICON_ID_PATTERN } from '../../utils/validation';
 import { getIn } from '../../hooks/useForm';
 import {
   DateField,
@@ -268,7 +269,12 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
         />
       );
 
-    case 'icon':
+    case 'icon': {
+      // An id Iconify cannot resolve renders nothing at all, which reads as
+      // "no icon chosen" rather than "that id is wrong". The placeholder says
+      // which of the two it is while the field is still being typed in.
+      const known = ICON_ID_PATTERN.test(String(value ?? ''));
+
       return (
         <div className={styles.iconField}>
           <TextField
@@ -280,7 +286,16 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
           />
           <div className={styles.iconRow}>
             <span className={styles.iconPreview} aria-hidden="true">
-              {value ? <Icon icon={value} width="24" height="24" /> : null}
+              {known ? (
+                <Icon icon={value} width="24" height="24" />
+              ) : (
+                <Icon
+                  icon="mdi:help-rhombus-outline"
+                  width="24"
+                  height="24"
+                  className={styles.iconUnknown}
+                />
+              )}
             </span>
             <Button
               variant="outline"
@@ -299,6 +314,7 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
           />
         </div>
       );
+    }
 
     case 'password':
       return (

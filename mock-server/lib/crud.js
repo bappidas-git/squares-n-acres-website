@@ -404,6 +404,18 @@ function makeCrudRouter(options) {
     return record;
   }
 
+  /**
+   * `?withUsage=true` on a single read: what a delete would refuse over.
+   *
+   * The same lookup the 409 uses, offered **before** a change rather than
+   * after it, so a form can warn that twelve listings point at the record it
+   * is about to move (D88, §5.14).
+   */
+  function usageOf(record, query) {
+    if (!deleteGuard || toBool(first(query.withUsage)) !== true) return {};
+    return { usedBy: findUsages(deleteGuard, record.id, usageSource()) };
+  }
+
   /** The 409 of a delete that is still referenced (D88). */
   function guardDelete(record) {
     if (!deleteGuard) return;
@@ -522,7 +534,10 @@ function makeCrudRouter(options) {
         next(notFound());
         return;
       }
-      res.ok(present(record, { admin: true, query: req.query }));
+      res.ok({
+        ...present(record, { admin: true, query: req.query }),
+        ...usageOf(record, req.query),
+      });
     });
   }
 

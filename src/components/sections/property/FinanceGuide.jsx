@@ -8,15 +8,23 @@ import {
   getEmailErrorMessage,
   getMobileErrorMessage,
 } from '../../../utils/validators';
-import { DEFAULT_BANKS } from '../../../config/adminConstants';
 import { toneStyles } from '../../ui/tones';
+import { useBanks } from '../../../hooks/useMasterData';
 import styles from './FinanceGuide.module.css';
 
 const formatCurrency = (val) => {
+  if (val === null || val === undefined || !Number.isFinite(Number(val))) return '—';
   if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
   if (val >= 100000) return `₹${(val / 100000).toFixed(2)} L`;
   return `₹${Math.round(val).toLocaleString('en-IN')}`;
 };
+
+/** A percentage as the cards print it — "8.35%", never "8.350000000000001%". */
+const formatPercent = (value) =>
+  Number.isFinite(Number(value)) ? `${Number(Number(value).toFixed(2))}%` : '—';
+
+/** A lender with no logo of its own still needs a mark. */
+const BANK_FALLBACK_ICON = 'mdi:bank-outline';
 
 /* ─── Assessment Options ─── */
 const occupationOptions = [
@@ -167,15 +175,11 @@ const getScoreLabel = (score) => {
   });
 };
 
-const FinanceGuide = ({
-  price = 0,
-  property = null,
-  savedUserDetails,
-  onLeadCaptured,
-  bankData,
-}) => {
-  // Bank data: use API-provided bankData prop when available, fall back to centralized defaults
-  const banks = Array.isArray(bankData) && bankData.length > 0 ? bankData : DEFAULT_BANKS;
+const FinanceGuide = ({ price = 0, property = null, savedUserDetails, onLeadCaptured }) => {
+  // The lenders are master data (§6.6): whatever the admin has made active, in
+  // its order. With none active the "Bank Loan Assistance" tab is not offered
+  // at all, rather than falling back to a hardcoded list of real brands.
+  const banks = useBanks();
 
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -274,6 +278,15 @@ const FinanceGuide = ({
   }, [savedUserDetails]);
 
   const visibleBanks = showAllBanks ? banks : banks.slice(0, initialBankCount);
+
+  // The headline figures are read off the lenders on screen; nothing about
+  // rates or funding is asserted that the master data does not say (§14).
+  const lowestRate = banks.length
+    ? Math.min(...banks.map((bank) => Number(bank.interestRateMin)).filter(Number.isFinite))
+    : null;
+  const highestLtv = banks.length
+    ? Math.max(...banks.map((bank) => Number(bank.maxLtvPercent)).filter(Number.isFinite))
+    : null;
 
   const handleAssessmentChange = useCallback((field, value) => {
     setAssessmentData((prev) => ({ ...prev, [field]: value }));
@@ -779,7 +792,9 @@ const FinanceGuide = ({
       label: 'Know Your Eligibility',
       icon: 'mdi:clipboard-check-outline',
     },
-    { id: 'finance', label: 'Bank Loan Assistance', icon: 'mdi:bank-check' },
+    ...(banks.length > 0
+      ? [{ id: 'finance', label: 'Bank Loan Assistance', icon: 'mdi:bank-check' }]
+      : []),
     { id: 'emi', label: 'EMI Projections', icon: 'mdi:calculator-variant' },
   ];
 
@@ -813,7 +828,7 @@ const FinanceGuide = ({
         {/* ═══════════════════════════════════════════════════════════ */}
         {/* TAB 1: Home Finance Clarity — Bank Cards                  */}
         {/* ═══════════════════════════════════════════════════════════ */}
-        {activeTab === 'finance' && (
+        {activeTab === 'finance' && banks.length > 0 && (
           <motion.div
             key="finance"
             initial={{ opacity: 0, y: 12 }}
@@ -828,8 +843,8 @@ const FinanceGuide = ({
               <div className={styles.financeBannerText}>
                 <h3>Banks Approved</h3>
                 <p>
-                  This property is pre-approved for home loans from India&apos;s top banks with
-                  competitive rates starting from <strong>8.35% p.a.</strong>
+                  Home loans for this property are available from our lending partners, with
+                  indicative rates starting from <strong>{formatPercent(lowestRate)} p.a.</strong>
                 </p>
               </div>
             </div>
@@ -839,7 +854,7 @@ const FinanceGuide = ({
               <div className={styles.statItem}>
                 <Icon icon="mdi:percent-circle" className={styles.statIcon} />
                 <div>
-                  <span className={styles.statValue}>8.35%</span>
+                  <span className={styles.statValue}>{formatPercent(lowestRate)}</span>
                   <span className={styles.statLabel}>Lowest Rate</span>
                 </div>
               </div>
@@ -855,7 +870,7 @@ const FinanceGuide = ({
               <div className={styles.statItem}>
                 <Icon icon="mdi:cash-multiple" className={styles.statIcon} />
                 <div>
-                  <span className={styles.statValue}>Up to 90%</span>
+                  <span className={styles.statValue}>Up to {formatPercent(highestLtv)}</span>
                   <span className={styles.statLabel}>Financing</span>
                 </div>
               </div>
@@ -873,7 +888,7 @@ const FinanceGuide = ({
             <div className={styles.bankGrid}>
               {visibleBanks.map((bank, idx) => (
                 <motion.div
-                  key={idx}
+                  key={bank.id ?? bank.name}
                   className={styles.bankCard}
                   initial={{ opacity: 0, y: 16 }}
                   animate={inView ? { opacity: 1, y: 0 } : {}}
@@ -881,7 +896,11 @@ const FinanceGuide = ({
                 >
                   <div className={styles.bankCardHeader}>
                     <div className={styles.bankIconWrap}>
-                      <Icon icon={bank.icon} className={styles.bankIconLg} />
+                      {bank.logoUrl ? (
+                        <img src={bank.logoUrl} alt="" className={styles.bankLogo} loading="lazy" />
+                      ) : (
+                        <Icon icon={BANK_FALLBACK_ICON} className={styles.bankIconLg} />
+                      )}
                     </div>
                     <div className={styles.bankNameBlock}>
                       <span className={styles.bankName}>{bank.name}</span>
@@ -894,18 +913,18 @@ const FinanceGuide = ({
                     <div className={styles.bankRateRow}>
                       <span className={styles.bankRateLabel}>Interest Rate</span>
                       <span className={styles.bankRateValue}>
-                        {bank.rate}% <small>p.a. onwards</small>
+                        {formatPercent(bank.interestRateMin)} <small>p.a. onwards</small>
                       </span>
                     </div>
                     <div className={styles.bankRateRow}>
                       <span className={styles.bankRateLabel}>Max Loan</span>
-                      <span className={styles.bankRateValue}>{formatCurrency(bank.maxLoan)}</span>
+                      <span className={styles.bankRateValue}>
+                        {formatCurrency(bank.maxLoanAmount)}
+                      </span>
                     </div>
                     <div className={styles.bankRateRow}>
                       <span className={styles.bankRateLabel}>Processing Fee</span>
-                      <span className={styles.bankRateValue}>
-                        0.5%<small> + GST</small>
-                      </span>
+                      <span className={styles.bankRateValue}>{bank.processingFeeNote || '—'}</span>
                     </div>
                   </div>
                   <button className={styles.bankCta} onClick={() => openEligibilityModal(bank)}>
@@ -1590,15 +1609,15 @@ const FinanceGuide = ({
               <div className={styles.eligibilityHeader}>
                 <div className={styles.eligibilityTitleWrap}>
                   <div className={styles.eligibilityBankIcon}>
-                    <Icon icon={eligibilityModal.bank.icon} style={{ fontSize: '1.3rem' }} />
+                    <Icon icon={BANK_FALLBACK_ICON} style={{ fontSize: '1.3rem' }} />
                   </div>
                   <div>
                     <h3 className={styles.eligibilityTitle}>
                       Check Eligibility with {eligibilityModal.bank.name}
                     </h3>
                     <p className={styles.eligibilitySubtitle}>
-                      Rate from {eligibilityModal.bank.rate}% p.a. &bull; Max loan{' '}
-                      {formatCurrency(eligibilityModal.bank.maxLoan)}
+                      Rate from {formatPercent(eligibilityModal.bank.interestRateMin)} p.a. &bull;
+                      Max loan {formatCurrency(eligibilityModal.bank.maxLoanAmount)}
                     </p>
                   </div>
                 </div>

@@ -99,10 +99,22 @@ const RESOURCES = [
     basePath: 'amenities',
     collection: 'amenities',
     schema: 'amenity',
+    needs: ['properties'],
     noun: { one: 'amenity', many: 'amenities' },
     deleteGuard: 'amenity',
+    afterRead: (record, { collections }) => ({
+      ...record,
+      propertyCount: activeProperties(collections).filter((property) =>
+        (property.amenityIds ?? []).some((id) => sameId(id, record.id))
+      ).length,
+    }),
     publicFilters: { category: { field: 'category' } },
-    sorts: { order: 'order,name', name: 'name', category: 'category,order' },
+    sorts: {
+      order: 'order,name',
+      name: 'name',
+      category: 'category,order',
+      propertyCount: '-propertyCount',
+    },
     defaultSort: 'order',
   },
 
@@ -110,9 +122,16 @@ const RESOURCES = [
     basePath: 'badges',
     collection: 'badges',
     schema: 'badge',
+    needs: ['properties'],
     noun: { one: 'badge', many: 'badges' },
     deleteGuard: 'badge',
-    sorts: { order: 'order,name', name: 'name' },
+    afterRead: (record, { collections }) => ({
+      ...record,
+      propertyCount: activeProperties(collections).filter((property) =>
+        (property.badgeIds ?? []).some((id) => sameId(id, record.id))
+      ).length,
+    }),
+    sorts: { order: 'order,name', name: 'name', propertyCount: '-propertyCount' },
     defaultSort: 'order',
   },
 

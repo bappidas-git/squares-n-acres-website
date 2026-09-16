@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { Fragment, useCallback, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import Checkbox from '@mui/material/Checkbox';
 import Table from '@mui/material/Table';
@@ -63,6 +63,8 @@ const defaultRowId = (row) => row?.id;
  * @param {(row: object) => string} [props.rowLink]
  * @param {boolean} [props.stickyHeader]
  * @param {(row: object) => React.ReactNode} [props.mobileCard]
+ * @param {(row: object) => {key: string, label: React.ReactNode}|null} [props.groupBy]
+ *   a heading row above the first row of each run — amenities read by category
  */
 export default function DataTable({
   columns = [],
@@ -87,6 +89,7 @@ export default function DataTable({
   rowLink,
   stickyHeader = false,
   mobileCard,
+  groupBy,
   caption,
 }) {
   const { isMobile } = useBreakpoint();
@@ -152,6 +155,21 @@ export default function DataTable({
   const columnCount = columns.length + (selectable ? 1 : 0) + (rowActions ? 1 : 0);
   const isEmpty = !loading && !error && rows.length === 0;
 
+  /**
+   * The heading this row opens, or `null` when it belongs to the run above it.
+   *
+   * The rows arrive sorted by whatever the group is keyed on, so "a new group"
+   * is simply "a different key from the row before" — no regrouping, and no
+   * assumption that the page holds a whole group.
+   */
+  const groupHeadOf = (row, index) => {
+    if (!groupBy) return null;
+    const group = groupBy(row);
+    if (!group) return null;
+    const previous = index > 0 ? groupBy(rows[index - 1]) : null;
+    return previous && previous.key === group.key ? null : group;
+  };
+
   const bulkBar = selectable ? (
     <BulkActionsBar
       selectedIds={selectedIds}
@@ -215,21 +233,24 @@ export default function DataTable({
           <div className={styles.scroller}>{stateBlock}</div>
         ) : (
           <div className={styles.cards}>
-            {rows.map((row) => {
+            {rows.map((row, index) => {
               const id = getRowId(row);
+              const group = groupHeadOf(row, index);
               return (
-                <MobileCard
-                  key={id}
-                  row={row}
-                  id={id}
-                  columns={columns}
-                  selectable={selectable}
-                  selected={selected.has(String(id))}
-                  onToggle={() => toggleRow(id)}
-                  actions={rowActions?.(row) ?? []}
-                  to={rowLink?.(row)}
-                  render={mobileCard}
-                />
+                <Fragment key={id}>
+                  {group ? <h3 className={styles.groupHeading}>{group.label}</h3> : null}
+                  <MobileCard
+                    row={row}
+                    id={id}
+                    columns={columns}
+                    selectable={selectable}
+                    selected={selected.has(String(id))}
+                    onToggle={() => toggleRow(id)}
+                    actions={rowActions?.(row) ?? []}
+                    to={rowLink?.(row)}
+                    render={mobileCard}
+                  />
+                </Fragment>
               );
             })}
           </div>
@@ -327,65 +348,74 @@ export default function DataTable({
                 </td>
               </TableRow>
             ) : (
-              rows.map((row) => {
+              rows.map((row, index) => {
                 const id = getRowId(row);
                 const isSelected = selected.has(String(id));
                 const to = rowLink?.(row);
+                const group = groupHeadOf(row, index);
 
                 return (
-                  <TableRow
-                    key={id}
-                    className={[
-                      styles.row,
-                      isSelected ? styles.rowSelected : '',
-                      to ? styles.rowClickable : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    tabIndex={to ? 0 : undefined}
-                    onClick={to ? () => openRow(row) : undefined}
-                    onKeyDown={
-                      to
-                        ? (event) => {
-                            if (event.key !== 'Enter' && event.key !== ' ') return;
-                            if (event.target !== event.currentTarget) return;
-                            event.preventDefault();
-                            openRow(row);
-                          }
-                        : undefined
-                    }
-                  >
-                    {selectable ? (
-                      <td className={[styles.cell, styles.checkboxCell].join(' ')}>
-                        <Checkbox
-                          size="small"
-                          disableRipple
-                          checked={isSelected}
-                          onClick={(event) => event.stopPropagation()}
-                          onChange={() => toggleRow(id)}
-                          slotProps={{ input: { 'aria-label': `Select row ${id}` } }}
-                        />
-                      </td>
+                  <Fragment key={id}>
+                    {group ? (
+                      <TableRow className={styles.groupRow}>
+                        <th className={styles.groupCell} colSpan={columnCount} scope="colgroup">
+                          {group.label}
+                        </th>
+                      </TableRow>
                     ) : null}
+                    <TableRow
+                      className={[
+                        styles.row,
+                        isSelected ? styles.rowSelected : '',
+                        to ? styles.rowClickable : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      tabIndex={to ? 0 : undefined}
+                      onClick={to ? () => openRow(row) : undefined}
+                      onKeyDown={
+                        to
+                          ? (event) => {
+                              if (event.key !== 'Enter' && event.key !== ' ') return;
+                              if (event.target !== event.currentTarget) return;
+                              event.preventDefault();
+                              openRow(row);
+                            }
+                          : undefined
+                      }
+                    >
+                      {selectable ? (
+                        <td className={[styles.cell, styles.checkboxCell].join(' ')}>
+                          <Checkbox
+                            size="small"
+                            disableRipple
+                            checked={isSelected}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={() => toggleRow(id)}
+                            slotProps={{ input: { 'aria-label': `Select row ${id}` } }}
+                          />
+                        </td>
+                      ) : null}
 
-                    {columns.map((column) => (
-                      <td
-                        key={column.key}
-                        style={{ textAlign: column.align || 'left' }}
-                        className={[styles.cell, HIDE_CLASS[column.hideBelow]]
-                          .filter(Boolean)
-                          .join(' ')}
-                      >
-                        {column.render ? column.render(row) : (row[column.key] ?? '—')}
-                      </td>
-                    ))}
+                      {columns.map((column) => (
+                        <td
+                          key={column.key}
+                          style={{ textAlign: column.align || 'left' }}
+                          className={[styles.cell, HIDE_CLASS[column.hideBelow]]
+                            .filter(Boolean)
+                            .join(' ')}
+                        >
+                          {column.render ? column.render(row) : (row[column.key] ?? '—')}
+                        </td>
+                      ))}
 
-                    {rowActions ? (
-                      <td className={[styles.cell, styles.actionsCell].join(' ')}>
-                        <RowActions actions={rowActions(row)} />
-                      </td>
-                    ) : null}
-                  </TableRow>
+                      {rowActions ? (
+                        <td className={[styles.cell, styles.actionsCell].join(' ')}>
+                          <RowActions actions={rowActions(row)} />
+                        </td>
+                      ) : null}
+                    </TableRow>
+                  </Fragment>
                 );
               })
             )}

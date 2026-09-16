@@ -6,3 +6,6 @@ mock-server/.runtime
 backend_developer_guidelines
 db.json
 *.min.*
+
+# The archive keeps the shape prompt 01 wrote it in.
+docs/archive/

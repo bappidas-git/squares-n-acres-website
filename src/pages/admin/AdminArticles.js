@@ -34,13 +34,16 @@ import articleService from '../../services/articleService';
 import { toLegacyArticles } from '../../utils/adapters/legacyArticle';
 import { useToast } from '../../components/common/ToastProvider';
 import { toneStyles } from '../../components/ui/tones';
-import {
-  ARTICLE_CATEGORIES,
-  ARTICLE_CATEGORY_TONES as categoryTones,
-} from '../../config/adminConstants';
 
-// Add 'All' option for filter view
-const categories = [{ value: '', label: 'All Categories' }, ...ARTICLE_CATEGORIES];
+/** The "everything" entry the category filter starts with. */
+const ALL_CATEGORIES = { value: '', label: 'All Categories' };
+
+/**
+ * Article categories are master data now (§6.8), so they have no colour of
+ * their own; one tone carries every category chip until prompt 33 rewrites
+ * this screen.
+ */
+const CATEGORY_TONE = 'info';
 
 const AdminArticles = () => {
   const toast = useToast();
@@ -56,6 +59,7 @@ const AdminArticles = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, article: null });
+  const [categories, setCategories] = useState([ALL_CATEGORIES]);
 
   /**
    * The admin list includes drafts and scheduled pieces. The rows still read
@@ -78,6 +82,30 @@ const AdminArticles = () => {
     fetchArticles();
   }, [fetchArticles]);
 
+  // The filter's options come from the collection, not from a hardcoded list:
+  // an editor who adds a category can filter by it without a release.
+  useEffect(() => {
+    const controller = new AbortController();
+
+    articleService
+      .categories({ perPage: 100 }, { signal: controller.signal })
+      .then(({ data }) => {
+        setCategories([
+          ALL_CATEGORIES,
+          ...(Array.isArray(data) ? data : []).map((category) => ({
+            value: category.slug,
+            label: category.name,
+          })),
+        ]);
+      })
+      .catch(() => {
+        // A category list that will not load leaves the filter at "All", which
+        // is the view this screen opens on anyway.
+      });
+
+    return () => controller.abort();
+  }, []);
+
   const filtered = useMemo(() => {
     let result = articles;
     if (search.trim()) {
@@ -90,7 +118,7 @@ const AdminArticles = () => {
       );
     }
     if (categoryFilter) {
-      result = result.filter((a) => a.category === categoryFilter);
+      result = result.filter((a) => a.categorySlug === categoryFilter);
     }
     if (statusFilter === 'published') {
       result = result.filter((a) => a.isActive);
@@ -288,7 +316,7 @@ const AdminArticles = () => {
           /* Mobile Card View */
           <Box sx={{ p: 2 }}>
             {paginated.map((article) => {
-              const catStyle = toneStyles(categoryTones[article.category]);
+              const catStyle = toneStyles(CATEGORY_TONE);
               return (
                 <Paper key={article.id} variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2 }}>
                   <Box
@@ -456,7 +484,7 @@ const AdminArticles = () => {
               </TableHead>
               <TableBody>
                 {paginated.map((article) => {
-                  const catStyle = toneStyles(categoryTones[article.category]);
+                  const catStyle = toneStyles(CATEGORY_TONE);
                   return (
                     <TableRow
                       key={article.id}

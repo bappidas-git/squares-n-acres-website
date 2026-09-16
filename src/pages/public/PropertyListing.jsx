@@ -74,7 +74,7 @@ const ROUTE_CONFIG = {
 const PropertyListing = ({ routePath }) => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { bySlug } = useMasterData();
+  const { bySlug, byId } = useMasterData();
 
   const currentPath = routePath || location.pathname;
   const baseConfig = ROUTE_CONFIG[currentPath] || ROUTE_CONFIG['/properties'];
@@ -143,15 +143,19 @@ const PropertyListing = ({ routePath }) => {
     if (listingType) params.listingType = listingType;
     if (status) params.constructionStatus = status;
 
-    const typeSlug = propertyType || searchParams.get('propertyType');
-    const typeId = typeSlug ? bySlug('propertyTypes', typeSlug)?.id : null;
+    // A route's pre-filter names a type by slug (`/rent/villas`); the filter
+    // panel's select names one by id (§5.7). Both resolve to the same record.
+    const wantedType = propertyType || searchParams.get('propertyType');
+    const typeId = wantedType
+      ? (bySlug('propertyTypes', wantedType)?.id ?? byId('propertyTypes', wantedType)?.id ?? null)
+      : null;
     if (typeId) params.propertyTypeId = typeId;
 
     const q = searchParams.get('q');
     if (q) params.q = q;
 
     return params;
-  }, [config.preFilters, searchParams, bySlug]);
+  }, [config.preFilters, searchParams, bySlug, byId]);
 
   const [refreshToken, setRefreshToken] = useState(0);
   const refetch = useCallback(() => setRefreshToken((token) => token + 1), []);
@@ -233,7 +237,11 @@ const PropertyListing = ({ routePath }) => {
     }
 
     if (filters.propertyType && !config.preFilters.propertyType) {
-      result = result.filter((row) => row.legacy.propertyType === filters.propertyType);
+      const wanted = String(filters.propertyType);
+      result = result.filter(
+        (row) =>
+          String(row.legacy.propertyTypeId ?? '') === wanted || row.legacy.propertyType === wanted
+      );
     }
 
     if (filters.status && !config.preFilters.status) {

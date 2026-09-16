@@ -30,10 +30,17 @@ import { Icon } from '@iconify/react';
 import masterDataService from '../../services/masterDataService';
 import { useToast } from '../../components/common/ToastProvider';
 import { toneStyles } from '../../components/ui/tones';
-import {
-  FAQ_CATEGORIES as faqCategories,
-  FAQ_CATEGORY_TONES as categoryTones,
-} from '../../config/adminConstants';
+import { FAQ_CATEGORIES } from '../../config/enums';
+
+/**
+ * The eight categories of §6.17, in the shape this screen already speaks: a
+ * list of `{value,label}` for the selects and a tone per value for the chips.
+ * The screen itself is rewritten in prompt 17.
+ */
+const faqCategories = FAQ_CATEGORIES.options;
+const categoryTones = Object.fromEntries(
+  FAQ_CATEGORIES.entries.map((entry) => [entry.value, entry.tone])
+);
 
 /** FAQs are master data (§6.9); the CRUD lives with the rest of it. */
 const faqService = masterDataService.faqs;

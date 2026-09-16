@@ -1,0 +1,77 @@
+/* The cells the four master-data tables of prompt 15 share. */
+
+.nameCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-charcoal);
+}
+
+/* The id in the record is not an icon this app can draw. */
+.iconUnknown {
+  color: var(--color-text-muted);
+  opacity: 0.55;
+}
+
+.swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-2);
+  border: 1px solid;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.swatchDot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+}
+
+.logo {
+  width: 72px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.logoEmpty {
+  display: block;
+  width: 72px;
+  height: 29px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+}
+
+/* One row of the drag-to-reorder list. */
+.orderRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  font-size: var(--font-size-sm);
+}

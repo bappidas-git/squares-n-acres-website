@@ -22,7 +22,7 @@ import { Icon } from '@iconify/react';
 import articleService from '../../services/articleService';
 import toLegacyArticle, { toLegacyArticles } from '../../utils/adapters/legacyArticle';
 import { Alert } from '../../components/ui';
-import { ARTICLE_CATEGORIES as categories } from '../../config/adminConstants';
+
 import { SITE } from '../../config/site';
 import { useToast } from '../../components/common/ToastProvider';
 
@@ -335,6 +335,9 @@ const ArticleForm = () => {
   const [markdownHelpOpen, setMarkdownHelpOpen] = useState(false);
   const [allArticles, setAllArticles] = useState([]);
   const [selectedRelatedArticles, setSelectedRelatedArticles] = useState([]);
+  // Categories are master data (§6.8) rather than a constant in the bundle;
+  // prompt 33 rewrites this screen around the same endpoint.
+  const [categories, setCategories] = useState([]);
 
   const fetchArticle = useCallback(async () => {
     if (!id) return;
@@ -381,6 +384,27 @@ const ArticleForm = () => {
     fetchArticle();
     fetchAllArticles();
   }, [fetchArticle, fetchAllArticles]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    articleService
+      .categories({ perPage: 100 }, { signal: controller.signal })
+      .then(({ data }) => {
+        setCategories(
+          (Array.isArray(data) ? data : []).map((category) => ({
+            value: category.slug,
+            label: category.name,
+          }))
+        );
+      })
+      .catch(() => {
+        // The select stays empty and the stored category is kept as it is; the
+        // save does not depend on this list.
+      });
+
+    return () => controller.abort();
+  }, []);
 
   // Sync selectedRelatedArticles when form and allArticles are ready
   useEffect(() => {

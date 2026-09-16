@@ -57,6 +57,7 @@ function paramKeysOf(filters = [], extra = {}) {
  */
 export function useMasterDataCrud(config) {
   const {
+    key: collectionKey,
     service,
     filters = [],
     defaultSort = { field: 'createdAt', order: 'desc' },
@@ -114,7 +115,7 @@ export function useMasterDataCrud(config) {
 
       try {
         await service.patch(row.id, { [field]: value });
-        onMutated?.();
+        onMutated?.(collectionKey);
       } catch (thrown) {
         setOverrides((current) => {
           const { [id]: _reverted, ...rest } = current;
@@ -125,7 +126,7 @@ export function useMasterDataCrud(config) {
         setBusyIds((current) => current.filter((entry) => entry !== id));
       }
     },
-    [service, toast, onMutated]
+    [service, toast, onMutated, collectionKey]
   );
 
   return {
@@ -168,27 +169,44 @@ export function useMasterDataCrud(config) {
  * @param {Array<object>} [props.config.bulkActions]
  * @param {boolean} [props.config.usageGuard] render the 409 dialog (D88)
  * @param {boolean} [props.config.canEdit] false renders the screen read-only
- * @param {() => void} [props.config.onMutated] after every successful write —
- *   `MasterDataContext.refresh` for the collections the public site caches
+ * @param {(collection: string) => void} [props.config.onMutated] after every
+ *   successful write, with `config.key` — `MasterDataContext.refresh` for the
+ *   collections the public site caches
+ * @param {string} [props.config.subtitle] the line under the `<h1>`
+ * @param {React.ReactNode} [props.config.formFooter] rendered below the fields
+ * @param {(row: object) => {key: string, label: React.ReactNode}|null} [props.config.groupBy]
+ *   heading rows inside the table, applied only while `groupSort` is the sort
+ * @param {string} [props.config.groupSort] the sort `groupBy` belongs to
+ * @param {string} [props.config.reorderHint] replaces the drag list's own line
+ * @param {(values: object, row: object|null) => Promise<object|null>} [props.config.confirmSave]
+ *   asked before a save; a returned `{message, usedBy, confirmLabel}` becomes a
+ *   confirm over the records the change reaches (D88)
  * @param {(row: object) => Array<object>} [props.config.extraRowActions]
  * @param {(values: object, row: object|null) => object} [props.config.toPayload]
  * @param {(row: object) => object} [props.config.toFormValues]
  */
 export default function MasterDataPage({ config }) {
   const {
+    key: collectionKey,
     title,
+    subtitle,
     singular,
     service,
     columns = [],
     filters = [],
     formFields: formFieldsProp = [],
+    formFooter,
     schema,
     createSchema,
     formMode = 'dialog',
     onCreate,
     onEdit,
     onMutated,
+    confirmSave,
+    groupBy,
+    groupSort,
     orderable = false,
+    reorderHint,
     renderOrderItem,
     activeToggle = true,
     featuredToggle = false,
@@ -224,6 +242,8 @@ export default function MasterDataPage({ config }) {
   const [deleting, setDeleting] = useState(null);
   const [deletingBusy, setDeletingBusy] = useState(false);
   const [guard, setGuard] = useState(null);
+  const [saveWarning, setSaveWarning] = useState(null);
+  const [checkingSave, setCheckingSave] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
@@ -272,6 +292,7 @@ export default function MasterDataPage({ config }) {
 
   const closeForm = () => {
     setConfirmDiscard(false);
+    setSaveWarning(null);
     setEditing(null);
   };
 
@@ -285,13 +306,51 @@ export default function MasterDataPage({ config }) {
     closeForm();
   };
 
-  const save = async () => {
+  /**
+   * Validates, writes, and tells the rest of the app what changed.
+   *
+   * @returns {Promise<boolean>} whether the record was saved
+   */
+  const persist = async () => {
     const saved = await form.submit();
-    if (!saved) return;
+    if (!saved) return false;
     toast.success(`${capitalise(singular)} ${editing?.id ? 'updated' : 'created'}.`);
-    setEditing(null);
-    onMutated?.();
+    closeForm();
+    onMutated?.(collectionKey);
     refetch();
+    return true;
+  };
+
+  /**
+   * "Save", with the one question a form cannot answer on its own.
+   *
+   * `confirmSave` looks the change up against what already points at the
+   * record — moving a property type to another segment is allowed, but twelve
+   * listings keep the type and not the move — and the answer is a dialog, not
+   * a refusal.
+   */
+  const save = async () => {
+    if (!confirmSave) {
+      await persist();
+      return;
+    }
+
+    if (!form.validateAll()) return;
+
+    setCheckingSave(true);
+    try {
+      const warning = await confirmSave(form.values, editing);
+      if (warning) {
+        setSaveWarning(warning);
+        return;
+      }
+    } catch (_thrown) {
+      // The check is advisory: a lookup that fails must not block the save.
+    } finally {
+      setCheckingSave(false);
+    }
+
+    await persist();
   };
 
   const confirmDelete = async () => {
@@ -302,7 +361,7 @@ export default function MasterDataPage({ config }) {
       toast.success(`${capitalise(singular)} deleted.`);
       setDeleting(null);
       setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
-      onMutated?.();
+      onMutated?.(collectionKey);
       refetch();
     } catch (thrown) {
       // 409 is not a failure to report as one: it is a list of what to unlink
@@ -333,7 +392,7 @@ export default function MasterDataPage({ config }) {
       const { message } = await service.bulk({ ids, action });
       toast.success(message || `${ids.length} records updated.`);
       setSelectedIds([]);
-      onMutated?.();
+      onMutated?.(collectionKey);
       refetch();
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'The bulk action could not be applied.'));
@@ -369,7 +428,7 @@ export default function MasterDataPage({ config }) {
             : service.patch(row.id, { order: offset + index })
         )
       );
-      onMutated?.();
+      onMutated?.(collectionKey);
       refetch();
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'The new order could not be saved.'));
@@ -473,6 +532,12 @@ export default function MasterDataPage({ config }) {
   // positions nobody can see.
   const reordering = orderable && params.sort === 'order' && !loading && !error && rows.length > 0;
 
+  // The group headings belong to one sort — the rows have to arrive grouped for
+  // "a new key" to mean "a new group" (§6 of prompt 15).
+  const grouping = groupBy && (!groupSort || params.sort === groupSort) ? groupBy : undefined;
+
+  const saving = form.submitting || checkingSave;
+
   const activeFilterCount = filters.reduce(
     (count, filter) => count + (isFilterSet(params, filter) ? 1 : 0),
     0
@@ -486,6 +551,32 @@ export default function MasterDataPage({ config }) {
       checkSlug={service.checkSlug}
       excludeId={editing?.id}
       slugBase={config.slugBase}
+    >
+      {typeof formFooter === 'function' ? formFooter(editing) : formFooter}
+    </MasterDataForm>
+  );
+
+  /**
+   * The "this reaches further than the form shows" confirm: the same usage list
+   * a 409 renders, asked before the write instead of after it.
+   */
+  const saveGuard = (
+    <DeleteGuardDialog
+      open={Boolean(saveWarning)}
+      heading={saveWarning?.heading ?? 'Check before saving'}
+      title={saveWarning?.title}
+      message={saveWarning?.message}
+      usedBy={saveWarning?.usedBy ?? []}
+      hint={saveWarning?.hint ?? ''}
+      confirmLabel={saveWarning?.confirmLabel ?? 'Save anyway'}
+      loading={form.submitting}
+      onClose={() => setSaveWarning(null)}
+      onConfirm={async () => {
+        // The dialog stays up while the write is in flight and closes with the
+        // form on success; a refusal lands on the field behind it, so it gets
+        // out of the way instead.
+        if (!(await persist())) setSaveWarning(null);
+      }}
     />
   );
 
@@ -498,16 +589,17 @@ export default function MasterDataPage({ config }) {
           title={editing.id ? `Edit ${singular}` : `New ${singular}`}
           actions={
             <>
-              <Button variant="ghost" onClick={requestClose} disabled={form.submitting}>
+              <Button variant="ghost" onClick={requestClose} disabled={saving}>
                 Cancel
               </Button>
-              <Button onClick={save} loading={form.submitting}>
+              <Button onClick={save} loading={saving}>
                 Save
               </Button>
             </>
           }
         />
         {formBody}
+        {saveGuard}
       </>
     );
   }
@@ -516,6 +608,7 @@ export default function MasterDataPage({ config }) {
     <>
       <PageHeader
         title={title}
+        subtitle={subtitle}
         count={meta?.total}
         actions={
           canEdit ? (
@@ -541,8 +634,8 @@ export default function MasterDataPage({ config }) {
       {reordering ? (
         <div className={styles.reorder}>
           <p className={styles.reorderHint}>
-            Drag a row, or focus it and press Alt + ↑ / ↓, to change the order they appear in. Sort
-            by anything else to go back to the table.
+            {reorderHint ??
+              'Drag a row, or focus it and press Alt + ↑ / ↓, to change the order they appear in. Sort by anything else to go back to the table.'}
           </p>
           <SortableList
             items={rows}
@@ -576,6 +669,7 @@ export default function MasterDataPage({ config }) {
           bulkBusy={bulkBusy}
           onBulkAction={runBulk}
           rowActions={rowActions}
+          groupBy={grouping}
           caption={title}
           emptyState={{
             title: emptyState?.title ?? `No ${title.toLowerCase()} yet`,
@@ -604,10 +698,10 @@ export default function MasterDataPage({ config }) {
           title={editing?.id ? `Edit ${singular}` : `New ${singular}`}
           footer={
             <>
-              <Button variant="ghost" onClick={requestClose} disabled={form.submitting}>
+              <Button variant="ghost" onClick={requestClose} disabled={saving}>
                 Cancel
               </Button>
-              <Button onClick={save} loading={form.submitting}>
+              <Button onClick={save} loading={saving}>
                 {editing?.id ? 'Save changes' : `Create ${singular}`}
               </Button>
             </>
@@ -648,6 +742,8 @@ export default function MasterDataPage({ config }) {
         usedBy={guard?.usedBy ?? []}
         onClose={() => setGuard(null)}
       />
+
+      {saveGuard}
     </>
   );
 }

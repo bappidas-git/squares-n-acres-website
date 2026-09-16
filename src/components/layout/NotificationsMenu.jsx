@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import PATHS from '../../routes/paths';
 import { IconButton } from '../ui';
 import { LEAD_SOURCES } from '../../config/enums';
-import { formatLeadSource } from '../../config/adminConstants';
 import { formatRelative } from '../../utils/format';
 import { useLeadNotifications } from '../../contexts/LeadNotificationsContext';
 
@@ -21,7 +20,7 @@ import styles from './NotificationsMenu.module.css';
  * until the leads are actually worked.
  */
 
-const sourceLabel = (source) => LEAD_SOURCES.labelOf(source) || formatLeadSource(source);
+const sourceLabel = (source) => LEAD_SOURCES.labelOfAny(source);
 
 export default function NotificationsMenu() {
   const navigate = useNavigate();
