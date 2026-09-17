@@ -6,7 +6,7 @@
  * the sample records are dropped here rather than left to a caller to remember.
  */
 
-import { compact } from './graph';
+const { compact } = require('./graph');
 
 const genuine = (testimonials) =>
   (Array.isArray(testimonials) ? testimonials : []).filter(
@@ -18,7 +18,7 @@ const genuine = (testimonials) =>
  * @param {object} [_context] unused; the testimonials come from the caller
  * @returns {Array<object>} `Review` nodes, empty when nothing is publishable
  */
-export function reviewNodes(input = {}, _context = {}) {
+function reviewNodes(input = {}, _context = {}) {
   const canonical = input.canonical ?? '';
 
   return genuine(input.testimonials).map((testimonial, index) =>
@@ -44,7 +44,7 @@ export function reviewNodes(input = {}, _context = {}) {
  * @param {Array<object>} testimonials
  * @returns {object|null}
  */
-export function aggregateRatingNode(testimonials = []) {
+function aggregateRatingNode(testimonials = []) {
   const rows = genuine(testimonials);
   if (!rows.length) return null;
 
@@ -58,4 +58,6 @@ export function aggregateRatingNode(testimonials = []) {
   };
 }
 
-export default reviewNodes;
+module.exports = reviewNodes;
+module.exports.reviewNodes = reviewNodes;
+module.exports.aggregateRatingNode = aggregateRatingNode;

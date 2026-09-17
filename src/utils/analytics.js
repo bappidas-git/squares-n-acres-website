@@ -7,17 +7,21 @@
  * whether a tag manager is installed at all. With no container on the page the
  * pushes simply accumulate in the array and nothing happens.
  *
- * When GA4 is configured the same event goes to `gtag('event', …)` as well, so
- * a site that runs GA4 directly rather than through GTM records it once and
- * only once. The `gtag.js` snippet itself is injected by `<Seo>` in prompt 38
- * from `seoSettings`; until then `window.gtag` is simply absent and the bridge
- * is a no-op.
+ * When GA4 or the Meta pixel is on the page the same event goes to
+ * `gtag('event', …)` and `fbq('trackCustom', …)` as well, so a site that runs
+ * either of them directly rather than through the tag manager records it once
+ * and only once. The snippets are injected by `components/seo/AnalyticsScripts`
+ * from `settings.integrations`; with no id configured `window.gtag` and
+ * `window.fbq` are simply absent and both bridges are no-ops.
  *
  *   track('whatsapp_click', { propertyId: 12 });
  */
 
 /** The events the site sends. A name not in here is a typo, not an event. */
 export const EVENTS = {
+  // A single-page app fires one automatic page view in its life, so GA4 is
+  // configured with `send_page_view: false` and every route change sends this.
+  pageView: 'page_view',
   whatsappClick: 'whatsapp_click',
   callClick: 'call_click',
   shareClick: 'share_click',
@@ -38,6 +42,11 @@ export const EVENTS = {
 /** Whether a GA4 tag is on the page and ready to receive events. */
 export function hasGa4() {
   return typeof window !== 'undefined' && typeof window.gtag === 'function';
+}
+
+/** Whether the Meta pixel is on the page and ready to receive events. */
+export function hasPixel() {
+  return typeof window !== 'undefined' && typeof window.fbq === 'function';
 }
 
 /**
@@ -76,8 +85,20 @@ export function track(event, params = {}) {
     }
   }
 
+  if (hasPixel()) {
+    try {
+      // `trackCustom`, not `track`: the pixel's `track` is reserved for Meta's
+      // own seventeen standard events, and sending `whatsapp_click` through it
+      // is how a pixel starts silently dropping events.
+      window.fbq('trackCustom', event, payload);
+      pushed = true;
+    } catch {
+      // Same again.
+    }
+  }
+
   return pushed;
 }
 
-const analytics = { EVENTS, hasGa4, track };
+const analytics = { EVENTS, hasGa4, hasPixel, track };
 export default analytics;

@@ -1,12 +1,10 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import { Helmet } from 'react-helmet-async';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { Breadcrumbs, Container, ErrorState } from '../../components/ui';
-import { LISTING_TYPES } from '../../config/enums';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { PropertyDetailSkeleton } from '../../components/common/SkeletonLoaders';
-import { SITE } from '../../config/site';
 import { getVisibleSections } from '../../utils/propertySections';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { useBanks } from '../../hooks/useMasterData';
@@ -30,6 +28,7 @@ import LocationSection, { NearbySection } from '../../components/sections/proper
 import MobileCtaBar from '../../components/sections/property/MobileCtaBar';
 import OverviewSection from '../../components/sections/property/OverviewSection';
 import PATHS from '../../routes/paths';
+import Seo from '../../components/seo/Seo';
 import PriceCard from '../../components/sections/property/PriceCard';
 import PropertyGallery from '../../components/sections/property/PropertyGallery';
 import RecentlyViewedSection from '../../components/sections/property/RecentlyViewedSection';
@@ -84,9 +83,6 @@ const SECTION_COMPONENTS = {
  */
 const MEDIA_SECTION_KEYS = ['video', 'virtualTour'];
 
-/** The listing index a property belongs to: `/buy`, `/rent` or `/lease`. */
-const LISTING_PATH = { sale: PATHS.buy, rent: PATHS.rent, lease: PATHS.lease };
-
 /** `64px` → `64`. */
 const pixels = (value, fallback) => {
   const parsed = Number.parseFloat(String(value ?? ''));
@@ -120,6 +116,10 @@ const PropertyDetails = () => {
   const headerHeight = pixels(useCssVar('--header-height', '64px'), 64);
 
   const preview = searchParams.get('preview') === PREVIEW_TOKEN && isAuthenticated;
+
+  // The questions an editor dropped into the description are questions this
+  // page answers, so they belong in its `FAQPage` beside the stored ones.
+  const [blockFaqs, setBlockFaqs] = useState([]);
 
   const {
     data: property,
@@ -236,43 +236,22 @@ const PropertyDetails = () => {
     );
   }
 
-  const listingLabel = LISTING_TYPES.labelOf(property.listingType);
-  const locality = property.location?.locality ?? null;
-  const path = PATHS.propertyDetails(property.slug);
-  const seo = property.seo ?? {};
   const unpublished = property.isActive === false;
-
-  const crumbs = [
-    { label: 'Home', to: PATHS.home },
-    ...(listingLabel
-      ? [{ label: listingLabel, to: LISTING_PATH[property.listingType] ?? PATHS.properties }]
-      : []),
-    ...(locality?.slug ? [{ label: locality.name, to: PATHS.locality(locality.slug) }] : []),
-    { label: property.title },
-  ];
+  const crumbs = breadcrumbsFor('property', property);
+  const faqs = [...(Array.isArray(property.faqs) ? property.faqs : []), ...blockFaqs];
 
   const visibility = property.sectionVisibility ?? {};
 
   return (
     <>
-      {/* TEMPORARY — `<Seo>` replaces this Helmet in prompt 38 with the §9.5
-          templates and the JSON-LD graph. */}
-      <Helmet>
-        <title>{`${seo.title || property.title} | ${SITE.name}`}</title>
-        <meta
-          name="description"
-          content={seo.description || property.shortDescription || property.title}
-        />
-        <link rel="canonical" href={`${SITE.url}${path}`} />
-        <meta
-          name="robots"
-          content={
-            preview || unpublished
-              ? 'noindex, nofollow'
-              : 'index, follow, max-image-preview:large, max-snippet:-1'
-          }
-        />
-      </Helmet>
+      <Seo
+        type="property"
+        entity={property}
+        description={property.seo?.description || property.shortDescription || property.title}
+        breadcrumbs={crumbs}
+        faqs={faqs}
+        overrides={unpublished ? { noindex: true } : undefined}
+      />
 
       {preview ? (
         <div className={styles.previewBanner} role="status">
@@ -337,6 +316,13 @@ const PropertyDetails = () => {
                   property={property}
                   properties={similarProperties}
                   background={background}
+                />
+              ) : section.key === 'overview' ? (
+                <Section
+                  key={section.key}
+                  property={property}
+                  background={background}
+                  onFaqItems={setBlockFaqs}
                 />
               ) : (
                 <Section key={section.key} property={property} background={background} />

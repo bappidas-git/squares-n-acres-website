@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { Icon } from '@iconify/react';
 import { useSearchParams } from 'react-router-dom';
 
 import PATHS from '../../routes/paths';
 import PropertyCard from '../../components/common/PropertyCard';
+import Seo from '../../components/seo/Seo';
 import ShareButton from '../../components/common/ShareButton';
 import propertyService from '../../services/propertyService';
 import styles from './Shortlist.module.css';
@@ -19,6 +19,7 @@ import {
 } from '../../components/ui';
 import { PropertyGridSkeleton } from '../../components/common/SkeletonLoaders';
 import { SITE } from '../../config/site';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { useShortlist } from '../../contexts/ShortlistContext';
 import { useToast } from '../../components/common/ToastProvider';
 
@@ -34,8 +35,8 @@ import { useToast } from '../../components/common/ToastProvider';
  * receives it.
  *
  * The page is `noindex` (§9.3): it is one visitor's list, not a page of the
- * site. The temporary `<Helmet>` is replaced by `<Seo type="shortlist">` in
- * prompt 38.
+ * site, and its head says so: `<Seo type="shortlist">` is `noindex, nofollow`
+ * (§9.3).
  */
 
 /** Everything a shortlist can hold; the ids are few and the cap generous. */
@@ -89,18 +90,14 @@ export default function Shortlist() {
     toast.success('Shortlist cleared');
   };
 
+  const crumbs = breadcrumbsFor('shortlist');
+
   return (
     <>
-      <Helmet>
-        <title>{`Your shortlist | ${SITE.name}`}</title>
-        <meta name="robots" content="noindex, follow" />
-      </Helmet>
+      <Seo type="shortlist" title={shared ? 'A shared shortlist' : 'Your shortlist'} />
 
       <Container className={styles.page}>
-        <Breadcrumbs
-          items={[{ label: 'Home', to: PATHS.home }, { label: 'Shortlist' }]}
-          className={styles.breadcrumbs}
-        />
+        <Breadcrumbs items={crumbs} className={styles.breadcrumbs} />
 
         <header className={styles.header}>
           <div>

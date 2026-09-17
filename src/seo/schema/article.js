@@ -6,9 +6,9 @@
  * `seo.schema.type`.
  */
 
-import { absolute, compact, isoDate, ref } from './graph';
-import { organizationId } from './organization';
-import { wordCount } from '../text';
+const { absolute, compact, isoDate, ref } = require('./graph');
+const { organizationId } = require('./organization');
+const { wordCount } = require('../text');
 
 const ARTICLE_TYPES = new Set(['Article', 'BlogPosting', 'NewsArticle']);
 
@@ -17,7 +17,7 @@ const ARTICLE_TYPES = new Set(['Article', 'BlogPosting', 'NewsArticle']);
  * @param {{seoSettings?: object, siteUrl?: string, authors?: Array<object>}} [context]
  * @returns {object|null}
  */
-export function articleNode(input = {}, context = {}) {
+function articleNode(input = {}, context = {}) {
   const article = input.entity ?? {};
   const canonical = input.canonical;
   if (!canonical) return null;
@@ -59,4 +59,5 @@ export function articleNode(input = {}, context = {}) {
   });
 }
 
-export default articleNode;
+module.exports = articleNode;
+module.exports.articleNode = articleNode;

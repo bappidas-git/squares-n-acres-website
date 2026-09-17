@@ -20,6 +20,9 @@ import BLOCK_COMPONENTS from './blocks';
  * @param {object} props
  * @param {{slug: string, title: string, blocks?: Array<object>, leadSource?: string,
  *   heroImageUrl?: string}} props.page
+ * @param {(items: Array<object>) => void} [props.onTestimonials] what the
+ *   testimonials block fetched, so the page can publish the genuine ones as
+ *   `Review` nodes (§9.3)
  * @param {Array<{label: string, to?: string}>} [props.breadcrumbs] passed to the
  *   `hero` block, which is the only one that shows them
  */
@@ -68,7 +71,7 @@ export function layoutBlocks(blocks) {
     });
 }
 
-export default function PageRenderer({ page, breadcrumbs = [] }) {
+export default function PageRenderer({ page, breadcrumbs = [], onTestimonials }) {
   const blocks = useMemo(() => layoutBlocks(page?.blocks), [page?.blocks]);
   const unknown = useMemo(() => unknownTypes(page?.blocks), [page?.blocks]);
 
@@ -94,6 +97,7 @@ export default function PageRenderer({ page, breadcrumbs = [] }) {
             background={background ?? undefined}
             index={index}
             {...(block.type === 'hero' ? { breadcrumbs } : null)}
+            {...(block.type === 'testimonials' ? { onItems: onTestimonials } : null)}
           />
         );
       })}

@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { Icon } from '@iconify/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import PATHS from '../../routes/paths';
+import Seo from '../../components/seo/Seo';
 import { Alert, Button, IconButton, Logo, TextField } from '../../components/ui';
 import { BRAND } from '../../config/site';
 import { GENERIC_MESSAGE } from '../../services/apiError';
@@ -90,10 +90,7 @@ const AdminLogin = () => {
 
   return (
     <div className={styles.page}>
-      <Helmet>
-        <title>{`Sign in | ${BRAND.name}`}</title>
-        <meta name="robots" content="noindex,nofollow" />
-      </Helmet>
+      <Seo type="admin" title="Sign in" description={`Sign in to the ${BRAND.name} admin panel.`} />
 
       <main className={styles.card}>
         <div className={styles.brand}>

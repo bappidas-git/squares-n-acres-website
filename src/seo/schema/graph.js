@@ -8,21 +8,24 @@
  * document out, duplicates folded together in the order they arrived.
  */
 
-import { validateGraph } from './validate';
+const { validateGraph } = require('./validate');
 
 /** schema.org, for every graph this engine emits. */
-export const SCHEMA_CONTEXT = 'https://schema.org';
+const SCHEMA_CONTEXT = 'https://schema.org';
 
 /**
  * An object with its empty properties removed, recursively.
  *
  * JSON-LD with `"telephone": null` in it is not wrong, but it is noise in a
- * document a human has to read when a rich result does not appear.
+ * document a human has to read when a rich result does not appear. A node left
+ * holding nothing but its `@type` goes the same way: `{"@type":"PostalAddress"}`
+ * on an organisation whose address nobody has filled in says nothing at all,
+ * and saying nothing is what an absent property already does (prompt 38 §7).
  *
  * @param {*} value
  * @returns {*}
  */
-export function compact(value) {
+function compact(value) {
   if (Array.isArray(value)) {
     const list = value.map(compact).filter((item) => item !== undefined);
     return list.length ? list : undefined;
@@ -35,7 +38,11 @@ export function compact(value) {
     const cleaned = compact(child);
     if (cleaned !== undefined) out[key] = cleaned;
   }
-  return Object.keys(out).length ? out : undefined;
+
+  const keys = Object.keys(out);
+  if (keys.length === 0) return undefined;
+  if (keys.length === 1 && keys[0] === '@type') return undefined;
+  return out;
 }
 
 /**
@@ -45,7 +52,7 @@ export function compact(value) {
  * @param {string} value
  * @returns {string|undefined}
  */
-export function absolute(siteUrl, value) {
+function absolute(siteUrl, value) {
   const path = String(value ?? '').trim();
   if (!path) return undefined;
   if (/^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith('//')) return path;
@@ -59,14 +66,14 @@ export function absolute(siteUrl, value) {
 }
 
 /** An ISO 8601 timestamp, or nothing when the value is not a date. */
-export function isoDate(value) {
+function isoDate(value) {
   if (!value) return undefined;
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
 /** A reference to another node of the graph: `{ '@id': … }`. */
-export const ref = (id) => (id ? { '@id': id } : undefined);
+const ref = (id) => (id ? { '@id': id } : undefined);
 
 /**
  * Several nodes as one `@graph`, de-duplicated by `@id`.
@@ -78,7 +85,7 @@ export const ref = (id) => (id ? { '@id': id } : undefined);
  * @param {Array<object>} nodes may contain `null`s, arrays and whole graphs
  * @returns {{'@context': string, '@graph': Array<object>}}
  */
-export function mergeGraph(nodes = []) {
+function mergeGraph(nodes = []) {
   const flat = [];
 
   const push = (node) => {
@@ -125,7 +132,7 @@ export function mergeGraph(nodes = []) {
  * @param {string} jsonString
  * @returns {{valid: boolean, nodes: Array<object>, errors: Array<{path: string, message: string}>}}
  */
-export function parseCustom(jsonString) {
+function parseCustom(jsonString) {
   const source = String(jsonString ?? '').trim();
   if (!source) return { valid: true, nodes: [], errors: [] };
 
@@ -160,4 +167,4 @@ export function parseCustom(jsonString) {
 
 const graph = { SCHEMA_CONTEXT, absolute, compact, isoDate, mergeGraph, parseCustom, ref };
 
-export default graph;
+module.exports = graph;

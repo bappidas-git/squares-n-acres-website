@@ -8,11 +8,15 @@
  * double spaces, a comma with nothing in front of it, a dangling `–` before
  * the separator — is cleaned up by {@link cleanTitle}. "Properties in ,
  * Bengaluru" is the failure this module exists to prevent.
+ *
+ * Authored in CommonJS (D36b, extended in prompt 38) so that `scripts/
+ * validate-jsonld.js` can `require` this module from Node with no bundler in
+ * front of it; React and Jest keep importing it.
  */
 
-import { AREA_UNITS, CONSTRUCTION_STATUS, LISTING_TYPES } from '../config/enums';
-import { SITE } from '../config/site';
-import { formatArea, formatBhk, formatDate, formatPrice } from '../utils/format';
+const { AREA_UNITS, CONSTRUCTION_STATUS, LISTING_TYPES } = require('../config/enums');
+const { SITE } = require('../config/site');
+const { formatArea, formatBhk, formatDate, formatPrice } = require('../utils/format');
 
 /** Every variable, with the copy the panel's insert menu shows. */
 const VARIABLES = [
@@ -45,7 +49,7 @@ const VARIABLES = [
  *
  * @returns {Array<{token: string, label: string, hint: string}>}
  */
-export const listVariables = () => VARIABLES.map((variable) => ({ ...variable }));
+const listVariables = () => VARIABLES.map((variable) => ({ ...variable }));
 
 /**
  * Removes the punctuation an unresolved variable leaves behind (§9.5).
@@ -56,7 +60,7 @@ export const listVariables = () => VARIABLES.map((variable) => ({ ...variable })
  * @param {string} text
  * @returns {string}
  */
-export function cleanTitle(text) {
+function cleanTitle(text) {
   return String(text ?? '')
     .replace(/%\w+%/g, '')
     .replace(/\s+/g, ' ')
@@ -80,7 +84,7 @@ export function cleanTitle(text) {
  * @param {Record<string, string|number|null|undefined>} [vars]
  * @returns {string}
  */
-export function resolveTemplate(template, vars = {}) {
+function resolveTemplate(template, vars = {}) {
   const lookup = {};
   for (const [key, value] of Object.entries(vars ?? {})) {
     lookup[key.toLowerCase().replace(/%/g, '')] =
@@ -149,7 +153,7 @@ function priceOf(property) {
  *   propertyTypes, developers, categories, authors, count, page, now }`
  * @returns {Record<string, string>}
  */
-export function buildVariables(entityType, entity = {}, context = {}) {
+function buildVariables(entityType, entity = {}, context = {}) {
   const record = entity ?? {};
   const seoSettings = context.seoSettings ?? {};
   const siteSettings = context.siteSettings ?? {};
@@ -201,7 +205,7 @@ export function buildVariables(entityType, entity = {}, context = {}) {
  * nothing (found while building the SEO settings screen's head preview,
  * prompt 37).
  */
-export const templateKeyFor = (entityType) =>
+const templateKeyFor = (entityType) =>
   [
     'home',
     'property',
@@ -226,7 +230,7 @@ export const templateKeyFor = (entityType) =>
  * @param {object} [context]
  * @returns {string}
  */
-export function resolveTitleTemplate(entityType, entity, context = {}) {
+function resolveTitleTemplate(entityType, entity, context = {}) {
   const templates = context.seoSettings?.titleTemplates ?? {};
   const template =
     templates[templateKeyFor(entityType)] ?? templates.default ?? '%title% %sep% %sitename%';
@@ -243,4 +247,4 @@ const variables = {
   templateKeyFor,
 };
 
-export default variables;
+module.exports = variables;

@@ -7,6 +7,10 @@ import {
   createRoutesFromElements,
 } from 'react-router-dom';
 
+import AnalyticsScripts from '../components/seo/AnalyticsScripts';
+import ErrorBoundary from '../components/common/ErrorBoundary';
+import Seo from '../components/seo/Seo';
+import RedirectHandler from '../components/common/RedirectHandler';
 import adminRoutes from './adminRoutes';
 import publicRoutes, { PublicRoute } from './publicRoutes';
 import { AdminAuthProvider } from '../contexts/AdminAuthContext';
@@ -30,6 +34,12 @@ import ToastProvider from '../components/common/ToastProvider';
  * Because a data router replaces `BrowserRouter`, every provider that uses a
  * router hook has to live *inside* it — `AdminAuthProvider` navigates on a 401
  * — so the providers are the root route's element rather than `App`'s children.
+ *
+ * `RedirectHandler` and `AnalyticsScripts` are mounted here for the same
+ * reason: both read a router hook and both read `SiteSettingsProvider`, and
+ * prompt 38's "in `App`" is where those providers lived before D97 moved them
+ * (D104). Mounted once, above the outlet, they survive every route change —
+ * which is the whole point of a tag manager that must not re-run.
  */
 
 const NotFound = lazy(() => import('../pages/public/NotFound'));
@@ -43,9 +53,15 @@ const AppShell = () => (
           <NavigationGuardProvider>
             <ShortlistProvider>
               <LeadCaptureProvider>
-                <Suspense fallback={<PageLoader />}>
-                  <Outlet />
-                </Suspense>
+                <RedirectHandler />
+                <AnalyticsScripts />
+                {/* Inside the router, so a page that throws still gets a head
+                    that says `noindex` rather than indexing a crash (§9.3). */}
+                <ErrorBoundary head={<Seo type="error" />}>
+                  <Suspense fallback={<PageLoader />}>
+                    <Outlet />
+                  </Suspense>
+                </ErrorBoundary>
               </LeadCaptureProvider>
             </ShortlistProvider>
           </NavigationGuardProvider>

@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import PATHS from '../../routes/paths';
+import Seo from '../../components/seo/Seo';
 import styles from './NotFound.module.css';
-import { SITE } from '../../config/site';
 
 /**
  * The 404 page — the route fallback, and what a public detail page renders
@@ -39,11 +38,7 @@ const NotFound = ({
 
   return (
     <>
-      <Helmet>
-        <title>{`${title} | ${SITE.name}`}</title>
-        <meta name="description" content={description} />
-        <meta name="robots" content="noindex, follow" />
-      </Helmet>
+      <Seo type="notFound" title={title} description={description} />
 
       <div className={styles.page}>
         <motion.div

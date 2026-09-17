@@ -23,8 +23,10 @@ import styles from './LocalitySections.module.css';
  *
  * @param {object} props
  * @param {object} props.locality a §6.2 record
+ * @param {(items: Array<object>) => void} [props.onItems] the cards this strip is
+ *   showing, so the page above can publish them as its `ItemList` (§9.3)
  */
-export default function LocalityListings({ locality }) {
+export default function LocalityListings({ locality, onItems }) {
   const { id, name } = locality;
   const [tab, setTab] = useState('sale');
 
@@ -104,6 +106,7 @@ export default function LocalityListings({ locality }) {
         routeConfig={routeConfig}
         fixedParams={fixedParams}
         headingLevel={null}
+        onItems={onItems}
       />
     </section>
   );

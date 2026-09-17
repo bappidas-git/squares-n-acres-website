@@ -1,20 +1,28 @@
 <!doctype html>
 <html lang="en-IN">
   <head>
+    <!--
+      `data-rh="true"` marks the tags `<Seo>` takes over once React has
+      booted (prompt 38): react-helmet-async replaces every tag carrying that
+      attribute rather than adding a second copy beside it. They are spelled
+      out here so that the first paint, a crawler that runs no JavaScript and
+      the prerendered build all have a title, a description and an icon.
+    -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#CF3F38" />
-    <meta name="application-name" content="Squares N Acres" />
+    <meta name="theme-color" content="#CF3F38" data-rh="true" />
+    <meta name="application-name" content="Squares N Acres" data-rh="true" />
     <meta
       name="description"
       content="Squares N Acres helps you buy, sell and rent apartments, villas, plots and commercial spaces across Bengaluru. Verified listings, locality guides and expert assistance."
+      data-rh="true"
     />
     <title>Squares N Acres – Buy, Sell &amp; Rent Properties in Bangalore</title>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/brand/favicon-32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/brand/favicon-16.png" />
-    <link rel="icon" type="image/png" sizes="48x48" href="%PUBLIC_URL%/brand/favicon-48.png" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/brand/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/brand/favicon-32.png" data-rh="true" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/brand/favicon-16.png" data-rh="true" />
+    <link rel="icon" type="image/png" sizes="48x48" href="%PUBLIC_URL%/brand/favicon-48.png" data-rh="true" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/brand/apple-touch-icon.png" data-rh="true" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />

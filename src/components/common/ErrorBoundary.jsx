@@ -6,9 +6,16 @@ import Button from '../ui/Button';
 import styles from './ErrorBoundary.module.css';
 
 /**
- * The branded crash screen (§8.2). It wraps the whole app in `App.js`, so a
- * render error shows this instead of a blank page — with a way back for the
- * visitor and the stack on the console for whoever is debugging.
+ * The branded crash screen (§8.2).
+ *
+ * It is mounted twice. The outer one wraps the whole app in `App.js` and is the
+ * last resort: it catches a failure in the router itself, so it can render
+ * nothing that needs a router — no `<Seo>`, no links. The inner one sits inside
+ * the router (`routes/index.js`) and passes `head={<Seo type="error" />}`, which
+ * is what gives a crashed *page* a title and a `noindex` (§9.3).
+ *
+ * @param {object} props
+ * @param {React.ReactNode} [props.head] rendered beside the screen when it shows
  */
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -29,6 +36,7 @@ class ErrorBoundary extends React.Component {
 
     return (
       <div className={styles.boundary} role="alert">
+        {this.props.head ?? null}
         <img src={BRAND.iconUrl} alt="" className={styles.mark} />
         <h1 className={styles.title}>Something went wrong</h1>
         <p className={styles.text}>

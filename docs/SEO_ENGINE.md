@@ -4,13 +4,26 @@
 > that answers two questions — **how good is the SEO of this record, and what
 > should be fixed first?** and **what does this record actually publish?**
 > Written by prompt 35, extended by prompt 36 (`resolve.js`,
-> `schema.buildGraph`), read by the SEO panel (36), the SEO dashboard (37) and
-> the public `<Seo>` component (38).
+> `schema.buildGraph`) and by prompt 38 (`breadcrumbs.js`, `pageTypes.js`,
+> `pageGraph.js`, `schema/jobPosting.js`), read by the SEO panel (36), the SEO
+> dashboard (37), the public `<Seo>` component (38) and the two validators
+> `npm run check:links` / `npm run check:jsonld` (38).
 
 Nothing in `src/seo/` imports React, calls the API or touches the DOM beyond an
 optional `DOMParser` and an optional `<canvas>`, both of which have a Node
 fallback. Everything is a function of its arguments, so everything is tested in
-Jest (`src/seo/__tests__/`, 523 assertions, ≥ 90 % statement coverage).
+Jest (`src/seo/__tests__/`).
+
+**Half of it is CommonJS** (D36b, extended in prompt 38): `text.js`, `urls.js`,
+`variables.js`, `entityAdapters.js`, `resolve.js`, `breadcrumbs.js`,
+`pageTypes.js`, `pageGraph.js` and all of `schema/`, plus the three leaves they
+reach — `src/config/site.js`, `src/routes/paths.js`, `src/utils/format.js`.
+React and Jest import them exactly as before, because `module.exports` is the
+namespace object the default import already was. The reason is
+`scripts/validate-jsonld.js`, which has to build the _same_ graph the browser
+builds: a validator that re-implemented the builder would only ever be checking
+its own opinion. The analysers, the scorer and `snippet.js` stay ESM — no Node
+script reads them.
 
 ---
 
@@ -247,18 +260,21 @@ every column sums to 100 and that no weight is 0.
 
 ## 5. The rest of the engine
 
-| Module              | What it answers                                                                                                                                                         |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `text.js`           | HTML → text, words, sentences, paragraphs, headings, images, links. One event stream, two parsers: `DOMParser` in a browser, a tag scanner in Node, asserted identical. |
-| `readability.js`    | Flesch Reading Ease, sentence and paragraph lengths, subheading distribution, the passive-voice heuristic, the transition-word share.                                   |
-| `keywords.js`       | Does this text carry this keyword, how often, how early — with the plural, hyphen and punctuation folding of §6 below.                                                  |
-| `snippet.js`        | Character and pixel widths, and what a result will actually show (`truncateToWidth`).                                                                                   |
-| `variables.js`      | The §9.5 template variables, `resolveTemplate`, `cleanTitle`, `listVariables`.                                                                                          |
-| `urls.js`           | `publicPathFor`, `canonicalFor`, `isNoindexListing` — the §9.4 whitelist and the "no trailing slash" policy.                                                            |
-| `entityAdapters.js` | Eight record shapes into the one shape the analysers read, including a CMS page's blocks as a body.                                                                     |
-| `schema/`           | One generator per JSON-LD type of §9.3, `mergeGraph`, `parseCustom`, and a structural `validate`.                                                                       |
-| `suggestions.js`    | Focus keyword suggestions built from the record's own facts.                                                                                                            |
-| `autoGenerate.js`   | Title, description, focus keyword and share image defaults — **never over an editor's own value** unless asked.                                                         |
+| Module              | What it answers                                                                                                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `text.js`           | HTML → text, words, sentences, paragraphs, headings, images, links. One event stream, two parsers: `DOMParser` in a browser, a tag scanner in Node, asserted identical.                          |
+| `readability.js`    | Flesch Reading Ease, sentence and paragraph lengths, subheading distribution, the passive-voice heuristic, the transition-word share.                                                            |
+| `keywords.js`       | Does this text carry this keyword, how often, how early — with the plural, hyphen and punctuation folding of §6 below.                                                                           |
+| `snippet.js`        | Character and pixel widths, and what a result will actually show (`truncateToWidth`).                                                                                                            |
+| `variables.js`      | The §9.5 template variables, `resolveTemplate`, `cleanTitle`, `listVariables`.                                                                                                                   |
+| `urls.js`           | `publicPathFor`, `canonicalFor`, `isNoindexListing` — the §9.4 whitelist and the "no trailing slash" policy.                                                                                     |
+| `entityAdapters.js` | Eight record shapes into the one shape the analysers read, including a CMS page's blocks as a body.                                                                                              |
+| `schema/`           | One generator per JSON-LD type of §9.3, `mergeGraph`, `parseCustom`, and a structural `validate`.                                                                                                |
+| `breadcrumbs.js`    | `breadcrumbsFor(type, entity, extras)` → the one trail `<Breadcrumbs>` draws and `<Seo>` publishes; speaks both `{ name, path }` and `{ label, to }`.                                            |
+| `pageTypes.js`      | The tables that join a `<Seo type>` to a record type: which pages are never indexed, which are records, what an index page is called, the `og:type`s and the verification meta names.            |
+| `pageGraph.js`      | `buildPageGraph(...)` — what a **page** publishes, as against what a record does: the publisher, the site node, the `ItemList`, the `FAQPage`, the reviews. Shared by `<Seo>` and the validator. |
+| `suggestions.js`    | Focus keyword suggestions built from the record's own facts.                                                                                                                                     |
+| `autoGenerate.js`   | Title, description, focus keyword and share image defaults — **never over an editor's own value** unless asked.                                                                                  |
 
 ---
 
@@ -373,6 +389,58 @@ repeat on every render (`docs/API_CONTRACT.md` → `SeoOverviewRow`).
 as well as the eight record types, so the settings screen's head preview and
 prompt 38's `<Seo type="home">` resolve the template an editor wrote rather than
 falling through to `default`.
+
+---
+
+## 6c. What the public site does with it (prompt 38)
+
+`src/components/seo/Seo.jsx` is the only head on the site. It renders;
+`useSeoResolved.js` decides, by calling `resolveSeoOutput` for the words,
+`urls.js` for the canonical, `breadcrumbs.js` for the trail and
+`pageGraph.buildPageGraph` for the JSON-LD. A page passes what it knows:
+
+```jsx
+<Seo
+  type="property"            // one of the 21 of `pageTypes.PAGE_TYPES`
+  entity={property}          // the record, with its §9.6 `seo` branch
+  description={…}            // the page's own summary, when it composes one
+  breadcrumbs={crumbs}       // the same array `<Breadcrumbs>` is drawing
+  faqs={faqs}                // the questions this page actually shows
+  items={cards}              // what this page is a list of
+  overrides={{ noindex }}    // what only the page can know
+/>
+```
+
+**Two title channels.** `title` is the page's own name and goes **through** the
+type's §9.5 template; `overrides.title` is the finished `<title>` and is used
+verbatim (still variable-resolved, §9.3). Only `ListingEngine` wants the second,
+because `listingSeo.js` has already applied the `listing` template.
+
+**Robots, in three steps.** A page nobody should keep _or follow_ — `admin`,
+`search`, `shortlist`, `notFound`, `error`, anything under `?preview=` — says
+`noindex, nofollow`. A page that is this visitor's view of a list (§9.4's
+filtered listing) or a record that is not published is `noindex, follow`.
+Everything else publishes the record's own directives.
+
+**One graph per page.** The publisher and the `WebSite` on every page, the
+`SearchAction` on the home page only, then the record's own nodes
+(`schema.buildGraph`), then what belongs to the page: the `ItemList`, the
+`FAQPage` of the questions on screen, and `Review`/`AggregateRating` for
+testimonials that are not seeded samples (D41). Merging is by `@id` and later
+wins, which is how a property page's fuller FAQ list replaces the record's.
+
+It is also the one tag `<Seo>` writes **outside** Helmet. Helmet de-duplicates a
+`<script>` by its contents, so a page that renders its head twice — every
+listing does, once before its results arrive and once with them — can end up
+publishing both graphs. `components/seo/JsonLd.jsx` owns a single
+`<script data-sna-jsonld>` in the head and rewrites its text in place instead.
+
+**The validators.** `npm run check:jsonld` walks the sitemaps and checks the
+head of every URL; `npm run check:links` follows every internal link. With
+`CHROME_PATH` both read a real rendered page — which is the only way to see one
+`<h1>` per page, `<img alt>` and a link that 404s. Without it they resolve the
+records behind those URLs through this library and say which checks they
+skipped. Both need `npm run dev` running and neither is part of `check:all`.
 
 ---
 

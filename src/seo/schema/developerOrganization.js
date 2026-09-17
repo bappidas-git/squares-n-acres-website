@@ -5,14 +5,14 @@
  * off the site's, so it can never be confused with the publisher node.
  */
 
-import { absolute, compact } from './graph';
+const { absolute, compact } = require('./graph');
 
 /**
  * @param {object} input the normalised record (`entityAdapters.toSeoInput`) of a developer
  * @param {{siteUrl?: string, seoSettings?: object}} [context]
  * @returns {object|null}
  */
-export function developerOrganizationNode(input = {}, context = {}) {
+function developerOrganizationNode(input = {}, context = {}) {
   const developer = input.entity ?? {};
   const canonical = input.canonical;
   if (!canonical) return null;
@@ -36,4 +36,5 @@ export function developerOrganizationNode(input = {}, context = {}) {
   });
 }
 
-export default developerOrganizationNode;
+module.exports = developerOrganizationNode;
+module.exports.developerOrganizationNode = developerOrganizationNode;

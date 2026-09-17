@@ -1,3 +1,11 @@
+/*
+ * `@testing-library/user-event` is pinned at 13.5 (§3.1), which — unlike v14 —
+ * does not wrap its own interactions in `act`. The wrappers below are what keep
+ * the state updates that follow a click inside the click's `act` scope, so the
+ * rule that assumes v14 is switched off for this file rather than the tests
+ * being rewritten around a version this project does not use.
+ */
+/* eslint-disable testing-library/no-unnecessary-act, testing-library/no-node-access */
 /**
  * The SEO desk's two site-wide runs (prompt 37 §4.4, §7).
  *

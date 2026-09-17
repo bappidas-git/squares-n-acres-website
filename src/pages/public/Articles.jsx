@@ -1,7 +1,7 @@
-import { Helmet } from 'react-helmet-async';
 import { Icon } from '@iconify/react';
 
 import PATHS from '../../routes/paths';
+import Seo from '../../components/seo/Seo';
 import articleService from '../../services/articleService';
 import useApi from '../../hooks/useApi';
 import useApiList from '../../hooks/useApiList';
@@ -20,9 +20,7 @@ import {
   Pagination,
   Skeleton,
 } from '../../components/ui';
-import { SITE } from '../../config/site';
-import { buildUrl } from '../../services/http';
-import { endpoints } from '../../services/endpoints';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './Articles.module.css';
 
@@ -36,12 +34,20 @@ import styles from './Articles.module.css';
  * paging (§5.6, BUG-18/BUG-19). The boilerplate asked for everything and
  * narrowed it here.
  *
- * The `<Helmet>` blocks on this page and on the three archives are temporary:
- * prompt 38 replaces them with `<Seo type="article|articleCategory|author">`.
+ * The head is `<Seo>`, with the type each caller names: the index is a `blog`,
+ * the three archives are the record they are an archive of, and all four carry
+ * the feed as an alternate representation (§9.3).
  */
 
 /** §8.6 and ART-09: twelve cards a page, three across at desktop. */
 const PER_PAGE = 12;
+
+/**
+ * Every category and every tag in one request: both collections are far under
+ * the 100 a public route may ask for — `perPage=all` is admin-only (§5.6), and
+ * asking for it on a public route quietly truncates the list to one page.
+ */
+const TAXONOMY_PER_PAGE = 100;
 
 /** The API hears the last keystroke, not every one (§5.6). */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -50,9 +56,6 @@ const SORTS = [
   { value: 'newest', label: 'Newest first' },
   { value: 'popular', label: 'Most read' },
 ];
-
-/** The absolute address of the feed, built from the API base the app talks to. */
-export const RSS_URL = buildUrl(endpoints.sitemap.rss);
 
 /** How many skeleton cards stand in for a page while it loads. */
 const SKELETONS = 6;
@@ -79,6 +82,10 @@ const SKELETONS = 6;
  * @param {string} [props.activeTagSlug]
  * @param {string} [props.emptyText]
  * @param {{title: string, description: string, canonical: string}} props.seo
+ * @param {'blog'|'articleCategory'|'articleTag'|'author'} [props.seoType] what
+ *   kind of page this is for the head (`components/seo/seoDefaults.js`)
+ * @param {object} [props.seoEntity] the record the archive is an archive of,
+ *   so its own `seo` branch and its schema reach the head
  */
 export function ArticleIndex({
   fixed,
@@ -94,6 +101,8 @@ export function ArticleIndex({
   activeTagSlug = '',
   emptyText = 'Try another category, or a different search.',
   seo,
+  seoType = 'blog',
+  seoEntity,
 }) {
   const { items, meta, loading, error, params, setFilters, setPage, resetFilters, refetch } =
     useApiList((listParams, options) => articleService.list(listParams, options), {
@@ -105,13 +114,13 @@ export function ArticleIndex({
     });
 
   const { data: categories } = useApi(
-    (signal) => articleService.categories({ perPage: 'all' }, { signal }),
+    (signal) => articleService.categories({ perPage: TAXONOMY_PER_PAGE }, { signal }),
     [],
     { enabled: withCategoryTabs, initialData: [] }
   );
 
   const { data: tags } = useApi(
-    (signal) => articleService.tags({ perPage: 'all' }, { signal }),
+    (signal) => articleService.tags({ perPage: TAXONOMY_PER_PAGE }, { signal }),
     [],
     { initialData: [] }
   );
@@ -147,23 +156,32 @@ export function ArticleIndex({
     if (sort !== 'newest') search.set('sort', sort);
     if (target > 1) search.set('page', String(target));
     const query = search.toString();
-    return `${SITE.url}${seo.canonical}${query ? `?${query}` : ''}`;
+    return `${seo.canonical}${query ? `?${query}` : ''}`;
   };
+
+  // The canonical carries the page number and nothing else: a search or a sort
+  // is this visitor's view of the archive, not a page of it (§9.4).
+  const canonical = page > 1 ? `${seo.canonical}?page=${page}` : seo.canonical;
 
   return (
     <>
-      {/* TEMPORARY — `<Seo>` replaces this Helmet in prompt 38. */}
-      <Helmet>
-        <title>{`${seo.title} | ${SITE.name}`}</title>
-        <meta name="description" content={seo.description} />
-        <link rel="canonical" href={`${SITE.url}${seo.canonical}`} />
-        <link
-          rel="alternate"
-          type="application/rss+xml"
-          title={`${SITE.name} — insights`}
-          href={RSS_URL}
-        />
-      </Helmet>
+      <Seo
+        type={seoType}
+        entity={seoEntity}
+        title={seo.title}
+        description={seo.description}
+        overrides={{ canonical, noindex: Boolean(q) }}
+        variables={{ count: total, page }}
+        breadcrumbs={breadcrumbs}
+        pagination={{
+          prev: page > 1 ? pageUrl(page - 1) : null,
+          next: page < totalPages ? pageUrl(page + 1) : null,
+        }}
+        items={items.map((article) => ({
+          name: article.title,
+          url: PATHS.article(article.slug),
+        }))}
+      />
 
       <div className={styles.page}>
         <header className={styles.header}>
@@ -288,8 +306,6 @@ export function ArticleIndex({
                   page={page}
                   totalPages={totalPages}
                   onChange={setPage}
-                  prevHref={page > 1 ? pageUrl(page - 1) : undefined}
-                  nextHref={page < totalPages ? pageUrl(page + 1) : undefined}
                   label="Article pages"
                   className={styles.pagination}
                 />
@@ -314,10 +330,11 @@ export default function Articles() {
     <ArticleIndex
       title="Real estate insights & guides"
       intro="What we have learned about buying, selling and renting in Bengaluru — the rules, the paperwork, the localities and the numbers, written plainly and with the caveats left in."
-      breadcrumbs={[{ label: 'Home', to: PATHS.home }, { label: 'Insights' }]}
+      breadcrumbs={breadcrumbsFor('blog')}
       withHero
       withCategoryTabs
       activeCategorySlug=""
+      seoType="blog"
       seo={{
         title: 'Real estate insights and guides for Bengaluru',
         description:

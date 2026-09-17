@@ -7,6 +7,12 @@
  * can never break a link.
  *
  * Route names follow `routes/index.js`; the HOM URLs all keep working (D11).
+ *
+ * Authored in CommonJS (D36b, extended in prompt 38): `src/seo/urls.js` reads
+ * the map to build canonicals, and `scripts/check-links.js` has to `require`
+ * that chain from Node with no bundler in front of it. `module.exports` is the
+ * `PATHS` object itself, so `import PATHS from '../routes/paths'` and
+ * `import { isReservedPath } from '../routes/paths'` both keep working.
  */
 
 const seg = (value) => encodeURIComponent(String(value ?? ''));
@@ -141,7 +147,7 @@ const adminPaths = {
  * it and `publicRoutes.js` lazily imports `CmsPage`: a constant with no
  * imports of its own is the one place that cannot become a cycle.
  */
-export const RESERVED_PATH_PREFIXES = [
+const RESERVED_PATH_PREFIXES = [
   'properties',
   'buy',
   'rent',
@@ -162,7 +168,7 @@ export const RESERVED_PATH_PREFIXES = [
  * @param {string} slug
  * @returns {boolean}
  */
-export const isReservedPath = (slug) =>
+const isReservedPath = (slug) =>
   RESERVED_PATH_PREFIXES.includes(
     String(slug ?? '')
       .replace(/^\/+/, '')
@@ -170,6 +176,8 @@ export const isReservedPath = (slug) =>
       .toLowerCase()
   );
 
-export const PATHS = { ...publicPaths, ...adminPaths };
+const PATHS = { ...publicPaths, ...adminPaths };
 
-export default PATHS;
+module.exports = PATHS;
+module.exports.RESERVED_PATH_PREFIXES = RESERVED_PATH_PREFIXES;
+module.exports.isReservedPath = isReservedPath;

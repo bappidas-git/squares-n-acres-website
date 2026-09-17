@@ -1,10 +1,10 @@
-import { Helmet } from 'react-helmet-async';
+import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useParams } from 'react-router-dom';
 
 import SafeHtml from '../../components/editor/SafeHtml';
 import NotFound from './NotFound';
-import PATHS from '../../routes/paths';
+import Seo from '../../components/seo/Seo';
 import masterDataService from '../../services/masterDataService';
 import useApi from '../../hooks/useApi';
 import { Container, ErrorState, Skeleton } from '../../components/ui';
@@ -14,7 +14,7 @@ import {
   DeveloperListings,
   DeveloperStats,
 } from '../../components/sections/developer';
-import { SITE } from '../../config/site';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './BuilderDetail.module.css';
 
@@ -30,11 +30,16 @@ import styles from './BuilderDetail.module.css';
  * empty headings (§8.2). The enquiry form is the exception — a lead must
  * always be possible.
  *
- * The `<title>` is a temporary Helmet tag following the §9.5 developer
- * template; prompt 38 replaces it with `<Seo>`.
+ * The head is `<Seo type="developer">`: the §9.5 developer template names the
+ * page, the graph carries the builder's `Organization`, and the `ItemList` is
+ * whatever the embedded listing strip is showing (§9.3).
  */
 export default function BuilderDetail() {
   const { slug } = useParams();
+
+  // What the embedded listing strip is actually showing, so the page can
+  // publish it as its `ItemList` (§9.3).
+  const [listings, setListings] = useState([]);
 
   const {
     data: developer,
@@ -62,23 +67,20 @@ export default function BuilderDetail() {
   const { name, description, shortDescription, highlights, seo } = developer;
   const items = Array.isArray(highlights) ? highlights.filter(Boolean) : [];
   const metaDescription = seo?.description || shortDescription || undefined;
+  const crumbs = breadcrumbsFor('developer', developer);
 
   return (
     <>
-      <Helmet>
-        <title>{`${name} – Projects in Bengaluru | ${SITE.name}`}</title>
-        {metaDescription ? <meta name="description" content={metaDescription} /> : null}
-      </Helmet>
+      <Seo
+        type="developer"
+        entity={developer}
+        description={metaDescription}
+        breadcrumbs={crumbs}
+        items={listings}
+      />
 
       <article className={styles.page}>
-        <DeveloperHero
-          developer={developer}
-          breadcrumbs={[
-            { label: 'Home', to: PATHS.home },
-            { label: 'Builders', to: PATHS.builders },
-            { label: name },
-          ]}
-        />
+        <DeveloperHero developer={developer} breadcrumbs={crumbs} />
 
         <Container className={styles.body}>
           {shortDescription ? <p className={styles.lede}>{shortDescription}</p> : null}
@@ -119,7 +121,7 @@ export default function BuilderDetail() {
             </section>
           ) : null}
 
-          <DeveloperListings developer={developer} />
+          <DeveloperListings developer={developer} onItems={setListings} />
 
           <DeveloperCta developer={developer} />
         </Container>

@@ -6,7 +6,7 @@
  * the validator refuses what is left empty.
  */
 
-import { absolute, compact, isoDate } from './graph';
+const { absolute, compact, isoDate } = require('./graph');
 
 /** The still image a video host serves for a URL, where we can derive one. */
 function thumbnailFor(url) {
@@ -21,7 +21,7 @@ function thumbnailFor(url) {
  * @param {{siteUrl?: string, seoSettings?: object}} [context]
  * @returns {object|null}
  */
-export function videoObjectNode(input = {}, context = {}) {
+function videoObjectNode(input = {}, context = {}) {
   const url = input.videoUrl ?? input.extras?.videoUrl;
   if (!url) return null;
 
@@ -41,4 +41,5 @@ export function videoObjectNode(input = {}, context = {}) {
   });
 }
 
-export default videoObjectNode;
+module.exports = videoObjectNode;
+module.exports.videoObjectNode = videoObjectNode;

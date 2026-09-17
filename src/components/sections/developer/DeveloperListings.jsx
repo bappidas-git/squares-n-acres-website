@@ -21,8 +21,10 @@ import styles from './DeveloperSections.module.css';
  *
  * @param {object} props
  * @param {object} props.developer a §6.5 record
+ * @param {(items: Array<object>) => void} [props.onItems] the cards this strip is
+ *   showing, so the page above can publish them as its `ItemList` (§9.3)
  */
-export default function DeveloperListings({ developer }) {
+export default function DeveloperListings({ developer, onItems }) {
   const { id, name, slug } = developer;
 
   const { meta, loading, error } = useApi(
@@ -65,6 +67,7 @@ export default function DeveloperListings({ developer }) {
         routeConfig={routeConfig}
         fixedParams={fixedParams}
         headingLevel={null}
+        onItems={onItems}
       />
     </section>
   );

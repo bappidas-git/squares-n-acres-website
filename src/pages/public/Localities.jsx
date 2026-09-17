@@ -1,7 +1,6 @@
-import { Helmet } from 'react-helmet-async';
-
 import LocalityCard from '../../components/sections/locality/LocalityCard';
 import PATHS from '../../routes/paths';
+import Seo from '../../components/seo/Seo';
 import masterDataService from '../../services/masterDataService';
 import useApiList from '../../hooks/useApiList';
 import {
@@ -14,7 +13,7 @@ import {
   Skeleton,
 } from '../../components/ui';
 import { LOCALITY_ZONES } from '../../config/enums';
-import { SITE } from '../../config/site';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './Localities.module.css';
 
@@ -42,7 +41,9 @@ const knownZone = (value) => (LOCALITY_ZONES.values.includes(value) ? value : ''
  * (§5.6). A `?zone=` the contract does not know is treated as no filter rather
  * than as a filter matching nothing.
  *
- * The `<title>` is a temporary Helmet tag; prompt 38 replaces it with `<Seo>`.
+ * The head is `<Seo type="localities">`: the fixed words come from
+ * `components/seo/seoDefaults.js` and the `ItemList` is whatever this page of
+ * the grid is actually showing (§9.3).
  */
 export default function Localities() {
   const { items, meta, loading, error, params, setFilters, setPage, refetch } = useApiList(
@@ -57,24 +58,24 @@ export default function Localities() {
   const zone = knownZone(params.zone);
   const sort = params.sort ?? 'order';
   const totalPages = meta?.totalPages ?? 1;
+  const crumbs = breadcrumbsFor('localities');
 
   return (
     <>
-      <Helmet>
-        <title>{`Localities in Bengaluru | ${SITE.name}`}</title>
-        <meta
-          name="description"
-          content="Explore neighbourhoods across Bengaluru: connectivity, prices and lifestyle at a glance."
-        />
-      </Helmet>
+      <Seo
+        type="localities"
+        breadcrumbs={crumbs}
+        variables={{ count: meta?.total ?? items.length, page: params.page ?? 1 }}
+        items={items.map((locality) => ({
+          name: locality.name,
+          url: PATHS.locality(locality.slug),
+        }))}
+      />
 
       <div className={styles.page}>
         <header className={styles.header}>
           <Container>
-            <Breadcrumbs
-              items={[{ label: 'Home', to: PATHS.home }, { label: 'Localities' }]}
-              className={styles.crumbs}
-            />
+            <Breadcrumbs items={crumbs} className={styles.crumbs} />
             <h1 className={styles.title}>Localities in Bengaluru</h1>
             <p className={styles.intro}>
               Explore neighbourhoods across Bengaluru: connectivity, prices and lifestyle at a

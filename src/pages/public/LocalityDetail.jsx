@@ -1,10 +1,10 @@
-import { Helmet } from 'react-helmet-async';
+import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useParams } from 'react-router-dom';
 
 import MapEmbed, { hasCoordinates } from '../../components/common/MapEmbed';
 import NotFound from './NotFound';
-import PATHS from '../../routes/paths';
+import Seo from '../../components/seo/Seo';
 import masterDataService from '../../services/masterDataService';
 import useApi from '../../hooks/useApi';
 import { Container, ErrorState, Skeleton } from '../../components/ui';
@@ -15,7 +15,7 @@ import {
   LocalityHero,
   LocalityListings,
 } from '../../components/sections/locality';
-import { SITE } from '../../config/site';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './LocalityDetail.module.css';
 
@@ -30,11 +30,16 @@ import styles from './LocalityDetail.module.css';
  * Every section renders only when the record carries what it needs, so a thin
  * locality is a short page rather than a page of empty headings (§8.2).
  *
- * The `<title>` is a temporary Helmet tag following the §9.5 locality template;
- * prompt 38 replaces it with `<Seo>`.
+ * The head is `<Seo type="locality">`: the §9.5 locality template names the
+ * page and the graph carries the `Place` — the node that makes "Whitefield" a
+ * neighbourhood of Bengaluru rather than a word (§9.3).
  */
 export default function LocalityDetail() {
   const { slug } = useParams();
+
+  // What the embedded listing strip is actually showing, so the page can
+  // publish it as its `ItemList` (§9.3).
+  const [listings, setListings] = useState([]);
 
   const {
     data: locality,
@@ -62,23 +67,20 @@ export default function LocalityDetail() {
   const { name, shortDescription, seo, latitude, longitude, priceTrendNote, city } = locality;
   const cityName = city?.name ?? 'Bengaluru';
   const description = seo?.description || shortDescription || undefined;
+  const crumbs = breadcrumbsFor('locality', locality);
 
   return (
     <>
-      <Helmet>
-        <title>{`Properties in ${name}, ${cityName} – Buy, Rent & Invest | ${SITE.name}`}</title>
-        {description ? <meta name="description" content={description} /> : null}
-      </Helmet>
+      <Seo
+        type="locality"
+        entity={locality}
+        description={description}
+        breadcrumbs={crumbs}
+        items={listings}
+      />
 
       <article className={styles.page}>
-        <LocalityHero
-          locality={locality}
-          breadcrumbs={[
-            { label: 'Home', to: PATHS.home },
-            { label: 'Localities', to: PATHS.localities },
-            { label: name },
-          ]}
-        />
+        <LocalityHero locality={locality} breadcrumbs={crumbs} />
 
         <Container className={styles.body}>
           <LocalityGuide locality={locality} />
@@ -115,7 +117,7 @@ export default function LocalityDetail() {
             </section>
           ) : null}
 
-          <LocalityListings locality={locality} />
+          <LocalityListings locality={locality} onItems={setListings} />
         </Container>
 
         <div className={styles.ctaBand}>

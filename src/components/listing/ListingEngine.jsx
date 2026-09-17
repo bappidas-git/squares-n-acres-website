@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { useSearchParams } from 'react-router-dom';
 
 import ActiveFilters from './ActiveFilters';
@@ -7,12 +6,15 @@ import FilterRail from './FilterRail';
 import FilterSheet from './FilterSheet';
 import ListingEmpty from './ListingEmpty';
 import ListingGrid from './ListingGrid';
+import PATHS from '../../routes/paths';
 import RecentlyViewed from '../common/RecentlyViewed';
 import ResultsHeader from './ResultsHeader';
+import Seo from '../seo/Seo';
 import styles from './ListingEngine.module.css';
 import useBreakpoint from '../../hooks/useBreakpoint';
 import useListingParams from './useListingParams';
 import { ErrorState, Pagination } from '../ui';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { buildListingSeo } from './listingSeo';
 import { useListingView } from './ViewToggle';
 import { useMasterData } from '../../contexts/MasterDataContext';
@@ -39,6 +41,9 @@ import { useSiteSettings } from '../../contexts/SiteSettingsContext';
  * @param {string} [props.initialSort]
  * @param {'h1'|'h2'|null} [props.headingLevel] `null` leaves the heading to
  *   the section the embed sits in
+ * @param {(items: Array<{name: string, url: string}>) => void} [props.onItems] what
+ *   this engine is showing, for the page above an **embed** to publish as its
+ *   `ItemList` — the head belongs to that page, not to the strip (§9.3)
  */
 export default function ListingEngine({
   routeConfig,
@@ -46,6 +51,7 @@ export default function ListingEngine({
   embedded = false,
   initialSort,
   headingLevel = embedded ? 'h2' : 'h1',
+  onItems,
 }) {
   const listing = useListingParams({ routeConfig, fixedParams, embedded, initialSort });
   const { params, meta, items, loading, error, fixed, activeCount } = listing;
@@ -107,15 +113,46 @@ export default function ListingEngine({
   const totalPages = Number.isFinite(meta?.totalPages) ? meta.totalPages : 1;
   const facets = meta?.facets ?? null;
 
+  // The route states the trail; `<Breadcrumbs>` on `PropertyListing` draws the
+  // same array this hands to `<Seo>` (§9.3).
+  const breadcrumbs = breadcrumbsFor('listing', null, { routeConfig });
+
+  const listItems = useMemo(
+    () =>
+      items.map((property) => ({
+        name: property.title,
+        url: PATHS.propertyDetails(property.slug),
+      })),
+    [items]
+  );
+
+  // An embed hands its cards to the page above rather than writing a head of
+  // its own; through a ref, so a caller passing an inline arrow does not re-run
+  // this on every render it causes (the pattern `SafeHtml` uses).
+  const report = useRef(onItems);
+  report.current = onItems;
+  useEffect(() => {
+    report.current?.(listItems);
+  }, [listItems]);
+
   return (
     <div className={[styles.engine, embedded ? styles.embedded : ''].filter(Boolean).join(' ')}>
+      {/* An embedded engine — the strip under a locality or a builder — is part
+          of that page, so the page owns the head and this one keeps quiet. */}
       {embedded ? null : (
-        <Helmet>
-          <title>{seo.title}</title>
-          <meta name="description" content={seo.description} />
-          <link rel="canonical" href={seo.canonicalUrl} />
-          {seo.noindex ? <meta name="robots" content="noindex, follow" /> : null}
-        </Helmet>
+        <Seo
+          type="listing"
+          overrides={{
+            title: seo.title,
+            description: seo.description,
+            canonical: seo.canonicalPath,
+            noindex: seo.noindex,
+          }}
+          variables={{ count: total, page: params.page }}
+          breadcrumbs={breadcrumbs}
+          pagination={seo.pagination}
+          items={listItems}
+        />
       )}
 
       <div className={styles.layout}>
@@ -181,8 +218,6 @@ export default function ListingEngine({
                 page={params.page}
                 totalPages={totalPages}
                 onChange={listing.setPage}
-                prevHref={embedded ? undefined : seo.pagination.prev}
-                nextHref={embedded ? undefined : seo.pagination.next}
                 label="Property results"
               />
             </>
