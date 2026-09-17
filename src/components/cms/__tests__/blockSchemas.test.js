@@ -25,7 +25,7 @@ import { BLOCK_TYPES } from '../../../config/enums';
 const DRAWABLE = new Set([
   'text',
   'textarea',
-  'html',
+  'richtext',
   'image',
   'url',
   'select',

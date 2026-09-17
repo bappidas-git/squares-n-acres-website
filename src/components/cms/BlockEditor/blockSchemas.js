@@ -29,10 +29,10 @@ import {
  * `name` may be a dotted path (`filter.listingType`), which is what keeps the
  * `properties` block's nested filter inside the same flat field list.
  *
- * Types: `text`, `textarea`, `html`, `image`, `url`, `select`, `switch`,
+ * Types: `text`, `textarea`, `richtext`, `image`, `url`, `select`, `switch`,
  * `number`, `icon`, `items`, `stringList`, `entity`, `fields` (the lead-form
- * field builder) and `leadSource`. `html` is a textarea with an HTML hint until
- * the rich-text editor arrives in prompt 32.
+ * field builder) and `leadSource`. `richtext` is `RichTextEditor`; `textarea`
+ * is plain text with no formatting at all.
  */
 
 /** The picker's sections, in the order it shows them. */
@@ -44,7 +44,7 @@ export const BLOCK_GROUPS = [
   { key: 'media', label: 'Media', description: 'Images, galleries and maps' },
 ];
 
-const HTML_HINT = 'HTML is allowed — <h2>, <p>, <ul>, <a>. The rich-text editor arrives soon.';
+const HTML_HINT = 'Headings, lists, links, tables, images and the SNA blocks.';
 
 /** A heading every band may carry; blank means the band shows no heading. */
 const title = (extra = {}) => ({
@@ -96,7 +96,7 @@ const DEFINITIONS = {
   richText: {
     group: 'content',
     description: 'A block of formatted prose — the story, the mission, a legal text.',
-    fields: [{ name: 'html', type: 'html', label: 'Content', required: true, rows: 14 }],
+    fields: [{ name: 'html', type: 'richtext', label: 'Content', required: true }],
   },
 
   html: {
@@ -105,11 +105,10 @@ const DEFINITIONS = {
     fields: [
       {
         name: 'html',
-        type: 'html',
+        type: 'richtext',
         label: 'Markup',
         required: true,
-        rows: 12,
-        hint: 'Rendered as-is. Scripts are refused.',
+        hint: 'Sanitised on save and again on the page. Scripts are refused.',
       },
     ],
   },
@@ -269,7 +268,7 @@ const DEFINITIONS = {
           { name: 'icon', type: 'icon', label: 'Icon', half: true },
           { name: 'title', type: 'text', label: 'Heading', required: true, half: true },
           { name: 'summary', type: 'textarea', label: 'Summary', rows: 2, required: true },
-          { name: 'html', type: 'html', label: 'Detail', rows: 8 },
+          { name: 'html', type: 'richtext', label: 'Detail', compact: true },
         ],
       },
     ],
@@ -388,7 +387,7 @@ const DEFINITIONS = {
         newItem: () => ({ question: '', answer: '' }),
         itemFields: [
           { name: 'question', type: 'text', label: 'Question', required: true },
-          { name: 'answer', type: 'html', label: 'Answer', rows: 5, required: true },
+          { name: 'answer', type: 'richtext', label: 'Answer', required: true, compact: true },
         ],
       },
     ],
@@ -636,12 +635,12 @@ const DEFINITIONS = {
   },
 };
 
-/** The `html` fields carry the same hint everywhere. */
+/** The `richtext` fields carry the same hint everywhere. */
 for (const definition of Object.values(DEFINITIONS)) {
   for (const field of definition.fields) {
-    if (field.type === 'html' && !field.hint) field.hint = HTML_HINT;
+    if (field.type === 'richtext' && !field.hint) field.hint = HTML_HINT;
     for (const itemField of field.itemFields ?? []) {
-      if (itemField.type === 'html' && !itemField.hint) itemField.hint = HTML_HINT;
+      if (itemField.type === 'richtext' && !itemField.hint) itemField.hint = HTML_HINT;
     }
   }
 }
@@ -759,7 +758,7 @@ export function validateBlockData(type, data = {}) {
           if (itemField.required && isBlank(itemValue)) {
             require(`${field.name}.${index}.${itemField.name}`, itemField.label);
           }
-          if (itemField.type === 'html' && SCRIPT_PATTERN.test(String(itemValue ?? ''))) {
+          if (itemField.type === 'richtext' && SCRIPT_PATTERN.test(String(itemValue ?? ''))) {
             errors[`${field.name}.${index}.${itemField.name}`] =
               'Script tags are not allowed in page content.';
           }
@@ -774,7 +773,7 @@ export function validateBlockData(type, data = {}) {
       continue;
     }
 
-    if (field.type === 'html' && SCRIPT_PATTERN.test(String(value ?? ''))) {
+    if (field.type === 'richtext' && SCRIPT_PATTERN.test(String(value ?? ''))) {
       errors[field.name] = 'Script tags are not allowed in page content.';
       continue;
     }

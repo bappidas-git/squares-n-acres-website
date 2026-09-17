@@ -1,4 +1,4 @@
-import LegacyHtml from '../../common/LegacyHtml';
+import SafeHtml from '../../editor/SafeHtml';
 import { Container, Section } from '../../ui';
 
 import styles from './blocks.module.css';
@@ -15,7 +15,7 @@ export default function HtmlBlock({ data = {}, background = 'bg' }) {
   return (
     <Section background={background} spacing="lg">
       <Container>
-        <LegacyHtml html={data.html} className={`prose proseWide ${styles.prose}`} />
+        <SafeHtml html={data.html} className={`proseWide ${styles.prose}`} />
       </Container>
     </Section>
   );

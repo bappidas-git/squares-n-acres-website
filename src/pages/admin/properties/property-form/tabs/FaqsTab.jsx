@@ -3,14 +3,8 @@ import { Icon } from '@iconify/react';
 
 import FormSection, { FormColumn } from '../../../../../components/admin/FormSection';
 import SortableList from '../../../../../components/admin/SortableList';
-import {
-  Alert,
-  Button,
-  IconButton,
-  Modal,
-  TextField,
-  TextareaField,
-} from '../../../../../components/ui';
+import RichTextField from '../../../../../components/editor/RichTextField';
+import { Alert, Button, IconButton, Modal, TextField } from '../../../../../components/ui';
 import { makeFaq } from '../initialState';
 import { FAQ_QUESTION_MAX, FAQ_QUESTION_MIN, plainText } from '../validators';
 import { useMasterData } from '../../../../../contexts/MasterDataContext';
@@ -23,8 +17,8 @@ import styles from './PropertyTabs.module.css';
  * Tab 12 — FAQs.
  *
  * Questions and answers, in the order they are asked. The answer is HTML
- * (§6.1): until prompt 32 it is typed into a textarea, and the same value goes
- * straight into the editor when it arrives — nothing here has to move.
+ * (§6.1), written in the compact rich-text editor: the same field, the same
+ * validator key and the same payload as the box it replaced.
  *
  * "Generate suggested FAQs" is the reason the tab exists in this shape. Every
  * listing owes a visitor the same six answers — price, possession, RERA,
@@ -120,17 +114,15 @@ export default function FaqsTab() {
                         </IconButton>
                       </span>
                     </div>
-                    <TextareaField
+                    <RichTextField
                       label="Answer"
-                      rows={4}
+                      variant="compact"
+                      minHeight={140}
                       value={faq.answer ?? ''}
                       error={errors[`${path}.answer`]}
                       disabled={disabled}
-                      hint="Simple HTML — a paragraph or a short list. The rich-text editor replaces this box in a later prompt."
-                      placeholder="<p>…</p>"
-                      onChange={(event) =>
-                        updateItem('faqs', faq.id, { answer: event.target.value })
-                      }
+                      helper="A paragraph or a short list — answer the question and stop."
+                      onChange={(html) => updateItem('faqs', faq.id, { answer: html })}
                     />
                   </div>
                 );

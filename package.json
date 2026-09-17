@@ -1,6 +1,6 @@
 {
   "name": "squares-n-acres-website",
-  "description": "Squares N Acres — Bengaluru real-estate portal (public website + admin panel)",
+  "description": "Squares N Acres \u2014 Bengaluru real-estate portal (public website + admin panel)",
   "version": "0.2.0",
   "private": true,
   "engines": {
@@ -15,8 +15,22 @@
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
+    "@tiptap/extension-image": "3.31.3",
+    "@tiptap/extension-link": "3.31.3",
+    "@tiptap/extension-table": "3.31.3",
+    "@tiptap/extension-table-cell": "3.31.3",
+    "@tiptap/extension-table-header": "3.31.3",
+    "@tiptap/extension-table-row": "3.31.3",
+    "@tiptap/extension-text-align": "3.31.3",
+    "@tiptap/extension-underline": "3.31.3",
+    "@tiptap/extension-youtube": "3.31.3",
+    "@tiptap/extensions": "3.31.3",
+    "@tiptap/pm": "3.31.3",
+    "@tiptap/react": "3.31.3",
+    "@tiptap/starter-kit": "3.31.3",
     "axios": "^1.13.5",
     "date-fns": "4.4.0",
+    "dompurify": "3.4.15",
     "framer-motion": "^12.34.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -132,7 +146,7 @@
   },
   "jest": {
     "transformIgnorePatterns": [
-      "node_modules/(?!(yet-another-react-lightbox|@iconify/react)/)"
+      "node_modules/(?!(yet-another-react-lightbox|@iconify/react|@tiptap)/)"
     ]
   },
   "browserslist": {

@@ -8,10 +8,13 @@
  * site has to style `h2 + p` for itself.
  *
  * It uses design tokens only (`src/assets/styles/global.css` owns the values)
- * and is imported once, by `src/components/cms/PageRenderer.jsx`, which is the
- * one place CMS markup reaches the page. Prompt 32's `SafeHtml` sanitises
- * against the editor's allow-list; the rules below cover exactly that
- * vocabulary.
+ * and is loaded once, beside `global.css` in `src/App.js`: `.prose` is a global
+ * vocabulary rather than one component's, and a stylesheet every lazily loaded
+ * route pulled in for itself would leave the extracted CSS order ambiguous.
+ *
+ * `SafeHtml` sanitises CMS markup against the editor's allow-list and
+ * `RichTextEditor` writes with it, so the rules below — the rendered page's and
+ * the editing surface's alike — cover exactly that vocabulary.
  */
 
 .prose {
@@ -220,4 +223,184 @@
   max-width: 100%;
   border: 0;
   border-radius: var(--radius-md);
+}
+
+/* ── Figures ───────────────────────────────────────────────────────────── */
+
+/*
+ * `FigureImage` writes `data-align` / `data-width` rather than layout classes:
+ * both attributes are on the sanitiser's allow-list, where a `class` is
+ * narrowed to `sna-*` and `prose-*`.
+ */
+.prose .sna-figure {
+  margin: 0;
+}
+
+.prose .sna-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.prose .sna-figure[data-width='half'] {
+  max-width: 50%;
+}
+
+.prose .sna-figure[data-width='wide'] {
+  width: 100%;
+}
+
+.prose .sna-figure[data-align='center'] {
+  margin-inline: auto;
+}
+
+.prose .sna-figure[data-align='right'] {
+  margin-inline-start: auto;
+}
+
+.prose .sna-figure[data-align='left'] {
+  margin-inline-end: auto;
+}
+
+.prose .sna-figure[data-align='left'] figcaption {
+  text-align: left;
+}
+
+.prose .sna-figure[data-align='right'] figcaption {
+  text-align: right;
+}
+
+/* A wide figure is allowed to breathe past the 72ch measure on a large screen. */
+@media (min-width: 1200px) {
+  .prose .sna-figure[data-width='wide'] {
+    width: calc(100% + var(--space-16));
+    margin-inline: calc(var(--space-8) * -1);
+  }
+
+  .prose.proseWide .sna-figure[data-width='wide'] {
+    width: 100%;
+    margin-inline: 0;
+  }
+}
+
+/* ── Embeds ────────────────────────────────────────────────────────────── */
+
+/* The Youtube extension writes `<div data-youtube-video><iframe …>`. */
+.prose [data-youtube-video] {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-2);
+}
+
+.prose [data-youtube-video] iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Marks ─────────────────────────────────────────────────────────────── */
+
+.prose mark {
+  padding: 0 2px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-primary-light);
+  color: inherit;
+}
+
+.prose sup,
+.prose sub {
+  font-size: 0.75em;
+  line-height: 0;
+}
+
+/* ── The editor ────────────────────────────────────────────────────────── */
+
+/*
+ * `RichTextEditor` gives its writing surface the same `.prose` class the
+ * published page uses, so a heading is the size it will be and a figure sits
+ * where it will sit. What follows is only what editing adds: the caret, the
+ * placeholder, the selection and the table handles.
+ */
+
+.ProseMirror {
+  min-height: inherit;
+  outline: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before,
+.ProseMirror p.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--color-text-muted);
+}
+
+.ProseMirror-selectednode {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.ProseMirror .tableWrapper {
+  overflow-x: auto;
+}
+
+/* Editing a table needs real cells; only the rendered page scrolls one. */
+.ProseMirror table {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.ProseMirror .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-primary-light);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.ProseMirror th,
+.ProseMirror td {
+  position: relative;
+}
+
+.ProseMirror-gapcursor {
+  display: none;
+  pointer-events: none;
+  position: absolute;
+}
+
+.ProseMirror-gapcursor::after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: -2px;
+  width: 20px;
+  border-top: 1px solid var(--color-text);
+  animation: sna-gapcursor-blink 1.1s steps(2, start) infinite;
+}
+
+.ProseMirror-focused .ProseMirror-gapcursor {
+  display: block;
+}
+
+@keyframes sna-gapcursor-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ProseMirror-gapcursor::after {
+    animation: none;
+  }
 }

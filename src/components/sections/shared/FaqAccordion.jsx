@@ -2,7 +2,7 @@ import { Fragment, useId, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 
-import LegacyHtml from '../../common/LegacyHtml';
+import SafeHtml from '../../editor/SafeHtml';
 
 import styles from './FaqAccordion.module.css';
 
@@ -16,10 +16,10 @@ import styles from './FaqAccordion.module.css';
  * same list a mouse does (§8.3). The open/close animation is skipped entirely
  * under `prefers-reduced-motion`.
  *
- * Answers are CMS-authored HTML rendered through the temporary `LegacyHtml`;
- * prompt 32 replaces it with `SafeHtml`, which sanitises against the editor's
- * own allow-list. The `FAQPage` structured data for these items arrives with
- * the SEO wiring in prompt 38.
+ * Answers are CMS-authored HTML rendered through `SafeHtml`, which sanitises
+ * against the editor's allow-list and dresses the markup in `.prose`. The
+ * `FAQPage` structured data for these items arrives with the SEO wiring in
+ * prompt 38.
  *
  * @param {object} props
  * @param {Array<{id: string|number, question: string, answer: string}>} props.items
@@ -109,7 +109,7 @@ export default function FaqAccordion({
                   transition={{ duration: 0.25, ease: 'easeInOut' }}
                 >
                   <div id={panelId} role="region" aria-labelledby={triggerId}>
-                    <LegacyHtml className={styles.answer} html={item.answer} />
+                    <SafeHtml className={styles.answer} html={item.answer} />
                   </div>
                 </motion.div>
               ) : null}
@@ -125,8 +125,8 @@ export default function FaqAccordion({
  * The question with every occurrence of `term` wrapped in `<mark>`.
  *
  * Only the question is highlighted: the answer is HTML the site does not own
- * the inside of, and injecting elements into it is prompt 32's sanitiser's
- * business, not a search box's.
+ * the inside of, and injecting elements into sanitised markup is not a search
+ * box's business.
  *
  * @param {string} text
  * @param {string} term

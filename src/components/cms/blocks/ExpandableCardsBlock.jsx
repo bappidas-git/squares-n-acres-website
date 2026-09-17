@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { Icon } from '@iconify/react';
 
-import LegacyHtml from '../../common/LegacyHtml';
+import SafeHtml from '../../editor/SafeHtml';
 import { Container, Section, SectionHeader } from '../../ui';
 
 import styles from './blocks.module.css';
@@ -74,7 +74,7 @@ export default function ExpandableCardsBlock({ data = {}, background = 'bg' }) {
                       />
                     </button>
                     <div id={panelId} hidden={!isOpen}>
-                      <LegacyHtml html={item.html} className={`prose ${styles.cardDetail}`} />
+                      <SafeHtml html={item.html} className={styles.cardDetail} />
                     </div>
                   </>
                 ) : null}

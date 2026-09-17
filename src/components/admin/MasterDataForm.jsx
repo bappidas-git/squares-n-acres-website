@@ -9,6 +9,7 @@ import IconPicker from './IconPicker';
 import ImageField from './ImageField';
 import IconButton from '../ui/IconButton';
 import MultiSelect from './MultiSelect';
+import RichTextField from '../editor/RichTextField';
 import SlugField from './SlugField';
 import SortableList from './SortableList';
 import ToneSelect from './ToneSelect';
@@ -36,8 +37,8 @@ import styles from './MasterDataForm.module.css';
  * and the dirty flag all come from one `useForm` instance, so a 422 lands on
  * the right control whatever type it is (§5.3).
  *
- * `richtext` renders a textarea until prompt 32 installs the editor — a field
- * that stores HTML, minus the toolbar.
+ * `richtext` renders `RichTextEditor`, lazily: the editor is the heaviest thing
+ * in the panel and only the forms that hold prose pay for it.
  *
  * @param {object} props
  * @param {Array<object>} props.fields
@@ -112,16 +113,30 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
 
   switch (field.type) {
     case 'textarea':
-    case 'richtext':
       return (
         <TextareaField
           {...shared}
-          hint={field.type === 'richtext' ? (field.hint ?? 'HTML is allowed.') : field.hint}
-          rows={field.rows ?? (field.type === 'richtext' ? 8 : 4)}
+          rows={field.rows ?? 4}
           value={value ?? ''}
           placeholder={field.placeholder}
           onBlur={onBlur}
           onChange={(event) => set(event.target.value)}
+        />
+      );
+
+    case 'richtext':
+      return (
+        <RichTextField
+          label={field.label}
+          required={field.required}
+          helper={field.hint}
+          error={error}
+          disabled={disabled}
+          variant={field.variant ?? 'compact'}
+          minHeight={field.minHeight ?? 180}
+          placeholder={field.placeholder}
+          value={value ?? ''}
+          onChange={set}
         />
       );
 

@@ -73,7 +73,7 @@ const ENTITIES = {
  *
  * Deliberately shallow: the input is HTML the editor produced, not markup from
  * the web, and no parser may be added (§3.3). The public side renders the same
- * HTML through `LegacyHtml`, and from prompt 32 through `SafeHtml`.
+ * HTML through `SafeHtml`.
  *
  * @param {string} html
  * @returns {string} single-spaced and trimmed; `''` for anything but a string
@@ -299,8 +299,7 @@ export const faqsConfig = ({ onMutated, propertyTypes: knownTypes = [] } = {}) =
       type: 'richtext',
       label: 'Answer',
       required: true,
-      rows: 8,
-      hint: 'HTML is allowed — paragraphs, lists and links. The editor arrives in prompt 32.',
+      hint: 'Paragraphs, lists and links. Keep it to what the question actually asks.',
     },
     {
       name: 'category',
@@ -704,10 +703,9 @@ export const teamConfig = ({ onMutated } = {}) => ({
     { name: 'photoUrl', type: 'image', label: 'Photograph', hint: 'avatar' },
     {
       name: 'bio',
-      type: 'textarea',
+      type: 'richtext',
       label: 'Biography',
-      rows: 5,
-      hint: 'HTML is allowed. A short paragraph — what they cover and for how long.',
+      hint: 'A short paragraph — what they cover and for how long.',
     },
     { name: 'socialLinks.linkedin', type: 'url', label: 'LinkedIn', half: true },
     { name: 'socialLinks.twitter', type: 'url', label: 'X (Twitter)', half: true },

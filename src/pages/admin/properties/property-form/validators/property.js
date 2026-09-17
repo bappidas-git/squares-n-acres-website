@@ -48,9 +48,10 @@ export const FOCUS_KEYWORD_MAX = 120;
 /**
  * Script tags in an answer.
  *
- * Sanitising the whole allow-list is prompt 32's job; refusing the one thing
- * that turns an answer into code is this prompt's, because the answer reaches
- * the public page through `dangerouslySetInnerHTML` until then.
+ * `RichTextEditor` sanitises what it emits and `SafeHtml` sanitises again on
+ * the way to the page, so nothing an editor types can reach this. It stays as
+ * the cheap guard against a value that never went through either — a legacy
+ * record, an import, a payload assembled by hand — being saved unnoticed.
  */
 const SCRIPT_PATTERN = /<\s*\/?\s*script\b|<\s*iframe\b|\son[a-z]+\s*=|javascript:/i;
 

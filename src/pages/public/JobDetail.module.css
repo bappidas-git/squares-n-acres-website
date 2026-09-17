@@ -85,43 +85,11 @@
 /* The description is CMS-authored HTML with no class names on it; prompt 32
    renders it through `SafeHtml` and these rules stay as they are. */
 
-.prose {
-  max-width: 72ch;
-  color: var(--color-text);
-  font-size: var(--font-size-md);
-  line-height: var(--line-height-normal);
-}
-
-.prose p {
-  margin: 0 0 var(--space-4);
-}
-
-.prose p:last-child {
-  margin-bottom: 0;
-}
-
-.prose h2,
-.prose h3 {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  margin: var(--space-6) 0 var(--space-2);
-  color: var(--color-charcoal);
-}
-
-.prose ul,
-.prose ol {
-  margin: 0 0 var(--space-4);
-  padding-left: var(--space-6);
-}
-
-.prose li {
-  margin-bottom: var(--space-2);
-}
-
-.prose a {
-  color: var(--color-primary-dark);
-}
+/*
+ * The role description is CMS HTML rendered by `SafeHtml`, which brings the
+ * global `.prose` — measure, headings, lists and links included — so this file
+ * has nothing of its own to say about it.
+ */
 
 @media (min-width: 1200px) {
   .layout {

@@ -71,35 +71,22 @@
   overflow: hidden;
 }
 
+/*
+ * An answer is CMS HTML rendered by `SafeHtml`, so it already wears the global
+ * `.prose`: headings, lists, links and the spacing between them come from
+ * there. The `:global(.prose)` qualifier is what lets the two things an answer
+ * really does differ by — it is smaller and quieter than body copy — outrank
+ * it; without it the two class names have the same weight and the winner would
+ * depend on the order the stylesheets happen to load in.
+ */
 .answer {
   padding: 0 var(--space-5) var(--space-5);
+}
+
+.answer:global(.prose) {
+  max-width: none;
   font-size: var(--font-size-sm);
-  line-height: var(--line-height-normal);
   color: var(--color-text-muted);
-}
-
-.answer p {
-  margin: 0 0 var(--space-3);
-}
-
-.answer p:last-child,
-.answer ul:last-child,
-.answer ol:last-child {
-  margin-bottom: 0;
-}
-
-.answer ul,
-.answer ol {
-  margin: 0 0 var(--space-3);
-  padding-left: var(--space-5);
-}
-
-.answer li + li {
-  margin-top: var(--space-1);
-}
-
-.answer a {
-  color: var(--color-primary-dark);
 }
 
 @media (prefers-reduced-motion: reduce) {

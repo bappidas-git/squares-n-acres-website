@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 31 — Careers & jobs, CMS awareness page, subscribers admin Next prompt: 32
+Last prompt executed: 32 — Rich text editor (Tiptap), sanitiser and `SafeHtml` Next prompt: 33
 
 ## Executed prompts
 
@@ -37,7 +37,8 @@ Last prompt executed: 31 — Careers & jobs, CMS awareness page, subscribers adm
 | 28  | Unified lead capture, spam protection, click tracking          | `66d200a`                                                                          | 2026-09-17 |
 | 29  | Admin leads CRM and the real-data dashboard                    | `69fd6c5`                                                                          | 2026-09-17 |
 | 30  | Pages CMS: admin block editor, public renderer, CmsPage routes | `7a161a0`                                                                          | 2026-09-17 |
-| 31  | Careers & jobs, CMS awareness page, newsletter subscribers     | HEAD of this branch (a commit cannot contain its own hash — prompt 32 fills it in) | 2026-09-17 |
+| 31  | Careers & jobs, CMS awareness page, newsletter subscribers     | `9e7d1cc`                                                                          | 2026-09-17 |
+| 32  | Tiptap rich text editor, sanitiser, SafeHtml, every textarea   | HEAD of this branch (a commit cannot contain its own hash — prompt 33 fills it in) | 2026-09-17 |
 
 ## Baseline (prompt 01)
 
@@ -293,41 +294,41 @@ The boilerplate's own endpoint surface stays inventoried in
 
 ## Pending rewrites (temporary adapters that must be removed; owner prompt)
 
-| Item                                            | Why it is temporary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Owner prompt |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `test:ci --passWithNoTests`                     | Needed only while `src/` contains no test file; drop the flag once real tests exist.                                                                                                                                                                                                                                                                                                                                                                                                                     | 35           |
-| Header / MobileHeader / BottomNav nav arrays    | The three components still declare the same `navItems` / `sideMenuItems` literals. Prompt 04 restyled and unified their breakpoints but left the data alone, as its §9 requires ("nav data still hardcoded until prompt 27"). Prompt 27 moves it to `src/config/navigation.js`.                                                                                                                                                                                                                          | 27           |
-| 501 on the sitemap / robots / RSS / llms paths  | The routes are mounted and mirrored at the root (D21) but answer `501` until prompt 09 generates the documents from `seoSettings` and the seed.                                                                                                                                                                                                                                                                                                                                                          | 09           |
-| `src/utils/adapters/legacyArticle.js`           | `toLegacyArticle()` maps `featuredImage.url` → `image`, `category.name`, `author.name` and `readingTimeMinutes` → `readTime` for `AdminArticles` and `ArticleForm`.                                                                                                                                                                                                                                                                                                                                      | 33 / 34      |
-| `src/components/common/LegacyHtml.jsx`          | Renders CMS-authored HTML (article bodies, FAQ answers) with `dangerouslySetInnerHTML`. Prompt 32 replaces it with `SafeHtml`, sanitising against the allow-list the Tiptap editor writes with.                                                                                                                                                                                                                                                                                                          | 32           |
-| FAQ answers textarea → `RichTextEditor`         | The FAQs tab's answer is a four-row `TextareaField` holding HTML, refused only by a regex when it carries a script, an iframe or an event handler (D66). Prompt 32 swaps the control for the Tiptap editor and the regex for the real sanitiser; the field, the validator key and the payload do not move.                                                                                                                                                                                               | 32           |
-| Description textarea → `RichTextEditor`         | The Basics tab's description is an eight-row `TextareaField` with a live character and word counter. The field stores sanitised HTML (§6.1) and the counters already measure the plain text inside it, so prompt 32 swaps the control for the Tiptap editor without touching the reducer, the validators or the payload.                                                                                                                                                                                 | 32           |
-| `ArticleForm` saving disabled                   | Its category, author and tag pickers offer hardcoded strings; an article now carries `categoryId`, `authorId`, `tagIds[]`, `featuredImage{}`, `status` and a nested `seo{}`. Loading works through `toLegacyArticle`; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                                         | 33           |
-| `AdminSettings` saving disabled                 | The screen holds a flattened view of five of the eight §6.13 branches, so writing it back would flatten the record on the server. Reads are live; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                                                                                                             | 40           |
-| `AdminSeo` saving disabled                      | SEO now lives in one nested `seo{}` saved through the entity's own PATCH, and the generator still writes boilerplate titles and canonicals (ADD-20/ADD-27). The table reads `GET /admin/seo/overview` live; editing and bulk generation are disabled behind an info `Alert`.                                                                                                                                                                                                                             | 36–37        |
-| `LegacyHtml` in `LocalityGuide`                 | The locality description is CMS-authored HTML rendered through the temporary `LegacyHtml`; `SafeHtml` replaces it with the editor's allow-list.                                                                                                                                                                                                                                                                                                                                                          | 32           |
-| `SeoPlaceholderTab` → `SeoPanel`                | The property form's SEO tab (prompt 21) holds `seo.title`, `seo.description`, `seo.focusKeyword` with the §9.1 length guides and a read-only mirror of the slug. The full panel — analysis, search and social previews, robots, schema, redirect — replaces it in prompt 36 (D87); the rest of the `seo` branch rides through every save untouched meanwhile.                                                                                                                                            | 36           |
-| Locality SEO placeholder card                   | The locality form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through a save untouched in the meantime.                                                                                                                                                                                                                                                                                                                          | 36           |
-| Locality/localities Helmet titles               | `Localities.jsx` and `LocalityDetail.jsx` set `<title>`/`description` through `react-helmet-async`; `<Seo>` replaces both, with the §9.5 templates and the JSON-LD graph.                                                                                                                                                                                                                                                                                                                                | 38           |
-| `LegacyHtml` in the builder profile             | The developer description on `/builders/:slug` is CMS-authored HTML rendered through the temporary `LegacyHtml`; `SafeHtml` replaces it with the editor's allow-list.                                                                                                                                                                                                                                                                                                                                    | 32           |
-| Developer SEO placeholder card                  | The developer form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched in the meantime.                                                                                                                                                                                                                                                                                                                      | 36           |
-| Builders/builder Helmet titles                  | `Builders.jsx` and `BuilderDetail.jsx` set `<title>`/`description` through `react-helmet-async`, following the §9.5 `developer` template; `<Seo>` replaces both, with the JSON-LD `Organization` + `ItemList` graph (§9.3).                                                                                                                                                                                                                                                                              | 38           |
-| Property-type SEO placeholder card              | The property-type form ends in an `Alert` saying the SEO panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched so nothing is lost meanwhile.                                                                                                                                                                                                                                                                                                                       | 36           |
-| `LegacyHtml` in `FaqAccordion`                  | Every FAQ on the site — the home band, `/insights/faqs`, a property page's questions and the CMS `faq` block — renders its answer through the temporary `LegacyHtml`. `SafeHtml` replaces it with the editor's allow-list, and the same prompt turns the FAQ form's HTML textarea into the editor.                                                                                                                                                                                                       | 32           |
-| `LegacyHtml` in `OverviewSection`               | The property description on `/properties/:slug` is CMS-authored HTML rendered through the temporary `LegacyHtml`, clamped to about twelve lines with a measured "Read more". `SafeHtml` replaces it with the editor's allow-list; the clamp, the measurement and the markup around it do not move.                                                                                                                                                                                                       | 32           |
-| `AdminPlaceholderPage` routes                   | Ten admin routes of `src/routes/adminRouteConfig.js` render `AdminPlaceholderPage` with the number of the prompt that writes the screen (31–39) — prompt 30 took the three `pages` routes off the list. Each one disappears when its owner prompt lands; the component itself must not exist after prompt 43.                                                                                                                                                                                            | 13–39        |
-| ~~`LeadModalTemp` → `LeadCaptureModal`~~        | **Closed in 28.** `LeadModalTemp.jsx` and its stylesheet are deleted; `components/common/LeadCaptureModal.jsx` is the one dialog, parameterised from `ENTRY_POINTS`. Prompt 25 gave it `successTitle`/`successAction`, which is how the documents section hands the file over after the lead (BUG-08); what it still lacks is the requirement fields, the submit throttle (D43) and `<label>`s on its boxes (ADD-09). Prompt 28 unifies every form on the site behind `LeadCaptureModal` and deletes it. | 28           |
-| `PropertyDetails` temporary `Helmet`            | The page sets `<title>`, the description, the canonical and `robots` through `react-helmet-async`; `<Seo>` replaces it in prompt 38 with the §9.5 templates, the social tags and the JSON-LD graph (including the `BreadcrumbList` the crumbs already describe).                                                                                                                                                                                                                                         | 38           |
-| Listing `Helmet` → `<Seo type="listing">`       | `ListingEngine` renders the title, the description, the canonical and `robots` from `listingSeo.js` through `react-helmet-async`, and `Pagination` emits `rel=prev/next` from the same object. Prompt 38 hands `buildListingSeo()` to `<Seo>`, which adds the OG/Twitter tags and the `ItemList` JSON-LD; the rules themselves do not change.                                                                                                                                                            | 38           |
-| `Shortlist` temporary `Helmet`                  | `/shortlist` sets its title and `noindex, follow` through `react-helmet-async`; `<Seo type="shortlist">` replaces it, with the same robots rule (§9.3).                                                                                                                                                                                                                                                                                                                                                  | 38           |
-| ~~`HomeFeatures` / `HomeSteps` → CMS blocks~~   | **Closed in 30.** Both files are deleted. `components/cms/blocks/FeaturesBlock.jsx` and `StepsBlock.jsx` carry the same markup, `PageRenderer` mounts them for every page that holds those blocks, and `Home.jsx` imports the very same two components — so the home page’s “Why choose us” and the About page’s values cannot drift apart.                                                                                                                                                              | 30           |
-| ~~Post-requirement modal → `LeadCaptureModal`~~ | **Closed in 28.** The header CTA, the drawer's CTA row and the bottom bar's Enquire all call `useLeadCapture().openLeadModal({ entry: 'post-requirement' })`; `LeadCaptureProvider` mounts the one dialog for the whole app.                                                                                                                                                                                                                                                                             | 28           |
-| Home `Helmet` → `<Seo type="home">`             | `Home.jsx` sets `<title>` and the description from the `home` CMS page's `seo` branch through `react-helmet-async`. Prompt 38 hands the same record to `<Seo type="home">`, which adds the §9.5 template, the social tags and the `Organization` + `WebSite` JSON-LD graph.                                                                                                                                                                                                                              | 38           |
-| RichText / Html blocks → editor + `SafeHtml`    | The `richText`, `html`, `faq` and `expandableCards` blocks hold HTML in a monospace `TextareaField` with an “HTML is allowed” hint, and render it through the temporary `LegacyHtml`. The client refuses a `<script` — the same rule the API enforces — and nothing else. Prompt 32 puts the Tiptap editor in the box and `SafeHtml` on the page, both against one allow-list; the block schema and the stored `data.html` do not change.                                                                | 32           |
-| Page SEO placeholder card                       | `PageFormPage` ends in an `Alert` saying the SEO panel arrives later; the form carries the record’s `seo` branch through the `PUT` untouched except for `seo.slug`, which is kept in step with the URL (D34). Prompt 36 replaces the card with the panel.                                                                                                                                                                                                                                                | 36           |
-| `CmsPage` `Helmet` → `<Seo type="page">`        | `CmsPage` sets `<title>`, the description, the canonical and `robots` (`noindex, nofollow` while previewing or while the page is a draft) through `react-helmet-async`, from the page’s own `seo` branch. Prompt 38 hands the same record to `<Seo type="page">`, which adds the §9.5 template, the social tags and the `BreadcrumbList` the crumbs already describe.                                                                                                                                    | 38           |
-| `LegacyHtml` in `JobDetail`                     | A job posting’s `description` is CMS-authored HTML rendered through the temporary `LegacyHtml` on `/careers/:jobSlug`. Prompt 32 replaces it with `SafeHtml`, sanitising against the allow-list the Tiptap editor writes with, and the admin form’s `richtext` textarea becomes the editor at the same time.                                                                                                                                                                                             | 32           |
-| `JobDetail` temporary `Helmet`                  | `/careers/:jobSlug` sets `<title>`, the description, the canonical and `robots` (`noindex, follow` once the opening has closed) through `react-helmet-async`. Prompt 38 hands the record to `<Seo type="job">`, which adds the §9.5 template, the social tags, the `BreadcrumbList` the crumbs already describe and the `JobPosting` graph.                                                                                                                                                              | 38           |
+| Item                                             | Why it is temporary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Owner prompt |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `test:ci --passWithNoTests`                      | Needed only while `src/` contains no test file; drop the flag once real tests exist.                                                                                                                                                                                                                                                                                                                                                                                                                     | 35           |
+| Header / MobileHeader / BottomNav nav arrays     | The three components still declare the same `navItems` / `sideMenuItems` literals. Prompt 04 restyled and unified their breakpoints but left the data alone, as its §9 requires ("nav data still hardcoded until prompt 27"). Prompt 27 moves it to `src/config/navigation.js`.                                                                                                                                                                                                                          | 27           |
+| 501 on the sitemap / robots / RSS / llms paths   | The routes are mounted and mirrored at the root (D21) but answer `501` until prompt 09 generates the documents from `seoSettings` and the seed.                                                                                                                                                                                                                                                                                                                                                          | 09           |
+| `src/utils/adapters/legacyArticle.js`            | `toLegacyArticle()` maps `featuredImage.url` → `image`, `category.name`, `author.name` and `readingTimeMinutes` → `readTime` for `AdminArticles` and `ArticleForm`.                                                                                                                                                                                                                                                                                                                                      | 33 / 34      |
+| ~~`src/components/common/LegacyHtml.jsx`~~       | **Closed in 32.** The file is deleted. `src/components/editor/SafeHtml.jsx` holds the only `dangerouslySetInnerHTML` in `src/`: it sanitises against the allow-list `RichTextEditor` writes with, renders the result inside `.prose`, gives every H2/H3 an id, and turns the three `data-sna-block` placeholders into live components.                                                                                                                                                                   | 32           |
+| ~~FAQ answers textarea → `RichTextEditor`~~      | **Closed in 32.** The FAQs tab draws `RichTextField variant="compact"`; the field, the validator key and the payload did not move. The script/iframe/handler regex stays as the cheap guard against a value that never went through the editor (an import, a payload assembled by hand) rather than as the sanitiser it never was.                                                                                                                                                                       | 32           |
+| ~~Description textarea → `RichTextEditor`~~      | **Closed in 32.** The Basics tab draws `RichTextField variant="full"`; the reducer, the validators and the payload are untouched, and the editor's own status bar now carries the character, word and reading-time counters the tab printed under the box.                                                                                                                                                                                                                                               | 32           |
+| `ArticleForm` saving disabled                    | Its category, author and tag pickers offer hardcoded strings; an article now carries `categoryId`, `authorId`, `tagIds[]`, `featuredImage{}`, `status` and a nested `seo{}`. Loading works through `toLegacyArticle`; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                                         | 33           |
+| `AdminSettings` saving disabled                  | The screen holds a flattened view of five of the eight §6.13 branches, so writing it back would flatten the record on the server. Reads are live; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                                                                                                             | 40           |
+| `AdminSeo` saving disabled                       | SEO now lives in one nested `seo{}` saved through the entity's own PATCH, and the generator still writes boilerplate titles and canonicals (ADD-20/ADD-27). The table reads `GET /admin/seo/overview` live; editing and bulk generation are disabled behind an info `Alert`.                                                                                                                                                                                                                             | 36–37        |
+| ~~`LegacyHtml` in `LocalityGuide`~~              | **Closed in 32.** `SafeHtml` renders the guide; the module's duplicate typography is gone, since the global `.prose` now covers it.                                                                                                                                                                                                                                                                                                                                                                      | 32           |
+| `SeoPlaceholderTab` → `SeoPanel`                 | The property form's SEO tab (prompt 21) holds `seo.title`, `seo.description`, `seo.focusKeyword` with the §9.1 length guides and a read-only mirror of the slug. The full panel — analysis, search and social previews, robots, schema, redirect — replaces it in prompt 36 (D87); the rest of the `seo` branch rides through every save untouched meanwhile.                                                                                                                                            | 36           |
+| Locality SEO placeholder card                    | The locality form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through a save untouched in the meantime.                                                                                                                                                                                                                                                                                                                          | 36           |
+| Locality/localities Helmet titles                | `Localities.jsx` and `LocalityDetail.jsx` set `<title>`/`description` through `react-helmet-async`; `<Seo>` replaces both, with the §9.5 templates and the JSON-LD graph.                                                                                                                                                                                                                                                                                                                                | 38           |
+| ~~`LegacyHtml` in the builder profile~~          | **Closed in 32.** `SafeHtml` renders the profile on `/builders/:slug`.                                                                                                                                                                                                                                                                                                                                                                                                                                   | 32           |
+| Developer SEO placeholder card                   | The developer form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched in the meantime.                                                                                                                                                                                                                                                                                                                      | 36           |
+| Builders/builder Helmet titles                   | `Builders.jsx` and `BuilderDetail.jsx` set `<title>`/`description` through `react-helmet-async`, following the §9.5 `developer` template; `<Seo>` replaces both, with the JSON-LD `Organization` + `ItemList` graph (§9.3).                                                                                                                                                                                                                                                                              | 38           |
+| Property-type SEO placeholder card               | The property-type form ends in an `Alert` saying the SEO panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched so nothing is lost meanwhile.                                                                                                                                                                                                                                                                                                                       | 36           |
+| ~~`LegacyHtml` in `FaqAccordion`~~               | **Closed in 32.** Every FAQ on the site renders its answer through `SafeHtml`, and the FAQ library's own form (`contentConfigs.js`) draws the compact editor.                                                                                                                                                                                                                                                                                                                                            | 32           |
+| ~~`LegacyHtml` in `OverviewSection`~~            | **Closed in 32.** `SafeHtml` renders the description; the measured twelve-line clamp and its "Read more" are unchanged, and a CTA or a listings row an editor drops into a description now renders live on the page.                                                                                                                                                                                                                                                                                     | 32           |
+| `AdminPlaceholderPage` routes                    | Ten admin routes of `src/routes/adminRouteConfig.js` render `AdminPlaceholderPage` with the number of the prompt that writes the screen (31–39) — prompt 30 took the three `pages` routes off the list. Each one disappears when its owner prompt lands; the component itself must not exist after prompt 43.                                                                                                                                                                                            | 13–39        |
+| ~~`LeadModalTemp` → `LeadCaptureModal`~~         | **Closed in 28.** `LeadModalTemp.jsx` and its stylesheet are deleted; `components/common/LeadCaptureModal.jsx` is the one dialog, parameterised from `ENTRY_POINTS`. Prompt 25 gave it `successTitle`/`successAction`, which is how the documents section hands the file over after the lead (BUG-08); what it still lacks is the requirement fields, the submit throttle (D43) and `<label>`s on its boxes (ADD-09). Prompt 28 unifies every form on the site behind `LeadCaptureModal` and deletes it. | 28           |
+| `PropertyDetails` temporary `Helmet`             | The page sets `<title>`, the description, the canonical and `robots` through `react-helmet-async`; `<Seo>` replaces it in prompt 38 with the §9.5 templates, the social tags and the JSON-LD graph (including the `BreadcrumbList` the crumbs already describe).                                                                                                                                                                                                                                         | 38           |
+| Listing `Helmet` → `<Seo type="listing">`        | `ListingEngine` renders the title, the description, the canonical and `robots` from `listingSeo.js` through `react-helmet-async`, and `Pagination` emits `rel=prev/next` from the same object. Prompt 38 hands `buildListingSeo()` to `<Seo>`, which adds the OG/Twitter tags and the `ItemList` JSON-LD; the rules themselves do not change.                                                                                                                                                            | 38           |
+| `Shortlist` temporary `Helmet`                   | `/shortlist` sets its title and `noindex, follow` through `react-helmet-async`; `<Seo type="shortlist">` replaces it, with the same robots rule (§9.3).                                                                                                                                                                                                                                                                                                                                                  | 38           |
+| ~~`HomeFeatures` / `HomeSteps` → CMS blocks~~    | **Closed in 30.** Both files are deleted. `components/cms/blocks/FeaturesBlock.jsx` and `StepsBlock.jsx` carry the same markup, `PageRenderer` mounts them for every page that holds those blocks, and `Home.jsx` imports the very same two components — so the home page’s “Why choose us” and the About page’s values cannot drift apart.                                                                                                                                                              | 30           |
+| ~~Post-requirement modal → `LeadCaptureModal`~~  | **Closed in 28.** The header CTA, the drawer's CTA row and the bottom bar's Enquire all call `useLeadCapture().openLeadModal({ entry: 'post-requirement' })`; `LeadCaptureProvider` mounts the one dialog for the whole app.                                                                                                                                                                                                                                                                             | 28           |
+| Home `Helmet` → `<Seo type="home">`              | `Home.jsx` sets `<title>` and the description from the `home` CMS page's `seo` branch through `react-helmet-async`. Prompt 38 hands the same record to `<Seo type="home">`, which adds the §9.5 template, the social tags and the `Organization` + `WebSite` JSON-LD graph.                                                                                                                                                                                                                              | 38           |
+| ~~RichText / Html blocks → editor + `SafeHtml`~~ | **Closed in 32.** The block schema's `html` field type is now `richtext`: `BlockForm` draws the editor (full for `richText`/`html`, compact for an expandable card's detail and a FAQ answer) and the four blocks render through `SafeHtml`. The stored `data.html` did not change.                                                                                                                                                                                                                      | 32           |
+| Page SEO placeholder card                        | `PageFormPage` ends in an `Alert` saying the SEO panel arrives later; the form carries the record’s `seo` branch through the `PUT` untouched except for `seo.slug`, which is kept in step with the URL (D34). Prompt 36 replaces the card with the panel.                                                                                                                                                                                                                                                | 36           |
+| `CmsPage` `Helmet` → `<Seo type="page">`         | `CmsPage` sets `<title>`, the description, the canonical and `robots` (`noindex, nofollow` while previewing or while the page is a draft) through `react-helmet-async`, from the page’s own `seo` branch. Prompt 38 hands the same record to `<Seo type="page">`, which adds the §9.5 template, the social tags and the `BreadcrumbList` the crumbs already describe.                                                                                                                                    | 38           |
+| ~~`LegacyHtml` in `JobDetail`~~                  | **Closed in 32.** `SafeHtml` renders the role on `/careers/:jobSlug` and the admin form's `richtext` field is the editor.                                                                                                                                                                                                                                                                                                                                                                                | 32           |
+| `JobDetail` temporary `Helmet`                   | `/careers/:jobSlug` sets `<title>`, the description, the canonical and `robots` (`noindex, follow` once the opening has closed) through `react-helmet-async`. Prompt 38 hands the record to `<Seo type="job">`, which adds the §9.5 template, the social tags, the `BreadcrumbList` the crumbs already describe and the `JobPosting` graph.                                                                                                                                                              | 38           |
 
 ## Known issues (open) — id, description, found by, owner prompt
 
@@ -4806,3 +4807,193 @@ empty console throughout.
 - The act() warnings `@testing-library/user-event@13` produces while typing
   (NEW-33) appear in the two new component suites as they do in the existing
   ones; no assertion depends on them and no console output reaches a browser.
+
+### Prompt 32 — The rich text editor: Tiptap, the sanitiser and `SafeHtml` (2026-09-17)
+
+**What changed**
+
+HTML stopped being something people type. Nine screens held it in a textarea and
+nine components printed it back with `dangerouslySetInnerHTML`; both halves are
+gone. `src/components/editor/RichTextEditor.jsx` is the one place prose is
+written and `src/components/editor/SafeHtml.jsx` is the one place it is read —
+and the same allow-list governs both, so what an editor can produce is exactly
+what a page will render.
+
+**The allow-list is the contract.** `sanitize.js` is DOMPurify with the
+vocabulary of ART-04 and nothing else: `ALLOW_DATA_ATTR` is off and the twelve
+`data-*` attributes the figure and the three SNA blocks need are named one by
+one, so a pasted `data-anything` is dropped like any other stranger. Two rules
+the allow-list cannot express are hooks: an `<iframe>` survives only when its
+`src` is `https` on `www.youtube.com`, `www.youtube-nocookie.com`,
+`player.vimeo.com` or `www.google.com/maps`, and a `class` keeps only its
+`sna-*` / `prose-*` tokens. `data:` URLs are stripped from `src` and `href`
+(including the `data:image/` an `<img>` would otherwise be allowed), and
+`target="_blank"` is given `rel="noopener"` with any `nofollow` kept. It runs
+twice on purpose: on the way out of the editor, so what is stored is already
+clean, and on the way into `SafeHtml`, so markup that predates the editor is
+clean on the page — the half that actually protects a visitor.
+
+**`SafeHtml` renders blocks, not placeholders.** It parses the sanitised markup,
+gives every H2 and H3 a de-duplicated slug id (a table of contents needs
+anchors, and the allow-list does not let an editor write one), adds
+`rel="noopener"` to external links and `loading="lazy"` to images, then splits
+the document at the top-level `div[data-sna-block]` boundaries. The runs of
+markup are printed inside `.prose`; the placeholders become `RenderedCta` (the
+band, with the real `openLeadModal`), `RenderedProperties` (today's listings
+from `GET /properties?ids=`, hidden when none come back) and `RenderedFaq` (the
+site's own `FaqAccordion`). An unknown block type renders nothing. The three are
+`React.lazy`: almost all CMS HTML is plain prose and every public page renders
+some. `onFaqItems(items)` hands the questions up to the page for prompt 38's
+`FAQPage` schema, and a depth context stops a FAQ answer that contains a FAQ
+block from recursing.
+
+**The editor.** StarterKit with H2–H4 and no code blocks (a listing quotes a
+clause number, never a program), Underline and Link from their own packages so
+their configuration is visible, `FigureImage` — the Image extension taught to
+serialise the `<figure><img loading="lazy"><figcaption>` the seed articles
+already use, with `data-align` / `data-width` rather than layout classes,
+because both are on the attribute allow-list where a class would need a second
+rule — tables, a `nocookie` YouTube embed, text alignment, a placeholder and the
+character counter. Three custom nodes serialise to the documented placeholders:
+`ctaBlock` (`data-title`, `data-text`, `data-button-label`, `data-button-href`,
+`data-lead-source`), `propertyEmbed` (`data-ids="1,3"`) and `faqBlock` (the
+questions as JSON in `data-items`). Each is an atom with a React node view: the
+CTA's four fields are edited in place, the other two open a dialog — which is
+also what keeps a second editable surface out of the document's own DOM, since a
+dialog is a portal.
+
+**Around it:** a grouped `role="toolbar"` with one tab stop, arrow-key
+navigation, `aria-pressed` on every toggle and shortcuts in the tooltips
+(`Mod+K` is answered by the editor rather than only promised); a bubble bar over
+a selection and a "+" on an empty paragraph, both measured against the editor's
+own box so a full-screen editor and one inside a scrolling form put them in the
+same place; a table menu that appears only inside a table; an outline rail with
+the H2/H3 list and the word, character and reading-time counters; full screen
+with `Escape`; and paste cleanup that keeps a Word paste's headings, lists and
+bold and drops its `mso-*` stylesheet, its classes and its spans.
+
+**`onChange` is debounced 200 ms and emits `sanitize(normalize(getHTML()))`.**
+`normalizeHtml` trims the empty paragraph ProseMirror keeps at the end and
+collapses runs of them, so a description does not end in blank bands. The
+component is deliberately not a controlled input: ProseMirror owns the document
+and the selection, and `value` is re-read only when it changes to something the
+editor did not itself produce.
+
+**Every consumer moved.** Property description (full) and FAQ answers (compact);
+locality and developer descriptions (full); `MasterDataForm`'s `richtext` type,
+which is what the FAQ library, an author's biography and a job's description use;
+the block editor, where the schema's `html` field type is now `richtext`; and
+`SafeHtml` in `OverviewSection`, `LocalityGuide`, `FaqAccordion`,
+`RichTextBlock`, `HtmlBlock`, `ExpandableCardsBlock`, `JobDetail`,
+`BuilderDetail` and the legacy `ArticleDetail`. Forms import `RichTextField`,
+not the editor: Tiptap and ProseMirror are a 150 KB chunk fetched the first time
+an admin opens a form that edits prose, and the main bundle contains none of it.
+The six modules whose typography duplicated the global `.prose` were trimmed to
+what is genuinely local, and `prose.css` now loads once beside `global.css`
+rather than per route.
+
+**Files**
+
+Added (36): `src/components/editor/` — `RichTextEditor.jsx` + `.module.css`,
+`RichTextField.jsx`, `extensions.js`, `sanitize.js`, `normalizeHtml.js`,
+`pasteRules.js`, `SafeHtml.jsx`, `InternalLinkPicker.jsx`;
+`toolbar/` — `Toolbar.jsx`, `BubbleMenuBar.jsx`, `FloatingInsertMenu.jsx`,
+`LinkDialog.jsx`, `ImageDialog.jsx`, `YoutubeDialog.jsx`, `TableMenu.jsx`,
+`OutlinePanel.jsx`;
+`nodes/` — `attributes.js`, `FigureImage.js`, `CtaBlockNode.js`,
+`CtaBlockView.jsx`, `PropertyEmbedNode.js`, `PropertyEmbedView.jsx`,
+`PropertyPickerDialog.jsx`, `FaqBlockNode.js`, `FaqBlockView.jsx`,
+`FaqItemsDialog.jsx`;
+`blocks/` — `RenderedCta.jsx`, `RenderedProperties.jsx`, `RenderedFaq.jsx`,
+`rendered.module.css`;
+`__tests__/` — `sanitize.test.js`, `normalizeHtml.test.js`,
+`pasteRules.test.js`, `SafeHtml.test.jsx`, `RichTextEditor.test.jsx`.
+
+Changed (33): `package.json` (14 pins, `transformIgnorePatterns`),
+`src/setupTests.js` (the four jsdom gaps ProseMirror and MUI fall into),
+`src/App.js` and `src/assets/styles/prose.css` (loaded globally; figures,
+embeds, marks and the `.ProseMirror` surface), `src/components/admin/MasterDataForm.jsx`,
+`src/components/cms/BlockEditor/` — `BlockForm.jsx`, `blockSchemas.js`,
+`BlockEditor.module.css` — `src/components/cms/PageRenderer.jsx`,
+`src/components/cms/blocks/` — `RichTextBlock.jsx`, `HtmlBlock.jsx`,
+`ExpandableCardsBlock.jsx`, `blocks.module.css` — `src/components/sections/shared/FaqAccordion.jsx`
+
+- `.module.css`, `src/components/sections/locality/LocalityGuide.jsx` +
+  `LocalitySections.module.css`, `src/components/sections/property/OverviewSection.jsx`
+- `.module.css`, `src/pages/admin/content/contentConfigs.js`, `JobsPage.jsx`,
+  `src/pages/admin/master-data/LocalityFormPage.jsx`, `DeveloperFormPage.jsx`,
+  `src/pages/admin/properties/property-form/tabs/BasicsTab.jsx`, `FaqsTab.jsx`,
+  `validators/property.js`, `src/pages/public/ArticleDetail.js`,
+  `BuilderDetail.jsx` + `.module.css`, `JobDetail.jsx` + `.module.css`,
+  `src/components/cms/__tests__/blockSchemas.test.js`.
+
+Removed (1): `src/components/common/LegacyHtml.jsx`.
+
+**Endpoints / dependencies / env vars / npm scripts**
+
+No endpoint changes; the link picker and the listings block use the admin lists'
+`q` and `GET /properties?ids=`, both of which already exist. Dependencies (exact
+pins, §3.3): `@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`,
+`@tiptap/extension-link`, `-image`, `-table`, `-table-row`, `-table-cell`,
+`-table-header`, `-youtube`, `-text-align`, `-underline`, `@tiptap/extensions`
+— all `3.31.3` — and `dompurify@3.4.15`. `package.json` → `jest.transformIgnorePatterns`
+gained `@tiptap`, because Jest 27 does not read an `exports` map and
+`@tiptap/pm/*` resolves to TypeScript sources without one. No env vars, no npm
+scripts.
+
+**Acceptance checklist**
+
+- [x] `RichTextEditor` implements ART-02/ART-03: StarterKit (H2–H4, marks,
+      quote, lists, rule, hard break, history), Underline, Link with the dialog
+      and the internal picker, images as figures with required alt, tables,
+      YouTube, alignment, placeholder, counters, the three custom nodes, the
+      grouped toolbar, the bubble and "+" menus, full screen, the outline rail,
+      paste cleanup, drag-and-drop and `variant="compact"`. Custom nodes
+      serialise to `<div data-sna-block="…" data-…>` — verified by saving a CTA
+      and a listings block through the property form and reading the record back.
+- [x] `sanitize.js` allow-list tests pass (15); `grep -rn "dangerouslySetInnerHTML" src`
+      returns `SafeHtml.jsx` only; `LegacyHtml.jsx` is deleted; every HTML
+      textarea named in the prompt is now the editor.
+- [x] Public pages render seed HTML with `.prose` and live blocks:
+      `/insights/articles/karnataka-rera-guide-for-homebuyers` draws its figure,
+      its table, slugged heading ids, the CTA band and two live property cards,
+      with no raw `[data-sna-block]` left and an empty console.
+- [x] The editor is not in the public bundle: `@tiptap` and `prosemirror` appear
+      in two async chunks and in neither `main.js` nor any initial chunk;
+      `main.js` grew 220 B gzipped.
+- [x] `npm run lint` (0 findings), `npm run test:ci` (**1 729 tests, 86 suites**),
+      `npm run build:ci` ("Compiled successfully", no warnings),
+      `npm run check:traces` (0 findings over 812 files) and `npm run smoke`
+      (274/274) pass. No console output in any of the browser walks.
+- [x] One commit, clean tree.
+
+**Manual QA (headless Chromium over the DevTools protocol, 800/1440 px and 390 px)**
+
+Public: the RERA article renders one figure, one table, three slugged heading
+ids, the CTA band, two live listing cards and three lazy images, with no raw
+placeholder and an empty console; at 390 px the page has no horizontal overflow
+and the table scrolls inside its column. The property page draws the CTA an
+editor saved into the description.
+
+Admin: the property form's description editor mounts with 24 toolbar buttons, a
+`role="textbox" aria-multiline` surface and the counters ("171 words, 1 022
+characters, 1 min read"); the three insert buttons each add their node view; a
+table inserts and the table menu appears with it; the image dialog refuses to
+insert without an address and without alt text ("Alt text is required."); the
+link dialog offers the address, the two attributes and the internal picker, and
+hides its text box exactly when there is a selection; a selection raises the
+bubble bar; the outline rail and full screen work, and `Escape` leaves it. A
+Word-flavoured paste keeps its `<h2>` and drops every `mso-*` and `<span>`; a
+pasted YouTube link becomes a `youtube-nocookie.com/embed/…` iframe. The page
+form draws two editors, the locality form one, and the FAQ form the compact
+variant with its eight controls. At 390 px the toolbar scrolls horizontally,
+its buttons measure 44 px and the page does not overflow.
+
+**Issues left**
+
+None opened. Two bugs were found by the browser walk and fixed in this prompt:
+the bubble and "+" menus read the ProseMirror view before `EditorContent` had
+mounted it (fatal under React's strict mode, now guarded by
+`editor.isInitialized`), and the link dialog asked `selection.empty` whether
+anything was selected — an editor that has not been clicked into yet answers
+"yes", so it now asks for the text between the two ends instead.

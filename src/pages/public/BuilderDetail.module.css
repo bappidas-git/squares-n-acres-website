@@ -38,35 +38,12 @@
   align-items: start;
 }
 
-.prose {
-  color: var(--color-text);
-  font-size: var(--font-size-md);
-  line-height: var(--line-height-normal);
-}
-
-.prose p {
-  margin: 0 0 var(--space-4);
-}
-
-.prose p:last-child {
-  margin-bottom: 0;
-}
-
-.prose h2,
-.prose h3 {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-xl);
-  margin: var(--space-6) 0 var(--space-2);
-}
-
-.prose ul,
-.prose ol {
-  margin: 0 0 var(--space-4);
-  padding-left: var(--space-6);
-}
-
-.prose a {
-  color: var(--color-primary-dark);
+/*
+ * The profile is CMS HTML rendered by `SafeHtml` and already wears the global
+ * `.prose`; it only needs to fill its grid column.
+ */
+.profileBody:global(.prose) {
+  max-width: none;
 }
 
 .highlights {

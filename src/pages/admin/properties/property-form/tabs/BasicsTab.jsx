@@ -12,6 +12,7 @@ import {
   TextField,
   TextareaField,
 } from '../../../../../components/ui';
+import RichTextField from '../../../../../components/editor/RichTextField';
 import {
   AVAILABILITY,
   CONSTRUCTION_STATUS,
@@ -434,13 +435,14 @@ export default function BasicsTab() {
         </FormColumn>
 
         <FormColumn>
-          <TextareaField
+          <RichTextField
             label="Description"
-            rows={8}
+            variant="full"
+            minHeight={320}
             value={values.description ?? ''}
             error={errors.description}
             disabled={disabled}
-            onChange={(event) => setField('description', event.target.value)}
+            onChange={(html) => setField('description', html)}
           />
           <p className={styles.counter}>
             <span className={longEnough ? styles.counterOk : styles.counterWarn}>
