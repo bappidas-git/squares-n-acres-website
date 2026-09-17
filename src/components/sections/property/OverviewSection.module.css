@@ -2,43 +2,14 @@
   margin-bottom: var(--space-6);
 }
 
-.prose {
-  font-family: var(--font-body);
-  font-size: var(--font-size-md);
-  line-height: var(--line-height-normal);
-  color: var(--color-text);
-}
-
-.prose :global(p) {
-  margin: 0 0 var(--space-4);
-}
-
-.prose :global(p:last-child) {
-  margin-bottom: 0;
-}
-
-.prose :global(ul),
-.prose :global(ol) {
-  margin: 0 0 var(--space-4);
-  padding-left: var(--space-6);
-}
-
-.prose :global(li) {
-  margin-bottom: var(--space-2);
-}
-
-.prose :global(a) {
-  color: var(--color-primary-dark);
-  text-decoration: underline;
-}
-
-.prose :global(h3),
-.prose :global(h4) {
-  margin: var(--space-5) 0 var(--space-2);
-  font-family: var(--font-heading);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-charcoal);
+/*
+ * The description is CMS HTML rendered by `SafeHtml`, which brings the global
+ * `.prose` with it. This wrapper exists for the clamp — it is the element whose
+ * height is measured — so all it has to say is that the text may use the whole
+ * column.
+ */
+.description :global(.prose) {
+  max-width: none;
 }
 
 /* About twelve lines. A max-height clamp (rather than `-webkit-line-clamp`)

@@ -6,6 +6,7 @@ import theme from './theme';
 import AppRoutes from './routes';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import './assets/styles/global.css';
+import './assets/styles/prose.css';
 
 /**
  * The providers that know nothing about routing sit here; the ones that do —

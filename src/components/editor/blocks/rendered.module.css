@@ -1,0 +1,63 @@
+/**
+ * The three `data-sna-block` placeholders, as they look on a published page.
+ *
+ * They sit inside `.prose`, which owns the typography around them; these rules
+ * only give each block the band, the grid or the spacing it needs to stop being
+ * a paragraph.
+ */
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-primary-light);
+}
+
+.ctaText {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.ctaTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-charcoal);
+}
+
+.ctaBody {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+}
+
+.properties {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.faq {
+  margin: 0;
+}
+
+@media (max-width: 1199px) {
+  .properties {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .properties {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cta {
+    padding: var(--space-5);
+  }
+}

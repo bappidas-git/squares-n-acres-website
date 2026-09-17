@@ -2,7 +2,7 @@ import { Helmet } from 'react-helmet-async';
 import { Icon } from '@iconify/react';
 import { useParams } from 'react-router-dom';
 
-import LegacyHtml from '../../components/common/LegacyHtml';
+import SafeHtml from '../../components/editor/SafeHtml';
 import NotFound from './NotFound';
 import PATHS from '../../routes/paths';
 import masterDataService from '../../services/masterDataService';
@@ -92,7 +92,9 @@ export default function BuilderDetail() {
               </h2>
 
               <div className={styles.aboutLayout}>
-                {description ? <LegacyHtml html={description} className={styles.prose} /> : null}
+                {description ? (
+                  <SafeHtml html={description} className={styles.profileBody} />
+                ) : null}
 
                 {items.length > 0 ? (
                   <div className={styles.highlights}>

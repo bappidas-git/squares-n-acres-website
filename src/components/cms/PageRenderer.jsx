@@ -2,8 +2,6 @@ import { useEffect, useMemo } from 'react';
 
 import BLOCK_COMPONENTS from './blocks';
 
-import '../../assets/styles/prose.css';
-
 /**
  * A CMS page's blocks, in order (00_MASTER_CONTEXT.md §6.10).
  *

@@ -7,7 +7,7 @@ import { Link, useParams } from 'react-router-dom';
 // `mini-css-extract-plugin` refuses to emit a stylesheet two chunks disagree
 // about the order of.
 import NotFound from './NotFound';
-import LegacyHtml from '../../components/common/LegacyHtml';
+import SafeHtml from '../../components/editor/SafeHtml';
 import PATHS from '../../routes/paths';
 import careerService from '../../services/careerService';
 import useApi from '../../hooks/useApi';
@@ -160,7 +160,7 @@ export default function JobDetail() {
                 <h2 className={styles.blockTitle} id="job-about">
                   About the role
                 </h2>
-                <LegacyHtml html={job.description} className={styles.prose} />
+                <SafeHtml html={job.description} />
               </section>
             ) : null}
 

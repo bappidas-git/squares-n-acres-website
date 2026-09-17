@@ -5,7 +5,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 import LeadForm from '../../components/common/LeadForm';
-import LegacyHtml from '../../components/common/LegacyHtml';
+import SafeHtml from '../../components/editor/SafeHtml';
 import PATHS from '../../routes/paths';
 import articleService from '../../services/articleService';
 import styles from './ArticleDetail.module.css';
@@ -19,9 +19,10 @@ import { leadFormProps } from '../../utils/leadSources';
  * One article.
  *
  * The body arrives as HTML from the CMS (§6.8), so it is rendered as HTML
- * through `LegacyHtml` instead of the boilerplate's hand-written Markdown
+ * through `SafeHtml` instead of the boilerplate's hand-written Markdown
  * renderer — which duplicated tables on every `|` line and turned ordered
- * lists into bullets (ADD-16). Prompt 32 replaces `LegacyHtml` with `SafeHtml`.
+ * lists into bullets (ADD-16). `SafeHtml` sanitises against the editor's
+ * allow-list and turns the `data-sna-block` placeholders into live blocks.
  *
  * Related articles come from the editor's own `relatedArticleIds` through
  * `GET /articles?ids=`, which returns them in the given order.
@@ -252,7 +253,7 @@ const ArticleDetail = () => {
 
             <h1 className={styles.articleTitle}>{article.title}</h1>
 
-            <LegacyHtml className={styles.articleContent} html={body} />
+            <SafeHtml className={styles.articleContent} html={body} />
 
             {Array.isArray(article.tags) && article.tags.length > 0 ? (
               <div className={styles.tags}>

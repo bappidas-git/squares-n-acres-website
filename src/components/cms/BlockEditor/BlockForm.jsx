@@ -7,6 +7,7 @@ import IconButton from '../../ui/IconButton';
 import ImageField from '../../admin/ImageField';
 import ItemsRepeater from './fields/ItemsRepeater';
 import LeadFieldsBuilder from './fields/LeadFieldsBuilder';
+import RichTextField from '../../editor/RichTextField';
 import articleService from '../../../services/articleService';
 import masterDataService from '../../../services/masterDataService';
 import propertyService from '../../../services/propertyService';
@@ -136,15 +137,19 @@ export function BlockField({
         />
       );
 
-    case 'html':
+    case 'richtext':
       return (
-        <TextareaField
-          {...shared}
-          rows={field.rows ?? 8}
+        <RichTextField
+          label={field.label}
+          required={field.required}
+          helper={field.hint}
+          error={error}
+          disabled={disabled}
+          variant={field.compact ? 'compact' : 'full'}
+          minHeight={field.compact ? 180 : 320}
           placeholder={field.placeholder}
           value={value ?? ''}
-          className={styles.htmlField}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={onChange}
         />
       );
 

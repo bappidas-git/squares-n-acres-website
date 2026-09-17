@@ -1,0 +1,595 @@
+/**
+ * The editor's chrome: the box, the toolbar, the floating menus, the dialogs
+ * and the three block node views.
+ *
+ * The writing surface itself is not styled here — it wears `.prose`
+ * (`src/assets/styles/prose.css`), the same stylesheet the published page uses,
+ * so what an editor sees while typing is what a visitor will read.
+ *
+ * One module for the whole folder, the way `cms/blocks/blocks.module.css`
+ * serves every block: these pieces are one control split across files for
+ * readability, not eight controls.
+ */
+
+.field {
+  width: 100%;
+}
+
+/* ── The box ───────────────────────────────────────────────────────────── */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+}
+
+.editor:focus-within {
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px var(--color-info-bg);
+}
+
+.invalid {
+  border-color: var(--color-error);
+}
+
+.readOnly {
+  background-color: var(--color-surface);
+}
+
+.fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  border-radius: 0;
+  border: 0;
+}
+
+.workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.canvas {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+}
+
+.fullscreen .canvas {
+  padding: var(--space-8) var(--space-6);
+}
+
+.surface {
+  max-width: none;
+  outline: none;
+}
+
+.surface:focus {
+  outline: none;
+}
+
+.statusBar {
+  display: flex;
+  gap: var(--space-4);
+  margin: 0;
+  padding: var(--space-2) var(--space-5);
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* ── Toolbar ───────────────────────────────────────────────────────────── */
+
+.toolbar,
+.tableMenu {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-1);
+  overflow-x: auto;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  scrollbar-width: thin;
+}
+
+.tableMenu {
+  top: auto;
+  background-color: var(--color-primary-light);
+}
+
+.toolbarGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-right: var(--space-2);
+  border-right: 1px solid var(--color-border);
+}
+
+.toolbarGroup:last-child {
+  border-right: 0;
+  padding-right: 0;
+}
+
+.toolbarSlot {
+  display: inline-flex;
+}
+
+.toolbarButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.toolbarButton:hover:not(:disabled) {
+  background-color: var(--color-surface-2);
+}
+
+.toolbarButton:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.toolbarButton:disabled {
+  color: var(--color-border-strong);
+  cursor: not-allowed;
+}
+
+.toolbarButtonOn {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.toolbarSelect {
+  height: 44px;
+  min-width: 140px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+}
+
+.toolbarSelect:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+/* ── Bubble and floating menus ─────────────────────────────────────────── */
+
+.bubble {
+  position: absolute;
+  z-index: var(--z-dropdown);
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  transform: translateX(-50%);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-md);
+}
+
+.bubbleButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.bubbleButton:hover {
+  background-color: var(--color-surface-2);
+}
+
+.bubbleButton:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.bubbleButtonOn {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.inserter {
+  position: absolute;
+  z-index: var(--z-dropdown);
+  transform: translateX(calc(-100% - var(--space-2)));
+}
+
+.inserterTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.inserterTrigger:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.inserterTrigger:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.inserterPanel {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-lg);
+}
+
+.inserterItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.inserterItem:hover {
+  background-color: var(--color-surface);
+}
+
+.inserterItem:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+/* ── Outline rail ──────────────────────────────────────────────────────── */
+
+.outline {
+  flex: 0 0 260px;
+  overflow-y: auto;
+  padding: var(--space-4);
+  border-left: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+.outlineTitle {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.outlineEmpty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.outlineList {
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.outlineList li[data-level='3'] {
+  padding-left: var(--space-4);
+}
+
+.outlineItem {
+  display: block;
+  width: 100%;
+  padding: var(--space-1) 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.outlineItem:hover {
+  color: var(--color-primary-dark);
+}
+
+.outlineItem:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.outlineStats {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.outlineStats > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.outlineStats dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.outlineStats dd {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.outlineOver {
+  color: var(--color-warning-dark);
+}
+
+/* ── Dialogs ───────────────────────────────────────────────────────────── */
+
+.dialogGrid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.dialogDetails {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-3);
+}
+
+.dialogSummary {
+  cursor: pointer;
+  color: var(--color-primary-dark);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.dialogSummary:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.dialogPreview {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+}
+
+.dialogPreview img {
+  display: block;
+  max-width: 100%;
+  max-height: 220px;
+  margin: 0 auto;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Internal link picker ──────────────────────────────────────────────── */
+
+.picker {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.pickerNote {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.pickerList {
+  display: grid;
+  gap: var(--space-1);
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pickerItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.pickerItem:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.pickerItem:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.pickerItemText {
+  display: grid;
+  min-width: 0;
+}
+
+.pickerItemTitle {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pickerItemPath {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Block node views ──────────────────────────────────────────────────── */
+
+.nodeBlock {
+  margin: var(--space-5) 0;
+}
+
+.nodeBody {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+}
+
+.nodeHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.nodeLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nodeGrid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.nodeGrid > * {
+  grid-column: 1 / -1;
+}
+
+.nodeHalf {
+  grid-column: span 1;
+}
+
+.nodeChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.nodeEmpty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.nodeList {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.faqRow {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.faqRowHead {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.faqRowField {
+  flex: 1;
+  min-width: 0;
+}
+
+.faqAdd {
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 899px) {
+  .nodeGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .nodeHalf {
+    grid-column: 1 / -1;
+  }
+
+  .outline {
+    display: none;
+  }
+
+  .fullscreen .outline {
+    display: block;
+    flex-basis: 200px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbarButton {
+    transition: none;
+  }
+}

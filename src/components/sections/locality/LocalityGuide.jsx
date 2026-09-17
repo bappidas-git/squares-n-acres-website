@@ -1,6 +1,6 @@
 import { Icon } from '@iconify/react';
 
-import LegacyHtml from '../../common/LegacyHtml';
+import SafeHtml from '../../editor/SafeHtml';
 
 import styles from './LocalitySections.module.css';
 
@@ -8,9 +8,9 @@ import styles from './LocalitySections.module.css';
  * The written half of a locality guide: the editor's description and the
  * highlights beside it.
  *
- * The description is CMS-authored HTML rendered through the temporary
- * `LegacyHtml`; prompt 32 swaps in `SafeHtml` with the allow-list the Tiptap
- * editor writes with (registered under "Pending rewrites").
+ * The description is CMS-authored HTML rendered through `SafeHtml`, which
+ * sanitises it against the editor's allow-list and gives it the site's prose
+ * typography.
  *
  * Nothing renders when a locality has neither — an empty "About" heading is
  * worse than no section (§7 of prompt 14).
@@ -31,7 +31,7 @@ export default function LocalityGuide({ locality }) {
       </h2>
 
       <div className={styles.guideLayout}>
-        {description ? <LegacyHtml html={description} className={styles.prose} /> : null}
+        {description ? <SafeHtml html={description} className={styles.guideBody} /> : null}
 
         {items.length > 0 ? (
           <div className={styles.highlights}>

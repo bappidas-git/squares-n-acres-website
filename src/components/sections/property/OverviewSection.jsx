@@ -3,7 +3,7 @@ import { Icon } from '@iconify/react';
 
 import { Button } from '../../ui';
 import { formatMonthYear, formatNumber } from '../../../utils/format';
-import LegacyHtml from '../../common/LegacyHtml';
+import SafeHtml from '../../editor/SafeHtml';
 import SectionShell from './SectionShell';
 
 import styles from './OverviewSection.module.css';
@@ -93,8 +93,9 @@ export function snapshot(property) {
  * because the same paragraph is four lines wide on a desktop and twelve on a
  * phone.
  *
- * `LegacyHtml` is temporary — prompt 32's `SafeHtml` sanitises with the
- * editor's own allow-list.
+ * `SafeHtml` sanitises the markup against the editor's own allow-list and
+ * renders the blocks an editor dropped into it — a call to action, a row of
+ * listings — as the live components rather than as empty divs.
  *
  * @param {object} props
  * @param {object} props.property a record of §6.1
@@ -131,9 +132,11 @@ export default function OverviewSection({ property, background = 'bg' }) {
         <div className={styles.body}>
           <div
             ref={bodyRef}
-            className={[styles.prose, expanded ? '' : styles.clamped].filter(Boolean).join(' ')}
+            className={[styles.description, expanded ? '' : styles.clamped]
+              .filter(Boolean)
+              .join(' ')}
           >
-            <LegacyHtml html={description} />
+            <SafeHtml html={description} />
           </div>
           {clampable ? (
             <Button

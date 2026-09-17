@@ -1,4 +1,4 @@
-import LegacyHtml from '../../common/LegacyHtml';
+import SafeHtml from '../../editor/SafeHtml';
 import { Container, Section } from '../../ui';
 
 import styles from './blocks.module.css';
@@ -10,9 +10,9 @@ import styles from './blocks.module.css';
  * is what gives an editor's bare `<h2>` and `<ul>` the site's typography
  * without a single class name in the content.
  *
- * `LegacyHtml` is temporary: prompt 32 replaces it with `SafeHtml`, which
- * sanitises against the rich-text editor's own allow-list. The API already
- * refuses a payload carrying a `<script`.
+ * `SafeHtml` sanitises against the rich-text editor's own allow-list — the API
+ * refuses a payload carrying a `<script` as well — and renders any block an
+ * editor dropped into the prose as the live component.
  */
 export default function RichTextBlock({ data = {}, background = 'bg' }) {
   if (!data.html) return null;
@@ -20,7 +20,7 @@ export default function RichTextBlock({ data = {}, background = 'bg' }) {
   return (
     <Section background={background} spacing="lg">
       <Container>
-        <LegacyHtml html={data.html} className={`prose ${styles.prose}`} />
+        <SafeHtml html={data.html} className={styles.prose} />
       </Container>
     </Section>
   );

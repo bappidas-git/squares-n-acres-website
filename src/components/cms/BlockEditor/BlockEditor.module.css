@@ -168,11 +168,6 @@
   grid-column: span 1;
 }
 
-.htmlField {
-  font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
-}
-
 .iconField {
   display: flex;
   align-items: flex-start;

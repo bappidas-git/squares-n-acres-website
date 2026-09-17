@@ -15,6 +15,7 @@ import MultiSelect from '../../../components/admin/MultiSelect';
 import { FormFieldControl } from '../../../components/admin/MasterDataForm';
 import FormSection, { FormColumn } from '../../../components/admin/FormSection';
 import PageHeader from '../../../components/admin/PageHeader';
+import RichTextField from '../../../components/editor/RichTextField';
 import SortableList from '../../../components/admin/SortableList';
 import {
   Alert,
@@ -343,15 +344,15 @@ export default function DeveloperFormPage() {
           </FormColumn>
 
           <FormColumn>
-            <TextareaField
+            <RichTextField
               label="Description"
-              rows={12}
+              variant="full"
+              minHeight={320}
               value={values.description ?? ''}
               error={form.errors.description}
               disabled={form.submitting}
-              hint="The profile itself. HTML is allowed; the rich-text editor replaces this box in prompt 32."
-              onChange={(event) => setField('description', event.target.value)}
-              onBlur={() => form.handleBlur('description')}
+              helper="The profile itself — what they build, where, and what they are known for."
+              onChange={(html) => setField('description', html)}
             />
           </FormColumn>
 

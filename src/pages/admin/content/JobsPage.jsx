@@ -266,8 +266,9 @@ export default function JobsPage() {
           type: 'richtext',
           label: 'About the role',
           required: true,
-          rows: 10,
-          hint: 'HTML is allowed — paragraphs and lists. The editor arrives in prompt 32.',
+          variant: 'full',
+          minHeight: 280,
+          hint: 'What the role is and who it suits. The bullet lists below come after it.',
         },
         {
           name: 'responsibilities',
