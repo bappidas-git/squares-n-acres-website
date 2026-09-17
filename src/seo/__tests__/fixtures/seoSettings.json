@@ -1,0 +1,94 @@
+{
+  "siteUrl": "https://www.squaresnacres.com",
+  "separator": "|",
+  "titleTemplates": {
+    "default": "%title% %sep% %sitename%",
+    "home": "%sitename% – Buy, Sell & Rent Properties in Bangalore",
+    "property": "%bhk% %propertytype% %listingtype% in %locality%, %city% – %price% %sep% %sitename%",
+    "listing": "%propertytype% %listingtype% in %locality%, %city% – %count% Listings %sep% %sitename%",
+    "locality": "Properties in %locality%, %city% – Buy, Rent & Invest %sep% %sitename%",
+    "developer": "%title% – Projects in %city% %sep% %sitename%",
+    "article": "%title% %sep% %sitename%",
+    "articleCategory": "%title% Articles %sep% %sitename%",
+    "page": "%title% %sep% %sitename%",
+    "author": "%title% – Author %sep% %sitename%",
+    "search": "Search results %sep% %sitename%"
+  },
+  "defaults": {
+    "metaDescription": "Squares N Acres is a property advisory in Bengaluru: curated apartments, villas, plots and commercial space, with verified information and one advisor throughout.",
+    "ogImageUrl": "https://res.cloudinary.com/dn9gyaiik/image/upload/w_1200,h_630,c_pad,b_white/v1789465788/sna-logo_o09ugt.png",
+    "twitterCard": "summary_large_image",
+    "robots": {
+      "index": true,
+      "follow": true
+    }
+  },
+  "knowledgeGraph": {
+    "type": "RealEstateAgent",
+    "name": "Squares N Acres",
+    "legalName": null,
+    "logoUrl": "https://res.cloudinary.com/dn9gyaiik/image/upload/v1789465788/sna-logo_o09ugt.png",
+    "description": "Property advisory in Bengaluru, Karnataka: curated residential and commercial listings, locality research and end-to-end transaction support.",
+    "phone": "+919800000001",
+    "email": "info@squaresnacres.com",
+    "address": {
+      "streetAddress": "[Office address to be provided]",
+      "addressLocality": "Bengaluru",
+      "addressRegion": "Karnataka",
+      "postalCode": "560001",
+      "addressCountry": "IN"
+    },
+    "geo": {
+      "latitude": 12.9716,
+      "longitude": 77.5946
+    },
+    "openingHours": ["Mo-Sa 09:30-18:30"],
+    "priceRange": null,
+    "areaServed": ["Bengaluru"],
+    "sameAs": []
+  },
+  "verification": {
+    "google": null,
+    "bing": null,
+    "pinterest": null,
+    "yandex": null
+  },
+  "robotsTxt": "User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /shortlist\nDisallow: /*?preview=\nDisallow: /*?q=\n\nUser-agent: Googlebot\nAllow: /\nUser-agent: Bingbot\nAllow: /\nUser-agent: DuckDuckBot\nAllow: /\nUser-agent: GPTBot\nAllow: /\nUser-agent: OAI-SearchBot\nAllow: /\nUser-agent: ChatGPT-User\nAllow: /\nUser-agent: ClaudeBot\nAllow: /\nUser-agent: Claude-User\nAllow: /\nUser-agent: Claude-SearchBot\nAllow: /\nUser-agent: anthropic-ai\nAllow: /\nUser-agent: PerplexityBot\nAllow: /\nUser-agent: Perplexity-User\nAllow: /\nUser-agent: Google-Extended\nAllow: /\nUser-agent: CCBot\nAllow: /\nUser-agent: Applebot\nAllow: /\nUser-agent: Applebot-Extended\nAllow: /\nUser-agent: Amazonbot\nAllow: /\nUser-agent: meta-externalagent\nAllow: /\nUser-agent: Bytespider\nAllow: /\n\nSitemap: %siteurl%/sitemap.xml",
+  "llmsTxt": "",
+  "sitemap": {
+    "enabled": true,
+    "includeProperties": true,
+    "includeLocalities": true,
+    "includeDevelopers": true,
+    "includeArticles": true,
+    "includePages": true,
+    "changefreq": {
+      "property": "weekly",
+      "locality": "weekly",
+      "developer": "monthly",
+      "article": "monthly",
+      "page": "monthly"
+    },
+    "priority": {
+      "property": 0.8,
+      "locality": 0.7,
+      "developer": 0.6,
+      "article": 0.6,
+      "page": 0.5
+    },
+    "excludeUrls": []
+  },
+  "breadcrumbs": {
+    "enabled": true,
+    "homeLabel": "Home"
+  },
+  "noindex": {
+    "searchResults": true,
+    "paginatedListings": false,
+    "filteredListings": true,
+    "adminAndAuth": true
+  },
+  "customHeadHtml": null,
+  "customBodyEndHtml": null,
+  "updatedAt": "2026-09-13T11:00:00.000Z"
+}

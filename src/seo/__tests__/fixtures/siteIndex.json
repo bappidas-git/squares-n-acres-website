@@ -1,0 +1,274 @@
+[
+  {
+    "id": 1,
+    "type": "property",
+    "title": "Lakeview Heights – 3 BHK Apartment in Whitefield",
+    "slug": "lakeview-heights-3-bhk-whitefield",
+    "url": "https://www.squaresnacres.com/properties/lakeview-heights-3-bhk-whitefield",
+    "seo": {
+      "focusKeyword": "3 bhk apartment in whitefield",
+      "title": "3 BHK Apartment in Whitefield",
+      "description": "3 BHK Apartment at Lakeview Heights, Whitefield, Bengaluru — 1,650 sq ft at ₹1.24 Cr. Ready-to-move 2 and 3 BHK apartments in a gated development off Whitefield",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "active",
+    "updatedAt": "2026-06-29T06:20:00.000Z"
+  },
+  {
+    "id": 2,
+    "type": "property",
+    "title": "Aurelia Park Residences – 2 BHK Apartment in Sarjapur Road",
+    "slug": "aurelia-park-residences-2-bhk-sarjapur-road",
+    "url": "https://www.squaresnacres.com/properties/aurelia-park-residences-2-bhk-sarjapur-road",
+    "seo": {
+      "focusKeyword": "2 bhk apartment in sarjapur road",
+      "title": "2 BHK Apartment in Sarjapur Road",
+      "description": "2 BHK Apartment at Aurelia Park Residences, Sarjapur Road, Bengaluru — 1,180 sq ft at ₹98 L. Under-construction 2 and 3 BHK apartments near the Ibblur end of",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "active",
+    "updatedAt": "2026-05-23T12:20:00.000Z"
+  },
+  {
+    "id": 3,
+    "type": "property",
+    "title": "Nandi Skyline Towers – 3 BHK Apartment in Hebbal",
+    "slug": "nandi-skyline-towers-3-bhk-hebbal",
+    "url": "https://www.squaresnacres.com/properties/nandi-skyline-towers-3-bhk-hebbal",
+    "seo": {
+      "focusKeyword": "3 bhk apartment in hebbal",
+      "title": "3 BHK Apartment in Hebbal",
+      "description": "3 BHK Apartment at Nandi Skyline Towers, Hebbal, Bengaluru — 1,780 sq ft at ₹1.75 Cr. Pre-launch 3 and 4 BHK apartments in three high-rise towers at Hebbal",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "active",
+    "updatedAt": "2026-06-18T09:20:00.000Z"
+  },
+  {
+    "id": 4,
+    "type": "property",
+    "title": "Cauvery Orchid Enclave – 2 BHK Apartment in Electronic City",
+    "slug": "cauvery-orchid-enclave-2-bhk-electronic-city",
+    "url": "https://www.squaresnacres.com/properties/cauvery-orchid-enclave-2-bhk-electronic-city",
+    "seo": {
+      "focusKeyword": "2 bhk apartment in electronic city",
+      "title": "2 BHK Apartment in Electronic City",
+      "description": "2 BHK Apartment at Cauvery Orchid Enclave, Electronic City, Bengaluru — 1,050 sq ft at ₹71.5 L. Completed 1, 2 and 3 BHK apartments in Electronic City Phase 1",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "active",
+    "updatedAt": "2026-08-12T09:20:00.000Z"
+  },
+  {
+    "id": 1,
+    "type": "article",
+    "title": "Karnataka RERA: A Complete Guide for Bengaluru Homebuyers",
+    "slug": "karnataka-rera-guide-for-homebuyers",
+    "url": "https://www.squaresnacres.com/insights/articles/karnataka-rera-guide-for-homebuyers",
+    "seo": {
+      "focusKeyword": "karnataka rera",
+      "title": "Karnataka RERA: A Guide for Homebuyers",
+      "description": "What the Real Estate (Regulation and Development) Act means in Karnataka, how to read a project page on the regulator’s portal, and the five things a",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "published",
+    "updatedAt": "2026-07-01T10:05:00.000Z"
+  },
+  {
+    "id": 2,
+    "type": "article",
+    "title": "BBMP A Khata vs B Khata: What Every Buyer Should Know",
+    "slug": "bbmp-a-khata-vs-b-khata-explained",
+    "url": "https://www.squaresnacres.com/insights/articles/bbmp-a-khata-vs-b-khata-explained",
+    "seo": {
+      "focusKeyword": "a khata vs b khata",
+      "title": "A Khata vs B Khata in Bengaluru",
+      "description": "A khata is not a title document, and B khata is not a lesser version of it. What each one records, what a B khata blocks, and the questions to ask before you",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "published",
+    "updatedAt": "2026-08-03T14:00:00.000Z"
+  },
+  {
+    "id": 3,
+    "type": "article",
+    "title": "Stamp Duty and Registration Charges in Karnataka (2026 Guide)",
+    "slug": "stamp-duty-and-registration-charges-in-karnataka",
+    "url": "https://www.squaresnacres.com/insights/articles/stamp-duty-and-registration-charges-in-karnataka",
+    "seo": {
+      "focusKeyword": "stamp duty in karnataka",
+      "title": "Stamp Duty and Registration in Karnataka",
+      "description": "What you actually pay at the sub-registrar’s office, how guidance value decides the base, and why the number in your budget should be larger than the one in the",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "published",
+    "updatedAt": "2026-07-21T11:35:00.000Z"
+  },
+  {
+    "id": 4,
+    "type": "article",
+    "title": "Home Loan Eligibility in India: FOIR, Credit Score and EMI Planning",
+    "slug": "home-loan-eligibility-and-foir-explained",
+    "url": "https://www.squaresnacres.com/insights/articles/home-loan-eligibility-and-foir-explained",
+    "seo": {
+      "focusKeyword": "home loan eligibility",
+      "title": "Home Loan Eligibility: FOIR and EMI Planning",
+      "description": "How a lender turns your salary slip into a sanction letter: the obligations ratio, the credit score, the loan-to-value cap and the tenure trade-off, with the",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "published",
+    "updatedAt": "2026-07-15T07:15:00.000Z"
+  },
+  {
+    "id": 1,
+    "type": "locality",
+    "title": "Whitefield",
+    "slug": "whitefield",
+    "url": "https://www.squaresnacres.com/localities/whitefield",
+    "seo": {
+      "focusKeyword": "property in whitefield",
+      "title": "Property in Whitefield, Bengaluru",
+      "description": "East Bengaluru's best-known technology corridor: gated apartment projects, international schools and Purple Line metro stations along the main road.",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "active",
+    "updatedAt": "2026-04-28T12:05:00.000Z"
+  },
+  {
+    "id": 2,
+    "type": "locality",
+    "title": "Sarjapur Road",
+    "slug": "sarjapur-road",
+    "url": "https://www.squaresnacres.com/localities/sarjapur-road",
+    "seo": {
+      "focusKeyword": "property in sarjapur road",
+      "title": "Property in Sarjapur Road, Bengaluru",
+      "description": "A corridor running south-east from Agara junction, filled in behind the Outer Ring Road campuses, with schools along the road and villas beyond Dommasandra.",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "active",
+    "updatedAt": "2026-07-22T07:35:00.000Z"
+  },
+  {
+    "id": 3,
+    "type": "locality",
+    "title": "Electronic City",
+    "slug": "electronic-city",
+    "url": "https://www.squaresnacres.com/localities/electronic-city",
+    "seo": {
+      "focusKeyword": "property in electronic city",
+      "title": "Property in Electronic City, Bengaluru",
+      "description": "Bengaluru's first planned technology hub, split into two phases off Hosur Road, with the most affordable apartment stock of the major employment corridors.",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "active",
+    "updatedAt": "2026-06-29T11:15:00.000Z"
+  },
+  {
+    "id": 1,
+    "type": "developer",
+    "title": "Aurelia Estates",
+    "slug": "aurelia-estates",
+    "url": "https://www.squaresnacres.com/builders/aurelia-estates",
+    "seo": {
+      "focusKeyword": "aurelia estates bengaluru",
+      "title": "Aurelia Estates — Projects in Bengaluru",
+      "description": "Mid-rise gated apartment projects across east Bengaluru, built around courtyards and clubhouses rather than towers.",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "active",
+    "updatedAt": "2026-04-02T11:45:00.000Z"
+  },
+  {
+    "id": 2,
+    "type": "developer",
+    "title": "Nandi Ridge Developers",
+    "slug": "nandi-ridge-developers",
+    "url": "https://www.squaresnacres.com/builders/nandi-ridge-developers",
+    "seo": {
+      "focusKeyword": "nandi ridge developers bengaluru",
+      "title": "Nandi Ridge Developers — Projects in Bengaluru",
+      "description": "Plotted layouts and villa communities in north Bengaluru, sold with approvals in place and infrastructure laid before handover.",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "active",
+    "updatedAt": "2026-08-15T12:00:00.000Z"
+  },
+  {
+    "id": 1,
+    "type": "page",
+    "title": "Home",
+    "slug": "home",
+    "url": "https://www.squaresnacres.com/home",
+    "seo": {
+      "focusKeyword": "property in bengaluru",
+      "title": "Buy, Sell and Rent Property in Bengaluru",
+      "description": "Verified apartments, villas, plots and commercial space across twenty Bengaluru localities, with an advisor from the first call to registration.",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "published",
+    "updatedAt": "2026-07-30T07:25:00.000Z"
+  },
+  {
+    "id": 2,
+    "type": "page",
+    "title": "About Us",
+    "slug": "about",
+    "url": "https://www.squaresnacres.com/about",
+    "seo": {
+      "focusKeyword": "about squares n acres",
+      "title": "About Squares N Acres",
+      "description": "Who we are, how we work and what we will and will not say about a property. The Squares N Acres approach to buying, selling and renting in Bengaluru.",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "published",
+    "updatedAt": "2026-08-27T13:05:00.000Z"
+  },
+  {
+    "id": 3,
+    "type": "page",
+    "title": "Contact Us",
+    "slug": "contact",
+    "url": "https://www.squaresnacres.com/contact",
+    "seo": {
+      "focusKeyword": "contact squares n acres",
+      "title": "Contact Squares N Acres",
+      "description": "Call, message or write to Squares N Acres about buying, selling, renting or letting property in Bengaluru. We reply as soon as we can.",
+      "score": null,
+      "scoreBand": "none"
+    },
+    "isActive": true,
+    "status": "published",
+    "updatedAt": "2026-05-18T05:00:00.000Z"
+  }
+]

@@ -1,0 +1,83 @@
+{
+  "id": 1,
+  "name": "Aurelia Estates",
+  "slug": "aurelia-estates",
+  "logoUrl": "https://picsum.photos/seed/sna-developer-aurelia-estates-logo/200/80",
+  "coverImageUrl": "https://picsum.photos/seed/sna-developer-aurelia-estates-cover/1600/600",
+  "description": "<p>Aurelia Estates builds mid-rise gated apartment projects across east Bengaluru, mostly in the eight to eighteen storey range, planned around a central landscaped court with the clubhouse on the podium.</p><p>The design brief repeats across their projects: cross-ventilated layouts, a balcony to every bedroom, covered parking at basement level and full power backup for common areas. Handover packages include the completion certificate, the approved plan set and the association handover documents.</p><p>Aurelia Estates is a fictional builder created for this dataset. The projects, the counts and the registration numbers attributed to it are placeholders, and the record should be replaced with the client's own builder data before the site goes live.</p>",
+  "shortDescription": "Mid-rise gated apartment projects across east Bengaluru, built around courtyards and clubhouses rather than towers.",
+  "establishedYear": 2004,
+  "headquarters": "Bengaluru, Karnataka",
+  "website": null,
+  "totalProjects": 26,
+  "ongoingProjects": 5,
+  "completedProjects": 21,
+  "reraIds": ["PRM/KA/RERA/1251/446/PR/200/placeholder"],
+  "highlights": [
+    "Mid-rise gated projects in the eight to eighteen storey range",
+    "Cross-ventilated layouts with a balcony to every bedroom",
+    "Clubhouse, pool and podium landscaping as standard",
+    "Completion certificate and plan set handed over with the keys"
+  ],
+  "isFeatured": true,
+  "isActive": true,
+  "order": 1,
+  "seo": {
+    "focusKeyword": "aurelia estates bengaluru",
+    "secondaryKeywords": ["aurelia estates projects", "builders in bengaluru"],
+    "title": "Aurelia Estates — Projects in Bengaluru",
+    "description": "Mid-rise gated apartment projects across east Bengaluru, built around courtyards and clubhouses rather than towers.",
+    "slug": "aurelia-estates",
+    "canonicalUrl": null,
+    "robots": {
+      "index": true,
+      "follow": true,
+      "noarchive": false,
+      "nosnippet": false,
+      "noimageindex": false,
+      "maxSnippet": null,
+      "maxImagePreview": "large",
+      "maxVideoPreview": null
+    },
+    "og": {
+      "title": null,
+      "description": null,
+      "imageUrl": null
+    },
+    "twitter": {
+      "card": "summary_large_image",
+      "title": null,
+      "description": null,
+      "imageUrl": null
+    },
+    "breadcrumbTitle": null,
+    "schema": {
+      "type": "auto",
+      "custom": "",
+      "disabledAutoTypes": []
+    },
+    "sitemap": {
+      "include": true,
+      "priority": null,
+      "changefreq": null
+    },
+    "redirect": {
+      "enabled": false,
+      "toPath": "",
+      "statusCode": 301
+    },
+    "score": null,
+    "scoreBand": "none",
+    "testsPassed": 0,
+    "testsTotal": 0,
+    "analysis": {
+      "basic": [],
+      "additional": [],
+      "titleReadability": [],
+      "contentReadability": []
+    },
+    "lastAnalyzedAt": null
+  },
+  "createdAt": "2026-03-28T10:30:00.000Z",
+  "updatedAt": "2026-04-02T11:45:00.000Z"
+}
