@@ -18,6 +18,7 @@ import {
   Skeleton,
 } from '../../components/ui';
 import { FAQ_CATEGORIES } from '../../config/enums';
+import { leadFormProps } from '../../utils/leadSources';
 import { SITE } from '../../config/site';
 
 import styles from './FAQs.module.css';
@@ -30,20 +31,6 @@ const LIST_PARAM_KEYS = { category: 'string', q: 'string' };
 
 /** What the tab row asks for: the categories that actually hold a question. */
 const CATEGORY_PROBE = { perPage: 100, sort: 'category' };
-
-/** The fields the "ask us" form collects (§6.7). */
-const QUESTION_FIELDS = [
-  { name: 'name', label: 'Full name', type: 'text', required: true, placeholder: 'Your name' },
-  { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: '10-digit mobile' },
-  { name: 'email', label: 'E-mail', type: 'email', placeholder: 'you@example.com' },
-  {
-    name: 'message',
-    label: 'Your question',
-    type: 'textarea',
-    required: true,
-    placeholder: 'What would you like to know?',
-  },
-];
 
 /**
  * `/insights/faqs` — every question we are asked often enough to answer here.
@@ -245,12 +232,7 @@ export default function FAQs() {
                 />
               </div>
 
-              <LeadForm
-                title="Ask your question"
-                subtitle="We answer as soon as we can"
-                fields={QUESTION_FIELDS}
-                source="faq"
-              />
+              <LeadForm {...leadFormProps('faq')} submitLabel="Ask us" />
             </div>
           </Container>
         </section>

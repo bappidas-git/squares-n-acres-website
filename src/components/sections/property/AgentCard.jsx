@@ -1,8 +1,8 @@
 import { Icon } from '@iconify/react';
 
+import CallButton from '../../common/CallButton';
+import WhatsAppButton from '../../common/WhatsAppButton';
 import { Avatar } from '../../ui';
-import { formatPhoneForTel, whatsappLink } from '../../../utils/format';
-import { track } from '../../../utils/analytics';
 
 import styles from './AgentCard.module.css';
 
@@ -24,16 +24,11 @@ export default function AgentCard({ agent, propertyTitle = '', propertyId }) {
   if (!agent || agent.showOnListing !== true) return null;
 
   const name = agent.name || 'Your advisor';
-  const phoneHref = agent.phone ? `tel:${formatPhoneForTel(agent.phone)}` : '';
-  const whatsappHref = whatsappLink(
-    agent.whatsapp,
-    propertyTitle ? `Hi, I am interested in ${propertyTitle}` : 'Hi, I would like to know more.'
-  );
   const emailHref = agent.email
     ? `mailto:${agent.email}${propertyTitle ? `?subject=${encodeURIComponent(propertyTitle)}` : ''}`
     : '';
 
-  if (!phoneHref && !whatsappHref && !emailHref) return null;
+  if (!agent.phone && !agent.whatsapp && !emailHref) return null;
 
   return (
     <div className={styles.card}>
@@ -46,27 +41,26 @@ export default function AgentCard({ agent, propertyTitle = '', propertyId }) {
       </div>
 
       <div className={styles.actions}>
-        {phoneHref ? (
-          <a
+        {agent.phone ? (
+          <CallButton
+            variant="link"
+            number={agent.phone}
+            propertyId={propertyId}
+            label="Call"
+            context="agent-card"
             className={styles.action}
-            href={phoneHref}
-            onClick={() => track('call_click', { propertyId, context: 'agent-card' })}
-          >
-            <Icon icon="mdi:phone-outline" aria-hidden="true" />
-            Call
-          </a>
+          />
         ) : null}
-        {whatsappHref ? (
-          <a
+        {agent.whatsapp ? (
+          <WhatsAppButton
+            variant="link"
+            number={agent.whatsapp}
+            propertyId={propertyId}
+            propertyTitle={propertyTitle}
+            label="WhatsApp"
+            context="agent-card"
             className={styles.action}
-            href={whatsappHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => track('whatsapp_click', { propertyId, context: 'agent-card' })}
-          >
-            <Icon icon="mdi:whatsapp" aria-hidden="true" />
-            WhatsApp
-          </a>
+          />
         ) : null}
         {emailHref ? (
           <a className={styles.action} href={emailHref}>

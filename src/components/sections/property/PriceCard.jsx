@@ -3,28 +3,27 @@ import { Icon } from '@iconify/react';
 import { Button, Chip, Price } from '../../ui';
 import { DEFAULT_LTV_PERCENT, DEFAULT_TENURE_YEARS, startingEmi } from '../../../utils/finance';
 import { formatPrice } from '../../../utils/format';
-import { track } from '../../../utils/analytics';
-import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import AgentCard from './AgentCard';
+import WhatsAppButton from '../../common/WhatsAppButton';
 
 import styles from './PriceCard.module.css';
 
-/** The three ways a visitor asks to be contacted, and the source each records. */
+/** The three ways a visitor asks to be contacted, and the entry point each is. */
 const CTAS = [
   {
-    source: 'property-enquiry',
+    entry: 'property-enquiry',
     label: 'Enquire now',
     variant: 'primary',
     icon: 'mdi:email-fast-outline',
   },
   {
-    source: 'callback-request',
+    entry: 'callback-request',
     label: 'Request a call back',
     variant: 'outline',
     icon: 'mdi:phone-return-outline',
   },
   {
-    source: 'site-visit-request',
+    entry: 'site-visit-request',
     label: 'Schedule a site visit',
     variant: 'outline',
     icon: 'mdi:calendar-check-outline',
@@ -47,10 +46,9 @@ const CTAS = [
  * @param {object} props
  * @param {object} props.property a record of §6.1
  * @param {Array<object>} [props.banks] the active lenders
- * @param {(source: string) => void} props.onRequest opens the lead dialog
+ * @param {(entry: string) => void} props.onRequest opens the lead dialog
  */
 export default function PriceCard({ property, banks = [], onRequest }) {
-  const { getWhatsappLink } = useSiteSettings();
   if (!property) return null;
 
   const pricing = property.pricing ?? {};
@@ -74,11 +72,6 @@ export default function PriceCard({ property, banks = [], onRequest }) {
     isRental || onRequestPrice
       ? null
       : startingEmi(hasRange ? pricing.priceRangeMin : pricing.price, banks);
-
-  const whatsappMessage = `Hi, I am interested in ${property.title}${
-    typeof window === 'undefined' ? '' : ` — ${window.location.href}`
-  }`;
-  const whatsappHref = getWhatsappLink(whatsappMessage);
 
   return (
     <aside className={styles.card} aria-label="Price and enquiry">
@@ -130,29 +123,22 @@ export default function PriceCard({ property, banks = [], onRequest }) {
       <div className={styles.ctas}>
         {CTAS.map((cta) => (
           <Button
-            key={cta.source}
+            key={cta.entry}
             variant={cta.variant}
             fullWidth
             icon={<Icon icon={cta.icon} aria-hidden="true" />}
-            onClick={() => onRequest?.(cta.source)}
+            onClick={() => onRequest?.(cta.entry)}
           >
             {cta.label}
           </Button>
         ))}
 
-        {whatsappHref ? (
-          <Button
-            variant="secondary"
-            fullWidth
-            href={whatsappHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            icon={<Icon icon="mdi:whatsapp" aria-hidden="true" />}
-            onClick={() => track('whatsapp_click', { propertyId: property.id })}
-          >
-            WhatsApp us
-          </Button>
-        ) : null}
+        <WhatsAppButton
+          propertyId={property.id}
+          propertyTitle={property.title}
+          label="WhatsApp us"
+          context="price-card"
+        />
       </div>
 
       {emi ? (

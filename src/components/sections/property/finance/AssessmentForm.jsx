@@ -73,7 +73,7 @@ export default function AssessmentForm({
   bank = null,
   onComplete,
 }) {
-  const [values, setValues] = useState(() => emptyAnswers(leadStorage.getUserDetails() ?? {}));
+  const [values, setValues] = useState(() => emptyAnswers(leadStorage.getVisitor() ?? {}));
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [failed, setFailed] = useState('');
@@ -100,7 +100,10 @@ export default function AssessmentForm({
     try {
       setSubmitting(true);
       await leadService.create(body);
-      leadStorage.save(values, propertyId, source);
+      // Answering the questionnaire identifies the visitor for the whole
+      // listing, so every gated kind on it opens (prompt 25 §4.2).
+      leadStorage.saveVisitor({ name: values.name, phone: values.phone, email: values.email });
+      leadStorage.markCaptured(propertyId, source);
       track('lead_submit', { propertyId, source, score: score.score });
       onComplete?.({ values, score });
     } catch (error) {

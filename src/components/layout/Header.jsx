@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Link, useLocation } from 'react-router-dom';
 
+import CallButton from '../common/CallButton';
 import GlobalSearch from '../common/GlobalSearch';
-import LeadModalTemp from '../sections/property/LeadModalTemp';
 import MegaMenu from './MegaMenu';
 import PATHS from '../../routes/paths';
 import styles from './Header.module.css';
@@ -11,8 +11,9 @@ import useBreakpoint from '../../hooks/useBreakpoint';
 import useNavPages from '../../hooks/useNavPages';
 import useScrollDirection from '../../hooks/useScrollDirection';
 import { Logo, Modal } from '../ui';
+import WhatsAppButton from '../common/WhatsAppButton';
 import { buildHeaderNav, collapseMenus } from '../../config/navigation';
-import { EVENTS, track } from '../../utils/analytics';
+import { useLeadCapture } from '../../contexts/LeadCaptureContext';
 import { useMasterData } from '../../contexts/MasterDataContext';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
@@ -40,9 +41,9 @@ export default function Header() {
   const { settings } = useSiteSettings();
   const { propertyTypes, localities } = useMasterData();
   const { header: pages } = useNavPages();
+  const { openLeadModal } = useLeadCapture();
 
   const [searchOpen, setSearchOpen] = useState(false);
-  const [leadOpen, setLeadOpen] = useState(false);
 
   const { menus, actions } = buildHeaderNav({ propertyTypes, localities, pages, settings });
   const visible = width === 'md' ? collapseMenus(menus) : menus;
@@ -90,33 +91,36 @@ export default function Header() {
                   key={action.key}
                   type="button"
                   className={styles.cta}
-                  onClick={() => setLeadOpen(true)}
+                  onClick={() => openLeadModal({ entry: 'post-requirement' })}
                 >
                   {action.label}
                 </button>
               );
             }
 
-            return (
-              <a
+            // Both glyphs are the shared buttons: one tracked click, and a
+            // `whatsapp-click` / `call-click` lead for a visitor we already
+            // know (§6.17).
+            const buttonClass = [styles.iconButton, overHero ? styles.onDark : '']
+              .filter(Boolean)
+              .join(' ');
+
+            return action.kind === 'whatsapp' ? (
+              <WhatsAppButton
                 key={action.key}
-                href={action.href}
-                className={[styles.iconButton, overHero ? styles.onDark : '']
-                  .filter(Boolean)
-                  .join(' ')}
-                title={action.title}
-                aria-label={action.title}
-                {...(action.kind === 'whatsapp'
-                  ? { target: '_blank', rel: 'noopener noreferrer' }
-                  : null)}
-                onClick={() =>
-                  track(action.kind === 'whatsapp' ? EVENTS.whatsappClick : EVENTS.callClick, {
-                    source: 'header',
-                  })
-                }
-              >
-                <Icon icon={action.icon} width={22} height={22} aria-hidden="true" />
-              </a>
+                variant="icon"
+                label={action.title}
+                context="header"
+                className={buttonClass}
+              />
+            ) : (
+              <CallButton
+                key={action.key}
+                variant="icon"
+                label={action.title}
+                context="header"
+                className={buttonClass}
+              />
             );
           })}
         </div>
@@ -131,14 +135,6 @@ export default function Header() {
       >
         <GlobalSearch autoFocus onNavigate={() => setSearchOpen(false)} />
       </Modal>
-
-      <LeadModalTemp
-        open={leadOpen}
-        onClose={() => setLeadOpen(false)}
-        source="post-requirement"
-        requirement
-        successTitle="Requirement received"
-      />
     </header>
   );
 }

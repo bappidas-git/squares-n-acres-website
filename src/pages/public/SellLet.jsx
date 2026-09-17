@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
+import { leadFormProps } from '../../utils/leadSources';
 import { Section } from '../../components/ui';
 import styles from './SellLet.module.css';
 import { BRAND, SITE } from '../../config/site';
@@ -60,47 +61,6 @@ const stats = [
   { value: '95%', label: 'Closure Rate' },
   { value: '30 Days', label: 'Average Time to Close' },
   { value: '₹500Cr+', label: 'Property Value Managed' },
-];
-
-const leadFields = [
-  { name: 'name', label: 'Full Name', type: 'text', required: true, placeholder: 'Full Name *' },
-  { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'Email Address *' },
-  { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: 'Phone Number *' },
-  {
-    name: 'propertyType',
-    label: 'Property Type',
-    type: 'select',
-    required: true,
-    placeholder: 'Select Property Type *',
-    options: [
-      { value: 'apartment', label: 'Apartment' },
-      { value: 'villa', label: 'Villa / Independent House' },
-      { value: 'plot', label: 'Plot / Land' },
-      { value: 'commercial', label: 'Commercial Property' },
-      { value: 'penthouse', label: 'Penthouse' },
-    ],
-  },
-  {
-    name: 'location',
-    label: 'Location',
-    type: 'text',
-    required: true,
-    placeholder: 'Property Location *',
-  },
-  {
-    name: 'askingPrice',
-    label: 'Asking Price',
-    type: 'text',
-    required: false,
-    placeholder: 'Expected Price (optional)',
-  },
-  {
-    name: 'description',
-    label: 'Description',
-    type: 'textarea',
-    required: false,
-    placeholder: 'Brief description of your property...',
-  },
 ];
 
 /* ── Component ─────────────────────────────────── */
@@ -242,12 +202,7 @@ const SellLet = () => {
                   </div>
                 </div>
               </div>
-              <LeadForm
-                title="Submit Property Details"
-                subtitle="Our team will review and connect within 24 hours"
-                fields={leadFields}
-                source="sell_let"
-              />
+              <LeadForm {...leadFormProps('sell-let')} />
             </div>
           </div>
         </Section>

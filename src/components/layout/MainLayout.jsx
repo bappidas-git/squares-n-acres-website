@@ -8,6 +8,7 @@ import MobileHeader from './MobileHeader';
 import Footer from './Footer';
 import BottomNav from './BottomNav';
 import ScrollToTop from '../common/ScrollToTop';
+import WhatsAppButton from '../common/WhatsAppButton';
 import BackToTop from '../common/BackToTop';
 import styles from './MainLayout.module.css';
 
@@ -62,6 +63,11 @@ const MainLayout = ({ children }) => {
 
       {/* Back to Top button */}
       <BackToTop />
+
+      {/* One tap to a conversation, on every public page. It renders nothing
+          when no WhatsApp number is configured (§14) and never appears in the
+          admin panel, which has its own layout. */}
+      <WhatsAppButton variant="float" context="floating" />
 
       {/* Mobile Bottom Nav */}
       {isMobile && <BottomNav />}

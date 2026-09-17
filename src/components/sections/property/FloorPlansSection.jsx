@@ -5,8 +5,9 @@ import { AREA_UNITS } from '../../../config/enums';
 import { Button, LazyImage, Price, Tabs } from '../../ui';
 import { formatArea, formatBhk } from '../../../utils/format';
 import GatedOverlay from './GatedOverlay';
-import LeadModalTemp from './LeadModalTemp';
+import LeadCaptureModal from '../../common/LeadCaptureModal';
 import SectionShell from './SectionShell';
+import { leadFormProps } from '../../../utils/leadSources';
 import { track } from '../../../utils/analytics';
 import useGatedContent from '../../../hooks/useGatedContent';
 
@@ -198,7 +199,8 @@ export default function FloorPlansSection({ property, background = 'bg' }) {
         </Suspense>
       ) : null}
 
-      <LeadModalTemp
+      <LeadCaptureModal
+        {...leadFormProps('floor-plan-request')}
         open={askingForAccess}
         onClose={() => {
           setAskingForAccess(false);
@@ -207,15 +209,18 @@ export default function FloorPlansSection({ property, background = 'bg' }) {
             setLightboxOpen(true);
           }
         }}
-        source="floor-plan-request"
         propertyId={propertyId}
         propertyTitle={property?.title ?? ''}
-        message={`Floor plans for ${property?.projectName || property?.title || 'this project'}`}
-        onCaptured={() => {
+        // Name and number only, so the project travels as a hidden field.
+        hiddenFields={{
+          message: `Floor plans for ${property?.projectName || property?.title || 'this project'}`,
+        }}
+        deliver={{ kind: 'unlock', unlockKind: 'floorPlans' }}
+        agent={property?.agent?.showOnListing ? property.agent : null}
+        onSuccess={() => {
           unlock();
           setShowOnDismiss(true);
         }}
-        agent={property?.agent?.showOnListing ? property.agent : null}
       />
     </SectionShell>
   );

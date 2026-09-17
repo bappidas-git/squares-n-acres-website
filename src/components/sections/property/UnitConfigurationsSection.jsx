@@ -3,9 +3,9 @@ import { Suspense, lazy, useMemo, useState } from 'react';
 import { AREA_UNITS } from '../../../config/enums';
 import { Button, Chip, LazyImage, Price } from '../../ui';
 import { formatArea, formatBhk, formatNumber } from '../../../utils/format';
-import LeadModalTemp from './LeadModalTemp';
 import SectionShell from './SectionShell';
 import useBreakpoint from '../../../hooks/useBreakpoint';
+import { useLeadCapture } from '../../../contexts/LeadCaptureContext';
 
 import styles from './UnitConfigurationsSection.module.css';
 
@@ -69,7 +69,7 @@ function configurationLine(unit) {
 export default function UnitConfigurationsSection({ property, background = 'bg' }) {
   const { isMobile } = useBreakpoint();
   const [lightbox, setLightbox] = useState(null);
-  const [lead, setLead] = useState(null);
+  const { openLeadModal } = useLeadCapture();
 
   const units = useMemo(() => activeUnits(property?.unitConfigurations), [property]);
 
@@ -88,7 +88,17 @@ export default function UnitConfigurationsSection({ property, background = 'bg' 
     if (at >= 0) setLightbox(at);
   };
 
-  const askForPrice = (unit) => setLead({ name: unit.name, message: `Price for ${unit.name}` });
+  // "Get price" on one unit: the shared dialog, with the unit already named in
+  // the message so the desk knows which configuration was asked about.
+  const askForPrice = (unit) =>
+    openLeadModal({
+      entry: 'price-request',
+      propertyId: property?.id ?? null,
+      propertyTitle: property?.title ?? '',
+      agent: property?.agent?.showOnListing ? property.agent : null,
+      meta: { unit: unit.name },
+      prefill: { message: `Price for ${unit.name}` },
+    });
 
   const priceCell = (unit) => (
     <Price
@@ -239,17 +249,6 @@ export default function UnitConfigurationsSection({ property, background = 'bg' 
           />
         </Suspense>
       ) : null}
-
-      <LeadModalTemp
-        key={lead?.name ?? 'unit-price'}
-        open={lead !== null}
-        onClose={() => setLead(null)}
-        source="price-request"
-        propertyId={property?.id ?? null}
-        propertyTitle={property?.title ?? ''}
-        message={lead?.message ?? ''}
-        agent={property?.agent?.showOnListing ? property.agent : null}
-      />
     </SectionShell>
   );
 }

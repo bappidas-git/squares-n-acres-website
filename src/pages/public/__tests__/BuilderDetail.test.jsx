@@ -186,20 +186,21 @@ describe('BuilderDetail', () => {
       screen.getByDisplayValue('Interested in projects by Aurelia Estates')
     ).toBeInTheDocument();
 
-    fireEvent.change(screen.getByPlaceholderText('Full name *'), {
+    fireEvent.change(screen.getByLabelText(/your name/i), {
       target: { name: 'name', value: 'Ravi Kumar' },
     });
-    fireEvent.change(screen.getByPlaceholderText('Phone number *'), {
+    fireEvent.change(screen.getByLabelText(/phone/i), {
       target: { name: 'phone', value: '9876543210' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /Submit Request/i }));
+    fireEvent.click(screen.getByRole('button', { name: /send enquiry/i }));
 
-    expect(await screen.findByText('Thank You!')).toBeInTheDocument();
-    expect(leadService.create).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(leadService.create).toHaveBeenCalledTimes(1));
     expect(leadService.create).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Ravi Kumar',
-        phone: '9876543210',
+        // Every form normalises the number before it is filed, so the CRM
+        // stores one shape (§6.7).
+        phone: '+919876543210',
         source: 'developer-page',
         pageSlug: 'aurelia-estates',
         pageUrl: 'http://localhost:3000/builders/aurelia-estates',

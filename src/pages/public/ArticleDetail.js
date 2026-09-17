@@ -13,6 +13,7 @@ import useApi from '../../hooks/useApi';
 import { ErrorState } from '../../components/ui';
 import { SITE } from '../../config/site';
 import { formatDate } from '../../utils/format';
+import { leadFormProps } from '../../utils/leadSources';
 
 /**
  * One article.
@@ -301,9 +302,8 @@ const ArticleDetail = () => {
                 </p>
               </div>
               <LeadForm
-                title="Speak to an advisor"
-                subtitle="We will be in touch as soon as we can"
-                source="article"
+                {...leadFormProps('article')}
+                articleId={article?.id ?? null}
                 className={styles.ctaForm}
               />
             </div>

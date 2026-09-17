@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
+import { leadFormProps } from '../../utils/leadSources';
 import { Section } from '../../components/ui';
 import styles from './RealEstateAwareness.module.css';
 import { BRAND, SITE } from '../../config/site';
@@ -167,27 +168,6 @@ const buyerChecklist = [
   { id: 8, text: 'Calculated total cost including stamp duty and registration' },
   { id: 9, text: 'Reviewed sale agreement with a lawyer' },
   { id: 10, text: 'Conducted site inspection before possession' },
-];
-
-const leadFields = [
-  { name: 'name', label: 'Full Name', type: 'text', required: true, placeholder: 'Full Name *' },
-  { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'Email Address *' },
-  { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: 'Phone Number *' },
-  {
-    name: 'interest',
-    label: 'Interested In',
-    type: 'select',
-    required: true,
-    placeholder: 'What are you looking for? *',
-    options: [
-      { value: 'buying', label: 'Buying a Property' },
-      { value: 'selling', label: 'Selling a Property' },
-      { value: 'renting', label: 'Renting a Property' },
-      { value: 'home-loan', label: 'Home Loan Assistance' },
-      { value: 'legal', label: 'Legal Assistance' },
-      { value: 'general', label: 'General Consultation' },
-    ],
-  },
 ];
 
 /* ── Component ─────────────────────────────────── */
@@ -539,12 +519,7 @@ const RealEstateAwareness = () => {
                   </div>
                 </div>
               </div>
-              <LeadForm
-                title="Get Expert Guidance"
-                subtitle="Our team will reach out within 24 hours"
-                fields={leadFields}
-                source="real_estate_awareness"
-              />
+              <LeadForm {...leadFormProps('real-estate-awareness')} />
             </div>
           </div>
         </Section>

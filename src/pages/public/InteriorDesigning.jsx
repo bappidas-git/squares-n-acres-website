@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
+import { leadFormProps } from '../../utils/leadSources';
 import { toneStyles } from '../../components/ui/tones';
 import { Section } from '../../components/ui';
 import styles from './InteriorDesigning.module.css';
@@ -132,48 +133,6 @@ const packages = [
       '90-day delivery',
     ],
     highlighted: false,
-  },
-];
-
-const leadFields = [
-  { name: 'name', label: 'Full Name', type: 'text', required: true, placeholder: 'Full Name *' },
-  { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'Email Address *' },
-  { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: 'Phone Number *' },
-  {
-    name: 'propertyType',
-    label: 'Property Type',
-    type: 'select',
-    required: true,
-    placeholder: 'Select Property Type *',
-    options: [
-      { value: '1bhk', label: '1 BHK' },
-      { value: '2bhk', label: '2 BHK' },
-      { value: '3bhk', label: '3 BHK' },
-      { value: '4bhk+', label: '4 BHK+' },
-      { value: 'villa', label: 'Villa / Independent House' },
-      { value: 'commercial', label: 'Commercial Space' },
-    ],
-  },
-  {
-    name: 'budget',
-    label: 'Budget Range',
-    type: 'select',
-    required: false,
-    placeholder: 'Select Budget Range',
-    options: [
-      { value: 'below-5L', label: 'Below ₹5 Lakhs' },
-      { value: '5L-10L', label: '₹5 - ₹10 Lakhs' },
-      { value: '10L-20L', label: '₹10 - ₹20 Lakhs' },
-      { value: '20L-50L', label: '₹20 - ₹50 Lakhs' },
-      { value: 'above-50L', label: 'Above ₹50 Lakhs' },
-    ],
-  },
-  {
-    name: 'message',
-    label: 'Message',
-    type: 'textarea',
-    required: false,
-    placeholder: 'Tell us about your design vision...',
   },
 ];
 
@@ -389,12 +348,7 @@ const InteriorDesigning = () => {
                   </div>
                 </div>
               </div>
-              <LeadForm
-                title="Book a Free Consultation"
-                subtitle="Tell us about your dream space"
-                fields={leadFields}
-                source="interior_design"
-              />
+              <LeadForm {...leadFormProps('interior-design')} />
             </div>
           </div>
         </Section>

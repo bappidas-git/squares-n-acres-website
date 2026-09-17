@@ -5,7 +5,7 @@
     var(--color-surface) 50%,
     var(--color-surface-2) 100%
   );
-  padding: 64px 24px;
+  padding: var(--space-16) var(--space-6);
 }
 
 .inner {
@@ -16,101 +16,32 @@
 
 .heading {
   font-family: var(--font-heading);
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
   color: var(--color-text);
-  margin-bottom: 32px;
-  line-height: 1.3;
+  margin: 0 0 var(--space-3);
+  line-height: var(--line-height-snug);
 }
 
 .subtitle {
-  font-size: 0.938rem;
+  font-size: var(--font-size-md);
   color: var(--color-text-muted);
-  margin-top: -16px;
-  margin-bottom: 32px;
-  line-height: 1.5;
+  margin: 0 0 var(--space-6);
+  line-height: var(--line-height-normal);
 }
 
+/* The shared form, laid out for a centred band: the boxes read left-aligned
+   because a label above a right-aligned input is unreadable. */
 .form {
-  display: flex;
-  gap: 12px;
-  max-width: 560px;
-  margin: 0 auto 16px;
-}
-
-.inputWrapper {
-  flex: 1;
-  position: relative;
-}
-
-.input {
-  width: 100%;
-  padding: 14px 18px;
-  font-family: var(--font-body);
-  font-size: 0.938rem;
-  color: var(--color-text);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  outline: none;
-  transition: border-color var(--transition-fast);
-}
-
-.input::placeholder {
-  color: var(--color-text-muted);
-}
-
-.input:focus {
-  border-color: var(--color-primary);
-}
-
-.submitBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 14px 28px;
-  font-family: var(--font-body);
-  font-size: 0.938rem;
-  font-weight: 500;
-  color: var(--color-text-inverse);
-  background-color: var(--color-primary);
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-  white-space: nowrap;
-  min-width: 120px;
-}
-
-.submitBtn:hover {
-  background-color: var(--color-primary-dark);
-}
-
-.submitBtn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--color-on-dark-border);
-  border-top-color: var(--color-text-inverse);
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  max-width: 480px;
+  margin: 0 auto var(--space-4);
+  text-align: left;
 }
 
 .disclaimer {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
-  line-height: 1.5;
+  line-height: var(--line-height-normal);
 }
 
 .disclaimer a {
@@ -120,38 +51,10 @@
 
 @media (max-width: 599.98px) {
   .newsletter {
-    padding: 48px 20px;
+    padding: var(--space-12) var(--space-5);
   }
 
   .heading {
-    font-size: 1.375rem;
+    font-size: var(--font-size-2xl);
   }
-
-  .form {
-    flex-direction: column;
-  }
-
-  .submitBtn {
-    width: 100%;
-  }
-}
-
-/* Inline validation, below the form. */
-.error {
-  margin: var(--space-3) 0 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-error);
-}
-
-/* A label the screen reader reads and the layout never shows. */
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }

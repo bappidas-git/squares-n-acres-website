@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Icon } from '@iconify/react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
@@ -26,7 +26,6 @@ import FloorPlansSection from '../../components/sections/property/FloorPlansSect
 import GallerySection from '../../components/sections/property/GallerySection';
 import HighlightsSection from '../../components/sections/property/HighlightsSection';
 import KeyFacts from '../../components/sections/property/KeyFacts';
-import LeadModalTemp from '../../components/sections/property/LeadModalTemp';
 import LocationSection, { NearbySection } from '../../components/sections/property/LocationSection';
 import MobileCtaBar from '../../components/sections/property/MobileCtaBar';
 import OverviewSection from '../../components/sections/property/OverviewSection';
@@ -43,6 +42,7 @@ import propertyService from '../../services/propertyService';
 import recentlyViewed from '../../utils/recentlyViewed';
 import useApi from '../../hooks/useApi';
 import viewTracker from '../../utils/viewTracker';
+import { useLeadCapture } from '../../contexts/LeadCaptureContext';
 
 import styles from './PropertyDetails.module.css';
 
@@ -134,7 +134,7 @@ const PropertyDetails = () => {
     [slug, preview]
   );
 
-  const [lead, setLead] = useState({ open: false, source: 'property-enquiry' });
+  const { openLeadModal, setPageContext } = useLeadCapture();
 
   // The similar row is fetched here rather than inside its section because the
   // navigation may only offer the item once the API has answered with
@@ -147,10 +147,28 @@ const PropertyDetails = () => {
   );
   const similarProperties = Array.isArray(similar) ? similar : [];
 
-  const openLead = useCallback((source) => setLead({ open: true, source }), []);
-  const closeLead = useCallback(() => setLead((current) => ({ ...current, open: false })), []);
+  // Every CTA on the page goes through the one dialog of `LeadCaptureContext`;
+  // the entry point decides the source, the heading and the boxes (§6.17).
+  const openLead = useCallback(
+    (entry) =>
+      openLeadModal({
+        entry,
+        propertyId: property?.id ?? null,
+        propertyTitle: property?.title ?? '',
+        agent: property?.agent?.showOnListing ? property.agent : null,
+      }),
+    [openLeadModal, property]
+  );
 
   const id = property?.id;
+
+  // The floating WhatsApp button and the click-tracked call links sit outside
+  // this page, so the page tells them which listing they are floating over.
+  useEffect(() => {
+    setPageContext({ propertyId: property?.id ?? null, propertyTitle: property?.title ?? '' });
+    return () => setPageContext(null);
+  }, [property?.id, property?.title, setPageContext]);
+
   const cover = useMemo(() => {
     const images = Array.isArray(property?.images) ? property.images : [];
     return images.find((image) => image?.isCover) ?? images[0] ?? null;
@@ -338,15 +356,6 @@ const PropertyDetails = () => {
       </Container>
 
       <MobileCtaBar property={property} onEnquire={openLead} />
-
-      <LeadModalTemp
-        open={lead.open}
-        onClose={closeLead}
-        source={lead.source}
-        propertyId={property.id}
-        propertyTitle={property.title}
-        agent={property.agent?.showOnListing ? property.agent : null}
-      />
     </>
   );
 };

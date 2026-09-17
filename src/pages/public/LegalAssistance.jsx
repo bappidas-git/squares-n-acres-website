@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
+import { leadFormProps } from '../../utils/leadSources';
 import { Section } from '../../components/ui';
 import styles from './LegalAssistance.module.css';
 import { SITE } from '../../config/site';
@@ -103,34 +104,6 @@ const faqs = [
   {
     q: 'What is RERA and how does it protect home buyers?',
     a: 'RERA (Real Estate Regulatory Authority) is a regulatory body that ensures transparency and accountability in real estate. It protects buyers by mandating project registration, timely delivery, quality standards, and providing a grievance redressal mechanism.',
-  },
-];
-
-const leadFields = [
-  { name: 'name', label: 'Full Name', type: 'text', required: true, placeholder: 'Full Name *' },
-  { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'Email Address *' },
-  { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: 'Phone Number *' },
-  {
-    name: 'serviceType',
-    label: 'Service Required',
-    type: 'select',
-    required: true,
-    placeholder: 'Select Service *',
-    options: [
-      { value: 'title-verification', label: 'Title Verification' },
-      { value: 'agreement-drafting', label: 'Agreement Drafting' },
-      { value: 'rera-compliance', label: 'RERA Compliance' },
-      { value: 'property-registration', label: 'Property Registration' },
-      { value: 'due-diligence', label: 'Due Diligence' },
-      { value: 'dispute-resolution', label: 'Dispute Resolution' },
-    ],
-  },
-  {
-    name: 'message',
-    label: 'Message',
-    type: 'textarea',
-    required: false,
-    placeholder: 'Describe your requirement...',
   },
 ];
 
@@ -318,12 +291,7 @@ const LegalAssistance = () => {
                   </div>
                 </div>
               </div>
-              <LeadForm
-                title="Request Legal Consultation"
-                subtitle="Describe your legal needs and we'll connect you with the right expert"
-                fields={leadFields}
-                source="legal_assistance"
-              />
+              <LeadForm {...leadFormProps('legal-assistance')} />
             </div>
           </div>
         </Section>

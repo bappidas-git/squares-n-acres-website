@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
+import { leadFormProps } from '../../utils/leadSources';
 import { Section } from '../../components/ui';
 import styles from './HomeLoan.module.css';
 import { SITE } from '../../config/site';
@@ -170,40 +171,6 @@ const faqs = [
   {
     q: 'What are the tax benefits on a home loan?',
     a: 'You can claim up to ₹1.5 lakh deduction on principal repayment under Section 80C, and up to ₹2 lakh on interest under Section 24(b) for a self-occupied property.',
-  },
-];
-
-const leadFields = [
-  { name: 'name', label: 'Full Name', type: 'text', required: true, placeholder: 'Full Name *' },
-  { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'Email Address *' },
-  { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: 'Phone Number *' },
-  {
-    name: 'monthlyIncome',
-    label: 'Monthly Income',
-    type: 'select',
-    required: true,
-    placeholder: 'Select Monthly Income *',
-    options: [
-      { value: 'below-50k', label: 'Below ₹50,000' },
-      { value: '50k-1L', label: '₹50,000 - ₹1,00,000' },
-      { value: '1L-2L', label: '₹1,00,000 - ₹2,00,000' },
-      { value: '2L-5L', label: '₹2,00,000 - ₹5,00,000' },
-      { value: 'above-5L', label: 'Above ₹5,00,000' },
-    ],
-  },
-  {
-    name: 'desiredLoanAmount',
-    label: 'Desired Loan Amount',
-    type: 'select',
-    required: true,
-    placeholder: 'Select Loan Amount *',
-    options: [
-      { value: 'below-30L', label: 'Below ₹30 Lakhs' },
-      { value: '30L-50L', label: '₹30 - ₹50 Lakhs' },
-      { value: '50L-1Cr', label: '₹50 Lakhs - ₹1 Crore' },
-      { value: '1Cr-2Cr', label: '₹1 - ₹2 Crore' },
-      { value: 'above-2Cr', label: 'Above ₹2 Crore' },
-    ],
   },
 ];
 
@@ -440,12 +407,7 @@ const HomeLoan = () => {
                   </div>
                 </div>
               </div>
-              <LeadForm
-                title="Get Pre-Approved Today"
-                subtitle="Our experts will call you within 24 hours"
-                fields={leadFields}
-                source="home_loan"
-              />
+              <LeadForm {...leadFormProps('home-loan')} />
             </div>
           </div>
         </Section>

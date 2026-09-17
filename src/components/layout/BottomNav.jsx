@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Link, matchPath, useLocation } from 'react-router-dom';
 
-import LeadModalTemp from '../sections/property/LeadModalTemp';
 import MobileDrawer from './MobileDrawer';
 import styles from './BottomNav.module.css';
 import useScrollDirection from '../../hooks/useScrollDirection';
 import { buildBottomNav } from '../../config/navigation';
+import { useLeadCapture } from '../../contexts/LeadCaptureContext';
 import { useShortlist } from '../../contexts/ShortlistContext';
 
 /**
@@ -37,9 +37,9 @@ export default function BottomNav() {
   const location = useLocation();
   const { direction } = useScrollDirection();
   const { count } = useShortlist();
+  const { openLeadModal } = useLeadCapture();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [leadOpen, setLeadOpen] = useState(false);
 
   const standsDown = OWN_BOTTOM_BAR.some((pattern) => matchPath(pattern, location.pathname));
   if (standsDown) return null;
@@ -75,7 +75,9 @@ export default function BottomNav() {
 
           if (item.kind === 'lead' || item.kind === 'menu') {
             const onClick =
-              item.kind === 'lead' ? () => setLeadOpen(true) : () => setDrawerOpen(true);
+              item.kind === 'lead'
+                ? () => openLeadModal({ entry: 'post-requirement' })
+                : () => setDrawerOpen(true);
             return (
               <button
                 key={item.key}
@@ -108,14 +110,6 @@ export default function BottomNav() {
       </nav>
 
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-
-      <LeadModalTemp
-        open={leadOpen}
-        onClose={() => setLeadOpen(false)}
-        source="post-requirement"
-        requirement
-        successTitle="Requirement received"
-      />
     </>
   );
 }

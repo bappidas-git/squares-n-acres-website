@@ -1,15 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import leadService from '../../services/leadService';
-import { useToast } from '../../components/common/ToastProvider';
-import {
-  getNameErrorMessage,
-  getEmailErrorMessage,
-  getMobileErrorMessage,
-} from '../../utils/validators';
 import { Section } from '../../components/ui';
+import { useLeadCapture } from '../../contexts/LeadCaptureContext';
 import styles from './Careers.module.css';
 import { BRAND, SITE } from '../../config/site';
 
@@ -103,70 +97,22 @@ const perks = [
 
 /* ── Component ─────────────────────────────────── */
 const Careers = () => {
-  const toast = useToast();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedPosition, setSelectedPosition] = useState('');
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    position: '',
-    coverLetter: '',
-  });
-  const [errors, setErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [submitError, setSubmitError] = useState('');
+  const { openLeadModal } = useLeadCapture();
 
-  const openModal = useCallback((positionTitle) => {
-    setSelectedPosition(positionTitle);
-    setFormData((prev) => ({ ...prev, position: positionTitle }));
-    setModalOpen(true);
-    setSubmitted(false);
-    setSubmitError('');
-    setErrors({});
-  }, []);
-
-  const closeModal = useCallback(() => {
-    setModalOpen(false);
-    setSelectedPosition('');
-  }, []);
-
-  const validate = () => {
-    const newErrors = {};
-    const nameErr = getNameErrorMessage(formData.name);
-    if (nameErr) newErrors.name = nameErr;
-    const emailErr = getEmailErrorMessage(formData.email, true);
-    if (emailErr) newErrors.email = emailErr;
-    const phoneErr = getMobileErrorMessage(formData.phone);
-    if (phoneErr) newErrors.phone = phoneErr;
-    if (!formData.position) newErrors.position = 'Position is required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitError('');
-    if (!validate()) return;
-    try {
-      setSubmitting(true);
-      await leadService.create({ ...formData, source: 'careers' });
-      setSubmitted(true);
-      toast.success('Application submitted successfully!');
-    } catch {
-      setSubmitError('Something went wrong. Please try again.');
-      toast.error('Failed to submit application. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  // The shared dialog, with the role in `meta` so the desk sees what was
+  // applied for (D56). A real application — the résumé upload and the
+  // `jobApplications` record — is prompt 31's; this keeps the entry point
+  // working and files the enquiry under the canonical `careers` source (D91).
+  const openModal = useCallback(
+    (positionTitle) =>
+      openLeadModal({
+        entry: 'careers',
+        title: `Apply for ${positionTitle}`,
+        subtitle: 'Tell us about yourself and an advisor will come back to you.',
+        meta: { position: positionTitle },
+      }),
+    [openLeadModal]
+  );
 
   return (
     <>
@@ -298,148 +244,6 @@ const Careers = () => {
             </div>
           </div>
         </Section>
-
-        {/* ── Application Modal ───────────────────── */}
-        <AnimatePresence>
-          {modalOpen && (
-            <motion.div
-              className={styles.modalBackdrop}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={closeModal}
-            >
-              <motion.div
-                className={styles.modal}
-                initial={{ opacity: 0, scale: 0.92, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button className={styles.modalClose} onClick={closeModal} aria-label="Close">
-                  <Icon icon="mdi:close" />
-                </button>
-
-                {submitted ? (
-                  <div className={styles.modalSuccess}>
-                    <Icon icon="mdi:check-circle" className={styles.successIcon} />
-                    <h3 className={styles.successTitle}>Application Submitted!</h3>
-                    <p className={styles.successText}>
-                      Thank you for applying for <strong>{selectedPosition}</strong>. We'll review
-                      your application and get back to you.
-                    </p>
-                    <button className={styles.closeBtn} onClick={closeModal}>
-                      Close
-                    </button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className={styles.modalForm}>
-                    <h2 className={styles.modalTitle}>Apply for {selectedPosition}</h2>
-                    <p className={styles.modalSubtitle}>
-                      Fill in your details to submit your application.
-                    </p>
-
-                    <div className={styles.modalFields}>
-                      <div className={styles.modalField}>
-                        <input
-                          type="text"
-                          name="name"
-                          placeholder="Full Name *"
-                          value={formData.name}
-                          onChange={handleChange}
-                          className={`${styles.modalInput} ${errors.name ? styles.inputError : ''}`}
-                        />
-                        {errors.name && <span className={styles.errorText}>{errors.name}</span>}
-                      </div>
-                      <div className={styles.modalField}>
-                        <input
-                          type="email"
-                          name="email"
-                          placeholder="Email Address *"
-                          value={formData.email}
-                          onChange={handleChange}
-                          inputMode="email"
-                          autoComplete="email"
-                          className={`${styles.modalInput} ${errors.email ? styles.inputError : ''}`}
-                        />
-                        {errors.email && <span className={styles.errorText}>{errors.email}</span>}
-                      </div>
-                      <div className={styles.modalField}>
-                        <input
-                          type="tel"
-                          name="phone"
-                          placeholder="Phone Number *"
-                          value={formData.phone}
-                          onChange={handleChange}
-                          inputMode="tel"
-                          autoComplete="tel"
-                          className={`${styles.modalInput} ${errors.phone ? styles.inputError : ''}`}
-                        />
-                        {errors.phone && <span className={styles.errorText}>{errors.phone}</span>}
-                      </div>
-                      <div className={styles.modalField}>
-                        <select
-                          name="position"
-                          value={formData.position}
-                          onChange={handleChange}
-                          className={`${styles.modalSelect} ${errors.position ? styles.inputError : ''}`}
-                        >
-                          <option value="">Select Position *</option>
-                          {positions.map((p) => (
-                            <option key={p.id} value={p.title}>
-                              {p.title}
-                            </option>
-                          ))}
-                        </select>
-                        {errors.position && (
-                          <span className={styles.errorText}>{errors.position}</span>
-                        )}
-                      </div>
-                      <div className={styles.modalField}>
-                        <div className={styles.fileUpload}>
-                          <Icon icon="mdi:file-upload-outline" />
-                          <span>Upload Resume (PDF, DOC)</span>
-                          <input
-                            type="file"
-                            accept=".pdf,.doc,.docx"
-                            className={styles.fileInput}
-                          />
-                        </div>
-                      </div>
-                      <div className={styles.modalField}>
-                        <textarea
-                          name="coverLetter"
-                          placeholder="Cover Letter (optional)"
-                          value={formData.coverLetter}
-                          onChange={handleChange}
-                          rows={4}
-                          className={styles.modalTextarea}
-                        />
-                      </div>
-                    </div>
-
-                    {submitError && (
-                      <p className={styles.submitErrorText}>
-                        <Icon icon="mdi:alert-circle-outline" /> {submitError}
-                      </p>
-                    )}
-
-                    <button type="submit" className={styles.submitBtn} disabled={submitting}>
-                      {submitting ? (
-                        <span className={styles.spinner} />
-                      ) : (
-                        <>
-                          Submit Application <Icon icon="mdi:send" />
-                        </>
-                      )}
-                    </button>
-                  </form>
-                )}
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </>
   );

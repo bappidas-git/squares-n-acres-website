@@ -1,0 +1,85 @@
+/* The floating circle (§6): 56px, always above the bottom bar and the safe
+   area, and clear of the back-to-top button so the two never overlap. */
+.float {
+  position: fixed;
+  right: var(--space-5);
+  bottom: calc(var(--space-5) + 44px + var(--space-3));
+  z-index: var(--z-sticky);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-lg);
+  text-decoration: none;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.float:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.float:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.whatsappFloat {
+  background: var(--color-whatsapp);
+}
+
+.callFloat {
+  background: var(--color-primary);
+}
+
+/* On phones and tablets the bottom navigation — or a listing's own CTA bar —
+   owns the foot of the screen, so the circle sits above it. */
+@media (max-width: 899.98px) {
+  .float {
+    right: var(--space-4);
+    bottom: calc(
+      var(--bottom-nav-height) + var(--safe-bottom) + var(--space-4) + 44px + var(--space-3)
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float,
+  .float:hover {
+    transform: none;
+    transition: none;
+  }
+}
+
+/* The bare glyph of a header bar or an advisor card. */
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-charcoal);
+  text-decoration: none;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.icon:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.icon:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}

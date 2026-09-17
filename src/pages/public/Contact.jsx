@@ -1,16 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import leadService from '../../services/leadService';
-import { useToast } from '../../components/common/ToastProvider';
-import {
-  getNameErrorMessage,
-  getEmailErrorMessage,
-  getMobileErrorMessage,
-  sanitizeInput,
-} from '../../utils/validators';
+import LeadForm from '../../components/common/LeadForm';
 import { Section } from '../../components/ui';
+import { leadFormProps } from '../../utils/leadSources';
 import styles from './Contact.module.css';
 import { BRAND, SITE } from '../../config/site';
 
@@ -45,15 +39,6 @@ const socialLinks = [
   { icon: 'mdi:youtube', label: 'YouTube', href: '#' },
 ];
 
-const subjectOptions = [
-  { value: 'general', label: 'General Inquiry' },
-  { value: 'property-inquiry', label: 'Property Inquiry' },
-  { value: 'buyer-assistance', label: 'Buyer Assistance' },
-  { value: 'partnership', label: 'Partnership' },
-  { value: 'careers', label: 'Careers' },
-  { value: 'other', label: 'Other' },
-];
-
 const workingHours = [
   { days: 'Monday - Saturday', hours: '9:00 AM - 7:00 PM' },
   { days: 'Sunday', hours: '10:00 AM - 5:00 PM' },
@@ -61,56 +46,6 @@ const workingHours = [
 
 /* ── Component ─────────────────────────────────── */
 const Contact = () => {
-  const toast = useToast();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    subject: '',
-    message: '',
-  });
-  const [errors, setErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [submitError, setSubmitError] = useState('');
-
-  const validate = () => {
-    const newErrors = {};
-    const nameErr = getNameErrorMessage(formData.name);
-    if (nameErr) newErrors.name = nameErr;
-    const emailErr = getEmailErrorMessage(formData.email, true);
-    if (emailErr) newErrors.email = emailErr;
-    const phoneErr = getMobileErrorMessage(formData.phone);
-    if (phoneErr) newErrors.phone = phoneErr;
-    if (!formData.subject) newErrors.subject = 'Please select a subject';
-    if (!sanitizeInput(formData.message)) newErrors.message = 'Message is required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitError('');
-    if (!validate()) return;
-    try {
-      setSubmitting(true);
-      await leadService.create({ ...formData, source: 'contact-page' });
-      setSubmitted(true);
-      toast.success("Message sent successfully! We'll get back to you soon.");
-    } catch {
-      setSubmitError('Something went wrong. Please try again.');
-      toast.error('Failed to send message. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
     <>
       <Helmet>
@@ -148,118 +83,11 @@ const Contact = () => {
             <div className={styles.contactGrid}>
               {/* Left: Form */}
               <div className={styles.formSide}>
-                {submitted ? (
-                  <motion.div
-                    className={styles.successState}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <Icon icon="mdi:check-circle" className={styles.successIcon} />
-                    <h3 className={styles.successTitle}>Thank You!</h3>
-                    <p className={styles.successText}>
-                      We've received your message. Our team will get back to you within 24 hours.
-                    </p>
-                  </motion.div>
-                ) : (
-                  <form onSubmit={handleSubmit} className={styles.form}>
-                    <h2 className={styles.formTitle}>Send us a Message</h2>
-                    <p className={styles.formSubtitle}>
-                      Fill out the form below and we'll respond promptly.
-                    </p>
-
-                    <div className={styles.fieldRow}>
-                      <div className={styles.field}>
-                        <input
-                          type="text"
-                          name="name"
-                          placeholder="Full Name *"
-                          value={formData.name}
-                          onChange={handleChange}
-                          autoComplete="name"
-                          className={`${styles.input} ${errors.name ? styles.inputError : ''}`}
-                        />
-                        {errors.name && <span className={styles.errorText}>{errors.name}</span>}
-                      </div>
-                      <div className={styles.field}>
-                        <input
-                          type="email"
-                          name="email"
-                          placeholder="Email Address *"
-                          value={formData.email}
-                          onChange={handleChange}
-                          inputMode="email"
-                          autoComplete="email"
-                          className={`${styles.input} ${errors.email ? styles.inputError : ''}`}
-                        />
-                        {errors.email && <span className={styles.errorText}>{errors.email}</span>}
-                      </div>
-                    </div>
-
-                    <div className={styles.fieldRow}>
-                      <div className={styles.field}>
-                        <input
-                          type="tel"
-                          name="phone"
-                          placeholder="Phone Number *"
-                          value={formData.phone}
-                          onChange={handleChange}
-                          inputMode="tel"
-                          autoComplete="tel"
-                          className={`${styles.input} ${errors.phone ? styles.inputError : ''}`}
-                        />
-                        {errors.phone && <span className={styles.errorText}>{errors.phone}</span>}
-                      </div>
-                      <div className={styles.field}>
-                        <select
-                          name="subject"
-                          value={formData.subject}
-                          onChange={handleChange}
-                          className={`${styles.select} ${errors.subject ? styles.inputError : ''}`}
-                        >
-                          <option value="">Select Subject *</option>
-                          {subjectOptions.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                        {errors.subject && (
-                          <span className={styles.errorText}>{errors.subject}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className={styles.field}>
-                      <textarea
-                        name="message"
-                        placeholder="Your Message *"
-                        value={formData.message}
-                        onChange={handleChange}
-                        rows={5}
-                        className={`${styles.textarea} ${errors.message ? styles.inputError : ''}`}
-                      />
-                      {errors.message && <span className={styles.errorText}>{errors.message}</span>}
-                    </div>
-
-                    {submitError && (
-                      <p className={styles.submitErrorText}>
-                        <Icon icon="mdi:alert-circle-outline" /> {submitError}
-                      </p>
-                    )}
-
-                    <button type="submit" className={styles.submitBtn} disabled={submitting}>
-                      {submitting ? (
-                        <span className={styles.spinner} />
-                      ) : (
-                        <>
-                          Send Message
-                          <Icon icon="mdi:send" />
-                        </>
-                      )}
-                    </button>
-                  </form>
-                )}
+                <LeadForm
+                  {...leadFormProps('contact-page')}
+                  submitLabel="Send message"
+                  className={styles.form}
+                />
               </div>
 
               {/* Right: Contact Info */}

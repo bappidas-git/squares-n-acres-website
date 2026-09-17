@@ -57,9 +57,9 @@ const property = {
  */
 async function shareDetails() {
   await userEvent.click(screen.getByRole('button', { name: /view floor plans/i }));
-  await userEvent.type(await screen.findByPlaceholderText('Your name *'), 'Asha Rao');
-  await userEvent.type(screen.getByPlaceholderText('Phone number *'), '9880000011');
-  await userEvent.click(screen.getByRole('button', { name: /submit request/i }));
+  await userEvent.type(await screen.findByLabelText(/your name/i), 'Asha Rao');
+  await userEvent.type(screen.getByLabelText(/phone/i), '9880000011');
+  await userEvent.click(screen.getByRole('button', { name: /^send$/i }));
   await screen.findByText(/request received/i);
 }
 
@@ -99,7 +99,8 @@ describe('FloorPlansSection', () => {
     expect(leadService.create).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Asha Rao',
-        phone: '9880000011',
+        // Every form normalises the number before it is filed (§6.7).
+        phone: '+919880000011',
         source: 'floor-plan-request',
         propertyId: 7,
         message: 'Floor plans for Lakeview Heights',
