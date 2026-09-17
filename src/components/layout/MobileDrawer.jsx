@@ -1,0 +1,182 @@
+import { useEffect, useRef, useState } from 'react';
+import { Icon } from '@iconify/react';
+import { Link, useLocation } from 'react-router-dom';
+
+import LeadModalTemp from '../sections/property/LeadModalTemp';
+import PATHS from '../../routes/paths';
+import styles from './MobileDrawer.module.css';
+import useNavPages from '../../hooks/useNavPages';
+import { Drawer, Logo } from '../ui';
+import { NAV } from '../../config/copy';
+import { buildHeaderNav } from '../../config/navigation';
+import { useMasterData } from '../../contexts/MasterDataContext';
+import { useShortlist } from '../../contexts/ShortlistContext';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
+
+/**
+ * The phone's navigation: the same menus as the desktop header, as accordions.
+ *
+ * It is built from the same `buildHeaderNav()` the header calls, which is the
+ * point — `Header` and `MobileHeader` each used to declare their own copy of
+ * the menu, so the two drifted apart and a link fixed in one stayed wrong in
+ * the other (BUG-20).
+ *
+ * The call, WhatsApp and "Post Requirement" row at the top is
+ * `siteSettings.navigation`; the CTA opens the post-requirement modal with the
+ * requirement fields of D82. There is no "Sign In": the admin panel is reached
+ * at `/admin/login` and is never linked from the public site (D24).
+ *
+ * @param {object} props
+ * @param {boolean} props.open
+ * @param {() => void} props.onClose
+ */
+export default function MobileDrawer({ open, onClose }) {
+  const location = useLocation();
+  const { settings } = useSiteSettings();
+  const { propertyTypes, localities } = useMasterData();
+  const { header: pages } = useNavPages();
+  const { count } = useShortlist();
+
+  const [expanded, setExpanded] = useState(null);
+  const [leadOpen, setLeadOpen] = useState(false);
+
+  const { menus, actions } = buildHeaderNav({ propertyTypes, localities, pages, settings });
+
+  // A tap that navigates has done its job; the drawer gets out of the way.
+  // `onClose` is read through a ref so an inline arrow in the host does not
+  // make this fire on every render.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
+  useEffect(() => {
+    closeRef.current?.();
+    setExpanded(null);
+  }, [location.pathname, location.search]);
+
+  const cta = actions.find((action) => action.kind === 'lead');
+  const links = actions.filter((action) => action.kind !== 'lead');
+
+  return (
+    <>
+      <Drawer open={open} onClose={onClose} anchor="right" padded={false}>
+        <div className={styles.head}>
+          <Link to={PATHS.home} onClick={onClose} className={styles.logo}>
+            <Logo height={32} />
+          </Link>
+          <button type="button" className={styles.close} onClick={onClose} aria-label="Close menu">
+            <Icon icon="mdi:close" width={24} height={24} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className={styles.actions}>
+          {links.map((action) => (
+            <a key={action.key} href={action.href} className={styles.action}>
+              <Icon icon={action.icon} aria-hidden="true" />
+              {action.key === 'call' ? NAV.call : action.label}
+            </a>
+          ))}
+          {cta ? (
+            <button
+              type="button"
+              className={[styles.action, styles.actionPrimary].join(' ')}
+              onClick={() => {
+                onClose?.();
+                setLeadOpen(true);
+              }}
+            >
+              <Icon icon={cta.icon} aria-hidden="true" />
+              {cta.label}
+            </button>
+          ) : null}
+        </div>
+
+        <nav className={styles.nav} aria-label="Main">
+          {menus.map((menu) => {
+            const columns = Array.isArray(menu.columns) ? menu.columns : [];
+
+            if (columns.length === 0) {
+              return (
+                <Link key={menu.key} to={menu.to} className={styles.item} onClick={onClose}>
+                  {menu.label}
+                </Link>
+              );
+            }
+
+            const isOpen = expanded === menu.key;
+            const panelId = `drawer-panel-${menu.key}`;
+
+            return (
+              <div key={menu.key} className={styles.group}>
+                <button
+                  type="button"
+                  className={styles.item}
+                  aria-expanded={isOpen}
+                  aria-controls={panelId}
+                  onClick={() => setExpanded(isOpen ? null : menu.key)}
+                >
+                  {menu.label}
+                  <Icon
+                    icon="mdi:chevron-down"
+                    className={[styles.chevron, isOpen ? styles.chevronOn : '']
+                      .filter(Boolean)
+                      .join(' ')}
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {isOpen ? (
+                  <div id={panelId} className={styles.panel}>
+                    <Link to={menu.to} className={styles.panelAll} onClick={onClose}>
+                      All {menu.label.toLowerCase()}
+                    </Link>
+                    {columns.map((column) => (
+                      <div key={column.key} className={styles.panelGroup}>
+                        {columns.length > 1 ? (
+                          <span className={styles.panelTitle}>{column.title}</span>
+                        ) : null}
+                        {column.links.map((link) => (
+                          <Link
+                            key={link.key}
+                            to={link.to}
+                            className={styles.panelLink}
+                            onClick={onClose}
+                          >
+                            {link.label}
+                          </Link>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </nav>
+
+        <div className={styles.footerLinks}>
+          <Link to={PATHS.localities} className={styles.footerLink} onClick={onClose}>
+            <Icon icon="mdi:map-marker-outline" aria-hidden="true" />
+            {NAV.localities}
+          </Link>
+          <Link to={PATHS.builders} className={styles.footerLink} onClick={onClose}>
+            <Icon icon="mdi:domain" aria-hidden="true" />
+            {NAV.builders}
+          </Link>
+          <Link to={PATHS.shortlist} className={styles.footerLink} onClick={onClose}>
+            <Icon icon="mdi:heart-outline" aria-hidden="true" />
+            {NAV.shortlist}
+            {count > 0 ? <span className={styles.badge}>{count > 99 ? '99+' : count}</span> : null}
+          </Link>
+        </div>
+      </Drawer>
+
+      <LeadModalTemp
+        open={leadOpen}
+        onClose={() => setLeadOpen(false)}
+        source="post-requirement"
+        requirement
+        successTitle="Requirement received"
+      />
+    </>
+  );
+}

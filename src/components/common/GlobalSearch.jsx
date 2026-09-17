@@ -94,16 +94,28 @@ export function rememberSearch(term) {
 
 /**
  * @param {object} props
- * @param {'default'|'hero'|'compact'} [props.variant]
+ * @param {'default'|'hero'|'compact'|'inline'} [props.variant] `inline` is the
+ *   hero form's field: no wrapper `<form>` (a form inside a form is invalid
+ *   markup) and no submit button, because the host owns both
  * @param {string} [props.value] the term the page is already showing
+ * @param {string} [props.inputId] ties the box to the host's visible `<label>`
  * @param {(q: string) => void} [props.onSearch] handled in place of navigating
+ * @param {(q: string) => void} [props.onChange] every keystroke, for a host
+ *   that keeps the term in its own state
+ * @param {(option: {group: object, row: object, to: string}) => boolean|void}
+ *   [props.onSelect] offered a suggestion before it is followed; returning
+ *   `true` means the host consumed it — the hero turns a locality into
+ *   `localityId` rather than navigating to its page
  * @param {boolean} [props.autoFocus]
  * @param {() => void} [props.onNavigate] called after a suggestion is followed
  */
 export default function GlobalSearch({
   variant = 'default',
   value = '',
+  inputId,
   onSearch,
+  onChange,
+  onSelect,
   autoFocus = false,
   placeholder = 'Search by locality, project or builder',
   onNavigate,
@@ -121,6 +133,7 @@ export default function GlobalSearch({
 
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
+  const inline = variant === 'inline';
   const term = query.trim();
   const debounced = useDebounce(term, DEBOUNCE_MS);
 
@@ -214,13 +227,18 @@ export default function GlobalSearch({
         runSearch(option.term);
         return;
       }
+
       setOpen(false);
       setRecent(rememberSearch(term));
       track(EVENTS.search, { q: term, target: option.group.key });
+
+      // A host may keep the suggestion instead of following it.
+      if (onSelect?.(option) === true) return;
+
       navigate(option.to);
       onNavigate?.();
     },
-    [navigate, onNavigate, runSearch, term]
+    [navigate, onNavigate, onSelect, runSearch, term]
   );
 
   const onKeyDown = (event) => {
@@ -238,14 +256,24 @@ export default function GlobalSearch({
       });
       return;
     }
-    if (event.key === 'Enter' && open && highlight >= 0) {
-      event.preventDefault();
-      choose(options[highlight]);
+    if (event.key === 'Enter') {
+      if (open && highlight >= 0) {
+        event.preventDefault();
+        choose(options[highlight]);
+        return;
+      }
+      // Without a wrapping `<form>` there is nothing to submit, so the inline
+      // variant runs the search itself.
+      if (inline) {
+        event.preventDefault();
+        runSearch(query);
+      }
     }
   };
 
   const showPopover = open && options.length > 0;
   const optionId = (position) => `${listId}-option-${position}`;
+  const Field = inline ? 'div' : 'form';
 
   // The rows are numbered in the order `options` holds them, so the arrow keys
   // and the mouse address exactly the same list.
@@ -254,22 +282,28 @@ export default function GlobalSearch({
 
   return (
     <div className={[styles.search, styles[variant]].filter(Boolean).join(' ')} ref={wrapperRef}>
-      <form
+      <Field
         className={styles.form}
         role="search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          runSearch(query);
-        }}
+        onSubmit={
+          inline
+            ? undefined
+            : (event) => {
+                event.preventDefault();
+                runSearch(query);
+              }
+        }
       >
         <Icon icon="mdi:magnify" className={styles.icon} aria-hidden="true" />
         <input
           ref={inputRef}
+          id={inputId}
           type="text"
           className={styles.input}
           value={query}
           placeholder={placeholder}
-          aria-label="Search properties"
+          // A host that renders a visible `<label>` owns the accessible name.
+          aria-label={inputId ? undefined : 'Search properties'}
           autoComplete="off"
           role="combobox"
           aria-expanded={showPopover}
@@ -280,17 +314,18 @@ export default function GlobalSearch({
             setQuery(event.target.value);
             setOpen(true);
             setHighlight(-1);
+            onChange?.(event.target.value);
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
         />
         {loading ? <span className={styles.spinner} aria-hidden="true" /> : null}
-        {variant === 'compact' ? null : (
+        {variant === 'compact' || inline ? null : (
           <button type="submit" className={styles.submit}>
             Search
           </button>
         )}
-      </form>
+      </Field>
 
       {showPopover ? (
         <ul className={styles.popover} id={listId} role="listbox" aria-label="Search suggestions">

@@ -1,186 +1,124 @@
-import React, { useState, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Drawer, IconButton } from '@mui/material';
+import { useState } from 'react';
 import { Icon } from '@iconify/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Link, useLocation } from 'react-router-dom';
+
 import GlobalSearch from '../common/GlobalSearch';
+import LeadModalTemp from '../sections/property/LeadModalTemp';
+import MegaMenu from './MegaMenu';
+import PATHS from '../../routes/paths';
+import styles from './Header.module.css';
+import useBreakpoint from '../../hooks/useBreakpoint';
+import useNavPages from '../../hooks/useNavPages';
 import useScrollDirection from '../../hooks/useScrollDirection';
 import { Logo, Modal } from '../ui';
-import styles from './Header.module.css';
+import { buildHeaderNav, collapseMenus } from '../../config/navigation';
+import { EVENTS, track } from '../../utils/analytics';
+import { useMasterData } from '../../contexts/MasterDataContext';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
-const navItems = [
-  {
-    label: 'Buy',
-    path: '/buy',
-    children: [
-      { label: 'Pre-Launch', path: '/buy/pre-launch' },
-      { label: 'Under-construction', path: '/buy/under-construction' },
-      { label: 'Ready to Move', path: '/buy/ready-to-move' },
-    ],
-  },
-  {
-    label: 'Rent',
-    path: '/rent',
-    children: [
-      { label: 'Apartments', path: '/rent/apartments' },
-      { label: 'Villas', path: '/rent/villas' },
-    ],
-  },
-  {
-    label: 'Buyer Assistance',
-    path: '/buyer-assistance',
-    children: [
-      { label: 'Home Loan', path: '/buyer-assistance/home-loan' },
-      { label: 'Legal Assistance', path: '/buyer-assistance/legal-assistance' },
-      { label: 'Interior Designing', path: '/buyer-assistance/interior-designing' },
-    ],
-  },
-  {
-    label: 'Real Estate Insights',
-    path: '/insights',
-    children: [
-      { label: 'Articles', path: '/insights/articles' },
-      { label: "FAQ's", path: '/insights/faqs' },
-      { label: 'Real Estate Awareness', path: '/insights/real-estate-awareness' },
-    ],
-  },
-  {
-    label: 'Contact',
-    path: '/contact',
-  },
-];
-
-const sideMenuItems = [
-  { label: 'View Properties', path: '/properties', icon: 'mdi:home-city-outline' },
-  { label: 'About Us', path: '/about', icon: 'mdi:information-outline' },
-  { label: 'Sell/Let Apartment', path: '/sell-let', icon: 'mdi:tag-outline' },
-  { label: 'Careers', path: '/careers', icon: 'mdi:briefcase-outline' },
-  { label: 'Partnership', path: '/partnership', icon: 'mdi:handshake-outline' },
-];
-
-const dropdownVariants = {
-  hidden: { opacity: 0, y: -10 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
-  exit: { opacity: 0, y: -10, transition: { duration: 0.15 } },
-};
-
-const Header = () => {
+/**
+ * The desktop header (≥ 900 px).
+ *
+ * The menus are `buildHeaderNav()` — master data and the published CMS pages —
+ * so nothing here is a hardcoded list of links, and the mobile drawer is built
+ * from the same call (BUG-20). The right-hand buttons are
+ * `siteSettings.navigation`: an editor who switches the WhatsApp button off in
+ * Admin → Settings switches it off here.
+ *
+ * Ten labels plus the logo and the buttons need about 1200 px of bar, so
+ * between 900 px and 1199 px the tail of the menu folds into "More" rather
+ * than overlapping the mark — every destination stays one hover away.
+ *
+ * D52: the bar is always visible and never hides; on the home page it is
+ * transparent over the hero and turns solid after ten pixels of scroll. There
+ * is no "Sign In" — the admin panel is never linked from the public site (D24).
+ */
+export default function Header() {
   const location = useLocation();
-  // D52: the header is always visible — it only gains elevation on scroll.
   const { scrolled } = useScrollDirection();
-  const [openDropdown, setOpenDropdown] = useState(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { width } = useBreakpoint();
+  const { settings } = useSiteSettings();
+  const { propertyTypes, localities } = useMasterData();
+  const { header: pages } = useNavPages();
+
   const [searchOpen, setSearchOpen] = useState(false);
-  const dropdownTimeoutRef = useRef(null);
+  const [leadOpen, setLeadOpen] = useState(false);
 
-  const handleDropdownEnter = (label) => {
-    clearTimeout(dropdownTimeoutRef.current);
-    setOpenDropdown(label);
-  };
+  const { menus, actions } = buildHeaderNav({ propertyTypes, localities, pages, settings });
+  const visible = width === 'md' ? collapseMenus(menus) : menus;
 
-  const handleDropdownLeave = () => {
-    dropdownTimeoutRef.current = setTimeout(() => {
-      setOpenDropdown(null);
-    }, 150);
-  };
-
-  const isActive = (item) => {
-    if (item.path === '/contact') return location.pathname === '/contact';
-    return location.pathname.startsWith(item.path);
-  };
+  // Only the home page has a hero to be transparent over.
+  const overHero = location.pathname === PATHS.home && !scrolled;
 
   return (
-    <header className={`${styles.header} ${scrolled ? styles.scrolled : ''}`}>
-      <div className={styles.headerInner}>
-        {/* Logo */}
-        <Link to="/" className={styles.logo}>
-          <Logo height={44} />
+    <header
+      className={[
+        styles.header,
+        overHero ? styles.transparent : '',
+        scrolled ? styles.scrolled : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div className={styles.inner}>
+        <Link to={PATHS.home} className={styles.logo} aria-label="Squares N Acres — home">
+          <span className={overHero ? styles.logoPlate : undefined}>
+            <Logo height={44} />
+          </span>
         </Link>
 
-        {/* Navigation */}
-        <nav className={styles.nav}>
-          {navItems.map((item) => (
-            <div
-              key={item.label}
-              className={styles.navItem}
-              onMouseEnter={() => item.children && handleDropdownEnter(item.label)}
-              onMouseLeave={() => item.children && handleDropdownLeave()}
-            >
-              {item.children ? (
-                <button
-                  className={`${styles.navLink} ${isActive(item) ? styles.active : ''}`}
-                  onClick={() => setOpenDropdown(openDropdown === item.label ? null : item.label)}
-                  aria-expanded={openDropdown === item.label}
-                  aria-haspopup="true"
-                >
-                  {item.label}
-                  <span
-                    className={`${styles.chevron} ${openDropdown === item.label ? styles.open : ''}`}
-                  >
-                    <Icon icon="mdi:chevron-down" />
-                  </span>
-                </button>
-              ) : (
-                <Link
-                  to={item.path}
-                  className={`${styles.navLink} ${isActive(item) ? styles.active : ''}`}
-                >
-                  {item.label}
-                </Link>
-              )}
-
-              {isActive(item) && <div className={styles.activeIndicator} />}
-
-              {/* Dropdown */}
-              <AnimatePresence>
-                {item.children && openDropdown === item.label && (
-                  <motion.div
-                    className={styles.dropdown}
-                    variants={dropdownVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                  >
-                    {item.children.map((child) => (
-                      <Link
-                        key={child.path}
-                        to={child.path}
-                        className={styles.dropdownItem}
-                        onClick={() => setOpenDropdown(null)}
-                      >
-                        {child.label}
-                      </Link>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+        <nav className={styles.nav} aria-label="Main">
+          {visible.map((menu) => (
+            <MegaMenu key={menu.key} menu={menu} transparent={overHero} />
           ))}
         </nav>
 
         <div className={styles.actions}>
-          {/* Search — the site's one search box, in a dialog (prompt 26) */}
           <button
-            className={styles.searchTrigger}
+            type="button"
+            className={[styles.iconButton, overHero ? styles.onDark : ''].filter(Boolean).join(' ')}
             onClick={() => setSearchOpen(true)}
             aria-label="Search properties"
-            type="button"
           >
-            <Icon icon="mdi:magnify" width={22} height={22} />
+            <Icon icon="mdi:magnify" width={22} height={22} aria-hidden="true" />
           </button>
 
-          {/* Hamburger */}
-          <button
-            className={styles.hamburger}
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Open menu"
-          >
-            <div className={styles.hamburgerIcon}>
-              <span className={styles.hamburgerLine} />
-              <span className={styles.hamburgerLine} />
-              <span className={styles.hamburgerLine} />
-            </div>
-          </button>
+          {actions.map((action) => {
+            if (action.kind === 'lead') {
+              return (
+                <button
+                  key={action.key}
+                  type="button"
+                  className={styles.cta}
+                  onClick={() => setLeadOpen(true)}
+                >
+                  {action.label}
+                </button>
+              );
+            }
+
+            return (
+              <a
+                key={action.key}
+                href={action.href}
+                className={[styles.iconButton, overHero ? styles.onDark : '']
+                  .filter(Boolean)
+                  .join(' ')}
+                title={action.title}
+                aria-label={action.title}
+                {...(action.kind === 'whatsapp'
+                  ? { target: '_blank', rel: 'noopener noreferrer' }
+                  : null)}
+                onClick={() =>
+                  track(action.kind === 'whatsapp' ? EVENTS.whatsappClick : EVENTS.callClick, {
+                    source: 'header',
+                  })
+                }
+              >
+                <Icon icon={action.icon} width={22} height={22} aria-hidden="true" />
+              </a>
+            );
+          })}
         </div>
       </div>
 
@@ -194,36 +132,13 @@ const Header = () => {
         <GlobalSearch autoFocus onNavigate={() => setSearchOpen(false)} />
       </Modal>
 
-      {/* Right-side Drawer */}
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        PaperProps={{ className: styles.drawerPaper }}
-      >
-        <div className={styles.drawerHeader}>
-          <Link to="/" onClick={() => setDrawerOpen(false)}>
-            <Logo height={40} />
-          </Link>
-          <IconButton onClick={() => setDrawerOpen(false)} aria-label="Close menu">
-            <Icon icon="mdi:close" width={24} />
-          </IconButton>
-        </div>
-        <div className={styles.drawerList}>
-          {sideMenuItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={styles.drawerItem}
-              onClick={() => setDrawerOpen(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </Drawer>
+      <LeadModalTemp
+        open={leadOpen}
+        onClose={() => setLeadOpen(false)}
+        source="post-requirement"
+        requirement
+        successTitle="Requirement received"
+      />
     </header>
   );
-};
-
-export default Header;
+}

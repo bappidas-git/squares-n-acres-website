@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 26 — Public listing and search Next prompt: 27
+Last prompt executed: 27 — Home page, navigation and footer Next prompt: 28
 
 ## Executed prompts
 
@@ -32,7 +32,8 @@ Last prompt executed: 26 — Public listing and search Next prompt: 27
 | 23  | Property details part 1: page shell, gallery, price, shortlist | `399b188`                                                                          | 2026-09-16 |
 | 24  | Property details part 2: the eleven content sections           | `296deaa`                                                                          | 2026-09-16 |
 | 25  | Property details part 3: documents, finance, similar, enquiry  | `adfe5ad`                                                                          | 2026-09-17 |
-| 26  | Public listing engine, filters, global search and shortlist    | HEAD of this branch (a commit cannot contain its own hash — prompt 27 fills it in) | 2026-09-17 |
+| 26  | Public listing engine, filters, global search and shortlist    | `382e5cf`                                                                          | 2026-09-17 |
+| 27  | Data-driven home page, navigation and footer                   | HEAD of this branch (a commit cannot contain its own hash — prompt 28 fills it in) | 2026-09-17 |
 
 ## Baseline (prompt 01)
 
@@ -247,6 +248,12 @@ not wire it.
 disappears from the registry; `scripts/check-endpoints.js` (now part of `npm run lint`)
 fails when a path literal appears anywhere else under `src/`.
 
+Prompt 27 added the second endpoint the catalogue did not list: **`GET /pages`**
+(`pages.list`), the navigation list of published pages — `showInHeader` / `showInFooter`
+filters, `{slug,title,headerMenu,footerColumn,order}` per row, unpaginated unless
+`page`/`perPage` ask otherwise. The header and the footer are built from it, so **237**
+endpoints are now declared.
+
 **Served by the mock:** all 236 registry endpoints, plus `GET /api/health` and four
 operational paths the registry does not declare (`GET /redirects/resolve`,
 `POST /admin/redirects/import`, `GET /admin/redirects/export`,
@@ -299,7 +306,9 @@ The boilerplate's own endpoint surface stays inventoried in
 | `PropertyDetails` temporary `Helmet`           | The page sets `<title>`, the description, the canonical and `robots` through `react-helmet-async`; `<Seo>` replaces it in prompt 38 with the §9.5 templates, the social tags and the JSON-LD graph (including the `BreadcrumbList` the crumbs already describe).                                                                                                                                                                                                                  | 38           |
 | Listing `Helmet` → `<Seo type="listing">`      | `ListingEngine` renders the title, the description, the canonical and `robots` from `listingSeo.js` through `react-helmet-async`, and `Pagination` emits `rel=prev/next` from the same object. Prompt 38 hands `buildListingSeo()` to `<Seo>`, which adds the OG/Twitter tags and the `ItemList` JSON-LD; the rules themselves do not change.                                                                                                                                     | 38           |
 | `Shortlist` temporary `Helmet`                 | `/shortlist` sets its title and `noindex, follow` through `react-helmet-async`; `<Seo type="shortlist">` replaces it, with the same robots rule (§9.3).                                                                                                                                                                                                                                                                                                                           | 38           |
-| Hero search → tabbed hero search               | The home hero mounts `GlobalSearch` as a single box. Prompt 27 puts the `HERO_SEARCH_TABS` strip (Buy / Rent / Lease / Commercial / Plots) above it, so the same box searches inside a chosen listing type.                                                                                                                                                                                                                                                                       | 27           |
+| `HomeFeatures` / `HomeSteps` → CMS blocks      | The `features` and `steps` blocks of the `home` page are rendered by two components in `sections/home/`. Prompt 30 moves them to `components/cms/blocks/` and mounts them from `PageRenderer`, so the About page's values and a service page's process render through the same markup. The markup is what moves; the data contract does not change.                                                                                                                               | 30           |
+| Post-requirement modal → `LeadCaptureModal`    | The header CTA, the drawer's CTA row and the bottom bar's Enquire each mount `LeadModalTemp` with `requirement`, which adds the six selects of D82. Prompt 28 replaces the dialog with `LeadCaptureModal` behind `LeadCaptureContext` — one instance for the whole app — and with it the `group` / `toBody` / function-`options` field descriptors `LeadForm` grew here.                                                                                                          | 28           |
+| Home `Helmet` → `<Seo type="home">`            | `Home.jsx` sets `<title>` and the description from the `home` CMS page's `seo` branch through `react-helmet-async`. Prompt 38 hands the same record to `<Seo type="home">`, which adds the §9.5 template, the social tags and the `Organization` + `WebSite` JSON-LD graph.                                                                                                                                                                                                       | 38           |
 
 ## Known issues (open) — id, description, found by, owner prompt
 
@@ -309,10 +318,9 @@ The boilerplate's own endpoint surface stays inventoried in
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | --------------------------- |
 | BUG-01                    | Every write uses `PUT` with partial payloads (11 call sites across property/lead/article/FAQ/neighborhood/partner/user toggles) **Prompt 11 moved every write it touched to the right verb**: toggles, reorders and lead-status changes use `PATCH`, bulk actions use `POST /admin/<resource>/bulk`, and `PUT` is reserved for a full-record form save. The row closes when prompts 18–40 confirm the remaining forms. **The property-form half is closed in 21**: the sixteen tabs are written, `toPayload` states the whole §6.1 record and the form saves it with `PUT /admin/properties/:id` (a create is `POST`); no property write sends a partial body through `PUT` any more. | master spec, confirmed 01 | 11, 14–22, 29, 33, 40       |
 | BUG-09 (contract defined) | Lead sources inconsistent (21 values in `src/` vs `adminConstants` vs `AdminLayout.formatSource`). **Prompt 05 froze `LEAD_SOURCES` (29 values) and `LEGACY_LEAD_SOURCE_MAP` (24 old values)** in `src/config/enums.js`, tested in `enums.test.js`. The forms still send the old values; **Prompt 08 applies `LEGACY_LEAD_SOURCE_MAP` on `POST /leads`**, so an old bundle's `property_enquiry` is stored as `property-enquiry` and an unknown value is a 422. The seed converts its own rows in 10, the forms move in 28 and the CRM labels in 29.                                                                                                                                   | master spec, confirmed 01 | 10, 28, 29 (contract: 05 ✔) |
-| BUG-11                    | Hardcoded content on About, Contact, FAQs, HomeLoan, LegalAssistance, InteriorDesigning, Careers, Partnership, SellLet, FlexibleWorkspace, DirectLeaseRetails, RealEstateAwareness, WhyChoose, HowItWorks, Dashboard trends, footer defaults, `SeoGuidelines` **Data side prepared in 10:** every one of those pages is now a seeded CMS record with its blocks, so prompts 27–31 render data rather than JSX.                                                                                                                                                                                                                                                                        | master spec, confirmed 01 | 27, 29, 30, 31, 37, 40      |
+| BUG-11                    | Hardcoded content on About, Contact, FAQs, HomeLoan, LegalAssistance, InteriorDesigning, Careers, Partnership, SellLet, FlexibleWorkspace, DirectLeaseRetails, RealEstateAwareness, WhyChoose, HowItWorks, Dashboard trends, footer defaults, `SeoGuidelines` **Data side prepared in 10:** every one of those pages is now a seeded CMS record with its blocks, so prompts 27–31 render data rather than JSX. **Home half closed in 27:** `WhyChoose` and `HowItWorks` are deleted and the two bands are the `features` and `steps` blocks of the `home` page; every other band of the home page is settings, master data or a collection. The other pages are still JSX.            | master spec, confirmed 01 | 29, 30, 31, 37, 40          |
 | BUG-15 (frontend)         | Careers résumé upload dead; no spam protection; newsletter no dedupe and a false reCAPTCHA notice. **Closed on the server in 09:** `POST /jobs/:id/apply`, `POST /newsletter/subscribe` and `POST /leads` are throttled to ten a minute per IP and honour the `website` honeypot, a known address answers "Already subscribed" and an unsubscribed one is revived, and a résumé travels as a URL (D12). The forms themselves arrive with 28 and 31.                                                                                                                                                                                                                                   | master spec, confirmed 01 | 28, 31                      |
 | BUG-18 (frontend)         | `getFeatured` tag hack; ad-hoc trending/related; FAQ page/section fetch-all-and-filter. **Closed on the server:** `/properties/featured` and `/properties/:id/similar` (08), `/articles/trending` and the `category`/`showOnHome`/`propertyTypeId` FAQ filters (09). The components that still fetch-all-and-filter arrive with 27 and 34. **Mostly closed in 11**: `FeaturedProperties` calls `/properties/featured`, `TrendingTopics` and `Articles` call `/articles/trending`, `FaqSection` calls `/faqs?showOnHome=true` and the FAQ page filters server-side. What is left is the listing page, which still narrows in the browser (prompt 26).                                  | master spec, confirmed 01 | 27, 34                      |
-| BUG-20 (partial)          | Nav **data** is still hardcoded and duplicated between `Header` and `MobileHeader`. The inconsistency prompt 04 owned is gone: both render on the same 900 px switch, with the same tokens, radii and shadows, and the footer is a light surface. Prompt 27 moves the arrays to `src/config/navigation.js`.                                                                                                                                                                                                                                                                                                                                                                           | master spec, confirmed 01 | 27, 43                      |
 | BUG-21                    | Additional defects recorded here by the audit prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | 01                        | 01 → all                    |
 
 ### Additional defects of `00_MASTER_CONTEXT.md` §11
@@ -323,7 +331,7 @@ The boilerplate's own endpoint surface stays inventoried in
 | ADD-02 | `dev` script equals `start` (no json-server anywhere); `devDependencies` empty; no ESLint/Prettier config beyond CRA | master spec | 01 (tooling half **closed**), 06 (`dev`/`mock`) |
 | ADD-03 | `public/index.html` references a non-existent `favicon.ico`; `robots.txt` allows everything with no sitemap; no `manifest.json` | master spec, confirmed 01 | 02 |
 | ADD-04 | `@mui/icons-material` and `web-vitals` are unused dependencies (0 imports each) | master spec, confirmed 01 | 03, 41 |
-| ADD-06 (partial) | **Closed in 04:** the three scroll-hide copies (now `useScrollDirection`; `useThrottledScroll` stays for `BackToTop`), the 13 local `Section` components (now `ui/Section`), and `tagColors` vs `TAG_OPTIONS` (`PropertyCard` reads `TAG_OPTIONS` tones). **Still open:** the five `formatPrice` and three `formatDate` copies still exist at their call sites — `src/utils/format.js` is the single implementation but the call sites move to it with the data hooks; `GooglePreview` ×2, `getTitleLenColor` ×2 and `leadStatusConfig` in `Dashboard`; nav data (BUG-20). | master spec, confirmed 01 | 11, 27, 36 |
+| ADD-06 (partial) | **Closed in 04:** the three scroll-hide copies (now `useScrollDirection`; `useThrottledScroll` stays for `BackToTop`), the 13 local `Section` components (now `ui/Section`), and `tagColors` vs `TAG_OPTIONS` (`PropertyCard` reads `TAG_OPTIONS` tones). **Still open:** the five `formatPrice` and three `formatDate` copies still exist at their call sites — `src/utils/format.js` is the single implementation but the call sites move to it with the data hooks; `GooglePreview` ×2, `getTitleLenColor` ×2 and `leadStatusConfig` in `Dashboard`. The nav data half closed in 27 (`src/config/navigation.js`). | master spec, confirmed 01 | 11, 36 |
 | ADD-09 | `LeadForm` ignores `required:false`, has no `<label>`s, no `onSuccess`, posts unsanitised values; `NewsletterSection` validation is `includes('@')`, fails silently, shows a false reCAPTCHA notice | master spec, confirmed 01 | 28 |
 | ADD-16 | `ArticleDetail` Markdown renderer: duplicate tables on every `\ **Closed in 11**: the article body is CMS-authored HTML rendered through `LegacyHtml`, and the breadcrumb now goes Home → Articles → category.                                                                                                                                                                                                                                                                                                                                                             | `line, ordered lists rendered as`<ul>`, only `**bold**`inline, breadcrumb "Insights" and "Articles" to the same URL;`Articles` state not URL-synced | master spec, confirmed 01 | 32, 34 |
 | ADD-17 | `Contact`: five `#` social links opening new tabs, generic Brigade Road map with a fabricated `!4v1700000000000`, US-format phone in FAQs `(555) 123-4567`. **The FAQ half is closed in 17**: `/insights/faqs` renders `ContactMethods`, which reads the phone, the e-mail and the WhatsApp number from `siteSettings.general` and renders nothing when they are empty (D83). The contact page keeps the rest. | master spec, confirmed 01 | 30, 31 |
@@ -360,6 +368,8 @@ The boilerplate's own endpoint surface stays inventoried in
 
 | Id                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Closed by                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BUG-20             | Nav data hardcoded and duplicated between `Header` and `MobileHeader` (two copies of `navItems` and `sideMenuItems`). **Closed in 27:** `src/config/navigation.js` builds every menu from master data, the published CMS pages and `siteSettings`; the header, the mobile drawer, the bottom bar and the footer all read the same builders, and the two literals are gone.                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ADD-15             | `HeroSection` owned a `role="combobox"` without `aria-controls`, offered "View all results" with no suggestions, and kept unused video/input refs. **Closed in 26/27:** the type-ahead is `GlobalSearch`; the hero is now the tabbed search card, the badges row and the stats row, and it holds no refs of its own.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | BUG-10             | `NotFound` sent `?search=`, `QuickActions` linked `?type=sale`, `?type=rent` and `?type=lease`, and the listing read neither; `type=lease` matched nothing at all. **Closed in 26:** `NotFound` navigates to `/properties?q=`, the six `QuickActions` tiles link to `/buy`, `/rent`, `/lease`, `/commercial`, `/plots` and `/buy/ready-to-move` (D92), and every parameter the listing reads is a §5.7 name. The `?area=` half closed in 14.                                                                                                                                                                                                                                                                                                                                                                         |
 | BUG-16             | Filter logic duplicated between `PropertyListing` and `PropertyFilters`. **Closed in 26:** both files are deleted; one `ListingEngine` holds the filters, and the rail and the mobile sheet render the same `FilterGroups` against the same draft.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | BUG-19             | The listing fetched `perPage=100` and then filtered, sorted and paginated in the browser. **Closed in 26:** `GET /properties` does all four (D94); the browser only draws the facets it is sent.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -3837,3 +3847,173 @@ render's copy of the list under React 18 batching — is fixed here with a test.
 NEW-33 (user-event v13 `act(…)` notices around MUI dialogs) still stands.
 
 **Next prompt: 27 — Home page.**
+
+### Prompt 27 — Data-driven home page, navigation and footer (2026-09-17)
+
+**What changed**
+
+The home page no longer contains a sentence a component made up. Fifteen bands,
+and every one of them is data: the hero and its search tabs are
+`siteSettings.hero`; the tiles and the four listing rows are `GET /properties`
+with different filters; the localities, property types and builders are master
+data; "Why choose Squares N Acres" and "How it works" are the `features` and
+`steps` blocks of the `home` CMS page (D81); the testimonials, articles, FAQs
+and partners are their own collections. `WhyChoose.jsx` and `HowItWorks.jsx` —
+eight hardcoded objects between them — are deleted. That is the home half of
+BUG-11 closed.
+
+**A section with nothing behind it renders nothing at all.** No heading, no
+empty state, no gap. A row below three results is absent; a tile whose count
+request failed shows no count rather than "0"; the CMS bands disappear the
+moment the page is unpublished, because there is no fallback copy by design —
+a fallback would mean quietly ignoring what an editor did.
+
+**The hero search** is the `HERO_SEARCH_TABS` strip over a card that overlaps
+the hero: a locality/keyword box, a property type, a budget and — for the two
+residential tabs — BHK chips. Each tab is a listing route and the form is that
+route's first filters, so Search lands on
+`/rent?localityId=7&bedrooms=2`, the same address the listing's own rail
+produces. A locality picked from the type-ahead becomes `localityId`; free text
+becomes `q`. Switching tab always drops the budget: the sale and rent scales are
+two orders of magnitude apart (D90). Searching is **not** a lead — it sends the
+`search` event and navigates, and `LEAD_SOURCES.hero-search` stays unused.
+
+**The navigation is one module.** `src/config/navigation.js` builds the header
+menus, the header actions, the footer columns, the legal line and the bottom bar
+from master data, the published CMS pages and `siteSettings`. `Header`,
+`MobileDrawer`, `BottomNav` and `Footer` all read those builders, so the two
+copies of `navItems` that `Header` and `MobileHeader` each carried are gone
+(BUG-20). A menu with no pages behind it is not rendered; a property type an
+editor adds appears in the Buy mega-menu, the type grid and the footer without
+a code change.
+
+**`GET /pages?showInHeader=&showInFooter=`** is the one new endpoint: published
+pages as `{slug,title,headerMenu,footerColumn,order}`, unpaginated, because a
+menu arrives whole or it is wrong. `useNavPages()` caches both lists in memory
+for the page load, so four components share one pair of requests (the D93
+reasoning, applied to the CMS).
+
+**Files added**
+
+- `src/config/navigation.js`, `src/config/copy.js`
+- `src/hooks/useNavPages.js`
+- `src/components/layout/`: `MegaMenu.jsx`, `MobileDrawer.jsx` (+ their CSS)
+- `src/components/sections/home/`: `HeroSearch.jsx`, `CategoryTiles.jsx`,
+  `PropertyRow.jsx`, `PropertyTypeGrid.jsx`, `TopBuilders.jsx`,
+  `HomeFeatures.jsx`, `HomeSteps.jsx`, `LatestInsights.jsx`, `CtaBand.jsx`
+  (+ their CSS), `useCategoryCounts.js`
+- Tests: `config/__tests__/navigation.test.js` (28),
+  `sections/home/__tests__/HeroSearch.test.jsx` (14),
+  `sections/home/__tests__/PropertyRow.test.jsx` (7)
+
+**Files changed**
+
+- `src/pages/public/Home.jsx` (+ CSS) — rewritten around the fifteen bands and
+  the `home` CMS page
+- `src/components/sections/home/HeroSection.jsx` (+ CSS) — media, headline, the
+  trust badges and the stats row (both only when settings carry them), and the
+  search card
+- `src/components/sections/home/ExploreLocalities.jsx` (+ CSS) — the shared
+  `Section`/`SectionHeader` and a "View all"
+- `src/components/layout/Header.jsx`, `MobileHeader.jsx`, `BottomNav.jsx`,
+  `Footer.jsx` (+ their CSS) — all four rebuilt on the builders
+- `src/components/layout/MainLayout.jsx` (+ CSS) — the home page's `<main>`
+  drops the header offset so the hero runs under the transparent bar (D52)
+- `src/components/common/GlobalSearch.jsx` (+ CSS) — an `inline` variant with no
+  `<form>` of its own, `inputId`, `onChange` and an `onSelect` a host may consume
+- `src/components/common/LeadForm.jsx` — a field may declare `group` (nest under
+  `requirement`), `toBody` (one budget select fills two fields) and a function
+  `options` (choices that follow the other answers)
+- `src/components/sections/property/LeadModalTemp.jsx` — a `requirement` prop
+  adding the six selects of D82
+- `src/components/ui/Drawer.jsx` (+ CSS) — `padded={false}`
+- `src/routes/paths.js` — `PATHS.page()` encodes each segment, so a nested page
+  slug keeps its slashes
+- `mock-server/routes/pages.js`, `src/services/endpoints.js`,
+  `pageService.js`, `endpoints.test.js`, `mock-server/__tests__/content.test.js`,
+  `docs/API_CONTRACT.md` — the navigation endpoint
+
+**Files removed**
+
+`QuickActions.jsx`, `WhyChoose.jsx`, `HowItWorks.jsx`, `FeaturedProperties.jsx`,
+`TrendingTopics.jsx` and their five stylesheets — 2 867 lines out against 1 393
+in across the whole diff, with 2 550 lines of new source in the twenty-eight new
+modules. `grep -rn "QuickActions\|WhyChoose\|HowItWorks\|FeaturedProperties\|TrendingTopics" src` → 0.
+
+**Endpoints / env vars / npm scripts**
+
+One endpoint added: `GET /pages?showInHeader=&showInFooter=` (`pages.list`,
+public, published only). No env var, no npm script, no dependency.
+
+**Acceptance checklist**
+
+- [x] Home renders every section of the objective from data; the hero search
+      navigates with the right parameters for each tab; the tiles show counts;
+      rows below three items are absent.
+- [x] Header, mega-menu, drawer, bottom bar and footer are built from data and
+      settings; no "Sign In"; the CTA opens the post-requirement modal; the
+      phone and WhatsApp buttons follow `settings.navigation`.
+- [x] The five legacy sections are deleted; `GET /pages?showInHeader` is
+      smoke-tested (`pages.list` in the walk) and unit-tested on the mock.
+- [x] `npm run lint`, `npm run test:ci` (1 452 tests, 67 suites),
+      `npm run build:ci` ("Compiled successfully", no warnings),
+      `npm run check:traces` (0 findings), `npm run test:mock` (131) and
+      `npm run smoke` (274/274) pass.
+- [x] One commit, clean tree.
+
+**Manual QA (headless Chromium over the DevTools protocol, 1280 px and 390 px)**
+
+- `/` renders one `<h1>` and fifteen `<h2>` bands in the objective's order, with
+  no horizontal scroll and no console output. The tiles read "Ready to move 14
+  listings", "Under construction 6", "New launch 2", "Plots & land 5", "Rent a
+  home 7", "Commercial 5".
+- Hero: the Rent tab switched the budget select to "Up to ₹10 K / ₹10 K – ₹20 K
+  / ₹20 K – ₹35 K"; typing "koramangala" offered the locality first, then three
+  listings; picking it, ticking 2 BHK and pressing Search landed on
+  `/rent?localityId=7&bedrooms=2`, headed "2 BHK Properties for rent in
+  Koramangala, Bengaluru".
+- Mega-menu keyboard: `Space` on "Buy" opened the four-column panel and focused
+  "Pre-Launch", `ArrowDown` moved to "Under Construction", `End` jumped to "HSR
+  Layout", `Escape` closed it and returned focus to the trigger with
+  `aria-expanded="false"`. The budget column links
+  `/buy?minPrice=5000000&maxPrice=10000000` … `/buy?minPrice=25000000`, and that
+  first link opens the listing as `noindex, follow` (§9.4).
+- Header width: measured at 900, 1024, 1280 and 1536 px — nav overflow 0 at all
+  four. Below 1200 px the tail folds into "More" (five menus + More at 900 and
+  1024; all ten at 1280 and 1536).
+- 390 px: no horizontal scroll; the bottom bar is Home · Search · Shortlist ·
+  Enquire · Menu; the tiles are two per row; the drawer lists all ten menus as
+  48 px accordion rows over a Call · WhatsApp · Post Requirement row, with no
+  "Sign In"; expanding Buy showed its four groups and 26 links.
+- "Enquire" opened the post-requirement dialog with the six D82 selects; filling
+  it in filed a lead whose `requirement` reads
+  `{listingType:'rent', bedrooms:3, budgetMin:20000, budgetMax:35000, timeline:'1-3-months'}`
+  — nested, not flattened. Choosing Rent first had switched the budget options to
+  the rent bands.
+- Settings: `PUT /api/admin/settings {"navigation":{"showWhatsappButton":false}}`
+  then a fresh load left `tel:` and the CTA in the header and no WhatsApp button;
+  restoring it brought the button back.
+- Edge cases: with `GET /properties?perPage=1` failing, every tile rendered
+  without a count and no "0" appeared anywhere; with the `home` page set to
+  `draft`, "Why choose Squares N Acres" and "How it works" were absent and the
+  page went from "Top builders" straight on with no gap.
+
+**Known issues**
+
+BUG-20 and ADD-15 are closed; BUG-11 and ADD-06 keep rows for the pages and the
+duplicates prompts 29–40 own. No new defect was recorded. Two things worth
+writing down for the next reader:
+
+- The header genuinely does not fit ten top-level menus below about 1200 px, so
+  `collapseMenus()` folds the tail into "More" between 900 px and 1199 px. That
+  is a decision, not a bug (see `docs/DECISIONS.md`), and the same measurement
+  is why the call and WhatsApp buttons are icons on desktop.
+- In this container every request to an external host (`picsum.photos`,
+  `res.cloudinary.com`, the Iconify API) fails TLS verification through the
+  agent proxy, so the QA screenshots show empty image and icon boxes and the
+  browser console carries `ERR_CERT_AUTHORITY_INVALID` lines. `curl` reaches the
+  same URLs from the shell (302), and nothing in the page's own JavaScript
+  reports an error; the "no console output" claims above exclude those transport
+  failures.
+
+**Next prompt: 28 — Lead capture unification.**

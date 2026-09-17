@@ -1,114 +1,158 @@
+/* 560px desktop / 480px mobile, with the search card overlapping the bottom
+   edge. The media box owns a fixed height from the first paint, so the sections
+   under it never move when the photograph arrives (no CLS). */
 .hero {
   position: relative;
-  width: 100%;
-  min-height: 520px;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 560px;
+  /* The header is fixed and transparent over this band, so the hero reserves
+     its height instead of the layout doing it (D52). */
+  padding: calc(var(--header-height) + var(--space-10)) var(--container-padding) var(--space-12);
   background-color: var(--color-charcoal);
+  isolation: isolate;
 }
 
-/* Clips parallax background without hiding the suggestions dropdown */
-.bgClip {
+.media {
   position: absolute;
   inset: 0;
   overflow: hidden;
   z-index: 0;
 }
 
-.bgImage {
+.mediaLayer {
   position: absolute;
-  inset: -80px 0 0 0;
-  bottom: 0;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  z-index: 0;
-  will-change: transform;
-}
-
-.bgVideoWrapper {
-  position: absolute;
-  inset: -80px 0 0 0;
-  bottom: 0;
-  z-index: 0;
-  will-change: transform;
-  overflow: hidden;
-}
-
-.bgVideo {
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
+  background-color: var(--color-charcoal);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .overlay {
   position: absolute;
   inset: 0;
   background: var(--color-overlay);
-  z-index: 1;
 }
 
 .content {
   position: relative;
-  z-index: 2;
-  text-align: center;
-  padding: 80px 24px 64px;
-  max-width: 720px;
+  z-index: 1;
   width: 100%;
+  max-width: var(--container-max);
+  text-align: center;
 }
 
 .heading {
+  margin: 0 auto var(--space-4);
+  max-width: 20ch;
   font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 3rem;
-  line-height: 1.2;
-  color: var(--color-text-inverse);
-  margin-bottom: 16px;
+  font-size: var(--font-size-5xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
   letter-spacing: -0.02em;
+  color: var(--color-text-inverse);
+  text-shadow: 0 2px 12px rgb(0 0 0 / 35%);
 }
 
 .subtitle {
-  font-family: var(--font-body);
-  font-size: 1.125rem;
-  color: var(--color-on-dark);
-  margin-bottom: 36px;
-  line-height: 1.6;
+  margin: 0 auto var(--space-6);
+  max-width: 62ch;
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-inverse);
+  text-shadow: 0 1px 8px rgb(0 0 0 / 35%);
 }
 
-/* Search container — provides positioning context for dropdown */
-.searchContainer {
-  position: relative;
-  max-width: 600px;
+/* Trust badges — rendered only when settings carry any. */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-6);
+  padding: 0;
+  list-style: none;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background-color: rgb(255 255 255 / 14%);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-inverse);
+}
+
+.searchWrap {
+  max-width: 980px;
   margin: 0 auto;
 }
 
-@media (max-width: 599.98px) {
+/* Stats — rendered only when settings carry any. */
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-6) var(--space-12);
+  margin-top: var(--space-8);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-inverse);
+}
+
+.statValue {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1;
+  text-shadow: 0 2px 12px rgb(0 0 0 / 35%);
+}
+
+.statSuffix {
+  margin-left: 2px;
+  font-size: var(--font-size-xl);
+}
+
+.statLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-inverse);
+  opacity: 0.88;
+}
+
+@media (max-width: 899.98px) {
   .hero {
-    min-height: 400px;
-  }
-
-  .content {
-    padding: 60px 16px 48px;
-  }
-
-  .heading {
-    font-size: 2rem;
+    min-height: 480px;
+    padding: calc(var(--header-height) + var(--space-6)) var(--container-padding) var(--space-10);
   }
 
   .subtitle {
-    font-size: 0.95rem;
-    margin-bottom: 24px;
+    font-size: var(--font-size-md);
   }
 
-  /* Reduce parallax offset on mobile to avoid gaps */
-  .bgImage,
-  .bgVideoWrapper {
-    inset: -40px 0 0 0;
+  .stats {
+    gap: var(--space-5) var(--space-8);
+  }
+}
+
+@media (max-width: 599.98px) {
+  .heading {
+    font-size: var(--font-size-3xl);
   }
 
-  .bgClip {
-    inset: 0;
+  .badge {
+    font-size: var(--font-size-xs);
   }
 }

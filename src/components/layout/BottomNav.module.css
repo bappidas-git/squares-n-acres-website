@@ -1,153 +1,90 @@
 .bottomNav {
   position: fixed;
-  bottom: 0;
   left: 0;
   right: 0;
+  bottom: 0;
   z-index: var(--z-bottom-nav);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  height: calc(var(--bottom-nav-height) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
   background-color: var(--color-bg);
   border-top: 1px solid var(--color-border);
   box-shadow: var(--shadow-md);
   transition: transform var(--transition-base);
-  /* Safe area padding for the iOS home indicator. */
-  padding-bottom: var(--safe-bottom);
 }
 
-.bottomNav.hidden {
-  transform: translateY(100%);
+/* D52: the bottom bar is the one chrome that hides on scroll-down. */
+.hidden {
+  transform: translateY(110%);
 }
 
-.navItems {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  height: var(--bottom-nav-height);
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.navButton {
+.item {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-width: 56px;
-  min-height: var(--bottom-nav-height);
-  padding: var(--space-1) var(--space-3);
+  min-height: 44px;
   border: none;
   background: none;
-  cursor: pointer;
-  text-decoration: none;
   color: var(--color-text-muted);
-  transition: color var(--transition-fast);
-  -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-body);
+  text-decoration: none;
+  cursor: pointer;
 }
 
-.navButton.active {
+.active {
   color: var(--color-primary-dark);
-  font-weight: var(--font-weight-semibold);
 }
 
-.navIcon {
+.icon {
   position: relative;
   display: flex;
   align-items: center;
+  justify-content: center;
   font-size: 22px;
+  line-height: 1;
 }
 
-/* The shortlist count. `aria-hidden`: the link's accessible name carries it. */
+.label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
 .badge {
   position: absolute;
   top: -6px;
-  left: 12px;
+  left: 60%;
   min-width: 18px;
-  height: 18px;
   padding: 0 4px;
   border-radius: var(--radius-full);
   background-color: var(--color-primary);
   color: var(--color-text-inverse);
-  font-family: var(--font-body);
   font-size: 10px;
   font-weight: var(--font-weight-bold);
   line-height: 18px;
   text-align: center;
 }
 
-.navLabel {
-  font-family: var(--font-body);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  white-space: nowrap;
+.item:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 
-/* SwipeableDrawer content */
-.drawerPaper {
-  border-top-left-radius: var(--radius-xl);
-  border-top-right-radius: var(--radius-xl);
-}
-
-.drawerContent {
-  padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-bottom));
-}
-
-.drawerHandle {
-  width: 40px;
-  height: 4px;
-  background-color: var(--color-border-strong);
-  border-radius: var(--radius-full);
-  margin: 0 auto var(--space-4);
-}
-
-.drawerTitle {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-charcoal);
-  margin-bottom: var(--space-4);
-  padding: 0 var(--space-1);
-}
-
-.drawerOptions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.drawerOption {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 56px;
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  text-decoration: none;
-  color: var(--color-text);
-  transition: background-color var(--transition-fast);
-}
-
-.drawerOption:hover {
-  background-color: var(--color-surface);
-}
-
-.drawerOptionIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  background-color: var(--color-surface);
-  color: var(--color-primary-dark);
-  font-size: 20px;
-}
-
-.drawerOptionLabel {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-}
-
+/* The bar belongs to the phone; the desktop header carries the same links. */
 @media (min-width: 900px) {
   .bottomNav {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottomNav {
+    transition: none;
+  }
+
+  .hidden {
+    transform: none;
   }
 }

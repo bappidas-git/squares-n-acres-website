@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import PATHS from '../../routes/paths';
 import useBreakpoint from '../../hooks/useBreakpoint';
 import Header from './Header';
 import MobileHeader from './MobileHeader';
@@ -35,7 +36,14 @@ const MainLayout = ({ children }) => {
       {isMobile ? <MobileHeader /> : <Header />}
 
       {/* Main Content */}
-      <main id="main-content" className={styles.main}>
+      {/* D52: the header is transparent over the home hero, so the home page
+          starts at the top of the viewport rather than below the bar. */}
+      <main
+        id="main-content"
+        className={[styles.main, location.pathname === PATHS.home ? styles.flush : '']
+          .filter(Boolean)
+          .join(' ')}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

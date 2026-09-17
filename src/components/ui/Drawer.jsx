@@ -14,6 +14,8 @@ import styles from './Drawer.module.css';
  * @param {'default'|'wide'} [props.size]
  * @param {React.ReactNode} [props.title]
  * @param {React.ReactNode} [props.footer]
+ * @param {boolean} [props.padded] `false` hands the body to the caller edge to
+ *   edge, for a panel whose own rows carry the padding (the navigation drawer)
  */
 export default function Drawer({
   open,
@@ -22,6 +24,7 @@ export default function Drawer({
   size = 'default',
   title,
   footer,
+  padded = true,
   closeLabel = 'Close',
   children,
   ...rest
@@ -45,7 +48,9 @@ export default function Drawer({
           </IconButton>
         </div>
       ) : null}
-      <div className={styles.body}>{children}</div>
+      <div className={[styles.body, padded ? '' : styles.flush].filter(Boolean).join(' ')}>
+        {children}
+      </div>
       {footer ? <div className={styles.footer}>{footer}</div> : null}
     </MuiDrawer>
   );

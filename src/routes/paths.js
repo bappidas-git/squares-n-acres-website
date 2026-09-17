@@ -59,7 +59,16 @@ const publicPaths = {
   disclaimer: '/disclaimer',
   shortlist: '/shortlist',
 
-  page: (slug) => `/${seg(slug)}`,
+  /**
+   * A CMS page. Its slug may itself be a path (`buyer-assistance/home-loan`),
+   * so the segments are encoded one by one and the separators survive.
+   */
+  page: (slug) =>
+    `/${String(slug ?? '')
+      .split('/')
+      .filter(Boolean)
+      .map(seg)
+      .join('/')}`,
 };
 
 /** Admin routes — never linked from the public site (D24). */

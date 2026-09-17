@@ -171,6 +171,7 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 | GET    | `/testimonials`         | public    | Active testimonials                                                      | `page`, `perPage`, `sort`, `order`, `q`, `isFeatured`                               | —                       | `TestimonialList` | —                                                                                                                                                                                                           |
 | GET    | `/team`                 | public    | Team members shown on the About page                                     | `page`, `perPage`, `sort`, `order`, `q`, `showOnAbout`                              | —                       | `TeamMemberList`  | —                                                                                                                                                                                                           |
 | GET    | `/partners`             | public    | Partner logos, optionally filtered by category                           | `page`, `perPage`, `sort`, `order`, `q`, `category`                                 | —                       | `PartnerList`     | —                                                                                                                                                                                                           |
+| GET    | `/pages`                | public    | Published pages that belong in the header or footer navigation           | `showInHeader`, `showInFooter`, `page`, `perPage`                                   | —                       | `PageNavList`     | Unpaginated unless `page`/`perPage` are given; returns `{slug,title,headerMenu,footerColumn,order}` only                                                                                                    |
 | GET    | `/pages/slug/:slug`     | public    | Published CMS page by slug; a matching preview token also returns drafts | `preview`                                                                           | —                       | `Page`            | —                                                                                                                                                                                                           |
 | GET    | `/jobs`                 | public    | Open job postings                                                        | `page`, `perPage`, `sort`, `order`, `q`, `department`                               | —                       | `JobList`         | —                                                                                                                                                                                                           |
 | GET    | `/jobs/slug/:slug`      | public    | Job posting by slug                                                      | —                                                                                   | —                       | `Job`             | —                                                                                                                                                                                                           |
@@ -821,6 +822,30 @@ The fields of §6.9, unchanged.
 
 The fields of §6.10: `blocks[] { id, type, order, data }` with the `data` shape of the
 block type, plus `seo` and the header/footer placement flags.
+
+### `PageNavList`
+
+What the header and the footer are built from (prompt 27). Five fields per published
+page, and never the blocks:
+
+```jsonc
+{
+  "data": [
+    {
+      "slug": "buyer-assistance/home-loan",
+      "title": "Home Loan Assistance",
+      "headerMenu": "buyer-assistance", // HEADER_MENUS, or null
+      "footerColumn": "services", // FOOTER_COLUMNS, or null
+      "order": 7,
+    },
+  ],
+  "meta": { "page": 1, "perPage": 10, "total": 10, "totalPages": 1 },
+}
+```
+
+`showInHeader=true` and `showInFooter=true` narrow the list; without either it is every
+published page's placement. Drafts never appear. A menu arrives whole, so the list is
+unpaginated unless `page`/`perPage` ask otherwise.
 
 ### `Job`, `JobApplication`
 

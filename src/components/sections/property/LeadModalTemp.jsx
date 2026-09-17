@@ -2,10 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import { Button, Modal } from '../../ui';
-import { LEAD_SOURCES } from '../../../config/enums';
+import {
+  BEDROOM_OPTIONS,
+  LEAD_SOURCES,
+  LISTING_TYPES,
+  PRICE_BUCKETS_RENT,
+  PRICE_BUCKETS_SALE,
+  REQUIREMENT_TIMELINES,
+} from '../../../config/enums';
 import { formatPhoneForTel, whatsappLink } from '../../../utils/format';
 import { leadStorage } from '../../../utils/leadStorage';
 import { track } from '../../../utils/analytics';
+import { useLocalities, usePropertyTypes } from '../../../hooks/useMasterData';
 import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import LeadForm from '../../common/LeadForm';
 
@@ -38,7 +46,95 @@ import styles from './LeadModalTemp.module.css';
  *   the first button of the success panel — how the documents section offers
  *   the file again when a pop-up blocker swallowed the tab it opened (BUG-08)
  * @param {{phone?: string, whatsapp?: string}|null} [props.agent]
+ * @param {boolean} [props.requirement] adds the six requirement selects of
+ *   D82 — what, where, how big, how much and by when — which the API stores
+ *   under `lead.requirement` (§6.7)
  */
+/** A price bucket as a `min-max` option value; the open-ended one ends in `-`. */
+const bucketOptions = (buckets) =>
+  buckets.map((bucket) => ({
+    value: `${bucket.min}-${bucket.max ?? ''}`,
+    label: bucket.label,
+  }));
+
+/** `"5000000-10000000"` back into the two numbers §6.7 stores. */
+function budgetToBody(value) {
+  const [min, max] = String(value ?? '').split('-');
+  return {
+    budgetMin: min === '' ? null : Number(min),
+    budgetMax: max === '' || max === undefined ? null : Number(max),
+  };
+}
+
+/**
+ * The six requirement selects of D82.
+ *
+ * Every one of them nests under `requirement` in the `POST /leads` body, and
+ * the budget bands follow the listing type the visitor picked above them — the
+ * sale and rent scales are two orders of magnitude apart (D90).
+ */
+function requirementFields({ propertyTypes, localities }) {
+  return [
+    {
+      name: 'listingType',
+      label: 'I want to',
+      type: 'select',
+      group: 'requirement',
+      placeholder: 'Buy, rent or lease',
+      options: LISTING_TYPES.options,
+    },
+    {
+      name: 'propertyTypeId',
+      label: 'Property type',
+      type: 'select',
+      group: 'requirement',
+      placeholder: 'Any property type',
+      options: propertyTypes.map((type) => ({ value: type.id, label: type.name })),
+      toBody: (value) => ({ propertyTypeId: Number(value) }),
+    },
+    {
+      name: 'localityId',
+      label: 'Preferred locality',
+      type: 'select',
+      group: 'requirement',
+      placeholder: 'Any locality',
+      options: localities.map((locality) => ({ value: locality.id, label: locality.name })),
+      toBody: (value) => ({ localityId: Number(value) }),
+    },
+    {
+      name: 'bedrooms',
+      label: 'Bedrooms',
+      type: 'select',
+      group: 'requirement',
+      placeholder: 'Any configuration',
+      options: BEDROOM_OPTIONS.options,
+      toBody: (value) => ({ bedrooms: Number(value) }),
+    },
+    {
+      name: 'budget',
+      label: 'Budget',
+      type: 'select',
+      group: 'requirement',
+      placeholder: 'Any budget',
+      options: (values) =>
+        bucketOptions(
+          values.listingType === 'rent' || values.listingType === 'lease'
+            ? PRICE_BUCKETS_RENT
+            : PRICE_BUCKETS_SALE
+        ),
+      toBody: budgetToBody,
+    },
+    {
+      name: 'timeline',
+      label: 'Timeline',
+      type: 'select',
+      group: 'requirement',
+      placeholder: 'When are you looking to move?',
+      options: REQUIREMENT_TIMELINES.options,
+    },
+  ];
+}
+
 export default function LeadModalTemp({
   open,
   onClose,
@@ -51,8 +147,11 @@ export default function LeadModalTemp({
   successTitle = 'Request received',
   successAction = null,
   agent = null,
+  requirement = false,
 }) {
   const { getContact, getWhatsappLink } = useSiteSettings();
+  const propertyTypes = usePropertyTypes();
+  const localities = useLocalities();
   const [done, setDone] = useState(false);
 
   // A second request from the same visit starts from the form again, with
@@ -106,6 +205,7 @@ export default function LeadModalTemp({
       placeholder: 'E-mail address',
       defaultValue: saved.email || '',
     },
+    ...(requirement ? requirementFields({ propertyTypes, localities }) : []),
     {
       name: 'message',
       label: 'Message',

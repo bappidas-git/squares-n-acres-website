@@ -1,114 +1,85 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Drawer, IconButton } from '@mui/material';
+import { useState } from 'react';
 import { Icon } from '@iconify/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Link, useLocation } from 'react-router-dom';
+
 import GlobalSearch from '../common/GlobalSearch';
+import MobileDrawer from './MobileDrawer';
+import PATHS from '../../routes/paths';
+import styles from './MobileHeader.module.css';
 import useScrollDirection from '../../hooks/useScrollDirection';
 import { Logo, Modal } from '../ui';
-import styles from './MobileHeader.module.css';
+import { EVENTS, track } from '../../utils/analytics';
+import { formatPhoneForTel } from '../../utils/format';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
-const navItems = [
-  {
-    label: 'Buy',
-    path: '/buy',
-    children: [
-      { label: 'Pre-Launch', path: '/buy/pre-launch' },
-      { label: 'Under-construction', path: '/buy/under-construction' },
-      { label: 'Ready to Move', path: '/buy/ready-to-move' },
-    ],
-  },
-  {
-    label: 'Rent',
-    path: '/rent',
-    children: [
-      { label: 'Apartments', path: '/rent/apartments' },
-      { label: 'Villas', path: '/rent/villas' },
-    ],
-  },
-  {
-    label: 'Buyer Assistance',
-    path: '/buyer-assistance',
-    children: [
-      { label: 'Home Loan', path: '/buyer-assistance/home-loan' },
-      { label: 'Legal Assistance', path: '/buyer-assistance/legal-assistance' },
-      { label: 'Interior Designing', path: '/buyer-assistance/interior-designing' },
-    ],
-  },
-  {
-    label: 'Real Estate Insights',
-    path: '/insights',
-    children: [
-      { label: 'Articles', path: '/insights/articles' },
-      { label: "FAQ's", path: '/insights/faqs' },
-      { label: 'Real Estate Awareness', path: '/insights/real-estate-awareness' },
-    ],
-  },
-  {
-    label: 'Contact',
-    path: '/contact',
-  },
-];
-
-const sideMenuItems = [
-  { label: 'View Properties', path: '/properties', icon: 'mdi:home-city-outline' },
-  { label: 'About Us', path: '/about', icon: 'mdi:information-outline' },
-  { label: 'Sell/Let Apartment', path: '/sell-let', icon: 'mdi:tag-outline' },
-  { label: 'Careers', path: '/careers', icon: 'mdi:briefcase-outline' },
-  { label: 'Partnership', path: '/partnership', icon: 'mdi:handshake-outline' },
-];
-
-const accordionVariants = {
-  collapsed: { height: 0, opacity: 0 },
-  expanded: { height: 'auto', opacity: 1, transition: { duration: 0.25, ease: 'easeInOut' } },
-};
-
-const MobileHeader = () => {
+/**
+ * The phone and tablet header (< 900 px): the mark, a search icon, the call
+ * button settings allow, and the menu button that opens `MobileDrawer`.
+ *
+ * The drawer holds the navigation — built from the same `buildHeaderNav()` the
+ * desktop header calls, which is what stops the two from drifting apart
+ * (BUG-20). D52: this bar never hides either; only the bottom navigation does.
+ */
+export default function MobileHeader() {
   const location = useLocation();
-  // D52: the header stays put at every width; only the elevation changes.
   const { scrolled } = useScrollDirection();
+  const { settings } = useSiteSettings();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [expandedItem, setExpandedItem] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  // Close drawer on route change
-  useEffect(() => {
-    setDrawerOpen(false);
-    setExpandedItem(null);
-    setSearchOpen(false);
-  }, [location.pathname]);
-
-  const toggleAccordion = (label) => {
-    setExpandedItem(expandedItem === label ? null : label);
-  };
+  const overHero = location.pathname === PATHS.home && !scrolled;
+  const phone = settings?.general?.contactPhone;
+  const showCall = settings?.navigation?.showCallButton !== false && Boolean(phone);
 
   return (
-    <header className={`${styles.mobileHeader} ${scrolled ? styles.scrolled : ''}`}>
-      <div className={styles.headerInner}>
-        <Link to="/" className={styles.logo}>
-          <Logo height={32} />
+    <header
+      className={[
+        styles.mobileHeader,
+        overHero ? styles.transparent : '',
+        scrolled ? styles.scrolled : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div className={styles.inner}>
+        <Link to={PATHS.home} className={styles.logo} aria-label="Squares N Acres — home">
+          <span className={overHero ? styles.logoPlate : undefined}>
+            <Logo height={32} />
+          </span>
         </Link>
 
         <div className={styles.actions}>
           <button
-            className={styles.searchTrigger}
+            type="button"
+            className={[styles.iconButton, overHero ? styles.onDark : ''].filter(Boolean).join(' ')}
             onClick={() => setSearchOpen(true)}
             aria-label="Search properties"
-            type="button"
           >
-            <Icon icon="mdi:magnify" width={22} height={22} />
+            <Icon icon="mdi:magnify" width={22} height={22} aria-hidden="true" />
           </button>
 
+          {showCall ? (
+            <a
+              href={`tel:${formatPhoneForTel(phone)}`}
+              className={[styles.iconButton, overHero ? styles.onDark : '']
+                .filter(Boolean)
+                .join(' ')}
+              aria-label={`Call ${phone}`}
+              onClick={() => track(EVENTS.callClick, { source: 'header' })}
+            >
+              <Icon icon="mdi:phone-outline" width={22} height={22} aria-hidden="true" />
+            </a>
+          ) : null}
+
           <button
-            className={styles.hamburger}
+            type="button"
+            className={[styles.iconButton, overHero ? styles.onDark : ''].filter(Boolean).join(' ')}
             onClick={() => setDrawerOpen(true)}
             aria-label="Open menu"
+            aria-expanded={drawerOpen}
           >
-            <div className={styles.hamburgerIcon}>
-              <span className={styles.hamburgerLine} />
-              <span className={styles.hamburgerLine} />
-              <span className={styles.hamburgerLine} />
-            </div>
+            <Icon icon="mdi:menu" width={24} height={24} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -122,108 +93,7 @@ const MobileHeader = () => {
         <GlobalSearch autoFocus onNavigate={() => setSearchOpen(false)} />
       </Modal>
 
-      {/* Full-screen Drawer */}
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        PaperProps={{
-          className: styles.fullDrawer,
-          sx: { backdropFilter: 'blur(4px)' },
-        }}
-      >
-        <motion.div
-          initial={{ x: 50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.3 }}
-          style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
-        >
-          {/* Drawer Header */}
-          <div className={styles.drawerHeader}>
-            <Link to="/" onClick={() => setDrawerOpen(false)}>
-              <Logo height={32} />
-            </Link>
-            <IconButton onClick={() => setDrawerOpen(false)} aria-label="Close menu">
-              <Icon icon="mdi:close" width={24} />
-            </IconButton>
-          </div>
-
-          {/* Navigation Items */}
-          <div className={styles.drawerContent}>
-            {navItems.map((item) =>
-              item.children ? (
-                <div key={item.label} className={styles.accordionItem}>
-                  <button
-                    className={styles.accordionHeader}
-                    onClick={() => toggleAccordion(item.label)}
-                    aria-expanded={expandedItem === item.label}
-                  >
-                    {item.label}
-                    <span
-                      className={`${styles.accordionChevron} ${expandedItem === item.label ? styles.open : ''}`}
-                    >
-                      <Icon icon="mdi:chevron-down" />
-                    </span>
-                  </button>
-                  <AnimatePresence>
-                    {expandedItem === item.label && (
-                      <motion.div
-                        className={styles.accordionBody}
-                        variants={accordionVariants}
-                        initial="collapsed"
-                        animate="expanded"
-                        exit="collapsed"
-                      >
-                        {item.children.map((child) => (
-                          <Link
-                            key={child.path}
-                            to={child.path}
-                            className={styles.accordionLink}
-                            onClick={() => setDrawerOpen(false)}
-                          >
-                            {child.label}
-                          </Link>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              ) : (
-                <Link
-                  key={item.label}
-                  to={item.path}
-                  className={styles.simpleLink}
-                  onClick={() => setDrawerOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              )
-            )}
-
-            {/* Divider */}
-            <div className={styles.drawerDivider} />
-
-            {/* Bottom Section */}
-            <div className={styles.drawerBottomSection}>
-              {sideMenuItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={styles.bottomLink}
-                  onClick={() => setDrawerOpen(false)}
-                >
-                  <span className={styles.bottomLinkIcon}>
-                    <Icon icon={item.icon} />
-                  </span>
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      </Drawer>
+      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </header>
   );
-};
-
-export default MobileHeader;
+}

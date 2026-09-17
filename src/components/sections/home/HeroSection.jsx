@@ -1,102 +1,117 @@
-import React, { useState } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { useState } from 'react';
+import { Icon } from '@iconify/react';
 
-import GlobalSearch from '../../common/GlobalSearch';
+import HeroSearch from './HeroSearch';
 import styles from './HeroSection.module.css';
 import useBreakpoint from '../../../hooks/useBreakpoint';
+import useCountUp from '../../../hooks/useCountUp';
+import useInView from '../../../hooks/useInView';
+import { formatNumber } from '../../../utils/format';
 import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 
 /**
- * The home hero: copy and media from `siteSettings.hero`, and the site's own
- * search box.
+ * The home hero: the media, the headline, the tabbed search and — when an
+ * editor filled them in — a row of trust badges and a row of figures.
  *
- * The type-ahead used to live here, in three hundred lines this component
- * shared with nobody — so the header had no search at all and the listing had
- * a different one. It is now `common/GlobalSearch`, which the header modal and
- * the results header mount too. Prompt 27 puts the tabbed Buy / Rent / Lease /
- * Commercial / Plots strip above it.
+ * Everything is `siteSettings.hero` (§6.13). The badges and the stats are
+ * arrays that ship empty, and an empty array renders nothing at all: the site
+ * does not claim "500+ happy families" until somebody who can stand behind the
+ * number types it in (§14).
+ *
+ * The media box reserves its height in CSS before the image loads, so nothing
+ * below it moves when it arrives (§6, CLS).
  */
 
-const FALLBACK_BG = 'var(--color-charcoal)';
+/** One figure of the stats row, counted up once its row is on screen. */
+function HeroStat({ label, value, suffix, active }) {
+  const numeric = Number(String(value ?? '').replace(/[^0-9.]/g, ''));
+  const countable = Number.isFinite(numeric) && numeric > 0;
+  const counted = useCountUp(countable ? numeric : 0, { enabled: active && countable });
 
-const HeroSection = () => {
+  return (
+    <div className={styles.stat}>
+      <span className={styles.statValue}>
+        {countable ? formatNumber(counted) : value}
+        {suffix ? <span className={styles.statSuffix}>{suffix}</span> : null}
+      </span>
+      <span className={styles.statLabel}>{label}</span>
+    </div>
+  );
+}
+
+export default function HeroSection() {
   const { settings } = useSiteSettings();
   const { isMobile } = useBreakpoint();
   const [mediaError, setMediaError] = useState(false);
-
-  const { scrollY } = useScroll();
-  const bgY = useTransform(scrollY, [0, 600], [0, 150]);
+  const { ref: statsRef, inView: statsInView } = useInView({ threshold: 0.3 });
 
   const hero = settings?.hero ?? {};
   const title = hero.title || 'Find your next home in Bengaluru';
   const subtitle = hero.subtitle || '';
+  const badges = Array.isArray(hero.badges) ? hero.badges.filter(Boolean) : [];
+  const stats = Array.isArray(hero.stats) ? hero.stats.filter((stat) => stat?.label) : [];
+
   const imageUrl =
     (isMobile ? hero.mobileImageUrl : hero.backgroundImageUrl) || hero.backgroundImageUrl || '';
   const videoUrl = hero.backgroundVideoUrl || '';
 
   return (
     <section className={styles.hero}>
-      <div className={styles.bgClip}>
+      <div className={styles.media}>
         {videoUrl && !mediaError ? (
-          <motion.div className={styles.bgVideoWrapper} style={{ y: bgY }}>
-            <video
-              className={styles.bgVideo}
-              src={videoUrl}
-              poster={imageUrl || undefined}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              onError={() => setMediaError(true)}
-            />
-          </motion.div>
+          <video
+            className={styles.mediaLayer}
+            src={videoUrl}
+            poster={imageUrl || undefined}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            onError={() => setMediaError(true)}
+          />
         ) : (
-          <motion.div
-            className={styles.bgImage}
-            style={{
-              y: bgY,
-              backgroundImage: imageUrl ? `url(${imageUrl})` : 'none',
-              backgroundColor: imageUrl ? undefined : FALLBACK_BG,
-            }}
+          <div
+            className={styles.mediaLayer}
+            style={imageUrl ? { backgroundImage: `url(${imageUrl})` } : undefined}
           />
         )}
-
         <div className={styles.overlay} />
       </div>
 
       <div className={styles.content}>
-        <motion.h1
-          className={styles.heading}
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: 'easeOut' }}
-        >
-          {title}
-        </motion.h1>
+        <h1 className={styles.heading}>{title}</h1>
+        {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
 
-        {subtitle ? (
-          <motion.p
-            className={styles.subtitle}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
-          >
-            {subtitle}
-          </motion.p>
+        {badges.length > 0 ? (
+          <ul className={styles.badges}>
+            {badges.map((badge) => (
+              <li key={badge} className={styles.badge}>
+                <Icon icon="mdi:check-decagram-outline" aria-hidden="true" />
+                {badge}
+              </li>
+            ))}
+          </ul>
         ) : null}
 
-        <motion.div
-          className={styles.searchContainer}
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.4, ease: 'easeOut' }}
-        >
-          <GlobalSearch variant="hero" placeholder="Search by locality, project or builder" />
-        </motion.div>
+        <div className={styles.searchWrap}>
+          <HeroSearch tabs={hero.searchTabs} />
+        </div>
+
+        {stats.length > 0 ? (
+          <div className={styles.stats} ref={statsRef}>
+            {stats.map((stat) => (
+              <HeroStat
+                key={stat.label}
+                label={stat.label}
+                value={stat.value}
+                suffix={stat.suffix}
+                active={statsInView}
+              />
+            ))}
+          </div>
+        ) : null}
       </div>
     </section>
   );
-};
-
-export default HeroSection;
+}

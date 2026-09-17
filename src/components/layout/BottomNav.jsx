@@ -1,157 +1,121 @@
-import React, { useState } from 'react';
-import { Link, matchPath, useLocation } from 'react-router-dom';
-import { SwipeableDrawer } from '@mui/material';
+import { useState } from 'react';
 import { Icon } from '@iconify/react';
-import { motion } from 'framer-motion';
-import PATHS from '../../routes/paths';
-import useScrollDirection from '../../hooks/useScrollDirection';
-import { useShortlist } from '../../contexts/ShortlistContext';
-import styles from './BottomNav.module.css';
+import { Link, matchPath, useLocation } from 'react-router-dom';
 
-const navItems = [
-  { label: 'Home', path: PATHS.home, icon: 'mdi:home-outline', activeIcon: 'mdi:home' },
-  // `?filters=open` lands on the listing with the filter sheet already up: on a
-  // phone, "Search" means "narrow this down" (prompt 26).
-  {
-    label: 'Search',
-    path: `${PATHS.properties}?filters=open`,
-    match: PATHS.properties,
-    icon: 'mdi:magnify',
-    activeIcon: 'mdi:magnify',
-  },
-  { label: 'Assistance', path: null, icon: 'mdi:hand-heart-outline', activeIcon: 'mdi:hand-heart' },
-  {
-    label: 'Saved',
-    path: PATHS.shortlist,
-    icon: 'mdi:heart-outline',
-    activeIcon: 'mdi:heart',
-    badge: 'shortlist',
-  },
-  { label: 'Contact', path: PATHS.contact, icon: 'mdi:phone-outline', activeIcon: 'mdi:phone' },
-];
+import LeadModalTemp from '../sections/property/LeadModalTemp';
+import MobileDrawer from './MobileDrawer';
+import styles from './BottomNav.module.css';
+import useScrollDirection from '../../hooks/useScrollDirection';
+import { buildBottomNav } from '../../config/navigation';
+import { useShortlist } from '../../contexts/ShortlistContext';
+
+/**
+ * The phone's bottom bar: Home · Search · Shortlist · Enquire · Menu.
+ *
+ * The five items are `buildBottomNav()`, so what the bar offers is described
+ * in one place with the rest of the navigation. "Enquire" opens the
+ * post-requirement modal and "Menu" opens the same `MobileDrawer` the header
+ * button opens — one drawer component, two ways in.
+ *
+ * D52: this is the one piece of chrome that hides on scroll-down and comes
+ * back on scroll-up.
+ */
 
 /**
  * The routes that carry a contact bar of their own.
  *
  * A property page's Call · WhatsApp · Enquire bar is about *this* listing and
  * sits where the bottom navigation sits; two stacked bars would take a third of
- * a phone screen, so this one stands down (prompt 23 §4.9).
+ * a phone screen, so this one stands down (prompt 23 §4.9). The admin panel has
+ * no public chrome at all (D24).
  */
-const OWN_BOTTOM_BAR = ['/properties/:slug'];
+const OWN_BOTTOM_BAR = ['/properties/:slug', '/admin/*'];
 
-const assistanceItems = [
-  { label: 'Home Loan', path: '/buyer-assistance/home-loan', icon: 'mdi:bank-outline' },
-  {
-    label: 'Legal Assistance',
-    path: '/buyer-assistance/legal-assistance',
-    icon: 'mdi:scale-balance',
-  },
-  {
-    label: 'Interior Designing',
-    path: '/buyer-assistance/interior-designing',
-    icon: 'mdi:palette-outline',
-  },
-];
+const ITEMS = buildBottomNav();
 
-const BottomNav = () => {
+export default function BottomNav() {
   const location = useLocation();
-  // D52: the bottom nav is the one chrome that hides on scroll-down.
   const { direction } = useScrollDirection();
   const { count } = useShortlist();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const hidden = direction === 'down';
+  const [leadOpen, setLeadOpen] = useState(false);
 
   const standsDown = OWN_BOTTOM_BAR.some((pattern) => matchPath(pattern, location.pathname));
   if (standsDown) return null;
 
   const isActive = (item) => {
-    if (!item.path) return location.pathname.startsWith('/buyer-assistance');
-    const path = item.match ?? item.path;
-    if (path === PATHS.home) return location.pathname === PATHS.home;
+    const path = item.match ?? item.to;
+    if (!path) return false;
+    if (item.exact) return location.pathname === path;
     return location.pathname.startsWith(path);
   };
 
+  const iconOf = (item, active) => (
+    <span className={styles.icon}>
+      <Icon icon={active ? item.activeIcon : item.icon} aria-hidden="true" />
+      {item.kind === 'shortlist' && count > 0 ? (
+        <span className={styles.badge} aria-hidden="true">
+          {count > 99 ? '99+' : count}
+        </span>
+      ) : null}
+    </span>
+  );
+
   return (
     <>
-      <nav className={`${styles.bottomNav} ${hidden ? styles.hidden : ''}`}>
-        <div className={styles.navItems}>
-          {navItems.map((item) => {
-            const active = isActive(item);
+      <nav
+        className={[styles.bottomNav, direction === 'down' ? styles.hidden : '']
+          .filter(Boolean)
+          .join(' ')}
+        aria-label="Quick navigation"
+      >
+        {ITEMS.map((item) => {
+          const active = isActive(item);
 
-            if (item.path === null) {
-              // Buyer Assistance - opens drawer
-              return (
-                <motion.button
-                  key={item.label}
-                  className={`${styles.navButton} ${active ? styles.active : ''}`}
-                  onClick={() => setDrawerOpen(true)}
-                  whileTap={{ scale: 0.9 }}
-                  aria-label={item.label}
-                >
-                  <span className={styles.navIcon}>
-                    <Icon icon={active ? item.activeIcon : item.icon} />
-                  </span>
-                  <span className={styles.navLabel}>{item.label}</span>
-                </motion.button>
-              );
-            }
-
-            const badge = item.badge === 'shortlist' && count > 0 ? count : null;
-
+          if (item.kind === 'lead' || item.kind === 'menu') {
+            const onClick =
+              item.kind === 'lead' ? () => setLeadOpen(true) : () => setDrawerOpen(true);
             return (
-              <motion.div key={item.label} whileTap={{ scale: 0.9 }}>
-                <Link
-                  to={item.path}
-                  className={`${styles.navButton} ${active ? styles.active : ''}`}
-                  aria-label={badge ? `${item.label} (${badge})` : item.label}
-                >
-                  <span className={styles.navIcon}>
-                    <Icon icon={active ? item.activeIcon : item.icon} />
-                    {badge ? (
-                      <span className={styles.badge} aria-hidden="true">
-                        {badge > 99 ? '99+' : badge}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className={styles.navLabel}>{item.label}</span>
-                </Link>
-              </motion.div>
+              <button
+                key={item.key}
+                type="button"
+                className={styles.item}
+                onClick={onClick}
+                aria-expanded={item.kind === 'menu' ? drawerOpen : undefined}
+              >
+                {iconOf(item, false)}
+                <span className={styles.label}>{item.label}</span>
+              </button>
             );
-          })}
-        </div>
+          }
+
+          return (
+            <Link
+              key={item.key}
+              to={item.to}
+              className={[styles.item, active ? styles.active : ''].filter(Boolean).join(' ')}
+              aria-label={
+                item.kind === 'shortlist' && count > 0 ? `${item.label} (${count})` : undefined
+              }
+              aria-current={active ? 'page' : undefined}
+            >
+              {iconOf(item, active)}
+              <span className={styles.label}>{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
 
-      {/* Buyer Assistance Drawer */}
-      <SwipeableDrawer
-        anchor="bottom"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        onOpen={() => setDrawerOpen(true)}
-        disableSwipeToOpen
-        PaperProps={{ className: styles.drawerPaper }}
-      >
-        <div className={styles.drawerContent}>
-          <div className={styles.drawerHandle} />
-          <div className={styles.drawerTitle}>Buyer Assistance</div>
-          <div className={styles.drawerOptions}>
-            {assistanceItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={styles.drawerOption}
-                onClick={() => setDrawerOpen(false)}
-              >
-                <span className={styles.drawerOptionIcon}>
-                  <Icon icon={item.icon} />
-                </span>
-                <span className={styles.drawerOptionLabel}>{item.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </SwipeableDrawer>
+      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+      <LeadModalTemp
+        open={leadOpen}
+        onClose={() => setLeadOpen(false)}
+        source="post-requirement"
+        requirement
+        successTitle="Requirement received"
+      />
     </>
   );
-};
-
-export default BottomNav;
+}

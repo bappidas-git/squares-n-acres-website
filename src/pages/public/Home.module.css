@@ -1,4 +1,6 @@
-.homePage {
+.home {
   width: 100%;
-  overflow-x: hidden;
+  /* Every band owns its own vertical rhythm through `ui/Section`; this only
+     guarantees that nothing on the page can scroll the document sideways. */
+  overflow-x: clip;
 }

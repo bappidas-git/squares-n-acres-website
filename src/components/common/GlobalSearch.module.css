@@ -110,6 +110,19 @@
   font-size: var(--font-size-sm);
 }
 
+/* The hero form's own field: square corners to match the selects beside it,
+   and no submit button — the form has one. */
+.inline .form {
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+  height: 48px;
+}
+
+.inline .input {
+  min-height: 46px;
+  font-size: var(--font-size-sm);
+}
+
 /* ------------------------------------------------------------- Popover */
 
 .popover {
