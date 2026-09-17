@@ -10,9 +10,17 @@
  * by decomposing to NFD and dropping the combining marks; the handful of Latin
  * letters that do not decompose carry an explicit mapping. Everything else —
  * Devanagari, Kannada, emoji — is dropped rather than guessed at.
+ *
+ * `slugifyPath` is the one exception to "a slug is one segment": a CMS page's
+ * slug is a URL **path** (§6.10, `buyer-assistance/home-loan`), so its
+ * separators survive and each segment is slugified on its own. Only the pages
+ * resource asks for it (`makeCrudRouter({ pathSlug: true })`).
  */
 
 const MAX_SLUG_LENGTH = 75;
+
+/** A path slug may hold several segments, so it is given a longer budget (§6.10). */
+const MAX_PATH_SLUG_LENGTH = 120;
 
 /** Latin letters without a canonical decomposition. */
 const LIGATURES = {
@@ -51,6 +59,25 @@ function slugify(text) {
     .replace(/-$/, '');
 }
 
+/**
+ * Turns arbitrary text into a URL **path** slug: every `/`-separated segment
+ * slugified on its own, empty segments dropped.
+ *
+ *   slugifyPath('Buyer Assistance/Home Loan')  // 'buyer-assistance/home-loan'
+ *
+ * @param {string} text
+ * @returns {string} `''` when nothing survives
+ */
+function slugifyPath(text) {
+  return String(text ?? '')
+    .split('/')
+    .map((segment) => slugify(segment))
+    .filter(Boolean)
+    .join('/')
+    .slice(0, MAX_PATH_SLUG_LENGTH)
+    .replace(/[-/]+$/, '');
+}
+
 /** Every slug already taken in `records`, except the one owned by `excludeId`. */
 function takenSlugs(records, excludeId, field = 'slug') {
   const exclude = excludeId === undefined || excludeId === null ? null : String(excludeId);
@@ -70,18 +97,21 @@ function takenSlugs(records, excludeId, field = 'slug') {
  * @param {string} slug the candidate, already slugified
  * @param {number|string|null} [excludeId] the record being updated
  * @param {string} [field] the slug field's name
+ * @param {(text: string) => string} [toSlug] `slugifyPath` for a path slug
  * @returns {string}
  */
-function ensureUniqueSlug(records, slug, excludeId = null, field = 'slug') {
-  const base = slugify(slug);
+function ensureUniqueSlug(records, slug, excludeId = null, field = 'slug', toSlug = slugify) {
+  const base = toSlug(slug);
   if (!base) return base;
 
   const taken = takenSlugs(records, excludeId, field);
   if (!taken.has(base)) return base;
 
+  const budget = toSlug === slugify ? MAX_SLUG_LENGTH : MAX_PATH_SLUG_LENGTH;
+
   for (let suffix = 2; ; suffix += 1) {
     const tail = `-${suffix}`;
-    const candidate = `${base.slice(0, MAX_SLUG_LENGTH - tail.length).replace(/-$/, '')}${tail}`;
+    const candidate = `${base.slice(0, budget - tail.length).replace(/[-/]$/, '')}${tail}`;
     if (!taken.has(candidate)) return candidate;
   }
 }
@@ -93,12 +123,20 @@ function ensureUniqueSlug(records, slug, excludeId = null, field = 'slug') {
  * @param {string} slug
  * @param {number|string|null} [excludeId]
  * @param {string} [field]
+ * @param {(text: string) => string} [toSlug] `slugifyPath` for a path slug
  * @returns {{available: boolean, suggestion: string}}
  */
-function checkSlug(records, slug, excludeId = null, field = 'slug') {
-  const candidate = slugify(slug);
-  const suggestion = ensureUniqueSlug(records, candidate, excludeId, field);
+function checkSlug(records, slug, excludeId = null, field = 'slug', toSlug = slugify) {
+  const candidate = toSlug(slug);
+  const suggestion = ensureUniqueSlug(records, candidate, excludeId, field, toSlug);
   return { available: candidate !== '' && candidate === suggestion, suggestion };
 }
 
-module.exports = { slugify, ensureUniqueSlug, checkSlug, MAX_SLUG_LENGTH };
+module.exports = {
+  slugify,
+  slugifyPath,
+  ensureUniqueSlug,
+  checkSlug,
+  MAX_SLUG_LENGTH,
+  MAX_PATH_SLUG_LENGTH,
+};

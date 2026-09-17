@@ -240,7 +240,13 @@ function sampleValue(descriptor, field, seed) {
 
   switch (descriptor.type) {
     case 'string':
-      return pad(`Smoke ${field} ${seed}`, descriptor.min);
+      // A patterned string cannot be a sentence. The only two in the contract
+      // are a page's path slug and a redirect's `fromPath`, and both are
+      // satisfied by a slug: the caller's `overrides` supply the leading slash
+      // where one is needed.
+      return descriptor.pattern
+        ? `smoke-${field.toLowerCase()}-${seed}`.replace(/[^a-z0-9-]+/g, '-')
+        : pad(`Smoke ${field} ${seed}`, descriptor.min);
     case 'html':
       return '<p>Created by the API smoke test; safe to delete.</p>';
     case 'slug':

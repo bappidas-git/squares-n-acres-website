@@ -1,0 +1,27 @@
+.previewBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--container-padding);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-dark);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
+.previewLink {
+  color: var(--color-warning-dark);
+  text-decoration: underline;
+}
+
+.previewLink:hover {
+  color: var(--color-charcoal);
+}
+
+.error {
+  padding: var(--space-16) var(--container-padding);
+}

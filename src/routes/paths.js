@@ -54,8 +54,9 @@ const publicPaths = {
   legalAssistance: '/buyer-assistance/legal-assistance',
   interiorDesigning: '/buyer-assistance/interior-designing',
 
+  // The three legal pages are CMS records; these are their seeded slugs (§6.10).
   privacy: '/privacy-policy',
-  terms: '/terms-and-conditions',
+  terms: '/terms-of-use',
   disclaimer: '/disclaimer',
   shortlist: '/shortlist',
 
@@ -125,6 +126,49 @@ const adminPaths = {
   adminSettings: '/admin/settings',
   adminUsers: '/admin/settings/users',
 };
+
+/**
+ * The first URL segments the CMS may never own (D11).
+ *
+ * Every one of them is answered by a static route registered **above** the CMS
+ * catch-all, so a page whose slug started with one would either be shadowed or
+ * would shadow a listing. `CmsPage` refuses them on the way in and
+ * `PageFormPage` refuses them on the way out ("Reserved path"), which is the
+ * difference between an editor learning about the clash at the keyboard and
+ * learning about it from a visitor.
+ *
+ * It lives here rather than in `publicRoutes.js` because both of those import
+ * it and `publicRoutes.js` lazily imports `CmsPage`: a constant with no
+ * imports of its own is the one place that cannot become a cycle.
+ */
+export const RESERVED_PATH_PREFIXES = [
+  'properties',
+  'buy',
+  'rent',
+  'lease',
+  'commercial',
+  'plots',
+  'localities',
+  'builders',
+  'insights',
+  'careers',
+  'shortlist',
+  'admin',
+];
+
+/**
+ * Whether a page slug's first segment is one of {@link RESERVED_PATH_PREFIXES}.
+ *
+ * @param {string} slug
+ * @returns {boolean}
+ */
+export const isReservedPath = (slug) =>
+  RESERVED_PATH_PREFIXES.includes(
+    String(slug ?? '')
+      .replace(/^\/+/, '')
+      .split('/')[0]
+      .toLowerCase()
+  );
 
 export const PATHS = { ...publicPaths, ...adminPaths };
 

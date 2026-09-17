@@ -24,7 +24,7 @@
 const express = require('express');
 
 const schemas = require('../../src/services/schemas');
-const { checkSlug, ensureUniqueSlug, slugify } = require('./slug');
+const { checkSlug, ensureUniqueSlug, slugify, slugifyPath } = require('./slug');
 const { conflict, notFound } = require('../middleware/errors');
 const { describeUsages, findUsages, USAGE_COLLECTIONS } = require('./usage');
 const { inCsv, matchesQ, toBool } = require('./filters');
@@ -162,6 +162,9 @@ function matchesFilter(record, descriptor, raw, context) {
  * @param {string|false} [options.deleteGuard] a `lib/usage.js` type
  * @param {object} [options.bulkActions] extra actions, `{ name: changes|null }`
  * @param {{one: string, many: string}} [options.noun] for the bulk message
+ * @param {boolean} [options.pathSlug] the slug is a URL path rather than one
+ *   segment — only the CMS pages, whose `buyer-assistance/home-loan` must keep
+ *   its separator (§6.10)
  * @param {boolean} [options.publicScoped] force the public active scope on/off
  * @param {Array<string>} [options.routes] the subset to build — `list`,
  *   `bySlug`, `adminList`, `create`, `get`, `update`, `patch`, `remove`,
@@ -193,6 +196,7 @@ function makeCrudRouter(options) {
     deleteGuard = false,
     bulkActions = {},
     noun = { one: 'record', many: 'records' },
+    pathSlug = false,
     publicScoped = Boolean(model.publicScope),
     routes = null,
   } = options;
@@ -203,6 +207,9 @@ function makeCrudRouter(options) {
   const has = (route) => routes === null || routes.includes(route);
   const searchable = model.searchable ?? [];
   const hasField = (field) => Object.prototype.hasOwnProperty.call(model.fields, field);
+
+  /** How this resource turns text into its slug (§5.9, §6.10). */
+  const toSlug = pathSlug ? slugifyPath : slugify;
 
   const rows = () => db.getCollection(name);
   const find = (id) => rows().find((record) => sameId(record?.id, id));
@@ -354,11 +361,11 @@ function makeCrudRouter(options) {
    * An explicit duplicate is a 409 (§5.9); an empty one is de-duplicated.
    */
   function resolveSlug(body, existing) {
-    const requested = slugify(body?.slug ?? '');
+    const requested = toSlug(body?.slug ?? '');
     const excludeId = existing?.id ?? null;
 
     if (requested) {
-      const { available } = checkSlug(rows(), requested, excludeId, model.slugField);
+      const { available } = checkSlug(rows(), requested, excludeId, model.slugField, toSlug);
       if (!available) {
         throw conflict('The slug has already been taken.', {
           slug: ['The slug has already been taken.'],
@@ -368,7 +375,7 @@ function makeCrudRouter(options) {
     }
 
     const fallback = body?.name ?? body?.title ?? existing?.name ?? existing?.title ?? '';
-    return ensureUniqueSlug(rows(), slugify(fallback), excludeId, model.slugField);
+    return ensureUniqueSlug(rows(), toSlug(fallback), excludeId, model.slugField, toSlug);
   }
 
   /** The entity slug and `seo.slug` are always the same string (§5.9, D34). */
@@ -489,7 +496,7 @@ function makeCrudRouter(options) {
     router.get(`/admin/${basePath}/check-slug`, (req, res) => {
       const slug = String(first(req.query.slug) ?? '');
       const excludeId = first(req.query.excludeId) ?? null;
-      res.ok(checkSlug(rows(), slug, excludeId, model.slugField));
+      res.ok(checkSlug(rows(), slug, excludeId, model.slugField, toSlug));
     });
   }
 
