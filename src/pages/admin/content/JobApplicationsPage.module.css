@@ -1,0 +1,132 @@
+/* Admin → Jobs → Applications: the table, and the panel one row opens. */
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.nameCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.externalLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-primary-dark);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+.externalLink:hover {
+  text-decoration: underline;
+}
+
+/* ── The drawer ────────────────────────────────────────────────────── */
+
+/* 480 px on a laptop, the whole screen on a phone (§6 of prompt 31). */
+.drawerPaper {
+  display: flex;
+  flex-direction: column;
+  width: min(480px, 100vw);
+  background: var(--color-bg);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.panelMeta {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.rowValue {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.rowValue a {
+  color: var(--color-primary-dark);
+}
+
+.sectionTitle {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+.letter {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.letterText {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  white-space: pre-wrap;
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.notesSave {
+  align-self: flex-start;
+}

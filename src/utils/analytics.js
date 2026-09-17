@@ -24,6 +24,9 @@ export const EVENTS = {
   shortlistAdd: 'shortlist_add',
   shortlistRemove: 'shortlist_remove',
   leadSubmit: 'lead_submit',
+  // An application is its own record, never a lead (D91), so it is its own
+  // event: counting it as `lead_submit` would inflate the pipeline in GA4.
+  jobApplication: 'job_application',
   galleryOpen: 'gallery_open',
   search: 'search',
   floorPlanDownload: 'floor_plan_download',

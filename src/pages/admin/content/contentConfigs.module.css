@@ -87,3 +87,15 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* The Applications cell of `/admin/jobs`: the count is the way into the list. */
+
+.countLink {
+  color: var(--color-primary-dark);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.countLink:hover {
+  text-decoration: underline;
+}

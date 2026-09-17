@@ -43,6 +43,11 @@ const FaqsPage = lazy(() => import('../pages/admin/content/FaqsPage'));
 const TestimonialsPage = lazy(() => import('../pages/admin/content/TestimonialsPage'));
 const TeamPage = lazy(() => import('../pages/admin/content/TeamPage'));
 const PartnersPage = lazy(() => import('../pages/admin/content/PartnersPage'));
+const JobsPage = lazy(() => import('../pages/admin/content/JobsPage'));
+const JobApplicationsPage = lazy(() => import('../pages/admin/content/JobApplicationsPage'));
+const NewsletterSubscribersPage = lazy(
+  () => import('../pages/admin/content/NewsletterSubscribersPage')
+);
 const AdminSeo = lazy(() => import('../pages/admin/AdminSeo'));
 const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
 const ProfilePage = lazy(() => import('../pages/admin/settings/ProfilePage'));
@@ -132,9 +137,9 @@ export const ADMIN_ROUTES = [
   page('testimonials', 'Testimonials', ['content', 'view'], <TestimonialsPage />),
   page('team', 'Team', ['content', 'view'], <TeamPage />),
   page('partners', 'Partners', ['content', 'view'], <PartnersPage />),
-  soon('jobs', 'Jobs', ['content', 'view'], 31),
-  soon('jobs/applications', 'Job applications', ['content', 'view'], 31),
-  soon('newsletter', 'Newsletter subscribers', ['content', 'view'], 31),
+  page('jobs', 'Jobs', ['content', 'view'], <JobsPage />),
+  page('jobs/applications', 'Job applications', ['content', 'view'], <JobApplicationsPage />),
+  page('newsletter', 'Newsletter subscribers', ['content', 'view'], <NewsletterSubscribersPage />),
 
   soon('media', 'Media library', ['media', 'view'], 39),
 

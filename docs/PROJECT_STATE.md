@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 30 — Pages CMS: admin block editor, public renderer, CmsPage routes Next prompt: 31
+Last prompt executed: 31 — Careers & jobs, CMS awareness page, subscribers admin Next prompt: 32
 
 ## Executed prompts
 
@@ -36,7 +36,8 @@ Last prompt executed: 30 — Pages CMS: admin block editor, public renderer, Cms
 | 27  | Data-driven home page, navigation and footer                   | `f20e4e0`                                                                          | 2026-09-17 |
 | 28  | Unified lead capture, spam protection, click tracking          | `66d200a`                                                                          | 2026-09-17 |
 | 29  | Admin leads CRM and the real-data dashboard                    | `69fd6c5`                                                                          | 2026-09-17 |
-| 30  | Pages CMS: admin block editor, public renderer, CmsPage routes | HEAD of this branch (a commit cannot contain its own hash — prompt 31 fills it in) | 2026-09-17 |
+| 30  | Pages CMS: admin block editor, public renderer, CmsPage routes | `7a161a0`                                                                          | 2026-09-17 |
+| 31  | Careers & jobs, CMS awareness page, newsletter subscribers     | HEAD of this branch (a commit cannot contain its own hash — prompt 32 fills it in) | 2026-09-17 |
 
 ## Baseline (prompt 01)
 
@@ -325,19 +326,21 @@ The boilerplate's own endpoint surface stays inventoried in
 | RichText / Html blocks → editor + `SafeHtml`    | The `richText`, `html`, `faq` and `expandableCards` blocks hold HTML in a monospace `TextareaField` with an “HTML is allowed” hint, and render it through the temporary `LegacyHtml`. The client refuses a `<script` — the same rule the API enforces — and nothing else. Prompt 32 puts the Tiptap editor in the box and `SafeHtml` on the page, both against one allow-list; the block schema and the stored `data.html` do not change.                                                                | 32           |
 | Page SEO placeholder card                       | `PageFormPage` ends in an `Alert` saying the SEO panel arrives later; the form carries the record’s `seo` branch through the `PUT` untouched except for `seo.slug`, which is kept in step with the URL (D34). Prompt 36 replaces the card with the panel.                                                                                                                                                                                                                                                | 36           |
 | `CmsPage` `Helmet` → `<Seo type="page">`        | `CmsPage` sets `<title>`, the description, the canonical and `robots` (`noindex, nofollow` while previewing or while the page is a draft) through `react-helmet-async`, from the page’s own `seo` branch. Prompt 38 hands the same record to `<Seo type="page">`, which adds the §9.5 template, the social tags and the `BreadcrumbList` the crumbs already describe.                                                                                                                                    | 38           |
+| `LegacyHtml` in `JobDetail`                     | A job posting’s `description` is CMS-authored HTML rendered through the temporary `LegacyHtml` on `/careers/:jobSlug`. Prompt 32 replaces it with `SafeHtml`, sanitising against the allow-list the Tiptap editor writes with, and the admin form’s `richtext` textarea becomes the editor at the same time.                                                                                                                                                                                             | 32           |
+| `JobDetail` temporary `Helmet`                  | `/careers/:jobSlug` sets `<title>`, the description, the canonical and `robots` (`noindex, follow` once the opening has closed) through `react-helmet-async`. Prompt 38 hands the record to `<Seo type="job">`, which adds the §9.5 template, the social tags, the `BreadcrumbList` the crumbs already describe and the `JobPosting` graph.                                                                                                                                                              | 38           |
 
 ## Known issues (open) — id, description, found by, owner prompt
 
 ### Tagged defects of `00_MASTER_CONTEXT.md` §11
 
-| Id                        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Found by                  | Owner prompt                      |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | --------------------------------- |
-| BUG-01                    | Every write uses `PUT` with partial payloads (11 call sites across property/lead/article/FAQ/neighborhood/partner/user toggles) **Prompt 11 moved every write it touched to the right verb**: toggles, reorders and lead-status changes use `PATCH`, bulk actions use `POST /admin/<resource>/bulk`, and `PUT` is reserved for a full-record form save. The row closes when prompts 18–40 confirm the remaining forms. **The property-form half is closed in 21**: the sixteen tabs are written, `toPayload` states the whole §6.1 record and the form saves it with `PUT /admin/properties/:id` (a create is `POST`); no property write sends a partial body through `PUT` any more.                                                                                                                                                                                                                                                                                                                    | master spec, confirmed 01 | 11, 14–22, 29, 33, 40             |
-| BUG-09 (contract defined) | Lead sources inconsistent (21 values in `src/` vs `adminConstants` vs `AdminLayout.formatSource`). **Prompt 05 froze `LEAD_SOURCES` (29 values) and `LEGACY_LEAD_SOURCE_MAP` (24 old values)** in `src/config/enums.js`, tested in `enums.test.js`. The forms still send the old values; **Prompt 08 applies `LEGACY_LEAD_SOURCE_MAP` on `POST /leads`**, so an old bundle's `property_enquiry` is stored as `property-enquiry` and an unknown value is a 422. The seed converts its own rows in 10, the forms move in 28 and the CRM labels in 29. **Closed in the client in 28:** `src/utils/leadSources.js` `ENTRY_POINTS` is the only place `src/` writes a source, every value is canonical, and `leadSources.test.js` asserts it; the acceptance grep for the fifteen legacy spellings returns 0. Only the CRM labels (29) remain.                                                                                                                                                                 | master spec, confirmed 01 | 29 (contract: 05 ✔, client: 28 ✔) |
-| BUG-11                    | Hardcoded content on About, Contact, FAQs, HomeLoan, LegalAssistance, InteriorDesigning, Careers, Partnership, SellLet, FlexibleWorkspace, DirectLeaseRetails, RealEstateAwareness, WhyChoose, HowItWorks, Dashboard trends, footer defaults, `SeoGuidelines` **Data side prepared in 10:** every one of those pages is a seeded CMS record with its blocks. **Home half closed in 27**, **dashboard half closed in 29.** **Nine more pages closed in 30:** `About.jsx`, `Contact.jsx`, `SellLet.jsx`, `Partnership.jsx`, `HomeLoan.jsx`, `LegalAssistance.jsx`, `InteriorDesigning.jsx`, `FlexibleWorkspace.jsx` and `DirectLeaseRetails.jsx` are deleted, and `CmsPage` renders all of them — plus the three legal texts — from their blocks through `PageRenderer`; `HomeFeatures.jsx`/`HomeSteps.jsx` are gone too, the home page importing the CMS block components directly. **What is left:** `Careers.jsx` and `RealEstateAwareness.js` (31), the footer defaults (40) and `SeoGuidelines` (37). | 31, 37, 40                | 29, 30, 31, 37, 40                |
-| BUG-15 (frontend)         | Careers résumé upload dead; no spam protection; newsletter no dedupe and a false reCAPTCHA notice. **Closed on the server in 09:** `POST /jobs/:id/apply`, `POST /newsletter/subscribe` and `POST /leads` are throttled to ten a minute per IP and honour the `website` honeypot, a known address answers "Already subscribed" and an unsubscribed one is revived, and a résumé travels as a URL (D12). **The spam protection and the newsletter half are closed in the client in 28:** every lead form and the newsletter band carry the `website` honeypot and a ten-second throttle (D43), a duplicate address reads back as "You're already subscribed", and the reCAPTCHA notice only appears when a site key is configured. The careers résumé upload is prompt 31's.                                                                                                                                                                                                                              | master spec, confirmed 01 | 31                                |
-| BUG-18 (frontend)         | `getFeatured` tag hack; ad-hoc trending/related; FAQ page/section fetch-all-and-filter. **Closed on the server:** `/properties/featured` and `/properties/:id/similar` (08), `/articles/trending` and the `category`/`showOnHome`/`propertyTypeId` FAQ filters (09). The components that still fetch-all-and-filter arrive with 27 and 34. **Mostly closed in 11**: `FeaturedProperties` calls `/properties/featured`, `TrendingTopics` and `Articles` call `/articles/trending`, `FaqSection` calls `/faqs?showOnHome=true` and the FAQ page filters server-side. What is left is the listing page, which still narrows in the browser (prompt 26).                                                                                                                                                                                                                                                                                                                                                     | master spec, confirmed 01 | 27, 34                            |
-| BUG-21                    | Additional defects recorded here by the audit prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | 01                        | 01 → all                          |
+| Id                        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Found by                  | Owner prompt                      |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- | --------------------------------- |
+| BUG-01                    | Every write uses `PUT` with partial payloads (11 call sites across property/lead/article/FAQ/neighborhood/partner/user toggles) **Prompt 11 moved every write it touched to the right verb**: toggles, reorders and lead-status changes use `PATCH`, bulk actions use `POST /admin/<resource>/bulk`, and `PUT` is reserved for a full-record form save. The row closes when prompts 18–40 confirm the remaining forms. **The property-form half is closed in 21**: the sixteen tabs are written, `toPayload` states the whole §6.1 record and the form saves it with `PUT /admin/properties/:id` (a create is `POST`); no property write sends a partial body through `PUT` any more.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | master spec, confirmed 01 | 11, 14–22, 29, 33, 40             |
+| BUG-09 (contract defined) | Lead sources inconsistent (21 values in `src/` vs `adminConstants` vs `AdminLayout.formatSource`). **Prompt 05 froze `LEAD_SOURCES` (29 values) and `LEGACY_LEAD_SOURCE_MAP` (24 old values)** in `src/config/enums.js`, tested in `enums.test.js`. The forms still send the old values; **Prompt 08 applies `LEGACY_LEAD_SOURCE_MAP` on `POST /leads`**, so an old bundle's `property_enquiry` is stored as `property-enquiry` and an unknown value is a 422. The seed converts its own rows in 10, the forms move in 28 and the CRM labels in 29. **Closed in the client in 28:** `src/utils/leadSources.js` `ENTRY_POINTS` is the only place `src/` writes a source, every value is canonical, and `leadSources.test.js` asserts it; the acceptance grep for the fifteen legacy spellings returns 0. Only the CRM labels (29) remain.                                                                                                                                                                                                                                                                                                                                                                                                               | master spec, confirmed 01 | 29 (contract: 05 ✔, client: 28 ✔) |
+| BUG-11                    | Hardcoded content on About, Contact, FAQs, HomeLoan, LegalAssistance, InteriorDesigning, Careers, Partnership, SellLet, FlexibleWorkspace, DirectLeaseRetails, RealEstateAwareness, WhyChoose, HowItWorks, Dashboard trends, footer defaults, `SeoGuidelines` **Data side prepared in 10:** every one of those pages is a seeded CMS record with its blocks. **Home half closed in 27**, **dashboard half closed in 29.** **Nine more pages closed in 30:** `About.jsx`, `Contact.jsx`, `SellLet.jsx`, `Partnership.jsx`, `HomeLoan.jsx`, `LegalAssistance.jsx`, `InteriorDesigning.jsx`, `FlexibleWorkspace.jsx` and `DirectLeaseRetails.jsx` are deleted, and `CmsPage` renders all of them — plus the three legal texts — from their blocks through `PageRenderer`; `HomeFeatures.jsx`/`HomeSteps.jsx` are gone too, the home page importing the CMS block components directly. **The last two pages closed in 31:** `Careers.jsx` (hardcoded culture cards, four invented roles and six perks) and `RealEstateAwareness.js` (hardcoded facts, cards, quiz and checklist) are deleted; `/careers` and `/insights/real-estate-awareness` are CMS records rendered by `CmsPage`. **What is left:** the footer defaults (40) and `SeoGuidelines` (37). | 37, 40                    | 29, 30, 31, 37, 40                |
+| BUG-15 (closed in 31)     | Careers résumé upload dead; no spam protection; newsletter no dedupe and a false reCAPTCHA notice. **Closed on the server in 09:** `POST /jobs/:id/apply`, `POST /newsletter/subscribe` and `POST /leads` are throttled to ten a minute per IP and honour the `website` honeypot, a known address answers "Already subscribed" and an unsubscribed one is revived, and a résumé travels as a URL (D12). **The spam protection and the newsletter half are closed in the client in 28:** every lead form and the newsletter band carry the `website` honeypot and a ten-second throttle (D43), a duplicate address reads back as "You're already subscribed", and the reCAPTCHA notice only appears when a site key is configured. **Closed in 31:** `/careers/:jobSlug` carries a real application form — a Cloudinary unsigned upload of a PDF/DOC/DOCX under 5 MB with a progress bar and a Cancel when a cloud name and preset are configured, a required `https://` link field when they are not (D12) — plus the same honeypot, consent box and ten-second throttle every other public write has, and a `POST /jobs/:id/apply` that files a `jobApplications` record the hiring desk reads at `/admin/jobs/applications`.                         | master spec, confirmed 01 | — (closed)                        |
+| BUG-18 (frontend)         | `getFeatured` tag hack; ad-hoc trending/related; FAQ page/section fetch-all-and-filter. **Closed on the server:** `/properties/featured` and `/properties/:id/similar` (08), `/articles/trending` and the `category`/`showOnHome`/`propertyTypeId` FAQ filters (09). The components that still fetch-all-and-filter arrive with 27 and 34. **Mostly closed in 11**: `FeaturedProperties` calls `/properties/featured`, `TrendingTopics` and `Articles` call `/articles/trending`, `FaqSection` calls `/faqs?showOnHome=true` and the FAQ page filters server-side. What is left is the listing page, which still narrows in the browser (prompt 26).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | master spec, confirmed 01 | 27, 34                            |
+| BUG-21                    | Additional defects recorded here by the audit prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | 01                        | 01 → all                          |
 
 ### Additional defects of `00_MASTER_CONTEXT.md` §11
 
@@ -350,7 +353,7 @@ The boilerplate's own endpoint surface stays inventoried in
 | ADD-06 (partial) | **Closed in 04:** the three scroll-hide copies (now `useScrollDirection`; `useThrottledScroll` stays for `BackToTop`), the 13 local `Section` components (now `ui/Section`), and `tagColors` vs `TAG_OPTIONS` (`PropertyCard` reads `TAG_OPTIONS` tones). **Still open:** the five `formatPrice` and three `formatDate` copies still exist at their call sites — `src/utils/format.js` is the single implementation but the call sites move to it with the data hooks; `GooglePreview` ×2, `getTitleLenColor` ×2 and `leadStatusConfig` in `Dashboard`. The nav data half closed in 27 (`src/config/navigation.js`). | master spec, confirmed 01 | 11, 36 |
 | ADD-09 (closed in 28) | `LeadForm` ignores `required:false`, has no `<label>`s, no `onSuccess`, posts unsanitised values; `NewsletterSection` validation is `includes('@')`, fails silently, shows a false reCAPTCHA notice. **Closed:** every control is a `ui/FormField` with a visible `<label>`, `aria-describedby` and `aria-invalid`; `required` is honoured per field; the payload is sanitised, the phone normalised to `+91XXXXXXXXXX` and unknown answers filed under `meta` (D56); `onSuccess(lead, values)` exists; `NewsletterForm` validates with `EMAIL_PATTERN`, shows its error inline and only claims reCAPTCHA when a key is set. | master spec, confirmed 01 | 28 ✔ |
 | ADD-16 | `ArticleDetail` Markdown renderer: duplicate tables on every `\ **Closed in 11**: the article body is CMS-authored HTML rendered through `LegacyHtml`, and the breadcrumb now goes Home → Articles → category.                                                                                                                                                                                                                                                                                                                                                             | `line, ordered lists rendered as`<ul>`, only `**bold**`inline, breadcrumb "Insights" and "Articles" to the same URL;`Articles` state not URL-synced | master spec, confirmed 01 | 32, 34 |
-| ADD-18 | `Careers`: résumé file input has no `name`/`onChange`, form never reset, modal without dialog semantics; `InteriorDesigning` room cards and "Get Started" buttons do nothing; `LegalAssistance`/`RealEstateAwareness` encode conflicting Karnataka stamp-duty figures | master spec, confirmed 01 | 30, 31 |
+| ADD-18 (closed in 31) | `Careers`: résumé file input has no `name`/`onChange`, form never reset, modal without dialog semantics; `InteriorDesigning` room cards and "Get Started" buttons do nothing; `LegalAssistance`/`RealEstateAwareness` encode conflicting Karnataka stamp-duty figures. **Interior and legal closed in 30** (both pages are CMS records; the packages block opens the shared dialog and the expandable cards carry the copy an editor writes). **Careers and awareness closed in 31:** both files are deleted, the application is a real form on the role’s own page with a working résumé control, and the awareness figures are the seeded page’s, written once and editable in the CMS. | master spec, confirmed 01 | — (closed) |
 | ADD-19 (settings/users) | `AdminSettings`: `PUT` drops `footerLinks`, tab panels out of order, "Footer Tagline" edits the General `tagline`, hardcoded `role === 'admin'`; `UserManagement`: last-admin guard hole, plaintext passwords echoed, own `ROLES` list. **The `AdminLogin` half is closed in 12 and the `UserManagement` half in 13; only the `AdminSettings` form remains, for prompt 40.** | master spec, confirmed 01 | 40 |
 | ADD-20 | `AdminSeo`: the old domain in previews, "Auto-Generate" writes HOM titles/canonicals/schema, `stats.missing` dead, saving wipes empty fields, no confirmation before bulk overwrite; `ArticleForm`: the boilerplate brand as the default article author, `readTime` not editable, `isTrending/trendingOrder` dropped on PUT, `setTimeout(navigate)` not cleared | master spec, confirmed 01 | 33, 36, 37 |
 | ADD-21 (property list closed) | `AdminProperties` fetches the public `/properties`, toggle omits the `is_active` fallback, `Promise.all` bulk aborts on first failure, per-page select-all (**closed in 22**: the file is deleted and `/admin/properties` is `PropertiesListPage`, server-side throughout, with one `POST /admin/properties/bulk` per bulk action); `AdminLeads`/`Dashboard` `p.id === propertyId` string-vs-number → Property column always empty; `Dashboard` "Leads by source" from 10 leads; `FaqManager` reorder wrong under a category filter with two sequential PUTs per swap (**closed in 17**: `FaqManager` is deleted and the reorder is D98's single `PATCH`); `LeadDetail` simulated timeline, `isMobile` unused (**closed in 01**). **Closed in 29:** `AdminLeads.js`, `LeadDetail.js` and `Dashboard.js` are deleted; the list is `PropertiesListPage`'s server-side twin, the Property column is the `property {id,title,slug}` embed the API sends, the timeline is the server's `activities[]`, and "Leads by source" is `trends.leadsBySource` over every lead rather than over the ten the browser had fetched | master spec, confirmed 01 | 29 ✅ |
@@ -4622,3 +4625,184 @@ The images and icons are blank in this environment's screenshots: `picsum.photos
 the Cloudinary brand assets and the Iconify API are all behind a TLS-inspecting
 proxy the headless browser does not trust (`ERR_CERT_AUTHORITY_INVALID`). Every
 such request is an external asset; nothing served by the app failed.
+
+### Prompt 31 — Careers and jobs, the CMS awareness page, subscribers admin (2026-09-17)
+
+**What changed**
+
+The last two hardcoded pages of the public site are gone. `Careers.jsx` (three
+culture cards, four invented roles, six perks and an "Apply" button that opened
+a modal with a dead file input) and `RealEstateAwareness.js` (six facts, six
+cards, a five-question quiz and a ten-line checklist, all as JSX) are deleted
+with their stylesheets — 783 lines of component and 1 315 lines of CSS.
+`/careers` and `/insights/real-estate-awareness` are the CMS records §6.10
+seeds, drawn by `PageRenderer`. That closes the page half of BUG-11 and all of
+ADD-18.
+
+**An opening is a record, so it has a URL.** `/careers/:jobSlug` is the one new
+page: the role in full, and the form that applies for it. It is where the jobs
+block's cards point, and it is what somebody forwards — which is the reason the
+application lives there rather than behind a dialog on the careers page. A role
+that has closed is still readable, with a notice, `noindex, follow` and a link
+back to the list, because somebody following a three-week-old link from a job
+board should see what the job was rather than a 404. `POST /jobs/:id/apply`
+refuses a closed role with a 404 and the form reads that back as the same
+notice.
+
+**The résumé is a URL, never a file (D12).** `utils/cloudinary.js` is new and
+holds three things: whether this deployment can upload at all (settings first,
+`REACT_APP_CLOUDINARY_*` second, and both halves required), the unsigned upload
+itself — `XMLHttpRequest` rather than `fetch`, because `xhr.upload` reports
+progress and `fetch` does not, with an `AbortSignal` behind the Cancel button —
+and `cloudinaryUrl()`, the `f_auto,q_auto,w_…` transformation §8.6 asks for,
+which `LazyImage` picks up in prompt 39. `ResumeUpload` is the control on top:
+a drop zone accepting `.pdf,.doc,.docx` up to 5 MB, refused before a byte is
+sent when either rule is broken, and a required `https://` link field instead
+when nothing is configured — which is the state of every checkout until a
+client provides a cloud name. After a failed upload it offers both "Try again"
+and "Send a link instead", because telling somebody to come back later is not
+an answer.
+
+**The application is not a lead (D91).** It is its own record with a hiring
+status, so it fires its own analytics event and the careers page keeps the
+general enquiry form beside it for somebody who did not find a role. What it
+shares with every lead form is the spam protection: the `website` honeypot the
+API answers 200 to, the ten-second throttle of D43, and the consent box.
+
+**Three admin screens.** `/admin/jobs` is a `MasterDataPage` whose form is a
+screen rather than a dialog — a description, two ordered lists and the dates an
+opening runs between do not fit in a modal. The Applications column is a link
+rather than a number, because the reason to open a posting is usually to read
+what came back from it. `/admin/jobs/applications` is a table with a job
+filter, a status filter and a search, all server-side; the status chip is the
+control that changes it, optimistically and with a rollback; a row opens a
+480 px drawer holding the covering note, the LinkedIn profile and the internal
+note the desk keeps. Every action there is per row: §5.14 gives applications a
+list, a `PATCH` and a `DELETE`, and a client-side loop pretending to be a bulk
+action fails halfway through and leaves the desk guessing which half.
+`/admin/newsletter` is the simplest of the three — a table, two filters, a
+delete and the CSV, which comes from the export endpoint with the filters that
+are on screen so the file and the table always say the same thing (D46).
+
+**Two additions to the admin kit.** `MasterDataForm` gained a `list` field type
+(a reorderable list of short strings, drawn with `SortableList`) rather than a
+third hand-written repeater after the locality's highlights and the
+developer's; `DataTable` gained `onRowClick`, which opens a row in place when
+the record has no page of its own.
+
+**Files**
+
+Added (17): `src/utils/cloudinary.js`, `src/utils/__tests__/cloudinary.test.js`;
+`src/components/sections/careers/` — `JobApplyForm.jsx`, `JobHeader.jsx`,
+`ResumeUpload.jsx`, `careers.module.css`, `index.js`,
+`__tests__/JobApplyForm.test.jsx`; `src/pages/public/JobDetail.jsx` +
+`.module.css`; `src/pages/admin/content/JobsPage.jsx`,
+`JobApplicationsPage.jsx` + `.module.css`, `ApplicationDrawer.jsx`,
+`NewsletterSubscribersPage.jsx`,
+`__tests__/JobApplicationsPage.test.jsx`.
+
+Changed (11): `src/routes/publicRoutes.js` (the job route; `/careers` and
+`/insights/real-estate-awareness` as spelled-out CMS routes),
+`src/routes/adminRouteConfig.js` (three placeholders replaced),
+`src/components/cms/blocks/JobsBlock.jsx` + `blocks.module.css` ("View & apply"
+and a card that stacks below 600 px), `src/components/admin/DataTable.jsx` +
+`.module.css` (`onRowClick`), `src/components/admin/MasterDataForm.jsx` +
+`.module.css` (the `list` field), `src/pages/admin/content/contentConfigs.module.css`,
+`src/utils/analytics.js` (`job_application`), `src/utils/leadSources.js` and
+`src/components/cms/BlockEditor/fields/LeadFieldsBuilder.jsx` (the phone
+placeholder is `98XXX XXXXX`, §14).
+
+Removed (4): `src/pages/public/Careers.jsx`, `RealEstateAwareness.js` and their
+two stylesheets (2 098 lines).
+
+**Endpoints / dependencies / env vars / npm scripts**
+
+No new endpoints and no contract change: `GET /jobs`, `GET /jobs/slug/:slug`,
+`POST /jobs/:id/apply`, `/admin/jobs*`, `/admin/job-applications*` and
+`/admin/newsletter-subscribers*` are all as prompt 09 built them, and
+`applicationCount` was already computed on admin reads
+(`mock-server/routes/jobs.js`), declared in `mock-server/schemas/models.js` and
+documented in `docs/API_CONTRACT.md` — this prompt is the first to render it.
+No dependencies, no npm scripts. Two optional variables are now read by code
+rather than only documented: `REACT_APP_CLOUDINARY_CLOUD_NAME` and
+`REACT_APP_CLOUDINARY_UPLOAD_PRESET`, both overridden by
+`settings.integrations.cloudinaryCloudName` / `…UploadPreset`.
+
+**Acceptance checklist**
+
+- [x] Jobs CRUD, the applications admin and the subscribers admin all work
+      against the mock: the list, the filters, the page form (including the two
+      reorderable string lists), a created posting appearing on `/careers`
+      within the same session, the status chip, the drawer's notes and the two
+      deletes. `applicationCount` is shown and links to the filtered
+      application list (`3`, `1`, `1`, `0` against the seed).
+- [x] `/careers` lists the openings from the CMS `jobs` block;
+      `/careers/<slug>` shows the role and accepts an application — verified
+      with a résumé URL (no Cloudinary) and with the upload zone (a cloud name
+      set in Site settings), including the 5 MB and file-type refusals and the
+      "Send a link instead" fallback after a failed upload. The application
+      appeared at `/admin/job-applications` with its résumé link.
+- [x] `/insights/real-estate-awareness` and `/contact` are fully CMS- and
+      settings-driven: the facts, the expandable cards, the five-question quiz
+      (retake resets to question 1 with nothing pressed) and the checklist
+      (persisted under `sna_checklist:insights/real-estate-awareness`, surviving
+      a reload) on one; the phone, e-mail, WhatsApp, address, working hours,
+      map iframe and subject-select form on the other. Both legacy files are
+      deleted.
+- [x] `cloudinary.js` tests pass (22 of them). `npm run lint` (0 findings,
+      `check:endpoints` 0 blocking over 492 files), `npm run test:ci`
+      (**1 683 tests, 81 suites**), `npm run build:ci` ("Compiled
+      successfully", no warnings), `npm run check:traces` (0 findings over 778
+      files), `npm run test:mock` (134 tests, 38 suites) and `npm run smoke`
+      (274/274) all pass. No console output on any page walked.
+- [x] One commit, clean tree.
+
+**Manual QA (headless Chromium over the DevTools protocol, 1280/1440 px and 390 px)**
+
+Public: `/careers` (one `<h1>`, four job links, "View & apply" on each),
+`/careers/real-estate-advisor-bengaluru` (breadcrumbs Home › Careers › title,
+four chips, the responsibilities and requirements lists, the sticky apply card
+at 1280 px), `/careers/nope-not-a-role` (404 with `noindex, follow`),
+`/careers/customer-relations-manager` after closing it through the API (the
+notice, `noindex, follow`, no Apply button, the form replaced by "no longer
+accepting applications", and `POST /jobs/4/apply` answering 404),
+`/insights/real-estate-awareness` and `/contact`. An application was filed end
+to end and read back through `GET /admin/job-applications`; a second identical
+one was accepted, which is the "no dedupe rule" of §7 recorded rather than
+assumed.
+
+Admin: signed in, walked `/admin/jobs` (five columns plus the applications
+link), created "QA Placeholder Role" through the page form with a
+responsibility row and found it on `/careers`, checked the 409 a delete gets
+while applications point at a posting ("Used by 3 applications" with the three
+names), walked `/admin/jobs/applications` (the chip menu, the drawer measured
+at 480 px, the notes `PATCH` carrying only `notes`) and `/admin/newsletter`
+(the export button reading "Export CSV (2)" under a status filter, and the
+endpoint answering only those two rows with the UTF-8 BOM). Every record
+created during the pass was deleted afterwards and the runtime db is back at
+its seeded shape.
+
+390 px: `/careers`, `/careers/property-analyst`,
+`/insights/real-estate-awareness`, `/contact`, `/admin/jobs`,
+`/admin/jobs/applications` and `/admin/newsletter` — no horizontal overflow on
+any of them (0 px on all seven), the admin tables rendering as cards, and an
+empty console throughout.
+
+**Notes**
+
+- The Cloudinary **upload** path was exercised against a fake cloud name, so
+  what is verified is the switch (settings turn the drop zone on), the two
+  pre-upload refusals, the error state and the URL fallback — not a stored
+  file. There is no Cloudinary test cloud in this environment, and §9 of the
+  prompt allows recording that rather than inventing one.
+- `grep -rn "98765\|Brigade Road\|(555)" src` is not zero, but nothing it
+  matches is a contact fact: after this prompt the only non-test matches are
+  six code comments in `format.js`, `validators.js`, `LeadFormField.jsx` and
+  `leadColumns.jsx` documenting the phone-normalisation rule. The two
+  user-visible placeholders it used to match are now `98XXX XXXXX` (§14).
+- BUG-11 is **not** fully closed by this prompt, whatever its §10 says: the
+  pages are, but the footer defaults (40) and `SeoGuidelines` (37) still carry
+  hardcoded copy and remain that row's owners.
+- The act() warnings `@testing-library/user-event@13` produces while typing
+  (NEW-33) appear in the two new component suites as they do in the existing
+  ones; no assertion depends on them and no console output reaches a browser.
