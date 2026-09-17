@@ -21,6 +21,10 @@ import { EMPTY, formatBhk } from '../../utils/format';
  * in a grid and no per-card image carousel. The heart is `ShortlistButton`,
  * which writes through `ShortlistContext` into `sna_shortlist` — the
  * boilerplate's remembered nothing (ADD-10).
+ *
+ * `variant="list"` is the same card laid on its side for the listing's list
+ * view: image left, body right, and room for the editor's highlights, which
+ * the grid has no space for.
  */
 
 const LISTING_BADGE = {
@@ -44,7 +48,10 @@ const headlineArea = (property) => {
     : { value, unit: area.areaUnit === 'sqft' ? 'sq ft' : area.areaUnit };
 };
 
-const PropertyCard = memo(({ property }) => {
+/** How many of the editor's highlights the wide card has room for. */
+const LIST_HIGHLIGHTS = 3;
+
+const PropertyCard = memo(({ property, variant = 'grid' }) => {
   if (!property) return null;
 
   const cover = coverImage(property);
@@ -59,8 +66,13 @@ const PropertyCard = memo(({ property }) => {
     .filter(Boolean)
     .join(', ');
 
+  const highlights =
+    variant === 'list' && Array.isArray(property.highlights)
+      ? property.highlights.filter(Boolean).slice(0, LIST_HIGHLIGHTS)
+      : [];
+
   return (
-    <div className={styles.card}>
+    <div className={[styles.card, variant === 'list' ? styles.list : ''].filter(Boolean).join(' ')}>
       <div className={styles.imageWrapper}>
         {cover?.url ? (
           <img
@@ -146,6 +158,21 @@ const PropertyCard = memo(({ property }) => {
             </span>
           </div>
         </div>
+
+        {highlights.length > 0 ? (
+          <ul className={styles.highlights}>
+            {highlights.map((highlight) => (
+              <li key={highlight} className={styles.highlight}>
+                <Icon
+                  icon="mdi:check-circle-outline"
+                  className={styles.highlightIcon}
+                  aria-hidden="true"
+                />
+                <span>{highlight}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
     </div>
   );

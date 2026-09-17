@@ -9,4 +9,4 @@ export { default as LocalityConnectivity } from './LocalityConnectivity';
 export { default as LocalityCta } from './LocalityCta';
 export { default as LocalityGuide } from './LocalityGuide';
 export { default as LocalityHero } from './LocalityHero';
-export { default as LocalityProperties } from './LocalityProperties';
+export { default as LocalityListings } from './LocalityListings';

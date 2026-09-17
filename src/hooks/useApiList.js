@@ -24,6 +24,9 @@ import useDebounce from './useDebounce';
  * @param {boolean} [options.syncToUrl]
  * @param {Record<string, 'int'|'number'|'bool'|'csv'|'string'>|string[]} [options.paramKeys]
  * @param {object} [options.defaults] values that never appear in the URL
+ * @param {object} [options.fixedParams] merged into every request and never
+ *   written to the URL — a route's or an embed's own filters, which the
+ *   visitor cannot remove
  * @param {number} [options.debounceMs] delay applied to `q` before fetching
  */
 export default function useApiList(fetcher, options = {}) {
@@ -32,6 +35,7 @@ export default function useApiList(fetcher, options = {}) {
     syncToUrl = false,
     paramKeys,
     defaults,
+    fixedParams,
     debounceMs = 0,
     keepPreviousData = true,
   } = options;
@@ -73,10 +77,14 @@ export default function useApiList(fetcher, options = {}) {
 
   // The search box updates on every keystroke; the API hears the last one.
   const debouncedQ = useDebounce(params.q ?? '', debounceMs);
-  const requestParams = useMemo(
-    () => (debounceMs > 0 && 'q' in params ? { ...params, q: debouncedQ || undefined } : params),
-    [params, debouncedQ, debounceMs]
-  );
+
+  // The fixed params are applied last: a route that says `listingType: 'rent'`
+  // means it, whatever the query string was edited to say.
+  const requestParams = useMemo(() => {
+    const searched =
+      debounceMs > 0 && 'q' in params ? { ...params, q: debouncedQ || undefined } : params;
+    return fixedParams ? { ...searched, ...fixedParams } : searched;
+  }, [params, debouncedQ, debounceMs, fixedParams]);
 
   const requestKey = useMemo(() => canonical(requestParams), [requestParams]);
 

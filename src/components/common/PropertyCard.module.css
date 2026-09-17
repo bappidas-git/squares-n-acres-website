@@ -333,3 +333,59 @@ video.image {
     opacity: 1;
   }
 }
+
+/* List view (prompt 26): the same card on its side once there is room for it.
+   Below 900px it stays the stacked card — a 360px screen has no side. */
+.highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.highlightIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--color-success-dark);
+}
+
+@media (min-width: 900px) {
+  .list {
+    flex-direction: row;
+  }
+
+  .list .imageWrapper {
+    flex: 0 0 300px;
+    aspect-ratio: 4 / 3;
+  }
+
+  .list .body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .list:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .image {
+    transition: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+}

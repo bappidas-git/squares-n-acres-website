@@ -19,6 +19,7 @@ export const EVENTS = {
   shortlistRemove: 'shortlist_remove',
   leadSubmit: 'lead_submit',
   galleryOpen: 'gallery_open',
+  search: 'search',
   floorPlanDownload: 'floor_plan_download',
   brochureDownload: 'brochure_download',
   documentDownload: 'document_download',

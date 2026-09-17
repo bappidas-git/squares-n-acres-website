@@ -50,6 +50,24 @@ describe('ShortlistContext', () => {
     expect(screen.getByTestId('ids')).toHaveTextContent('4,9');
   });
 
+  it('keeps both of two hearts pressed in the same tick', () => {
+    let api;
+    renderShortlist((value) => {
+      api = value;
+    });
+
+    // React batches the two updates; reading the render's copy of the list
+    // would let the second write overwrite the first.
+    act(() => {
+      api.add(4);
+      api.add(9);
+      api.toggle(11);
+    });
+
+    expect(screen.getByTestId('ids')).toHaveTextContent('4,9,11');
+    expect(storage.getItem(SHORTLIST_KEY)).toEqual(['4', '9', '11']);
+  });
+
   it('saves and unsaves through one toggle, and says which it did', () => {
     let api;
     renderShortlist((value) => {

@@ -3,8 +3,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { Drawer, IconButton } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import GlobalSearch from '../common/GlobalSearch';
 import useScrollDirection from '../../hooks/useScrollDirection';
-import { Logo } from '../ui';
+import { Logo, Modal } from '../ui';
 import styles from './Header.module.css';
 
 const navItems = [
@@ -69,6 +70,7 @@ const Header = () => {
   const { scrolled } = useScrollDirection();
   const [openDropdown, setOpenDropdown] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const dropdownTimeoutRef = useRef(null);
 
   const handleDropdownEnter = (label) => {
@@ -156,19 +158,41 @@ const Header = () => {
           ))}
         </nav>
 
-        {/* Hamburger */}
-        <button
-          className={styles.hamburger}
-          onClick={() => setDrawerOpen(true)}
-          aria-label="Open menu"
-        >
-          <div className={styles.hamburgerIcon}>
-            <span className={styles.hamburgerLine} />
-            <span className={styles.hamburgerLine} />
-            <span className={styles.hamburgerLine} />
-          </div>
-        </button>
+        <div className={styles.actions}>
+          {/* Search — the site's one search box, in a dialog (prompt 26) */}
+          <button
+            className={styles.searchTrigger}
+            onClick={() => setSearchOpen(true)}
+            aria-label="Search properties"
+            type="button"
+          >
+            <Icon icon="mdi:magnify" width={22} height={22} />
+          </button>
+
+          {/* Hamburger */}
+          <button
+            className={styles.hamburger}
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Open menu"
+          >
+            <div className={styles.hamburgerIcon}>
+              <span className={styles.hamburgerLine} />
+              <span className={styles.hamburgerLine} />
+              <span className={styles.hamburgerLine} />
+            </div>
+          </button>
+        </div>
       </div>
+
+      <Modal
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        title="Search properties"
+        size="md"
+        mobile="fullscreen"
+      >
+        <GlobalSearch autoFocus onNavigate={() => setSearchOpen(false)} />
+      </Modal>
 
       {/* Right-side Drawer */}
       <Drawer

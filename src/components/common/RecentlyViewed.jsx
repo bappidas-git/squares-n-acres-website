@@ -23,9 +23,17 @@ import styles from './RecentlyViewed.module.css';
  * @param {number|string|null} [props.exclude] the listing whose own page is asking
  * @param {number} [props.limit]
  * @param {'row'|'stack'} [props.layout] a scrolling row, or a vertical list
+ * @param {React.ReactNode} [props.heading] wraps the strip in a titled section;
+ *   the title disappears with the strip, so an empty history is no heading
  * @param {string} [props.className]
  */
-export default function RecentlyViewed({ exclude = null, limit = 8, layout = 'row', className }) {
+export default function RecentlyViewed({
+  exclude = null,
+  limit = 8,
+  layout = 'row',
+  heading,
+  className,
+}) {
   // The list is read after mount: it is per-browser, and a server-rendered or
   // prerendered page (prompt 41) must not bake one visitor's history into the
   // HTML every other visitor is served.
@@ -37,7 +45,7 @@ export default function RecentlyViewed({ exclude = null, limit = 8, layout = 'ro
 
   if (items.length === 0) return null;
 
-  return (
+  const strip = (
     <ul
       className={[styles.list, layout === 'stack' ? styles.stack : styles.row, className]
         .filter(Boolean)
@@ -68,5 +76,16 @@ export default function RecentlyViewed({ exclude = null, limit = 8, layout = 'ro
         </li>
       ))}
     </ul>
+  );
+
+  if (!heading) return strip;
+
+  return (
+    <section className={styles.section} aria-labelledby="recently-viewed">
+      <h2 className={styles.heading} id="recently-viewed">
+        {heading}
+      </h2>
+      {strip}
+    </section>
   );
 }
