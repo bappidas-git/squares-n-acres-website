@@ -1,0 +1,198 @@
+{
+  "id": 2,
+  "slug": "about",
+  "title": "About Us",
+  "template": "about",
+  "status": "published",
+  "heroImageUrl": "https://picsum.photos/seed/sna-page-about/1600/700",
+  "blocks": [
+    {
+      "id": 1,
+      "type": "hero",
+      "order": 1,
+      "data": {
+        "title": "About Squares N Acres",
+        "subtitle": "A Bengaluru property advisory built around one idea: tell the client what we would want to be told.",
+        "imageUrl": "https://picsum.photos/seed/sna-page-about/1600/700",
+        "ctaLabel": null,
+        "ctaHref": null
+      }
+    },
+    {
+      "id": 2,
+      "type": "richText",
+      "order": 2,
+      "data": {
+        "html": "<h2>Our story</h2><p>[Placeholder — client to provide] This paragraph is where the founding story belongs — when the company started, what it set out to do differently, and what it has learned since. Replace it with the client’s own account before the site goes live.</p><p>[Placeholder — client to provide] A second paragraph can cover how the practice has grown and what it focuses on today.</p>"
+      }
+    },
+    {
+      "id": 3,
+      "type": "steps",
+      "order": 3,
+      "data": {
+        "title": "How we got here",
+        "subtitle": "A timeline the client supplies; the structure is ready for it.",
+        "items": [
+          {
+            "title": "Founded",
+            "text": "[Placeholder — client to provide] The year the practice started and why."
+          },
+          {
+            "title": "First offices",
+            "text": "[Placeholder — client to provide] Where the practice began working and in which segments."
+          },
+          {
+            "title": "Widening the coverage",
+            "text": "[Placeholder — client to provide] How the coverage grew across Bengaluru’s localities."
+          },
+          {
+            "title": "Today",
+            "text": "[Placeholder — client to provide] What the practice looks like now and where it is going."
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "type": "features",
+      "order": 4,
+      "data": {
+        "title": "What we value",
+        "subtitle": "Four commitments that decide how we work on every file.",
+        "items": [
+          {
+            "icon": "mdi:eye-check-outline",
+            "title": "Say what is wrong with it",
+            "text": "Every property has a weakness. An advisor who never mentions one is not advising."
+          },
+          {
+            "icon": "mdi:file-document-check-outline",
+            "title": "Documents before deposits",
+            "text": "Nothing is paid until somebody qualified has read the papers."
+          },
+          {
+            "icon": "mdi:map-marker-radius-outline",
+            "title": "One city, properly",
+            "text": "Bengaluru only, twenty localities, visited rather than listed."
+          },
+          {
+            "icon": "mdi:handshake-outline",
+            "title": "One point of contact",
+            "text": "The advisor who takes the first call stays on the file to the end."
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "type": "richText",
+      "order": 5,
+      "data": {
+        "html": "<h2>Mission</h2><p>[Placeholder — client to provide] The client’s mission statement goes here.</p><h2>Vision</h2><p>[Placeholder — client to provide] The client’s vision statement goes here.</p>"
+      }
+    },
+    {
+      "id": 6,
+      "type": "stats",
+      "order": 6,
+      "data": {
+        "items": []
+      }
+    },
+    {
+      "id": 7,
+      "type": "team",
+      "order": 7,
+      "data": {
+        "title": "The people you will work with",
+        "memberIds": []
+      }
+    },
+    {
+      "id": 8,
+      "type": "testimonials",
+      "order": 8,
+      "data": {
+        "title": "What clients say",
+        "ids": []
+      }
+    },
+    {
+      "id": 9,
+      "type": "cta",
+      "order": 9,
+      "data": {
+        "title": "Looking for something specific?",
+        "text": "Tell us the locality, the budget and the configuration, and an advisor will come back with a shortlist.",
+        "buttonLabel": "Post your requirement",
+        "buttonHref": "#post-requirement",
+        "leadSource": "post-requirement"
+      }
+    }
+  ],
+  "leadSource": "contact-page",
+  "seo": {
+    "focusKeyword": "about squares n acres",
+    "secondaryKeywords": ["squares n acres", "bengaluru property"],
+    "title": "About Squares N Acres",
+    "description": "Who we are, how we work and what we will and will not say about a property. The Squares N Acres approach to buying, selling and renting in Bengaluru.",
+    "slug": "about",
+    "canonicalUrl": null,
+    "robots": {
+      "index": true,
+      "follow": true,
+      "noarchive": false,
+      "nosnippet": false,
+      "noimageindex": false,
+      "maxSnippet": null,
+      "maxImagePreview": "large",
+      "maxVideoPreview": null
+    },
+    "og": {
+      "title": null,
+      "description": null,
+      "imageUrl": null
+    },
+    "twitter": {
+      "card": "summary_large_image",
+      "title": null,
+      "description": null,
+      "imageUrl": null
+    },
+    "breadcrumbTitle": null,
+    "schema": {
+      "type": "auto",
+      "custom": "",
+      "disabledAutoTypes": []
+    },
+    "sitemap": {
+      "include": true,
+      "priority": null,
+      "changefreq": null
+    },
+    "redirect": {
+      "enabled": false,
+      "toPath": "",
+      "statusCode": 301
+    },
+    "score": null,
+    "scoreBand": "none",
+    "testsPassed": 0,
+    "testsTotal": 0,
+    "analysis": {
+      "basic": [],
+      "additional": [],
+      "titleReadability": [],
+      "contentReadability": []
+    },
+    "lastAnalyzedAt": null
+  },
+  "order": 2,
+  "showInFooter": true,
+  "footerColumn": "company",
+  "showInHeader": true,
+  "headerMenu": "company",
+  "createdAt": "2026-04-12T15:15:00.000Z",
+  "updatedAt": "2026-08-27T13:05:00.000Z"
+}

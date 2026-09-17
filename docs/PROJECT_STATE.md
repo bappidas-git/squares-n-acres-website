@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 34 — Public blog: index, taxonomy pages, article page Next prompt: 35
+Last prompt executed: 35 — SEO engine core (`src/seo/`) Next prompt: 36
 
 ## Executed prompts
 
@@ -40,7 +40,8 @@ Last prompt executed: 34 — Public blog: index, taxonomy pages, article page Ne
 | 31  | Careers & jobs, CMS awareness page, newsletter subscribers     | `9e7d1cc`                                                                          | 2026-09-17 |
 | 32  | Tiptap rich text editor, sanitiser, SafeHtml, every textarea   | `42d836f`                                                                          | 2026-09-17 |
 | 33  | Articles admin: list, editor form, scheduling, taxonomy CRUD   | `ad85093`                                                                          | 2026-09-17 |
-| 34  | Public blog: index, taxonomy pages, article page, RSS link     | HEAD of this branch (a commit cannot contain its own hash — prompt 35 fills it in) | 2026-09-17 |
+| 34  | Public blog: index, taxonomy pages, article page, RSS link     | `6862bf2`                                                                          | 2026-09-17 |
+| 35  | SEO engine core: analyzers, scoring, readability, schema       | HEAD of this branch (a commit cannot contain its own hash — prompt 36 fills it in) | 2026-09-17 |
 
 ## Baseline (prompt 01)
 
@@ -307,7 +308,8 @@ The boilerplate's own endpoint surface stays inventoried in
 | ~~Description textarea → `RichTextEditor`~~      | **Closed in 32.** The Basics tab draws `RichTextField variant="full"`; the reducer, the validators and the payload are untouched, and the editor's own status bar now carries the character, word and reading-time counters the tab printed under the box.                                                                                                                                                                                                                                                                        | 32           |
 | ~~`ArticleForm` saving disabled~~                | **Closed in 33.** `src/pages/admin/articles/ArticleFormPage.jsx` writes the real record: the category and the author are `<select>`s over `/admin/article-categories` and `/admin/authors`, the tags are records a creatable multi-select posts to `/admin/article-tags`, the body is the Tiptap editor's sanitised HTML, and the status radio publishes, schedules or archives. Every write goes through `POST`/`PUT` with the §6.8 payload.                                                                                     | —            |
 | `AdminSettings` saving disabled                  | The screen holds a flattened view of five of the eight §6.13 branches, so writing it back would flatten the record on the server. Reads are live; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                                                                                                                                      | 40           |
-| `AdminSeo` saving disabled                       | SEO now lives in one nested `seo{}` saved through the entity's own PATCH, and the generator still writes boilerplate titles and canonicals (ADD-20/ADD-27). The table reads `GET /admin/seo/overview` live; editing and bulk generation are disabled behind an info `Alert`.                                                                                                                                                                                                                                                      | 36–37        |
+| ~~`AdminSeo` saving disabled~~                   | **Closed in 35.** The file is deleted, with `utils/seoScoring.js` and `utils/seoGenerator.js`. `src/seo/` is the engine those two were standing in for (ADD-27 closed); `/admin/seo` renders `pages/admin/seo/SeoPlaceholderPage.jsx` until 37 builds the dashboard.                                                                                                                                                                                                                                                              | 36–37        |
+| `SeoPlaceholderPage` → SEO dashboard             | `/admin/seo` renders `AdminPlaceholderPage` through `src/pages/admin/seo/SeoPlaceholderPage.jsx`. Prompt 37 replaces that file with the real dashboard — the `GET /admin/seo/overview` table, the score and band filters, the bulk actions, `/admin/seo/settings`, `/admin/seo/redirects` and the rewritten guide.                                                                                                                                                                                                                | 37           |
 | ~~`LegacyHtml` in `LocalityGuide`~~              | **Closed in 32.** `SafeHtml` renders the guide; the module's duplicate typography is gone, since the global `.prose` now covers it.                                                                                                                                                                                                                                                                                                                                                                                               | 32           |
 | `SeoPlaceholderTab` → `SeoPanel`                 | The property form's SEO tab (prompt 21) holds `seo.title`, `seo.description`, `seo.focusKeyword` with the §9.1 length guides and a read-only mirror of the slug. The full panel — analysis, search and social previews, robots, schema, redirect — replaces it in prompt 36 (D87); the rest of the `seo` branch rides through every save untouched meanwhile.                                                                                                                                                                     | 36           |
 | Locality SEO placeholder card                    | The locality form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through a save untouched in the meantime.                                                                                                                                                                                                                                                                                                                                                   | 36           |
@@ -362,10 +364,10 @@ The boilerplate's own endpoint surface stays inventoried in
 | ADD-16 | `ArticleDetail` Markdown renderer: duplicate tables on every `\ **Closed in 11**: the article body is CMS-authored HTML rendered through `LegacyHtml`, and the breadcrumb now goes Home → Articles → category.                                                                                                                                                                                                                                                                                                                                                             | `line, ordered lists rendered as`<ul>`, only `**bold**`inline, breadcrumb "Insights" and "Articles" to the same URL;`Articles` state not URL-synced **Fully closed in 34**: the page is `ArticleDetail.jsx`, the body goes through `SafeHtml`, and the breadcrumb is Home › Insights › Category › Title. | master spec, confirmed 01 | 32, 34 |
 | ADD-18 (closed in 31) | `Careers`: résumé file input has no `name`/`onChange`, form never reset, modal without dialog semantics; `InteriorDesigning` room cards and "Get Started" buttons do nothing; `LegalAssistance`/`RealEstateAwareness` encode conflicting Karnataka stamp-duty figures. **Interior and legal closed in 30** (both pages are CMS records; the packages block opens the shared dialog and the expandable cards carry the copy an editor writes). **Careers and awareness closed in 31:** both files are deleted, the application is a real form on the role’s own page with a working résumé control, and the awareness figures are the seeded page’s, written once and editable in the CMS. | master spec, confirmed 01 | — (closed) |
 | ADD-19 (settings/users) | `AdminSettings`: `PUT` drops `footerLinks`, tab panels out of order, "Footer Tagline" edits the General `tagline`, hardcoded `role === 'admin'`; `UserManagement`: last-admin guard hole, plaintext passwords echoed, own `ROLES` list. **The `AdminLogin` half is closed in 12 and the `UserManagement` half in 13; only the `AdminSettings` form remains, for prompt 40.** | master spec, confirmed 01 | 40 |
-| ADD-20 (article half closed in 33) | `AdminSeo`: the old domain in previews, "Auto-Generate" writes the boilerplate's titles/canonicals/schema, `stats.missing` dead, saving wipes empty fields, no confirmation before bulk overwrite; `ArticleForm`: the boilerplate brand as the default article author, `readTime` not editable, `isTrending/trendingOrder` dropped on PUT, `setTimeout(navigate)` not cleared. **The `ArticleForm` half is closed in 33:** both files are deleted. There is no default author — `authorId` is a required select over the real records, so an article is never signed by a name nobody chose; `readingTimeMinutes` is derived by the API from the body and shown in the rail; the trending pair is replaced by `isFeatured` plus the view-based `/articles/trending` (§5.14); and the one navigation the form performs waits for the unsaved-changes guard to let go and clears its timer on unmount. The `AdminSeo` half stays open for 36/37. | master spec, confirmed 01 | 36, 37 |
+| ADD-20 (closed in 33 and 35) | `AdminSeo`: the old domain in previews, "Auto-Generate" writes the boilerplate's titles/canonicals/schema, `stats.missing` dead, saving wipes empty fields, no confirmation before bulk overwrite; `ArticleForm`: the boilerplate brand as the default article author, `readTime` not editable, `isTrending/trendingOrder` dropped on PUT, `setTimeout(navigate)` not cleared. **The `ArticleForm` half is closed in 33:** both files are deleted. There is no default author — `authorId` is a required select over the real records, so an article is never signed by a name nobody chose; `readingTimeMinutes` is derived by the API from the body and shown in the rail; the trending pair is replaced by `isFeatured` plus the view-based `/articles/trending` (§5.14); and the one navigation the form performs waits for the unsaved-changes guard to let go and clears its timer on unmount. **The `AdminSeo` half is closed in 35:** the file is deleted with the two utils behind it (ADD-27), so the old domain, the boilerplate auto-generation, the dead `stats.missing` and the save that wiped empty fields are all gone; `/admin/seo` is a placeholder until 37 draws the dashboard on top of `src/seo/`. | master spec, confirmed 01 | 35 (engine), 37 (dashboard) |
 | ADD-21 (property list closed) | `AdminProperties` fetches the public `/properties`, toggle omits the `is_active` fallback, `Promise.all` bulk aborts on first failure, per-page select-all (**closed in 22**: the file is deleted and `/admin/properties` is `PropertiesListPage`, server-side throughout, with one `POST /admin/properties/bulk` per bulk action); `AdminLeads`/`Dashboard` `p.id === propertyId` string-vs-number → Property column always empty; `Dashboard` "Leads by source" from 10 leads; `FaqManager` reorder wrong under a category filter with two sequential PUTs per swap (**closed in 17**: `FaqManager` is deleted and the reorder is D98's single `PATCH`); `LeadDetail` simulated timeline, `isMobile` unused (**closed in 01**). **Closed in 29:** `AdminLeads.js`, `LeadDetail.js` and `Dashboard.js` are deleted; the list is `PropertiesListPage`'s server-side twin, the Property column is the `property {id,title,slug}` embed the API sends, the timeline is the server's `activities[]`, and "Leads by source" is `trends.leadsBySource` over every lead rather than over the ten the browser had fetched | master spec, confirmed 01 | 29 ✅ |
 | ADD-22 | Property tabs: `DetailsTab` drag issues N state updates per drag-over; `SectionVisibilityTab` toggle asymmetric for `undefined`; `GalleryTab` seeds placeholder-image covers; `NearbyPlacesTab` default type `school` unknown to the public map; index keys everywhere; `SeoTagsTab` old-domain placeholder. **Prompt 18 settles the structural half for the new form**: every repeating row carries a stable id (`tmp-<n>` until the API assigns one), so no list is keyed by its index and a move is one `LIST_MOVE`; `fromRecord` fills all eighteen `sectionVisibility` keys, so a toggle is never reading `undefined`; `makeNearbyPlace` defaults to `other`; and nothing seeds an image. The tabs that render these fields are written in 19–21. **Closed in 21**: the new Section-visibility tab writes `true`/`false` explicitly for the key pressed and every key at once for "Enable all"/"Disable all", and the whole of `property-tabs/*` — `DetailsTab`, `GalleryTab`, `NearbyPlacesTab`, `SeoTagsTab` and the rest — is deleted. | master spec, confirmed 01 | 18–21 |
-| ADD-27 | `seoScoring.js`/`seoGenerator.js`: HOM site name/URL constants, generic CTA-word scoring, schema string stored in the record | master spec, confirmed 01 | 36 |
+| ~~ADD-27~~ (closed in 35) | ~~`seoScoring.js`/`seoGenerator.js`: HOM site name/URL constants, generic CTA-word scoring, schema string stored in the record~~ **Both files are deleted.** `src/seo/` replaces them: the site name and the URL come from `seoSettings` and `config/site.js` rather than from a constant, the scoring is the 50 weighted tests of SEO-06…SEO-09 with per-entity-type applicability, and the JSON-LD is built by `src/seo/schema/` at render time from the record — `seo.schema.custom` remains the only schema string stored, and it is validated before it is published. | master spec, confirmed 01 | 35 |
 
 ### New defects found by this audit
 
@@ -5461,3 +5463,139 @@ the enquiry form filing `POST /leads` `201` with `source: "article"` and
 scheduled article answering 404 without a token and the preview banner plus
 `noindex, nofollow` with one. No horizontal scroll at 390 px; the console carries
 only the sandbox's certificate errors for the external image and font hosts.
+
+### Prompt 35 — SEO engine core (`src/seo/`): analyzers, scoring, readability, snippet widths, template variables, schema generators, keywords, URLs (2026-09-17)
+
+**What changed**
+
+The two files the boilerplate called an SEO engine are gone.
+`src/utils/seoScoring.js` scored nine checks against the HOM site name and
+domain and gave a letter grade; `src/utils/seoGenerator.js` built titles,
+canonicals and a schema **string** from the old flat property shape, and the
+only screen that read either — `src/pages/admin/AdminSeo.js`, read-only since
+prompt 11 — is deleted with them (ADD-27 closed, and the `AdminSeo` half of
+ADD-20 with it). `src/seo/` replaces all three: 36 modules, no React, no
+network, no DOM it cannot do without, and 505 assertions over them.
+
+**`analyze(entityType, entity, context)` is the whole surface.** It normalises
+the record, runs the four groups of §9.1 and scores the results, answering
+exactly what §9.6 stores: `{ score, band, testsPassed, testsTotal, groups }`.
+Fifty tests exist — the ten of SEO-06, the twenty-six of SEO-07, the five of
+SEO-08 and the nine of SEO-09 including the `heading-hierarchy` test §7 of the
+prompt asks for — and each answers `{ id, group, status, message, hint, field,
+weight }`, where `field` is the dotted path prompt 36's panel focuses when the
+row is clicked.
+
+**Weights are apportioned, not written down.** Each test carries points (1–5)
+that mean the same thing whatever record they measure; `APPLICABILITY` says
+which tests each of the eight entity types is asked; `WEIGHTS[entityType]` is
+those points apportioned to exactly 100 by the largest-remainder method, ties
+broken by test id. Pass earns the full weight, warn half, fail nothing, and a
+`skip` — a test that does not apply — leaves the denominator, which is
+re-normalised over what is left. So a property is never marked down for having
+no article category, and adding a test later cannot leave a column summing
+to 99. `score.test.js` asserts the sum and that no weight is 0;
+`docs/SEO_ENGINE.md` prints every column.
+
+**One rule lives in `analyze.js` rather than in the analysers: a record nobody
+has written yet fails everything.** A blank form has no title, no slug, no
+description, no body and no keyword, so a warning about the FAQs it has not got
+— or an "it may be indexed" about a record that does not exist — would score it
+points for nothing. Every applicable result is read as the failure it is,
+messages kept, and the score is 0 (§7).
+
+**Two parsers, one answer.** `text.js` turns markup into a flat stream of
+`open`/`text`/`close` events — `DOMParser` in the browser, a tag scanner in
+Node — and every rule (`stripHtml`, `wordCount`, `sentences`, `paragraphs`,
+`headings`, `images`, `links`) is written against the stream rather than against
+either parser. `text.test.js` asserts the two agree event for event on ten
+samples, the seed article and a listing description, which is what makes a rule
+written once trustworthy in both places. Sentences survive `sq.`, `ft.` and
+`Rs.`; words survive a hyphen, a grouped number and the combining marks Indian
+scripts write their vowels with.
+
+**Pixel widths are a table in Node and a canvas in the browser (D85).**
+`snippet.js` measures Arial 20 px for titles and 14 px for descriptions against
+the limits of §9.1 (580 px / 920 px). jsdom has a `document` and no 2D context —
+it answers `getContext` with `null` and logs an implementation error while doing
+it — so the engine never asks there: Node and Jest use the Helvetica metric set
+in 1/1000 em units, and every test measures the same number on every run.
+
+**Keyword matching is forgiving in three ways and no others.** The regular,
+`-es` and `-ies` plurals and the Indian-English irregulars (`BHKs` → `bhk`);
+hyphens and spaces interchangeable, so `ready-to-move` finds `ready to move`
+both ways; case and punctuation ignored. Word order is not forgiven — "flats in
+whitefield" and "whitefield flats" are two different searches — and neither are
+words in between.
+
+**`schema/` is fourteen generators, a merger and a validator.** Every node
+carries the stable `@id` of §9.3 (`<canonical>#listing`, `#article`,
+`#breadcrumb`, `#faq`, `#itemlist`, `#place`, `#person`, `#webpage`, `#video`,
+`<siteUrl>/#organization`, `<siteUrl>/#website`), `mergeGraph` folds duplicates
+by `@id` into one `@graph`, and `validate` refuses an unknown `@type`, a missing
+required property, a URL that is not absolute and a date that is not ISO 8601 —
+while accepting `{ "@id": … }` and `{ "@type": "WebPage", "@id": … }` as the
+references they are. A listing publishes its coordinates only when the record
+allows the exact location, and `review.js` drops every `isSample: true`
+testimonial before it publishes a rating.
+
+**Found while writing the tests, and kept as findings rather than papered
+over:** the seed listing's meta description reads "3 BHK Apartment **at**
+Lakeview Heights, Whitefield" and its slug leads with the project name, so
+`keyword-in-description` and `keyword-in-slug` both fail for it. They are right
+to. The seed is prompt 10's; the panel will show the two rows and an editor can
+decide.
+
+**Files**
+
+Added (36 modules): `src/seo/index.js`, `analyze.js`, `score.js`,
+`entityAdapters.js`, `text.js`, `keywords.js`, `readability.js`, `snippet.js`,
+`variables.js`, `urls.js`, `suggestions.js`, `autoGenerate.js`;
+`analyzers/` (`basic`, `additional`, `titleReadability`, `contentReadability`,
+`index`); `schema/` (`index`, `graph`, `validate`, `organization`, `website`,
+`breadcrumb`, `realEstateListing`, `article`, `faqPage`, `itemList`, `place`,
+`developerOrganization`, `person`, `webPage`, `videoObject`, `review`);
+`data/` (`powerWords`, `stopWords`, `transitionWords`).
+Plus `src/pages/admin/seo/SeoPlaceholderPage.jsx` and `docs/SEO_ENGINE.md`.
+
+Tests added (16 suites, 505 assertions): `src/seo/__tests__/` — `analyze` (43),
+`score` (38), `basic` (35), `additional` (53), `titleReadability` (23),
+`contentReadability` (31), `readability` (26), `snippet` (20), `variables` (24),
+`keywords` (30), `urls` (24), `text` (45), `suggestions` (14), `autoGenerate`
+(20), `schema` (52), `entityAdapters` (27) — with eight fixtures taken from the
+seed (`property`, `article`, `page`, `locality`, `developer`, `seoSettings`,
+`masterData`, `siteIndex`). The fixtures are `.json` rather than `.js` because
+CRA's `testMatch` collects **every** `.js` file under a `__tests__` folder as a
+suite, and a data module there would fail as "your test suite must contain at
+least one test".
+
+Changed (3): `src/routes/adminRouteConfig.js` (`/admin/seo` → the placeholder),
+`docs/PROJECT_STATE.md`, `docs/DECISIONS.md`.
+
+Removed (3): `src/utils/seoScoring.js`, `src/utils/seoGenerator.js`,
+`src/pages/admin/AdminSeo.js`.
+
+**Endpoints / dependencies / env vars / npm scripts**
+
+None. The engine is pure code and calls nothing; `context.siteIndex` is the
+`GET /admin/seo/overview` rows the caller already holds, which prompts 36 and 37
+fetch.
+
+**Verification**
+
+`npm run lint` clean (`--max-warnings=0`, 0 blocking endpoint findings);
+`npm run test:ci` 110 suites / 2331 tests; `src/seo` alone 16 suites / 505 tests
+at **96.67 % statements**, 83.13 % branches, 99.31 % functions, 97.98 % lines;
+`npm run build:ci` compiled successfully with no warnings;
+`npm run check:traces` 0 findings; `npm run test:mock` 137/137;
+`npm run smoke` 276/276.
+
+Driven in Chromium against the dev server: `/admin/seo` signs in and renders the
+placeholder under the real topbar title and the `seo · view` guard, and the rest
+of the app is untouched — `/properties` and `/admin/properties` (20 rows) render
+as before. The console carries only the sandbox's certificate errors for the
+external image hosts.
+
+**Next prompt: 36 — the SEO panel (`src/components/seo/SeoPanel/`), which draws
+these results, the Google preview and the keyword suggestions inside every
+entity form.**

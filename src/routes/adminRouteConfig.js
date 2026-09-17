@@ -51,7 +51,7 @@ const JobApplicationsPage = lazy(() => import('../pages/admin/content/JobApplica
 const NewsletterSubscribersPage = lazy(
   () => import('../pages/admin/content/NewsletterSubscribersPage')
 );
-const AdminSeo = lazy(() => import('../pages/admin/AdminSeo'));
+const SeoPlaceholderPage = lazy(() => import('../pages/admin/seo/SeoPlaceholderPage'));
 const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
 const ProfilePage = lazy(() => import('../pages/admin/settings/ProfilePage'));
 const UsersPage = lazy(() => import('../pages/admin/settings/UsersPage'));
@@ -151,7 +151,7 @@ export const ADMIN_ROUTES = [
 
   soon('media', 'Media library', ['media', 'view'], 39),
 
-  page('seo', 'SEO dashboard', ['seo', 'view'], <AdminSeo />),
+  page('seo', 'SEO dashboard', ['seo', 'view'], <SeoPlaceholderPage />),
   soon('seo/settings', 'SEO settings', ['seo', 'view'], 37),
   soon('seo/redirects', 'Redirects', ['seo', 'view'], 37),
   soon('seo/guide', 'SEO guide', ['seo', 'view'], 37),

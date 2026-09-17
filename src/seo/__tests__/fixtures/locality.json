@@ -1,0 +1,100 @@
+{
+  "id": 1,
+  "name": "Whitefield",
+  "slug": "whitefield",
+  "cityId": 1,
+  "zone": "east",
+  "description": "<p>Whitefield began as a settlement on the eastern edge of the city and is now its best-known technology corridor. The stretch between Hope Farm and Varthur Kodi carries a dense mix of gated apartment projects, older independent houses and villa communities set back from the main road.</p><p>Purple Line metro stations along Whitefield Main Road have made the run towards the centre far more predictable than the road alone ever was. Outer Ring Road is roughly 12 km west, and Kempegowda International Airport about 45 km north.</p><p>International schools, multi-speciality hospitals and two large shopping centres sit inside the catchment, and the restaurant and retail strip around Varthur Road has grown with the offices behind it.</p><p>Apartments in Whitefield typically trade in the ₹7,500 to ₹9,500 per square foot band. Prices and travel times are indicative and worth checking against current market data before you commit to anything.</p><p>Most of what we list here is two- and three-bedroom stock in gated projects, with a steady flow of resale flats from the first generation of buyers moving on. An advisor can put the current shortlist in front of you rather than a portal average.</p>",
+  "shortDescription": "East Bengaluru's best-known technology corridor: gated apartment projects, international schools and Purple Line metro stations along the main road.",
+  "heroImageUrl": "https://picsum.photos/seed/sna-locality-whitefield/1600/900",
+  "latitude": 12.9698,
+  "longitude": 77.75,
+  "pincodes": ["560066", "560067"],
+  "highlights": [
+    "Established technology corridor with a deep rental market",
+    "Purple Line metro connectivity towards the city centre",
+    "International schools and multi-speciality hospitals within the neighbourhood",
+    "The widest choice of ready-to-move gated apartments in east Bengaluru"
+  ],
+  "connectivity": [
+    {
+      "label": "Metro",
+      "value": "Purple Line, along Whitefield Main Road"
+    },
+    {
+      "label": "Outer Ring Road",
+      "value": "12 km"
+    },
+    {
+      "label": "Kempegowda Airport",
+      "value": "45 km"
+    },
+    {
+      "label": "Railway",
+      "value": "Whitefield station, 3 km"
+    }
+  ],
+  "avgPricePerSqft": 8200,
+  "priceTrendNote": "Indicative range for apartments; confirm against current market data.",
+  "isFeatured": true,
+  "isActive": true,
+  "order": 1,
+  "seo": {
+    "focusKeyword": "property in whitefield",
+    "secondaryKeywords": ["flats in whitefield", "whitefield bangalore price"],
+    "title": "Property in Whitefield, Bengaluru",
+    "description": "East Bengaluru's best-known technology corridor: gated apartment projects, international schools and Purple Line metro stations along the main road.",
+    "slug": "whitefield",
+    "canonicalUrl": null,
+    "robots": {
+      "index": true,
+      "follow": true,
+      "noarchive": false,
+      "nosnippet": false,
+      "noimageindex": false,
+      "maxSnippet": null,
+      "maxImagePreview": "large",
+      "maxVideoPreview": null
+    },
+    "og": {
+      "title": null,
+      "description": null,
+      "imageUrl": null
+    },
+    "twitter": {
+      "card": "summary_large_image",
+      "title": null,
+      "description": null,
+      "imageUrl": null
+    },
+    "breadcrumbTitle": null,
+    "schema": {
+      "type": "auto",
+      "custom": "",
+      "disabledAutoTypes": []
+    },
+    "sitemap": {
+      "include": true,
+      "priority": null,
+      "changefreq": null
+    },
+    "redirect": {
+      "enabled": false,
+      "toPath": "",
+      "statusCode": 301
+    },
+    "score": null,
+    "scoreBand": "none",
+    "testsPassed": 0,
+    "testsTotal": 0,
+    "analysis": {
+      "basic": [],
+      "additional": [],
+      "titleReadability": [],
+      "contentReadability": []
+    },
+    "lastAnalyzedAt": null
+  },
+  "createdAt": "2026-03-25T08:45:00.000Z",
+  "updatedAt": "2026-04-28T12:05:00.000Z"
+}

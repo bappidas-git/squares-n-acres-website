@@ -1,0 +1,246 @@
+{
+  "cities": [
+    {
+      "id": 1,
+      "name": "Bengaluru",
+      "slug": "bengaluru",
+      "state": "Karnataka",
+      "isActive": true,
+      "createdAt": "2026-03-20T12:45:00.000Z",
+      "updatedAt": "2026-07-24T14:35:00.000Z"
+    }
+  ],
+  "localities": [
+    {
+      "id": 1,
+      "name": "Whitefield",
+      "slug": "whitefield",
+      "cityId": 1
+    },
+    {
+      "id": 2,
+      "name": "Sarjapur Road",
+      "slug": "sarjapur-road",
+      "cityId": 1
+    },
+    {
+      "id": 3,
+      "name": "Electronic City",
+      "slug": "electronic-city",
+      "cityId": 1
+    }
+  ],
+  "propertyTypes": [
+    {
+      "id": 1,
+      "name": "Apartments",
+      "slug": "apartments",
+      "segment": "residential"
+    },
+    {
+      "id": 2,
+      "name": "Villas",
+      "slug": "villas",
+      "segment": "residential"
+    },
+    {
+      "id": 3,
+      "name": "Independent Houses",
+      "slug": "independent-houses",
+      "segment": "residential"
+    },
+    {
+      "id": 4,
+      "name": "Row Houses",
+      "slug": "row-houses",
+      "segment": "residential"
+    },
+    {
+      "id": 5,
+      "name": "Penthouses",
+      "slug": "penthouses",
+      "segment": "residential"
+    }
+  ],
+  "developers": [
+    {
+      "id": 1,
+      "name": "Aurelia Estates",
+      "slug": "aurelia-estates"
+    },
+    {
+      "id": 2,
+      "name": "Nandi Ridge Developers",
+      "slug": "nandi-ridge-developers"
+    },
+    {
+      "id": 3,
+      "name": "Cauvery Homes",
+      "slug": "cauvery-homes"
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "Buying Guides",
+      "slug": "buying-guides"
+    },
+    {
+      "id": 2,
+      "name": "Market Trends",
+      "slug": "market-trends"
+    },
+    {
+      "id": 3,
+      "name": "Legal & RERA",
+      "slug": "legal-rera"
+    },
+    {
+      "id": 4,
+      "name": "Investment & Finance",
+      "slug": "investment-finance"
+    }
+  ],
+  "authors": [
+    {
+      "id": 1,
+      "name": "Editorial Team",
+      "slug": "editorial-team",
+      "designation": "Editorial desk (placeholder)"
+    },
+    {
+      "id": 2,
+      "name": "Research Desk",
+      "slug": "research-desk",
+      "designation": "Market research (placeholder)"
+    },
+    {
+      "id": 3,
+      "name": "Legal Desk",
+      "slug": "legal-desk",
+      "designation": "Legal and compliance (placeholder)"
+    }
+  ],
+  "amenities": [
+    {
+      "id": 1,
+      "name": "Power Backup",
+      "slug": "power-backup",
+      "category": "basic"
+    },
+    {
+      "id": 2,
+      "name": "Lift",
+      "slug": "lift",
+      "category": "basic"
+    },
+    {
+      "id": 3,
+      "name": "Water Supply",
+      "slug": "water-supply",
+      "category": "basic"
+    },
+    {
+      "id": 4,
+      "name": "Piped Gas",
+      "slug": "piped-gas",
+      "category": "basic"
+    },
+    {
+      "id": 5,
+      "name": "Intercom",
+      "slug": "intercom",
+      "category": "basic"
+    },
+    {
+      "id": 6,
+      "name": "Swimming Pool",
+      "slug": "swimming-pool",
+      "category": "lifestyle"
+    },
+    {
+      "id": 7,
+      "name": "Clubhouse",
+      "slug": "clubhouse",
+      "category": "lifestyle"
+    },
+    {
+      "id": 8,
+      "name": "Gymnasium",
+      "slug": "gymnasium",
+      "category": "lifestyle"
+    },
+    {
+      "id": 9,
+      "name": "Spa",
+      "slug": "spa",
+      "category": "lifestyle"
+    },
+    {
+      "id": 10,
+      "name": "Mini Theatre",
+      "slug": "mini-theatre",
+      "category": "lifestyle"
+    },
+    {
+      "id": 11,
+      "name": "Library",
+      "slug": "library",
+      "category": "lifestyle"
+    },
+    {
+      "id": 12,
+      "name": "Party Hall",
+      "slug": "party-hall",
+      "category": "lifestyle"
+    },
+    {
+      "id": 13,
+      "name": "Landscaped Gardens",
+      "slug": "landscaped-gardens",
+      "category": "lifestyle"
+    },
+    {
+      "id": 14,
+      "name": "24x7 Security",
+      "slug": "24x7-security",
+      "category": "safety"
+    },
+    {
+      "id": 15,
+      "name": "CCTV Surveillance",
+      "slug": "cctv-surveillance",
+      "category": "safety"
+    },
+    {
+      "id": 16,
+      "name": "Fire Safety",
+      "slug": "fire-safety",
+      "category": "safety"
+    },
+    {
+      "id": 17,
+      "name": "Gated Community",
+      "slug": "gated-community",
+      "category": "safety"
+    },
+    {
+      "id": 18,
+      "name": "Video Door Phone",
+      "slug": "video-door-phone",
+      "category": "safety"
+    },
+    {
+      "id": 19,
+      "name": "Tennis Court",
+      "slug": "tennis-court",
+      "category": "sports"
+    },
+    {
+      "id": 20,
+      "name": "Badminton Court",
+      "slug": "badminton-court",
+      "category": "sports"
+    }
+  ]
+}

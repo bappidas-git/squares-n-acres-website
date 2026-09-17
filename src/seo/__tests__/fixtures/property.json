@@ -1,0 +1,565 @@
+{
+  "id": 1,
+  "slug": "lakeview-heights-3-bhk-whitefield",
+  "title": "Lakeview Heights – 3 BHK Apartment in Whitefield",
+  "projectName": "Lakeview Heights",
+  "listingType": "sale",
+  "segment": "residential",
+  "propertyTypeId": 1,
+  "constructionStatus": "ready-to-move",
+  "availability": "available",
+  "possessionDate": null,
+  "ageOfPropertyYears": 2,
+  "furnishing": "semi-furnished",
+  "facing": "east",
+  "floorNumber": 7,
+  "totalFloors": 18,
+  "ownership": "freehold",
+  "reraNumber": "PRM/KA/RERA/1251/446/PR/301/placeholder",
+  "reraRegistered": true,
+  "description": "<p>Lakeview Heights is a completed gated development off Whitefield Main Road, four towers arranged around a central landscaped court with the clubhouse on the podium. 3 BHK Apartment of 1,650 sq ft, part of a project with 3 configurations from ₹88.5 L, priced at ₹1.24 Cr (about ₹7,515 per square foot).</p><p>The living room and the primary bedroom face the open side of each block, which keeps the interiors bright through the day. Residents have access to swimming pool, clubhouse, gymnasium and landscaped gardens among 18 listed amenities.</p><p>Whitefield sits in east Bengaluru; Hope Farm Metro Station is about 1.5 km away and Forum Shantiniketan Mall roughly 2.6 km. The locality page sets out the wider picture.</p><p>The property is ready to move into, about 2 years old, with no construction risk left to carry. Lakeview Heights is a fictional project created for this dataset: the name, the pricing, the approvals and the photographs are placeholders, and the record should be replaced with a real listing before the site goes live.</p>",
+  "shortDescription": "Ready-to-move 2 and 3 BHK apartments in a gated development off Whitefield Main Road, with a clubhouse, a pool and two covered parking bays per three-bedroom home.",
+  "highlights": [
+    "Ready to move — no waiting period and no construction risk",
+    "Two covered parking bays with every three-bedroom apartment",
+    "Podium clubhouse with a pool, a gymnasium and a party hall",
+    "Ready for registration and handover, about 2 years old",
+    "18 amenities including swimming pool, clubhouse and gymnasium"
+  ],
+  "amenityIds": [1, 2, 3, 5, 6, 7, 8, 12, 13, 14, 15, 16, 17, 23, 26, 29, 34, 35],
+  "badgeIds": [3, 4, 5],
+  "specifications": [
+    {
+      "group": "other",
+      "label": "Project area",
+      "value": "5.2 acres",
+      "icon": null
+    },
+    {
+      "group": "other",
+      "label": "Towers",
+      "value": "4",
+      "icon": null
+    },
+    {
+      "group": "other",
+      "label": "Total units",
+      "value": "320",
+      "icon": null
+    },
+    {
+      "group": "other",
+      "label": "Open area",
+      "value": "72% of the site",
+      "icon": null
+    },
+    {
+      "group": "structure",
+      "label": "Structure",
+      "value": "RCC framed structure designed to the applicable seismic zone",
+      "icon": null
+    },
+    {
+      "group": "lift-common-areas",
+      "label": "Lifts",
+      "value": "Two passenger lifts and one service lift per block",
+      "icon": null
+    },
+    {
+      "group": "security",
+      "label": "Security",
+      "value": "Manned security at entry with camera surveillance in the lobbies",
+      "icon": null
+    },
+    {
+      "group": "other",
+      "label": "Water supply",
+      "value": "Borewell and corporation supply with treated storage",
+      "icon": null
+    }
+  ],
+  "constructionSpecs": [
+    {
+      "group": "structure",
+      "label": "Framing",
+      "value": "RCC framed structure with concrete block masonry"
+    },
+    {
+      "group": "flooring",
+      "label": "Living and dining",
+      "value": "Large-format vitrified tiles"
+    },
+    {
+      "group": "flooring",
+      "label": "Bedrooms",
+      "value": "Laminated wooden flooring in the primary bedroom, vitrified elsewhere"
+    },
+    {
+      "group": "kitchen",
+      "label": "Counter and dado",
+      "value": "Granite counter with a stainless steel sink and a tiled dado"
+    },
+    {
+      "group": "doors-windows",
+      "label": "Main door",
+      "value": "Engineered hardwood frame with a veneered, polished shutter"
+    },
+    {
+      "group": "doors-windows",
+      "label": "Windows",
+      "value": "UPVC sliding windows with mosquito mesh provision"
+    },
+    {
+      "group": "bathroom",
+      "label": "Fittings",
+      "value": "Ceramic sanitaryware with single-lever mixers and a geyser point"
+    },
+    {
+      "group": "electrical",
+      "label": "Wiring",
+      "value": "Concealed FR copper wiring with modular switches and an ELCB"
+    },
+    {
+      "group": "walls-painting",
+      "label": "Finish",
+      "value": "Two coats of emulsion over putty inside, textured exterior paint"
+    },
+    {
+      "group": "lift-common-areas",
+      "label": "Lobbies",
+      "value": "Granite-clad ground lobby with tiled floors on the upper levels"
+    }
+  ],
+  "unitConfigurations": [
+    {
+      "id": 1,
+      "name": "2 BHK",
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "superBuiltUpArea": 1180,
+      "carpetArea": 850,
+      "areaUnit": "sqft",
+      "price": 8850000,
+      "priceOnRequest": false,
+      "floorPlanImageUrl": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-1/900/600",
+      "floorPlanPdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "availableUnits": 4,
+      "isActive": true
+    },
+    {
+      "id": 2,
+      "name": "3 BHK",
+      "bedrooms": 3,
+      "bathrooms": 3,
+      "superBuiltUpArea": 1650,
+      "carpetArea": 1188,
+      "areaUnit": "sqft",
+      "price": 12400000,
+      "priceOnRequest": false,
+      "floorPlanImageUrl": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-2/900/600",
+      "floorPlanPdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "availableUnits": 6,
+      "isActive": true
+    },
+    {
+      "id": 3,
+      "name": "3 BHK + Study",
+      "bedrooms": 3,
+      "bathrooms": 3,
+      "superBuiltUpArea": 1860,
+      "carpetArea": 1339,
+      "areaUnit": "sqft",
+      "price": 14200000,
+      "priceOnRequest": false,
+      "floorPlanImageUrl": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-3/900/600",
+      "floorPlanPdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "availableUnits": 2,
+      "isActive": true
+    }
+  ],
+  "floorPlans": [
+    {
+      "id": 1,
+      "title": "2 BHK — 1,180 sq ft",
+      "imageUrl": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-1/900/600",
+      "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "area": 1180,
+      "areaUnit": "sqft",
+      "bedrooms": 2,
+      "price": 8850000,
+      "order": 1
+    },
+    {
+      "id": 2,
+      "title": "3 BHK — 1,650 sq ft",
+      "imageUrl": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-2/900/600",
+      "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "area": 1650,
+      "areaUnit": "sqft",
+      "bedrooms": 3,
+      "price": 12400000,
+      "order": 2
+    },
+    {
+      "id": 3,
+      "title": "3 BHK + Study — 1,860 sq ft",
+      "imageUrl": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-3/900/600",
+      "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "area": 1860,
+      "areaUnit": "sqft",
+      "bedrooms": 3,
+      "price": 14200000,
+      "order": 3
+    }
+  ],
+  "images": [
+    {
+      "id": 1,
+      "url": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-1/1200/800",
+      "alt": "Lakeview Heights – 3 BHK Apartment in Whitefield – exterior",
+      "caption": "Lakeview Heights, Whitefield",
+      "order": 1,
+      "isCover": true
+    },
+    {
+      "id": 2,
+      "url": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-2/1200/800",
+      "alt": "Lakeview Heights – 3 BHK Apartment in Whitefield – living room",
+      "caption": null,
+      "order": 2,
+      "isCover": false
+    },
+    {
+      "id": 3,
+      "url": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-3/1200/800",
+      "alt": "Lakeview Heights – 3 BHK Apartment in Whitefield – kitchen",
+      "caption": null,
+      "order": 3,
+      "isCover": false
+    },
+    {
+      "id": 4,
+      "url": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-4/1200/800",
+      "alt": "Lakeview Heights – 3 BHK Apartment in Whitefield – bedroom",
+      "caption": null,
+      "order": 4,
+      "isCover": false
+    },
+    {
+      "id": 5,
+      "url": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-5/1200/800",
+      "alt": "Lakeview Heights – 3 BHK Apartment in Whitefield – balcony view",
+      "caption": null,
+      "order": 5,
+      "isCover": false
+    },
+    {
+      "id": 6,
+      "url": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-6/1200/800",
+      "alt": "Lakeview Heights – 3 BHK Apartment in Whitefield – clubhouse",
+      "caption": null,
+      "order": 6,
+      "isCover": false
+    },
+    {
+      "id": 7,
+      "url": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-7/1200/800",
+      "alt": "Lakeview Heights – 3 BHK Apartment in Whitefield – amenities",
+      "caption": null,
+      "order": 7,
+      "isCover": false
+    },
+    {
+      "id": 8,
+      "url": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-8/1200/800",
+      "alt": "Lakeview Heights – 3 BHK Apartment in Whitefield – master plan",
+      "caption": null,
+      "order": 8,
+      "isCover": false
+    }
+  ],
+  "videoUrl": "https://www.youtube.com/watch?v=ysz5S6PUM-U",
+  "virtualTourUrl": "https://www.squaresnacres.com/virtual-tour/placeholder",
+  "brochureUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+  "brochureLeadGated": true,
+  "documents": [
+    {
+      "id": 1,
+      "title": "Project brochure",
+      "url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "type": "brochure",
+      "leadGated": true,
+      "order": 1
+    },
+    {
+      "id": 2,
+      "title": "Approved plan sanction",
+      "url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "type": "approval",
+      "leadGated": true,
+      "order": 2
+    },
+    {
+      "id": 3,
+      "title": "Title and encumbrance summary",
+      "url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "type": "legal",
+      "leadGated": true,
+      "order": 3
+    },
+    {
+      "id": 4,
+      "title": "Current price list",
+      "url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "type": "price-list",
+      "leadGated": true,
+      "order": 4
+    }
+  ],
+  "location": {
+    "address": "Survey No. 11, Whitefield Main Road",
+    "localityId": 1,
+    "cityId": 1,
+    "pincode": "560066",
+    "landmark": "Near Hope Farm Metro Station",
+    "latitude": 12.9746,
+    "longitude": 77.7517,
+    "mapEmbedUrl": null,
+    "showExactLocation": false
+  },
+  "nearbyPlaces": [
+    {
+      "id": 1,
+      "name": "Hope Farm Metro Station",
+      "category": "metro",
+      "distanceKm": 1.5,
+      "travelTimeMin": 6,
+      "order": 1
+    },
+    {
+      "id": 2,
+      "name": "Forum Shantiniketan Mall",
+      "category": "mall",
+      "distanceKm": 2.6,
+      "travelTimeMin": 10,
+      "order": 2
+    },
+    {
+      "id": 3,
+      "name": "Vydehi Institute of Medical Sciences",
+      "category": "hospital",
+      "distanceKm": 3.4,
+      "travelTimeMin": 13,
+      "order": 3
+    },
+    {
+      "id": 4,
+      "name": "Deens Academy",
+      "category": "school",
+      "distanceKm": 2.2,
+      "travelTimeMin": 9,
+      "order": 4
+    },
+    {
+      "id": 5,
+      "name": "International Tech Park Bangalore",
+      "category": "it-park",
+      "distanceKm": 4.2,
+      "travelTimeMin": 16,
+      "order": 5
+    },
+    {
+      "id": 6,
+      "name": "Whitefield Railway Station",
+      "category": "railway",
+      "distanceKm": 3,
+      "travelTimeMin": 12,
+      "order": 6
+    },
+    {
+      "id": 7,
+      "name": "Kempegowda International Airport",
+      "category": "airport",
+      "distanceKm": 45,
+      "travelTimeMin": 75,
+      "order": 7
+    }
+  ],
+  "pricing": {
+    "price": 12400000,
+    "priceOnRequest": false,
+    "priceRangeMin": 8850000,
+    "priceRangeMax": 14200000,
+    "pricePerSqft": 7515,
+    "priceNegotiable": true,
+    "rentPerMonth": null,
+    "securityDeposit": null,
+    "maintenanceChargesMonthly": null,
+    "bookingAmount": 500000,
+    "otherCharges": [],
+    "currency": "INR"
+  },
+  "area": {
+    "superBuiltUpArea": 1650,
+    "builtUpArea": 1436,
+    "carpetArea": 1188,
+    "plotArea": null,
+    "areaUnit": "sqft",
+    "plotLength": null,
+    "plotWidth": null,
+    "plotDimensionUnit": null
+  },
+  "configuration": {
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "balconies": 2,
+    "parkingCovered": 2,
+    "parkingOpen": 0,
+    "servantRoom": false,
+    "studyRoom": true,
+    "poojaRoom": true,
+    "kitchenType": "modular"
+  },
+  "project": {
+    "developerId": 1,
+    "totalUnits": 320,
+    "totalTowers": 4,
+    "totalFloors": 18,
+    "projectAreaAcres": 5.2,
+    "openAreaPercent": 72,
+    "launchDate": "2022-02-01",
+    "approvals": ["bbmp", "rera"],
+    "landmarkProject": true
+  },
+  "constructionTimeline": [],
+  "constructionProgressPercent": null,
+  "faqs": [
+    {
+      "id": 1,
+      "question": "What does a 3 BHK Apartment at Lakeview Heights cost?",
+      "answer": "<p>The 3 bhk apartment in this listing is priced at ₹1.24 Cr, which works out to roughly ₹7,515 per square foot. Other configurations in the project start at ₹88.5 L. Registration, stamp duty and the statutory charges are payable on top.</p>",
+      "order": 1
+    },
+    {
+      "id": 2,
+      "question": "Is the property ready to move into?",
+      "answer": "<p>Yes. The property is complete and ready for registration and handover, and is about 2 years old. There is no construction risk left in this transaction.</p>",
+      "order": 2
+    },
+    {
+      "id": 3,
+      "question": "Is the project registered under RERA?",
+      "answer": "<p>The listing carries the registration number shown in the overview. Check it yourself on the Karnataka RERA portal — the project page there shows the declared plans, the unit inventory and the completion date, which is what makes the number useful.</p>",
+      "order": 3
+    },
+    {
+      "id": 4,
+      "question": "What is included in the amenities?",
+      "answer": "<p>18 amenities are listed on this page, including swimming pool, clubhouse, gymnasium and landscaped gardens. The amenities section lists them in full, grouped by category.</p>",
+      "order": 4
+    },
+    {
+      "id": 5,
+      "question": "What is Whitefield like to live in?",
+      "answer": "<p>East Bengaluru's best-known technology corridor: gated apartment projects, international schools and Purple Line metro stations along the main road. The locality page carries the full picture — connectivity, price band and the landmarks nearby.</p>",
+      "order": 5
+    }
+  ],
+  "similarPropertyIds": [2, 3, 4, 5],
+  "sectionVisibility": {
+    "overview": true,
+    "highlights": true,
+    "specifications": true,
+    "amenities": true,
+    "unitConfigurations": true,
+    "floorPlans": true,
+    "gallery": true,
+    "video": true,
+    "virtualTour": true,
+    "documents": true,
+    "construction": false,
+    "builder": true,
+    "nearby": true,
+    "location": true,
+    "finance": true,
+    "faqs": true,
+    "similar": true,
+    "enquiry": true
+  },
+  "agent": {
+    "teamMemberId": 2,
+    "name": null,
+    "phone": null,
+    "whatsapp": null,
+    "email": null,
+    "photoUrl": null,
+    "showOnListing": true
+  },
+  "seo": {
+    "focusKeyword": "3 bhk apartment in whitefield",
+    "secondaryKeywords": ["lakeview heights whitefield", "apartments in whitefield"],
+    "title": "3 BHK Apartment in Whitefield",
+    "description": "3 BHK Apartment at Lakeview Heights, Whitefield, Bengaluru — 1,650 sq ft at ₹1.24 Cr. Ready-to-move 2 and 3 BHK apartments in a gated development off Whitefield",
+    "slug": "lakeview-heights-3-bhk-whitefield",
+    "canonicalUrl": null,
+    "robots": {
+      "index": true,
+      "follow": true,
+      "noarchive": false,
+      "nosnippet": false,
+      "noimageindex": false,
+      "maxSnippet": null,
+      "maxImagePreview": "large",
+      "maxVideoPreview": null
+    },
+    "og": {
+      "title": null,
+      "description": null,
+      "imageUrl": null
+    },
+    "twitter": {
+      "card": "summary_large_image",
+      "title": null,
+      "description": null,
+      "imageUrl": null
+    },
+    "breadcrumbTitle": null,
+    "schema": {
+      "type": "auto",
+      "custom": "",
+      "disabledAutoTypes": []
+    },
+    "sitemap": {
+      "include": true,
+      "priority": null,
+      "changefreq": null
+    },
+    "redirect": {
+      "enabled": false,
+      "toPath": "",
+      "statusCode": 301
+    },
+    "score": null,
+    "scoreBand": "none",
+    "testsPassed": 0,
+    "testsTotal": 0,
+    "analysis": {
+      "basic": [],
+      "additional": [],
+      "titleReadability": [],
+      "contentReadability": []
+    },
+    "lastAnalyzedAt": null
+  },
+  "isActive": true,
+  "isFeatured": true,
+  "isVerified": true,
+  "priorityOrder": 9,
+  "viewCount": 1690,
+  "enquiryCount": 24,
+  "publishedAt": "2026-04-23T09:30:00.000Z",
+  "createdBy": 1,
+  "updatedBy": 1,
+  "createdAt": "2026-04-19T14:45:00.000Z",
+  "updatedAt": "2026-06-29T06:20:00.000Z"
+}
