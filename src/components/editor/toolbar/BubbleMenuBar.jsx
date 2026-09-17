@@ -15,8 +15,7 @@ const OFFSET = 8;
  * that instance where the selection is on screen throws. Both menus measure
  * geometry, so both have to ask first.
  */
-export const isMounted = (editor) =>
-  Boolean(editor) && editor.isInitialized && !editor.isDestroyed;
+export const isMounted = (editor) => Boolean(editor) && editor.isInitialized && !editor.isDestroyed;
 
 /**
  * The little bar that appears over a text selection.

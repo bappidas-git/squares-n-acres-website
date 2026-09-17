@@ -26,8 +26,11 @@ const PropertiesListPage = lazy(() => import('../pages/admin/properties/Properti
 const PropertyFormPage = lazy(() => import('../pages/admin/properties/PropertyFormPage'));
 const LeadsListPage = lazy(() => import('../pages/admin/leads/LeadsListPage'));
 const LeadDetailPage = lazy(() => import('../pages/admin/leads/LeadDetailPage'));
-const AdminArticles = lazy(() => import('../pages/admin/AdminArticles'));
-const ArticleForm = lazy(() => import('../pages/admin/ArticleForm'));
+const ArticlesListPage = lazy(() => import('../pages/admin/articles/ArticlesListPage'));
+const ArticleFormPage = lazy(() => import('../pages/admin/articles/ArticleFormPage'));
+const ArticleCategoriesPage = lazy(() => import('../pages/admin/articles/CategoriesPage'));
+const ArticleTagsPage = lazy(() => import('../pages/admin/articles/TagsPage'));
+const AuthorsPage = lazy(() => import('../pages/admin/articles/AuthorsPage'));
 const LocalitiesPage = lazy(() => import('../pages/admin/master-data/LocalitiesPage'));
 const LocalityFormPage = lazy(() => import('../pages/admin/master-data/LocalityFormPage'));
 const CitiesPage = lazy(() => import('../pages/admin/master-data/CitiesPage'));
@@ -85,12 +88,17 @@ export const ADMIN_ROUTES = [
   page('leads', 'Leads', ['leads', 'view'], <LeadsListPage />),
   page('leads/:id', 'Lead details', ['leads', 'view'], <LeadDetailPage />),
 
-  page('articles', 'Articles', ['articles', 'view'], <AdminArticles />),
-  page('articles/add', 'Add article', ['articles', 'create'], <ArticleForm />),
-  page('articles/edit/:id', 'Edit article', ['articles', 'edit'], <ArticleForm />),
-  soon('articles/categories', 'Article categories', ['articles', 'view'], 33),
-  soon('articles/tags', 'Article tags', ['articles', 'view'], 33),
-  soon('articles/authors', 'Authors', ['articles', 'view'], 33),
+  page('articles', 'Articles', ['articles', 'view'], <ArticlesListPage />),
+  page('articles/add', 'Add article', ['articles', 'create'], <ArticleFormPage />),
+  page('articles/edit/:id', 'Edit article', ['articles', 'edit'], <ArticleFormPage />),
+  page(
+    'articles/categories',
+    'Article categories',
+    ['articles', 'view'],
+    <ArticleCategoriesPage />
+  ),
+  page('articles/tags', 'Article tags', ['articles', 'view'], <ArticleTagsPage />),
+  page('articles/authors', 'Authors', ['articles', 'view'], <AuthorsPage />),
 
   page('pages', 'Pages', ['content', 'view'], <PagesListPage />),
   page('pages/add', 'Add page', ['content', 'create'], <PageFormPage />),
