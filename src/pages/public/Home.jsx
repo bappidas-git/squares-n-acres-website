@@ -1,13 +1,17 @@
 import { useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 
+// The two CMS blocks lead the imports, before any section that pulls a
+// stylesheet `components/cms/blocks/index.js` also pulls: that barrel registers
+// `blocks.module.css` first, and two chunks disagreeing about the order of the
+// extracted CSS is what `build:ci` treats as an error.
+import FeaturesBlock from '../../components/cms/blocks/FeaturesBlock';
+import StepsBlock from '../../components/cms/blocks/StepsBlock';
 import CategoryTiles from '../../components/sections/home/CategoryTiles';
 import CtaBand from '../../components/sections/home/CtaBand';
 import ExploreLocalities from '../../components/sections/home/ExploreLocalities';
 import FaqSection from '../../components/sections/home/FaqSection';
 import HeroSection from '../../components/sections/home/HeroSection';
-import HomeFeatures from '../../components/sections/home/HomeFeatures';
-import HomeSteps from '../../components/sections/home/HomeSteps';
 import LatestInsights from '../../components/sections/home/LatestInsights';
 import PATHS from '../../routes/paths';
 import PartnersSection from '../../components/sections/home/PartnersSection';
@@ -33,6 +37,10 @@ import { useSiteSettings } from '../../contexts/SiteSettingsContext';
  * and the testimonials, insights, FAQs and partners are their own collections.
  * Nothing on this page is a sentence a component made up, which is what closes
  * the home half of BUG-11.
+ *
+ * The two CMS bands are rendered by `components/cms/blocks` — the very
+ * components every other page uses for the same two block types (prompt 30), so
+ * the home page and `/about` cannot drift apart.
  *
  * A section with nothing behind it renders nothing at all — no heading, no
  * empty state, no gap. A visitor cannot tell the difference between a section
@@ -138,8 +146,8 @@ export default function Home() {
         <PropertyTypeGrid />
         <TopBuilders />
 
-        <HomeFeatures data={blocks.features} />
-        <HomeSteps data={blocks.steps} />
+        <FeaturesBlock data={blocks.features ?? {}} background="surface" />
+        <StepsBlock data={blocks.steps ?? {}} background="bg" />
 
         {testimonials.length > 0 ? (
           <Section background="surface" spacing="lg">

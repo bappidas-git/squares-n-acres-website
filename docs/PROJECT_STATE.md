@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 29 — Admin leads CRM and dashboard Next prompt: 30
+Last prompt executed: 30 — Pages CMS: admin block editor, public renderer, CmsPage routes Next prompt: 31
 
 ## Executed prompts
 
@@ -35,7 +35,8 @@ Last prompt executed: 29 — Admin leads CRM and dashboard Next prompt: 30
 | 26  | Public listing engine, filters, global search and shortlist    | `382e5cf`                                                                          | 2026-09-17 |
 | 27  | Data-driven home page, navigation and footer                   | `f20e4e0`                                                                          | 2026-09-17 |
 | 28  | Unified lead capture, spam protection, click tracking          | `66d200a`                                                                          | 2026-09-17 |
-| 29  | Admin leads CRM and the real-data dashboard                    | HEAD of this branch (a commit cannot contain its own hash — prompt 30 fills it in) | 2026-09-17 |
+| 29  | Admin leads CRM and the real-data dashboard                    | `69fd6c5`                                                                          | 2026-09-17 |
+| 30  | Pages CMS: admin block editor, public renderer, CmsPage routes | HEAD of this branch (a commit cannot contain its own hash — prompt 31 fills it in) | 2026-09-17 |
 
 ## Baseline (prompt 01)
 
@@ -313,27 +314,30 @@ The boilerplate's own endpoint surface stays inventoried in
 | Property-type SEO placeholder card              | The property-type form ends in an `Alert` saying the SEO panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched so nothing is lost meanwhile.                                                                                                                                                                                                                                                                                                                       | 36           |
 | `LegacyHtml` in `FaqAccordion`                  | Every FAQ on the site — the home band, `/insights/faqs`, a property page's questions and the CMS `faq` block — renders its answer through the temporary `LegacyHtml`. `SafeHtml` replaces it with the editor's allow-list, and the same prompt turns the FAQ form's HTML textarea into the editor.                                                                                                                                                                                                       | 32           |
 | `LegacyHtml` in `OverviewSection`               | The property description on `/properties/:slug` is CMS-authored HTML rendered through the temporary `LegacyHtml`, clamped to about twelve lines with a measured "Read more". `SafeHtml` replaces it with the editor's allow-list; the clamp, the measurement and the markup around it do not move.                                                                                                                                                                                                       | 32           |
-| `AdminPlaceholderPage` routes                   | Thirteen admin routes of `src/routes/adminRouteConfig.js` render `AdminPlaceholderPage` with the number of the prompt that writes the screen (13–39). Each one disappears when its owner prompt lands; the component itself must not exist after prompt 43.                                                                                                                                                                                                                                              | 13–39        |
+| `AdminPlaceholderPage` routes                   | Ten admin routes of `src/routes/adminRouteConfig.js` render `AdminPlaceholderPage` with the number of the prompt that writes the screen (31–39) — prompt 30 took the three `pages` routes off the list. Each one disappears when its owner prompt lands; the component itself must not exist after prompt 43.                                                                                                                                                                                            | 13–39        |
 | ~~`LeadModalTemp` → `LeadCaptureModal`~~        | **Closed in 28.** `LeadModalTemp.jsx` and its stylesheet are deleted; `components/common/LeadCaptureModal.jsx` is the one dialog, parameterised from `ENTRY_POINTS`. Prompt 25 gave it `successTitle`/`successAction`, which is how the documents section hands the file over after the lead (BUG-08); what it still lacks is the requirement fields, the submit throttle (D43) and `<label>`s on its boxes (ADD-09). Prompt 28 unifies every form on the site behind `LeadCaptureModal` and deletes it. | 28           |
 | `PropertyDetails` temporary `Helmet`            | The page sets `<title>`, the description, the canonical and `robots` through `react-helmet-async`; `<Seo>` replaces it in prompt 38 with the §9.5 templates, the social tags and the JSON-LD graph (including the `BreadcrumbList` the crumbs already describe).                                                                                                                                                                                                                                         | 38           |
 | Listing `Helmet` → `<Seo type="listing">`       | `ListingEngine` renders the title, the description, the canonical and `robots` from `listingSeo.js` through `react-helmet-async`, and `Pagination` emits `rel=prev/next` from the same object. Prompt 38 hands `buildListingSeo()` to `<Seo>`, which adds the OG/Twitter tags and the `ItemList` JSON-LD; the rules themselves do not change.                                                                                                                                                            | 38           |
 | `Shortlist` temporary `Helmet`                  | `/shortlist` sets its title and `noindex, follow` through `react-helmet-async`; `<Seo type="shortlist">` replaces it, with the same robots rule (§9.3).                                                                                                                                                                                                                                                                                                                                                  | 38           |
-| `HomeFeatures` / `HomeSteps` → CMS blocks       | The `features` and `steps` blocks of the `home` page are rendered by two components in `sections/home/`. Prompt 30 moves them to `components/cms/blocks/` and mounts them from `PageRenderer`, so the About page's values and a service page's process render through the same markup. The markup is what moves; the data contract does not change.                                                                                                                                                      | 30           |
+| ~~`HomeFeatures` / `HomeSteps` → CMS blocks~~   | **Closed in 30.** Both files are deleted. `components/cms/blocks/FeaturesBlock.jsx` and `StepsBlock.jsx` carry the same markup, `PageRenderer` mounts them for every page that holds those blocks, and `Home.jsx` imports the very same two components — so the home page’s “Why choose us” and the About page’s values cannot drift apart.                                                                                                                                                              | 30           |
 | ~~Post-requirement modal → `LeadCaptureModal`~~ | **Closed in 28.** The header CTA, the drawer's CTA row and the bottom bar's Enquire all call `useLeadCapture().openLeadModal({ entry: 'post-requirement' })`; `LeadCaptureProvider` mounts the one dialog for the whole app.                                                                                                                                                                                                                                                                             | 28           |
 | Home `Helmet` → `<Seo type="home">`             | `Home.jsx` sets `<title>` and the description from the `home` CMS page's `seo` branch through `react-helmet-async`. Prompt 38 hands the same record to `<Seo type="home">`, which adds the §9.5 template, the social tags and the `Organization` + `WebSite` JSON-LD graph.                                                                                                                                                                                                                              | 38           |
+| RichText / Html blocks → editor + `SafeHtml`    | The `richText`, `html`, `faq` and `expandableCards` blocks hold HTML in a monospace `TextareaField` with an “HTML is allowed” hint, and render it through the temporary `LegacyHtml`. The client refuses a `<script` — the same rule the API enforces — and nothing else. Prompt 32 puts the Tiptap editor in the box and `SafeHtml` on the page, both against one allow-list; the block schema and the stored `data.html` do not change.                                                                | 32           |
+| Page SEO placeholder card                       | `PageFormPage` ends in an `Alert` saying the SEO panel arrives later; the form carries the record’s `seo` branch through the `PUT` untouched except for `seo.slug`, which is kept in step with the URL (D34). Prompt 36 replaces the card with the panel.                                                                                                                                                                                                                                                | 36           |
+| `CmsPage` `Helmet` → `<Seo type="page">`        | `CmsPage` sets `<title>`, the description, the canonical and `robots` (`noindex, nofollow` while previewing or while the page is a draft) through `react-helmet-async`, from the page’s own `seo` branch. Prompt 38 hands the same record to `<Seo type="page">`, which adds the §9.5 template, the social tags and the `BreadcrumbList` the crumbs already describe.                                                                                                                                    | 38           |
 
 ## Known issues (open) — id, description, found by, owner prompt
 
 ### Tagged defects of `00_MASTER_CONTEXT.md` §11
 
-| Id                        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Found by                  | Owner prompt                      |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- | --------------------------------- |
-| BUG-01                    | Every write uses `PUT` with partial payloads (11 call sites across property/lead/article/FAQ/neighborhood/partner/user toggles) **Prompt 11 moved every write it touched to the right verb**: toggles, reorders and lead-status changes use `PATCH`, bulk actions use `POST /admin/<resource>/bulk`, and `PUT` is reserved for a full-record form save. The row closes when prompts 18–40 confirm the remaining forms. **The property-form half is closed in 21**: the sixteen tabs are written, `toPayload` states the whole §6.1 record and the form saves it with `PUT /admin/properties/:id` (a create is `POST`); no property write sends a partial body through `PUT` any more.                                                                                                                                                                                                                                                      | master spec, confirmed 01 | 11, 14–22, 29, 33, 40             |
-| BUG-09 (contract defined) | Lead sources inconsistent (21 values in `src/` vs `adminConstants` vs `AdminLayout.formatSource`). **Prompt 05 froze `LEAD_SOURCES` (29 values) and `LEGACY_LEAD_SOURCE_MAP` (24 old values)** in `src/config/enums.js`, tested in `enums.test.js`. The forms still send the old values; **Prompt 08 applies `LEGACY_LEAD_SOURCE_MAP` on `POST /leads`**, so an old bundle's `property_enquiry` is stored as `property-enquiry` and an unknown value is a 422. The seed converts its own rows in 10, the forms move in 28 and the CRM labels in 29. **Closed in the client in 28:** `src/utils/leadSources.js` `ENTRY_POINTS` is the only place `src/` writes a source, every value is canonical, and `leadSources.test.js` asserts it; the acceptance grep for the fifteen legacy spellings returns 0. Only the CRM labels (29) remain.                                                                                                   | master spec, confirmed 01 | 29 (contract: 05 ✔, client: 28 ✔) |
-| BUG-11                    | Hardcoded content on About, Contact, FAQs, HomeLoan, LegalAssistance, InteriorDesigning, Careers, Partnership, SellLet, FlexibleWorkspace, DirectLeaseRetails, RealEstateAwareness, WhyChoose, HowItWorks, Dashboard trends, footer defaults, `SeoGuidelines` **Data side prepared in 10:** every one of those pages is now a seeded CMS record with its blocks, so prompts 27–31 render data rather than JSX. **Home half closed in 27:** `WhyChoose` and `HowItWorks` are deleted and the two bands are the `features` and `steps` blocks of the `home` page; every other band of the home page is settings, master data or a collection. **Dashboard half closed in 29:** `Dashboard.js` is deleted and `/admin/dashboard` draws one `GET /admin/dashboard` response — the "+12 %" badges are gone and the single comparison on the screen is this month against last, omitted when last month was zero. The other pages are still JSX. | master spec, confirmed 01 | 29, 30, 31, 37, 40                |
-| BUG-15 (frontend)         | Careers résumé upload dead; no spam protection; newsletter no dedupe and a false reCAPTCHA notice. **Closed on the server in 09:** `POST /jobs/:id/apply`, `POST /newsletter/subscribe` and `POST /leads` are throttled to ten a minute per IP and honour the `website` honeypot, a known address answers "Already subscribed" and an unsubscribed one is revived, and a résumé travels as a URL (D12). **The spam protection and the newsletter half are closed in the client in 28:** every lead form and the newsletter band carry the `website` honeypot and a ten-second throttle (D43), a duplicate address reads back as "You're already subscribed", and the reCAPTCHA notice only appears when a site key is configured. The careers résumé upload is prompt 31's.                                                                                                                                                                | master spec, confirmed 01 | 31                                |
-| BUG-18 (frontend)         | `getFeatured` tag hack; ad-hoc trending/related; FAQ page/section fetch-all-and-filter. **Closed on the server:** `/properties/featured` and `/properties/:id/similar` (08), `/articles/trending` and the `category`/`showOnHome`/`propertyTypeId` FAQ filters (09). The components that still fetch-all-and-filter arrive with 27 and 34. **Mostly closed in 11**: `FeaturedProperties` calls `/properties/featured`, `TrendingTopics` and `Articles` call `/articles/trending`, `FaqSection` calls `/faqs?showOnHome=true` and the FAQ page filters server-side. What is left is the listing page, which still narrows in the browser (prompt 26).                                                                                                                                                                                                                                                                                       | master spec, confirmed 01 | 27, 34                            |
-| BUG-21                    | Additional defects recorded here by the audit prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | 01                        | 01 → all                          |
+| Id                        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Found by                  | Owner prompt                      |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | --------------------------------- |
+| BUG-01                    | Every write uses `PUT` with partial payloads (11 call sites across property/lead/article/FAQ/neighborhood/partner/user toggles) **Prompt 11 moved every write it touched to the right verb**: toggles, reorders and lead-status changes use `PATCH`, bulk actions use `POST /admin/<resource>/bulk`, and `PUT` is reserved for a full-record form save. The row closes when prompts 18–40 confirm the remaining forms. **The property-form half is closed in 21**: the sixteen tabs are written, `toPayload` states the whole §6.1 record and the form saves it with `PUT /admin/properties/:id` (a create is `POST`); no property write sends a partial body through `PUT` any more.                                                                                                                                                                                                                                                                                                                    | master spec, confirmed 01 | 11, 14–22, 29, 33, 40             |
+| BUG-09 (contract defined) | Lead sources inconsistent (21 values in `src/` vs `adminConstants` vs `AdminLayout.formatSource`). **Prompt 05 froze `LEAD_SOURCES` (29 values) and `LEGACY_LEAD_SOURCE_MAP` (24 old values)** in `src/config/enums.js`, tested in `enums.test.js`. The forms still send the old values; **Prompt 08 applies `LEGACY_LEAD_SOURCE_MAP` on `POST /leads`**, so an old bundle's `property_enquiry` is stored as `property-enquiry` and an unknown value is a 422. The seed converts its own rows in 10, the forms move in 28 and the CRM labels in 29. **Closed in the client in 28:** `src/utils/leadSources.js` `ENTRY_POINTS` is the only place `src/` writes a source, every value is canonical, and `leadSources.test.js` asserts it; the acceptance grep for the fifteen legacy spellings returns 0. Only the CRM labels (29) remain.                                                                                                                                                                 | master spec, confirmed 01 | 29 (contract: 05 ✔, client: 28 ✔) |
+| BUG-11                    | Hardcoded content on About, Contact, FAQs, HomeLoan, LegalAssistance, InteriorDesigning, Careers, Partnership, SellLet, FlexibleWorkspace, DirectLeaseRetails, RealEstateAwareness, WhyChoose, HowItWorks, Dashboard trends, footer defaults, `SeoGuidelines` **Data side prepared in 10:** every one of those pages is a seeded CMS record with its blocks. **Home half closed in 27**, **dashboard half closed in 29.** **Nine more pages closed in 30:** `About.jsx`, `Contact.jsx`, `SellLet.jsx`, `Partnership.jsx`, `HomeLoan.jsx`, `LegalAssistance.jsx`, `InteriorDesigning.jsx`, `FlexibleWorkspace.jsx` and `DirectLeaseRetails.jsx` are deleted, and `CmsPage` renders all of them — plus the three legal texts — from their blocks through `PageRenderer`; `HomeFeatures.jsx`/`HomeSteps.jsx` are gone too, the home page importing the CMS block components directly. **What is left:** `Careers.jsx` and `RealEstateAwareness.js` (31), the footer defaults (40) and `SeoGuidelines` (37). | 31, 37, 40                | 29, 30, 31, 37, 40                |
+| BUG-15 (frontend)         | Careers résumé upload dead; no spam protection; newsletter no dedupe and a false reCAPTCHA notice. **Closed on the server in 09:** `POST /jobs/:id/apply`, `POST /newsletter/subscribe` and `POST /leads` are throttled to ten a minute per IP and honour the `website` honeypot, a known address answers "Already subscribed" and an unsubscribed one is revived, and a résumé travels as a URL (D12). **The spam protection and the newsletter half are closed in the client in 28:** every lead form and the newsletter band carry the `website` honeypot and a ten-second throttle (D43), a duplicate address reads back as "You're already subscribed", and the reCAPTCHA notice only appears when a site key is configured. The careers résumé upload is prompt 31's.                                                                                                                                                                                                                              | master spec, confirmed 01 | 31                                |
+| BUG-18 (frontend)         | `getFeatured` tag hack; ad-hoc trending/related; FAQ page/section fetch-all-and-filter. **Closed on the server:** `/properties/featured` and `/properties/:id/similar` (08), `/articles/trending` and the `category`/`showOnHome`/`propertyTypeId` FAQ filters (09). The components that still fetch-all-and-filter arrive with 27 and 34. **Mostly closed in 11**: `FeaturedProperties` calls `/properties/featured`, `TrendingTopics` and `Articles` call `/articles/trending`, `FaqSection` calls `/faqs?showOnHome=true` and the FAQ page filters server-side. What is left is the listing page, which still narrows in the browser (prompt 26).                                                                                                                                                                                                                                                                                                                                                     | master spec, confirmed 01 | 27, 34                            |
+| BUG-21                    | Additional defects recorded here by the audit prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | 01                        | 01 → all                          |
 
 ### Additional defects of `00_MASTER_CONTEXT.md` §11
 
@@ -346,7 +350,6 @@ The boilerplate's own endpoint surface stays inventoried in
 | ADD-06 (partial) | **Closed in 04:** the three scroll-hide copies (now `useScrollDirection`; `useThrottledScroll` stays for `BackToTop`), the 13 local `Section` components (now `ui/Section`), and `tagColors` vs `TAG_OPTIONS` (`PropertyCard` reads `TAG_OPTIONS` tones). **Still open:** the five `formatPrice` and three `formatDate` copies still exist at their call sites — `src/utils/format.js` is the single implementation but the call sites move to it with the data hooks; `GooglePreview` ×2, `getTitleLenColor` ×2 and `leadStatusConfig` in `Dashboard`. The nav data half closed in 27 (`src/config/navigation.js`). | master spec, confirmed 01 | 11, 36 |
 | ADD-09 (closed in 28) | `LeadForm` ignores `required:false`, has no `<label>`s, no `onSuccess`, posts unsanitised values; `NewsletterSection` validation is `includes('@')`, fails silently, shows a false reCAPTCHA notice. **Closed:** every control is a `ui/FormField` with a visible `<label>`, `aria-describedby` and `aria-invalid`; `required` is honoured per field; the payload is sanitised, the phone normalised to `+91XXXXXXXXXX` and unknown answers filed under `meta` (D56); `onSuccess(lead, values)` exists; `NewsletterForm` validates with `EMAIL_PATTERN`, shows its error inline and only claims reCAPTCHA when a key is set. | master spec, confirmed 01 | 28 ✔ |
 | ADD-16 | `ArticleDetail` Markdown renderer: duplicate tables on every `\ **Closed in 11**: the article body is CMS-authored HTML rendered through `LegacyHtml`, and the breadcrumb now goes Home → Articles → category.                                                                                                                                                                                                                                                                                                                                                             | `line, ordered lists rendered as`<ul>`, only `**bold**`inline, breadcrumb "Insights" and "Articles" to the same URL;`Articles` state not URL-synced | master spec, confirmed 01 | 32, 34 |
-| ADD-17 | `Contact`: five `#` social links opening new tabs, generic Brigade Road map with a fabricated `!4v1700000000000`, US-format phone in FAQs `(555) 123-4567`. **The FAQ half is closed in 17**: `/insights/faqs` renders `ContactMethods`, which reads the phone, the e-mail and the WhatsApp number from `siteSettings.general` and renders nothing when they are empty (D83). The contact page keeps the rest. | master spec, confirmed 01 | 30, 31 |
 | ADD-18 | `Careers`: résumé file input has no `name`/`onChange`, form never reset, modal without dialog semantics; `InteriorDesigning` room cards and "Get Started" buttons do nothing; `LegalAssistance`/`RealEstateAwareness` encode conflicting Karnataka stamp-duty figures | master spec, confirmed 01 | 30, 31 |
 | ADD-19 (settings/users) | `AdminSettings`: `PUT` drops `footerLinks`, tab panels out of order, "Footer Tagline" edits the General `tagline`, hardcoded `role === 'admin'`; `UserManagement`: last-admin guard hole, plaintext passwords echoed, own `ROLES` list. **The `AdminLogin` half is closed in 12 and the `UserManagement` half in 13; only the `AdminSettings` form remains, for prompt 40.** | master spec, confirmed 01 | 40 |
 | ADD-20 | `AdminSeo`: the old domain in previews, "Auto-Generate" writes HOM titles/canonicals/schema, `stats.missing` dead, saving wipes empty fields, no confirmation before bulk overwrite; `ArticleForm`: the boilerplate brand as the default article author, `readTime` not editable, `isTrending/trendingOrder` dropped on PUT, `setTimeout(navigate)` not cleared | master spec, confirmed 01 | 33, 36, 37 |
@@ -379,6 +382,7 @@ The boilerplate's own endpoint surface stays inventoried in
 
 | Id                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Closed by                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ADD-17             | `Contact`: five `#` social links opening new tabs, generic Brigade Road map with a fabricated `!4v1700000000000`, US-format phone in FAQs `(555) 123-4567`. **The FAQ half was closed in 17.** **Closed in 30:** `Contact.jsx` is deleted. `/contact` is the `contact` CMS page, whose `contactInfo` block reads the phone, the e-mail, the WhatsApp number, the address, the working hours and the social links from `siteSettings` and renders nothing it was not given (D83), and whose `map` block falls back to the office coordinates in settings rather than to a hardcoded embed URL.                                                                                                                                                                                                                        |
 | BUG-20             | Nav data hardcoded and duplicated between `Header` and `MobileHeader` (two copies of `navItems` and `sideMenuItems`). **Closed in 27:** `src/config/navigation.js` builds every menu from master data, the published CMS pages and `siteSettings`; the header, the mobile drawer, the bottom bar and the footer all read the same builders, and the two literals are gone.                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ADD-15             | `HeroSection` owned a `role="combobox"` without `aria-controls`, offered "View all results" with no suggestions, and kept unused video/input refs. **Closed in 26/27:** the type-ahead is `GlobalSearch`; the hero is now the tabbed search card, the badges row and the stats row, and it holds no refs of its own.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | BUG-10             | `NotFound` sent `?search=`, `QuickActions` linked `?type=sale`, `?type=rent` and `?type=lease`, and the listing read neither; `type=lease` matched nothing at all. **Closed in 26:** `NotFound` navigates to `/properties?q=`, the six `QuickActions` tiles link to `/buy`, `/rent`, `/lease`, `/commercial`, `/plots` and `/buy/ready-to-move` (D92), and every parameter the listing reads is a §5.7 name. The `?area=` half closed in 14.                                                                                                                                                                                                                                                                                                                                                                         |
@@ -4442,3 +4446,179 @@ Three things worth writing down for the next reader:
 - **The lead list's property filter is a `FilterBar` `custom` field**, not a
   `children` slot: as a field it sits in the row with the other filters on a
   laptop and moves into the "More filters" popover with them below 900 px.
+
+### Prompt 30 — Pages CMS: admin block editor, public renderer and the `CmsPage` routes (2026-09-17)
+
+**What changed**
+
+Nine pages of the public website stopped being JavaScript. `About.jsx`,
+`Contact.jsx`, `SellLet.jsx`, `Partnership.jsx`, `HomeLoan.jsx`,
+`LegalAssistance.jsx`, `InteriorDesigning.jsx`, `FlexibleWorkspace.jsx` and
+`DirectLeaseRetails.jsx` are deleted, with their stylesheets — 2 621 lines of
+hardcoded copy, a hand-rolled EMI calculator, a Brigade Road map iframe and
+five `#` social links among them. Every one of those pages is a CMS record
+whose blocks `PageRenderer` draws, and so are the three legal texts. That is
+the bulk of BUG-11 and all of ADD-17.
+
+**One renderer, twenty-five blocks.** `components/cms/blocks/index.js` maps
+each `BLOCK_TYPES` value to a component; `PageRenderer` sorts by `order`, asks
+each component whether it would render anything at all, alternates the white
+and grey bands over what is left, and renders nothing for a type it does not
+know — with a `console.warn` in development only, so a page saved by a newer
+build degrades rather than breaking. `hero` and `cta` are full-bleed bands and
+do not take a turn in the alternation. `stats` renders only when it has
+figures, which is what §14 means by seeding every stats block empty: the band
+is absent until a client provides a number we can honestly print.
+
+**The blocks are the site's own components.** The FAQ block is `FaqAccordion`,
+the team block is `TeamSection`, the testimonials block is
+`TestimonialsSection`, the partners block is `PartnersSection`, the properties
+block is `PropertyRow`, the banks block is `BankCards` + `EmiCalculator` (with
+a price box, because there is no listing to take a price from), the lead form
+is the one `LeadForm` of prompt 28, and the gallery opens the same lazily
+loaded lightbox chunk the property pages use (D7). Four blocks are new
+behaviour: `ChecklistBlock` keeps a visitor's ticks in their own browser under
+`sna_checklist:<pageSlug>` with a `role="progressbar"` and a Reset;
+`QuizBlock` asks one question at a time and shows the explanation the moment
+an answer is picked, right or wrong; `ExpandableCardsBlock` opens a summary
+into its detail; `PackagesBlock` opens the enquiry dialog with the tier named
+in `meta` (D56).
+
+**`/about` and everything like it.** `CmsPage` resolves a slug three ways — a
+fixed one from a spelled-out route, a prefix plus a parameter
+(`/buyer-assistance/:slug`), or the whole path from the catch-all — fetches
+`GET /pages/slug/:slug`, and answers 404 for a slug nobody has written, a
+draft without a token and a token that has expired. With a token it renders
+the page behind a banner and `noindex, nofollow` (D28). The catch-all is
+`/:slug/*` rather than `*` so that React Router's specificity ranking puts it
+below every static route and above the 404; the twelve reserved first segments
+of D11 never reach it.
+
+**The block editor.** `/admin/pages` lists the fifteen pages with their
+template, their status as a chip that publishes on one press, where they sit in
+the header and footer menus, and when they changed; it filters, bulk-publishes
+and duplicates. `/admin/pages/add|edit/:id` is the form: title, a URL that may
+carry slashes, template, status, hero image, menu placement, a default lead
+source, and `BlockEditor` — cards that collapse to one line, drag or ↑/↓ to
+reorder, duplicate, delete, and a picker of all twenty-five types grouped and
+searchable with a sentence each. There is no per-type form component:
+`blockSchemas.js` says which boxes a type has and `BlockForm` draws them, which
+is what makes an `items[]` list, an entity picker, a lead-form field builder and
+a nested `filter.localityId` all the same switch statement.
+
+**Errors land on the box that caused them.** `validateBlockData` produces the
+same dotted keys a 422 uses (`blocks.3.data.items.0.title`), so a client
+refusal and a server refusal reach the same control, and the card above it
+wears a badge saying how many problems it holds. A slug under a reserved prefix
+is refused with "Reserved path" before it can be saved into a URL no visitor
+could reach.
+
+**A page's slug is a URL path.** This is the contract change the prompt needed.
+§6.10 seeds `buyer-assistance/home-loan` and `scripts/validate-seed.js` has
+allowed it since prompt 10, but nothing had ever written a page _through the
+API_: `slug` was typed `slug` (`[a-z0-9-]+`), so a `PUT` of the seeded record
+answered 422 and `slugify()` would have turned the separator into a hyphen.
+`src/services/schemas/page.js` now types `slug` and its mirrored `seo.slug` as
+a patterned string; `mock-server/lib/slug.js` gained `slugifyPath()` and
+`makeCrudRouter` a `pathSlug` option that only the pages router sets;
+`SlugField` gained a `path` mode. Nothing else in the contract moved.
+
+**Files**
+
+Added (49): `src/components/cms/` — `PageRenderer.jsx`, `PageHero.jsx` +
+`.module.css`, `blocks/index.js`, `blocks/blocks.module.css` and the
+twenty-five block components (`HeroBlock`, `RichTextBlock`, `FeaturesBlock`,
+`StepsBlock`, `StatsBlock`, `FaqBlock`, `CtaBlock`, `LeadFormBlock`,
+`TeamBlock`, `TestimonialsBlock`, `PropertiesBlock`, `ArticlesBlock`,
+`ChecklistBlock`, `QuizBlock`, `MapBlock`, `ContactInfoBlock`, `ImageBlock`,
+`BanksBlock`, `PartnersBlock`, `HtmlBlock`, `JobsBlock`, `FactsBlock`,
+`ExpandableCardsBlock`, `PackagesBlock`, `GalleryBlock`);
+`BlockEditor/BlockEditor.jsx` + `.module.css`, `BlockCard.jsx`,
+`BlockPicker.jsx`, `BlockForm.jsx`, `blockSchemas.js`,
+`fields/ItemsRepeater.jsx`, `fields/LeadFieldsBuilder.jsx`;
+`__tests__/PageRenderer.test.jsx`, `__tests__/blockSchemas.test.js`,
+`__tests__/QuizBlock.test.jsx`, `__tests__/ChecklistBlock.test.jsx`;
+`src/pages/public/CmsPage.jsx` + `.module.css`;
+`src/pages/admin/pages/PagesListPage.jsx` + `.module.css`,
+`PageFormPage.jsx` + `.module.css`; `src/assets/styles/prose.css`.
+
+Changed (15): `src/routes/publicRoutes.js` (the CMS routes and the catch-all),
+`src/routes/paths.js` (`RESERVED_PATH_PREFIXES`, `isReservedPath`, `terms` →
+`/terms-of-use`), `src/routes/adminRouteConfig.js` (three placeholders
+replaced), `src/pages/public/Home.jsx` (the two CMS block components),
+`src/components/admin/SlugField.jsx` (`path` mode), `src/utils/slug.js`
+(`slugifyPath`, `toPathSlugInput`), `src/services/schemas/page.js` (the path
+slug), `src/services/endpoints.js` (`ids` on `faqs`, `testimonials`, `team`),
+`mock-server/lib/slug.js`, `mock-server/lib/crud.js`,
+`mock-server/routes/pages.js` (`pathSlug: true`), `scripts/smoke-api.js`,
+`docs/API_CONTRACT.md`, `docs/DECISIONS.md`, `docs/PROJECT_STATE.md`.
+
+Removed (22): `src/pages/public/About.jsx`, `Contact.jsx`, `SellLet.jsx`,
+`Partnership.jsx`, `HomeLoan.jsx`, `LegalAssistance.jsx`,
+`InteriorDesigning.jsx`, `FlexibleWorkspace.jsx`, `DirectLeaseRetails.jsx`
+(2 621 lines) and their nine stylesheets;
+`src/components/sections/home/HomeFeatures.jsx`, `HomeSteps.jsx` and their two
+stylesheets.
+
+**Endpoints / dependencies / env vars / npm scripts**
+
+No new endpoints. `GET /faqs`, `GET /testimonials` and `GET /team` now declare
+the `ids` filter the mock's `applyFilters` already served — the `faq`, `team`
+and `testimonials` blocks ask for the records an editor picked, in that order
+(§5.7). `POST`/`PUT /admin/pages` accept a slug carrying `/`. No dependencies,
+no env vars, no npm scripts.
+
+**Acceptance checklist**
+
+- [x] The admin list, the form and the block editor work end to end: signing in,
+      fifteen rows, the About page's nine blocks as collapsed cards, the picker
+      of twenty-five types, adding a `cta` block, filling it and saving it back
+      as `blocks[9]` with `order: 10` — all verified over the DevTools protocol
+      with an empty console.
+- [x] Every seed page renders at its route through `PageRenderer`: `/about`
+      (9 blocks), `/contact`, `/sell-let`, `/partnership`, `/flexible-workspace`,
+      `/direct-lease-retails`, the three `/buyer-assistance/*` guides and the
+      three legal texts, each with exactly one `<h1>` and no console output. A
+      scratch page exercised the nine block types the seed does not use
+      (`properties`, `articles`, `image`, `html`, `quiz`, `gallery`, `jobs`,
+      `facts`, `banks`, `partners`) and was deleted afterwards.
+- [x] The home page's "Why choose Squares N Acres" and "How it works" come from
+      `FeaturesBlock` / `StepsBlock`; the nine legacy page files and
+      `HomeFeatures` / `HomeSteps` are deleted.
+- [x] Reserved prefixes never reach the CMS (`/insights/anything`,
+      `/shortlist/deep`, `/careers/some-role` all 404 without a request), and an
+      unknown slug 404s with `noindex, follow`.
+- [x] A draft answers 404; a valid token renders it behind a banner with
+      `noindex, nofollow`; an expired token 404s.
+- [x] An unsupported block type is skipped by the renderer (dev-only
+      `console.warn`) and shown in the editor as "Unsupported block" with delete
+      only.
+- [x] The checklist persists per page (`sna_checklist:buyer-assistance/home-loan`
+      → `["0","2"]`, surviving a reload, cleared by Reset); the packages CTA
+      opens the dialog titled "Premium — tell us about the space"; the expandable
+      cards open their detail; the EMI calculator has its three sliders and a
+      price box.
+- [x] `npm run lint` (0 findings, `check:endpoints` 0 blocking over 481 files),
+      `npm run test:ci` (**1 640 tests, 78 suites**), `npm run build:ci`
+      ("Compiled successfully", no warnings), `npm run check:traces` (0 findings
+      over 766 files), `npm run test:mock` (134 tests, 38 suites),
+      `npm run smoke` (274/274) and `npm run validate:seed` pass.
+- [x] One commit, clean tree.
+
+**Manual QA (headless Chromium over the DevTools protocol, 1280/1440 px and 390 px)**
+
+Walked `/about`, `/contact`, `/sell-let`, `/partnership`,
+`/flexible-workspace`, `/direct-lease-retails`, `/privacy-policy`,
+`/terms-of-use`, `/disclaimer`, `/buyer-assistance/home-loan`,
+`/buyer-assistance/legal-assistance`, `/buyer-assistance/interior-designing`,
+`/` and four 404 routes at 1280 px, and the four busiest of them again at
+390 px: one `<h1>` each, the expected `<h2>` sequence, the right `robots` and
+canonical, and an empty console on every one. Admin: signed in, opened the list
+and the form, added and filled a block, saved it, and checked the two refusals
+(a reserved slug and a block with a required field missing) land on the right
+control with the card badged "1 problem".
+
+The images and icons are blank in this environment's screenshots: `picsum.photos`,
+the Cloudinary brand assets and the Iconify API are all behind a TLS-inspecting
+proxy the headless browser does not trust (`ERR_CERT_AUTHORITY_INVALID`). Every
+such request is an external asset; nothing served by the app failed.

@@ -13,6 +13,12 @@ import { SLUG_PATTERN } from './validation';
 /** The contract's ceiling for every entity slug (§5.9). */
 export const SLUG_MAX_LENGTH = 75;
 
+/** A CMS page's slug is a URL path, so it is given a longer budget (§6.10). */
+export const PATH_SLUG_MAX_LENGTH = 120;
+
+/** One or more slug segments joined by `/` — what a page's slug may be. */
+export const PATH_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/;
+
 export { SLUG_PATTERN };
 
 /** `true` when a string is a slug the API would accept. */
@@ -65,6 +71,42 @@ export function toSlugInput(value, { maxLength = SLUG_MAX_LENGTH } = {}) {
     .replace(/[^a-z0-9-]/g, '')
     .replace(/-{2,}/g, '-')
     .slice(0, maxLength);
+}
+
+/**
+ * The slug of a **path**: every `/`-separated segment slugified on its own
+ * (§6.10). Only the CMS pages need it — `buyer-assistance/home-loan` is one
+ * slug, and `slugify` would turn its separator into a hyphen.
+ *
+ * @param {string} value
+ * @returns {string} `''` when nothing survives
+ */
+export function slugifyPath(value) {
+  return String(value ?? '')
+    .split('/')
+    .map((segment) => slugify(segment, { maxLength: PATH_SLUG_MAX_LENGTH }))
+    .filter(Boolean)
+    .join('/')
+    .slice(0, PATH_SLUG_MAX_LENGTH)
+    .replace(/[-/]+$/, '');
+}
+
+/**
+ * What a path slug looks like **while it is being typed** — the separators and
+ * one trailing hyphen survive, so a multi-segment slug can be typed at all.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+export function toPathSlugInput(value) {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9\-/]/g, '')
+    .replace(/-{2,}/g, '-')
+    .replace(/\/{2,}/g, '/')
+    .replace(/^\//, '')
+    .slice(0, PATH_SLUG_MAX_LENGTH);
 }
 
 export default slugify;

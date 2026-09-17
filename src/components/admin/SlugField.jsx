@@ -4,7 +4,7 @@ import { Icon } from '@iconify/react';
 import Button from '../ui/Button';
 import IconButton from '../ui/IconButton';
 import { isCanceled } from '../../services/apiError';
-import { slugify, toSlugInput } from '../../utils/slug';
+import { slugify, slugifyPath, toPathSlugInput, toSlugInput } from '../../utils/slug';
 
 import styles from './SlugField.module.css';
 
@@ -32,6 +32,9 @@ export const CHECK_DEBOUNCE_MS = 500;
  *   Promise<{data: {available: boolean, suggestion?: string}}>} [props.checkSlug]
  * @param {number|string} [props.excludeId] the record being edited
  * @param {string} [props.base] the path the slug hangs off, e.g. `/properties/`
+ * @param {boolean} [props.path] the slug is a URL **path** rather than a single
+ *   segment, so `/` survives and each segment is slugified on its own — the CMS
+ *   pages, whose `buyer-assistance/home-loan` is one slug (§6.10)
  * @param {string} [props.error]
  */
 export default function SlugField({
@@ -42,10 +45,14 @@ export default function SlugField({
   checkSlug,
   excludeId,
   base = '/',
+  path = false,
   error,
   required = false,
   disabled = false,
 }) {
+  // How this field turns text into a slug: one segment, or a whole path.
+  const toSlug = path ? slugifyPath : slugify;
+  const toInput = path ? toPathSlugInput : toSlugInput;
   const id = useId();
   // Locked = "follow the title". A slug that already exists arrives unlocked,
   // because it is a live URL rather than a draft.
@@ -83,11 +90,11 @@ export default function SlugField({
     }
     if (!current.locked) return;
 
-    const next = slugify(source);
+    const next = toSlug(source);
     if (next === current.value) return;
     written.current = next;
     current.onChange?.(next);
-  }, [source, value]);
+  }, [source, value, toSlug]);
 
   const check = useCallback(
     (slug) => {
@@ -123,7 +130,7 @@ export default function SlugField({
   useEffect(() => {
     // A half-typed slug (`whitefield-`) is not a slug the API can answer about,
     // so the question waits until the value is one.
-    if (!value || slugify(value) !== value) {
+    if (!value || toSlug(value) !== value) {
       setStatus({ state: 'idle' });
       return undefined;
     }
@@ -135,16 +142,16 @@ export default function SlugField({
       clearTimeout(timer);
       abort?.();
     };
-  }, [value, check]);
+  }, [value, check, toSlug]);
 
   const edit = (next) => {
     setLocked(false);
-    write(toSlugInput(next));
+    write(toInput(next));
   };
 
   // Typing may leave a trailing separator behind; leaving the field tidies it.
   const normalise = () => {
-    const tidy = slugify(value);
+    const tidy = toSlug(value);
     if (tidy !== value) write(tidy);
   };
 
@@ -185,7 +192,7 @@ export default function SlugField({
               return;
             }
             setLocked(true);
-            write(slugify(source));
+            write(toSlug(source));
           }}
           disabled={disabled}
         >
@@ -197,8 +204,12 @@ export default function SlugField({
         </IconButton>
       </div>
 
+      {/* The availability line stands down while the field carries an error: a
+          slug the API would accept can still be one this form refuses — a
+          reserved path — and "available" under "Reserved path" reads as a
+          contradiction rather than as two facts. */}
       <p className={styles.status} id={statusId} aria-live="polite">
-        {status.state === 'checking' ? (
+        {error ? null : status.state === 'checking' ? (
           <span className={styles.checking}>
             <Icon
               icon="mdi:loading"

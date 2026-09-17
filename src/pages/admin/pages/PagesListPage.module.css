@@ -1,0 +1,45 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.titleCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+.slug {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* The chip is the control that publishes: a button around it, with none of a
+   button's chrome, so the row keeps its shape and the target stays 44 px. */
+.statusButton {
+  display: inline-flex;
+  padding: var(--space-1);
+  margin: calc(var(--space-1) * -1);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: none;
+  cursor: pointer;
+}
+
+.statusButton:disabled {
+  cursor: default;
+}
+
+.statusButton:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}

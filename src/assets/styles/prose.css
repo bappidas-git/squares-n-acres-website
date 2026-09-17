@@ -1,0 +1,223 @@
+/**
+ * `.prose` — the typography of CMS-authored HTML.
+ *
+ * A rich-text block, an article body, a legal page and an expandable card's
+ * detail are all the same thing: markup an editor wrote, with no class names on
+ * it. This stylesheet is what makes that markup readable — measure, heading
+ * rhythm, list indents, table overflow, figure captions — so nothing on the
+ * site has to style `h2 + p` for itself.
+ *
+ * It uses design tokens only (`src/assets/styles/global.css` owns the values)
+ * and is imported once, by `src/components/cms/PageRenderer.jsx`, which is the
+ * one place CMS markup reaches the page. Prompt 32's `SafeHtml` sanitises
+ * against the editor's allow-list; the rules below cover exactly that
+ * vocabulary.
+ */
+
+.prose {
+  max-width: 72ch;
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-normal);
+}
+
+.prose.proseWide {
+  max-width: none;
+}
+
+/* ── Flow ──────────────────────────────────────────────────────────────── */
+
+.prose > * + * {
+  margin-top: var(--space-4);
+}
+
+.prose > * + h2,
+.prose > * + h3,
+.prose > * + h4 {
+  margin-top: var(--space-8);
+}
+
+.prose > :first-child {
+  margin-top: 0;
+}
+
+.prose > :last-child {
+  margin-bottom: 0;
+}
+
+/* ── Headings ──────────────────────────────────────────────────────────── */
+
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-snug);
+  color: var(--color-charcoal);
+}
+
+.prose h2 {
+  font-size: var(--font-size-2xl);
+}
+
+.prose h3 {
+  font-size: var(--font-size-xl);
+}
+
+.prose h4 {
+  font-size: var(--font-size-lg);
+}
+
+.prose h5,
+.prose h6 {
+  font-size: var(--font-size-md);
+}
+
+/* ── Text ──────────────────────────────────────────────────────────────── */
+
+.prose p {
+  margin: 0;
+}
+
+.prose strong,
+.prose b {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+.prose a {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.prose small {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.prose hr {
+  height: 1px;
+  margin: var(--space-8) 0;
+  border: 0;
+  background-color: var(--color-border);
+}
+
+/* ── Lists ─────────────────────────────────────────────────────────────── */
+
+.prose ul,
+.prose ol {
+  padding-left: var(--space-6);
+}
+
+.prose li + li {
+  margin-top: var(--space-2);
+}
+
+.prose li > ul,
+.prose li > ol {
+  margin-top: var(--space-2);
+}
+
+.prose ul {
+  list-style: disc;
+}
+
+.prose ol {
+  list-style: decimal;
+}
+
+.prose ul ul {
+  list-style: circle;
+}
+
+/* ── Quotes and code ───────────────────────────────────────────────────── */
+
+.prose blockquote {
+  padding: var(--space-2) 0 var(--space-2) var(--space-5);
+  border-left: 3px solid var(--color-primary);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+  font-style: italic;
+}
+
+.prose blockquote p + p {
+  margin-top: var(--space-3);
+}
+
+.prose code {
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-2);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.prose pre {
+  overflow-x: auto;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-2);
+}
+
+.prose pre code {
+  padding: 0;
+  background: none;
+}
+
+/* ── Tables ────────────────────────────────────────────────────────────── */
+
+/* A wide table scrolls inside the column rather than widening the page. */
+.prose table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.prose th,
+.prose td {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.prose th {
+  background-color: var(--color-surface);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+}
+
+/* ── Media ─────────────────────────────────────────────────────────────── */
+
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+}
+
+.prose figure {
+  margin: 0;
+}
+
+.prose figcaption {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.prose iframe {
+  max-width: 100%;
+  border: 0;
+  border-radius: var(--radius-md);
+}

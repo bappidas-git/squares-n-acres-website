@@ -198,6 +198,9 @@ module.exports = ({ db, getModel }) => {
       // The slug lookup above owns the public half: it is the one public read
       // a page has, and it has to understand `?preview=`.
       publicPath: false,
+      // A page's slug is a URL path, so its separators survive slugification
+      // and `check-slug` answers about the whole path (§6.10).
+      pathSlug: true,
       beforeValidate: (body) => rejectScripts(normaliseBlocks(body)),
       adminFilters: {
         status: { field: 'status', type: 'csv' },

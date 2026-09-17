@@ -37,6 +37,8 @@ const BadgesPage = lazy(() => import('../pages/admin/master-data/BadgesPage'));
 const DevelopersPage = lazy(() => import('../pages/admin/master-data/DevelopersPage'));
 const DeveloperFormPage = lazy(() => import('../pages/admin/master-data/DeveloperFormPage'));
 const BanksPage = lazy(() => import('../pages/admin/master-data/BanksPage'));
+const PagesListPage = lazy(() => import('../pages/admin/pages/PagesListPage'));
+const PageFormPage = lazy(() => import('../pages/admin/pages/PageFormPage'));
 const FaqsPage = lazy(() => import('../pages/admin/content/FaqsPage'));
 const TestimonialsPage = lazy(() => import('../pages/admin/content/TestimonialsPage'));
 const TeamPage = lazy(() => import('../pages/admin/content/TeamPage'));
@@ -85,9 +87,9 @@ export const ADMIN_ROUTES = [
   soon('articles/tags', 'Article tags', ['articles', 'view'], 33),
   soon('articles/authors', 'Authors', ['articles', 'view'], 33),
 
-  soon('pages', 'Pages', ['content', 'view'], 30),
-  soon('pages/add', 'Add page', ['content', 'create'], 30),
-  soon('pages/edit/:id', 'Edit page', ['content', 'edit'], 30),
+  page('pages', 'Pages', ['content', 'view'], <PagesListPage />),
+  page('pages/add', 'Add page', ['content', 'create'], <PageFormPage />),
+  page('pages/edit/:id', 'Edit page', ['content', 'edit'], <PageFormPage />),
   page('faqs', 'FAQs', ['content', 'view'], <FaqsPage />),
 
   page('master-data/localities', 'Localities', ['masterData', 'view'], <LocalitiesPage />),
