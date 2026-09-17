@@ -8,9 +8,9 @@ import { LISTING_ROUTES } from '../components/listing/listingRoutes';
  * The public website's routes (D11: every boilerplate URL keeps working).
  *
  * Moved out of `routes/index.js` in prompt 12 so that the admin table can grow
- * without the file becoming unreadable. Prompt 14 added the two locality URLs
- * and prompt 16 the two builder ones; prompts 31 and 34 add the careers and
- * article routes.
+ * without the file becoming unreadable. Prompt 14 added the two locality URLs,
+ * prompt 16 the two builder ones and prompt 31 the job detail route; prompt 34
+ * adds the article ones.
  *
  * Prompt 26 replaced the five hand-written category pages (`PreLaunch`,
  * `UnderConstruction`, `ReadyToMove`, `RentApartments`, `RentVillas`) with the
@@ -26,6 +26,12 @@ import { LISTING_ROUTES } from '../components/listing/listingRoutes';
  * `CmsPage` renders all of them from their blocks (BUG-11). Their URLs are
  * spelled out below rather than left to the catch-all so that a route table is
  * still a readable list of what the site answers.
+ *
+ * **Prompt 31 finished the job.** `Careers.jsx` and `RealEstateAwareness.js`
+ * are gone too: `/careers` and `/insights/real-estate-awareness` are CMS
+ * records whose blocks — the jobs list, the facts, the quiz, the checklist —
+ * `PageRenderer` draws. What stayed a page of its own is `/careers/:jobSlug`,
+ * because one opening is a record rather than a block (§6.11, D12).
  *
  * The catch-all is registered **last**, after every static route, so a reserved
  * prefix — `/properties`, `/buy`, `/localities`, `/insights`, `/admin` — is
@@ -43,8 +49,7 @@ const Shortlist = lazy(() => import('../pages/public/Shortlist'));
 const Articles = lazy(() => import('../pages/public/Articles'));
 const ArticleDetail = lazy(() => import('../pages/public/ArticleDetail'));
 const FAQs = lazy(() => import('../pages/public/FAQs'));
-const RealEstateAwareness = lazy(() => import('../pages/public/RealEstateAwareness'));
-const Careers = lazy(() => import('../pages/public/Careers'));
+const JobDetail = lazy(() => import('../pages/public/JobDetail'));
 const CmsPage = lazy(() => import('../pages/public/CmsPage'));
 
 /** Header, footer and bottom navigation around every public page. */
@@ -65,9 +70,8 @@ const PUBLIC_PAGES = [
   ['/insights/articles', Articles],
   ['/insights/articles/:slug', ArticleDetail],
   ['/insights/faqs', FAQs],
-  ['/insights/real-estate-awareness', RealEstateAwareness],
 
-  ['/careers', Careers],
+  ['/careers/:jobSlug', JobDetail],
 ];
 
 /**
@@ -80,6 +84,7 @@ const PUBLIC_PAGES = [
 const CMS_PAGES = [
   ['/about', 'about'],
   ['/contact', 'contact'],
+  ['/careers', 'careers'],
   ['/sell-let', 'sell-let'],
   ['/partnership', 'partnership'],
   ['/flexible-workspace', 'flexible-workspace'],
@@ -87,6 +92,11 @@ const CMS_PAGES = [
   ['/privacy-policy', 'privacy-policy'],
   ['/terms-of-use', 'terms-of-use'],
   ['/disclaimer', 'disclaimer'],
+
+  // A nested slug whose prefix is reserved (`insights`), so the route has to
+  // be spelled out: the catch-all would refuse it and the CMS would never be
+  // asked (D11). The `slug` prop is what tells `CmsPage` this is deliberate.
+  ['/insights/real-estate-awareness', 'insights/real-estate-awareness'],
 ];
 
 /** One `<Route>` per listing URL, all rendering the same engine. */

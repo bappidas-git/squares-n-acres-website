@@ -7,8 +7,10 @@ import EntityPicker from './EntityPicker';
 import FormSection, { FormColumn } from './FormSection';
 import IconPicker from './IconPicker';
 import ImageField from './ImageField';
+import IconButton from '../ui/IconButton';
 import MultiSelect from './MultiSelect';
 import SlugField from './SlugField';
+import SortableList from './SortableList';
 import ToneSelect from './ToneSelect';
 import { ICON_ID_PATTERN } from '../../utils/validation';
 import { getIn } from '../../hooks/useForm';
@@ -120,6 +122,17 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
           placeholder={field.placeholder}
           onBlur={onBlur}
           onChange={(event) => set(event.target.value)}
+        />
+      );
+
+    case 'list':
+      return (
+        <StringListField
+          {...shared}
+          field={field}
+          value={Array.isArray(value) ? value : []}
+          errors={form.errors}
+          onChange={set}
         />
       );
 
@@ -369,6 +382,108 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
         />
       );
   }
+}
+
+/**
+ * A list of short strings the admin can reorder — a job's responsibilities, its
+ * requirements, anything §6 types as `string[]`.
+ *
+ * Reordering is `SortableList`: drag on a mouse, ↑/↓ buttons everywhere else,
+ * each move announced through its live region (§8.3). The order is the field's
+ * value, so nothing is written until the form is saved.
+ *
+ * A 422 dots its nested keys (`responsibilities.2`), which is the key this
+ * reads its per-row message from.
+ *
+ * @param {object} props
+ * @param {object} props.field the descriptor — `label`, `addLabel`, `maxLength`
+ * @param {Array<string>} props.value
+ * @param {(value: Array<string>) => void} props.onChange
+ * @param {Record<string, string>} [props.errors] the whole form's errors
+ */
+function StringListField({
+  field,
+  label,
+  hint,
+  error,
+  required,
+  value,
+  errors = {},
+  onChange,
+  disabled,
+}) {
+  const rows = value.map((text, index) => ({ id: index, text }));
+  const singular =
+    field.singular ??
+    String(label ?? 'item')
+      .replace(/s$/i, '')
+      .toLowerCase();
+
+  const update = (index, text) => onChange(value.map((row, at) => (at === index ? text : row)));
+  const remove = (index) => onChange(value.filter((_row, at) => at !== index));
+
+  return (
+    <fieldset className={styles.repeater}>
+      <legend className={styles.repeaterLegend}>
+        {label}
+        {required ? (
+          <span className={styles.required} aria-hidden="true">
+            *
+          </span>
+        ) : null}
+      </legend>
+      {hint ? <p className={styles.repeaterHint}>{hint}</p> : null}
+
+      {rows.length > 0 ? (
+        <SortableList
+          items={rows}
+          disabled={disabled}
+          label={`${label}, in order`}
+          getId={(item) => item.id}
+          getLabel={(item, index) => item.text || `${singular} ${index + 1}`}
+          onReorder={(next) => onChange(next.map((item) => item.text))}
+          renderItem={(item, index) => (
+            <div className={styles.repeaterRow}>
+              <TextField
+                label={`${label} ${index + 1}`}
+                fieldClassName={styles.repeaterField}
+                value={item.text}
+                disabled={disabled}
+                maxLength={field.maxLength ?? 300}
+                error={errors[`${field.name}.${index}`]}
+                onChange={(event) => update(index, event.target.value)}
+              />
+              <IconButton
+                label={`Remove ${singular} ${index + 1}`}
+                size="sm"
+                disabled={disabled}
+                onClick={() => remove(index)}
+              >
+                <Icon icon="mdi:close" width="18" height="18" />
+              </IconButton>
+            </div>
+          )}
+        />
+      ) : null}
+
+      {error ? (
+        <p className={styles.repeaterError} role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <Button
+        variant="outline"
+        size="sm"
+        className={styles.repeaterAdd}
+        disabled={disabled}
+        icon={<Icon icon="mdi:plus" width="16" height="16" />}
+        onClick={() => onChange([...value, ''])}
+      >
+        {field.addLabel ?? `Add ${singular}`}
+      </Button>
+    </fieldset>
+  );
 }
 
 /**

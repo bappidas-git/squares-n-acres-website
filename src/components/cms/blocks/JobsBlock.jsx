@@ -13,9 +13,9 @@ import styles from './blocks.module.css';
  * The open roles (§6.10 `jobs`, D27).
  *
  * `GET /jobs` answers the active postings already (§5.14), so the block neither
- * filters nor sorts. Prompt 31 builds the careers page around it — the job
- * detail route and the application form — but the list itself is small enough
- * to belong here, with the block type that names it.
+ * filters nor sorts. Each card opens `/careers/<slug>`, which is where the
+ * role is described in full and where it is applied for (prompt 31): one
+ * opening is a URL people forward, not a dialog.
  *
  * With no openings the band says so rather than disappearing: "no openings
  * right now" is information a visitor came for, unlike an empty features grid.
@@ -58,13 +58,10 @@ export default function JobsBlock({ data = {}, background = 'bg' }) {
                       ) : null}
                     </span>
                   </span>
-                  <Icon
-                    icon="mdi:arrow-right"
-                    width="20"
-                    height="20"
-                    aria-hidden="true"
-                    className={styles.jobArrow}
-                  />
+                  <span className={styles.jobApply}>
+                    View &amp; apply
+                    <Icon icon="mdi:arrow-right" width="18" height="18" aria-hidden="true" />
+                  </span>
                 </Link>
               </li>
             ))}

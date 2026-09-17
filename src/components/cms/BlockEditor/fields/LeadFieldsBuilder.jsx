@@ -42,7 +42,7 @@ export const TOP_LEVEL_NAMES = ['name', 'phone', 'email', 'message'];
 /** The four boxes a new form opens with. */
 export const STARTER_FIELDS = [
   { name: 'name', label: 'Your name', type: 'text', required: true, placeholder: 'Full name' },
-  { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: '98765 43210' },
+  { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: '98XXX XXXXX' },
   {
     name: 'email',
     label: 'E-mail',

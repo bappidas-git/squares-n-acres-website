@@ -46,7 +46,7 @@ export const DEFAULT_FIELDS = [
     label: 'Phone',
     type: 'tel',
     required: true,
-    placeholder: '98765 43210',
+    placeholder: '98XXX XXXXX',
     autoComplete: 'tel',
     half: true,
   },

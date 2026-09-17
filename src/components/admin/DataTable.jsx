@@ -65,6 +65,8 @@ const defaultRowId = (row) => row?.id;
  * @param {(row: object) => string|number} [props.getRowId]
  * @param {{title: string, text?: string, action?: React.ReactNode}} [props.emptyState]
  * @param {(row: object) => string} [props.rowLink]
+ * @param {(row: object) => void} [props.onRowClick] opens the row in place — a
+ *   drawer rather than a route, for a record that has no page of its own
  * @param {boolean} [props.stickyHeader]
  * @param {(row: object) => React.ReactNode} [props.mobileCard]
  * @param {(row: object) => {key: string, label: React.ReactNode}|null} [props.groupBy]
@@ -96,6 +98,7 @@ export default function DataTable({
   getRowId = defaultRowId,
   emptyState = null,
   rowLink,
+  onRowClick,
   stickyHeader = false,
   mobileCard,
   groupBy,
@@ -157,9 +160,13 @@ export default function DataTable({
   const openRow = useCallback(
     (row) => {
       const to = rowLink?.(row);
-      if (to) navigate(to);
+      if (to) {
+        navigate(to);
+        return;
+      }
+      onRowClick?.(row);
     },
-    [rowLink, navigate]
+    [rowLink, navigate, onRowClick]
   );
 
   const columnCount = columns.length + (selectable ? 1 : 0) + (rowActions ? 1 : 0);
@@ -268,6 +275,7 @@ export default function DataTable({
                     actions={rowActions?.(row) ?? []}
                     actionsLabel={rowActionsLabel?.(row)}
                     to={rowLink?.(row)}
+                    onOpen={onRowClick ? () => onRowClick(row) : undefined}
                     render={mobileCard}
                   />
                 </Fragment>
@@ -372,6 +380,7 @@ export default function DataTable({
                 const id = getRowId(row);
                 const isSelected = selected.has(String(id));
                 const to = rowLink?.(row);
+                const clickable = Boolean(to) || Boolean(onRowClick);
                 const group = groupHeadOf(row, index);
 
                 return (
@@ -388,14 +397,14 @@ export default function DataTable({
                         styles.row,
                         isSelected ? styles.rowSelected : '',
                         rowHighlight?.(row) ? styles.rowHighlight : '',
-                        to ? styles.rowClickable : '',
+                        clickable ? styles.rowClickable : '',
                       ]
                         .filter(Boolean)
                         .join(' ')}
-                      tabIndex={to ? 0 : undefined}
-                      onClick={to ? () => openRow(row) : undefined}
+                      tabIndex={clickable ? 0 : undefined}
+                      onClick={clickable ? () => openRow(row) : undefined}
                       onKeyDown={
-                        to
+                        clickable
                           ? (event) => {
                               if (event.key !== 'Enter' && event.key !== ' ') return;
                               if (event.target !== event.currentTarget) return;
@@ -470,6 +479,7 @@ function MobileCard({
   actions,
   actionsLabel,
   to,
+  onOpen,
   render,
 }) {
   const primary = columns.find((column) => column.primary) ?? columns[0];
@@ -511,6 +521,10 @@ function MobileCard({
                 <Link className={styles.cardTitleLink} to={to}>
                   {title}
                 </Link>
+              ) : onOpen ? (
+                <button type="button" className={styles.cardTitleButton} onClick={onOpen}>
+                  {title}
+                </button>
               ) : (
                 title
               )}
