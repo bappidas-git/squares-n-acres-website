@@ -81,6 +81,23 @@
   background: var(--color-primary-light);
 }
 
+/* A row that has not been dealt with yet — a `new` lead. The tint is faint on
+   purpose: it marks the row without competing with a selected one, and the
+   left edge carries the signal for anyone who does not see the tint. */
+.rowHighlight {
+  background: var(--color-info-bg);
+  box-shadow: inset 3px 0 0 0 var(--color-info);
+}
+
+.rowHighlight:hover {
+  background: var(--color-info-bg);
+}
+
+.rowSelected.rowHighlight,
+.rowSelected.rowHighlight:hover {
+  background: var(--color-primary-light);
+}
+
 .rowClickable {
   cursor: pointer;
 }
@@ -181,6 +198,16 @@
 }
 
 .cardSelected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.cardHighlight {
+  border-color: var(--color-info);
+  background: var(--color-info-bg);
+}
+
+.cardSelected.cardHighlight {
   border-color: var(--color-primary);
   background: var(--color-primary-light);
 }

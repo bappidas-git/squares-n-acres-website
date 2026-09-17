@@ -1531,6 +1531,9 @@ const adminUsers = adminResource({
   slugged: false,
   withUsage: false,
   auth: 'admin',
+  // Reading the directory is what the lead CRM's assignment picker needs, and
+  // `leads.assign` is admin **and** manager (§7); every write stays admin-only.
+  readAuth: 'manager',
   query: { role: enumOf(ROLES) },
 });
 

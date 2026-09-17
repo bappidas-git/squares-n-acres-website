@@ -64,6 +64,15 @@ const ACTION_FALLBACKS = {
   duplicate: ['duplicate', 'create', 'edit', 'view'],
 };
 
+/**
+ * Areas whose GET is not the area's `view`.
+ *
+ * Reading the staff directory is what naming an assignee needs, so it belongs
+ * to everyone who may assign a lead; opening the Users screen, creating a
+ * colleague or deleting one stays `users` — admin only (§7).
+ */
+const READ_ACTIONS = { users: 'list' };
+
 /** The §7 area each admin resource belongs to, by first path segment. */
 const RESOURCE_AREAS = {
   dashboard: 'dashboard',
@@ -144,7 +153,9 @@ function resolvePermission(path, method) {
     .slice(1)
     .reduce((found, segment) => SEGMENT_ACTIONS[segment] ?? found, undefined);
 
-  const action = named ?? METHOD_ACTIONS[String(method).toUpperCase()] ?? 'view';
+  const verb = String(method).toUpperCase();
+  const read = verb === 'GET' || verb === 'HEAD' ? READ_ACTIONS[area] : undefined;
+  const action = named ?? read ?? METHOD_ACTIONS[verb] ?? 'view';
 
   return { area, action: resolveAction(area, action) };
 }
@@ -152,6 +163,7 @@ function resolvePermission(path, method) {
 module.exports = {
   resolvePermission,
   RESOURCE_AREAS,
+  READ_ACTIONS,
   SEGMENT_ACTIONS,
   METHOD_ACTIONS,
   ACTION_FALLBACKS,

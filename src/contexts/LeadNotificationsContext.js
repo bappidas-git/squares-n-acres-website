@@ -21,8 +21,11 @@ import { useToast } from '../components/common/ToastProvider';
  * It is mounted inside `AdminLayout`, so it exists only while an admin screen
  * is open, and it asks for exactly one thing every thirty seconds: the five
  * newest leads whose status is still `new`. `meta.total` is the sidebar badge,
- * `data` is the bell menu, and `lastUpdatedAt` is what `AdminLeads` watches to
- * refresh its table — no screen polls on its own.
+ * `data` is the bell menu, `lastUpdatedAt` says when the poll last answered,
+ * and `refreshKey` counts the answers that actually **changed** something —
+ * which is what the leads table refetches on, so a quiet thirty seconds costs
+ * it nothing and a new lead reloads it without touching the scroll position
+ * (D55).
  *
  * Polling stops while the tab is hidden and fetches immediately when it comes
  * back, so a backgrounded panel costs nothing.
@@ -58,8 +61,14 @@ export const LeadNotificationsProvider = ({ children }) => {
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
   const [seenAt, setSeenAt] = useState(() => storage.getItem(SEEN_STORAGE_KEY, null));
 
+  /** Bumped only when a poll brings news; see `refreshKey` above. */
+  const [refreshKey, setRefreshKey] = useState(0);
+
   /** `null` until the first answer — the first load never announces anything. */
   const lastTotalRef = useRef(null);
+
+  /** The last answer, reduced to the parts a screen would redraw for. */
+  const signatureRef = useRef(null);
 
   const announce = useCallback(
     (lead) => {
@@ -93,6 +102,14 @@ export const LeadNotificationsProvider = ({ children }) => {
       setRecentLeads(rows);
       setNewLeadCount(total);
       setLastUpdatedAt(new Date().toISOString());
+
+      // Two polls that answer the same thing are the same answer: the table
+      // only reloads when the count moved or a newer lead arrived.
+      const signature = `${total}:${rows[0]?.id ?? ''}:${rows[0]?.updatedAt ?? ''}`;
+      if (signatureRef.current !== null && signatureRef.current !== signature) {
+        setRefreshKey((current) => current + 1);
+      }
+      signatureRef.current = signature;
 
       if (previousTotal !== null && total > previousTotal && rows[0]) announce(rows[0]);
     } catch {
@@ -151,8 +168,16 @@ export const LeadNotificationsProvider = ({ children }) => {
   }, [recentLeads, seenAt]);
 
   const value = useMemo(
-    () => ({ newLeadCount, recentLeads, lastUpdatedAt, hasUnseen, refresh, markSeen }),
-    [newLeadCount, recentLeads, lastUpdatedAt, hasUnseen, refresh, markSeen]
+    () => ({
+      newLeadCount,
+      recentLeads,
+      lastUpdatedAt,
+      refreshKey,
+      hasUnseen,
+      refresh,
+      markSeen,
+    }),
+    [newLeadCount, recentLeads, lastUpdatedAt, refreshKey, hasUnseen, refresh, markSeen]
   );
 
   return (

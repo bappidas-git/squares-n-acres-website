@@ -21,11 +21,11 @@ import { can, hasRouteAccess } from '../config/rbac';
  * still point at the placeholder after prompt 43.
  */
 
-const Dashboard = lazy(() => import('../pages/admin/Dashboard'));
+const DashboardPage = lazy(() => import('../pages/admin/dashboard/DashboardPage'));
 const PropertiesListPage = lazy(() => import('../pages/admin/properties/PropertiesListPage'));
 const PropertyFormPage = lazy(() => import('../pages/admin/properties/PropertyFormPage'));
-const AdminLeads = lazy(() => import('../pages/admin/AdminLeads'));
-const LeadDetail = lazy(() => import('../pages/admin/LeadDetail'));
+const LeadsListPage = lazy(() => import('../pages/admin/leads/LeadsListPage'));
+const LeadDetailPage = lazy(() => import('../pages/admin/leads/LeadDetailPage'));
 const AdminArticles = lazy(() => import('../pages/admin/AdminArticles'));
 const ArticleForm = lazy(() => import('../pages/admin/ArticleForm'));
 const LocalitiesPage = lazy(() => import('../pages/admin/master-data/LocalitiesPage'));
@@ -68,15 +68,15 @@ const soon = (path, title, permission, owner) => ({
  * }>}
  */
 export const ADMIN_ROUTES = [
-  page('dashboard', 'Dashboard', ['dashboard', 'view'], <Dashboard />),
+  page('dashboard', 'Dashboard', ['dashboard', 'view'], <DashboardPage />),
 
   page('properties', 'Properties', ['properties', 'view'], <PropertiesListPage />),
   page('properties/add', 'Add property', ['properties', 'create'], <PropertyFormPage />),
   // Sales open the form read-only (§7), so editing is gated on `view`.
   page('properties/edit/:id', 'Edit property', ['properties', 'view'], <PropertyFormPage />),
 
-  page('leads', 'Leads', ['leads', 'view'], <AdminLeads />),
-  page('leads/:id', 'Lead details', ['leads', 'view'], <LeadDetail />),
+  page('leads', 'Leads', ['leads', 'view'], <LeadsListPage />),
+  page('leads/:id', 'Lead details', ['leads', 'view'], <LeadDetailPage />),
 
   page('articles', 'Articles', ['articles', 'view'], <AdminArticles />),
   page('articles/add', 'Add article', ['articles', 'create'], <ArticleForm />),

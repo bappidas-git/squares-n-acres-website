@@ -28,9 +28,10 @@ const isSet = (value) =>
  * `syncToUrl` in practice — and come back through `onChange(patch)`.
  *
  * @param {object} props
- * @param {Array<{key: string, type: 'search'|'select'|'multiselect'|'daterange'|'toggle'|'number-range',
+ * @param {Array<{key: string, type: 'search'|'select'|'multiselect'|'daterange'|'toggle'|'number-range'|'custom',
  *   label: string, options?: Array<{value: string|number, label: string}>,
- *   placeholder?: string, width?: string}>} props.fields
+ *   placeholder?: string, width?: string,
+ *   render?: (api: {values: object, onChange: (patch: object) => void}) => React.ReactNode}>} props.fields
  * @param {object} props.values
  * @param {(patch: object) => void} props.onChange
  * @param {() => void} [props.onReset]
@@ -243,6 +244,18 @@ function FilterControl({ field, values, onChange }) {
     );
   }
 
+  // A filter whose control is the caller's — an `EntityPicker` over a
+  // collection too long for a `<select>`. It sits in the row with the rest and
+  // moves into the popover with them below 900 px; the chip is its own, since
+  // only the caller knows what the chosen record is called.
+  if (field.type === 'custom') {
+    return (
+      <div className={styles.control} style={style}>
+        {field.render?.({ values, onChange })}
+      </div>
+    );
+  }
+
   if (field.type === 'daterange' || field.type === 'number-range') {
     const isDate = field.type === 'daterange';
     const [fromKey, toKey] = field.keys ?? [`${field.key}From`, `${field.key}To`];
@@ -278,6 +291,8 @@ function buildChips(fields, values) {
   const chips = [];
 
   for (const field of fields) {
+    if (field.type === 'custom') continue;
+
     if (field.type === 'search') {
       if (isSet(values[field.key])) {
         chips.push({

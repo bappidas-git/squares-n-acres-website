@@ -477,6 +477,12 @@ none; `ipAddress` and `userAgent` are stored but returned to admins only.
 
 // GET /api/admin/leads/export → text/csv; charset=utf-8, a BOM, then
 // ID,Name,Phone,Email,Source,Status,Priority,Assigned To,Property,Requirement,Message,Follow-up,Created At
+// — the same filters as the list; with no matches the file is the header row alone.
+
+// GET /api/admin/leads?q=Ananya → the list rows, each with the duplicate flag
+// and without the timeline:
+// { "data": [ { "id": 7, "name": "Ananya Rao", …, "isPossibleDuplicate": false } ],
+//   "meta": { "page": 1, "perPage": 20, "total": 1, "totalPages": 1 } }
 ```
 
 #### Admin — master data
@@ -658,9 +664,9 @@ none; `ipAddress` and `userAgent` are stored but returned to admins only.
 | GET    | `/admin/seo/overview`   | admin · manager | Lightweight SEO rows for the dashboard and the uniqueness checks    | `page`, `perPage`, `sort`, `order`, `q`, `type`, `scoreBand`, `index`                    | —                    | `SeoOverviewRowList` | —                                                                |
 | GET    | `/admin/settings`       | admin · manager | The complete site settings singleton, including the lead branch     | —                                                                                        | —                    | `Settings`           | —                                                                |
 | PUT    | `/admin/settings`       | admin           | Replace the site settings; known keys are deep-merged               | —                                                                                        | `settings.update`    | `Settings`           | Deep-merges the known keys only                                  |
-| GET    | `/admin/users`          | admin           | List users for the admin table                                      | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `role`                       | —                    | `UserList`           | —                                                                |
+| GET    | `/admin/users`          | admin · manager | List users for the admin table                                      | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `role`                       | —                    | `UserList`           | —                                                                |
 | POST   | `/admin/users`          | admin           | Create a user                                                       | —                                                                                        | `user.create`        | `User`               | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
-| GET    | `/admin/users/:id`      | admin           | Read one user with every admin field                                | —                                                                                        | —                    | `User`               | —                                                                |
+| GET    | `/admin/users/:id`      | admin · manager | Read one user with every admin field                                | —                                                                                        | —                    | `User`               | —                                                                |
 | PUT    | `/admin/users/:id`      | admin           | Replace a user with the full record from the form                   | —                                                                                        | `user.update`        | `User`               | Replaces the record; regenerates the slug when it changed        |
 | PATCH  | `/admin/users/:id`      | admin           | Update the given fields of a user (toggles, order, SEO panel)       | —                                                                                        | `user.patch`         | `User`               | —                                                                |
 | DELETE | `/admin/users/:id`      | admin           | Delete a user; 409 when it is still in use                          | —                                                                                        | —                    | `Null`               | 409 with `data.usedBy` when the record is still referenced       |
@@ -793,6 +799,18 @@ The card payload returned inside `PropertyList`:
 Every field of §6.7 including `notes[]` and `activities[]`, plus the embeds
 `property {id,title,slug}` and `assignedUser {id,name}`. `ipAddress` and `userAgent` are
 returned to admins only. `LeadList` rows carry the same shape without `activities`.
+
+Admin reads — the list, the detail and every write that answers with a lead —
+also carry the computed boolean **`isPossibleDuplicate`**: `true` when another
+lead holds the same normalised phone number and was created within **30 days**
+of this one. The window is measured between the two leads rather than from
+today, so a pair's answer never changes as the calendar moves on, and it is
+computed over the whole collection rather than over the caller's scope — that
+a caller has enquired before is a fact about the caller, and the sales user who
+cannot see the other enquiry is the one who most needs telling that it exists
+(D15 governs the records, not this flag). The public `POST /leads` response
+does not carry it. A number the Indian mobile rule does not recognise is
+compared on its digits rather than dropped.
 
 ### `Article` / `ArticleSummary`
 

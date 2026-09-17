@@ -69,6 +69,9 @@ const defaultRowId = (row) => row?.id;
  * @param {(row: object) => React.ReactNode} [props.mobileCard]
  * @param {(row: object) => {key: string, label: React.ReactNode}|null} [props.groupBy]
  *   a heading row above the first row of each run — amenities read by category
+ * @param {(row: object) => boolean} [props.rowHighlight] tints the row and its
+ *   phone card — what a lead nobody has answered yet looks like in a list of
+ *   forty (prompt 29)
  */
 export default function DataTable({
   columns = [],
@@ -96,6 +99,7 @@ export default function DataTable({
   stickyHeader = false,
   mobileCard,
   groupBy,
+  rowHighlight,
   caption,
 }) {
   const { isMobile } = useBreakpoint();
@@ -259,6 +263,7 @@ export default function DataTable({
                     columns={columns}
                     selectable={selectable}
                     selected={selected.has(String(id))}
+                    highlighted={Boolean(rowHighlight?.(row))}
                     onToggle={() => toggleRow(id)}
                     actions={rowActions?.(row) ?? []}
                     actionsLabel={rowActionsLabel?.(row)}
@@ -382,6 +387,7 @@ export default function DataTable({
                       className={[
                         styles.row,
                         isSelected ? styles.rowSelected : '',
+                        rowHighlight?.(row) ? styles.rowHighlight : '',
                         to ? styles.rowClickable : '',
                       ]
                         .filter(Boolean)
@@ -459,6 +465,7 @@ function MobileCard({
   columns,
   selectable,
   selected,
+  highlighted = false,
   onToggle,
   actions,
   actionsLabel,
@@ -476,7 +483,13 @@ function MobileCard({
 
   return (
     <article
-      className={[styles.card, selected ? styles.cardSelected : ''].filter(Boolean).join(' ')}
+      className={[
+        styles.card,
+        selected ? styles.cardSelected : '',
+        highlighted ? styles.cardHighlight : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
       {selectable ? (
         <Checkbox
