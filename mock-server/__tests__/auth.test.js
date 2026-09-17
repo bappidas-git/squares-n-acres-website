@@ -233,15 +233,28 @@ describe('the role matrix on /api/admin', () => {
     });
   });
 
-  it('keeps sales and managers out of the users resource', async () => {
+  it('keeps sales out of the users resource and managers out of its writes', async () => {
     await withServer(async ({ request, login }) => {
-      for (const credentials of [SALES, MANAGER]) {
-        const token = await login(credentials);
-        const response = await request('GET', '/admin/users', { token });
+      const sales = await login(SALES);
+      const refused = await request('GET', '/admin/users', { token: sales });
+      assert.equal(refused.status, 403);
+      assert.equal(refused.body.message, 'You do not have permission to perform this action.');
 
-        assert.equal(response.status, 403);
-        assert.equal(response.body.message, 'You do not have permission to perform this action.');
-      }
+      // A manager assigns leads, and naming a colleague means reading the
+      // directory (`users.list`); managing the accounts stays admin-only.
+      const manager = await login(MANAGER);
+      assert.equal((await request('GET', '/admin/users', { token: manager })).status, 200);
+      assert.equal((await request('GET', '/admin/users/3', { token: manager })).status, 200);
+      assert.equal(
+        (await request('POST', '/admin/users', { token: manager, body: { name: 'New' } })).status,
+        403
+      );
+      assert.equal(
+        (await request('PATCH', '/admin/users/3', { token: manager, body: { isActive: false } }))
+          .status,
+        403
+      );
+      assert.equal((await request('DELETE', '/admin/users/3', { token: manager })).status, 403);
     });
   });
 

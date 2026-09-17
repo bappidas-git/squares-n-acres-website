@@ -9,6 +9,9 @@
  * mock has no notion of the viewer's timezone, and a server that answers the
  * same question differently depending on where it runs is worse than one that
  * answers it in UTC and says so.
+ *
+ * The same file also answers "have we heard from this person already?" —
+ * `isPossibleDuplicate`, the flag the CRM list and detail carry (prompt 29).
  */
 
 const { inCsv, matchesQ, toBool } = require('./filters');
@@ -113,4 +116,114 @@ function applyLeadSort(items, sort, order) {
   });
 }
 
-module.exports = { applyLeadFilters, applyLeadSort, matchesAssignee, SORTABLE };
+/* ------------------------------------------------------------------ *
+ * Duplicates
+ * ------------------------------------------------------------------ */
+
+/** How far apart two enquiries from one number may be and still be "the same". */
+const DUPLICATE_WINDOW_DAYS = 30;
+const DUPLICATE_WINDOW_MS = DUPLICATE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+
+/**
+ * An Indian mobile number in one shape: `+919876543210`.
+ *
+ * The forms send `+91 98765 43210`, `09876543210` and `9876543210`, and a CRM
+ * that stores all three cannot tell that they are one person.
+ *
+ * @param {string} value
+ * @returns {string|null} the canonical number, or `null` when it is not one
+ */
+function normalizeLeadPhone(value) {
+  if (typeof value !== 'string') return null;
+
+  const digits = value.replace(/[\s()-]/g, '').replace(/^\+/, '');
+  const local = digits.replace(/^91/, '').replace(/^0/, '');
+  if (!/^[6-9]\d{9}$/.test(local)) return null;
+
+  return `+91${local}`;
+}
+
+/**
+ * The key two leads are compared on.
+ *
+ * A number the Indian rule does not recognise — a landline, a number from
+ * abroad — still identifies a person, so it is compared on its digits rather
+ * than dropped.
+ *
+ * @param {string} value
+ * @returns {string} `''` when there is nothing to compare
+ */
+function leadPhoneKey(value) {
+  const canonical = normalizeLeadPhone(value);
+  if (canonical) return canonical;
+  return typeof value === 'string' ? value.replace(/\D/g, '') : '';
+}
+
+/**
+ * Indexes every lead by its phone key, so the flag below costs one pass over
+ * the collection rather than one scan per row.
+ *
+ * The index is built from **all** leads, not the ones in scope: whether a
+ * caller has enquired before is a fact about the caller, and a sales user who
+ * cannot see the other enquiry is exactly the person who needs telling that it
+ * exists (D15 governs the records, not this boolean).
+ *
+ * @param {Array<object>} leads
+ * @returns {Map<string, Array<{id: unknown, at: number|null}>>}
+ */
+function buildDuplicateIndex(leads = []) {
+  const index = new Map();
+
+  for (const lead of leads) {
+    const key = leadPhoneKey(lead?.phone);
+    if (key === '') continue;
+    const at = Date.parse(lead?.createdAt);
+    const entry = { id: lead?.id, at: Number.isFinite(at) ? at : null };
+    const bucket = index.get(key);
+    if (bucket) bucket.push(entry);
+    else index.set(key, [entry]);
+  }
+
+  return index;
+}
+
+/**
+ * Whether another lead carries the same number within
+ * {@link DUPLICATE_WINDOW_DAYS} days of this one.
+ *
+ * The window is measured between the two leads rather than from today, so the
+ * answer for a pair of enquiries never changes as the calendar moves on.
+ *
+ * @param {object} lead
+ * @param {Map<string, Array<{id: unknown, at: number|null}>>} index
+ * @returns {boolean}
+ */
+function isPossibleDuplicate(lead, index) {
+  const key = leadPhoneKey(lead?.phone);
+  if (key === '') return false;
+
+  const bucket = index?.get(key) ?? [];
+  if (bucket.length < 2) return false;
+
+  const at = Date.parse(lead?.createdAt);
+  if (!Number.isFinite(at)) return false;
+
+  return bucket.some(
+    (entry) =>
+      String(entry.id) !== String(lead?.id) &&
+      entry.at !== null &&
+      Math.abs(entry.at - at) <= DUPLICATE_WINDOW_MS
+  );
+}
+
+module.exports = {
+  applyLeadFilters,
+  applyLeadSort,
+  buildDuplicateIndex,
+  isPossibleDuplicate,
+  leadPhoneKey,
+  matchesAssignee,
+  normalizeLeadPhone,
+  DUPLICATE_WINDOW_DAYS,
+  SORTABLE,
+};

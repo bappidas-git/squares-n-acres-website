@@ -445,3 +445,75 @@ describe('GET /admin/leads/export', () => {
     });
   });
 });
+
+describe('isPossibleDuplicate', () => {
+  it('flags both leads when one number enquires twice inside the window', async () => {
+    await withServer(async ({ request, login }) => {
+      // The same person, typing their number two different ways.
+      const first = await request('POST', '/leads', {
+        body: { ...ENQUIRY, name: 'Rohit Nair', phone: '9845012345' },
+      });
+      const second = await request('POST', '/leads', {
+        body: {
+          ...ENQUIRY,
+          name: 'Rohit N.',
+          phone: '+91 98450 12345',
+          source: 'callback-request',
+        },
+      });
+
+      const token = await login(ADMIN);
+      const list = await request('GET', '/admin/leads?perPage=all', { token });
+      const flagged = list.body.data.filter((lead) => lead.isPossibleDuplicate);
+
+      assert.deepEqual(
+        flagged.map((lead) => lead.id).sort((a, b) => a - b),
+        [first.body.data.id, second.body.data.id],
+        'the flag is on the pair, not on the newer one alone'
+      );
+      assert.equal(
+        list.body.data.find((lead) => lead.id === 1).isPossibleDuplicate,
+        false,
+        'a number that enquired once is not a duplicate'
+      );
+
+      const detail = await request('GET', `/admin/leads/${second.body.data.id}`, { token });
+      assert.equal(detail.body.data.isPossibleDuplicate, true, 'the detail carries it too');
+    });
+  });
+
+  it('is not part of what the public form gets back', async () => {
+    await withServer(async ({ request }) => {
+      const created = await request('POST', '/leads', { body: ENQUIRY });
+      assert.equal(created.body.data.isPossibleDuplicate, undefined);
+    });
+  });
+
+  it('tells a sales user about a duplicate they cannot open', async () => {
+    await withServer(async ({ request, login }) => {
+      const admin = await login(ADMIN);
+
+      // Two enquiries from one number, one of them parked on the manager —
+      // outside the sales scope of D15, which is exactly why the flag matters.
+      const theirs = await request('POST', '/leads', {
+        body: { ...ENQUIRY, name: 'Meera Iyer', phone: '9845099887' },
+      });
+      const hidden = await request('POST', '/leads', {
+        body: { ...ENQUIRY, name: 'Meera I.', phone: '9845099887' },
+      });
+      await request('PATCH', `/admin/leads/${hidden.body.data.id}`, {
+        token: admin,
+        body: { assignedTo: 2 },
+      });
+
+      const token = await login(SALES);
+      assert.equal(
+        (await request('GET', `/admin/leads/${hidden.body.data.id}`, { token })).status,
+        404
+      );
+
+      const visible = await request('GET', `/admin/leads/${theirs.body.data.id}`, { token });
+      assert.equal(visible.body.data.isPossibleDuplicate, true);
+    });
+  });
+});

@@ -1,0 +1,537 @@
+/* Admin → Leads → one lead: the two-column layout and every card in it.
+   Shared with the eight components the screen is assembled from. */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (min-width: 1200px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+}
+
+.main,
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* The rail follows the reader down a long timeline, but only where there is
+   room for it to stand beside one. */
+@media (min-width: 1200px) {
+  .rail {
+    position: sticky;
+    top: var(--space-4);
+  }
+}
+
+.card,
+.railCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.emptyLine {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.link {
+  color: var(--color-primary-dark);
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------------ *
+ * Contact, requirement and meta cards
+ * ------------------------------------------------------------------ */
+
+.contactActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.message {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-border-strong);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  white-space: pre-line;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3) var(--space-4);
+  margin: 0;
+}
+
+.facts dt {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.factWide {
+  grid-column: 1 / -1;
+}
+
+.utm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.utmLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.metaBank {
+  margin: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * The listing the enquiry was about
+ * ------------------------------------------------------------------ */
+
+.propertyRow {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.propertyCover {
+  flex: 0 0 auto;
+  width: 96px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-surface-2);
+}
+
+.propertyBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.propertyTitle {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.propertyTitle:hover,
+.propertyTitle:focus-visible {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+.propertyLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------------------ *
+ * The rail
+ * ------------------------------------------------------------------ */
+
+.railBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.railTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.railValue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+.railActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.followUpFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+/* ------------------------------------------------------------------ *
+ * The pipeline
+ * ------------------------------------------------------------------ */
+
+.pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+/* Below 900 px the funnel reads down the page; above it, across. */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+}
+
+/* The line that makes six buttons one funnel. */
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--color-border);
+}
+
+.stepDone:not(:last-child)::after {
+  background: var(--color-success);
+}
+
+.stepButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-1) 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.stepButton:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.stepMarker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-border-strong);
+  background: var(--color-bg);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.stepLabel {
+  font-size: var(--font-size-sm);
+}
+
+.stepDone .stepMarker {
+  border-color: var(--color-success);
+  background: var(--color-success);
+  color: var(--color-text-inverse);
+}
+
+.stepDone .stepButton {
+  color: var(--color-text);
+}
+
+.stepActive .stepMarker {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.stepActive .stepButton {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* A lost lead left the funnel: the rungs are still reachable — reopening is a
+   decision somebody may make — but none of them is where the lead stands. */
+.stepLost .stepButton {
+  opacity: 0.55;
+}
+
+.lostBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  width: 100%;
+  border-radius: var(--radius-md);
+  background: var(--color-error-bg);
+  color: var(--color-error-dark);
+  font-weight: var(--font-weight-semibold);
+}
+
+.lostLabel {
+  display: block;
+}
+
+.lostReason {
+  display: block;
+  font-weight: var(--font-weight-regular);
+}
+
+@media (min-width: 900px) {
+  .steps {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+
+  .step {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .step:not(:last-child)::after {
+    left: 40px;
+    right: -8px;
+    top: 19px;
+    bottom: auto;
+    width: auto;
+    height: 2px;
+  }
+
+  .stepButton {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+
+  .stepLabel {
+    font-size: var(--font-size-xs);
+  }
+}
+
+/* The rail is narrow on a laptop; the funnel reads down it again there. */
+@media (min-width: 1200px) {
+  .steps {
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .step {
+    flex: 0 0 auto;
+  }
+
+  .step:not(:last-child)::after {
+    left: 15px;
+    top: 32px;
+    right: auto;
+    bottom: -4px;
+    width: 2px;
+    height: auto;
+  }
+
+  .stepButton {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .stepLabel {
+    font-size: var(--font-size-sm);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Notes
+ * ------------------------------------------------------------------ */
+
+.noteForm {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.noteForm > *:first-child {
+  width: 100%;
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.noteBody {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.noteMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.noteAuthor {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.noteText {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------------ *
+ * Timeline
+ * ------------------------------------------------------------------ */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+/* The thread that turns a list of events into a history. */
+.event:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 28px;
+  bottom: calc(var(--space-4) * -1);
+  width: 2px;
+  background: var(--color-border);
+}
+
+.eventIcon {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+}
+
+.eventBody {
+  min-width: 0;
+}
+
+.eventText {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.eventMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 2px 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}

@@ -18,6 +18,11 @@
  * and nothing else — a lead outside that scope answers 404, because its
  * existence is not theirs to know. **Timeline**: every change worth explaining
  * later appends an activity, so the lead detail can be read like a story.
+ *
+ * Every admin read also carries `isPossibleDuplicate` — whether another lead
+ * holds the same number within thirty days (`lib/leadFilters.js`) — because the
+ * moment to notice that somebody has enquired twice is while reading the row,
+ * not after calling them twice.
  */
 
 const express = require('express');
@@ -30,7 +35,13 @@ const {
   LEAD_STATUS,
   LEGACY_LEAD_SOURCE_MAP,
 } = require('../lib/enums');
-const { applyLeadFilters, applyLeadSort } = require('../lib/leadFilters');
+const {
+  applyLeadFilters,
+  applyLeadSort,
+  buildDuplicateIndex,
+  isPossibleDuplicate,
+  normalizeLeadPhone,
+} = require('../lib/leadFilters');
 const { canSeeLead, omit, scopeLeads } = require('../lib/scope');
 const { clientIp, rateLimit } = require('../middleware/rateLimit');
 const { conflict, forbidden, notFound, validation } = require('../middleware/errors');
@@ -81,22 +92,6 @@ const first = (value) => (Array.isArray(value) ? value[0] : value);
 
 const sameId = (left, right) => String(left) === String(right);
 
-/**
- * An Indian mobile number in one shape: `+919876543210`.
- *
- * The forms send `+91 98765 43210`, `09876543210` and `9876543210`, and a
- * CRM that stores all three cannot tell that they are one person (§7).
- */
-function normalizePhone(value) {
-  if (typeof value !== 'string') return value;
-
-  const digits = value.replace(/[\s()-]/g, '').replace(/^\+/, '');
-  const local = digits.replace(/^91/, '').replace(/^0/, '');
-  if (!/^[6-9]\d{9}$/.test(local)) return value;
-
-  return `+91${local}`;
-}
-
 /** The `utm_*` parameters of the page the form was submitted from. */
 function utmFromUrl(pageUrl) {
   const empty = { source: null, medium: null, campaign: null, term: null, content: null };
@@ -135,6 +130,9 @@ module.exports = ({ db, getModel }) => {
     properties: db.getCollection('properties'),
     localities: db.getCollection('localities'),
     adminUsers: users(),
+    // Built once per response rather than per row: a twenty-row page would
+    // otherwise walk the whole collection twenty times (prompt 29).
+    duplicates: buildDuplicateIndex(rows()),
   });
 
   const userName = (id) => users().find((user) => sameId(user.id, id))?.name ?? null;
@@ -147,7 +145,9 @@ module.exports = ({ db, getModel }) => {
    */
   const present = (lead, { admin = true, list = false, collections = source() } = {}) => {
     const embedded = embedLead(lead, collections);
-    const scoped = admin ? embedded : omit(embedded, ['ipAddress', 'userAgent']);
+    const scoped = admin
+      ? { ...embedded, isPossibleDuplicate: isPossibleDuplicate(lead, collections.duplicates) }
+      : omit(embedded, ['ipAddress', 'userAgent']);
     return list ? omit(scoped, ['activities']) : scoped;
   };
 
@@ -251,7 +251,9 @@ module.exports = ({ db, getModel }) => {
         return;
       }
 
-      if (typeof body.phone === 'string') body.phone = normalizePhone(body.phone);
+      // A number the Indian rule does not recognise is kept as typed, so the
+      // validator — not this line — is what refuses it (`lib/leadFilters.js`).
+      if (typeof body.phone === 'string') body.phone = normalizeLeadPhone(body.phone) ?? body.phone;
       validateBody(schemas.getSchema('lead.create'), body, { fillDefaults: true });
 
       // The old site's 24 source values keep arriving from bookmarked pages and

@@ -90,6 +90,11 @@ const PERMISSIONS = {
     edit: ADMIN_ONLY,
   },
   users: {
+    // Naming an assignee means reading the staff list, and a manager may
+    // assign a lead (`leads.assign`) without being allowed anywhere near the
+    // Users screen — so the directory read is its own permission and `view`,
+    // which `/admin/settings/users` is gated on, stays with `'*'`.
+    list: ADMIN_MANAGER,
     '*': ADMIN_ONLY,
   },
   profile: {
