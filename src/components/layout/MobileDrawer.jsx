@@ -2,13 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Link, useLocation } from 'react-router-dom';
 
-import LeadModalTemp from '../sections/property/LeadModalTemp';
+import CallButton from '../common/CallButton';
 import PATHS from '../../routes/paths';
+import WhatsAppButton from '../common/WhatsAppButton';
 import styles from './MobileDrawer.module.css';
 import useNavPages from '../../hooks/useNavPages';
 import { Drawer, Logo } from '../ui';
 import { NAV } from '../../config/copy';
 import { buildHeaderNav } from '../../config/navigation';
+import { useLeadCapture } from '../../contexts/LeadCaptureContext';
 import { useMasterData } from '../../contexts/MasterDataContext';
 import { useShortlist } from '../../contexts/ShortlistContext';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
@@ -36,9 +38,9 @@ export default function MobileDrawer({ open, onClose }) {
   const { propertyTypes, localities } = useMasterData();
   const { header: pages } = useNavPages();
   const { count } = useShortlist();
+  const { openLeadModal } = useLeadCapture();
 
   const [expanded, setExpanded] = useState(null);
-  const [leadOpen, setLeadOpen] = useState(false);
 
   const { menus, actions } = buildHeaderNav({ propertyTypes, localities, pages, settings });
 
@@ -69,19 +71,32 @@ export default function MobileDrawer({ open, onClose }) {
         </div>
 
         <div className={styles.actions}>
-          {links.map((action) => (
-            <a key={action.key} href={action.href} className={styles.action}>
-              <Icon icon={action.icon} aria-hidden="true" />
-              {action.key === 'call' ? NAV.call : action.label}
-            </a>
-          ))}
+          {links.map((action) =>
+            action.kind === 'whatsapp' ? (
+              <WhatsAppButton
+                key={action.key}
+                variant="link"
+                label={action.label}
+                context="drawer"
+                className={styles.action}
+              />
+            ) : (
+              <CallButton
+                key={action.key}
+                variant="link"
+                label={NAV.call}
+                context="drawer"
+                className={styles.action}
+              />
+            )
+          )}
           {cta ? (
             <button
               type="button"
               className={[styles.action, styles.actionPrimary].join(' ')}
               onClick={() => {
                 onClose?.();
-                setLeadOpen(true);
+                openLeadModal({ entry: 'post-requirement' });
               }}
             >
               <Icon icon={cta.icon} aria-hidden="true" />
@@ -169,14 +184,6 @@ export default function MobileDrawer({ open, onClose }) {
           </Link>
         </div>
       </Drawer>
-
-      <LeadModalTemp
-        open={leadOpen}
-        onClose={() => setLeadOpen(false)}
-        source="post-requirement"
-        requirement
-        successTitle="Requirement received"
-      />
     </>
   );
 }

@@ -1,0 +1,36 @@
+/* The confirmation a visitor sees instead of a second form. */
+.skip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-4) 0 var(--space-2);
+}
+
+.skipIcon {
+  width: 48px;
+  height: 48px;
+  color: var(--color-success-dark);
+}
+
+.skipText {
+  margin: 0;
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  line-height: var(--line-height-normal);
+}
+
+.skipActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+@media (max-width: 599.98px) {
+  .skipActions > * {
+    width: 100%;
+  }
+}

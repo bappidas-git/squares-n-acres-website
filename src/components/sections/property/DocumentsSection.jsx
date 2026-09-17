@@ -3,8 +3,9 @@ import { Icon } from '@iconify/react';
 
 import { Button, Chip } from '../../ui';
 import { DOCUMENT_TYPES } from '../../../config/enums';
-import LeadModalTemp from './LeadModalTemp';
+import LeadCaptureModal, { openFile } from '../../common/LeadCaptureModal';
 import SectionShell from './SectionShell';
+import { leadFormProps } from '../../../utils/leadSources';
 import { track } from '../../../utils/analytics';
 import { useToast } from '../../common/ToastProvider';
 import useGatedContent from '../../../hooks/useGatedContent';
@@ -22,22 +23,6 @@ const TYPE_ICON = {
 };
 
 const filled = (value) => value !== null && value !== undefined && String(value).trim() !== '';
-
-/**
- * Open a file in a new tab.
- *
- * Returns the window the browser gave us, or `null` when it blocked the pop-up
- * — which is why every caller here is a click handler and why the success
- * panel of the lead dialog offers the link again: a download that a visitor
- * paid for with their phone number must not be lost to a pop-up blocker.
- *
- * @param {string} url
- * @returns {Window|null}
- */
-export function openFile(url) {
-  if (!filled(url) || typeof window === 'undefined') return null;
-  return window.open(url, '_blank', 'noopener,noreferrer');
-}
 
 /**
  * The documents in `order`, with anything that has no address dropped.
@@ -131,7 +116,7 @@ export default function DocumentsSection({ property, background = 'bg' }) {
             icon: TYPE_ICON.brochure,
             url: brochureUrl,
             gated: brochureGated,
-            source: 'brochure-download',
+            entry: 'brochure-download',
             event: 'brochure_download',
             action: 'Download brochure',
             // Four rows whose buttons all read "Open" sound identical to a
@@ -148,7 +133,7 @@ export default function DocumentsSection({ property, background = 'bg' }) {
       icon: TYPE_ICON[document.type] ?? TYPE_ICON.other,
       url: document.url,
       gated: document.leadGated !== false,
-      source: 'document-request',
+      entry: 'document-request',
       event: 'document_download',
       action: 'Open',
       actionLabel: `Open ${document.title}`,
@@ -214,34 +199,32 @@ export default function DocumentsSection({ property, background = 'bg' }) {
         })}
       </ul>
 
-      <LeadModalTemp
-        open={Boolean(asking)}
-        onClose={() => setAsking(null)}
-        source={asking?.source ?? 'document-request'}
-        propertyId={propertyId}
-        propertyTitle={property?.title ?? ''}
-        message={asking ? `Requested: ${asking.title}` : ''}
-        successTitle={asking ? 'Your file is ready' : undefined}
-        successAction={
-          asking
-            ? {
-                label: `Open ${asking.title}`,
-                icon: 'mdi:open-in-new',
-                onClick: () => deliver(asking.url, asking.title),
-              }
-            : null
-        }
-        onCaptured={() => {
-          unlock();
-          if (asking) {
-            // Inside the click that submitted the form, so the browser still
-            // counts it as a user gesture and lets the tab through.
-            deliver(asking.url, asking.title);
+      {asking ? (
+        <LeadCaptureModal
+          key={asking.id}
+          {...leadFormProps(asking.entry)}
+          open
+          onClose={() => setAsking(null)}
+          propertyId={propertyId}
+          propertyTitle={property?.title ?? ''}
+          // The gated forms ask for a name and a number only, so what was
+          // asked for travels as a hidden field rather than a box to fill in.
+          hiddenFields={{ message: `Requested: ${asking.title}` }}
+          deliver={{
+            kind: 'file',
+            unlockKind: 'documents',
+            fileUrl: asking.url,
+            fileLabel: asking.title,
+          }}
+          agent={property?.agent?.showOnListing ? property.agent : null}
+          onSuccess={() => {
+            unlock();
+            // The file itself is opened by the dialog, inside the click that
+            // submitted the form, so the browser still lets the tab through.
             track(asking.event, { propertyId, document: asking.title });
-          }
-        }}
-        agent={property?.agent?.showOnListing ? property.agent : null}
-      />
+          }}
+        />
+      ) : null}
     </SectionShell>
   );
 }

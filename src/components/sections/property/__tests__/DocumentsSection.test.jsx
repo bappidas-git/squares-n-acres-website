@@ -36,17 +36,12 @@ const property = {
   ],
 };
 
-/**
- * Fills the temporary lead dialog in and waits for the success panel.
- *
- * The boxes are found by their placeholders because `LeadForm` still has no
- * `<label>`s — ADD-09, which prompt 28 closes.
- */
+/** Fills the gated lead dialog in and waits for the success panel. */
 async function shareDetails() {
-  await userEvent.type(await screen.findByPlaceholderText('Your name *'), 'Asha Rao');
-  await userEvent.type(screen.getByPlaceholderText('Phone number *'), '9876543210');
-  await userEvent.click(screen.getByRole('button', { name: /submit request/i }));
-  await screen.findByText(/your file is ready/i);
+  await userEvent.type(await screen.findByLabelText(/your name/i), 'Asha Rao');
+  await userEvent.type(screen.getByLabelText(/phone/i), '9876543210');
+  await userEvent.click(screen.getByRole('button', { name: /^send$/i }));
+  await screen.findByRole('link', { name: /^open /i });
 }
 
 beforeEach(() => {
@@ -105,7 +100,7 @@ describe('<DocumentsSection>', () => {
       'noopener,noreferrer'
     );
     expect(leadService.create).not.toHaveBeenCalled();
-    expect(screen.queryByPlaceholderText('Your name *')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/your name/i)).not.toBeInTheDocument();
   });
 
   it('asks first for a gated brochure, then delivers the file (BUG-08)', async () => {
@@ -127,13 +122,20 @@ describe('<DocumentsSection>', () => {
     expect(window.dataLayer.at(-1)).toMatchObject({ event: 'brochure_download', propertyId: 7 });
   });
 
-  it('prefills the request with the document that was asked for', async () => {
+  it('files which document was asked for, without a box to overwrite it', async () => {
     renderWith(<DocumentsSection property={property} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Open Approved plan sanction' }));
+    expect(await screen.findByLabelText(/your name/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^message$/i)).not.toBeInTheDocument();
 
-    expect(await screen.findByPlaceholderText('Anything we should know?')).toHaveValue(
-      'Requested: Approved plan sanction'
+    await shareDetails();
+
+    expect(leadService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'document-request',
+        message: 'Requested: Approved plan sanction',
+      })
     );
   });
 
@@ -157,14 +159,11 @@ describe('<DocumentsSection>', () => {
     await userEvent.click(screen.getByRole('button', { name: /download the project brochure/i }));
     await shareDetails();
 
-    // The dialog is still open over the toast, so the panel carries the offer.
-    window.open = jest.fn(() => ({ focus: jest.fn() }));
-    await userEvent.click(screen.getByRole('button', { name: /^open project brochure/i }));
-
-    expect(window.open).toHaveBeenCalledWith(
-      'https://example.test/brochure.pdf',
-      '_blank',
-      'noopener,noreferrer'
+    // A real link rather than a second `window.open`: a blocker that ate the
+    // first tab would eat another one too (BUG-08).
+    expect(screen.getByRole('link', { name: /^open project brochure/i })).toHaveAttribute(
+      'href',
+      'https://example.test/brochure.pdf'
     );
   });
 
@@ -178,7 +177,8 @@ describe('<DocumentsSection>', () => {
   });
 
   it('opens a gated document directly once this visit has already enquired', async () => {
-    leadStorage.save({ name: 'Asha Rao', phone: '9876543210' }, 7, 'property-enquiry');
+    leadStorage.saveVisitor({ name: 'Asha Rao', phone: '+919876543210' });
+    leadStorage.markCaptured(7, 'property-enquiry');
     renderWith(<DocumentsSection property={property} />);
 
     expect(screen.queryByText(/shared on request/i)).not.toBeInTheDocument();

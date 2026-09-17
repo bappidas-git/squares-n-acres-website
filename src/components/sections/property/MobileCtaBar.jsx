@@ -1,8 +1,7 @@
 import { Icon } from '@iconify/react';
 
-import { formatPhoneForTel, whatsappLink } from '../../../utils/format';
-import { track } from '../../../utils/analytics';
-import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
+import CallButton from '../../common/CallButton';
+import WhatsAppButton from '../../common/WhatsAppButton';
 
 import styles from './MobileCtaBar.module.css';
 
@@ -20,50 +19,36 @@ import styles from './MobileCtaBar.module.css';
  *
  * @param {object} props
  * @param {object} props.property
- * @param {(source: string) => void} props.onEnquire
+ * @param {(entry: string) => void} props.onEnquire
  */
 export default function MobileCtaBar({ property, onEnquire }) {
-  const { getContact, getWhatsappLink } = useSiteSettings();
   if (!property) return null;
 
   const agent = property.agent ?? {};
   const listed = agent.showOnListing === true;
-  const contact = getContact();
-
-  const phone = (listed && agent.phone) || contact.phone;
-  const phoneHref = phone ? `tel:${formatPhoneForTel(phone)}` : '';
-
-  const message = `Hi, I am interested in ${property.title}${
-    typeof window === 'undefined' ? '' : ` — ${window.location.href}`
-  }`;
-  const whatsappHref =
-    (listed ? whatsappLink(agent.whatsapp, message) : '') || getWhatsappLink(message);
 
   return (
     <div className={styles.bar} role="region" aria-label="Contact about this property">
-      {phoneHref ? (
-        <a
-          className={styles.action}
-          href={phoneHref}
-          onClick={() => track('call_click', { propertyId: property.id, context: 'cta-bar' })}
-        >
-          <Icon icon="mdi:phone-outline" className={styles.icon} aria-hidden="true" />
-          <span>Call</span>
-        </a>
-      ) : null}
+      <CallButton
+        variant="link"
+        number={listed ? agent.phone : undefined}
+        propertyId={property.id}
+        label="Call"
+        context="cta-bar"
+        className={styles.action}
+        iconClassName={styles.icon}
+      />
 
-      {whatsappHref ? (
-        <a
-          className={styles.action}
-          href={whatsappHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => track('whatsapp_click', { propertyId: property.id, context: 'cta-bar' })}
-        >
-          <Icon icon="mdi:whatsapp" className={styles.icon} aria-hidden="true" />
-          <span>WhatsApp</span>
-        </a>
-      ) : null}
+      <WhatsAppButton
+        variant="link"
+        number={listed ? agent.whatsapp : undefined}
+        propertyId={property.id}
+        propertyTitle={property.title}
+        label="WhatsApp"
+        context="cta-bar"
+        className={styles.action}
+        iconClassName={styles.icon}
+      />
 
       <button
         type="button"

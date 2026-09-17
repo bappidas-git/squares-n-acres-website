@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
+import { leadFormProps } from '../../utils/leadSources';
 import { Section } from '../../components/ui';
 import styles from './Partnership.module.css';
 import { BRAND, SITE } from '../../config/site';
@@ -64,46 +65,6 @@ const partners = [
   { name: 'HDFC Home Finance', type: 'Financial' },
   { name: 'Design Cafe', type: 'Interior' },
   { name: 'HomeLane', type: 'Interior' },
-];
-
-const leadFields = [
-  {
-    name: 'companyName',
-    label: 'Company Name',
-    type: 'text',
-    required: true,
-    placeholder: 'Company Name *',
-  },
-  {
-    name: 'name',
-    label: 'Contact Person',
-    type: 'text',
-    required: true,
-    placeholder: 'Contact Person *',
-  },
-  { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'Email Address *' },
-  { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: 'Phone Number *' },
-  {
-    name: 'partnershipType',
-    label: 'Partnership Type',
-    type: 'select',
-    required: true,
-    placeholder: 'Select Partnership Type *',
-    options: [
-      { value: 'builder', label: 'Builder / Developer' },
-      { value: 'agent', label: 'Real Estate Agent' },
-      { value: 'financial', label: 'Financial Institution' },
-      { value: 'interior', label: 'Interior Designer' },
-      { value: 'other', label: 'Other' },
-    ],
-  },
-  {
-    name: 'message',
-    label: 'Message',
-    type: 'textarea',
-    required: false,
-    placeholder: 'Tell us about your partnership interest...',
-  },
 ];
 
 /* ── Component ─────────────────────────────────── */
@@ -257,12 +218,7 @@ const Partnership = () => {
                   </div>
                 </div>
               </div>
-              <LeadForm
-                title="Partnership Inquiry"
-                subtitle="Tell us about your company and partnership interest"
-                fields={leadFields}
-                source="partnership"
-              />
+              <LeadForm {...leadFormProps('partnership')} />
             </div>
           </div>
         </Section>

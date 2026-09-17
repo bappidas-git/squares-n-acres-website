@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
+import { leadFormProps } from '../../utils/leadSources';
 import { Section } from '../../components/ui';
 import styles from './FlexibleWorkspace.module.css';
 import { SITE } from '../../config/site';
@@ -62,40 +63,6 @@ const benefits = [
     icon: 'mdi:wifi',
     title: 'Fully Equipped',
     desc: 'High-speed internet, printing, pantry, and housekeeping — all included.',
-  },
-];
-
-const leadFields = [
-  { name: 'name', label: 'Full Name', type: 'text', required: true, placeholder: 'Full Name *' },
-  { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'Email Address *' },
-  { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: 'Phone Number *' },
-  {
-    name: 'workspaceType',
-    label: 'Workspace Type',
-    type: 'select',
-    required: true,
-    placeholder: 'Select Workspace Type *',
-    options: [
-      { value: 'hot-desk', label: 'Hot Desk' },
-      { value: 'dedicated-desk', label: 'Dedicated Desk' },
-      { value: 'private-office', label: 'Private Office' },
-      { value: 'meeting-room', label: 'Meeting Room' },
-      { value: 'virtual-office', label: 'Virtual Office' },
-    ],
-  },
-  {
-    name: 'teamSize',
-    label: 'Team Size',
-    type: 'text',
-    required: false,
-    placeholder: 'Number of seats needed (optional)',
-  },
-  {
-    name: 'message',
-    label: 'Requirements',
-    type: 'textarea',
-    required: false,
-    placeholder: 'Any specific requirements...',
   },
 ];
 
@@ -221,12 +188,7 @@ const FlexibleWorkspace = () => {
                   </div>
                 </div>
               </div>
-              <LeadForm
-                title="Enquire About Workspaces"
-                subtitle="Our team will curate the best options for you"
-                fields={leadFields}
-                source="flexible_workspace"
-              />
+              <LeadForm {...leadFormProps('flexible-workspace')} />
             </div>
           </div>
         </Section>

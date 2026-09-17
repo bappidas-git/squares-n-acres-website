@@ -439,12 +439,6 @@
   margin-bottom: var(--space-4);
 }
 
-.newsletterForm {
-  background: transparent !important;
-  padding: 0 !important;
-  box-shadow: none !important;
-}
-
 /* ── Skeleton Loader ──────────────────────────── */
 .loadingGrid {
   display: grid;

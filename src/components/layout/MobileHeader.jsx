@@ -2,14 +2,13 @@ import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Link, useLocation } from 'react-router-dom';
 
+import CallButton from '../common/CallButton';
 import GlobalSearch from '../common/GlobalSearch';
 import MobileDrawer from './MobileDrawer';
 import PATHS from '../../routes/paths';
 import styles from './MobileHeader.module.css';
 import useScrollDirection from '../../hooks/useScrollDirection';
 import { Logo, Modal } from '../ui';
-import { EVENTS, track } from '../../utils/analytics';
-import { formatPhoneForTel } from '../../utils/format';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 /**
@@ -60,16 +59,13 @@ export default function MobileHeader() {
           </button>
 
           {showCall ? (
-            <a
-              href={`tel:${formatPhoneForTel(phone)}`}
+            <CallButton
+              variant="icon"
+              context="header"
               className={[styles.iconButton, overHero ? styles.onDark : '']
                 .filter(Boolean)
                 .join(' ')}
-              aria-label={`Call ${phone}`}
-              onClick={() => track(EVENTS.callClick, { source: 'header' })}
-            >
-              <Icon icon="mdi:phone-outline" width={22} height={22} aria-hidden="true" />
-            </a>
+            />
           ) : null}
 
           <button

@@ -4,7 +4,7 @@ import { Icon } from '@iconify/react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-import LeadForm from '../../components/common/LeadForm';
+import NewsletterForm from '../../components/common/NewsletterForm';
 import PATHS from '../../routes/paths';
 import articleService from '../../services/articleService';
 import styles from './Articles.module.css';
@@ -270,28 +270,7 @@ const Articles = () => {
                 <p className={styles.newsletterText}>
                   Locality notes and practical guidance, once a month.
                 </p>
-                <LeadForm
-                  title=""
-                  subtitle=""
-                  fields={[
-                    {
-                      name: 'name',
-                      label: 'Name',
-                      type: 'text',
-                      required: true,
-                      placeholder: 'Your name',
-                    },
-                    {
-                      name: 'email',
-                      label: 'Email',
-                      type: 'email',
-                      required: true,
-                      placeholder: 'Email address',
-                    },
-                  ]}
-                  source="newsletter"
-                  className={styles.newsletterForm}
-                />
+                <NewsletterForm withName />
               </div>
             </aside>
           </div>

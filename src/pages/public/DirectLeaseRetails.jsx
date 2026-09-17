@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import LeadForm from '../../components/common/LeadForm';
+import { leadFormProps } from '../../utils/leadSources';
 import { Section } from '../../components/ui';
 import styles from './DirectLeaseRetails.module.css';
 import { SITE } from '../../config/site';
@@ -75,40 +76,6 @@ const process = [
     icon: 'mdi:file-sign',
     title: 'Lease & Move In',
     desc: 'We facilitate the lease agreement and handover for a smooth transition.',
-  },
-];
-
-const leadFields = [
-  { name: 'name', label: 'Full Name', type: 'text', required: true, placeholder: 'Full Name *' },
-  { name: 'email', label: 'Email', type: 'email', required: true, placeholder: 'Email Address *' },
-  { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: 'Phone Number *' },
-  {
-    name: 'spaceType',
-    label: 'Space Type',
-    type: 'select',
-    required: true,
-    placeholder: 'Select Space Type *',
-    options: [
-      { value: 'retail-shop', label: 'Retail Shop' },
-      { value: 'office-space', label: 'Office Space' },
-      { value: 'showroom', label: 'Showroom' },
-      { value: 'fnb-outlet', label: 'F&B Outlet' },
-      { value: 'other', label: 'Other' },
-    ],
-  },
-  {
-    name: 'areaRequired',
-    label: 'Area Required',
-    type: 'text',
-    required: false,
-    placeholder: 'Approx. area in sq.ft (optional)',
-  },
-  {
-    name: 'message',
-    label: 'Requirements',
-    type: 'textarea',
-    required: false,
-    placeholder: 'Location preference, budget, or any specific needs...',
   },
 ];
 
@@ -262,12 +229,7 @@ const DirectLeaseRetails = () => {
                   </div>
                 </div>
               </div>
-              <LeadForm
-                title="Enquire About Spaces"
-                subtitle="Our team will curate the best options for you"
-                fields={leadFields}
-                source="direct_lease_retails"
-              />
+              <LeadForm {...leadFormProps('direct-lease-retail')} />
             </div>
           </div>
         </Section>

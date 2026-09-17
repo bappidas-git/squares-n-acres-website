@@ -10,6 +10,7 @@ import {
 import adminRoutes from './adminRoutes';
 import publicRoutes, { PublicRoute } from './publicRoutes';
 import { AdminAuthProvider } from '../contexts/AdminAuthContext';
+import { LeadCaptureProvider } from '../contexts/LeadCaptureContext';
 import { MasterDataProvider } from '../contexts/MasterDataContext';
 import { NavigationGuardProvider } from '../contexts/NavigationGuardContext';
 import { PageLoader } from '../components/common/SkeletonLoaders';
@@ -41,9 +42,11 @@ const AppShell = () => (
         <AdminAuthProvider>
           <NavigationGuardProvider>
             <ShortlistProvider>
-              <Suspense fallback={<PageLoader />}>
-                <Outlet />
-              </Suspense>
+              <LeadCaptureProvider>
+                <Suspense fallback={<PageLoader />}>
+                  <Outlet />
+                </Suspense>
+              </LeadCaptureProvider>
             </ShortlistProvider>
           </NavigationGuardProvider>
         </AdminAuthProvider>
