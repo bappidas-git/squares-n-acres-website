@@ -19,6 +19,8 @@ import { createContext, useContext } from 'react';
  * @property {(path: string, from: number, to: number) => void} moveItem
  * @property {(path: string, id: number|string, patch: object) => void} updateItem
  * @property {(key: string) => void} goToTab opens another tab — for a field that lives there
+ * @property {(path: string) => void} focusField opens the tab that owns a dotted
+ *   path and puts the cursor in the control — what the SEO panel's hints do
  * @property {boolean} disabled true for a sales user — the whole form is read-only (§7)
  * @property {boolean} isNew
  * @property {number|string|null} propertyId

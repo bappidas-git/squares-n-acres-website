@@ -11,7 +11,9 @@ import { setIn } from '../../../../hooks/useForm';
 import { useNavigationGuard } from '../../../../contexts/NavigationGuardContext';
 import { useToast } from '../../../../components/common/ToastProvider';
 import { PREVIEW_QUERY, publicUrlOf, viewPathOf, viewUrlOf } from '../publicUrl';
-import { DEFAULT_TAB, firstTabWithErrors, groupErrorsByTab, tabByKey } from './tabs';
+import { DEFAULT_TAB, firstTabWithErrors, groupErrorsByTab, tabByKey, tabOfPath } from './tabs';
+import { FIELD_ALIASES, focusFieldElement } from './fieldFocus';
+import { applySeoSideEffects } from '../../../../components/seo/seoSideEffects';
 import { computeCompleteness } from './completeness';
 import { validateAll as runAllValidators, validateForActivation } from './validators';
 import reducer, { actions, createFormState } from './reducer';
@@ -67,6 +69,10 @@ export default function usePropertyForm({
   const [draftSavedAt, setDraftSavedAt] = useState(null);
   const [redirect, setRedirect] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  // Focusing a control on another tab has to wait for the render that mounts
+  // it, which is what this ref and the effect below its writer are for.
+  const pendingFocus = useRef(null);
 
   const { values, errors, initial } = state;
 
@@ -163,6 +169,23 @@ export default function usePropertyForm({
    * ---------------------------------------------------------------- */
 
   const setField = useCallback((path, value) => dispatch(actions.set(path, value)), []);
+
+  /**
+   * Opens the tab that owns a dotted path and puts the cursor in the control.
+   *
+   * This is what the SEO panel's fix hints do: "the body never uses the focus
+   * keyword" is a sentence, and a click that opens Basics with the cursor in
+   * the description is a fix. The path is the analyser's `field` — `content`,
+   * `images`, `faqs`, `pricing` — and `tabOfPath` already knows which tab owns
+   * each one, because that is how a 422 finds its badge (§5.3).
+   *
+   * @param {string} path
+   */
+  const focusField = useCallback((path) => {
+    if (!path) return;
+    setActiveTab(tabOfPath(FIELD_ALIASES[path] ?? path));
+    pendingFocus.current = FIELD_ALIASES[path] ?? path;
+  }, []);
   const setFields = useCallback((patch) => dispatch(actions.setMany(patch)), []);
   const addItem = useCallback(
     (path, item, index) => dispatch(actions.listAdd(path, item, index)),
@@ -314,6 +337,12 @@ export default function usePropertyForm({
         storage.removeItem(draftKey(current.propertyId));
         setDraftOffer(null);
         setDraftSavedAt(null);
+
+        // The redirect this listing's `seo` asks for is written now, against
+        // the slug the API answered with — a new listing has none until this
+        // point (§9.6). It comes after the state that says the listing is
+        // saved, because it never throws and never changes that answer.
+        await applySeoSideEffects('property', saved);
         toast.success(savedMessage(mode, saved, wasPublished));
 
         // A created listing moves to its own URL, replacing the add route so
@@ -415,6 +444,15 @@ export default function usePropertyForm({
     return () => clearTimeout(timer);
   }, [redirect, isBlocking, navigate]);
 
+  useEffect(() => {
+    const path = pendingFocus.current;
+    if (!path) return undefined;
+    pendingFocus.current = null;
+
+    const timer = setTimeout(() => focusFieldElement(path), 0);
+    return () => clearTimeout(timer);
+  }, [activeTab]);
+
   /* ---------------------------------------------------------------- *
    * Derived
    * ---------------------------------------------------------------- */
@@ -444,6 +482,7 @@ export default function usePropertyForm({
     moveItem,
     updateItem,
     setActive,
+    focusField,
     validateTab,
     validateAll,
     save,

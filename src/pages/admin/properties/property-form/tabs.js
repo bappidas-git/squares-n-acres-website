@@ -48,7 +48,7 @@ import MediaTab from './tabs/MediaTab';
 import PricingTab from './tabs/PricingTab';
 import ProjectBuilderTab from './tabs/ProjectBuilderTab';
 import SectionVisibilityTab from './tabs/SectionVisibilityTab';
-import SeoPlaceholderTab from './tabs/SeoPlaceholderTab';
+import SeoTab from './tabs/SeoTab';
 import SimilarPropertiesTab from './tabs/SimilarPropertiesTab';
 import UnitConfigurationsTab from './tabs/UnitConfigurationsTab';
 
@@ -216,8 +216,11 @@ export const TABS = [
     key: 'seo',
     label: 'SEO',
     icon: 'mdi:magnify',
-    component: SeoPlaceholderTab,
+    component: SeoTab,
     validator: validateSeo,
+    // The panel edits the listing's own slug (D34), so a message about it
+    // belongs on both tabs; `tabOfPath` answers with the first match, which is
+    // Basics — where the field an editor started from lives.
     fields: ['seo'],
   },
 ];

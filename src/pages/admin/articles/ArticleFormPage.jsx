@@ -1,6 +1,8 @@
 import { Icon } from '@iconify/react';
+import { useCallback, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import AdminTabs, { AdminTabPanel } from '../../../components/admin/AdminTabs';
 import ArticleChecksCard from './ArticleChecksCard';
 import ArticleFaqsCard from './ArticleFaqsCard';
 import ArticleImageCard from './ArticleImageCard';
@@ -9,9 +11,12 @@ import ArticleStatusCard from './ArticleStatusCard';
 import ArticleTaxonomyCard from './ArticleTaxonomyCard';
 import FormSection, { FormColumn } from '../../../components/admin/FormSection';
 import PATHS from '../../../routes/paths';
+import SeoPanel from '../../../components/seo/SeoPanel';
+import SeoSummaryCard from '../../../components/seo/SeoPanel/SeoSummaryCard';
 import PageHeader from '../../../components/admin/PageHeader';
 import RichTextField from '../../../components/editor/RichTextField';
 import SlugField from '../../../components/admin/SlugField';
+import { toSeoPaths } from '../../../components/seo/seoValues';
 import articleService from '../../../services/articleService';
 import useApi from '../../../hooks/useApi';
 import useArticleForm, { EXCERPT_MAX_LENGTH, TITLE_MAX_LENGTH } from './useArticleForm';
@@ -42,7 +47,34 @@ const checkArticleSlug = (slug, { excludeId, signal } = {}) =>
 
 /** The character guides of §9.1 — what a search result has room to print. */
 const TITLE_GUIDE = { min: 50, max: 60 };
-const DESCRIPTION_GUIDE = { min: 120, max: 160 };
+
+/** The two halves of the form. */
+const FORM_TABS = [
+  { key: 'content', label: 'Content', icon: 'mdi:text-box-outline' },
+  { key: 'seo', label: 'SEO', icon: 'mdi:magnify' },
+];
+
+/**
+ * What the SEO analysers call a field, and where it is on this screen.
+ *
+ * A hint that names the body scrolls to the editor; one that names the category
+ * scrolls to the Classification card in the rail. Anything not listed still
+ * opens the Content tab, which is where everything about the article is.
+ */
+const FIELD_TARGET = {
+  content: 'article-content',
+  excerpt: 'article-excerpt',
+  slug: 'article-slug',
+  faqs: 'article-faqs',
+  featuredImage: 'article-image',
+  categoryId: 'article-taxonomy',
+  tagIds: 'article-taxonomy',
+  relatedArticleIds: 'article-related',
+  tableOfContents: 'article-status',
+};
+
+/** What "focus this field" means when the id is on a block rather than a control. */
+const FOCUSABLE = 'input, textarea, select, [contenteditable="true"]';
 
 /**
  * Admin → Articles → add / edit
@@ -82,6 +114,33 @@ export default function ArticleFormPage() {
 
   const taxonomy = useArticleTaxonomy();
   const form = useArticleForm({ articleId: id ?? null, record, readOnly });
+
+  const [activeTab, setActiveTab] = useState('content');
+  // Focusing a control the SEO tab has just hidden has to wait for the render
+  // that brings it back, which is what this ref and the callback below are for.
+  const pendingFocus = useRef(null);
+
+  /**
+   * The SEO panel's fix hints: open the half of the form that holds the field,
+   * then put the cursor in it.
+   */
+  const focusField = useCallback((path) => {
+    const target = FIELD_TARGET[path];
+    setActiveTab('content');
+    pendingFocus.current = target ?? null;
+
+    window.requestAnimationFrame(() => {
+      const elementId = pendingFocus.current;
+      pendingFocus.current = null;
+      if (!elementId) return;
+
+      const element = document.getElementById(elementId);
+      if (!element) return;
+      const control = element.matches(FOCUSABLE) ? element : element.querySelector(FOCUSABLE);
+      (control ?? element).focus?.();
+      element.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    });
+  }, []);
 
   const {
     values,
@@ -183,6 +242,19 @@ export default function ArticleFormPage() {
   const rail = (
     <div className={styles.rail}>
       <ArticleStatusCard form={form} />
+      <aside className={styles.card} aria-labelledby="article-seo">
+        <h2 className={styles.cardTitle} id="article-seo">
+          Search engines
+        </h2>
+        <SeoSummaryCard
+          compact
+          seo={values.seo}
+          onOpen={(field) => {
+            if (field) focusField(field);
+            else setActiveTab('seo');
+          }}
+        />
+      </aside>
       <ArticleChecksCard form={form} />
       <ArticleTaxonomyCard form={form} taxonomy={taxonomy} />
       <ArticleImageCard form={form} />
@@ -216,158 +288,130 @@ export default function ArticleFormPage() {
         >
           <DraftBanner draft={draftOffer} onRestore={restoreDraft} onDiscard={discardDraft} />
 
-          <FormSection title="The article">
-            <FormColumn>
-              <TextField
-                label="Headline"
-                required
-                value={values.title ?? ''}
-                error={errors.title}
-                disabled={readOnly || saving}
-                maxLength={TITLE_MAX_LENGTH}
-                hint="20 to 100 characters. What a reader would search for, not what an editor would file it under."
-                onChange={(event) => setField('title', event.target.value)}
-                onBlur={() => handleBlur('title')}
-              />
-              <Counter
-                value={values.title}
-                guide={TITLE_GUIDE}
-                max={TITLE_MAX_LENGTH}
-                label="The headline"
-              />
-            </FormColumn>
+          <AdminTabs
+            label="Article sections"
+            tabs={FORM_TABS}
+            value={activeTab}
+            onChange={setActiveTab}
+          />
 
-            <FormColumn>
-              <SlugField
-                label="URL"
-                required
-                base="/insights/articles/"
-                value={values.slug ?? ''}
-                source={values.title ?? ''}
-                error={errors.slug ?? errors['seo.slug']}
-                disabled={readOnly || saving}
-                excludeId={id}
-                checkSlug={checkArticleSlug}
-                onChange={(next) => setField('slug', next)}
-              />
-            </FormColumn>
+          <AdminTabPanel tabKey="content" value={activeTab}>
+            <FormSection title="The article">
+              <FormColumn>
+                <TextField
+                  label="Headline"
+                  required
+                  value={values.title ?? ''}
+                  error={errors.title}
+                  disabled={readOnly || saving}
+                  maxLength={TITLE_MAX_LENGTH}
+                  hint="20 to 100 characters. What a reader would search for, not what an editor would file it under."
+                  onChange={(event) => setField('title', event.target.value)}
+                  onBlur={() => handleBlur('title')}
+                />
+                <Counter
+                  value={values.title}
+                  guide={TITLE_GUIDE}
+                  max={TITLE_MAX_LENGTH}
+                  label="The headline"
+                />
+              </FormColumn>
 
-            <FormColumn>
-              <TextareaField
-                label="Excerpt"
-                rows={3}
-                value={values.excerpt ?? ''}
-                error={errors.excerpt}
-                disabled={readOnly || saving}
-                maxLength={EXCERPT_MAX_LENGTH}
-                hint="The sentence the archive card and the search result print. Required before the article goes live."
-                onChange={(event) => setField('excerpt', event.target.value)}
-              />
-              <div className={styles.excerptFoot}>
-                <span className={styles.counterPlain} aria-live="polite">
-                  {(values.excerpt ?? '').length} / {EXCERPT_MAX_LENGTH} characters
-                </span>
-                {readOnly ? null : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={saving || !values.content}
-                    icon={<Icon icon="mdi:auto-fix" width="16" height="16" />}
-                    onClick={() => setField('excerpt', generateExcerpt(values.content))}
-                  >
-                    Generate from content
-                  </Button>
-                )}
-              </div>
-            </FormColumn>
-          </FormSection>
+              <FormColumn id="article-slug">
+                <SlugField
+                  label="URL"
+                  required
+                  base="/insights/articles/"
+                  value={values.slug ?? ''}
+                  source={values.title ?? ''}
+                  error={errors.slug ?? errors['seo.slug']}
+                  disabled={readOnly || saving}
+                  excludeId={id}
+                  checkSlug={checkArticleSlug}
+                  onChange={(next) => setField('slug', next)}
+                />
+              </FormColumn>
 
-          <FormSection
-            title="Body"
-            description="Headings, lists, images, tables and the three blocks — a call to action, a row of listings, a FAQ group."
-          >
-            <FormColumn>
-              <RichTextField
-                ref={editorRef}
-                label="Content"
-                required
-                variant="full"
-                minHeight={420}
-                value={values.content ?? ''}
-                error={errors.content}
-                disabled={readOnly || saving}
-                focusKeyword={values.seo?.focusKeyword ?? ''}
-                placeholder="Open with the answer, then explain it."
-                helper="Images are added by address until the media library arrives; every one needs alt text."
-                onChange={(html) => setField('content', html)}
-              />
-            </FormColumn>
-          </FormSection>
+              <FormColumn>
+                <TextareaField
+                  id="article-excerpt"
+                  label="Excerpt"
+                  rows={3}
+                  value={values.excerpt ?? ''}
+                  error={errors.excerpt}
+                  disabled={readOnly || saving}
+                  maxLength={EXCERPT_MAX_LENGTH}
+                  hint="The sentence the archive card and the search result print. Required before the article goes live."
+                  onChange={(event) => setField('excerpt', event.target.value)}
+                />
+                <div className={styles.excerptFoot}>
+                  <span className={styles.counterPlain} aria-live="polite">
+                    {(values.excerpt ?? '').length} / {EXCERPT_MAX_LENGTH} characters
+                  </span>
+                  {readOnly ? null : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={saving || !values.content}
+                      icon={<Icon icon="mdi:auto-fix" width="16" height="16" />}
+                      onClick={() => setField('excerpt', generateExcerpt(values.content))}
+                    >
+                      Generate from content
+                    </Button>
+                  )}
+                </div>
+              </FormColumn>
+            </FormSection>
 
-          <ArticleFaqsCard form={form} />
+            <FormSection
+              title="Body"
+              description="Headings, lists, images, tables and the three blocks — a call to action, a row of listings, a FAQ group."
+            >
+              <FormColumn id="article-content">
+                <RichTextField
+                  ref={editorRef}
+                  label="Content"
+                  required
+                  variant="full"
+                  minHeight={420}
+                  value={values.content ?? ''}
+                  error={errors.content}
+                  disabled={readOnly || saving}
+                  focusKeyword={values.seo?.focusKeyword ?? ''}
+                  placeholder="Open with the answer, then explain it."
+                  helper="Images are added by address until the media library arrives; every one needs alt text."
+                  onChange={(html) => setField('content', html)}
+                />
+              </FormColumn>
+            </FormSection>
 
-          <FormSection
-            title="Search result"
-            description="What Google prints for this article. Leave a field empty and the site-wide template fills it in (§9.5)."
-          >
-            <FormColumn>
-              <TextField
-                label="Title"
-                value={values.seo?.title ?? ''}
-                error={errors['seo.title']}
-                disabled={readOnly || saving}
-                maxLength={200}
-                placeholder="Karnataka RERA: what a registration number tells a buyer"
-                onChange={(event) => setField('seo.title', event.target.value)}
-              />
-              <Counter value={values.seo?.title} guide={TITLE_GUIDE} label="The title" />
-            </FormColumn>
+            <ArticleFaqsCard form={form} />
+          </AdminTabPanel>
 
-            <FormColumn>
-              <TextareaField
-                label="Meta description"
-                rows={3}
-                value={values.seo?.description ?? ''}
-                error={errors['seo.description']}
-                disabled={readOnly || saving}
-                maxLength={320}
-                placeholder="A sentence somebody would click: what the piece answers, and for whom."
-                onChange={(event) => setField('seo.description', event.target.value)}
-              />
-              <Counter
-                value={values.seo?.description}
-                guide={DESCRIPTION_GUIDE}
-                label="The description"
-              />
-            </FormColumn>
-
-            <FormColumn half>
-              <TextField
-                label="Focus keyword"
-                value={values.seo?.focusKeyword ?? ''}
-                error={errors['seo.focusKeyword']}
-                disabled={readOnly || saving}
-                maxLength={120}
-                hint="The one phrase this article should rank for. The editor's image dialog and the analysis in the full panel are built around it."
-                placeholder="karnataka rera registration"
-                onChange={(event) => setField('seo.focusKeyword', event.target.value)}
-              />
-            </FormColumn>
-
-            <FormColumn>
-              <Alert
-                tone="info"
-                title="The rest of the SEO panel arrives in a later step"
-                icon={<Icon icon="mdi:progress-wrench" width="20" height="20" />}
-              >
-                The full panel — the analysis, the search and social previews, the robots
-                directives, the schema and the redirect — is added later. The keywords, canonical,
-                Open Graph, Twitter, schema, sitemap and redirect this article already holds are
-                carried through every save untouched in the meantime, and the URL above keeps the
-                slug in step (D34).
-              </Alert>
-            </FormColumn>
-          </FormSection>
+          <AdminTabPanel tabKey="seo" value={activeTab}>
+            <SeoPanel
+              entityType="article"
+              entity={values}
+              seo={values.seo}
+              variant="full"
+              errors={errors}
+              disabled={readOnly || saving}
+              excludeId={id}
+              checkSlug={checkArticleSlug}
+              slugBase="/insights/articles/"
+              context={{ categories: taxonomy.categories, authors: taxonomy.authors }}
+              onFocusField={focusField}
+              onSlugChange={(slug) => setField('slug', slug)}
+              onChange={(patch) => {
+                // One dotted path at a time: `useForm.setField` composes on the
+                // current values, so an edit and the analysis landing behind it
+                // cannot overwrite each other.
+                for (const [path, value] of Object.entries(toSeoPaths(patch))) {
+                  setField(path, value);
+                }
+              }}
+            />
+          </AdminTabPanel>
         </form>
 
         {beside ? <div className={styles.railColumn}>{rail}</div> : null}

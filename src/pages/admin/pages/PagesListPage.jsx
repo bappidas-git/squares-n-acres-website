@@ -9,6 +9,7 @@ import DataTable from '../../../components/admin/DataTable';
 import FilterBar from '../../../components/admin/FilterBar';
 import PATHS from '../../../routes/paths';
 import PageHeader from '../../../components/admin/PageHeader';
+import SeoScoreChip from '../../../components/seo/SeoScoreChip';
 import StatusChip from '../../../components/admin/StatusChip';
 import pageService from '../../../services/pageService';
 import useApiList from '../../../hooks/useApiList';
@@ -258,6 +259,14 @@ export default function PagesListPage() {
         mobile: false,
         render: (row) =>
           row.showInFooter && row.footerColumn ? FOOTER_COLUMNS.labelOf(row.footerColumn) : '—',
+      },
+      {
+        key: 'seoScore',
+        label: 'SEO',
+        width: '132px',
+        hideBelow: 'lg',
+        mobile: false,
+        render: (row) => <SeoScoreChip seo={row.seo} />,
       },
       {
         key: 'updatedAt',

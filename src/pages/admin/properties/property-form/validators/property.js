@@ -18,6 +18,7 @@ import {
   SLUG_PATTERN,
   URL_PATTERN,
 } from '../../../../../utils/validation';
+import { validateSeoBranch } from '../../../../../components/seo/seoSideEffects';
 
 /** Title length the contract asks for (§6.1). */
 export const TITLE_MIN = 10;
@@ -573,6 +574,16 @@ export function validateAgent(values) {
   return errors;
 }
 
+/**
+ * The SEO tab (§9.6).
+ *
+ * The 50–60 character guide the panel draws its meters against is **advice**,
+ * not a rule: a long title is cut in a result, not refused, and a listing whose
+ * title is sixty-eight characters must still be savable. The only lengths here
+ * are the API's own, and the only two things that genuinely block a save are
+ * shared with every other form through `validateSeoBranch` — a custom schema
+ * that would invalidate the page's JSON-LD, and a redirect with nowhere to go.
+ */
 export function validateSeo(values) {
   const { errors, add } = collector();
   const seo = values.seo ?? {};
@@ -585,6 +596,8 @@ export function validateSeo(values) {
     add('seo.focusKeyword', `Keep the focus keyword to ${FOCUS_KEYWORD_MAX} characters.`);
   }
   checkUrl(add, 'seo.canonicalUrl', seo.canonicalUrl, 'The canonical URL');
+
+  for (const [path, message] of Object.entries(validateSeoBranch(seo))) add(path, message);
 
   return errors;
 }

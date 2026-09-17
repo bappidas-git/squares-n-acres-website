@@ -34,6 +34,7 @@ import {
   showsFurnishing,
   showsPossessionDate,
 } from '../fieldRules';
+import { propertyFieldId } from '../fieldFocus';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
@@ -423,6 +424,7 @@ export default function BasicsTab() {
       >
         <FormColumn>
           <TextareaField
+            id={propertyFieldId('shortDescription')}
             label="Short description"
             rows={3}
             maxLength={SHORT_DESCRIPTION_MAX}
@@ -434,7 +436,7 @@ export default function BasicsTab() {
           />
         </FormColumn>
 
-        <FormColumn>
+        <FormColumn id={propertyFieldId('description')}>
           <RichTextField
             label="Description"
             variant="full"

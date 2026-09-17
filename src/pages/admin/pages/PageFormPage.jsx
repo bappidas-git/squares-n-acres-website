@@ -15,10 +15,10 @@ import { useNavigationGuard } from '../../../contexts/NavigationGuardContext';
 // then cannot give the extracted CSS one order across the admin chunks.
 import { FormFieldControl } from '../../../components/admin/MasterDataForm';
 import FormSection, { FormColumn } from '../../../components/admin/FormSection';
+import SeoPanel from '../../../components/seo/SeoPanel';
 import PageHeader from '../../../components/admin/PageHeader';
 import SlugField from '../../../components/admin/SlugField';
 import {
-  Alert,
   Button,
   ErrorState,
   RadioGroup,
@@ -34,6 +34,13 @@ import {
   PAGE_TEMPLATES,
 } from '../../../config/enums';
 import { validateBlockData } from '../../../components/cms/BlockEditor/blockSchemas';
+import { applySeoSideEffects, validateSeoBranch } from '../../../components/seo/seoSideEffects';
+import {
+  createSeo,
+  toSeoPaths,
+  toSeoPayload,
+  withSeoDefaults,
+} from '../../../components/seo/seoValues';
 import { resetNavPagesCache } from '../../../hooks/useNavPages';
 import { schemas } from '../../../services/schemas';
 import { slugifyPath } from '../../../utils/slug';
@@ -75,6 +82,8 @@ const BLANK = {
   headerMenu: '',
   showInFooter: false,
   footerColumn: '',
+  seo: createSeo(),
+  updatedAt: null,
 };
 
 /** The record, reduced to what this form edits. */
@@ -96,9 +105,32 @@ const toFormValues = (record) => ({
   headerMenu: record.headerMenu ?? '',
   showInFooter: Boolean(record.showInFooter),
   footerColumn: record.footerColumn ?? '',
+  // Every field of §9.6 present, whatever the record was saved with.
+  seo: withSeoDefaults(record.seo),
+  // Read-only, never sent back: the SEO panel prints it as "last modified".
+  updatedAt: record.updatedAt ?? null,
 });
 
 const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');
+
+/**
+ * What the SEO analysers call a field, and where it is on this screen.
+ *
+ * A page's body is its blocks, so "the body never uses the focus keyword"
+ * scrolls to the block editor; everything else the engine can name about a page
+ * is either the URL or a field of the panel itself.
+ */
+const FIELD_TARGET = { content: 'page-content', slug: 'page-slug', images: 'page-content' };
+
+/** Brings the block a hint names into view, and focuses the first control in it. */
+function focusField(path) {
+  const element = document.getElementById(FIELD_TARGET[path] ?? '');
+  if (!element) return;
+
+  const control = element.querySelector('input, textarea, select, [contenteditable="true"]');
+  control?.focus?.();
+  element.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+}
 
 /**
  * `SlugField`'s availability check, in the shape it hands over.
@@ -150,11 +182,6 @@ export default function PageFormPage() {
     refetch,
   } = useApi((signal) => pageService.adminGet(id, { signal }), [id], { enabled: isEdit });
 
-  // The branch this screen carries but never shows: the SEO panel is prompt 36,
-  // and a `PUT` that left `seo` out would wipe it (§5.8).
-  const seoRef = useRef(null);
-  seoRef.current = record?.seo ?? null;
-
   const [redirect, setRedirect] = useState(null);
   const [previewing, setPreviewing] = useState(false);
   // "Publish" is a status change *and* a save. `setField` lands one render
@@ -176,9 +203,8 @@ export default function PageFormPage() {
       headerMenu: values.showInHeader ? values.headerMenu || null : null,
       showInFooter: Boolean(values.showInFooter),
       footerColumn: values.showInFooter ? values.footerColumn || null : null,
-      ...(seoRef.current
-        ? { seo: { ...seoRef.current, slug: slugifyPath(values.slug ?? '') } }
-        : {}),
+      // D34: one URL — `seo.slug` always mirrors the page's own.
+      seo: toSeoPayload(values.seo, slugifyPath(values.slug ?? '')),
     }),
     []
   );
@@ -221,6 +247,10 @@ export default function PageFormPage() {
           found[`blocks.${index}.data.${key}`] = message;
         }
       });
+
+      // The SEO panel's own two blockers: JSON-LD that would invalidate the
+      // page's script tag, and a redirect with nowhere to send anybody.
+      Object.assign(found, validateSeoBranch(values.seo));
 
       return found;
     },
@@ -300,6 +330,9 @@ export default function PageFormPage() {
     // The header and footer menus are built from the published pages and are
     // cached for the page load (D93).
     resetNavPagesCache();
+    // The redirect this page's `seo` asks for, against the slug the API
+    // answered with — a new page has none until now (§9.6).
+    await applySeoSideEffects('page', saved);
     toast.success(isEdit ? 'Page saved.' : 'Page created.');
 
     if (after === 'view' && saved.slug) {
@@ -439,7 +472,7 @@ export default function PageFormPage() {
               onBlur={() => form.handleBlur('title')}
             />
           </FormColumn>
-          <FormColumn half>
+          <FormColumn half id="page-slug">
             <SlugField
               label="URL"
               required
@@ -578,7 +611,7 @@ export default function PageFormPage() {
           title="Content"
           description="The bands the page is built from, in the order a visitor meets them."
         >
-          <FormColumn>
+          <FormColumn id="page-content">
             <BlockEditor
               blocks={values.blocks ?? []}
               errors={blockErrors}
@@ -588,13 +621,32 @@ export default function PageFormPage() {
           </FormColumn>
         </FormSection>
 
-        <FormSection title="Search engines">
+        <FormSection
+          title="Search engines"
+          description="The whole panel: the phrase this page targets, what a result prints, the share cards, the robots directives and the structured data (§9)."
+        >
           <FormColumn>
-            <Alert tone="info" icon={<Icon icon="mdi:magnify" width="20" height="20" />}>
-              The SEO panel is added in prompt 36. Until then the API keeps this page’s title,
-              description and schema exactly as they are, including through this form — only the
-              slug is kept in step with the URL above (D34).
-            </Alert>
+            <SeoPanel
+              entityType="page"
+              entity={values}
+              seo={values.seo}
+              variant="full"
+              errors={errors}
+              disabled={form.submitting}
+              excludeId={id}
+              checkSlug={checkPageSlug}
+              slugBase="/"
+              onFocusField={focusField}
+              onSlugChange={(slug) => setField('slug', slug)}
+              onChange={(patch) => {
+                // One dotted path at a time: `useForm.setField` composes on the
+                // current values, so an edit and the analysis landing behind it
+                // cannot overwrite each other.
+                for (const [path, value] of Object.entries(toSeoPaths(patch))) {
+                  setField(path, value);
+                }
+              }}
+            />
           </FormColumn>
         </FormSection>
 

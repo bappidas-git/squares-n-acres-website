@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -14,6 +14,7 @@ import { useNavigationGuard } from '../../../contexts/NavigationGuardContext';
 import MultiSelect from '../../../components/admin/MultiSelect';
 import { FormFieldControl } from '../../../components/admin/MasterDataForm';
 import FormSection, { FormColumn } from '../../../components/admin/FormSection';
+import SeoPanel from '../../../components/seo/SeoPanel';
 import PageHeader from '../../../components/admin/PageHeader';
 import RichTextField from '../../../components/editor/RichTextField';
 import SortableList from '../../../components/admin/SortableList';
@@ -28,6 +29,13 @@ import {
   TextareaField,
 } from '../../../components/ui';
 import { adminCrud, developers } from '../../../services/masterDataService';
+import { applySeoSideEffects, validateSeoBranch } from '../../../components/seo/seoSideEffects';
+import {
+  createSeo,
+  toSeoPaths,
+  toSeoPayload,
+  withSeoDefaults,
+} from '../../../components/seo/seoValues';
 import { schemas } from '../../../services/schemas';
 import { URL_PATTERN } from '../../../utils/validation';
 import { useMasterData } from '../../../contexts/MasterDataContext';
@@ -63,6 +71,8 @@ const BLANK = {
   isFeatured: false,
   isActive: true,
   order: 0,
+  seo: createSeo(),
+  updatedAt: null,
 };
 
 /** The record, reduced to what this form edits. */
@@ -84,6 +94,10 @@ const toFormValues = (record) => ({
   isFeatured: Boolean(record.isFeatured),
   isActive: record.isActive !== false,
   order: record.order ?? 0,
+  // Every field of §9.6 present, whatever the record was saved with.
+  seo: withSeoDefaults(record.seo),
+  // Read-only, never sent back: the panel prints it as "last modified".
+  updatedAt: record.updatedAt ?? null,
 });
 
 const numberOrNull = (value) => {
@@ -93,6 +107,32 @@ const numberOrNull = (value) => {
 };
 
 const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');
+
+/**
+ * `SlugField`'s availability check, in the shape it hands over.
+ *
+ * Module level so its identity is stable: the field debounces on it, and a new
+ * arrow on every render would ask the API after every keystroke of the name.
+ */
+const checkDeveloperSlug = (slug, { excludeId, signal } = {}) =>
+  developerService.checkSlug(slug, { excludeId, signal });
+
+/** What the SEO analysers call a field, and where it is on this screen. */
+const FIELD_TARGET = {
+  content: 'developer-description',
+  highlights: 'developer-highlights',
+  slug: 'developer-slug',
+};
+
+/** Brings the block a hint names into view, and focuses the first control in it. */
+function focusField(path) {
+  const element = document.getElementById(FIELD_TARGET[path] ?? '');
+  if (!element) return;
+
+  const control = element.querySelector('input, textarea, select, [contenteditable="true"]');
+  control?.focus?.();
+  element.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+}
 
 /**
  * Admin → Master data → Developers → add / edit
@@ -125,10 +165,6 @@ export default function DeveloperFormPage() {
     refetch,
   } = useApi((signal) => developerService.get(id, { signal }), [id], { enabled: isEdit });
 
-  // The part of the record this screen carries but never shows (see above).
-  const seoRef = useRef(null);
-  seoRef.current = record?.seo ?? null;
-
   const [redirect, setRedirect] = useState(null);
 
   const toPayload = useCallback(
@@ -150,7 +186,8 @@ export default function DeveloperFormPage() {
       isFeatured: Boolean(values.isFeatured),
       isActive: values.isActive !== false,
       order: Number(values.order) || 0,
-      ...(seoRef.current ? { seo: seoRef.current } : {}),
+      // D34: one URL — `seo.slug` always mirrors the record's own.
+      seo: toSeoPayload(values.seo, values.slug ?? ''),
     }),
     []
   );
@@ -210,6 +247,9 @@ export default function DeveloperFormPage() {
     const saved = await form.submit();
     if (!saved) return;
 
+    // The redirect this record's `seo` asks for, against the slug the API
+    // answered with — a new record has none until now (§9.6).
+    await applySeoSideEffects('developer', saved);
     toast.success(isEdit ? 'Developer updated.' : 'Developer created.');
     // The property form's developer select reads the cached list (D93).
     refreshMasterData('developers');
@@ -534,12 +574,32 @@ export default function DeveloperFormPage() {
           </FormColumn>
         </FormSection>
 
-        <FormSection title="Search engines">
+        <FormSection
+          title="Search engines"
+          description="The phrase this page targets, what a result prints, and the share cards. The robots directives, the redirect and the structured data are in the sections below it (§9)."
+        >
           <FormColumn>
-            <Alert tone="info" icon={<Icon icon="mdi:magnify" width="20" height="20" />}>
-              The SEO panel is added in prompt 36. Until then the API keeps this developer&rsquo;s
-              title, description and schema exactly as they are, including through this form.
-            </Alert>
+            <SeoPanel
+              entityType="developer"
+              entity={values}
+              seo={values.seo}
+              variant="compact"
+              errors={form.errors}
+              disabled={form.submitting}
+              excludeId={id}
+              checkSlug={checkDeveloperSlug}
+              slugBase="/builders/"
+              onFocusField={focusField}
+              onSlugChange={(slug) => setField('slug', slug)}
+              onChange={(patch) => {
+                // One dotted path at a time: `useForm.setField` composes on the
+                // current values, so an edit and the analysis landing behind it
+                // cannot overwrite each other.
+                for (const [path, value] of Object.entries(toSeoPaths(patch))) {
+                  setField(path, value);
+                }
+              }}
+            />
           </FormColumn>
         </FormSection>
 
@@ -550,14 +610,16 @@ export default function DeveloperFormPage() {
 }
 
 /**
- * The two rules the schema is deliberately wider than.
+ * The rules the schema is deliberately wider than, and the SEO panel's own two.
  *
  * §6.5 allows any year from 1800 and any URL the `url` type accepts; an
  * editor typing into this form wants to hear "1950 to this year" and
- * "include https://" rather than the generic refusals those produce.
+ * "include https://" rather than the generic refusals those produce. The panel
+ * adds JSON-LD that would invalidate the page's script tag, and a redirect with
+ * nowhere to send anybody.
  */
 function extraRules(values) {
-  const errors = {};
+  const errors = { ...validateSeoBranch(values.seo) };
 
   const year = numberOrNull(values.establishedYear);
   if (year !== null && (year < EARLIEST_YEAR || year > CURRENT_YEAR)) {

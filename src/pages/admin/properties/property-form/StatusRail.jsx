@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 
+import SeoSummaryCard from '../../../../components/seo/SeoPanel/SeoSummaryCard';
 import {
   Alert,
   Button,
@@ -45,6 +46,8 @@ export default function StatusRail({ form, collapsible = false }) {
     viewUrl,
     setField,
     setActive,
+    focusField,
+    setActiveTab,
     save,
     duplicate,
     remove,
@@ -164,6 +167,18 @@ export default function StatusRail({ form, collapsible = false }) {
             ))}
           </ul>
         ) : null}
+      </section>
+
+      <section className={styles.block} aria-labelledby="rail-seo">
+        <SeoSummaryCard
+          seo={values.seo}
+          onOpen={(field) => {
+            // The first failing test is the one worth opening on; when nothing
+            // is failing the tab itself is the destination.
+            if (field) focusField(field);
+            else setActiveTab('seo');
+          }}
+        />
       </section>
 
       <section className={styles.block} aria-labelledby="rail-url">

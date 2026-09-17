@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import MasterDataPage from '../../../components/admin/MasterDataPage';
 import PATHS from '../../../routes/paths';
+import SeoScoreChip from '../../../components/seo/SeoScoreChip';
 import { LazyImage } from '../../../components/ui';
 import { adminCrud, developers } from '../../../services/masterDataService';
 import { formatDate, formatNumber } from '../../../utils/format';
@@ -94,6 +95,14 @@ export default function DevelopersPage() {
           hideBelow: 'lg',
           mobile: false,
           render: (row) => (row.establishedYear ? String(row.establishedYear) : '—'),
+        },
+        {
+          key: 'seoScore',
+          label: 'SEO',
+          width: '132px',
+          hideBelow: 'lg',
+          mobile: false,
+          render: (row) => <SeoScoreChip seo={row.seo} />,
         },
         {
           key: 'updatedAt',

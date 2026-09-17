@@ -144,6 +144,10 @@ export const categoriesConfig = ({ onMutated } = {}) => ({
   orderable: true,
   activeToggle: true,
   usageGuard: true,
+  // D87: a category is a page with a title and a description, so it gets the
+  // panel — folded, because there is far less of it to say than of an article.
+  seoPanel: 'compact',
+  seoEntityType: 'articleCategory',
   reorderHint:
     'Sorted by Order the table becomes this list. Drag a row, or focus it and press Alt + ↑ / ↓, to change the order the archive lists the categories in.',
 
@@ -346,6 +350,8 @@ export const authorsConfig = ({ onMutated } = {}) => ({
   defaultSort: { field: 'name', order: 'asc' },
   activeToggle: true,
   usageGuard: true,
+  seoPanel: 'compact',
+  seoEntityType: 'author',
 
   columns: [
     {
