@@ -51,13 +51,19 @@
   }
 }
 
-/* ── Sections ───────────────────────────────────────────────────────────── */
-.section {
-  scroll-margin-top: calc(var(--header-height) + var(--space-16));
+/* ── Media ──────────────────────────────────────────────────────────────── */
+.media {
+  position: relative;
 }
 
-.section:not(:empty) {
-  padding-top: var(--space-6);
+/* The scroll target for the "Video" and "Virtual tour" navigation items: both
+   are tabs of the gallery, so their anchors sit at the top of it. */
+.anchor {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  scroll-margin-top: calc(var(--header-height) + var(--space-16));
 }
 
 /* ── Admin preview banner ───────────────────────────────────────────────── */

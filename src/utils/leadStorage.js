@@ -8,9 +8,10 @@
  *
  * Unlocks are **per kind** (`floorPlans`, `documents`): sharing a phone number
  * to read a floor plan is not the same as asking for the legal papers, and the
- * page says which one it is asking for. The one exception is a property
- * enquiry, which is a visitor identifying themselves about the whole listing
- * and therefore opens every kind on it (prompt 24 §7).
+ * page says which one it is asking for. The exceptions are the forms in which a
+ * visitor identifies themselves about the whole listing rather than about one
+ * file — an enquiry, and either of the eligibility checks, which ask for more
+ * than any download gate does (prompt 24 §7, prompt 25 §4.2).
  *
  * Nothing here is a permission system: it decides what a page shows this
  * visitor, and the lead it records is the thing of value. Clearing the session
@@ -23,7 +24,24 @@ const STORAGE_KEY = 'sna_lead';
 export const UNLOCK_KINDS = ['floorPlans', 'documents'];
 
 /** Lead sources that identify a visitor for the whole listing, not one file. */
-const UNLOCKS_EVERYTHING = ['property-enquiry'];
+export const UNLOCKS_EVERYTHING = ['property-enquiry', 'financial-assessment', 'bank-eligibility'];
+
+/**
+ * The event a section listens for when another part of the page opens a gate.
+ *
+ * Unlocking is a write to `sessionStorage`, which fires no event in the tab
+ * that made it, so a component that read the gate when it mounted would keep
+ * showing a lock after an enquiry elsewhere on the page had opened it.
+ */
+export const LEAD_CHANGE_EVENT = 'sna:lead-change';
+
+const announce = () => {
+  try {
+    window.dispatchEvent(new CustomEvent(LEAD_CHANGE_EVENT));
+  } catch {
+    // No window (a Node render) means nothing is listening.
+  }
+};
 
 /** Storage keys are strings; a property id arrives as either. */
 const key = (propertyId) =>
@@ -45,6 +63,7 @@ const writeRaw = (data) => {
     // A full or blocked session store costs the visitor a prefilled form, not
     // the lead: the POST has already happened by the time this is called.
   }
+  announce();
   return data;
 };
 
@@ -78,8 +97,9 @@ export const leadStorage = {
       data.capturedSources.push({ propertyId: propertyId ?? null, source, timestamp: Date.now() });
     }
 
-    // Somebody who has enquired about the listing has already told us who they
-    // are; asking again before each file would be theatre.
+    // Somebody who has enquired about the listing, or answered the eligibility
+    // questionnaire about it, has already told us who they are; asking again
+    // before each file would be theatre.
     if (id && UNLOCKS_EVERYTHING.includes(source)) {
       data.unlocks = { ...data.unlocks, [id]: [...UNLOCK_KINDS] };
     }
@@ -160,6 +180,7 @@ export const leadStorage = {
     } catch {
       // Nothing to clear if the store cannot be reached.
     }
+    announce();
   },
 };
 

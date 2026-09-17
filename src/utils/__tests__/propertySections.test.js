@@ -188,10 +188,15 @@ describe('what a section needs', () => {
     expect(has('faqs', { faqs: [{ question: 'When?' }] })).toBe(true);
   });
 
-  it('similar takes the editor’s picks or the API’s fill', () => {
+  it('similar follows the API when the caller has asked it, the picks when not', () => {
+    // The admin's visibility tab makes no request, so the picks decide there.
     expect(has('similar', {})).toBe(false);
     expect(has('similar', { similarPropertyIds: [2] })).toBe(true);
+
+    // The page passes what the endpoint actually answered with, and that wins:
+    // the editor's picks may all have been unpublished since (BUG-07).
     expect(has('similar', {}, { similarAvailable: true })).toBe(true);
+    expect(has('similar', { similarPropertyIds: [2] }, { similarAvailable: false })).toBe(false);
   });
 
   it('the enquiry section is always available (D86)', () => {
