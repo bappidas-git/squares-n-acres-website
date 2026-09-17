@@ -5,6 +5,14 @@
 import { endpoints } from './endpoints';
 import http from './http';
 
+/**
+ * The navigation list: published pages that an editor placed in the header or
+ * the footer, as `{ slug, title, headerMenu, footerColumn, order }`.
+ *
+ *   pageService.list({ showInHeader: true })
+ */
+export const list = (params, opts) => http.request(endpoints.pages.list, { params, ...opts });
+
 /** Published pages only; `?preview=<token>` also returns drafts (D28). */
 export const getBySlug = (slug, params, opts) =>
   http.request(endpoints.pages.bySlug, { pathParams: { slug }, params, ...opts });
@@ -35,6 +43,7 @@ export const previewToken = (id, opts) =>
   http.request(endpoints.adminPages.previewToken, { pathParams: { id }, ...opts });
 
 const pageService = {
+  list,
   getBySlug,
   adminList,
   adminGet,

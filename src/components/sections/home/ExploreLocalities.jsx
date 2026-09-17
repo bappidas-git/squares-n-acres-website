@@ -1,12 +1,12 @@
-import React from 'react';
+import { Icon } from '@iconify/react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 
 import LocalityCard from '../locality/LocalityCard';
 import PATHS from '../../../routes/paths';
 import styles from './ExploreLocalities.module.css';
-import useInView from '../../../hooks/useInView';
-import { useMasterData } from '../../../contexts/MasterDataContext';
+import { Container, Section, SectionHeader } from '../../ui';
+import { HOME } from '../../../config/copy';
+import { useLocalities } from '../../../hooks/useMasterData';
 
 /**
  * The featured-localities strip. Reads `MasterDataContext` (D93) rather than
@@ -18,58 +18,33 @@ import { useMasterData } from '../../../contexts/MasterDataContext';
  * once (prompt 14).
  */
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (index) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, delay: Math.min(index, 4) * 0.1, ease: 'easeOut' },
-  }),
-};
+export default function ExploreLocalities() {
+  const featured = useLocalities({ featuredOnly: true });
 
-const ExploreLocalities = () => {
-  const { localities, loading } = useMasterData();
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.15 });
-
-  const featured = localities.filter((locality) => locality.isFeatured);
-
-  if (loading || featured.length === 0) return null;
+  if (featured.length === 0) return null;
 
   return (
-    <section className={styles.section} ref={ref}>
-      <div className={styles.container}>
-        <motion.div
-          className={styles.header}
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5 }}
-        >
-          <h2 className={styles.title}>Explore localities</h2>
-          <p className={styles.subtitle}>Where we know the streets, not just the listings</p>
-        </motion.div>
+    <Section background="bg" spacing="lg">
+      <Container>
+        <SectionHeader
+          title={HOME.localities.title}
+          subtitle={HOME.localities.subtitle}
+          action={
+            <Link to={PATHS.localities} className={styles.viewAll}>
+              {HOME.viewAll}
+              <Icon icon="mdi:arrow-right" width="18" height="18" aria-hidden="true" />
+            </Link>
+          }
+        />
 
-        <div className={styles.grid}>
-          {featured.map((locality, index) => (
-            <motion.div
-              key={locality.id}
-              custom={index}
-              initial="hidden"
-              animate={inView ? 'visible' : 'hidden'}
-              variants={cardVariants}
-            >
+        <ul className={styles.grid}>
+          {featured.slice(0, 8).map((locality) => (
+            <li key={locality.id}>
               <LocalityCard locality={locality} variant="compact" />
-            </motion.div>
+            </li>
           ))}
-        </div>
-
-        <div className={styles.footer}>
-          <Link to={PATHS.localities} className={styles.allLink}>
-            View all localities
-          </Link>
-        </div>
-      </div>
-    </section>
+        </ul>
+      </Container>
+    </Section>
   );
-};
-
-export default ExploreLocalities;
+}

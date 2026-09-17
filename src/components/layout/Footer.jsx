@@ -1,76 +1,76 @@
-import React from 'react';
 import { Icon } from '@iconify/react';
 import { Link } from 'react-router-dom';
 
 import NewsletterSection from '../common/NewsletterSection';
 import styles from './Footer.module.css';
+import useNavPages from '../../hooks/useNavPages';
 import { Logo } from '../ui';
+import { buildFooterColumns, buildLegalLinks } from '../../config/navigation';
 import { formatPhoneForTel } from '../../utils/format';
+import { useMasterData } from '../../contexts/MasterDataContext';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 /**
- * The site footer, entirely driven by `siteSettings.footer` and
- * `siteSettings.general` (§6.13). Nothing here is hardcoded: the columns, the
- * about text, the disclaimer and the copyright line are what an editor typed
- * in Admin → Settings, and an empty branch simply does not render.
+ * The site footer: `siteSettings.footer` plus the columns the data already
+ * knows (§6.13, prompt 27 §4.7).
+ *
+ * An editor's own columns come first and the generated ones — Buy by type,
+ * Popular localities, Insights, Company — fill the row up to five, so a
+ * settings file that already fills the footer is never overruled, and a site
+ * whose settings carry no columns at all still has a usable footer.
+ *
+ * The legal line is built from the published pages that actually exist: a
+ * privacy policy nobody has published yet is not linked, rather than being a
+ * dead link in every footer of the site.
+ *
+ * D3: a light surface with charcoal text, so the wordmark sits on it as-is.
+ * D79: the boilerplate's image collage survives as an opt-in setting.
  */
 
-const SOCIAL_ICONS = {
-  facebook: 'mdi:facebook',
-  instagram: 'mdi:instagram',
-  linkedin: 'mdi:linkedin',
-  youtube: 'mdi:youtube',
-  x: 'mdi:twitter',
-  pinterest: 'mdi:pinterest',
-};
-
-const SOCIAL_LABELS = {
-  facebook: 'Facebook',
-  instagram: 'Instagram',
-  linkedin: 'LinkedIn',
-  youtube: 'YouTube',
-  x: 'X',
-  pinterest: 'Pinterest',
+const SOCIAL = {
+  facebook: { icon: 'mdi:facebook', label: 'Facebook' },
+  instagram: { icon: 'mdi:instagram', label: 'Instagram' },
+  linkedin: { icon: 'mdi:linkedin', label: 'LinkedIn' },
+  youtube: { icon: 'mdi:youtube', label: 'YouTube' },
+  x: { icon: 'mdi:twitter', label: 'X' },
+  pinterest: { icon: 'mdi:pinterest', label: 'Pinterest' },
 };
 
 /** `© %year% Squares N Acres…` with the placeholder filled in. */
 const withYear = (text) => String(text ?? '').replace(/%year%/g, String(new Date().getFullYear()));
 
 /** An internal path renders as a `<Link>`; anything else as an `<a>`. */
-const FooterLink = ({ link }) => {
-  const href = link?.href ?? '';
-  if (!href) return null;
+function FooterLink({ link }) {
+  if (!link?.to) return null;
 
-  if (link.external || /^https?:\/\//i.test(href)) {
+  if (link.external) {
     return (
-      <a href={href} className={styles.footerLink} target="_blank" rel="noopener noreferrer">
+      <a href={link.to} className={styles.link} target="_blank" rel="noopener noreferrer">
         {link.label}
       </a>
     );
   }
   return (
-    <Link to={href} className={styles.footerLink}>
+    <Link to={link.to} className={styles.link}>
       {link.label}
     </Link>
   );
-};
+}
 
-const Footer = () => {
+export default function Footer() {
   const { settings, siteName, tagline, getContact } = useSiteSettings();
+  const { propertyTypes, localities } = useMasterData();
+  const { footer: pages } = useNavPages();
 
   const footer = settings?.footer ?? {};
   const contact = getContact();
-  const columns = Array.isArray(footer.columns) ? footer.columns : [];
+  const columns = buildFooterColumns({ propertyTypes, localities, pages, settings });
+  const legal = buildLegalLinks(pages);
   const gallery = footer.showGallery ? (footer.galleryImageUrls ?? []).slice(0, 6) : [];
 
   const social = Object.entries(settings?.social ?? {})
-    .filter(([, url]) => Boolean(url))
-    .map(([key, url]) => ({
-      key,
-      href: url,
-      icon: SOCIAL_ICONS[key] ?? 'mdi:link-variant',
-      label: SOCIAL_LABELS[key] ?? key,
-    }));
+    .filter(([key, url]) => Boolean(url) && SOCIAL[key])
+    .map(([key, url]) => ({ key, href: url, ...SOCIAL[key] }));
 
   const newsletterEnabled =
     settings?.newsletter?.enabled !== false && footer.showNewsletter !== false;
@@ -91,14 +91,35 @@ const Footer = () => {
       {newsletterEnabled ? <NewsletterSection /> : null}
 
       <footer className={styles.footer}>
-        <div className={styles.footerTop}>
-          <div className={styles.brandSection}>
+        <div className={styles.inner}>
+          <div className={styles.brand}>
             <Logo height={40} className={styles.brandLogo} />
-            {footer.aboutText ? <p className={styles.brandTagline}>{footer.aboutText}</p> : null}
-            {tagline ? <div className={styles.brandElevating}>{tagline}</div> : null}
+            {footer.aboutText ? <p className={styles.about}>{footer.aboutText}</p> : null}
+            {tagline ? <p className={styles.tagline}>{tagline}</p> : null}
+
+            <div className={styles.contact}>
+              {contact.phone ? (
+                <a href={`tel:${formatPhoneForTel(contact.phone)}`} className={styles.contactItem}>
+                  <Icon icon="mdi:phone-outline" aria-hidden="true" />
+                  {contact.phone}
+                </a>
+              ) : null}
+              {contact.email ? (
+                <a href={`mailto:${contact.email}`} className={styles.contactItem}>
+                  <Icon icon="mdi:email-outline" aria-hidden="true" />
+                  {contact.email}
+                </a>
+              ) : null}
+              {addressLine ? (
+                <span className={styles.contactItem}>
+                  <Icon icon="mdi:map-marker-outline" aria-hidden="true" />
+                  {addressLine}
+                </span>
+              ) : null}
+            </div>
 
             {social.length > 0 ? (
-              <div className={styles.socialIcons}>
+              <div className={styles.social}>
                 {social.map((item) => (
                   <a
                     key={item.key}
@@ -108,80 +129,58 @@ const Footer = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <Icon icon={item.icon} />
+                    <Icon icon={item.icon} aria-hidden="true" />
                   </a>
                 ))}
               </div>
             ) : null}
           </div>
 
-          {gallery.length > 0 ? (
-            <div className={styles.imageCollage}>
-              {gallery.map((src) => (
-                <div key={src} className={styles.collageCell}>
-                  <img
-                    src={src}
-                    alt=""
-                    className={styles.collageImage}
-                    loading="lazy"
-                    aria-hidden="true"
-                  />
-                </div>
-              ))}
-            </div>
-          ) : null}
+          <nav className={styles.columns} aria-label="Footer">
+            {columns.map((column) => (
+              <div key={column.key} className={styles.column}>
+                <h2 className={styles.columnTitle}>{column.title}</h2>
+                {column.links.map((link) => (
+                  <FooterLink key={link.key} link={link} />
+                ))}
+              </div>
+            ))}
+          </nav>
         </div>
 
-        <div className={styles.footerBottom}>
-          {columns.map((column) => (
-            <div key={column.title} className={styles.footerColumn}>
-              <h4>{column.title}</h4>
-              {(column.links ?? []).map((link) => (
-                <FooterLink key={`${column.title}-${link.label}`} link={link} />
-              ))}
-            </div>
-          ))}
+        {gallery.length > 0 ? (
+          <div className={styles.gallery}>
+            {gallery.map((src) => (
+              <div key={src} className={styles.galleryCell}>
+                <img src={src} alt="" className={styles.galleryImage} loading="lazy" />
+              </div>
+            ))}
+          </div>
+        ) : null}
 
-          <div className={styles.footerColumn}>
-            <h4>Contact</h4>
-            {contact.phone ? (
-              <div className={styles.contactItem}>
-                <span className={styles.contactIcon}>
-                  <Icon icon="mdi:phone" />
-                </span>
-                <a href={`tel:${formatPhoneForTel(contact.phone)}`}>{contact.phone}</a>
-              </div>
-            ) : null}
-            {contact.email ? (
-              <div className={styles.contactItem}>
-                <span className={styles.contactIcon}>
-                  <Icon icon="mdi:email-outline" />
-                </span>
-                <a href={`mailto:${contact.email}`}>{contact.email}</a>
-              </div>
-            ) : null}
-            {addressLine ? (
-              <div className={styles.contactItem}>
-                <span className={styles.contactIcon}>
-                  <Icon icon="mdi:map-marker-outline" />
-                </span>
-                <span>{addressLine}</span>
-              </div>
+        <div className={styles.legal}>
+          {footer.disclaimer ? <p className={styles.disclaimer}>{footer.disclaimer}</p> : null}
+          <div className={styles.legalRow}>
+            <p className={styles.copyright}>
+              {footer.copyrightText
+                ? withYear(footer.copyrightText)
+                : `© ${new Date().getFullYear()} ${siteName}. All rights reserved.`}
+            </p>
+            {legal.length > 0 ? (
+              <p className={styles.legalLinks}>
+                {legal.map((link, index) => (
+                  <span key={link.key}>
+                    {index > 0 ? <span aria-hidden="true"> · </span> : null}
+                    <Link to={link.to} className={styles.legalLink}>
+                      {link.label}
+                    </Link>
+                  </span>
+                ))}
+              </p>
             ) : null}
           </div>
-        </div>
-
-        <div className={styles.copyright}>
-          {footer.disclaimer ? <p className={styles.disclaimer}>{footer.disclaimer}</p> : null}
-          <p>
-            {footer.copyrightText
-              ? withYear(footer.copyrightText)
-              : `© ${new Date().getFullYear()} ${siteName}. All rights reserved.`}
-          </p>
         </div>
       </footer>
     </>
   );
-};
-
-export default Footer;
+}

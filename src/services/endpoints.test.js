@@ -36,6 +36,7 @@ const PUBLIC_PATHS = [
   'GET /testimonials',
   'GET /team',
   'GET /partners',
+  'GET /pages',
   'GET /pages/slug/:slug',
   'GET /jobs',
   'GET /jobs/slug/:slug',

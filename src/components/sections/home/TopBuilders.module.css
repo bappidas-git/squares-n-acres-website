@@ -1,0 +1,16 @@
+.viewAll {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary-dark);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.viewAll:hover {
+  text-decoration: underline;
+}

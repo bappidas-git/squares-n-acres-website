@@ -1,8 +1,15 @@
 /**
  * Pages — the CMS (00_MASTER_CONTEXT.md §5.14, §6.10; decision D28).
  *
- *   GET /api/pages/slug/:slug            published, or any status with a token
+ *   GET /api/pages?showInHeader=&showInFooter=   the navigation list
+ *   GET /api/pages/slug/:slug                    published, or any status with a token
  *   …and the admin CRUD, `bulk`, `check-slug` and `preview-token` of §5.14.
+ *
+ * The navigation list exists because the header and the footer are built from
+ * data (prompt 27): an editor who adds a service page decides where it appears
+ * by ticking `showInHeader` and picking a `headerMenu`, and no menu is spelled
+ * out in the frontend. It answers the five fields a link needs and nothing
+ * else — a menu is not a reason to download fifteen pages of blocks.
  *
  * A page is a list of blocks, and the two things the API owes the editor are
  * about that list: every block gets an id the moment it is saved — the same
@@ -22,6 +29,8 @@ const { issueToken, verifyToken } = require('../lib/previewTokens');
 const { makeCrudRouter } = require('../lib/crud');
 const { maxId } = require('../lib/ids');
 const { notFound, validation } = require('../middleware/errors');
+const { paginate, toPositiveInt } = require('../lib/paginate');
+const { toBool } = require('../lib/filters');
 
 /** Block types whose `data.html` is rendered as markup (§6.10). */
 const HTML_BLOCKS = new Set(['richText', 'html']);
@@ -35,6 +44,15 @@ const BULK_ACTIONS = {
 const first = (value) => (Array.isArray(value) ? value[0] : value);
 
 const sameId = (left, right) => String(left) === String(right);
+
+/** The five fields a navigation link is built from. */
+const navShape = (page) => ({
+  slug: page.slug,
+  title: page.title,
+  headerMenu: page.headerMenu ?? null,
+  footerColumn: page.footerColumn ?? null,
+  order: Number.isFinite(page.order) ? page.order : 0,
+});
 
 /**
  * Gives every block an id and renumbers `order` as `1…n`.
@@ -111,6 +129,31 @@ module.exports = ({ db, getModel }) => {
   /* ---------------------------------------------------------------- *
    * Public
    * ---------------------------------------------------------------- */
+
+  // The navigation list. Unpaginated by default — a menu is a whole menu or
+  // it is wrong — while still honouring an explicit `page`/`perPage` (§5.2
+  // covers an unpaginated list's `meta`).
+  router.get('/pages', (req, res) => {
+    const wantsHeader = toBool(first(req.query.showInHeader));
+    const wantsFooter = toBool(first(req.query.showInFooter));
+
+    const matching = rows()
+      .filter((row) => row.status === 'published')
+      .filter((row) => wantsHeader === undefined || Boolean(row.showInHeader) === wantsHeader)
+      .filter((row) => wantsFooter === undefined || Boolean(row.showInFooter) === wantsFooter)
+      .sort(
+        (left, right) =>
+          (left.order ?? 0) - (right.order ?? 0) ||
+          String(left.title ?? '').localeCompare(String(right.title ?? ''))
+      );
+
+    const { data, meta } = paginate(matching, {
+      page: first(req.query.page),
+      perPage: toPositiveInt(first(req.query.perPage), null),
+    });
+
+    res.ok(data.map(navShape), meta);
+  });
 
   // A page's slug is a URL path (§6.10): `buyer-assistance/home-loan`. The
   // `(*)` makes the parameter greedy so the whole remainder of the path is the

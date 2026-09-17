@@ -1,10 +1,5 @@
-.grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-5);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.rail {
+  margin-top: var(--space-2);
 }
 
 .viewAll {
@@ -24,21 +19,29 @@
   text-decoration: underline;
 }
 
+/* The loading state keeps the row's height, so the page below it does not
+   jump when the listings arrive. */
+.skeletons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-5);
+  margin-top: var(--space-2);
+}
+
 @media (max-width: 1199.98px) {
-  .grid {
+  .skeletons {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (max-width: 899.98px) {
-  .grid {
+  .skeletons {
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-4);
   }
 }
 
 @media (max-width: 599.98px) {
-  .grid {
-    gap: var(--space-3);
+  .skeletons {
+    grid-template-columns: 1fr;
   }
 }

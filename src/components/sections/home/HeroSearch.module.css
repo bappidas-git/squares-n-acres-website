@@ -1,0 +1,220 @@
+/* The search card that overlaps the bottom of the hero. */
+.card {
+  width: 100%;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: visible;
+  text-align: left;
+}
+
+/* Tabs — a segmented control along the top edge of the card. */
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-2) 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 var(--space-5);
+  border: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: none;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.tab:hover {
+  color: var(--color-primary-dark);
+  background-color: var(--color-surface);
+}
+
+.tabOn {
+  color: var(--color-primary-dark);
+  background-color: var(--color-primary-light);
+}
+
+.form {
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.tabs + .form {
+  border-top: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.place,
+.field {
+  min-width: 0;
+}
+
+.label {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.select {
+  width: 100%;
+  height: 48px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.select:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.submit {
+  height: 48px;
+  padding: 0 var(--space-8);
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.submit:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.submit:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* The BHK chips and the Buy/Lease toggle, under the main row. */
+.extras {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--color-border);
+}
+
+.extrasLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.chips,
+.intents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.pill {
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.pill:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.pillOn {
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.pill:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 899.98px) {
+  .row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .place {
+    grid-column: 1 / -1;
+  }
+
+  .submit {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 599.98px) {
+  .card {
+    border-radius: var(--radius-lg);
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+  }
+
+  .tab {
+    padding: 0 var(--space-4);
+    font-size: var(--font-size-xs);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab,
+  .pill,
+  .submit {
+    transition: none;
+  }
+}

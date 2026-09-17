@@ -603,6 +603,18 @@ const partners = {
 };
 
 const pages = {
+  list: {
+    key: 'pages.list',
+    method: 'GET',
+    path: '/pages',
+    auth: 'public',
+    module: 'content',
+    description: 'Published pages that belong in the header or footer navigation',
+    query: { showInHeader: 'bool', showInFooter: 'bool', page: 'int', perPage: 'int' },
+    body: null,
+    response: 'PageNavList',
+    example: 1,
+  },
   bySlug: {
     key: 'pages.bySlug',
     method: 'GET',

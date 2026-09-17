@@ -5,55 +5,61 @@
   border-top: 1px solid var(--color-border);
 }
 
-/* Top Section */
-.footerTop {
+.inner {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 2.6fr;
+  gap: var(--space-12);
   max-width: var(--container-max);
   margin: 0 auto;
-  padding: var(--space-16) var(--container-padding) var(--space-12);
-  display: flex;
-  gap: var(--space-12);
-  align-items: flex-start;
+  padding: var(--space-16) var(--container-padding) var(--space-10);
 }
 
-.brandSection {
-  flex: 1;
+.brand {
   min-width: 0;
 }
 
 .brandLogo {
-  margin-bottom: var(--space-3);
-}
-
-.brandSubtitle {
-  font-family: var(--font-body);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--color-primary-dark);
   margin-bottom: var(--space-4);
 }
 
-.brandTagline {
+.about {
+  margin: 0 0 var(--space-3);
+  max-width: 44ch;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-normal);
   color: var(--color-text-muted);
-  margin-bottom: var(--space-5);
-  max-width: 340px;
 }
 
-.brandElevating {
-  font-family: var(--font-body);
+.tagline {
+  margin: 0 0 var(--space-5);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-primary-dark);
-  font-style: italic;
-  margin-bottom: var(--space-6);
 }
 
-.socialIcons {
+.contact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.contactItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.contactItem:hover {
+  color: var(--color-primary-dark);
+}
+
+.social {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
@@ -65,16 +71,16 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: var(--radius-full);
   border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
   background-color: var(--color-bg);
   color: var(--color-text);
   font-size: 18px;
+  text-decoration: none;
   transition:
     border-color var(--transition-fast),
     color var(--transition-fast),
     background-color var(--transition-fast);
-  text-decoration: none;
 }
 
 .socialIcon:hover {
@@ -83,161 +89,147 @@
   background-color: var(--color-primary-light);
 }
 
-/* Image Collage — 3x2 uniform grid for exactly 6 images */
-.imageCollage {
-  flex-shrink: 0;
+/* Four or five link columns (§6). */
+.columns {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: var(--space-1);
-  width: 380px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-6);
+  min-width: 0;
 }
 
-.collageCell {
+.column {
+  min-width: 0;
+}
+
+.columnTitle {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-charcoal);
+}
+
+.link {
+  display: block;
+  padding: var(--space-2) 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.link:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+/* D79: the boilerplate's image collage, off unless settings switch it on. */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-1);
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--container-padding) var(--space-8);
+}
+
+.galleryCell {
   aspect-ratio: 4 / 3;
   overflow: hidden;
   border-radius: var(--radius-sm);
 }
 
-.collageImage {
+.galleryImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.collageFallback {
-  width: 100%;
-  height: 100%;
-  background: var(--color-surface-2);
+.legal {
+  border-top: 1px solid var(--color-border);
 }
 
-/* Bottom Columns */
-.footerBottom {
-  max-width: var(--container-max);
+.disclaimer {
+  max-width: 88ch;
   margin: 0 auto;
-  padding: 0 var(--container-padding) var(--space-12);
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-8);
-}
-
-.footerColumn h4 {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-bold);
-  margin-bottom: var(--space-4);
-  color: var(--color-charcoal);
-}
-
-.footerLink {
-  display: block;
-  padding: var(--space-2) 0;
-  font-size: var(--font-size-sm);
+  padding: var(--space-4) var(--container-padding) 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
   color: var(--color-text-muted);
-  text-decoration: none;
-  transition: color var(--transition-fast);
+  text-align: center;
 }
 
-.footerLink:hover {
-  color: var(--color-primary-dark);
-  text-decoration: underline;
-}
-
-.contactItem {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-2) 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-}
-
-.contactItem a {
-  color: var(--color-text-muted);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-
-.contactItem a:hover {
-  color: var(--color-primary-dark);
-}
-
-.contactIcon {
+.legalRow {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
-  margin-top: 2px;
-  font-size: 16px;
-  color: var(--color-primary);
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: var(--space-4) var(--container-padding);
 }
 
-/* Copyright */
-.copyright {
-  border-top: 1px solid var(--color-border);
-  text-align: center;
-  padding: var(--space-5) var(--container-padding);
+.copyright,
+.legalLinks {
+  margin: 0;
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
-.copyright p {
-  margin: 0;
+.legalLink {
+  color: var(--color-text-muted);
+  text-decoration: none;
 }
 
-/* The editor's legal line, above the copyright. */
-.disclaimer {
-  max-width: 68ch;
-  margin: 0 auto var(--space-2);
+.legalLink:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
 }
 
-/* Tablet */
-@media (max-width: 899.98px) {
-  .footerTop {
-    flex-direction: column;
-    padding: var(--space-10) var(--container-padding) var(--space-8);
-    gap: var(--space-8);
+/* Tablet: two columns. */
+@media (max-width: 1199.98px) {
+  .inner {
+    grid-template-columns: 1fr;
+    gap: var(--space-10);
+    padding-top: var(--space-12);
   }
 
-  .brandTagline {
+  .about {
     max-width: none;
   }
 
-  .imageCollage {
-    width: 100%;
-  }
-
-  .footerBottom {
+  .columns {
     grid-template-columns: repeat(2, 1fr);
-    padding: 0 var(--container-padding) var(--space-8);
-    gap: var(--space-6);
   }
 }
 
-/* Mobile */
+/* Phone: stacked, no accordions (§6). */
 @media (max-width: 599.98px) {
-  .footerTop {
-    padding: var(--space-8) var(--container-padding) var(--space-6);
-    gap: var(--space-6);
+  .inner {
+    padding: var(--space-10) var(--container-padding) var(--space-6);
+    gap: var(--space-8);
   }
 
-  .imageCollage {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .footerBottom {
-    grid-template-columns: 1fr 1fr;
-    padding: 0 var(--container-padding) var(--space-6);
+  .columns {
+    grid-template-columns: 1fr;
     gap: var(--space-5);
   }
 
-  .footerColumn h4 {
-    font-size: var(--font-size-sm);
-    margin-bottom: var(--space-3);
+  .gallery {
+    grid-template-columns: repeat(3, 1fr);
   }
 
-  .footerLink,
-  .contactItem {
-    font-size: var(--font-size-xs);
+  .legalRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link,
+  .socialIcon {
+    transition: none;
   }
 }

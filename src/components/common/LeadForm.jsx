@@ -27,6 +27,37 @@ const filled = (values) =>
   );
 
 /**
+ * Merges one value into the request body, honouring the field's own mapping.
+ *
+ * A descriptor may say `group: 'requirement'` — the answer nests under that key
+ * of the body (§6.7 stores what a visitor is looking for under `requirement`)
+ * — and `toBody(value)` — the answer becomes the object it returns, which is
+ * how one "budget" select fills `budgetMin` and `budgetMax`.
+ */
+function mergeValue(body, field, name, value) {
+  const pairs = field?.toBody ? (field.toBody(value) ?? {}) : { [name]: value };
+  if (!field?.group) return Object.assign(body, pairs);
+  body[field.group] = { ...(body[field.group] ?? {}), ...pairs };
+  return body;
+}
+
+/** `{ ...target, ...patch }`, merging a nested object rather than replacing it. */
+function mergeBody(target, patch) {
+  for (const [key, value] of Object.entries(patch ?? {})) {
+    const existing = target[key];
+    const bothObjects =
+      existing &&
+      typeof existing === 'object' &&
+      !Array.isArray(existing) &&
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value);
+    target[key] = bothObjects ? { ...existing, ...value } : value;
+  }
+  return target;
+}
+
+/**
  * A lead form.
  *
  * `hiddenFields` carries the context the visitor never types — the locality of
@@ -39,7 +70,9 @@ const filled = (values) =>
  *
  * @param {object} props
  * @param {Array<object>} [props.fields] defaults to name / email / phone;
- *   `{ name, label, type, required?, placeholder?, options?, defaultValue? }`
+ *   `{ name, label, type, required?, placeholder?, options?, defaultValue?,
+ *   group?, toBody? }` — see {@link mergeValue} for the last two; `options`
+ *   may be a function of the current answers
  * @param {string} [props.source] a `LEAD_SOURCES` value
  * @param {number|null} [props.propertyId]
  * @param {object} [props.hiddenFields] merged into the request body
@@ -78,6 +111,14 @@ const LeadForm = ({
 
   const toast = useToast();
   const [formData, setFormData] = useState(initialValues);
+
+  /**
+   * A select's choices, which may depend on the other answers: the budget
+   * bands of a rental requirement are two orders of magnitude away from a
+   * purchase's (D90), so `options` may be a function of the current values.
+   */
+  const optionsOf = (field, values = formData) =>
+    (typeof field.options === 'function' ? field.options(values) : field.options) || [];
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -107,7 +148,23 @@ const LeadForm = ({
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      // An answer that the new choices no longer offer is dropped rather than
+      // submitted invisibly — switching to Rent must not send a ₹1 Cr budget.
+      for (const field of formFields) {
+        if (field.name === name || typeof field.options !== 'function') continue;
+        const current = next[field.name];
+        if (!current) continue;
+        const offered = optionsOf(field, next).some(
+          (option) => String(option.value) === String(current)
+        );
+        if (!offered) next[field.name] = '';
+      }
+      return next;
+    });
+
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -121,12 +178,14 @@ const LeadForm = ({
 
     try {
       setSubmitting(true);
-      const response = await leadService.create({
-        ...filled(formData),
-        source,
-        ...(propertyId ? { propertyId } : {}),
-        ...(hiddenFields ?? {}),
-      });
+
+      const body = { source, ...(propertyId ? { propertyId } : {}) };
+      const descriptors = new Map(formFields.map((field) => [field.name, field]));
+      for (const [name, value] of Object.entries(filled(formData))) {
+        mergeValue(body, descriptors.get(name), name, value);
+      }
+
+      const response = await leadService.create(mergeBody(body, hiddenFields));
       setSubmitted(true);
       toast.success(response?.message || 'Thank you — we will be in touch shortly.');
       onSuccess?.(filled(formData));
@@ -201,7 +260,7 @@ const LeadForm = ({
                       className={`${styles.select} ${errors[field.name] ? styles.inputError : ''}`}
                     >
                       <option value="">{field.placeholder || `Select ${field.label}`}</option>
-                      {(field.options || []).map((opt) => (
+                      {optionsOf(field).map((opt) => (
                         <option key={opt.value} value={opt.value}>
                           {opt.label}
                         </option>

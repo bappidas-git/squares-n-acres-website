@@ -583,6 +583,43 @@ describe('pages', () => {
       assert.equal((await request('GET', `/pages/slug/${PAGE.slug}`)).status, 200);
     });
   });
+
+  it('lists the header and footer pages with the five fields a link needs', async () => {
+    await withServer(async ({ request }) => {
+      const header = await request('GET', '/pages?showInHeader=true');
+
+      assert.equal(header.status, 200);
+      assert.ok(header.body.data.length > 0);
+      assert.ok(header.body.data.every((row) => row.headerMenu));
+      assert.deepEqual(Object.keys(header.body.data[0]).sort(), [
+        'footerColumn',
+        'headerMenu',
+        'order',
+        'slug',
+        'title',
+      ]);
+      // A menu arrives whole: the list is unpaginated unless asked otherwise.
+      assert.equal(header.body.meta.total, header.body.data.length);
+
+      const footer = await request('GET', '/pages?showInFooter=true');
+      assert.ok(footer.body.data.some((row) => row.slug === 'about'));
+      // `home` is a published page that belongs in neither menu.
+      assert.ok(!footer.body.data.some((row) => row.slug === 'home'));
+    });
+  });
+
+  it('keeps a draft out of the navigation list', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      await request('POST', '/admin/pages', {
+        token,
+        body: { ...PAGE, showInHeader: true, headerMenu: 'company' },
+      });
+
+      const listed = await request('GET', '/pages?showInHeader=true');
+      assert.ok(!listed.body.data.some((row) => row.slug === PAGE.slug));
+    });
+  });
 });
 
 /* ------------------------------------------------------------------ *

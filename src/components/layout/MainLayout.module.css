@@ -5,6 +5,12 @@
   overflow-x: clip;
 }
 
+/* …except on the home page, whose hero reaches up behind the transparent
+   header and reserves the room itself (D52). */
+.flush {
+  padding-top: 0;
+}
+
 /* Below 900px the bottom navigation covers the last band of the page. */
 @media (max-width: 899.98px) {
   .main {

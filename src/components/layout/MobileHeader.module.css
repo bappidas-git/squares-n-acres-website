@@ -6,21 +6,31 @@
   z-index: var(--z-header);
   background-color: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
-  transition: box-shadow var(--transition-base);
+  transition:
+    background-color var(--transition-base),
+    box-shadow var(--transition-base),
+    border-color var(--transition-base);
 }
 
 /* D52: the mobile header never hides either — only the bottom nav does. */
-.mobileHeader.scrolled {
+.scrolled {
   box-shadow: var(--shadow-sm);
 }
 
-.headerInner {
+.transparent {
+  background-color: transparent;
+  border-bottom-color: transparent;
+  box-shadow: none;
+  background-image: linear-gradient(to bottom, rgb(0 0 0 / 45%), rgb(0 0 0 / 0%));
+}
+
+.inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  padding: 0 var(--container-padding);
+  gap: var(--space-2);
   height: var(--header-height);
+  padding: 0 var(--container-padding);
 }
 
 .logo {
@@ -28,199 +38,60 @@
   align-items: center;
 }
 
-.hamburger {
+/* D3/§2.2: the wordmark is never placed straight on a dark surface. */
+.logoPlate {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.iconButton {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 44px;
   height: 44px;
   border: none;
+  border-radius: var(--radius-md);
   background: none;
-  cursor: pointer;
   color: var(--color-text);
-}
-
-.hamburgerIcon {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  width: 22px;
-}
-
-.hamburgerLine {
-  width: 100%;
-  height: 2px;
-  background-color: currentColor;
-  border-radius: 1px;
-}
-
-/* Full-screen Drawer */
-.fullDrawer {
-  width: 100vw;
-}
-
-.drawerHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-2) var(--container-padding);
-  min-height: var(--header-height);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.drawerContent {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-2) 0 calc(var(--space-8) + var(--safe-bottom));
-}
-
-.accordionItem {
-  border-bottom: 1px solid var(--color-border);
-}
-
-.accordionHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-height: 52px;
-  padding: var(--space-4) var(--space-5);
-  border: none;
-  background: none;
   cursor: pointer;
-  font-family: var(--font-body);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text);
-  text-align: left;
+  text-decoration: none;
   transition: color var(--transition-fast);
 }
 
-.accordionHeader:hover {
+.iconButton:hover {
   color: var(--color-primary-dark);
 }
 
-.accordionChevron {
-  display: flex;
-  align-items: center;
-  transition: transform 0.25s ease;
-  font-size: 20px;
-  color: var(--color-text-muted);
+.onDark {
+  color: var(--color-text-inverse);
+  filter: drop-shadow(0 1px 4px rgb(0 0 0 / 45%));
 }
 
-.accordionChevron.open {
-  transform: rotate(180deg);
+.iconButton:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
-.accordionBody {
-  overflow: hidden;
-}
-
-.accordionLink {
-  display: block;
-  min-height: 44px;
-  padding: var(--space-3) var(--space-5) var(--space-3) var(--space-10);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  text-decoration: none;
-  transition:
-    color var(--transition-fast),
-    background-color var(--transition-fast);
-}
-
-.accordionLink:hover {
-  color: var(--color-primary-dark);
-  background-color: var(--color-surface);
-}
-
-.simpleLink {
-  display: block;
-  min-height: 52px;
-  padding: var(--space-4) var(--space-5);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text);
-  text-decoration: none;
-  border-bottom: 1px solid var(--color-border);
-  transition: color var(--transition-fast);
-}
-
-.simpleLink:hover {
-  color: var(--color-primary-dark);
-}
-
-.drawerDivider {
-  height: var(--space-2);
-  background-color: var(--color-surface);
-  margin: var(--space-2) 0;
-}
-
-.drawerBottomSection {
-  padding: var(--space-2) 0;
-}
-
-.bottomLink {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 48px;
-  padding: var(--space-3) var(--space-5);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text);
-  text-decoration: none;
-  transition:
-    color var(--transition-fast),
-    background-color var(--transition-fast);
-}
-
-.bottomLink:hover {
-  color: var(--color-primary-dark);
-  background-color: var(--color-surface);
-}
-
-.bottomLinkIcon {
-  display: flex;
-  align-items: center;
-  color: var(--color-text-muted);
-  font-size: 20px;
-}
-
+/* The desktop header takes over at 900px (D51). */
 @media (min-width: 900px) {
   .mobileHeader {
     display: none;
   }
 }
 
-/* The search trigger sits beside the menu button (prompt 26); it opens the
-   site's one search box in a dialog. */
-.actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  flex-shrink: 0;
-}
-
-.searchTrigger {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: var(--color-text);
-  transition: color var(--transition-fast);
-}
-
-.searchTrigger:hover {
-  color: var(--color-primary);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .searchTrigger {
+  .mobileHeader,
+  .iconButton {
     transition: none;
   }
 }
