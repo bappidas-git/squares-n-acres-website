@@ -10,14 +10,17 @@
  *
  * Pure, like the rest of `src/seo`: a record, the settings, and the master data
  * the title templates read go in; strings come out.
+ *
+ * Authored in CommonJS (D36b, extended in prompt 38) so that
+ * `scripts/validate-jsonld.js` can resolve the same strings the browser does.
  */
 
-import { BRAND } from '../config/site';
-import { toSeoInput } from './entityAdapters';
-import { buildVariables, resolveTemplate, resolveTitleTemplate } from './variables';
+const { BRAND } = require('../config/site');
+const { toSeoInput } = require('./entityAdapters');
+const { buildVariables, resolveTemplate, resolveTitleTemplate } = require('./variables');
 
 /** `og:type` per entity type (§9.3) — an article is an article, everything else is a page. */
-export const OG_TYPE_OF = {
+const OG_TYPE_OF = {
   article: 'article',
   articleCategory: 'website',
   author: 'profile',
@@ -40,7 +43,7 @@ const trimmed = (value) => String(value ?? '').trim();
  * @param {{indexable?: boolean}} [options] `indexable: false` forces `noindex`
  * @returns {string[]} the directives, in order
  */
-export function robotsDirectives(robots = {}, { indexable = true } = {}) {
+function robotsDirectives(robots = {}, { indexable = true } = {}) {
   const out = [];
 
   out.push(indexable && robots.index !== false ? 'index' : 'noindex');
@@ -62,7 +65,7 @@ export function robotsDirectives(robots = {}, { indexable = true } = {}) {
 }
 
 /** The same directives as the one string the `<meta name="robots">` carries. */
-export const robotsContent = (robots, options) => robotsDirectives(robots, options).join(', ');
+const robotsContent = (robots, options) => robotsDirectives(robots, options).join(', ');
 
 /**
  * Everything one record publishes about itself.
@@ -81,7 +84,7 @@ export const robotsContent = (robots, options) => robotsDirectives(robots, optio
  *     url: string|null, siteName: string, locale: string},
  *   twitter: {card: string, title: string, description: string, imageUrl: string|null}}}
  */
-export function resolveSeoOutput(entityType, entity = {}, seoSettings = {}, context = {}) {
+function resolveSeoOutput(entityType, entity = {}, seoSettings = {}, context = {}) {
   const settings = seoSettings ?? {};
   const siteUrl = context.siteUrl ?? settings.siteUrl ?? '';
   const full = { ...context, seoSettings: settings, siteUrl };
@@ -146,4 +149,4 @@ export function resolveSeoOutput(entityType, entity = {}, seoSettings = {}, cont
 
 const resolve = { OG_TYPE_OF, resolveSeoOutput, robotsContent, robotsDirectives };
 
-export default resolve;
+module.exports = resolve;

@@ -7,8 +7,8 @@
  * rejected.
  */
 
-import { compact } from './graph';
-import { stripHtml } from '../text';
+const { compact } = require('./graph');
+const { stripHtml } = require('../text');
 
 /**
  * @param {{faqs?: Array<{question: string, answer: string}>, canonical?: string}} input
@@ -16,7 +16,7 @@ import { stripHtml } from '../text';
  * @param {object} [_context] unused; the questions come from the record
  * @returns {object|null} a `FAQPage` node, or `null` when there are no questions
  */
-export function faqPageNode(input = {}, _context = {}) {
+function faqPageNode(input = {}, _context = {}) {
   const faqs = (Array.isArray(input.faqs) ? input.faqs : (input.extras?.faqs ?? [])).filter(
     (faq) => faq?.question && faq?.answer
   );
@@ -35,4 +35,5 @@ export function faqPageNode(input = {}, _context = {}) {
   });
 }
 
-export default faqPageNode;
+module.exports = faqPageNode;
+module.exports.faqPageNode = faqPageNode;

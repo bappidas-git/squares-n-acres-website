@@ -4,14 +4,14 @@
  * Google reads can never disagree.
  */
 
-import { absolute, compact } from './graph';
+const { absolute, compact } = require('./graph');
 
 /**
  * @param {{items?: Array<{name: string, url?: string}>, canonical?: string}} input
  * @param {{siteUrl?: string, seoSettings?: object}} [context]
  * @returns {object|null} a `BreadcrumbList` node, or `null` when there is no trail
  */
-export function breadcrumbNode(input = {}, context = {}) {
+function breadcrumbNode(input = {}, context = {}) {
   const items = (Array.isArray(input.items) ? input.items : []).filter((item) => item?.name);
   if (!items.length) return null;
 
@@ -32,4 +32,5 @@ export function breadcrumbNode(input = {}, context = {}) {
   });
 }
 
-export default breadcrumbNode;
+module.exports = breadcrumbNode;
+module.exports.breadcrumbNode = breadcrumbNode;

@@ -1,15 +1,20 @@
-import { formatDistanceToNowStrict } from 'date-fns';
-
 /**
  * The one place that turns data into display strings (D33). It replaces the
  * five `formatPrice` and three `formatDate` copies the boilerplate carried.
  *
  * Conventions: Indian digit grouping (`en-IN`), lakh/crore for money, IST for
  * absolute dates (D22), and the em dash `—` for "no value".
+ *
+ * Authored in CommonJS (D36b, extended in prompt 38): `src/seo/variables.js`
+ * formats the price and the area a title template prints, and
+ * `scripts/validate-jsonld.js` has to `require` that chain from Node with no
+ * bundler in front of it.
  */
 
+const { formatDistanceToNowStrict } = require('date-fns');
+
 /** What every formatter renders when it has nothing to render. */
-export const EMPTY = '—';
+const EMPTY = '—';
 
 const RUPEE = '₹';
 
@@ -27,7 +32,7 @@ const trim = (fixed) => fixed.replace(/\.?0+$/, '');
  * @param {number|string|null} value
  * @param {{ maximumFractionDigits?: number }} [options]
  */
-export function formatNumber(value, { maximumFractionDigits = 0 } = {}) {
+function formatNumber(value, { maximumFractionDigits = 0 } = {}) {
   const n = toNumber(value);
   if (n === null) return EMPTY;
   return n.toLocaleString('en-IN', { maximumFractionDigits });
@@ -47,7 +52,7 @@ export function formatNumber(value, { maximumFractionDigits = 0 } = {}) {
  * @param {number|string|null} value
  * @param {{ priceOnRequest?: boolean, listingType?: string, perMonth?: boolean, compact?: boolean }} [options]
  */
-export function formatPrice(value, { priceOnRequest = false, listingType, perMonth } = {}) {
+function formatPrice(value, { priceOnRequest = false, listingType, perMonth } = {}) {
   if (priceOnRequest) return 'Price on Request';
 
   const n = toNumber(value);
@@ -68,7 +73,7 @@ export function formatPrice(value, { priceOnRequest = false, listingType, perMon
  * @param {number|string|null} max
  * @param {{ priceOnRequest?: boolean, listingType?: string, perMonth?: boolean }} [options]
  */
-export function formatPriceRange(min, max, options = {}) {
+function formatPriceRange(min, max, options = {}) {
   if (options.priceOnRequest) return 'Price on Request';
 
   const low = toNumber(min);
@@ -85,14 +90,14 @@ export function formatPriceRange(min, max, options = {}) {
  * @param {number|string|null} value
  * @param {string} [unit] one of the area units of `enums.js`; defaults to sq ft
  */
-export function formatArea(value, unit = 'sq ft') {
+function formatArea(value, unit = 'sq ft') {
   const n = toNumber(value);
   if (n === null) return EMPTY;
   return `${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })} ${unit}`;
 }
 
 /** `3 BHK`, `5+ BHK` above the highest configured bucket, `Studio` for 0. */
-export function formatBhk(bedrooms) {
+function formatBhk(bedrooms) {
   const n = toNumber(bedrooms);
   if (n === null) return EMPTY;
   if (n <= 0) return 'Studio';
@@ -113,7 +118,7 @@ const parse = (value) => {
  * @param {string|Date|null} value
  * @param {{ withTime?: boolean }} [options]
  */
-export function formatDate(value, { withTime = false } = {}) {
+function formatDate(value, { withTime = false } = {}) {
   const date = parse(value);
   if (!date) return EMPTY;
   return new Intl.DateTimeFormat('en-IN', {
@@ -131,7 +136,7 @@ export function formatDate(value, { withTime = false } = {}) {
 }
 
 /** `05 Sep 2026, 04:30 pm` in IST. */
-export function formatDateTime(value) {
+function formatDateTime(value) {
   return formatDate(value, { withTime: true });
 }
 
@@ -141,7 +146,7 @@ export function formatDateTime(value) {
  *
  * @param {string|Date|null} value
  */
-export function formatMonthYear(value) {
+function formatMonthYear(value) {
   const date = parse(value);
   if (!date) return EMPTY;
   return new Intl.DateTimeFormat('en-IN', {
@@ -152,14 +157,14 @@ export function formatMonthYear(value) {
 }
 
 /** `04:30 pm` in IST — the clock alone, for "Draft saved …" style indicators. */
-export function formatTime(value) {
+function formatTime(value) {
   const date = parse(value);
   if (!date) return EMPTY;
   return new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', ...TIME_PARTS }).format(date);
 }
 
 /** `3 hours ago`, `2 days ago` — `date-fns` does the arithmetic (D22). */
-export function formatRelative(value) {
+function formatRelative(value) {
   const date = parse(value);
   if (!date) return EMPTY;
   return `${formatDistanceToNowStrict(date)} ago`;
@@ -172,7 +177,7 @@ export function formatRelative(value) {
  *
  * @param {string|number|null} value
  */
-export function formatPhoneForTel(value) {
+function formatPhoneForTel(value) {
   if (value === null || value === undefined) return '';
   const raw = String(value).trim();
   const digits = raw.replace(/\D/g, '');
@@ -195,7 +200,7 @@ export function formatPhoneForTel(value) {
  * @param {string|number|null} value
  * @returns {string} `''` when there is no plausible number
  */
-export function formatWhatsappNumber(value) {
+function formatWhatsappNumber(value) {
   return formatPhoneForTel(value).replace(/^\+/, '');
 }
 
@@ -205,13 +210,14 @@ export function formatWhatsappNumber(value) {
  * @param {string|number|null} number
  * @param {string} [message]
  */
-export function whatsappLink(number, message) {
+function whatsappLink(number, message) {
   const digits = formatWhatsappNumber(number);
   if (!digits) return '';
   return `https://wa.me/${digits}${message ? `?text=${encodeURIComponent(message)}` : ''}`;
 }
 
-const format = {
+module.exports = {
+  EMPTY,
   formatArea,
   formatBhk,
   formatDate,
@@ -223,7 +229,6 @@ const format = {
   formatPriceRange,
   formatRelative,
   formatWhatsappNumber,
+  formatMonthYear,
   whatsappLink,
 };
-
-export default format;

@@ -18,8 +18,8 @@ import styles from './FaqAccordion.module.css';
  *
  * Answers are CMS-authored HTML rendered through `SafeHtml`, which sanitises
  * against the editor's allow-list and dresses the markup in `.prose`. The
- * `FAQPage` structured data for these items arrives with the SEO wiring in
- * prompt 38.
+ * `FAQPage` structured data for these items is published by `<Seo faqs>` on the
+ * page that draws the accordion — the markup belongs to the head, not here.
  *
  * @param {object} props
  * @param {Array<{id: string|number, question: string, answer: string}>} props.items

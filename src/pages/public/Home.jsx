@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { Helmet } from 'react-helmet-async';
 
 // The two CMS blocks lead the imports, before any section that pulls a
 // stylesheet `components/cms/blocks/index.js` also pulls: that barrel registers
@@ -17,6 +16,7 @@ import PATHS from '../../routes/paths';
 import PartnersSection from '../../components/sections/home/PartnersSection';
 import PropertyRow from '../../components/sections/home/PropertyRow';
 import PropertyTypeGrid from '../../components/sections/home/PropertyTypeGrid';
+import Seo from '../../components/seo/Seo';
 import TestimonialsSection from '../../components/sections/shared/TestimonialsSection';
 import TopBuilders from '../../components/sections/home/TopBuilders';
 import masterDataService from '../../services/masterDataService';
@@ -47,8 +47,9 @@ import { useSiteSettings } from '../../contexts/SiteSettingsContext';
  * that is absent and one that was never planned, but they can very much tell
  * the difference between a section and an apology.
  *
- * The `<Helmet>` here is temporary: prompt 38 replaces it with
- * `<Seo type="home">`, which reads the same CMS page's `seo` branch.
+ * The head is `<Seo type="home">`, which reads the same CMS page's `seo`
+ * branch: the home page is a record like any other, and the one node only it
+ * publishes is the `WebSite` with its search box (§9.3).
  */
 
 /** The four listing rows, in the order the page shows them. */
@@ -111,10 +112,9 @@ export default function Home() {
 
   const testimonials = Array.isArray(testimonialData) ? testimonialData : [];
 
-  // The CMS page owns the title; with no page published, the site's own
-  // tagline is the next honest thing to say about it.
-  const subject = page?.seo?.title || tagline;
-  const title = subject ? `${subject} | ${siteName}` : siteName;
+  // The CMS page owns the words; with no page published, the site's own
+  // tagline is the next honest thing to say about it. The `home` template
+  // (§9.5) decides what the tab actually reads.
   const description =
     page?.seo?.description ||
     settings?.hero?.subtitle ||
@@ -122,10 +122,13 @@ export default function Home() {
 
   return (
     <>
-      <Helmet>
-        <title>{title}</title>
-        <meta name="description" content={description} />
-      </Helmet>
+      <Seo
+        type="home"
+        entity={page ?? undefined}
+        title={page?.seo?.title || tagline || siteName}
+        description={description}
+        testimonials={testimonials}
+      />
 
       <div className={styles.home}>
         <HeroSection />

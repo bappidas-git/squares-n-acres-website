@@ -1,8 +1,8 @@
-import { Helmet } from 'react-helmet-async';
 import { Icon } from '@iconify/react';
 
 import DeveloperCard from '../../components/sections/developer/DeveloperCard';
 import PATHS from '../../routes/paths';
+import Seo from '../../components/seo/Seo';
 import masterDataService from '../../services/masterDataService';
 import useApiList from '../../hooks/useApiList';
 import {
@@ -14,7 +14,7 @@ import {
   Pagination,
   Skeleton,
 } from '../../components/ui';
-import { SITE } from '../../config/site';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './Builders.module.css';
 
@@ -61,24 +61,24 @@ export default function Builders() {
   const sort = params.sort ?? 'order';
   const totalPages = meta?.totalPages ?? 1;
   const total = meta?.total ?? items.length;
+  const crumbs = breadcrumbsFor('builders');
 
   return (
     <>
-      <Helmet>
-        <title>{`Builders and developers in Bengaluru | ${SITE.name}`}</title>
-        <meta
-          name="description"
-          content="The builders behind the projects we list in Bengaluru — their track record, their registrations and what they have available now."
-        />
-      </Helmet>
+      <Seo
+        type="builders"
+        breadcrumbs={crumbs}
+        variables={{ count: total, page: params.page ?? 1 }}
+        items={items.map((developer) => ({
+          name: developer.name,
+          url: PATHS.builder(developer.slug),
+        }))}
+      />
 
       <div className={styles.page}>
         <header className={styles.header}>
           <Container>
-            <Breadcrumbs
-              items={[{ label: 'Home', to: PATHS.home }, { label: 'Builders' }]}
-              className={styles.crumbs}
-            />
+            <Breadcrumbs items={crumbs} className={styles.crumbs} />
             <h1 className={styles.title}>Builders and developers in Bengaluru</h1>
             <p className={styles.intro}>
               Every project on this site is built by one of these companies. Open a builder to see

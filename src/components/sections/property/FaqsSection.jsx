@@ -31,8 +31,9 @@ export function orderedFaqs(faqs) {
 /**
  * The listing's own FAQs, in the one accordion the whole site uses.
  *
- * The `FAQPage` structured data for these items is emitted by `<Seo>` in
- * prompt 38 — the accordion is the reading experience, not the markup.
+ * The `FAQPage` structured data for these items is emitted by `<Seo faqs>` on
+ * `PropertyDetails`, which merges them with the questions the description
+ * carries — the accordion is the reading experience, not the markup.
  *
  * @param {object} props
  * @param {object} props.property a record of §6.1

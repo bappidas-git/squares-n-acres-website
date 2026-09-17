@@ -120,6 +120,8 @@ describe('realEstateListingNode', () => {
     expect(node.floorSize).toEqual({
       '@type': 'QuantitativeValue',
       value: 1650,
+      // Google reads the UN/CEFACT code, a human reads the words (prompt 38).
+      unitCode: 'FTK',
       unitText: 'sq ft',
     });
     expect(node.numberOfRooms).toBe(3);

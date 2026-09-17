@@ -3,14 +3,14 @@
  * neighbourhood of Bengaluru rather than a word on a page.
  */
 
-import { absolute, compact } from './graph';
+const { absolute, compact } = require('./graph');
 
 /**
  * @param {object} input the normalised record (`entityAdapters.toSeoInput`) of a locality
  * @param {{siteUrl?: string, seoSettings?: object}} [context]
  * @returns {object|null}
  */
-export function placeNode(input = {}, context = {}) {
+function placeNode(input = {}, context = {}) {
   const locality = input.entity ?? {};
   const canonical = input.canonical;
   if (!canonical) return null;
@@ -40,4 +40,5 @@ export function placeNode(input = {}, context = {}) {
   });
 }
 
-export default placeNode;
+module.exports = placeNode;
+module.exports.placeNode = placeNode;

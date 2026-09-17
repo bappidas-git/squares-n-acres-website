@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import TestimonialsSection from '../../sections/shared/TestimonialsSection';
 import masterDataService from '../../../services/masterDataService';
@@ -11,8 +11,18 @@ import { Container, Section } from '../../ui';
  * With no ids the block shows the featured ones. `TestimonialsSection` drops
  * the seeded samples from a production build (D41) and hides itself when
  * nothing survives, so an unfilled library leaves no empty band behind.
+ *
+ * `onItems` reports what was fetched to the page above, which publishes the
+ * genuine ones as `Review` nodes (§9.3). The block is the only thing that knows
+ * *which* testimonials this page shows, and asking for them a second time in
+ * the page would be the duplicate request D93 exists to prevent.
+ *
+ * @param {object} props
+ * @param {object} props.data the block's §6.10 data
+ * @param {'bg'|'surface'} [props.background]
+ * @param {(items: Array<object>) => void} [props.onItems]
  */
-export default function TestimonialsBlock({ data = {}, background = 'surface' }) {
+export default function TestimonialsBlock({ data = {}, background = 'surface', onItems }) {
   const ids = Array.isArray(data.ids) ? data.ids : [];
   const idsKey = ids.join(',');
 
@@ -27,7 +37,16 @@ export default function TestimonialsBlock({ data = {}, background = 'surface' })
     { initialData: [] }
   );
 
-  const items = Array.isArray(fetched) ? fetched : [];
+  const items = useMemo(() => (Array.isArray(fetched) ? fetched : []), [fetched]);
+
+  // Through a ref, so a page passing an inline arrow does not re-run this on
+  // every render it causes (the pattern `SafeHtml` uses for its questions).
+  const report = useRef(onItems);
+  report.current = onItems;
+  useEffect(() => {
+    report.current?.(items);
+  }, [items]);
+
   if (items.length === 0) return null;
 
   return (

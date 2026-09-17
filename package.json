@@ -1,6 +1,6 @@
 {
   "name": "squares-n-acres-website",
-  "description": "Squares N Acres \u2014 Bengaluru real-estate portal (public website + admin panel)",
+  "description": "Squares N Acres — Bengaluru real-estate portal (public website + admin panel)",
   "version": "0.2.0",
   "private": true,
   "engines": {
@@ -50,6 +50,7 @@
     "express": "^4.22.3",
     "json-server": "^0.17.4",
     "prettier": "^3.9.6",
+    "puppeteer-core": "24.43.1",
     "rimraf": "^5.0.10"
   },
   "scripts": {
@@ -75,6 +76,8 @@
     "check:all": "npm run lint && npm run test:ci && npm run test:mock && npm run build:ci && npm run check:traces && npm run validate:seed && npm run check:contrast",
     "check:contrast": "node scripts/contrast-check.js",
     "check:endpoints": "node scripts/check-endpoints.js",
+    "check:links": "node scripts/check-links.js",
+    "check:jsonld": "node scripts/validate-jsonld.js",
     "smoke": "node scripts/smoke-api.js"
   },
   "eslintConfig": {

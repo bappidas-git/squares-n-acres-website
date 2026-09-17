@@ -6,6 +6,7 @@ import articleService from '../../services/articleService';
 import useApi from '../../hooks/useApi';
 import { ArticleIndex } from './Articles';
 import { AuthorBox } from '../../components/sections/article';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { PageLoader } from '../../components/common/SkeletonLoaders';
 
 import styles from './AuthorPage.module.css';
@@ -40,14 +41,12 @@ export default function AuthorPage() {
       key={slug}
       fixed={{ authorSlug: slug }}
       paramKeys={['q', 'page', 'sort']}
-      breadcrumbs={[
-        { label: 'Home', to: PATHS.home },
-        { label: 'Insights', to: PATHS.articles },
-        { label: author.name },
-      ]}
+      breadcrumbs={breadcrumbsFor('author', author)}
       header={<AuthorBox author={author} variant="hero" className={styles.authorBox} />}
       title={author.name}
       emptyText="Nothing published under this name yet."
+      seoType="author"
+      seoEntity={author}
       seo={{
         title: `${author.name} — articles and guides`,
         description:

@@ -6,18 +6,17 @@
  * repeating it.
  */
 
-import { absolute, compact } from './graph';
+const { absolute, compact } = require('./graph');
 
 /** The `@id` of the publisher node, for anything that references it. */
-export const organizationId = (siteUrl) =>
-  `${String(siteUrl ?? '').replace(/\/+$/, '')}/#organization`;
+const organizationId = (siteUrl) => `${String(siteUrl ?? '').replace(/\/+$/, '')}/#organization`;
 
 /**
  * @param {object} [_input] unused; the publisher comes from settings, not from a record
  * @param {{seoSettings?: object, siteSettings?: object}} [context]
  * @returns {object} an `Organization`, `RealEstateAgent` or `LocalBusiness` node
  */
-export function organizationNode(_input = {}, context = {}) {
+function organizationNode(_input = {}, context = {}) {
   const seoSettings = context.seoSettings ?? {};
   const knowledge = seoSettings.knowledgeGraph ?? {};
   const siteUrl = String(context.siteUrl ?? seoSettings.siteUrl ?? '').replace(/\/+$/, '');
@@ -56,4 +55,6 @@ export function organizationNode(_input = {}, context = {}) {
   });
 }
 
-export default organizationNode;
+module.exports = organizationNode;
+module.exports.organizationNode = organizationNode;
+module.exports.organizationId = organizationId;

@@ -11,6 +11,13 @@ import styles from './TagCloud.module.css';
 const LIMIT = 20;
 
 /**
+ * Every category and every tag in one request: both collections are far under
+ * the 100 a public route may ask for — `perPage=all` is admin-only (§5.6), and
+ * asking for it on a public route quietly truncates the list to one page.
+ */
+const TAXONOMY_PER_PAGE = 100;
+
+/**
  * The tags the archive is indexed by, each a link to its own page.
  *
  * A tag nothing published carries is left out: §5.14 counts only published
@@ -33,7 +40,7 @@ export default function TagCloud({
   const provided = Array.isArray(tags);
 
   const { data, loading } = useApi(
-    (signal) => articleService.tags({ perPage: 'all' }, { signal }),
+    (signal) => articleService.tags({ perPage: TAXONOMY_PER_PAGE }, { signal }),
     [],
     { enabled: !provided, initialData: [] }
   );

@@ -3,15 +3,15 @@
  * they do, and where else they are.
  */
 
-import { absolute, compact } from './graph';
-import { stripHtml } from '../text';
+const { absolute, compact } = require('./graph');
+const { stripHtml } = require('../text');
 
 /**
  * @param {object} input the normalised record (`entityAdapters.toSeoInput`) of an author
  * @param {{siteUrl?: string, seoSettings?: object}} [context]
  * @returns {object|null}
  */
-export function personNode(input = {}, context = {}) {
+function personNode(input = {}, context = {}) {
   const author = input.entity ?? {};
   const canonical = input.canonical;
   if (!canonical) return null;
@@ -32,4 +32,5 @@ export function personNode(input = {}, context = {}) {
   });
 }
 
-export default personNode;
+module.exports = personNode;
+module.exports.personNode = personNode;

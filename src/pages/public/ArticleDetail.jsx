@@ -1,17 +1,18 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { Icon } from '@iconify/react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import NotFound from './NotFound';
 import PATHS from '../../routes/paths';
 import SafeHtml from '../../components/editor/SafeHtml';
+import Seo from '../../components/seo/Seo';
 import articleService from '../../services/articleService';
 import sanitizeHtml from '../../components/editor/sanitize';
 import useApi from '../../hooks/useApi';
 import { Breadcrumbs, Container, ErrorState, LazyImage } from '../../components/ui';
 import { PageLoader } from '../../components/common/SkeletonLoaders';
 import { SITE } from '../../config/site';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { buildToc, tocIds } from '../../utils/toc';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import {
@@ -51,9 +52,10 @@ import styles from './ArticleDetail.module.css';
  * `SafeHtml` still reports them through `onFaqItems`, which is also what
  * prompt 38's `FAQPage` structured data is built from.
  *
- * The `<Helmet>` is temporary — prompt 38 replaces it with
- * `<Seo type="article">`, which adds the social tags and the `Article` +
- * `BreadcrumbList` + `FAQPage` graph from the same record.
+ * The head is `<Seo type="article">`: it adds the social card and the
+ * `BlogPosting` + `BreadcrumbList` + `FAQPage` graph from the same record, and
+ * the questions it publishes are the ones this page shows — the article's own
+ * plus the ones its body carries (§9.3).
  */
 
 /** Below this many headings a contents list is longer than what it indexes. */
@@ -132,39 +134,22 @@ export default function ArticleDetail() {
   const seo = article.seo ?? {};
   const previewing = Boolean(preview);
   const unpublished = article.status !== 'published';
-  const url = `${SITE.url}${PATHS.article(article.slug)}`;
   const description = seo.description || article.excerpt || article.title;
+  const crumbs = breadcrumbsFor('article', article);
+  // The share bar needs an absolute address a visitor can paste anywhere; the
+  // canonical in the head is `<Seo>`'s, resolved from the runtime settings.
+  const url = `${SITE.url}${PATHS.article(article.slug)}`;
 
   return (
     <>
-      {/* TEMPORARY — `<Seo type="article">` replaces this Helmet in prompt 38. */}
-      <Helmet>
-        <title>{`${seo.title || article.title} | ${SITE.name}`}</title>
-        <meta name="description" content={description} />
-        <link rel="canonical" href={url} />
-        <meta
-          name="robots"
-          content={
-            previewing || unpublished
-              ? 'noindex, nofollow'
-              : 'index, follow, max-image-preview:large, max-snippet:-1'
-          }
-        />
-        <meta property="og:type" content="article" />
-        <meta property="og:title" content={seo.title || article.title} />
-        <meta property="og:description" content={description} />
-        <meta property="og:url" content={url} />
-        {image.url ? <meta property="og:image" content={image.url} /> : null}
-        {article.publishedAt ? (
-          <meta property="article:published_time" content={article.publishedAt} />
-        ) : null}
-        {article.updatedAtDisplay ? (
-          <meta property="article:modified_time" content={article.updatedAtDisplay} />
-        ) : null}
-        {article.category?.name ? (
-          <meta property="article:section" content={article.category.name} />
-        ) : null}
-      </Helmet>
+      <Seo
+        type="article"
+        entity={article}
+        description={description}
+        breadcrumbs={crumbs}
+        faqs={faqs}
+        overrides={unpublished ? { noindex: true } : undefined}
+      />
 
       {previewing ? (
         <div className={styles.previewBanner} role="status">
@@ -186,22 +171,7 @@ export default function ArticleDetail() {
         <header className={styles.header}>
           <Container>
             <div className={styles.shell}>
-              <Breadcrumbs
-                className={styles.crumbs}
-                items={[
-                  { label: 'Home', to: PATHS.home },
-                  { label: 'Insights', to: PATHS.articles },
-                  ...(article.category?.slug
-                    ? [
-                        {
-                          label: article.category.name,
-                          to: PATHS.articleCategory(article.category.slug),
-                        },
-                      ]
-                    : []),
-                  { label: article.title },
-                ]}
-              />
+              <Breadcrumbs className={styles.crumbs} items={crumbs} />
 
               <h1 className={styles.title}>{article.title}</h1>
               {article.excerpt ? <p className={styles.lede}>{article.excerpt}</p> : null}

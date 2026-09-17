@@ -2,44 +2,57 @@
  * Every JSON-LD generator of §9.3, the merger that turns them into one
  * `@graph`, and the validator that refuses a graph search engines would.
  *
- * Nothing here renders: prompt 38's `<Seo>` chooses which generators a page
- * calls and puts the result in the head. These are pure functions of a record
- * and the settings, which is what makes them testable without a browser.
+ * Nothing here renders: `components/seo/Seo.jsx` chooses which generators a
+ * page calls and puts the result in the head. These are pure functions of a
+ * record and the settings, which is what makes them testable without a browser
+ * — and, since prompt 38, `require`-able from `scripts/validate-jsonld.js`
+ * without one either (D36b, D103).
  */
 
-import { SEO_SCHEMA_TYPES } from '../../config/enums';
-import { articleNode } from './article';
-import { breadcrumbNode } from './breadcrumb';
-import { developerOrganizationNode } from './developerOrganization';
-import { faqPageNode } from './faqPage';
-import { toSeoInput } from '../entityAdapters';
-import { SCHEMA_CONTEXT, absolute, compact, isoDate, mergeGraph, parseCustom, ref } from './graph';
-import { itemListNode } from './itemList';
-import { organizationId, organizationNode } from './organization';
-import { personNode } from './person';
-import { placeNode } from './place';
-import { realEstateListingNode, residenceTypeOf } from './realEstateListing';
-import { aggregateRatingNode, reviewNodes } from './review';
-import {
+const { SEO_SCHEMA_TYPES } = require('../../config/enums');
+const { articleNode } = require('./article');
+const { breadcrumbNode } = require('./breadcrumb');
+const { developerOrganizationNode } = require('./developerOrganization');
+const { faqPageNode } = require('./faqPage');
+const { toSeoInput } = require('../entityAdapters');
+const {
+  SCHEMA_CONTEXT,
+  absolute,
+  compact,
+  isoDate,
+  mergeGraph,
+  parseCustom,
+  ref,
+} = require('./graph');
+const { itemListNode } = require('./itemList');
+const { jobPostingNode } = require('./jobPosting');
+const { organizationId, organizationNode } = require('./organization');
+const { personNode } = require('./person');
+const { placeNode } = require('./place');
+const { realEstateListingNode, residenceTypeOf } = require('./realEstateListing');
+const { aggregateRatingNode, reviewNodes } = require('./review');
+const {
   KNOWN_TYPES,
   REQUIRED_PROPERTIES,
   validate,
   validateGraph,
   validateNode,
-} from './validate';
-import { videoObjectNode } from './videoObject';
-import { webPageNode } from './webPage';
-import { websiteId, websiteNode } from './website';
+} = require('./validate');
+const { videoObjectNode } = require('./videoObject');
+const { webPageNode } = require('./webPage');
+const { websiteId, websiteNode } = require('./website');
 
 /** The generator each entity type leads with, for a caller that has no opinion. */
-export const GENERATOR_FOR = {
+const GENERATOR_FOR = {
   property: realEstateListingNode,
   article: articleNode,
   page: webPageNode,
   locality: placeNode,
   developer: developerOrganizationNode,
   author: personNode,
+  job: jobPostingNode,
   articleCategory: webPageNode,
+  articleTag: webPageNode,
   propertyType: webPageNode,
 };
 
@@ -52,7 +65,7 @@ export const GENERATOR_FOR = {
  * @param {object} [context]
  * @returns {object|null}
  */
-export function primaryNodeFor(entityType, input, context = {}) {
+function primaryNodeFor(entityType, input, context = {}) {
   const generator = GENERATOR_FOR[entityType];
   return generator ? generator(input, context) : null;
 }
@@ -62,9 +75,11 @@ const SECTION_OF = {
   property: { name: 'Properties', url: '/properties' },
   article: { name: 'Insights', url: '/insights/articles' },
   articleCategory: { name: 'Insights', url: '/insights/articles' },
+  articleTag: { name: 'Insights', url: '/insights/articles' },
   author: { name: 'Insights', url: '/insights/articles' },
   locality: { name: 'Localities', url: '/localities' },
   developer: { name: 'Builders', url: '/builders' },
+  job: { name: 'Careers', url: '/careers' },
   propertyType: { name: 'Properties', url: '/properties' },
 };
 
@@ -84,10 +99,11 @@ const SECTION_OF = {
  * @param {string} entityType one of `SEO_ENTITY_TYPES`
  * @param {object} entity the record, as the form holds it
  * @param {object} [seoSettings] `GET /seo/settings`
- * @param {object} [context] the master data of `toSeoInput`
+ * @param {object} [context] the master data of `toSeoInput`, plus the page's own
+ *   `breadcrumbs` (`[{ name, path }]`) when it has already built them
  * @returns {{'@context': string, '@graph': Array<object>}}
  */
-export function buildGraph(entityType, entity = {}, seoSettings = {}, context = {}) {
+function buildGraph(entityType, entity = {}, seoSettings = {}, context = {}) {
   const siteUrl = context.siteUrl ?? seoSettings?.siteUrl ?? '';
   const full = { ...context, seoSettings: seoSettings ?? {}, siteUrl };
   const input = toSeoInput(entityType, entity, full);
@@ -115,24 +131,35 @@ const typesOf = (node) => {
   return Array.isArray(type) ? type.map(String) : type ? [String(type)] : [];
 };
 
-/** The generated nodes, in graph order, before anything is removed. */
-function autoNodes(entityType, input, context) {
+/**
+ * The trail above a record: the page's own crumbs when it has built them
+ * (`breadcrumbsFor`, prompt 38), and the type's own guess otherwise so that the
+ * SEO panel's Schema tab previews a trail without a rendered page behind it.
+ */
+function trailFor(entityType, input, context) {
+  const shared = Array.isArray(context.breadcrumbs) ? context.breadcrumbs : null;
+  if (shared && shared.length) {
+    return shared.map((item) => ({ name: item.name ?? item.label, url: item.path ?? item.url }));
+  }
+
   const section = SECTION_OF[entityType];
   const label = input.seo.breadcrumbTitle || input.title || input.effectiveTitle;
 
+  return [
+    { name: 'Home', url: '/' },
+    ...(section ? [section] : []),
+    ...(label ? [{ name: label, url: input.url }] : []),
+  ];
+}
+
+/** The generated nodes, in graph order, before anything is removed. */
+function autoNodes(entityType, input, context) {
   return [
     primaryNodeFor(entityType, input, context),
     faqPageNode(input, context),
     videoObjectNode(input, context),
     breadcrumbNode(
-      {
-        canonical: input.canonical,
-        items: [
-          { name: 'Home', url: '/' },
-          ...(section ? [section] : []),
-          ...(label ? [{ name: label, url: input.url }] : []),
-        ],
-      },
+      { canonical: input.canonical, items: trailFor(entityType, input, context) },
       context
     ),
   ].filter(Boolean);
@@ -148,7 +175,7 @@ function autoNodes(entityType, input, context) {
  * @param {object} [context]
  * @returns {string[]} unique, in graph order
  */
-export function autoNodeTypes(entityType, entity = {}, seoSettings = {}, context = {}) {
+function autoNodeTypes(entityType, entity = {}, seoSettings = {}, context = {}) {
   const siteUrl = context.siteUrl ?? seoSettings?.siteUrl ?? '';
   const full = { ...context, seoSettings: seoSettings ?? {}, siteUrl };
   const input = toSeoInput(entityType, entity, full);
@@ -157,7 +184,7 @@ export function autoNodeTypes(entityType, entity = {}, seoSettings = {}, context
 }
 
 /** The schema types an entity type may be forced to, beyond `auto` (§6.17). */
-export const ALLOWED_TYPES_FOR = {
+const ALLOWED_TYPES_FOR = {
   property: ['RealEstateListing', 'Product', 'Place', 'WebPage'],
   article: ['Article', 'BlogPosting', 'NewsArticle', 'WebPage'],
   page: ['WebPage', 'FAQPage', 'Event'],
@@ -165,6 +192,7 @@ export const ALLOWED_TYPES_FOR = {
   developer: ['Organization', 'LocalBusiness', 'WebPage'],
   articleCategory: ['WebPage'],
   author: ['WebPage'],
+  job: ['WebPage'],
   propertyType: ['WebPage'],
 };
 
@@ -175,36 +203,43 @@ export const ALLOWED_TYPES_FOR = {
  * @param {string} entityType
  * @returns {Array<{value: string, label: string}>}
  */
-export function schemaTypeOptions(entityType) {
+function schemaTypeOptions(entityType) {
   const allowed = ALLOWED_TYPES_FOR[entityType] ?? ALLOWED_TYPES_FOR.page;
   return SEO_SCHEMA_TYPES.options.filter(
     (option) => option.value === 'auto' || allowed.includes(option.value)
   );
 }
 
-export {
+const schema = {
+  ALLOWED_TYPES_FOR,
+  GENERATOR_FOR,
   KNOWN_TYPES,
   REQUIRED_PROPERTIES,
   SCHEMA_CONTEXT,
   absolute,
   aggregateRatingNode,
   articleNode,
+  autoNodeTypes,
   breadcrumbNode,
+  buildGraph,
   compact,
   developerOrganizationNode,
   faqPageNode,
   isoDate,
   itemListNode,
+  jobPostingNode,
   mergeGraph,
   organizationId,
   organizationNode,
   parseCustom,
   personNode,
   placeNode,
+  primaryNodeFor,
   realEstateListingNode,
   ref,
   residenceTypeOf,
   reviewNodes,
+  schemaTypeOptions,
   validate,
   validateGraph,
   validateNode,
@@ -214,32 +249,4 @@ export {
   websiteNode,
 };
 
-const schema = {
-  ALLOWED_TYPES_FOR,
-  GENERATOR_FOR,
-  aggregateRatingNode,
-  articleNode,
-  autoNodeTypes,
-  breadcrumbNode,
-  buildGraph,
-  developerOrganizationNode,
-  faqPageNode,
-  itemListNode,
-  mergeGraph,
-  organizationNode,
-  parseCustom,
-  personNode,
-  placeNode,
-  primaryNodeFor,
-  realEstateListingNode,
-  reviewNodes,
-  schemaTypeOptions,
-  validate,
-  validateGraph,
-  validateNode,
-  videoObjectNode,
-  webPageNode,
-  websiteNode,
-};
-
-export default schema;
+module.exports = schema;

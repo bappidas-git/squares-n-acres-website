@@ -1,5 +1,3 @@
-import { Helmet } from 'react-helmet-async';
-
 import styles from './Pagination.module.css';
 
 /**
@@ -26,24 +24,21 @@ function buildPages(page, totalPages, siblings = 1) {
 /**
  * Server-driven pagination.
  *
- * When `prevHref`/`nextHref` are supplied it also emits `<link rel="prev">` and
- * `<link rel="next">`, which is what tells search engines a paginated series
- * belongs together (§9.4).
+ * The `<link rel="prev">` / `<link rel="next">` that tell a search engine a
+ * series belongs together are **not** emitted here: they are part of the head,
+ * and since prompt 38 the head has one owner (`<Seo pagination>`, §9.4). A page
+ * that draws this control passes the same two URLs to `<Seo>`.
  *
  * @param {object} props
  * @param {number} props.page 1-based
  * @param {number} props.totalPages
  * @param {(page: number) => void} props.onChange
- * @param {string} [props.prevHref] absolute URL of the previous page
- * @param {string} [props.nextHref] absolute URL of the next page
  * @param {string} [props.label] accessible name of the navigation
  */
 export default function Pagination({
   page = 1,
   totalPages = 1,
   onChange,
-  prevHref,
-  nextHref,
   siblings = 1,
   label = 'Pagination',
   className = '',
@@ -58,59 +53,51 @@ export default function Pagination({
   };
 
   return (
-    <>
-      {prevHref || nextHref ? (
-        <Helmet>
-          {prevHref ? <link rel="prev" href={prevHref} /> : null}
-          {nextHref ? <link rel="next" href={nextHref} /> : null}
-        </Helmet>
-      ) : null}
-      <nav
-        aria-label={label}
-        className={[styles.pagination, className].filter(Boolean).join(' ')}
-        {...rest}
+    <nav
+      aria-label={label}
+      className={[styles.pagination, className].filter(Boolean).join(' ')}
+      {...rest}
+    >
+      <button
+        type="button"
+        className={styles.page}
+        onClick={() => go(page - 1)}
+        disabled={page <= 1}
+        aria-label="Previous page"
       >
-        <button
-          type="button"
-          className={styles.page}
-          onClick={() => go(page - 1)}
-          disabled={page <= 1}
-          aria-label="Previous page"
-        >
-          &lsaquo;
-        </button>
+        &lsaquo;
+      </button>
 
-        {pages.map((entry, index) =>
-          entry === 'gap' ? (
-            <span key={`gap-${index}`} className={styles.ellipsis} aria-hidden="true">
-              &hellip;
-            </span>
-          ) : (
-            <button
-              key={entry}
-              type="button"
-              className={[styles.page, entry === page ? styles.current : '']
-                .filter(Boolean)
-                .join(' ')}
-              onClick={() => go(entry)}
-              aria-label={`Page ${entry}`}
-              aria-current={entry === page ? 'page' : undefined}
-            >
-              {entry}
-            </button>
-          )
-        )}
+      {pages.map((entry, index) =>
+        entry === 'gap' ? (
+          <span key={`gap-${index}`} className={styles.ellipsis} aria-hidden="true">
+            &hellip;
+          </span>
+        ) : (
+          <button
+            key={entry}
+            type="button"
+            className={[styles.page, entry === page ? styles.current : '']
+              .filter(Boolean)
+              .join(' ')}
+            onClick={() => go(entry)}
+            aria-label={`Page ${entry}`}
+            aria-current={entry === page ? 'page' : undefined}
+          >
+            {entry}
+          </button>
+        )
+      )}
 
-        <button
-          type="button"
-          className={styles.page}
-          onClick={() => go(page + 1)}
-          disabled={page >= totalPages}
-          aria-label="Next page"
-        >
-          &rsaquo;
-        </button>
-      </nav>
-    </>
+      <button
+        type="button"
+        className={styles.page}
+        onClick={() => go(page + 1)}
+        disabled={page >= totalPages}
+        aria-label="Next page"
+      >
+        &rsaquo;
+      </button>
+    </nav>
   );
 }

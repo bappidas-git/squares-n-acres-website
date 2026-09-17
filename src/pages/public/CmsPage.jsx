@@ -1,5 +1,4 @@
-import { useMemo } from 'react';
-import { Helmet } from 'react-helmet-async';
+import { useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
@@ -9,11 +8,12 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import NotFound from './NotFound';
 import PATHS, { isReservedPath } from '../../routes/paths';
 import PageRenderer from '../../components/cms/PageRenderer';
+import Seo from '../../components/seo/Seo';
 import pageService from '../../services/pageService';
 import useApi from '../../hooks/useApi';
 import { ErrorState } from '../../components/ui';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { PageLoader } from '../../components/common/SkeletonLoaders';
-import { SITE } from '../../config/site';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 
 import styles from './CmsPage.module.css';
@@ -33,43 +33,21 @@ import styles from './CmsPage.module.css';
  * else — a slug nobody has written, a draft without a token, an expired one —
  * is a 404, which is the same answer the API gave.
  *
- * The `<Helmet>` here is temporary: prompt 38 replaces it with
- * `<Seo type="page">`, reading the same `seo` branch through the §9.5
- * templates.
+ * The head is `<Seo type="page">`, reading the same `seo` branch through the
+ * §9.5 templates, and its trail is the one `PageRenderer` draws (§9.3).
  */
-
-/** "buyer-assistance" → "Buyer Assistance", for the middle crumb. */
-const humanise = (segment) =>
-  String(segment ?? '')
-    .split('-')
-    .filter(Boolean)
-    .map((word) => `${word[0].toUpperCase()}${word.slice(1)}`)
-    .join(' ');
 
 /**
- * Home › [parent] › Title.
+ * Home › [parent] › Title, from the one place that builds a trail (§9.3).
  *
- * A nested slug gets its parent segment as a crumb — Home › Buyer Assistance ›
- * Home Loan — but the parent is **not** a link: `/buyer-assistance` is not a
- * page, and a breadcrumb to a 404 is worse than a breadcrumb that is only a
- * label (§9.7).
- *
- * Exported for the unit test.
+ * Exported for the unit test, and kept as a named function rather than inlined
+ * so the page and its test name the same thing.
  *
  * @param {{slug?: string, title?: string, seo?: object}} page
- * @returns {Array<{label: string, to?: string}>}
+ * @returns {Array<{name: string, path?: string}>}
  */
 export function buildCrumbs(page) {
-  const segments = String(page?.slug ?? '')
-    .split('/')
-    .filter(Boolean);
-  const label = page?.seo?.breadcrumbTitle || page?.title || humanise(segments.at(-1));
-
-  return [
-    { label: 'Home', to: PATHS.home },
-    ...segments.slice(0, -1).map((segment) => ({ label: humanise(segment) })),
-    { label },
-  ];
+  return breadcrumbsFor('page', page ?? {});
 }
 
 /**
@@ -103,6 +81,9 @@ export default function CmsPage({ slug: fixedSlug, prefix = '' }) {
 
   const slug = fixedSlug ?? slugFromParams(params, prefix);
   const previewToken = searchParams.get('preview') ?? '';
+
+  // Reported by the testimonials block once it has fetched them (§9.3).
+  const [testimonials, setTestimonials] = useState([]);
 
   // A path the catch-all picked up whose first segment belongs to a static
   // route is never a CMS page: `/properties/…`, `/buy/…` and `/admin/…` answer
@@ -153,20 +134,14 @@ export default function CmsPage({ slug: fixedSlug, prefix = '' }) {
 
   return (
     <>
-      {/* TEMPORARY — `<Seo type="page">` replaces this Helmet in prompt 38. */}
-      <Helmet>
-        <title>{`${seo.title || page.title} | ${SITE.name}`}</title>
-        <meta name="description" content={description} />
-        <link rel="canonical" href={`${SITE.url}${PATHS.page(page.slug)}`} />
-        <meta
-          name="robots"
-          content={
-            previewing || draft
-              ? 'noindex, nofollow'
-              : 'index, follow, max-image-preview:large, max-snippet:-1'
-          }
-        />
-      </Helmet>
+      <Seo
+        type="page"
+        entity={page}
+        description={description}
+        breadcrumbs={crumbs}
+        testimonials={testimonials}
+        overrides={draft ? { noindex: true } : undefined}
+      />
 
       {previewing ? (
         <div className={styles.previewBanner} role="status">
@@ -184,7 +159,7 @@ export default function CmsPage({ slug: fixedSlug, prefix = '' }) {
         </div>
       ) : null}
 
-      <PageRenderer page={page} breadcrumbs={crumbs} />
+      <PageRenderer page={page} breadcrumbs={crumbs} onTestimonials={setTestimonials} />
     </>
   );
 }

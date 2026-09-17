@@ -1,10 +1,10 @@
 import { Suspense, useCallback, useState } from 'react';
 import { Drawer } from '@mui/material';
-import { Helmet } from 'react-helmet-async';
 import { Outlet, useLocation } from 'react-router-dom';
 
 import AdminSidebar from './AdminSidebar';
 import AdminTopbar from './AdminTopbar';
+import Seo from '../seo/Seo';
 import useBreakpoint from '../../hooks/useBreakpoint';
 import { BRAND } from '../../config/site';
 import { LeadNotificationsProvider } from '../../contexts/LeadNotificationsContext';
@@ -53,10 +53,11 @@ const AdminShell = () => {
 
   return (
     <div className={styles.shell}>
-      <Helmet>
-        <title>{`${title} | Admin | ${BRAND.name}`}</title>
-        <meta name="robots" content="noindex,nofollow" />
-      </Helmet>
+      <Seo
+        type="admin"
+        title={`${title} — Admin`}
+        description={`${title} — ${BRAND.name} admin panel.`}
+      />
 
       {isMobile ? (
         <Drawer

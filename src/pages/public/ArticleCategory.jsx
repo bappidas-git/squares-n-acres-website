@@ -5,7 +5,15 @@ import PATHS from '../../routes/paths';
 import articleService from '../../services/articleService';
 import useApi from '../../hooks/useApi';
 import { ArticleIndex } from './Articles';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { PageLoader } from '../../components/common/SkeletonLoaders';
+
+/**
+ * Every category and every tag in one request: both collections are far under
+ * the 100 a public route may ask for — `perPage=all` is admin-only (§5.6), and
+ * asking for it on a public route quietly truncates the list to one page.
+ */
+const TAXONOMY_PER_PAGE = 100;
 
 /**
  * `/insights/articles/category/:slug` — one category's archive.
@@ -27,9 +35,13 @@ export default function ArticleCategory() {
     data: categories,
     loading,
     error,
-  } = useApi((signal) => articleService.categories({ perPage: 'all' }, { signal }), [], {
-    initialData: [],
-  });
+  } = useApi(
+    (signal) => articleService.categories({ perPage: TAXONOMY_PER_PAGE }, { signal }),
+    [],
+    {
+      initialData: [],
+    }
+  );
 
   const list = Array.isArray(categories) ? categories : [];
   const category = list.find((record) => record.slug === slug) ?? null;
@@ -51,14 +63,12 @@ export default function ArticleCategory() {
       paramKeys={['q', 'page', 'sort']}
       title={`${category.name} articles`}
       intro={category.description || undefined}
-      breadcrumbs={[
-        { label: 'Home', to: PATHS.home },
-        { label: 'Insights', to: PATHS.articles },
-        { label: category.name },
-      ]}
+      breadcrumbs={breadcrumbsFor('articleCategory', category)}
       withCategoryTabs
       activeCategorySlug={slug}
       emptyText="Nothing has been published in this category yet. The rest of the archive is one click away."
+      seoType="articleCategory"
+      seoEntity={category}
       seo={{
         title: `${category.name} — Bengaluru property guides`,
         description:

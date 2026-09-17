@@ -6,9 +6,13 @@
  * `BRAND.*Url` point at the Cloudinary originals; `BRAND.local*` point at the
  * copies downloaded into `public/brand/` by `npm run generate:brand-assets`,
  * which `public/index.html` and `public/manifest.json` reference.
+ *
+ * Authored in CommonJS (D36b, extended in prompt 38) because `src/seo` reaches
+ * it through `variables.js`, and `scripts/validate-jsonld.js` has to `require`
+ * that chain from Node with no bundler in front of it.
  */
 
-export const BRAND = {
+const BRAND = {
   name: 'Squares N Acres',
   shortName: 'SNA',
   logoUrl: 'https://res.cloudinary.com/dn9gyaiik/image/upload/v1789465788/sna-logo_o09ugt.png',
@@ -22,9 +26,11 @@ export const BRAND = {
   localOgImage: '/brand/og-default.png',
 };
 
-export const SITE = {
+const SITE = {
   name: process.env.REACT_APP_SITE_NAME || BRAND.name,
   url: (process.env.REACT_APP_SITE_URL || 'https://www.squaresnacres.com').replace(/\/+$/, ''),
   defaultLocale: 'en-IN',
   placeholderDomain: 'https://www.squaresnacres.com',
 };
+
+module.exports = { BRAND, SITE };

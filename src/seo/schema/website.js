@@ -5,18 +5,20 @@
  * `<siteUrl>/#organization` rather than a second copy of it.
  */
 
-import { compact, ref } from './graph';
-import { organizationId } from './organization';
+const { compact, ref } = require('./graph');
+const { organizationId } = require('./organization');
 
 /** The `@id` of the site node. */
-export const websiteId = (siteUrl) => `${String(siteUrl ?? '').replace(/\/+$/, '')}/#website`;
+const websiteId = (siteUrl) => `${String(siteUrl ?? '').replace(/\/+$/, '')}/#website`;
 
 /**
- * @param {object} [_input] unused
+ * @param {{searchAction?: boolean}} [input] `searchAction` publishes the
+ *   `SearchAction` Google may draw a search box from — the home page's to
+ *   offer, and nobody else's (§9.3)
  * @param {{seoSettings?: object, siteUrl?: string}} [context]
  * @returns {object} a `WebSite` node
  */
-export function websiteNode(_input = {}, context = {}) {
+function websiteNode(input = {}, context = {}) {
   const seoSettings = context.seoSettings ?? {};
   const siteUrl = String(context.siteUrl ?? seoSettings.siteUrl ?? '').replace(/\/+$/, '');
   const name = seoSettings.knowledgeGraph?.name;
@@ -29,17 +31,20 @@ export function websiteNode(_input = {}, context = {}) {
     description: seoSettings.defaults?.metaDescription,
     inLanguage: 'en-IN',
     publisher: ref(organizationId(siteUrl)),
-    potentialAction: siteUrl
-      ? {
-          '@type': 'SearchAction',
-          target: {
-            '@type': 'EntryPoint',
-            urlTemplate: `${siteUrl}/properties?q={search_term_string}`,
-          },
-          'query-input': 'required name=search_term_string',
-        }
-      : undefined,
+    potentialAction:
+      siteUrl && input.searchAction !== false
+        ? {
+            '@type': 'SearchAction',
+            target: {
+              '@type': 'EntryPoint',
+              urlTemplate: `${siteUrl}/properties?q={search_term_string}`,
+            },
+            'query-input': 'required name=search_term_string',
+          }
+        : undefined,
   });
 }
 
-export default websiteNode;
+module.exports = websiteNode;
+module.exports.websiteNode = websiteNode;
+module.exports.websiteId = websiteId;

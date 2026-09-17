@@ -13,7 +13,7 @@
  * weeks later.
  */
 
-import { SEO_SCHEMA_TYPES } from '../../config/enums';
+const { SEO_SCHEMA_TYPES } = require('../../config/enums');
 
 /** The types the generators emit, on top of the ones the panel offers. */
 const GENERATED_TYPES = [
@@ -29,6 +29,7 @@ const GENERATED_TYPES = [
   'House',
   'ImageObject',
   'ItemList',
+  'JobPosting',
   'ListItem',
   'LocationFeatureSpecification',
   'Offer',
@@ -46,24 +47,27 @@ const GENERATED_TYPES = [
   'SearchAction',
   'Service',
   'SingleFamilyResidence',
+  'UnitPriceSpecification',
   'VideoObject',
   'WebPage',
   'WebSite',
 ];
 
 /** Every `@type` this engine accepts. */
-export const KNOWN_TYPES = new Set(
+const KNOWN_TYPES = new Set(
   [...SEO_SCHEMA_TYPES.values.filter((value) => value !== 'auto'), ...GENERATED_TYPES].sort()
 );
 
 /** What each type cannot be published without. */
-export const REQUIRED_PROPERTIES = {
+const REQUIRED_PROPERTIES = {
   Article: ['headline'],
   BlogPosting: ['headline'],
   BreadcrumbList: ['itemListElement'],
   Event: ['name', 'startDate'],
   FAQPage: ['mainEntity'],
   ItemList: ['itemListElement'],
+  // Google shows nothing for a posting missing any of these four (prompt 38).
+  JobPosting: ['title', 'description', 'datePosted', 'hiringOrganization'],
   ListItem: ['position'],
   LocalBusiness: ['name'],
   NewsArticle: ['headline'],
@@ -186,7 +190,7 @@ function checkNode(node, path, errors, seen) {
  * @param {object} node
  * @returns {{valid: boolean, errors: Array<{path: string, message: string}>}}
  */
-export function validateNode(node) {
+function validateNode(node) {
   const errors = [];
   checkNode(node, '', errors, new Set());
   return { valid: errors.length === 0, errors };
@@ -198,7 +202,7 @@ export function validateNode(node) {
  * @param {Array<object>|object} input
  * @returns {{valid: boolean, errors: Array<{path: string, message: string}>}}
  */
-export function validateGraph(input) {
+function validateGraph(input) {
   const errors = [];
 
   if (input && !Array.isArray(input) && typeof input === 'object' && '@graph' in input) {
@@ -221,8 +225,8 @@ export function validateGraph(input) {
 }
 
 /** {@link validateGraph} under the name the panel calls it by. */
-export const validate = validateGraph;
+const validate = validateGraph;
 
 const validateModule = { KNOWN_TYPES, REQUIRED_PROPERTIES, validate, validateGraph, validateNode };
 
-export default validateModule;
+module.exports = validateModule;

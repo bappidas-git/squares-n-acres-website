@@ -100,8 +100,11 @@ export function snapshot(property) {
  * @param {object} props
  * @param {object} props.property a record of §6.1
  * @param {'bg'|'surface'} [props.background]
+ * @param {(items: Array<{question: string, answer: string}>) => void} [props.onFaqItems]
+ *   every question the description itself carries, so the page can publish them
+ *   in its `FAQPage` alongside the listing's own (§9.3)
  */
-export default function OverviewSection({ property, background = 'bg' }) {
+export default function OverviewSection({ property, background = 'bg', onFaqItems }) {
   const bodyRef = useRef(null);
   const [expanded, setExpanded] = useState(false);
   const [clampable, setClampable] = useState(false);
@@ -136,7 +139,7 @@ export default function OverviewSection({ property, background = 'bg' }) {
               .filter(Boolean)
               .join(' ')}
           >
-            <SafeHtml html={description} />
+            <SafeHtml html={description} onFaqItems={onFaqItems} />
           </div>
           {clampable ? (
             <Button

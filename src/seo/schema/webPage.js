@@ -3,15 +3,15 @@
  * so that a crawler can see where it sits.
  */
 
-import { absolute, compact, isoDate, ref } from './graph';
-import { websiteId } from './website';
+const { absolute, compact, isoDate, ref } = require('./graph');
+const { websiteId } = require('./website');
 
 /**
  * @param {object} input the normalised record (`entityAdapters.toSeoInput`)
  * @param {{siteUrl?: string, seoSettings?: object}} [context]
  * @returns {object|null}
  */
-export function webPageNode(input = {}, context = {}) {
+function webPageNode(input = {}, context = {}) {
   const page = input.entity ?? {};
   const canonical = input.canonical;
   if (!canonical) return null;
@@ -33,4 +33,5 @@ export function webPageNode(input = {}, context = {}) {
   });
 }
 
-export default webPageNode;
+module.exports = webPageNode;
+module.exports.webPageNode = webPageNode;

@@ -6,24 +6,29 @@
  * `Place` for land and commercial space — which is what lets a result show the
  * right thing. Coordinates are published **only** when the record says the
  * exact location may be shown (§6.1 `showExactLocation`); an approximate pin
- * published as an exact one is worse than none.
+ * published as an exact one is worse than none. The street address follows the
+ * same switch, for the same reason.
+ *
+ * Authored in CommonJS (D36b, extended in prompt 38) so that
+ * `scripts/validate-jsonld.js` can `require` it from Node.
  */
 
-import { AREA_UNITS } from '../../config/enums';
-import { absolute, compact, isoDate, ref } from './graph';
-import { organizationId } from './organization';
+const { AREA_UNITS } = require('../../config/enums');
+const { absolute, compact, isoDate, ref } = require('./graph');
+const { organizationId } = require('./organization');
+const { stripHtml } = require('../text');
 
-/** schema.org's word for each of our property-type segments and slugs. */
+/** schema.org's word for each of our property-type slugs (prompt 38 §4.2). */
 const RESIDENCE_TYPES = {
   apartments: 'Apartment',
   studios: 'Apartment',
   'builder-floors': 'Apartment',
   penthouses: 'Apartment',
-  duplexes: 'Apartment',
   'pg-co-living': 'Apartment',
   villas: 'House',
   'independent-houses': 'House',
   'row-houses': 'House',
+  duplexes: 'House',
 };
 
 /** `available` → schema.org availability. */
@@ -34,12 +39,63 @@ const AVAILABILITY = {
   reserved: 'https://schema.org/LimitedAvailability',
 };
 
+/** UN/CEFACT codes: square feet, square metres, and a month of rent. */
+const AREA_UNIT_CODES = { sqft: 'FTK', sqm: 'MTK', sqyd: 'YDK' };
+
+/** At most this many images per listing — Google reads the first few anyway. */
+const MAX_IMAGES = 10;
+
+/** A description a rich result can show: no markup, no essay (§9.3). */
+const MAX_DESCRIPTION = 300;
+
 /** The second `@type` of the listing: what kind of place it is. */
-export function residenceTypeOf(property, propertyType) {
+function residenceTypeOf(property, propertyType) {
   const slug = propertyType?.slug ?? property?.propertyType?.slug ?? '';
   if (RESIDENCE_TYPES[slug]) return RESIDENCE_TYPES[slug];
   if (property?.segment === 'land' || property?.segment === 'commercial') return 'Place';
   return 'Residence';
+}
+
+/** The plain-text description, clipped at a sentence rather than mid-word. */
+function shortDescription(input) {
+  const source = stripHtml(input.description || input.summary || input.contentHtml || '');
+  if (source.length <= MAX_DESCRIPTION) return source;
+
+  const clipped = source.slice(0, MAX_DESCRIPTION);
+  const lastSpace = clipped.lastIndexOf(' ');
+  return `${(lastSpace > 0 ? clipped.slice(0, lastSpace) : clipped).replace(/[\s,;:.-]+$/, '')}…`;
+}
+
+/**
+ * What the listing is offered at.
+ *
+ * A rent is a price *per month*, and an `Offer` that says `45000` without
+ * saying so reads as a flat asking price — so rent carries a
+ * `UnitPriceSpecification` with `unitCode: 'MON'` rather than a bare number.
+ */
+function offerOf(property, canonical) {
+  const pricing = property.pricing ?? {};
+  const isSale = property.listingType === 'sale';
+  const price = Number(isSale ? pricing.price : pricing.rentPerMonth);
+
+  if (pricing.priceOnRequest || !Number.isFinite(price) || price <= 0) return undefined;
+  const currency = pricing.currency || 'INR';
+
+  return compact({
+    '@type': 'Offer',
+    price,
+    priceCurrency: currency,
+    availability: AVAILABILITY[property.availability] ?? AVAILABILITY.available,
+    url: canonical,
+    priceSpecification: isSale
+      ? undefined
+      : {
+          '@type': 'UnitPriceSpecification',
+          price,
+          priceCurrency: currency,
+          unitCode: 'MON',
+        },
+  });
 }
 
 /**
@@ -48,14 +104,13 @@ export function residenceTypeOf(property, propertyType) {
  *   amenities?: Array<object>}} [context]
  * @returns {object|null}
  */
-export function realEstateListingNode(input = {}, context = {}) {
+function realEstateListingNode(input = {}, context = {}) {
   const property = input.entity ?? {};
   const canonical = input.canonical;
   if (!canonical) return null;
 
   const siteUrl = String(context.siteUrl ?? context.seoSettings?.siteUrl ?? '').replace(/\/+$/, '');
   const location = property.location ?? {};
-  const pricing = property.pricing ?? {};
   const area = property.area ?? {};
   const configuration = property.configuration ?? {};
   const propertyType =
@@ -70,22 +125,40 @@ export function realEstateListingNode(input = {}, context = {}) {
         (property.amenityIds ?? []).map(String).includes(String(row?.id))
       );
 
+  const developer =
+    property.project?.developer ??
+    (Array.isArray(context.developers)
+      ? context.developers.find((row) => String(row?.id) === String(property.project?.developerId))
+      : null);
+
   const areaValue = area.superBuiltUpArea ?? area.builtUpArea ?? area.carpetArea ?? area.plotArea;
-  const price = property.listingType === 'sale' ? pricing.price : pricing.rentPerMonth;
+  const areaUnit = area.areaUnit ?? 'sqft';
 
   return compact({
     '@type': ['RealEstateListing', residenceTypeOf(property, propertyType)],
     '@id': `${canonical}#listing`,
     url: canonical,
     name: input.title || input.effectiveTitle,
-    description: input.description || input.summary,
+    description: shortDescription(input),
     datePosted: isoDate(property.publishedAt ?? property.createdAt),
     dateModified: isoDate(property.updatedAt),
-    image: input.images.map((image) => absolute(siteUrl, image.src)).filter(Boolean),
+    image: input.images
+      .map((image) => absolute(siteUrl, image.src))
+      .filter(Boolean)
+      .slice(0, MAX_IMAGES),
     provider: ref(organizationId(siteUrl)),
+    seller: developer?.name
+      ? compact({
+          '@type': 'Organization',
+          name: developer.name,
+          url: developer.slug ? absolute(siteUrl, `/builders/${developer.slug}`) : undefined,
+        })
+      : undefined,
     address: compact({
       '@type': 'PostalAddress',
-      streetAddress: location.address,
+      // An exact street address is the one field that turns an approximate pin
+      // into a doorstep, so it follows `showExactLocation` like `geo` does.
+      streetAddress: location.showExactLocation ? location.address : undefined,
       addressLocality: location.locality?.name ?? input.extras?.localityName,
       addressRegion: location.city?.state ?? 'Karnataka',
       postalCode: location.pincode,
@@ -102,28 +175,24 @@ export function realEstateListingNode(input = {}, context = {}) {
     numberOfRooms: Number(configuration.bedrooms) || undefined,
     numberOfBathroomsTotal: Number(configuration.bathrooms) || undefined,
     floorSize: areaValue
-      ? {
+      ? compact({
           '@type': 'QuantitativeValue',
           value: Number(areaValue),
-          unitText: AREA_UNITS.labelOf(area.areaUnit ?? 'sqft'),
-        }
+          unitCode: AREA_UNIT_CODES[areaUnit],
+          unitText: AREA_UNITS.labelOf(areaUnit),
+        })
       : undefined,
     amenityFeature: amenities.map((amenity) => ({
       '@type': 'LocationFeatureSpecification',
       name: amenity?.name,
       value: true,
     })),
-    offers:
-      pricing.priceOnRequest || !Number(price)
-        ? undefined
-        : compact({
-            '@type': 'Offer',
-            price: Number(price),
-            priceCurrency: pricing.currency || 'INR',
-            availability: AVAILABILITY[property.availability] ?? AVAILABILITY.available,
-            url: canonical,
-          }),
+    offers: offerOf(property, canonical),
   });
 }
 
-export default realEstateListingNode;
+module.exports = realEstateListingNode;
+module.exports.realEstateListingNode = realEstateListingNode;
+module.exports.residenceTypeOf = residenceTypeOf;
+module.exports.AREA_UNIT_CODES = AREA_UNIT_CODES;
+module.exports.MAX_IMAGES = MAX_IMAGES;

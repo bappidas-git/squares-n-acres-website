@@ -12,12 +12,16 @@
  * string.
  *
  * Trailing slash policy: none, anywhere, including the home page.
+ *
+ * Authored in CommonJS (D36b, extended in prompt 38) so that `scripts/
+ * validate-jsonld.js` and `scripts/check-links.js` can `require` this module
+ * from Node with no bundler in front of it; React and Jest keep importing it.
  */
 
-import PATHS from '../routes/paths';
+const PATHS = require('../routes/paths');
 
 /** Indexed, in this order (§9.4). */
-export const INDEX_WORTHY_PARAMS = [
+const INDEX_WORTHY_PARAMS = [
   'listingType',
   'segment',
   'propertyTypeId',
@@ -28,7 +32,7 @@ export const INDEX_WORTHY_PARAMS = [
 ];
 
 /** The listing parameters whose default value is the same as being absent. */
-export const LISTING_PARAM_DEFAULTS = { sort: 'relevance', perPage: 12, page: 1 };
+const LISTING_PARAM_DEFAULTS = { sort: 'relevance', perPage: 12, page: 1 };
 
 const hasValue = (value) => {
   if (value === undefined || value === null || value === '') return false;
@@ -39,7 +43,7 @@ const hasValue = (value) => {
 const asString = (value) => (Array.isArray(value) ? value.join(',') : String(value));
 
 /** `https://site.com/path`, with no trailing slash and no double slash. */
-export function absoluteUrl(siteUrl, path = '/') {
+function absoluteUrl(siteUrl, path = '/') {
   const base = String(siteUrl ?? '').replace(/\/+$/, '');
   const suffix = normalisePath(path);
   if (!base) return suffix;
@@ -47,7 +51,7 @@ export function absoluteUrl(siteUrl, path = '/') {
 }
 
 /** A leading slash, no trailing slash, `/` for the root. */
-export function normalisePath(path) {
+function normalisePath(path) {
   const value = String(path ?? '').trim();
   if (!value || value === '/') return '/';
   const withSlash = value.startsWith('/') ? value : `/${value}`;
@@ -58,12 +62,13 @@ export function normalisePath(path) {
  * The public path of a record (§9.1, `routes/paths.js`).
  *
  * @param {string} entityType `property`, `article`, `articleCategory`,
- *   `articleTag`, `author`, `locality`, `developer`, `page`, `propertyType`
+ *   `articleTag`, `author`, `locality`, `developer`, `job`, `page`,
+ *   `propertyType`
  * @param {object} entity the record; only its slug and — for a property type —
  *   its segment are read
  * @returns {string|null} `null` when the record has no slug yet
  */
-export function publicPathFor(entityType, entity = {}) {
+function publicPathFor(entityType, entity = {}) {
   const slug = entity?.seo?.slug || entity?.slug || '';
   if (!slug) return null;
 
@@ -82,6 +87,8 @@ export function publicPathFor(entityType, entity = {}) {
       return PATHS.locality(slug);
     case 'developer':
       return PATHS.builder(slug);
+    case 'job':
+      return PATHS.job(slug);
     case 'propertyType':
       return entity.segment === 'commercial' ? PATHS.commercialType(slug) : PATHS.buyType(slug);
     case 'page':
@@ -101,7 +108,7 @@ export function publicPathFor(entityType, entity = {}) {
  * @param {{indexWorthy?: string[], defaults?: object}} [rules]
  * @returns {string}
  */
-export function canonicalFor(siteUrl, path, query = {}, rules = {}) {
+function canonicalFor(siteUrl, path, query = {}, rules = {}) {
   const keys = rules.indexWorthy ?? INDEX_WORTHY_PARAMS;
   const defaults = rules.defaults ?? LISTING_PARAM_DEFAULTS;
   const params = query ?? {};
@@ -133,7 +140,7 @@ export function canonicalFor(siteUrl, path, query = {}, rules = {}) {
  * @param {{seoSettings?: object, siteUrl?: string}} [context]
  * @returns {string|null}
  */
-export function canonicalForEntity(entityType, entity = {}, context = {}) {
+function canonicalForEntity(entityType, entity = {}, context = {}) {
   const override = entity?.seo?.canonicalUrl;
   if (override) return String(override).replace(/\/+$/, '');
 
@@ -154,7 +161,7 @@ export function canonicalForEntity(entityType, entity = {}, context = {}) {
  * @param {object} [seoSettings]
  * @returns {boolean}
  */
-export function isNoindexListing(query = {}, seoSettings = {}) {
+function isNoindexListing(query = {}, seoSettings = {}) {
   const rules = seoSettings?.noindex ?? {};
   const params = query ?? {};
 
@@ -180,7 +187,7 @@ export function isNoindexListing(query = {}, seoSettings = {}) {
  * @param {{isPublished?: boolean}} [options]
  * @returns {boolean}
  */
-export function isIndexable(entity = {}, { isPublished = true } = {}) {
+function isIndexable(entity = {}, { isPublished = true } = {}) {
   const robots = entity?.seo?.robots ?? {};
   if (robots.index === false) return false;
   return isPublished !== false;
@@ -198,4 +205,4 @@ const urls = {
   publicPathFor,
 };
 
-export default urls;
+module.exports = urls;

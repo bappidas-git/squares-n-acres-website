@@ -8,6 +8,7 @@ import MobileHeader from './MobileHeader';
 import Footer from './Footer';
 import BottomNav from './BottomNav';
 import ScrollToTop from '../common/ScrollToTop';
+import { CustomBodyEnd } from '../seo/CustomHtml';
 import WhatsAppButton from '../common/WhatsAppButton';
 import BackToTop from '../common/BackToTop';
 import styles from './MainLayout.module.css';
@@ -71,6 +72,12 @@ const MainLayout = ({ children }) => {
 
       {/* Mobile Bottom Nav */}
       {isMobile && <BottomNav />}
+
+      {/* `seoSettings.customBodyEndHtml`, appended to the body once per visit.
+          Its head counterpart is rendered by `<Seo>`; both are administrator
+          territory and both are documented as a trust boundary in
+          `components/seo/CustomHtml.jsx` (§6.14). */}
+      <CustomBodyEnd />
     </>
   );
 };

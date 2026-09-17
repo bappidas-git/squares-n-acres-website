@@ -1,4 +1,3 @@
-import { Helmet } from 'react-helmet-async';
 import { Icon } from '@iconify/react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -9,11 +8,13 @@ import { Link, useParams } from 'react-router-dom';
 import NotFound from './NotFound';
 import SafeHtml from '../../components/editor/SafeHtml';
 import PATHS from '../../routes/paths';
+import Seo from '../../components/seo/Seo';
 import careerService from '../../services/careerService';
 import useApi from '../../hooks/useApi';
 import { Container, ErrorState, Skeleton } from '../../components/ui';
 import { JobApplyForm, JobHeader } from '../../components/sections/careers';
-import { SITE } from '../../config/site';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 import styles from './JobDetail.module.css';
 
@@ -79,11 +80,13 @@ function BulletList({ title, items, icon }) {
  * three-week-old link should see what the job was and that it has gone, not a
  * dead end — with the form replaced by a notice and a way back to the others.
  *
- * The `<Helmet>` here is temporary: prompt 38 replaces it with `<Seo>`, and
- * the description goes through `SafeHtml` in prompt 32.
+ * The head is `<Seo type="job">`, whose graph carries the `JobPosting` Google
+ * for Jobs reads — and a closed role is `noindex`, because a listing nobody can
+ * apply to is not a result worth showing (§9.3).
  */
 export default function JobDetail() {
   const { jobSlug } = useParams();
+  const { siteName } = useSiteSettings();
 
   const {
     data: job,
@@ -112,30 +115,23 @@ export default function JobDetail() {
   }
 
   const closed = isJobClosed(job);
-  const breadcrumbs = [
-    { label: 'Home', to: PATHS.home },
-    { label: 'Careers', to: PATHS.careers },
-    { label: job.title },
-  ];
-
+  const breadcrumbs = breadcrumbsFor('job', job);
   const summary = [job.department, job.location].filter(Boolean).join(' · ');
 
   return (
     <>
-      {/* TEMPORARY — `<Seo type="job">` replaces this Helmet in prompt 38. */}
-      <Helmet>
-        <title>{`${job.title} | Careers | ${SITE.name}`}</title>
-        <meta
-          name="description"
-          content={
-            summary
-              ? `${job.title} — ${summary}. Apply to join ${SITE.name}.`
-              : `${job.title} — apply to join ${SITE.name}.`
-          }
-        />
-        <link rel="canonical" href={`${SITE.url}${PATHS.job(job.slug)}`} />
-        <meta name="robots" content={closed ? 'noindex, follow' : 'index, follow'} />
-      </Helmet>
+      <Seo
+        type="job"
+        entity={job}
+        title={`${job.title} — Careers`}
+        description={
+          summary
+            ? `${job.title} — ${summary}. Apply to join ${siteName}.`
+            : `${job.title} — apply to join ${siteName}.`
+        }
+        breadcrumbs={breadcrumbs}
+        overrides={closed ? { noindex: true } : undefined}
+      />
 
       <article className={styles.page}>
         <Container className={styles.layout}>

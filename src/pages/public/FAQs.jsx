@@ -1,11 +1,10 @@
 import { useMemo } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { Icon } from '@iconify/react';
 
 import ContactMethods from '../../components/sections/shared/ContactMethods';
 import FaqAccordion from '../../components/sections/shared/FaqAccordion';
 import LeadForm from '../../components/common/LeadForm';
-import PATHS from '../../routes/paths';
+import Seo from '../../components/seo/Seo';
 import masterDataService from '../../services/masterDataService';
 import useApi from '../../hooks/useApi';
 import useApiList from '../../hooks/useApiList';
@@ -19,7 +18,7 @@ import {
 } from '../../components/ui';
 import { FAQ_CATEGORIES } from '../../config/enums';
 import { leadFormProps } from '../../utils/leadSources';
-import { SITE } from '../../config/site';
+import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './FAQs.module.css';
 
@@ -93,23 +92,23 @@ export default function FAQs() {
       .map((value) => ({ category: value, items: byCategory.get(value) }));
   }, [items, activeCategory]);
 
+  const crumbs = breadcrumbsFor('faqs');
+
   return (
     <>
-      <Helmet>
-        <title>{`Frequently asked questions | ${SITE.name}`}</title>
-        <meta
-          name="description"
-          content="Answers to the questions buyers, sellers, tenants and NRIs ask us most often about property in Bengaluru — buying, renting, home loans, legal checks and RERA."
-        />
-      </Helmet>
+      {/* Every question on the page, whatever the tab or the search: the
+          `FAQPage` has to match what a visitor can actually read here (§9.3). */}
+      <Seo
+        type="faqs"
+        breadcrumbs={crumbs}
+        overrides={search ? { noindex: true } : undefined}
+        faqs={items}
+      />
 
       <div className={styles.page}>
         <header className={styles.header}>
           <Container size="narrow">
-            <Breadcrumbs
-              items={[{ label: 'Home', to: PATHS.home }, { label: 'FAQs' }]}
-              className={styles.crumbs}
-            />
+            <Breadcrumbs items={crumbs} className={styles.crumbs} />
             <h1 className={styles.title}>Frequently asked questions</h1>
             <p className={styles.intro}>
               What buying, renting, financing and registering a property in Bengaluru actually

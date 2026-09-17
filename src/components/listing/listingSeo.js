@@ -7,9 +7,9 @@ import { SITE } from '../../config/site';
  * What a listing URL tells a search engine (§9.4, §9.5).
  *
  * A pure function: route + params + `meta` in, `{ title, description, h1,
- * canonicalPath, noindex, intro }` out. The page renders it through a
- * temporary `<Helmet>` today and `<Seo type="listing">` reads the same object
- * in prompt 38, so the rules are written down once and tested once.
+ * canonicalPath, noindex, intro }` out. `ListingEngine` hands it to
+ * `<Seo type="listing">` as overrides and draws the same `h1` from it, so the
+ * rules are written down once and tested once.
  *
  * Two rules do the work. **Canonical**: the path plus only the parameters
  * worth indexing, in a fixed order, so `?localityId=4&sort=price-asc` and

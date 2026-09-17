@@ -13,6 +13,10 @@
  *
  * Nothing here is React-aware and nothing here sanitises: `components/editor/
  * SafeHtml` is what puts markup on a page, and this module only measures it.
+ *
+ * Authored in CommonJS (D36b, extended in prompt 38) so that `scripts/
+ * validate-jsonld.js` and `scripts/check-links.js` can `require` this module
+ * from Node with no bundler in front of it; React and Jest keep importing it.
  */
 
 /** Elements that carry no text and never close. */
@@ -114,7 +118,7 @@ const NAMED_ENTITIES = {
  * @param {string} value
  * @returns {string}
  */
-export function decodeEntities(value) {
+function decodeEntities(value) {
   return String(value ?? '').replace(/&(#x?[0-9a-f]+|[a-z][a-z0-9]*);/gi, (match, body) => {
     if (body[0] === '#') {
       const code =
@@ -155,7 +159,7 @@ function parseAttributes(source) {
  * @param {string} html
  * @returns {Array<{kind: 'open'|'close'|'text', tag?: string, attrs?: object, value?: string}>}
  */
-export function scanHtml(html) {
+function scanHtml(html) {
   const source = String(html ?? '');
   const events = [];
   let index = 0;
@@ -226,7 +230,7 @@ export function scanHtml(html) {
  * @param {string} html
  * @returns {Array<object>} the same shape {@link scanHtml} returns
  */
-export function parseHtmlWithDom(html) {
+function parseHtmlWithDom(html) {
   const body = new DOMParser().parseFromString(
     `<body>${String(html ?? '')}</body>`,
     'text/html'
@@ -264,7 +268,7 @@ const looksLikeHtml = (value) => /<[a-zA-Z!/]/.test(value);
  * @param {string} html
  * @returns {Array<object>}
  */
-export function parseHtml(html) {
+function parseHtml(html) {
   const source = String(html ?? '');
   if (!source) return [];
   if (typeof DOMParser === 'undefined') return scanHtml(source);
@@ -291,7 +295,7 @@ function normaliseText(value) {
  * @param {string} html markup, or plain text (returned tidied)
  * @returns {string}
  */
-export function stripHtml(html) {
+function stripHtml(html) {
   const source = String(html ?? '');
   if (!source) return '';
   if (!looksLikeHtml(source)) return normaliseText(source);
@@ -321,7 +325,7 @@ export function stripHtml(html) {
  * @param {string} input HTML or text
  * @returns {number}
  */
-export function wordCount(input) {
+function wordCount(input) {
   return words(input).length;
 }
 
@@ -331,7 +335,7 @@ export function wordCount(input) {
  * @param {string} input HTML or text
  * @returns {string[]}
  */
-export function words(input) {
+function words(input) {
   const text = stripHtml(input);
   return (
     text.match(/[\p{L}\p{N}][\p{L}\p{N}\p{M}]*(?:[’'\-.,][\p{L}\p{N}][\p{L}\p{N}\p{M}]*)*/gu) ?? []
@@ -405,7 +409,7 @@ function splitSentences(line) {
  * @param {string} input HTML or text
  * @returns {string[]}
  */
-export function sentences(input) {
+function sentences(input) {
   return stripHtml(input)
     .split('\n')
     .map((line) => line.trim())
@@ -421,7 +425,7 @@ export function sentences(input) {
  * @param {string} input HTML or text
  * @returns {string[]}
  */
-export function paragraphs(input) {
+function paragraphs(input) {
   const source = String(input ?? '');
   if (!source.trim()) return [];
 
@@ -498,7 +502,7 @@ function collectElements(events, matches) {
  * @param {string} html
  * @returns {Array<{level: number, text: string}>}
  */
-export function headings(html) {
+function headings(html) {
   return collectElements(parseHtml(html), (tag) => HEADING_TAGS.has(tag))
     .map((element) => ({ level: Number(element.tag[1]), text: element.text }))
     .filter((heading) => heading.text.length > 0);
@@ -511,7 +515,7 @@ export function headings(html) {
  * @param {string} html
  * @returns {Array<{src: string, alt: string}>}
  */
-export function images(html) {
+function images(html) {
   return parseHtml(html)
     .filter((event) => event.kind === 'open' && event.tag === 'img')
     .map((event) => ({ src: event.attrs.src ?? '', alt: event.attrs.alt ?? '' }));
@@ -539,7 +543,7 @@ function isInternalHref(href, siteUrl) {
  *   absolute link back to it is counted as internal rather than as outbound
  * @returns {Array<{href: string, rel: string, internal: boolean}>}
  */
-export function links(html, { siteUrl = '' } = {}) {
+function links(html, { siteUrl = '' } = {}) {
   return parseHtml(html)
     .filter((event) => event.kind === 'open' && event.tag === 'a' && 'href' in event.attrs)
     .map((event) => ({
@@ -550,7 +554,7 @@ export function links(html, { siteUrl = '' } = {}) {
 }
 
 /** Whether a link carries `rel="nofollow"` (or `sponsored`/`ugc`, which count the same). */
-export const isNofollow = (link) => /\b(nofollow|sponsored|ugc)\b/i.test(link?.rel ?? '');
+const isNofollow = (link) => /\b(nofollow|sponsored|ugc)\b/i.test(link?.rel ?? '');
 
 /**
  * The first `n` words of a body as one string — what the "keyword in the first
@@ -560,7 +564,7 @@ export const isNofollow = (link) => /\b(nofollow|sponsored|ugc)\b/i.test(link?.r
  * @param {number} count
  * @returns {string}
  */
-export const firstWords = (input, count) => words(input).slice(0, Math.max(0, count)).join(' ');
+const firstWords = (input, count) => words(input).slice(0, Math.max(0, count)).join(' ');
 
 const text = {
   decodeEntities,
@@ -579,4 +583,4 @@ const text = {
   words,
 };
 
-export default text;
+module.exports = text;

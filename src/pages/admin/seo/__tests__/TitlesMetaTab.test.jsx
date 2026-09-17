@@ -1,3 +1,11 @@
+/*
+ * `@testing-library/user-event` is pinned at 13.5 (§3.1), which — unlike v14 —
+ * does not wrap its own interactions in `act`. The wrappers below are what keep
+ * the state updates that follow a click inside the click's `act` scope, so the
+ * rule that assumes v14 is switched off for this file rather than the tests
+ * being rewritten around a version this project does not use.
+ */
+/* eslint-disable testing-library/no-unnecessary-act */
 /**
  * The title templates and their live examples (prompt 37 §4.6).
  *
@@ -101,11 +109,9 @@ describe('the property title template', () => {
       await userEvent.selectOptions(screen.getByLabelText('Separator'), '–');
     });
 
-    await waitFor(() =>
-      expect(
-        screen.getByText(/Whitefield, Bengaluru – ₹1\.42 Cr – Squares N Acres/)
-      ).toBeInTheDocument()
-    );
+    expect(
+      await screen.findByText(/Whitefield, Bengaluru – ₹1\.42 Cr – Squares N Acres/)
+    ).toBeInTheDocument();
   });
 
   it('updates the example while the template is typed', async () => {
@@ -118,9 +124,7 @@ describe('the property title template', () => {
       await userEvent.type(field, '%bhk% in %locality% %sep% %sitename%');
     });
 
-    await waitFor(() =>
-      expect(screen.getByText('3 BHK in Whitefield | Squares N Acres')).toBeInTheDocument()
-    );
+    expect(await screen.findByText('3 BHK in Whitefield | Squares N Acres')).toBeInTheDocument();
   });
 
   it('removes an unresolved variable and the punctuation it leaves behind (§9.5)', async () => {
@@ -135,7 +139,7 @@ describe('the property title template', () => {
 
     // This listing names no builder, so `%developer%` and the comma it was
     // hanging off both go, rather than publishing "3 BHK in Whitefield, ".
-    await waitFor(() => expect(screen.getByText('3 BHK in Whitefield')).toBeInTheDocument());
+    expect(await screen.findByText('3 BHK in Whitefield')).toBeInTheDocument();
   });
 
   it('says so when a template resolves to nothing at all', async () => {

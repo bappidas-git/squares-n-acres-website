@@ -8,21 +8,25 @@
  * whatever they are pointed at. Everything a type-specific test needs — a
  * property's price, an article's tags, a locality's connectivity table — is
  * gathered once into `extras`, so no analyser reaches into a raw record.
+ *
+ * Authored in CommonJS (D36b, extended in prompt 38) so that `scripts/
+ * validate-jsonld.js` can `require` this module from Node with no bundler in
+ * front of it; React and Jest keep importing it.
  */
 
-import { AREA_UNITS, LISTING_TYPES } from '../config/enums';
-import {
-  headings as htmlHeadings,
-  images as htmlImages,
-  links as htmlLinks,
+const { AREA_UNITS, LISTING_TYPES } = require('../config/enums');
+const {
+  headings: htmlHeadings,
+  images: htmlImages,
+  links: htmlLinks,
   stripHtml,
   wordCount,
-} from './text';
-import { canonicalForEntity, publicPathFor } from './urls';
-import { buildVariables, resolveTemplate, templateKeyFor } from './variables';
+} = require('./text');
+const { canonicalForEntity, publicPathFor } = require('./urls');
+const { buildVariables, resolveTemplate, templateKeyFor } = require('./variables');
 
 /** The `seo` branch of §9.6, with the fields the engine reads always present. */
-export function readSeo(entity = {}) {
+function readSeo(entity = {}) {
   const seo = entity?.seo ?? {};
   return {
     focusKeyword: seo.focusKeyword ?? '',
@@ -86,7 +90,7 @@ const BLOCK_LINK_KEYS = {
  * @param {object} page
  * @returns {string}
  */
-export function blocksToHtml(page = {}) {
+function blocksToHtml(page = {}) {
   const blocks = Array.isArray(page?.blocks) ? [...page.blocks] : [];
   blocks.sort((a, b) => (Number(a?.order) || 0) - (Number(b?.order) || 0));
 
@@ -313,7 +317,7 @@ function readByType(entityType, entity, context) {
  *   propertyTypes, developers, categories, authors, siteIndex }`
  * @returns {object}
  */
-export function toSeoInput(entityType, entity = {}, context = {}) {
+function toSeoInput(entityType, entity = {}, context = {}) {
   const record = entity ?? {};
   const byType = readByType(entityType, record, context);
   const seo = readSeo(record);
@@ -365,4 +369,4 @@ export function toSeoInput(entityType, entity = {}, context = {}) {
 
 const entityAdapters = { blocksToHtml, readSeo, toSeoInput };
 
-export default entityAdapters;
+module.exports = entityAdapters;

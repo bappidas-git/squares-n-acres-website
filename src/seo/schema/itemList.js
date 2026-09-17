@@ -6,7 +6,7 @@
  * manual action is written for.
  */
 
-import { absolute, compact } from './graph';
+const { absolute, compact } = require('./graph');
 
 /**
  * @param {{items?: Array<{name?: string, title?: string, url?: string}>, canonical?: string,
@@ -14,7 +14,7 @@ import { absolute, compact } from './graph';
  * @param {{siteUrl?: string, seoSettings?: object}} [context]
  * @returns {object|null}
  */
-export function itemListNode(input = {}, context = {}) {
+function itemListNode(input = {}, context = {}) {
   const items = (Array.isArray(input.items) ? input.items : []).filter(Boolean);
   if (!items.length) return null;
 
@@ -38,4 +38,5 @@ export function itemListNode(input = {}, context = {}) {
   });
 }
 
-export default itemListNode;
+module.exports = itemListNode;
+module.exports.itemListNode = itemListNode;
