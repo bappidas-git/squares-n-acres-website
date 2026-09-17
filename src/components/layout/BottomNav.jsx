@@ -9,8 +9,16 @@ import { useShortlist } from '../../contexts/ShortlistContext';
 import styles from './BottomNav.module.css';
 
 const navItems = [
-  { label: 'Home', path: '/', icon: 'mdi:home-outline', activeIcon: 'mdi:home' },
-  { label: 'Search', path: '/properties', icon: 'mdi:magnify', activeIcon: 'mdi:magnify' },
+  { label: 'Home', path: PATHS.home, icon: 'mdi:home-outline', activeIcon: 'mdi:home' },
+  // `?filters=open` lands on the listing with the filter sheet already up: on a
+  // phone, "Search" means "narrow this down" (prompt 26).
+  {
+    label: 'Search',
+    path: `${PATHS.properties}?filters=open`,
+    match: PATHS.properties,
+    icon: 'mdi:magnify',
+    activeIcon: 'mdi:magnify',
+  },
   { label: 'Assistance', path: null, icon: 'mdi:hand-heart-outline', activeIcon: 'mdi:hand-heart' },
   {
     label: 'Saved',
@@ -19,7 +27,7 @@ const navItems = [
     activeIcon: 'mdi:heart',
     badge: 'shortlist',
   },
-  { label: 'Contact', path: '/contact', icon: 'mdi:phone-outline', activeIcon: 'mdi:phone' },
+  { label: 'Contact', path: PATHS.contact, icon: 'mdi:phone-outline', activeIcon: 'mdi:phone' },
 ];
 
 /**
@@ -58,8 +66,9 @@ const BottomNav = () => {
 
   const isActive = (item) => {
     if (!item.path) return location.pathname.startsWith('/buyer-assistance');
-    if (item.path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(item.path);
+    const path = item.match ?? item.path;
+    if (path === PATHS.home) return location.pathname === PATHS.home;
+    return location.pathname.startsWith(path);
   };
 
   return (

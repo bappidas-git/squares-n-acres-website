@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import storage from '../utils/storage';
 
@@ -35,6 +43,12 @@ const readStored = () => normalise(storage.getItem(SHORTLIST_KEY, []));
 export const ShortlistProvider = ({ children }) => {
   const [ids, setIds] = useState(readStored);
 
+  // What is saved *now*, which is not what the last render was told when two
+  // hearts are pressed in the same tick — on a grid of twelve cards that is an
+  // ordinary thing to do, and reading the render's copy would lose the first.
+  const latest = useRef(ids);
+  latest.current = ids;
+
   // Another tab saved or removed something: follow it rather than overwriting
   // it the next time this one writes.
   useEffect(() => {
@@ -42,7 +56,9 @@ export const ShortlistProvider = ({ children }) => {
 
     const onStorage = (event) => {
       if (event.key !== null && event.key !== SHORTLIST_KEY) return;
-      setIds(readStored());
+      const stored = readStored();
+      latest.current = stored;
+      setIds(stored);
     };
 
     window.addEventListener('storage', onStorage);
@@ -50,6 +66,7 @@ export const ShortlistProvider = ({ children }) => {
   }, []);
 
   const write = useCallback((next) => {
+    latest.current = next;
     setIds(next);
     storage.setItem(SHORTLIST_KEY, next);
     return next;
@@ -61,22 +78,22 @@ export const ShortlistProvider = ({ children }) => {
   const add = useCallback(
     (id) => {
       const key = String(id ?? '');
-      if (key === '' || ids.includes(key)) return false;
-      write([...ids, key]);
+      if (key === '' || latest.current.includes(key)) return false;
+      write([...latest.current, key]);
       return true;
     },
-    [ids, write]
+    [write]
   );
 
   /** @returns {boolean} whether the property was saved before the call */
   const remove = useCallback(
     (id) => {
       const key = String(id ?? '');
-      if (key === '' || !ids.includes(key)) return false;
-      write(ids.filter((entry) => entry !== key));
+      if (key === '' || !latest.current.includes(key)) return false;
+      write(latest.current.filter((entry) => entry !== key));
       return true;
     },
-    [ids, write]
+    [write]
   );
 
   /**
@@ -87,11 +104,11 @@ export const ShortlistProvider = ({ children }) => {
     (id) => {
       const key = String(id ?? '');
       if (key === '') return false;
-      const saved = !ids.includes(key);
-      write(saved ? [...ids, key] : ids.filter((entry) => entry !== key));
+      const saved = !latest.current.includes(key);
+      write(saved ? [...latest.current, key] : latest.current.filter((entry) => entry !== key));
       return saved;
     },
-    [ids, write]
+    [write]
   );
 
   const clear = useCallback(() => write([]), [write]);

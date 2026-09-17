@@ -11,7 +11,7 @@ import { Container, ErrorState, Skeleton } from '../../components/ui';
 import {
   DeveloperCta,
   DeveloperHero,
-  DeveloperProperties,
+  DeveloperListings,
   DeveloperStats,
 } from '../../components/sections/developer';
 import { SITE } from '../../config/site';
@@ -117,7 +117,7 @@ export default function BuilderDetail() {
             </section>
           ) : null}
 
-          <DeveloperProperties developer={developer} />
+          <DeveloperListings developer={developer} />
 
           <DeveloperCta developer={developer} />
         </Container>

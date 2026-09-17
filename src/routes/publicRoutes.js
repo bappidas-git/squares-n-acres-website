@@ -2,6 +2,7 @@ import React, { lazy } from 'react';
 import { Route } from 'react-router-dom';
 
 import MainLayout from '../components/layout/MainLayout';
+import { LISTING_ROUTES } from '../components/listing/listingRoutes';
 
 /**
  * The public website's routes (D11: every boilerplate URL keeps working).
@@ -10,6 +11,13 @@ import MainLayout from '../components/layout/MainLayout';
  * without the file becoming unreadable. Prompt 14 added the two locality URLs
  * and prompt 16 the two builder ones; prompts 30, 31 and 34 add the CMS,
  * careers and article routes.
+ *
+ * Prompt 26 replaced the five hand-written category pages (`PreLaunch`,
+ * `UnderConstruction`, `ReadyToMove`, `RentApartments`, `RentVillas`) with the
+ * route table of `components/listing/listingRoutes.js`: every listing URL
+ * renders the same page, which differs only by the filters its route fixes.
+ * `/buy/pre-launch` and `/rent/apartments` therefore still answer, and so do
+ * the twelve URLs the boilerplate never had.
  */
 
 const Home = lazy(() => import('../pages/public/Home'));
@@ -19,11 +27,7 @@ const Localities = lazy(() => import('../pages/public/Localities'));
 const LocalityDetail = lazy(() => import('../pages/public/LocalityDetail'));
 const Builders = lazy(() => import('../pages/public/Builders'));
 const BuilderDetail = lazy(() => import('../pages/public/BuilderDetail'));
-const PreLaunch = lazy(() => import('../pages/public/PreLaunch'));
-const UnderConstruction = lazy(() => import('../pages/public/UnderConstruction'));
-const ReadyToMove = lazy(() => import('../pages/public/ReadyToMove'));
-const RentApartments = lazy(() => import('../pages/public/RentApartments'));
-const RentVillas = lazy(() => import('../pages/public/RentVillas'));
+const Shortlist = lazy(() => import('../pages/public/Shortlist'));
 const HomeLoan = lazy(() => import('../pages/public/HomeLoan'));
 const LegalAssistance = lazy(() => import('../pages/public/LegalAssistance'));
 const InteriorDesigning = lazy(() => import('../pages/public/InteriorDesigning'));
@@ -45,21 +49,14 @@ export const PublicRoute = ({ children }) => <MainLayout>{children}</MainLayout>
 /** `[path, page]` — the whole public URL map. */
 const PUBLIC_PAGES = [
   ['/', Home],
-  ['/properties', PropertyListing],
   ['/properties/:slug', PropertyDetails],
+  ['/shortlist', Shortlist],
 
   ['/localities', Localities],
   ['/localities/:slug', LocalityDetail],
 
   ['/builders', Builders],
   ['/builders/:slug', BuilderDetail],
-
-  ['/buy/pre-launch', PreLaunch],
-  ['/buy/under-construction', UnderConstruction],
-  ['/buy/ready-to-move', ReadyToMove],
-
-  ['/rent/apartments', RentApartments],
-  ['/rent/villas', RentVillas],
 
   ['/buyer-assistance/home-loan', HomeLoan],
   ['/buyer-assistance/legal-assistance', LegalAssistance],
@@ -79,16 +76,32 @@ const PUBLIC_PAGES = [
   ['/direct-lease-retails', DirectLeaseRetails],
 ];
 
-const publicRoutes = PUBLIC_PAGES.map(([path, Page]) => (
+/** One `<Route>` per listing URL, all rendering the same engine. */
+const listingRoutes = LISTING_ROUTES.map((route) => (
   <Route
-    key={path}
-    path={path}
+    key={route.key}
+    path={route.path}
     element={
       <PublicRoute>
-        <Page />
+        <PropertyListing routeKey={route.key} />
       </PublicRoute>
     }
   />
 ));
+
+const publicRoutes = [
+  ...PUBLIC_PAGES.map(([path, Page]) => (
+    <Route
+      key={path}
+      path={path}
+      element={
+        <PublicRoute>
+          <Page />
+        </PublicRoute>
+      }
+    />
+  )),
+  ...listingRoutes,
+];
 
 export default publicRoutes;

@@ -13,7 +13,7 @@ import {
   LocalityCta,
   LocalityGuide,
   LocalityHero,
-  LocalityProperties,
+  LocalityListings,
 } from '../../components/sections/locality';
 import { SITE } from '../../config/site';
 
@@ -115,7 +115,7 @@ export default function LocalityDetail() {
             </section>
           ) : null}
 
-          <LocalityProperties locality={locality} />
+          <LocalityListings locality={locality} />
         </Container>
 
         <div className={styles.ctaBand}>

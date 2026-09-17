@@ -2,28 +2,55 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
+import PATHS from '../../../routes/paths';
 import useInView from '../../../hooks/useInView';
 import styles from './QuickActions.module.css';
 
+/**
+ * The six ways into the listing (D92).
+ *
+ * Each tile is a real category route with its own heading and canonical, not a
+ * `?type=` query the listing never read — `type=lease` in particular matched
+ * nothing at all, so the "Lease Office Space" tile returned an empty search
+ * (BUG-10).
+ */
 const actions = [
   {
     icon: 'mdi:home-search',
     title: 'Buy a home',
-    description: 'Find your place with an immersive photo experience and the most listings.',
-    link: '/properties?type=sale',
+    description: 'Apartments, villas and plots for sale across Bengaluru.',
+    link: PATHS.buy,
   },
   {
     icon: 'mdi:key-variant',
     title: 'Rent a home',
-    description:
-      'Find rental properties with flexible terms and premium amenities for your comfort.',
-    link: '/properties?type=rent',
+    description: 'Rental homes with the monthly rent, deposit and furnishing stated upfront.',
+    link: PATHS.rent,
   },
   {
     icon: 'mdi:office-building',
-    title: 'Lease Office Space',
-    description: 'Discover premium commercial spaces perfect for your business needs.',
-    link: '/properties?type=lease',
+    title: 'Lease office space',
+    description: 'Offices, retail units and warehouses available on lease.',
+    link: PATHS.lease,
+  },
+  {
+    icon: 'mdi:storefront-outline',
+    title: 'Commercial property',
+    description:
+      'Offices, shops and showrooms to buy or lease, with the floor plate on every listing.',
+    link: PATHS.commercial,
+  },
+  {
+    icon: 'mdi:map-outline',
+    title: 'Plots & land',
+    description: 'Residential plots and land around Bengaluru, with the approval and khata.',
+    link: PATHS.plots,
+  },
+  {
+    icon: 'mdi:home-clock-outline',
+    title: 'Ready to move',
+    description: 'Completed homes you can visit, register and move into now.',
+    link: PATHS.buyStatus('ready-to-move'),
   },
 ];
 
@@ -32,7 +59,7 @@ const cardVariants = {
   visible: (i) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, delay: i * 0.15, ease: 'easeOut' },
+    transition: { duration: 0.5, delay: i * 0.08, ease: 'easeOut' },
   }),
 };
 

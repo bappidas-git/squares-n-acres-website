@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
+import PATHS from '../../routes/paths';
 import styles from './NotFound.module.css';
 import { SITE } from '../../config/site';
 
@@ -29,8 +30,10 @@ const NotFound = ({
 
   const handleSearch = (e) => {
     e.preventDefault();
+    // `q` is the contract's search parameter (§5.7); the boilerplate sent
+    // `search`, which the listing has never read (BUG-10).
     if (searchQuery.trim()) {
-      navigate(`/properties?search=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`${PATHS.properties}?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 

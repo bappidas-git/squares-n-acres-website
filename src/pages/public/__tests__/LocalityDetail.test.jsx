@@ -1,5 +1,5 @@
 import { Route, Routes } from 'react-router-dom';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 
 import ApiError from '../../../services/apiError';
 import LocalityDetail from '../LocalityDetail';
@@ -119,22 +119,45 @@ describe('LocalityDetail', () => {
     );
   });
 
-  it('shows the listings of the locality with a link to the full search', async () => {
+  it('embeds the listing engine with the locality fixed (prompt 26)', async () => {
     render();
 
-    expect(await screen.findByRole('link', { name: /View all 3 properties/ })).toHaveAttribute(
-      'href',
-      '/properties?localityId=1'
-    );
     expect(
-      screen.getByRole('heading', { level: 2, name: 'Properties in Whitefield' })
+      await screen.findByRole('heading', { level: 2, name: 'Listings in Whitefield' })
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Lakeview Heights – 3 BHK Apartment in Whitefield')
+      await screen.findByText('Lakeview Heights – 3 BHK Apartment in Whitefield')
     ).toBeInTheDocument();
+
+    // One counting call per tab decides which tabs exist…
     expect(propertyService.list).toHaveBeenCalledWith(
-      expect.objectContaining({ localityId: 1, perPage: 6, sort: 'relevance' }),
+      expect.objectContaining({ localityId: 1, listingType: 'sale', perPage: 1 }),
       expect.anything()
+    );
+    expect(propertyService.list).toHaveBeenCalledWith(
+      expect.objectContaining({ localityId: 1, listingType: 'rent', perPage: 1 }),
+      expect.anything()
+    );
+    // …and the engine asks for the page itself, the locality fixed.
+    expect(propertyService.list).toHaveBeenCalledWith(
+      expect.objectContaining({ localityId: ['1'], listingType: 'sale', perPage: 12 }),
+      expect.anything()
+    );
+
+    expect(screen.getByRole('tab', { name: 'Buy (3)' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Rent (3)' })).toBeInTheDocument();
+  });
+
+  it('switches the embedded engine to the rent tab', async () => {
+    render();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Rent (3)' }));
+
+    await waitFor(() =>
+      expect(propertyService.list).toHaveBeenCalledWith(
+        expect.objectContaining({ localityId: ['1'], listingType: 'rent', perPage: 12 }),
+        expect.anything()
+      )
     );
   });
 
@@ -169,7 +192,7 @@ describe('LocalityDetail', () => {
     ).toBeInTheDocument();
 
     await waitFor(() =>
-      expect(screen.queryByRole('heading', { name: 'Properties in Hennur', level: 2 })).toBeNull()
+      expect(screen.queryByRole('heading', { name: 'Listings in Hennur', level: 2 })).toBeNull()
     );
     expect(screen.queryByRole('heading', { name: 'About Hennur' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Connectivity' })).toBeNull();

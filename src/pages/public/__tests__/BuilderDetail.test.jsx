@@ -133,7 +133,9 @@ describe('BuilderDetail', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Cross-ventilated layouts')).toBeInTheDocument();
 
-    expect(await screen.findByRole('link', { name: /View all 8 projects/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Projects by Aurelia Estates' })
+    ).toBeInTheDocument();
 
     expect(
       screen.getByRole('heading', { level: 2, name: 'Interested in a project by Aurelia Estates?' })
@@ -150,24 +152,27 @@ describe('BuilderDetail', () => {
     );
     // The projects below settle on their own; waiting for them keeps the
     // teardown from landing in the middle of a render.
-    await screen.findByRole('link', { name: /View all 8 projects/ });
+    await screen.findByText('Lakeview Heights – 3 BHK Apartment in Whitefield');
   });
 
-  it('shows the builder’s projects with a link to the full search', async () => {
+  it('embeds the listing engine with the builder fixed (prompt 26)', async () => {
     render();
 
-    expect(await screen.findByRole('link', { name: /View all 8 projects/ })).toHaveAttribute(
-      'href',
-      '/properties?developerId=1'
-    );
     expect(
-      screen.getByRole('heading', { level: 2, name: 'Projects by Aurelia Estates' })
+      await screen.findByRole('heading', { level: 2, name: 'Projects by Aurelia Estates' })
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Lakeview Heights – 3 BHK Apartment in Whitefield')
+      await screen.findByText('Lakeview Heights – 3 BHK Apartment in Whitefield')
     ).toBeInTheDocument();
+
+    // One counting call decides whether the section exists at all…
     expect(propertyService.list).toHaveBeenCalledWith(
-      expect.objectContaining({ developerId: 1, perPage: 12, sort: 'relevance' }),
+      expect.objectContaining({ developerId: 1, perPage: 1 }),
+      expect.anything()
+    );
+    // …and the engine asks for the page itself, the builder fixed.
+    expect(propertyService.list).toHaveBeenCalledWith(
+      expect.objectContaining({ developerId: '1', perPage: 12, sort: 'relevance' }),
       expect.anything()
     );
   });
@@ -175,7 +180,7 @@ describe('BuilderDetail', () => {
   it('files the enquiry against the builder, with the page it came from', async () => {
     render();
 
-    await screen.findByRole('link', { name: /View all 8 projects/ });
+    await screen.findByText('Lakeview Heights – 3 BHK Apartment in Whitefield');
     // The message opens on the builder's name; the visitor writes after it.
     expect(
       screen.getByDisplayValue('Interested in projects by Aurelia Estates')
