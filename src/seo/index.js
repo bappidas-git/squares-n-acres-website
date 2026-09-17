@@ -43,6 +43,7 @@ import snippet, {
   truncateToWidth,
 } from './snippet';
 import { MAX_SUGGESTIONS, suggestKeywords, titleNgrams } from './suggestions';
+import { OG_TYPE_OF, resolveSeoOutput, robotsContent, robotsDirectives } from './resolve';
 import text from './text';
 import urls from './urls';
 import {
@@ -59,6 +60,7 @@ export {
   DESCRIPTION_MAX_PX,
   GROUP_OF,
   MAX_SUGGESTIONS,
+  OG_TYPE_OF,
   POINTS,
   TEST_GROUPS,
   TEST_IDS,
@@ -79,8 +81,11 @@ export {
   measureSnippet,
   readSeo,
   readability,
+  resolveSeoOutput,
   resolveTemplate,
   resolveTitleTemplate,
+  robotsContent,
+  robotsDirectives,
   runAllAnalyzers,
   schema,
   snippet,
@@ -105,7 +110,9 @@ const seo = {
   keywords,
   listVariables,
   readability,
+  resolveSeoOutput,
   resolveTemplate,
+  robotsContent,
   schema,
   snippet,
   suggestKeywords,

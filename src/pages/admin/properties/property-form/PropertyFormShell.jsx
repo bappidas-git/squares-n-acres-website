@@ -49,6 +49,7 @@ export default function PropertyFormShell({ form }) {
     saving,
     busy,
     save,
+    focusField,
     draftOffer,
     restoreDraft,
     discardDraft,
@@ -83,6 +84,9 @@ export default function PropertyFormShell({ form }) {
     // second copy of the control: Documents points at the brochure on Media,
     // Project & builder at the RERA switch on Basics.
     goToTab: changeTab,
+    // The SEO panel's fix hints go further: they name a field, and the form
+    // opens the tab that owns it and puts the cursor in it.
+    focusField,
     disabled: readOnly,
     isNew,
     propertyId,

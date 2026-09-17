@@ -15,6 +15,8 @@ import {
   toDateTimeLocal,
   wordCount,
 } from '../../../utils/articleUtils';
+import { applySeoSideEffects, validateSeoBranch } from '../../../components/seo/seoSideEffects';
+import { createSeo, toSeoPayload, withSeoDefaults } from '../../../components/seo/seoValues';
 import { schemas } from '../../../services/schemas';
 import { slugify } from '../../../utils/slug';
 import { useNavigationGuard } from '../../../contexts/NavigationGuardContext';
@@ -83,13 +85,14 @@ const BLANK = {
   publishedAt: null,
   scheduledAt: '',
   updatedAtDisplay: null,
+  updatedAt: null,
   isFeatured: false,
   allowComments: false,
   relatedArticleIds: [],
   relatedPropertyIds: [],
   faqs: [],
   tableOfContents: true,
-  seo: { focusKeyword: '', title: '', description: '' },
+  seo: createSeo(),
 };
 
 /**
@@ -124,6 +127,9 @@ export function toFormValues(record) {
     // The scheduling control speaks wall-clock IST; the record speaks UTC.
     scheduledAt: record.status === 'scheduled' ? toDateTimeLocal(record.publishedAt) : '',
     updatedAtDisplay: record.updatedAtDisplay ?? null,
+    // Read-only, and never sent back: the SEO panel prints it as "last
+    // modified", which is what the page reports as `dateModified` (§9.3).
+    updatedAt: record.updatedAt ?? null,
     isFeatured: record.isFeatured === true,
     allowComments: record.allowComments === true,
     relatedArticleIds: Array.isArray(record.relatedArticleIds) ? record.relatedArticleIds : [],
@@ -135,7 +141,9 @@ export function toFormValues(record) {
       answer: faq?.answer ?? '',
     })),
     tableOfContents: record.tableOfContents !== false,
-    seo: record.seo ? { ...record.seo } : { ...BLANK.seo },
+    // Every field of §9.6 present, whatever the record was saved with: the
+    // panel reads fifty of them and must never meet `undefined`.
+    seo: withSeoDefaults(record.seo),
   };
 }
 
@@ -201,7 +209,7 @@ export function toPayload(values) {
     })),
     tableOfContents: values.tableOfContents !== false,
     // The slug and `seo.slug` are one URL (D34).
-    seo: { ...(values.seo ?? {}), slug },
+    seo: toSeoPayload(values.seo, slug),
   };
 }
 
@@ -361,6 +369,10 @@ export default function useArticleForm({ articleId = null, record = null, readOn
       if (!answer) found[`faqs.${index}.answer`] = 'Write the answer, or remove this row.';
     });
 
+    // The SEO panel's own two blockers: JSON-LD that would invalidate the
+    // page's script tag, and a redirect with nowhere to send anybody.
+    Object.assign(found, validateSeoBranch(values.seo));
+
     return found;
   }, []);
 
@@ -500,6 +512,12 @@ export default function useArticleForm({ articleId = null, record = null, readOn
 
       clearDraft();
       reset(toFormValues(saved));
+
+      // The redirect this article's `seo` asks for is written against the slug
+      // the API answered with — a new article has none until now (§9.6). It
+      // comes after the draft is cleared: the article is saved either way, and
+      // a side effect must not hold up the state that says so.
+      await applySeoSideEffects('article', saved);
       toast.success(savedMessage(mode, saved));
 
       // A created article moves to its own URL, replacing the add route so Back

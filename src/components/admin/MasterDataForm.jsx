@@ -10,11 +10,13 @@ import ImageField from './ImageField';
 import IconButton from '../ui/IconButton';
 import MultiSelect from './MultiSelect';
 import RichTextField from '../editor/RichTextField';
+import SeoPanel from '../seo/SeoPanel';
 import SlugField from './SlugField';
 import SortableList from './SortableList';
 import ToneSelect from './ToneSelect';
 import { ICON_ID_PATTERN } from '../../utils/validation';
 import { getIn } from '../../hooks/useForm';
+import { toSeoPaths } from '../seo/seoValues';
 import {
   DateField,
   Field,
@@ -47,6 +49,12 @@ import styles from './MasterDataForm.module.css';
  * @param {Function} [props.checkSlug] handed to every `slug` field
  * @param {number|string} [props.excludeId]
  * @param {string} [props.slugBase]
+ * @param {'compact'|'full'|false} [props.seoPanel] renders the SEO panel under
+ *   the fields, bound to `form.values.seo` (D87)
+ * @param {string} [props.seoEntityType] which `SEO_ENTITY_TYPES` member these
+ *   records are — required when `seoPanel` is set
+ * @param {object} [props.seoRecord] the record being edited, for the fields the
+ *   panel shows but does not own (`id`, `updatedAt`)
  */
 export default function MasterDataForm({
   fields = [],
@@ -55,6 +63,9 @@ export default function MasterDataForm({
   checkSlug,
   excludeId,
   slugBase = '/',
+  seoPanel = false,
+  seoEntityType,
+  seoRecord,
   children,
 }) {
   // A 422 can name something no control owns — `errors.id` is how the API
@@ -89,6 +100,31 @@ export default function MasterDataForm({
           />
         </FormColumn>
       ))}
+      {seoPanel && seoEntityType ? (
+        <FormColumn>
+          <SeoPanel
+            entityType={seoEntityType}
+            entity={{ ...(seoRecord ?? {}), ...form.values }}
+            seo={form.values.seo}
+            variant={seoPanel === 'full' ? 'full' : 'compact'}
+            errors={form.errors}
+            disabled={disabled}
+            excludeId={excludeId}
+            checkSlug={checkSlug}
+            slugBase={slugBase}
+            onSlugChange={(slug) => form.setField('slug', slug)}
+            onChange={(patch) => {
+              // One dotted path at a time: `useForm.setField` composes on the
+              // current values, so an edit and the analysis landing behind it
+              // cannot overwrite each other.
+              for (const [path, value] of Object.entries(toSeoPaths(patch))) {
+                form.setField(path, value);
+              }
+            }}
+          />
+        </FormColumn>
+      ) : null}
+
       {children ? <FormColumn>{children}</FormColumn> : null}
     </FormSection>
   );

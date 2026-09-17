@@ -188,6 +188,11 @@ export const propertyTypesConfig = ({ onMutated } = {}) => ({
   orderable: true,
   activeToggle: true,
   usageGuard: true,
+  // D87: the type's own landing pages are `/buy/:slug` and `/rent/:slug`, so it
+  // carries a `seo` branch like any other page — folded, because there is far
+  // less of it to say than of a listing.
+  seoPanel: 'compact',
+  seoEntityType: 'propertyType',
 
   columns: [
     {

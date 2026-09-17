@@ -1,14 +1,16 @@
 # SEO_ENGINE — `src/seo/`
 
 > The SEO engine of `00_MASTER_CONTEXT.md` §9: a pure, framework-free library
-> that answers one question — **how good is the SEO of this record, and what
-> should be fixed first?** Written by prompt 35, read by the SEO panel (36), the
-> SEO dashboard (37) and the public `<Seo>` component (38).
+> that answers two questions — **how good is the SEO of this record, and what
+> should be fixed first?** and **what does this record actually publish?**
+> Written by prompt 35, extended by prompt 36 (`resolve.js`,
+> `schema.buildGraph`), read by the SEO panel (36), the SEO dashboard (37) and
+> the public `<Seo>` component (38).
 
 Nothing in `src/seo/` imports React, calls the API or touches the DOM beyond an
 optional `DOMParser` and an optional `<canvas>`, both of which have a Node
 fallback. Everything is a function of its arguments, so everything is tested in
-Jest (`src/seo/__tests__/`, 505 assertions, ≥ 90 % statement coverage).
+Jest (`src/seo/__tests__/`, 523 assertions, ≥ 90 % statement coverage).
 
 ---
 
@@ -281,6 +283,54 @@ move` both ways. Word order is **not** forgiven: "flats in whitefield" and
   warns, never fails.
 - **Density counts occurrences, not words.** One use of a four-word phrase
   counts once; the question is how often the phrase is used.
+
+---
+
+## 6a. What a record publishes (`resolve.js`, prompt 36)
+
+`analyze()` answers how good a record's SEO is. `resolveSeoOutput()` answers
+what it actually sends, by the rules of §9.3:
+
+```js
+import { resolveSeoOutput } from '../seo';
+
+const out = resolveSeoOutput('property', property, seoSettings, context);
+// → { title, titleSource, description, descriptionSource, canonical,
+//     canonicalSource, robots, robotsList, indexable, ogType, og, twitter }
+```
+
+- **Title** — `seo.title` verbatim when it is set, still passed through the
+  variable resolver, so an editor may type `%bhk% in %locality%` by hand;
+  otherwise the type's template from `seoSettings.titleTemplates` (§9.5).
+- **Description** — `seo.description`, then `seoSettings.defaults.
+metaDescription`. `descriptionSource` says which, because the panel has to be
+  able to tell an editor that the sentence they are reading is the site's and
+  not this page's.
+- **Canonical** — `seo.canonicalUrl` when it is set, otherwise the computed
+  address (`urls.canonicalForEntity`).
+- **Robots** — `robotsDirectives()`: the two switches first, then the three
+  "do not" flags, then the three limits, each printed only when it has been
+  set. A record that is not published is forced to `noindex` whatever its own
+  `robots.index` says.
+- **Social** — the §9.3 image chain (`seo.og.imageUrl` → the record's cover →
+  `seoSettings.defaults.ogImageUrl` → `BRAND.ogImageUrl`), `og:type` `article`
+  for an article and `profile` for an author, and the two cards falling back to
+  the search title and description.
+
+The panel's "Resolved values" box renders exactly this object, and prompt 38's
+`<Seo>` puts the same strings in the head — one resolver, so the box and the
+page cannot disagree.
+
+**`schema.buildGraph(entityType, entity, seoSettings, context)`** is the
+counterpart for structured data: the record's own share of the `@graph` — the
+node its type leads with, its questions, its video and its trail — with
+`seo.schema.type` retyping the leading node, `disabledAutoTypes` removing
+generated nodes by type, and a valid `schema.custom` appended.
+`autoNodeTypes()` lists what it would publish (the panel's checklist) and
+`schemaTypeOptions(entityType)` narrows `SEO_SCHEMA_TYPES` to the types that
+entity type could honestly claim. `Organization`, `WebSite` and the lists of
+whatever else a page shows belong to the **page**, not the record, and arrive
+with `<Seo>`.
 
 ---
 

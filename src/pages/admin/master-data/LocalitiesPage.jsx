@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import MasterDataPage from '../../../components/admin/MasterDataPage';
 import PATHS from '../../../routes/paths';
+import SeoScoreChip from '../../../components/seo/SeoScoreChip';
 import { LazyImage } from '../../../components/ui';
 import { LOCALITY_ZONES } from '../../../config/enums';
 import { adminCrud, localities } from '../../../services/masterDataService';
@@ -97,6 +98,14 @@ export default function LocalitiesPage() {
           align: 'right',
           width: '110px',
           render: (row) => formatNumber(row.propertyCount ?? 0),
+        },
+        {
+          key: 'seoScore',
+          label: 'SEO',
+          width: '132px',
+          hideBelow: 'lg',
+          mobile: false,
+          render: (row) => <SeoScoreChip seo={row.seo} />,
         },
         {
           key: 'updatedAt',

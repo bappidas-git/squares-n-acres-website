@@ -31,6 +31,7 @@ export default function ArticleFaqsCard({ form }) {
 
   return (
     <FormSection
+      id="article-faqs"
       title="FAQs"
       description="The questions this article leaves a reader with. They render as an accordion under the body and as FAQ structured data for search engines (§9)."
     >

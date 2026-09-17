@@ -15,7 +15,9 @@ import SortableList from './SortableList';
 import useApiList from '../../hooks/useApiList';
 import useForm from '../../hooks/useForm';
 import useUnsavedChanges from '../../hooks/useUnsavedChanges';
+import { applySeoSideEffects, validateSeoBranch } from '../seo/seoSideEffects';
 import { firstFieldMessage } from '../../services/apiError';
+import { toSeoPayload, withSeoDefaults } from '../seo/seoValues';
 import { useToast } from '../common/ToastProvider';
 
 import styles from './MasterDataPage.module.css';
@@ -175,6 +177,10 @@ export function useMasterDataCrud(config) {
  *   successful write, with `config.key` — `MasterDataContext.refresh` for the
  *   collections the public site caches
  * @param {string} [props.config.subtitle] the line under the `<h1>`
+ * @param {'compact'|'full'|false} [props.config.seoPanel] renders the SEO panel
+ *   under the fields, bound to the record's `seo` branch (D87)
+ * @param {string} [props.config.seoEntityType] which `SEO_ENTITY_TYPES` member
+ *   the records are — required when `seoPanel` is set
  * @param {React.ReactNode} [props.config.formFooter] rendered below the fields
  * @param {(row: object) => {key: string, label: React.ReactNode}|null} [props.config.groupBy]
  *   heading rows inside the table, applied only while `groupSort` is the sort
@@ -198,6 +204,8 @@ export default function MasterDataPage({ config }) {
     filters = [],
     formFields: formFieldsProp = [],
     formFooter,
+    seoPanel = false,
+    seoEntityType,
     schema,
     createSchema,
     formMode = 'dialog',
@@ -262,15 +270,42 @@ export default function MasterDataPage({ config }) {
 
   const initialValues = useMemo(() => {
     if (!editing) return {};
-    if (!editing.id) return { ...defaultsFromFields(formFields), ...newValues };
-    return toFormValues ? toFormValues(editing) : pickFields(editing, formFields);
-  }, [editing, formFields, newValues, toFormValues]);
+    const base = editing.id
+      ? toFormValues
+        ? toFormValues(editing)
+        : pickFields(editing, formFields)
+      : { ...defaultsFromFields(formFields), ...newValues };
+
+    // The panel reads fifty fields of §9.6 and must never meet `undefined`; a
+    // screen without a panel keeps the values it always had.
+    return seoPanel ? { ...base, seo: withSeoDefaults(editing.seo) } : base;
+  }, [editing, formFields, newValues, toFormValues, seoPanel]);
+
+  /** The body the API receives, with the `seo` branch when the panel is on. */
+  const normalize = useCallback(
+    (values) => {
+      const payload = toPayload ? toPayload(values, editing) : values;
+      if (!seoPanel) return payload;
+      // D34: one URL — `seo.slug` always mirrors the record's own.
+      return { ...payload, seo: toSeoPayload(values.seo, payload.slug ?? values.slug ?? '') };
+    },
+    [toPayload, editing, seoPanel]
+  );
+
+  /** The screen's own rules, plus the panel's two blockers when it is on. */
+  const validate = useCallback(
+    (values) => ({
+      ...(customValidate ? (customValidate(values, editing) ?? {}) : {}),
+      ...(seoPanel ? validateSeoBranch(values.seo) : {}),
+    }),
+    [customValidate, editing, seoPanel]
+  );
 
   const form = useForm({
     initialValues,
     schema: activeSchema,
-    validate: customValidate ? (values) => customValidate(values, editing) : undefined,
-    normalize: toPayload ? (values) => toPayload(values, editing) : undefined,
+    validate,
+    normalize,
     onSubmit: async (payload) => {
       if (editing?.id) return service.update(editing.id, payload);
       return service.create(payload);
@@ -316,6 +351,9 @@ export default function MasterDataPage({ config }) {
   const persist = async () => {
     const saved = await form.submit();
     if (!saved) return false;
+    // The redirect this record's `seo` asks for, against the slug the API
+    // answered with — a new record has none until now (§9.6).
+    if (seoPanel && seoEntityType) await applySeoSideEffects(seoEntityType, saved);
     toast.success(`${capitalise(singular)} ${editing?.id ? 'updated' : 'created'}.`);
     closeForm();
     onMutated?.(collectionKey);
@@ -590,6 +628,9 @@ export default function MasterDataPage({ config }) {
       checkSlug={service.checkSlug}
       excludeId={editing?.id}
       slugBase={config.slugBase}
+      seoPanel={seoPanel}
+      seoEntityType={seoEntityType}
+      seoRecord={editing}
     >
       {typeof formFooter === 'function' ? formFooter(editing) : formFooter}
     </MasterDataForm>

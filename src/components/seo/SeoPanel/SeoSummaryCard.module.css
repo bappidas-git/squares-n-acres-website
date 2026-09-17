@@ -1,0 +1,48 @@
+/**
+ * The rail summary's own six rules.
+ *
+ * Its own stylesheet rather than the panel's: the card renders eagerly in a
+ * form's rail while the panel it links to is a lazy chunk, and one stylesheet
+ * spanning that boundary is what makes the extracted CSS order ambiguous.
+ */
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-charcoal);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.tests {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+}
+
+.fail {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  color: var(--color-error-dark);
+}

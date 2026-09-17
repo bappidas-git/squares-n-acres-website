@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 35 — SEO engine core (`src/seo/`) Next prompt: 36
+Last prompt executed: 36 — SEO panel (admin UI) Next prompt: 37
 
 ## Executed prompts
 
@@ -41,7 +41,8 @@ Last prompt executed: 35 — SEO engine core (`src/seo/`) Next prompt: 36
 | 32  | Tiptap rich text editor, sanitiser, SafeHtml, every textarea   | `42d836f`                                                                          | 2026-09-17 |
 | 33  | Articles admin: list, editor form, scheduling, taxonomy CRUD   | `ad85093`                                                                          | 2026-09-17 |
 | 34  | Public blog: index, taxonomy pages, article page, RSS link     | `6862bf2`                                                                          | 2026-09-17 |
-| 35  | SEO engine core: analyzers, scoring, readability, schema       | HEAD of this branch (a commit cannot contain its own hash — prompt 36 fills it in) | 2026-09-17 |
+| 35  | SEO engine core: analyzers, scoring, readability, schema       | `a9e806f`                                                                          | 2026-09-17 |
+| 36  | SEO panel: General/Social/Advanced/Schema, wired into 8 forms  | HEAD of this branch (a commit cannot contain its own hash — prompt 37 fills it in) | 2026-09-17 |
 
 ## Baseline (prompt 01)
 
@@ -311,15 +312,15 @@ The boilerplate's own endpoint surface stays inventoried in
 | ~~`AdminSeo` saving disabled~~                   | **Closed in 35.** The file is deleted, with `utils/seoScoring.js` and `utils/seoGenerator.js`. `src/seo/` is the engine those two were standing in for (ADD-27 closed); `/admin/seo` renders `pages/admin/seo/SeoPlaceholderPage.jsx` until 37 builds the dashboard.                                                                                                                                                                                                                                                              | 36–37        |
 | `SeoPlaceholderPage` → SEO dashboard             | `/admin/seo` renders `AdminPlaceholderPage` through `src/pages/admin/seo/SeoPlaceholderPage.jsx`. Prompt 37 replaces that file with the real dashboard — the `GET /admin/seo/overview` table, the score and band filters, the bulk actions, `/admin/seo/settings`, `/admin/seo/redirects` and the rewritten guide.                                                                                                                                                                                                                | 37           |
 | ~~`LegacyHtml` in `LocalityGuide`~~              | **Closed in 32.** `SafeHtml` renders the guide; the module's duplicate typography is gone, since the global `.prose` now covers it.                                                                                                                                                                                                                                                                                                                                                                                               | 32           |
-| `SeoPlaceholderTab` → `SeoPanel`                 | The property form's SEO tab (prompt 21) holds `seo.title`, `seo.description`, `seo.focusKeyword` with the §9.1 length guides and a read-only mirror of the slug. The full panel — analysis, search and social previews, robots, schema, redirect — replaces it in prompt 36 (D87); the rest of the `seo` branch rides through every save untouched meanwhile.                                                                                                                                                                     | 36           |
-| Locality SEO placeholder card                    | The locality form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through a save untouched in the meantime.                                                                                                                                                                                                                                                                                                                                                   | 36           |
+| ~~`SeoPlaceholderTab` → `SeoPanel`~~             | **Closed in 36.** The file is deleted; tab 16 is `tabs/SeoTab.jsx`, the full `SeoPanel` bound to the form's own `seo` branch. The rail carries `SeoSummaryCard`, and a test's fix hint calls `form.focusField(path)`, which opens the tab that owns the field and puts the cursor in it.                                                                                                                                                                                                                                          | 36           |
+| ~~Locality SEO placeholder card~~                | **Closed in 36.** The section renders `SeoPanel variant="compact"` (D87): General inline, Social, Advanced and Schema folded. The form's `toPayload` builds the branch through `toSeoPayload`, and the save writes the redirect the panel asked for.                                                                                                                                                                                                                                                                              | 36           |
 | Locality/localities Helmet titles                | `Localities.jsx` and `LocalityDetail.jsx` set `<title>`/`description` through `react-helmet-async`; `<Seo>` replaces both, with the §9.5 templates and the JSON-LD graph.                                                                                                                                                                                                                                                                                                                                                         | 38           |
 | ~~`LegacyHtml` in the builder profile~~          | **Closed in 32.** `SafeHtml` renders the profile on `/builders/:slug`.                                                                                                                                                                                                                                                                                                                                                                                                                                                            | 32           |
-| Developer SEO placeholder card                   | The developer form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched in the meantime.                                                                                                                                                                                                                                                                                                                                               | 36           |
+| ~~Developer SEO placeholder card~~               | **Closed in 36.** The section renders `SeoPanel variant="compact"`, on the same contract as the locality form.                                                                                                                                                                                                                                                                                                                                                                                                                    | 36           |
 | Builders/builder Helmet titles                   | `Builders.jsx` and `BuilderDetail.jsx` set `<title>`/`description` through `react-helmet-async`, following the §9.5 `developer` template; `<Seo>` replaces both, with the JSON-LD `Organization` + `ItemList` graph (§9.3).                                                                                                                                                                                                                                                                                                       | 38           |
-| Article SEO placeholder card                     | The article form's "Search result" section holds `seo.title`, `seo.description` and `seo.focusKeyword` with the §9.1 length counters; the categories and authors forms end in an `Alert` saying the panel arrives later. All three carry the record's whole `seo` branch through every save untouched, with only the slug kept in step (D34).                                                                                                                                                                                     | 36           |
+| ~~Article SEO placeholder card~~                 | **Closed in 36.** The article form is two `AdminTabs` — Content and SEO — with the full panel on the second and `SeoSummaryCard` in the rail; the categories and authors screens carry `seoPanel: 'compact'` in `taxonomyConfigs.js`, which `MasterDataForm` renders under the fields.                                                                                                                                                                                                                                            | 36           |
 | ~~Legacy public article pages~~                  | **Closed in 34.** `Articles.js` and `ArticleDetail.js` are deleted. `Articles.jsx` holds one `ArticleIndex` engine that `GET /articles` filters, sorts and pages, and `ArticleCategory.jsx`, `ArticleTag.jsx` and `AuthorPage.jsx` are the same engine with one filter nailed down by the route. `ArticleDetail.jsx` has the contents list, the live blocks, the share bar, the merged FAQs, the related listings row and the previous/next pair.                                                                                 | 34           |
-| Property-type SEO placeholder card               | The property-type form ends in an `Alert` saying the SEO panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched so nothing is lost meanwhile.                                                                                                                                                                                                                                                                                                                                                | 36           |
+| ~~Property-type SEO placeholder card~~           | **Closed in 36.** `masterDataConfigs.js` carries `seoPanel: 'compact'` / `seoEntityType: 'propertyType'`, and `MasterDataPage` puts the branch in the form's values, its payload and its validation.                                                                                                                                                                                                                                                                                                                              | 36           |
 | ~~`LegacyHtml` in `FaqAccordion`~~               | **Closed in 32.** Every FAQ on the site renders its answer through `SafeHtml`, and the FAQ library's own form (`contentConfigs.js`) draws the compact editor.                                                                                                                                                                                                                                                                                                                                                                     | 32           |
 | ~~`LegacyHtml` in `OverviewSection`~~            | **Closed in 32.** `SafeHtml` renders the description; the measured twelve-line clamp and its "Read more" are unchanged, and a CTA or a listings row an editor drops into a description now renders live on the page.                                                                                                                                                                                                                                                                                                              | 32           |
 | `AdminPlaceholderPage` routes                    | Ten admin routes of `src/routes/adminRouteConfig.js` render `AdminPlaceholderPage` with the number of the prompt that writes the screen (31–39) — prompt 30 took the three `pages` routes off the list. Each one disappears when its owner prompt lands; the component itself must not exist after prompt 43.                                                                                                                                                                                                                     | 13–39        |
@@ -331,7 +332,7 @@ The boilerplate's own endpoint surface stays inventoried in
 | ~~Post-requirement modal → `LeadCaptureModal`~~  | **Closed in 28.** The header CTA, the drawer's CTA row and the bottom bar's Enquire all call `useLeadCapture().openLeadModal({ entry: 'post-requirement' })`; `LeadCaptureProvider` mounts the one dialog for the whole app.                                                                                                                                                                                                                                                                                                      | 28           |
 | Home `Helmet` → `<Seo type="home">`              | `Home.jsx` sets `<title>` and the description from the `home` CMS page's `seo` branch through `react-helmet-async`. Prompt 38 hands the same record to `<Seo type="home">`, which adds the §9.5 template, the social tags and the `Organization` + `WebSite` JSON-LD graph.                                                                                                                                                                                                                                                       | 38           |
 | ~~RichText / Html blocks → editor + `SafeHtml`~~ | **Closed in 32.** The block schema's `html` field type is now `richtext`: `BlockForm` draws the editor (full for `richText`/`html`, compact for an expandable card's detail and a FAQ answer) and the four blocks render through `SafeHtml`. The stored `data.html` did not change.                                                                                                                                                                                                                                               | 32           |
-| Page SEO placeholder card                        | `PageFormPage` ends in an `Alert` saying the SEO panel arrives later; the form carries the record’s `seo` branch through the `PUT` untouched except for `seo.slug`, which is kept in step with the URL (D34). Prompt 36 replaces the card with the panel.                                                                                                                                                                                                                                                                         | 36           |
+| ~~Page SEO placeholder card~~                    | **Closed in 36.** The "Search engines" section below the block editor is the full panel; a page's body is its blocks, so a hint about the content scrolls to `BlockEditor`.                                                                                                                                                                                                                                                                                                                                                       | 36           |
 | `CmsPage` `Helmet` → `<Seo type="page">`         | `CmsPage` sets `<title>`, the description, the canonical and `robots` (`noindex, nofollow` while previewing or while the page is a draft) through `react-helmet-async`, from the page’s own `seo` branch. Prompt 38 hands the same record to `<Seo type="page">`, which adds the §9.5 template, the social tags and the `BreadcrumbList` the crumbs already describe.                                                                                                                                                             | 38           |
 | ~~`LegacyHtml` in `JobDetail`~~                  | **Closed in 32.** `SafeHtml` renders the role on `/careers/:jobSlug` and the admin form's `richtext` field is the editor.                                                                                                                                                                                                                                                                                                                                                                                                         | 32           |
 | `JobDetail` temporary `Helmet`                   | `/careers/:jobSlug` sets `<title>`, the description, the canonical and `robots` (`noindex, follow` once the opening has closed) through `react-helmet-async`. Prompt 38 hands the record to `<Seo type="job">`, which adds the §9.5 template, the social tags, the `BreadcrumbList` the crumbs already describe and the `JobPosting` graph.                                                                                                                                                                                       | 38           |
@@ -359,7 +360,7 @@ The boilerplate's own endpoint surface stays inventoried in
 | ADD-02 | `dev` script equals `start` (no json-server anywhere); `devDependencies` empty; no ESLint/Prettier config beyond CRA | master spec | 01 (tooling half **closed**), 06 (`dev`/`mock`) |
 | ADD-03 | `public/index.html` references a non-existent `favicon.ico`; `robots.txt` allows everything with no sitemap; no `manifest.json` | master spec, confirmed 01 | 02 |
 | ADD-04 | `@mui/icons-material` and `web-vitals` are unused dependencies (0 imports each) | master spec, confirmed 01 | 03, 41 |
-| ADD-06 (partial) | **Closed in 04:** the three scroll-hide copies (now `useScrollDirection`; `useThrottledScroll` stays for `BackToTop`), the 13 local `Section` components (now `ui/Section`), and `tagColors` vs `TAG_OPTIONS` (`PropertyCard` reads `TAG_OPTIONS` tones). **Still open:** the five `formatPrice` and three `formatDate` copies still exist at their call sites — `src/utils/format.js` is the single implementation but the call sites move to it with the data hooks; `GooglePreview` ×2, `getTitleLenColor` ×2 and `leadStatusConfig` in `Dashboard`. The nav data half closed in 27 (`src/config/navigation.js`). | master spec, confirmed 01 | 11, 36 |
+| ADD-06 (partial) | **Closed in 04:** the three scroll-hide copies (now `useScrollDirection`; `useThrottledScroll` stays for `BackToTop`), the 13 local `Section` components (now `ui/Section`), and `tagColors` vs `TAG_OPTIONS` (`PropertyCard` reads `TAG_OPTIONS` tones). **Closed in 36:** `GooglePreview` ×2 and `getTitleLenColor` ×2 — there is one search preview (`SeoPanel/parts/GooglePreview.jsx`, which truncates on pixels rather than characters) and one length verdict (`parts/SeoMeter.jsx`'s `meterState`), and both of the screens that held the duplicates are gone. **Still open:** the five `formatPrice` and three `formatDate` copies still exist at their call sites — `src/utils/format.js` is the single implementation but the call sites move to it with the data hooks; and `leadStatusConfig` in `Dashboard`. The nav data half closed in 27 (`src/config/navigation.js`). | master spec, confirmed 01 | 11 |
 | ADD-09 (closed in 28) | `LeadForm` ignores `required:false`, has no `<label>`s, no `onSuccess`, posts unsanitised values; `NewsletterSection` validation is `includes('@')`, fails silently, shows a false reCAPTCHA notice. **Closed:** every control is a `ui/FormField` with a visible `<label>`, `aria-describedby` and `aria-invalid`; `required` is honoured per field; the payload is sanitised, the phone normalised to `+91XXXXXXXXXX` and unknown answers filed under `meta` (D56); `onSuccess(lead, values)` exists; `NewsletterForm` validates with `EMAIL_PATTERN`, shows its error inline and only claims reCAPTCHA when a key is set. | master spec, confirmed 01 | 28 ✔ |
 | ADD-16 | `ArticleDetail` Markdown renderer: duplicate tables on every `\ **Closed in 11**: the article body is CMS-authored HTML rendered through `LegacyHtml`, and the breadcrumb now goes Home → Articles → category.                                                                                                                                                                                                                                                                                                                                                             | `line, ordered lists rendered as`<ul>`, only `**bold**`inline, breadcrumb "Insights" and "Articles" to the same URL;`Articles` state not URL-synced **Fully closed in 34**: the page is `ArticleDetail.jsx`, the body goes through `SafeHtml`, and the breadcrumb is Home › Insights › Category › Title. | master spec, confirmed 01 | 32, 34 |
 | ADD-18 (closed in 31) | `Careers`: résumé file input has no `name`/`onChange`, form never reset, modal without dialog semantics; `InteriorDesigning` room cards and "Get Started" buttons do nothing; `LegalAssistance`/`RealEstateAwareness` encode conflicting Karnataka stamp-duty figures. **Interior and legal closed in 30** (both pages are CMS records; the packages block opens the shared dialog and the expandable cards carry the copy an editor writes). **Careers and awareness closed in 31:** both files are deleted, the application is a real form on the role’s own page with a working résumé control, and the awareness figures are the seeded page’s, written once and editable in the CMS. | master spec, confirmed 01 | — (closed) |
@@ -391,6 +392,7 @@ The boilerplate's own endpoint surface stays inventoried in
 | NEW-36 (closed in 33) | ~~`PagesListPage`'s "Duplicate" row action cannot succeed~~: it posted the copy with `slug: ''` and `seo.slug: ''`, and §6.10 types a page's slug as a patterned string that the empty string does not match, so the API answered `422 {slug, seo.slug}` before `resolveSlug` was ever reached. **Closed:** the payload moved into `pageService.duplicate()` beside the article one, and the copy now **chooses** its slug — `<slug>-copy`, or the free variant `check-slug` suggests — rather than sending an empty one. Omitting the key, which is what fixed the article copy, is refused here too (`{ slug: ['The slug field is required.'] }`): unlike an article's, a page's slug is `required` with no default, so the API cannot be left to derive it. The copy also drops `seo.canonicalUrl`, `seo.redirect`, the score and the analysis, and is a draft in neither menu with neither menu set. Verified against the running mock (422 before, 201 with `partnership-copy` and then `partnership-copy-2` after) and through the screen itself; covered by `src/services/__tests__/pageService.test.js` (11). | 33 (QA of the article duplicate, which had the same bug) | —                               |
 | NEW-35                | For about half a second after a route change, every `position: fixed` element **inside** `<main>` is positioned against `MainLayout`'s framer-motion page-transition wrapper rather than the viewport, because that wrapper carries a `transform` while the spring settles (a transform on an ancestor makes it the containing block for fixed descendants). Measured at 390 px on `/properties/:slug`: the mobile CTA bar reads `top: 9041` in a 780 px viewport at 0 ms and `top: 715` (pinned to the bottom) from ~500 ms on. It self-corrects and affects only the property page's own CTA bar — the floating WhatsApp button sits outside `<main>` and is never affected. Pre-existing (the wrapper is prompt 04's, the bar prompt 23's); the fix is either rendering the bar in a portal or dropping the transform once the animation ends.                                                                                                                                                                                                                                                                     | 28                                                       | 41 (performance/animation pass) |
 | NEW-37 (closed in 34) | ~~Every paragraph of every CMS body on the site ran into the one above it~~: `prose.css`'s `.prose p { margin: 0 }` is one class and one element, so it outranked the `.prose > * + *` flow rule written to space them, whatever the source order — measured with `getComputedStyle` in the browser, `margin-top: 0px` on every paragraph of an article, a listing description, a locality guide and a page's rich text. **Closed:** the three margin resets (`p`, `figure`, `.sna-figure`) are wrapped in `:where()`, which scores nothing and hands `margin-top` back to the flow rule (`16px` after).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | 34, in the browser                                       | 34                              |
+| NEW-38                | **`ArticleRelatedCard`'s pickers render two children with the same key.** Adding a related article to an article that already has one logs React's "Encountered two children with the same key" from `EntityPicker` → `SortableList`: the picker's value array can hold the same id twice, so the list keys collide. Found while wiring the SEO panel into the article form; **verified against `HEAD` before this prompt's changes**, so it is prompt 33's and not 36's. Nothing renders wrongly today — React keeps the first child — but the warning is the shape of a row that disappears on the next reorder. The fix belongs with `EntityPicker`, which should refuse a duplicate before it reaches the list.                                                                                                                                                                                                                                                                                                                                                                                                   | 36, running the article form's tests                     | 45                              |
 
 ## Known issues (closed)
 
@@ -5599,3 +5601,144 @@ external image hosts.
 **Next prompt: 36 — the SEO panel (`src/components/seo/SeoPanel/`), which draws
 these results, the Google preview and the keyword suggestions inside every
 entity form.**
+
+---
+
+### Prompt 36 — The SEO panel (`src/components/seo/SeoPanel/`): General, Social, Advanced and Schema, wired into eight entity forms (2026-09-17)
+
+**What changed**
+
+Every "the SEO panel arrives later" card in the admin is gone. Six of them were
+`Alert`s (article, page, locality, developer, property type, article category)
+and one was a four-field tab (`SeoPlaceholderTab.jsx`, deleted). In their place
+is one component, `SeoPanel`, mounted eight times.
+
+**The panel is a view of `seo` and of `analyze()`, and holds no state of its
+own** beyond which tab is open. A host gives it `entity`, `seo`, `onChange` and
+`onFocusField`; every edit is an `onChange` away from being in the form's
+values, and the analysis writes `score`, `scoreBand`, `testsPassed`,
+`testsTotal`, `analysis` and `lastAnalyzedAt` back through the same callback
+(§9.6). Verified against the running mock: a `PUT /admin/localities/1` carrying
+the whole branch — the analysis rows included — comes back with
+`seo.score: 74`, `seo.scoreBand: "ok"` and the redirect intact.
+
+**Four tabs.**
+
+- **General** — the focus keyword with suggestions from the record's own facts
+  (`suggestKeywords`) and up to four creatable secondary phrases; the snippet
+  editor (SEO title with a variable-insert menu, the permalink, the meta
+  description), each with a bar that measures **characters and pixels** and
+  says which limit bit; the Google preview at 600 px and 380 px, truncated by
+  pixel width, with the date in front of an article's snippet; the score card
+  (a gauge, the band, "N of M tests passed", "Re-analyse", "Auto-fill
+  missing"); and the four accordions of §9.1 with per-status counts.
+- **Social** — Open Graph and X, every field an override with a "Use default"
+  that fills it with what the page would have said anyway, the read-only
+  `og:type`, and the two cards drawn (500 × 261 for Facebook/LinkedIn, the
+  `summary_large_image` or `summary` X card the record asks for).
+- **Advanced** — the robots directives with the string they produce printed
+  underneath, the canonical override against the computed one, the breadcrumb
+  title, the redirect, the sitemap entry, the read-only last-modified and (for
+  an article) its single category, and the **Resolved values** box.
+- **Schema** — the type select, a checklist of the generated nodes, the custom
+  JSON-LD block with its validator, and the resolved graph as read-only JSON.
+
+**A fix hint is a click, not a sentence.** Every analyser result carries the
+dotted `field` it is about. `seo.*` stays inside the panel — the tab that owns
+it opens and the control takes focus — and everything else goes to the host:
+`usePropertyForm.focusField('content')` opens Basics and puts the cursor in the
+description; `images` opens Media; `faqs` opens the FAQ tab. The article form
+maps the same paths onto its own screen (the editor, the excerpt, the rail
+cards).
+
+**Two new pieces of the engine.** `src/seo/resolve.js` answers what a record
+actually publishes — title, description, canonical, the robots string, the two
+social cards — from the §9.3 rules, and it is what the Resolved values box
+renders **and** what prompt 38's `<Seo>` will put in the head, so the box and
+the page cannot disagree. `schema.buildGraph(entityType, entity, seoSettings)`
+is the record's own share of the `@graph`: the node its type leads with, its
+questions, its video and its trail, with `schema.type`, `disabledAutoTypes` and
+`schema.custom` applied. 18 assertions in `src/seo/__tests__/resolve.test.js`.
+
+**Two things block a save, and only two** (`validateSeoBranch`): custom JSON-LD
+that does not parse or does not validate — invalid JSON-LD invalidates the
+whole script tag, generated nodes included — and a redirect switched on with
+nowhere to send anybody. Everything else is advice: a title of sixty-eight
+characters is cut in a result, not refused, so the panel says so and the save
+goes through.
+
+**The redirect is a side effect, and it happens after the entity save.**
+`applySeoSideEffects(entityType, savedRecord)` writes the `redirects` row with
+`fromPath` = the record's own public path — which a new record does not have
+until the API answers — and deactivates the row rather than deleting it when
+the switch goes off. It never throws: a rule that could not be written is a
+console warning, not a failed save. `redirectService.upsertByFromPath` does the
+create-or-patch through the `q` filter that already existed on
+`GET /admin/redirects`, so **no mock change was needed**; verified against the
+running mock (201 create, 200 patch, deactivate, gone from `GET /redirects`).
+
+**The site-wide index is loaded once per admin session.** `useSiteSeoIndex`
+caches `GET /admin/seo/overview?perPage=all` at module level, and every save
+publishes `seo:changed` through the new `src/utils/events.js`, which is what
+refreshes it. Without the list the three uniqueness tests `skip` rather than
+guess, so a desk that cannot read it (a sales user's 403) still gets a working
+panel.
+
+**The panel is a lazy chunk.** `components/seo/SeoPanel/index.jsx` is a
+`React.lazy` wrapper, for the same reason `RichTextField` is one: the panel is
+the second-heaviest thing in the admin, six forms import it, and a stylesheet
+that spans the eager/lazy boundary is what makes the extracted CSS order
+ambiguous. The §9.6 value helpers (`createSeo`, `withSeoDefaults`,
+`toSeoPayload`, `toSeoPaths`) therefore live in `components/seo/seoValues.js`,
+where a form's payload can reach them without pulling the panel.
+
+**Files**
+
+- New: `src/components/seo/SeoPanel/` — `index.jsx`, `SeoPanel.jsx`,
+  `SeoPanel.module.css`, `SeoPanelContext.js`, `useSeoAnalysis.js`,
+  `useSiteSeoIndex.js`, `SeoSummaryCard.jsx` (+ css), `tabs/GeneralTab.jsx`,
+  `tabs/SocialTab.jsx`, `tabs/AdvancedTab.jsx`, `tabs/SchemaTab.jsx`,
+  `parts/FocusKeywordField.jsx`, `parts/SnippetEditor.jsx`,
+  `parts/VariableMenu.jsx`, `parts/SeoMeter.jsx`, `parts/GooglePreview.jsx`,
+  `parts/SocialPreview.jsx`, `parts/ScoreCard.jsx`, `parts/TestList.jsx`,
+  `parts/RobotsFields.jsx`, `parts/RedirectFields.jsx`,
+  `parts/SitemapFields.jsx`, `parts/ResolvedValues.jsx`,
+  `parts/SchemaEditor.jsx`; `src/components/seo/seoValues.js`,
+  `src/components/seo/seoSideEffects.js`; `src/seo/resolve.js`;
+  `src/utils/events.js`;
+  `src/pages/admin/properties/property-form/tabs/SeoTab.jsx` and
+  `property-form/fieldFocus.js`.
+- Tests: `SeoPanel/__tests__/SeoPanel.test.jsx` (9),
+  `SnippetEditor.test.jsx` (10), `SchemaEditor.test.jsx` (10),
+  `src/seo/__tests__/resolve.test.js` (18).
+- Changed: `src/seo/schema/index.js` (`buildGraph`, `autoNodeTypes`,
+  `schemaTypeOptions`), `src/seo/index.js`, `src/services/redirectService.js`
+  (`upsertByFromPath`, `findByFromPath`, `deactivateByFromPath`),
+  `components/admin/MasterDataForm.jsx` + `MasterDataPage.jsx` (`seoPanel`),
+  the property form (`tabs.js`, `StatusRail.jsx`, `PropertyFormShell.jsx`,
+  `PropertyFormContext.js`, `usePropertyForm.js`, `validators/property.js`,
+  `tabs/BasicsTab.jsx`), `ArticleFormPage.jsx` + `useArticleForm.js` +
+  `ArticleFaqsCard.jsx`, `PageFormPage.jsx`, `LocalityFormPage.jsx`,
+  `DeveloperFormPage.jsx`, `taxonomyConfigs.js`, `masterDataConfigs.js`,
+  `PagesListPage.jsx`, `LocalitiesPage.jsx`, `DevelopersPage.jsx`.
+- Deleted: `property-form/tabs/SeoPlaceholderTab.jsx`.
+
+**Not touched**, per the guardrails: the public `<Seo>` (38), the mock server,
+`db.json`, `theme.js`, `global.css`. No dependency was added.
+
+**Verification**
+
+`npm run lint` (0 findings, endpoints registry clean) · `npm run test:ci`
+(114 suites, 2 377 tests) · `npm run build:ci` (compiled, no CSS-order
+conflict) · `npm run check:traces` (967 files, 0 findings) · `npm run smoke`
+(276/276) · `npm run format:check`. `npm run test:mock` was not re-run for a
+change of its own — no mock file was touched — and the redirect upsert was
+verified against the running server instead.
+
+One console warning survives in the article form and is **not** this prompt's:
+`EntityPicker` → `SortableList` logs a duplicate React key when a related
+article is added (NEW-38, verified against `HEAD` before these changes, owned
+by the QA prompt that covers the article form).
+
+**Next prompt: 37 — the SEO dashboard, settings and redirects screens at
+`/admin/seo`, which read the same `overview` rows this panel writes.**
