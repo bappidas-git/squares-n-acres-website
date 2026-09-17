@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 32 — Rich text editor (Tiptap), sanitiser and `SafeHtml` Next prompt: 33
+Last prompt executed: 33 — Articles admin: list, Tiptap editor form, taxonomy CRUD Next prompt: 34
 
 ## Executed prompts
 
@@ -38,7 +38,8 @@ Last prompt executed: 32 — Rich text editor (Tiptap), sanitiser and `SafeHtml`
 | 29  | Admin leads CRM and the real-data dashboard                    | `69fd6c5`                                                                          | 2026-09-17 |
 | 30  | Pages CMS: admin block editor, public renderer, CmsPage routes | `7a161a0`                                                                          | 2026-09-17 |
 | 31  | Careers & jobs, CMS awareness page, newsletter subscribers     | `9e7d1cc`                                                                          | 2026-09-17 |
-| 32  | Tiptap rich text editor, sanitiser, SafeHtml, every textarea   | HEAD of this branch (a commit cannot contain its own hash — prompt 33 fills it in) | 2026-09-17 |
+| 32  | Tiptap rich text editor, sanitiser, SafeHtml, every textarea   | `42d836f`                                                                          | 2026-09-17 |
+| 33  | Articles admin: list, editor form, scheduling, taxonomy CRUD   | HEAD of this branch (a commit cannot contain its own hash — prompt 34 fills it in) | 2026-09-17 |
 
 ## Baseline (prompt 01)
 
@@ -299,11 +300,11 @@ The boilerplate's own endpoint surface stays inventoried in
 | `test:ci --passWithNoTests`                      | Needed only while `src/` contains no test file; drop the flag once real tests exist.                                                                                                                                                                                                                                                                                                                                                                                                                     | 35           |
 | Header / MobileHeader / BottomNav nav arrays     | The three components still declare the same `navItems` / `sideMenuItems` literals. Prompt 04 restyled and unified their breakpoints but left the data alone, as its §9 requires ("nav data still hardcoded until prompt 27"). Prompt 27 moves it to `src/config/navigation.js`.                                                                                                                                                                                                                          | 27           |
 | 501 on the sitemap / robots / RSS / llms paths   | The routes are mounted and mirrored at the root (D21) but answer `501` until prompt 09 generates the documents from `seoSettings` and the seed.                                                                                                                                                                                                                                                                                                                                                          | 09           |
-| `src/utils/adapters/legacyArticle.js`            | `toLegacyArticle()` maps `featuredImage.url` → `image`, `category.name`, `author.name` and `readingTimeMinutes` → `readTime` for `AdminArticles` and `ArticleForm`.                                                                                                                                                                                                                                                                                                                                      | 33 / 34      |
+| ~~`src/utils/adapters/legacyArticle.js`~~        | **Closed in 33.** The file is deleted with the two screens that read it. `/admin/articles` and its form now speak the §6.8 record: `featuredImage{url,alt,caption}`, `categoryId`/`category`, `authorId`/`author`, `tagIds[]`/`tags[]` and `readingTimeMinutes`. `src/utils/adapters/` is gone.                                                                                                                                                                                                          | —            |
 | ~~`src/components/common/LegacyHtml.jsx`~~       | **Closed in 32.** The file is deleted. `src/components/editor/SafeHtml.jsx` holds the only `dangerouslySetInnerHTML` in `src/`: it sanitises against the allow-list `RichTextEditor` writes with, renders the result inside `.prose`, gives every H2/H3 an id, and turns the three `data-sna-block` placeholders into live components.                                                                                                                                                                   | 32           |
 | ~~FAQ answers textarea → `RichTextEditor`~~      | **Closed in 32.** The FAQs tab draws `RichTextField variant="compact"`; the field, the validator key and the payload did not move. The script/iframe/handler regex stays as the cheap guard against a value that never went through the editor (an import, a payload assembled by hand) rather than as the sanitiser it never was.                                                                                                                                                                       | 32           |
 | ~~Description textarea → `RichTextEditor`~~      | **Closed in 32.** The Basics tab draws `RichTextField variant="full"`; the reducer, the validators and the payload are untouched, and the editor's own status bar now carries the character, word and reading-time counters the tab printed under the box.                                                                                                                                                                                                                                               | 32           |
-| `ArticleForm` saving disabled                    | Its category, author and tag pickers offer hardcoded strings; an article now carries `categoryId`, `authorId`, `tagIds[]`, `featuredImage{}`, `status` and a nested `seo{}`. Loading works through `toLegacyArticle`; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                                         | 33           |
+| ~~`ArticleForm` saving disabled~~                | **Closed in 33.** `src/pages/admin/articles/ArticleFormPage.jsx` writes the real record: the category and the author are `<select>`s over `/admin/article-categories` and `/admin/authors`, the tags are records a creatable multi-select posts to `/admin/article-tags`, the body is the Tiptap editor's sanitised HTML, and the status radio publishes, schedules or archives. Every write goes through `POST`/`PUT` with the §6.8 payload.                                                            | —            |
 | `AdminSettings` saving disabled                  | The screen holds a flattened view of five of the eight §6.13 branches, so writing it back would flatten the record on the server. Reads are live; saving is disabled behind an info `Alert`.                                                                                                                                                                                                                                                                                                             | 40           |
 | `AdminSeo` saving disabled                       | SEO now lives in one nested `seo{}` saved through the entity's own PATCH, and the generator still writes boilerplate titles and canonicals (ADD-20/ADD-27). The table reads `GET /admin/seo/overview` live; editing and bulk generation are disabled behind an info `Alert`.                                                                                                                                                                                                                             | 36–37        |
 | ~~`LegacyHtml` in `LocalityGuide`~~              | **Closed in 32.** `SafeHtml` renders the guide; the module's duplicate typography is gone, since the global `.prose` now covers it.                                                                                                                                                                                                                                                                                                                                                                      | 32           |
@@ -313,6 +314,8 @@ The boilerplate's own endpoint surface stays inventoried in
 | ~~`LegacyHtml` in the builder profile~~          | **Closed in 32.** `SafeHtml` renders the profile on `/builders/:slug`.                                                                                                                                                                                                                                                                                                                                                                                                                                   | 32           |
 | Developer SEO placeholder card                   | The developer form's "Search engines" section is an `Alert` saying the panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched in the meantime.                                                                                                                                                                                                                                                                                                                      | 36           |
 | Builders/builder Helmet titles                   | `Builders.jsx` and `BuilderDetail.jsx` set `<title>`/`description` through `react-helmet-async`, following the §9.5 `developer` template; `<Seo>` replaces both, with the JSON-LD `Organization` + `ItemList` graph (§9.3).                                                                                                                                                                                                                                                                              | 38           |
+| Article SEO placeholder card                     | The article form's "Search result" section holds `seo.title`, `seo.description` and `seo.focusKeyword` with the §9.1 length counters; the categories and authors forms end in an `Alert` saying the panel arrives later. All three carry the record's whole `seo` branch through every save untouched, with only the slug kept in step (D34).                                                                                                                                                            | 36           |
+| Legacy public article pages                      | `/insights/articles` and `/insights/articles/:slug` are still the boilerplate's `Articles.js` / `ArticleDetail.js`: the index filters in the browser rather than through `GET /articles`, there is no category, tag or author archive, and the detail page has no table of contents, no related listings row and no FAQ accordion of its own. Prompt 34 rewrites both against the record this prompt's form now writes.                                                                                  | 34           |
 | Property-type SEO placeholder card               | The property-type form ends in an `Alert` saying the SEO panel arrives later; the form carries the record's `seo` branch through the `PUT` untouched so nothing is lost meanwhile.                                                                                                                                                                                                                                                                                                                       | 36           |
 | ~~`LegacyHtml` in `FaqAccordion`~~               | **Closed in 32.** Every FAQ on the site renders its answer through `SafeHtml`, and the FAQ library's own form (`contentConfigs.js`) draws the compact editor.                                                                                                                                                                                                                                                                                                                                            | 32           |
 | ~~`LegacyHtml` in `OverviewSection`~~            | **Closed in 32.** `SafeHtml` renders the description; the measured twelve-line clamp and its "Read more" are unchanged, and a CTA or a listings row an editor drops into a description now renders live on the page.                                                                                                                                                                                                                                                                                     | 32           |
@@ -356,31 +359,32 @@ The boilerplate's own endpoint surface stays inventoried in
 | ADD-16 | `ArticleDetail` Markdown renderer: duplicate tables on every `\ **Closed in 11**: the article body is CMS-authored HTML rendered through `LegacyHtml`, and the breadcrumb now goes Home → Articles → category.                                                                                                                                                                                                                                                                                                                                                             | `line, ordered lists rendered as`<ul>`, only `**bold**`inline, breadcrumb "Insights" and "Articles" to the same URL;`Articles` state not URL-synced | master spec, confirmed 01 | 32, 34 |
 | ADD-18 (closed in 31) | `Careers`: résumé file input has no `name`/`onChange`, form never reset, modal without dialog semantics; `InteriorDesigning` room cards and "Get Started" buttons do nothing; `LegalAssistance`/`RealEstateAwareness` encode conflicting Karnataka stamp-duty figures. **Interior and legal closed in 30** (both pages are CMS records; the packages block opens the shared dialog and the expandable cards carry the copy an editor writes). **Careers and awareness closed in 31:** both files are deleted, the application is a real form on the role’s own page with a working résumé control, and the awareness figures are the seeded page’s, written once and editable in the CMS. | master spec, confirmed 01 | — (closed) |
 | ADD-19 (settings/users) | `AdminSettings`: `PUT` drops `footerLinks`, tab panels out of order, "Footer Tagline" edits the General `tagline`, hardcoded `role === 'admin'`; `UserManagement`: last-admin guard hole, plaintext passwords echoed, own `ROLES` list. **The `AdminLogin` half is closed in 12 and the `UserManagement` half in 13; only the `AdminSettings` form remains, for prompt 40.** | master spec, confirmed 01 | 40 |
-| ADD-20 | `AdminSeo`: the old domain in previews, "Auto-Generate" writes HOM titles/canonicals/schema, `stats.missing` dead, saving wipes empty fields, no confirmation before bulk overwrite; `ArticleForm`: the boilerplate brand as the default article author, `readTime` not editable, `isTrending/trendingOrder` dropped on PUT, `setTimeout(navigate)` not cleared | master spec, confirmed 01 | 33, 36, 37 |
+| ADD-20 (article half closed in 33) | `AdminSeo`: the old domain in previews, "Auto-Generate" writes the boilerplate's titles/canonicals/schema, `stats.missing` dead, saving wipes empty fields, no confirmation before bulk overwrite; `ArticleForm`: the boilerplate brand as the default article author, `readTime` not editable, `isTrending/trendingOrder` dropped on PUT, `setTimeout(navigate)` not cleared. **The `ArticleForm` half is closed in 33:** both files are deleted. There is no default author — `authorId` is a required select over the real records, so an article is never signed by a name nobody chose; `readingTimeMinutes` is derived by the API from the body and shown in the rail; the trending pair is replaced by `isFeatured` plus the view-based `/articles/trending` (§5.14); and the one navigation the form performs waits for the unsaved-changes guard to let go and clears its timer on unmount. The `AdminSeo` half stays open for 36/37. | master spec, confirmed 01 | 36, 37 |
 | ADD-21 (property list closed) | `AdminProperties` fetches the public `/properties`, toggle omits the `is_active` fallback, `Promise.all` bulk aborts on first failure, per-page select-all (**closed in 22**: the file is deleted and `/admin/properties` is `PropertiesListPage`, server-side throughout, with one `POST /admin/properties/bulk` per bulk action); `AdminLeads`/`Dashboard` `p.id === propertyId` string-vs-number → Property column always empty; `Dashboard` "Leads by source" from 10 leads; `FaqManager` reorder wrong under a category filter with two sequential PUTs per swap (**closed in 17**: `FaqManager` is deleted and the reorder is D98's single `PATCH`); `LeadDetail` simulated timeline, `isMobile` unused (**closed in 01**). **Closed in 29:** `AdminLeads.js`, `LeadDetail.js` and `Dashboard.js` are deleted; the list is `PropertiesListPage`'s server-side twin, the Property column is the `property {id,title,slug}` embed the API sends, the timeline is the server's `activities[]`, and "Leads by source" is `trends.leadsBySource` over every lead rather than over the ten the browser had fetched | master spec, confirmed 01 | 29 ✅ |
 | ADD-22 | Property tabs: `DetailsTab` drag issues N state updates per drag-over; `SectionVisibilityTab` toggle asymmetric for `undefined`; `GalleryTab` seeds placeholder-image covers; `NearbyPlacesTab` default type `school` unknown to the public map; index keys everywhere; `SeoTagsTab` old-domain placeholder. **Prompt 18 settles the structural half for the new form**: every repeating row carries a stable id (`tmp-<n>` until the API assigns one), so no list is keyed by its index and a move is one `LIST_MOVE`; `fromRecord` fills all eighteen `sectionVisibility` keys, so a toggle is never reading `undefined`; `makeNearbyPlace` defaults to `other`; and nothing seeds an image. The tabs that render these fields are written in 19–21. **Closed in 21**: the new Section-visibility tab writes `true`/`false` explicitly for the key pressed and every key at once for "Enable all"/"Disable all", and the whole of `property-tabs/*` — `DetailsTab`, `GalleryTab`, `NearbyPlacesTab`, `SeoTagsTab` and the rest — is deleted. | master spec, confirmed 01 | 18–21 |
 | ADD-27 | `seoScoring.js`/`seoGenerator.js`: HOM site name/URL constants, generic CTA-word scoring, schema string stored in the record | master spec, confirmed 01 | 36 |
 
 ### New defects found by this audit
 
-| Id     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Found by | Owner prompt                    |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------- |
-| NEW-01 | `config/rbac.js` has no `/admin/settings/users` entry and no per-area permission matrix; `AdminSettings` uses `role === 'admin'` and `UserManagement` its own `ROLES` array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | 01       | 12                              |
-| NEW-02 | `routes/index.js` limits `/admin/seo` and `/admin/settings` to `admin` only; §7 of the master context gives both to `admin` **and** `manager`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | 01       | 12                              |
-| NEW-03 | Navigation/role data lives in three places: `rbac.NAV_ITEMS`, `AdminLayout.pageTitles` and the `<Route>` declarations                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 01       | 12                              |
-| NEW-04 | `slick-carousel` is a dependency but its CSS is never imported, so the `SimilarProperties` slider renders unstyled                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | 01       | 03, 25                          |
-| NEW-08 | `GalleryTab` carried the repository's only `eslint-disable` comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | 01       | **closed in 01**                |
-| NEW-10 | `AdminSettings` renders `TabPanel index={4}` after `index={5}`, so the JSX order no longer matches the `<Tab>` order                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | 01       | 40                              |
-| NEW-11 | `AdminSettings.mergeWithDefaults` omits `footerLinks`, so every save drops that `db.json` key                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | 01       | 40                              |
-| NEW-15 | `useThrottledScroll` has a single consumer (`BackToTop`); Header, MobileHeader, BottomNav and StickyNav each re-implement scroll handling                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | 01       | 04                              |
-| NEW-17 | `global.css` loads Google Fonts through a render-blocking CSS `@import` instead of a `<link>` in `index.html`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | 01       | 02, 04                          |
-| NEW-18 | `public/robots.txt` is the CRA default with no `Sitemap:`; `index.html` has no manifest, no OG tags, and a `theme-color` in the boilerplate navy                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | 01       | 02                              |
-| NEW-20 | No test file exists anywhere (119 files checked, 0 matches), so `test:ci` needs `--passWithNoTests` until the first tests land                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | 01       | partially closed in 01; 35      |
-| NEW-28 | `src/pages/public/RealEstateAwareness.js` uses `mdi:stamp`, which is not in the Iconify MDI set — the tile renders blank. Found while verifying every icon id of prompt 13.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | 13       | 31                              |
-| NEW-29 | `db.json` seeds `icon: "mdi:home-check-outline"`, which is not in the Iconify MDI set. `db.json` is off-limits to prompt 13 (§12 guardrails), so the seed keeps a blank icon until its owner prompt fixes it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | 13       | 15                              |
-| NEW-30 | `useCountUp` figures are still at their start value when a page is rendered by a browser that never delivers a second animation frame — headless Chrome with `--virtual-time-budget` grants exactly one. Every counted statistic (`DeveloperStats`, `BuilderOverview`, and the home figures of 27) therefore prerenders as `0`. The prerenderer must emulate `prefers-reduced-motion: reduce`, which makes `useCountUp` jump straight to the value; a real browser is unaffected.                                                                                                                                                                                                                                                                                                                                                                 | 16       | 41                              |
-| NEW-33 | A Jest suite that drives a MUI dialog with `@testing-library/user-event@13` reports React's "An update to … was not wrapped in act(…)" for the transition timers jsdom never fires a `transitionend` for. It is not specific to the property page (the `IconPicker` suite reports 95 of them and the `Modal` suite 8), every affected test passes, and no test is flaky because of it. The fix is user-event v14's `userEvent.setup()`, a dependency bump §3.3 does not list; the QA prompt decides whether to ask for it.                                                                                                                                                                                                                                                                                                                        | 24       | 44                              |
-| NEW-35 | For about half a second after a route change, every `position: fixed` element **inside** `<main>` is positioned against `MainLayout`'s framer-motion page-transition wrapper rather than the viewport, because that wrapper carries a `transform` while the spring settles (a transform on an ancestor makes it the containing block for fixed descendants). Measured at 390 px on `/properties/:slug`: the mobile CTA bar reads `top: 9041` in a 780 px viewport at 0 ms and `top: 715` (pinned to the bottom) from ~500 ms on. It self-corrects and affects only the property page's own CTA bar — the floating WhatsApp button sits outside `<main>` and is never affected. Pre-existing (the wrapper is prompt 04's, the bar prompt 23's); the fix is either rendering the bar in a portal or dropping the transform once the animation ends. | 28       | 41 (performance/animation pass) |
+| Id                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Found by                                                 | Owner prompt                    |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------- |
+| NEW-01                | `config/rbac.js` has no `/admin/settings/users` entry and no per-area permission matrix; `AdminSettings` uses `role === 'admin'` and `UserManagement` its own `ROLES` array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | 01                                                       | 12                              |
+| NEW-02                | `routes/index.js` limits `/admin/seo` and `/admin/settings` to `admin` only; §7 of the master context gives both to `admin` **and** `manager`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | 01                                                       | 12                              |
+| NEW-03                | Navigation/role data lives in three places: `rbac.NAV_ITEMS`, `AdminLayout.pageTitles` and the `<Route>` declarations                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | 01                                                       | 12                              |
+| NEW-04                | `slick-carousel` is a dependency but its CSS is never imported, so the `SimilarProperties` slider renders unstyled                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | 01                                                       | 03, 25                          |
+| NEW-08                | `GalleryTab` carried the repository's only `eslint-disable` comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | 01                                                       | **closed in 01**                |
+| NEW-10                | `AdminSettings` renders `TabPanel index={4}` after `index={5}`, so the JSX order no longer matches the `<Tab>` order                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | 01                                                       | 40                              |
+| NEW-11                | `AdminSettings.mergeWithDefaults` omits `footerLinks`, so every save drops that `db.json` key                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | 01                                                       | 40                              |
+| NEW-15                | `useThrottledScroll` has a single consumer (`BackToTop`); Header, MobileHeader, BottomNav and StickyNav each re-implement scroll handling                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 01                                                       | 04                              |
+| NEW-17                | `global.css` loads Google Fonts through a render-blocking CSS `@import` instead of a `<link>` in `index.html`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | 01                                                       | 02, 04                          |
+| NEW-18                | `public/robots.txt` is the CRA default with no `Sitemap:`; `index.html` has no manifest, no OG tags, and a `theme-color` in the boilerplate navy                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | 01                                                       | 02                              |
+| NEW-20                | No test file exists anywhere (119 files checked, 0 matches), so `test:ci` needs `--passWithNoTests` until the first tests land                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | 01                                                       | partially closed in 01; 35      |
+| NEW-28                | `src/pages/public/RealEstateAwareness.js` uses `mdi:stamp`, which is not in the Iconify MDI set — the tile renders blank. Found while verifying every icon id of prompt 13.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | 13                                                       | 31                              |
+| NEW-29                | `db.json` seeds `icon: "mdi:home-check-outline"`, which is not in the Iconify MDI set. `db.json` is off-limits to prompt 13 (§12 guardrails), so the seed keeps a blank icon until its owner prompt fixes it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | 13                                                       | 15                              |
+| NEW-30                | `useCountUp` figures are still at their start value when a page is rendered by a browser that never delivers a second animation frame — headless Chrome with `--virtual-time-budget` grants exactly one. Every counted statistic (`DeveloperStats`, `BuilderOverview`, and the home figures of 27) therefore prerenders as `0`. The prerenderer must emulate `prefers-reduced-motion: reduce`, which makes `useCountUp` jump straight to the value; a real browser is unaffected.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | 16                                                       | 41                              |
+| NEW-33                | A Jest suite that drives a MUI dialog with `@testing-library/user-event@13` reports React's "An update to … was not wrapped in act(…)" for the transition timers jsdom never fires a `transitionend` for. It is not specific to the property page (the `IconPicker` suite reports 95 of them and the `Modal` suite 8), every affected test passes, and no test is flaky because of it. The fix is user-event v14's `userEvent.setup()`, a dependency bump §3.3 does not list; the QA prompt decides whether to ask for it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | 24                                                       | 44                              |
+| NEW-36 (closed in 33) | ~~`PagesListPage`'s "Duplicate" row action cannot succeed~~: it posted the copy with `slug: ''` and `seo.slug: ''`, and §6.10 types a page's slug as a patterned string that the empty string does not match, so the API answered `422 {slug, seo.slug}` before `resolveSlug` was ever reached. **Closed:** the payload moved into `pageService.duplicate()` beside the article one, and the copy now **chooses** its slug — `<slug>-copy`, or the free variant `check-slug` suggests — rather than sending an empty one. Omitting the key, which is what fixed the article copy, is refused here too (`{ slug: ['The slug field is required.'] }`): unlike an article's, a page's slug is `required` with no default, so the API cannot be left to derive it. The copy also drops `seo.canonicalUrl`, `seo.redirect`, the score and the analysis, and is a draft in neither menu with neither menu set. Verified against the running mock (422 before, 201 with `partnership-copy` and then `partnership-copy-2` after) and through the screen itself; covered by `src/services/__tests__/pageService.test.js` (11). | 33 (QA of the article duplicate, which had the same bug) | —                               |
+| NEW-35                | For about half a second after a route change, every `position: fixed` element **inside** `<main>` is positioned against `MainLayout`'s framer-motion page-transition wrapper rather than the viewport, because that wrapper carries a `transform` while the spring settles (a transform on an ancestor makes it the containing block for fixed descendants). Measured at 390 px on `/properties/:slug`: the mobile CTA bar reads `top: 9041` in a 780 px viewport at 0 ms and `top: 715` (pinned to the bottom) from ~500 ms on. It self-corrects and affects only the property page's own CTA bar — the floating WhatsApp button sits outside `<main>` and is never affected. Pre-existing (the wrapper is prompt 04's, the bar prompt 23's); the fix is either rendering the bar in a portal or dropping the transform once the animation ends.                                                                                                                                                                                                                                                                     | 28                                                       | 41 (performance/animation pass) |
 
 ## Known issues (closed)
 
@@ -4997,3 +5001,316 @@ mounted it (fatal under React's strict mode, now guarded by
 `editor.isInitialized`), and the link dialog asked `selection.empty` whether
 anything was selected — an editor that has not been clicked into yet answers
 "yes", so it now asks for the text between the two ends instead.
+
+### Prompt 33 — Articles admin: the list, the editor form, scheduling and the taxonomy (2026-09-17)
+
+**What changed**
+
+The two screens the boilerplate used to publish an article are gone. `AdminArticles.js`
+fetched the **public** list and narrowed it in the browser, with a "trending"
+toggle that wrote a tag; `ArticleForm.jsx` was a plain-text box with a
+syntax-help modal, a free-text author line, category and tag pickers made of
+hardcoded strings, and a save button behind an `Alert` explaining that saving
+was disabled (ADD-20). `src/pages/admin/articles/` replaces both against the
+real §6.8 record, and `src/utils/adapters/legacyArticle.js` — the adapter that
+renamed `featuredImage.url` to `image` and `category.name` to `category` so
+those two files could read a record they did not understand — is deleted with
+them. `src/utils/adapters/` no longer exists.
+
+**The list is the API's answer.** Six filters (`q`, status as a multi-select,
+category, author, tag, featured), four sortable headers, the page and the page
+size are query parameters the URL carries and the API answers, so the screen
+holds one page of rows however long the archive gets and a filtered view is a
+link somebody can send (§5.6, BUG-19). Six bulk actions — publish, unpublish,
+archive, feature, unfeature, delete — are the ones `POST /admin/articles/bulk`
+accepts for the resource, and nothing else is offered. Per row: Edit, Preview
+(behind a token), View on the site **only when the article is live**, Feature /
+Unfeature as an optimistic `PATCH`, Duplicate and Delete.
+
+**Trending is a measurement now, not a flag.** The boilerplate's
+`isTrending` / `trendingOrder` pair had an editor deciding what was popular; the
+replacement is `isFeatured` for the editorial row on the home page and
+`GET /articles/trending`, which reads `viewCount` (§5.14). Nothing was lost — a
+feature toggle exists in the table, in the kebab and in the form's rail.
+
+**The form is two columns.** The piece on the left (headline with a live
+`SlugField` on `/insights/articles/`, excerpt with a counter and "Generate from
+content", the full Tiptap editor, the FAQ repeater, the search-result fields);
+everything _about_ it in a 340 px rail on the right (status and scheduling,
+content checks, classification, featured image, related records). Below 1200 px
+the rail folds above the body as a row of panels and Save plus the publishing
+action follow the page in a sticky bar.
+
+**A status is four things to do, not one field with four values.** The radio
+group is Draft / Published / Scheduled / Archived, each with a sentence saying
+what it means for a visitor, and `scheduled` brings its own `datetime-local`
+field with it. **The clock is Bengaluru's**: the control has no timezone of its
+own, so `utils/articleUtils` converts to and from IST at a fixed +05:30 (India
+has never kept daylight saving), which makes the field independent of the
+timezone the editor's laptop is set to (D22). Pressing Publish or Schedule moves
+the status _first_ and saves on the render that commits it, so the validation
+that follows reads the rules of the state being asked for rather than the state
+being left.
+
+**Publishing is refused, not repaired.** An excerpt, a featured image, alt text,
+a category, an author and 300 words are what a publish needs; the rail's
+"Content checks" card lists all seven (the two recommendations — two tags, a FAQ
+item — never block) so "why will it not publish" is answered where it can be
+acted on rather than in a toast. Alt text is required as soon as there **is** an
+image, published or not: a hero picture a screen reader announces as nothing is
+not a publication problem (§8.3).
+
+**Everything else the record carries.** A creatable tag box that lower-cases and
+slugs what is typed (`BBMP Khata` → `bbmp khata` / `bbmp-khata`, and an existing
+tag is selected rather than duplicated); a category quick-create dialog; two
+`EntityPicker`s for the related articles (5) and listings (4), searched rather
+than listed; a table-of-contents toggle; a FAQ repeater whose answers are the
+compact editor and whose rows are keyed on their own identity; and the reading
+time and word count the API will derive, computed from the same string that will
+be saved.
+
+**The draft survives a crash.** Every ten seconds a dirty form writes
+`sna_article_draft:<id|new>`; on the next visit a draft newer than the record is
+**offered** (restore or discard) and one older than it is thrown away without
+asking. A save clears it.
+
+**The taxonomy is three `MasterDataPage` configurations.** Categories (ordered,
+described, with the SEO placeholder and a drag list when sorted by order), tags
+(a name and a URL — most are created from the article form) and authors (a
+photograph, a designation, a biography in the compact editor, three social
+links, a private e-mail §5.10 strips from every public response, and the SEO
+placeholder). All three count the **published** articles pointing at them, which
+is the number a delete is refused over (D88).
+
+**Files**
+
+Added (19): `src/utils/articleUtils.js`;
+`src/pages/admin/articles/` — `ArticlesListPage.jsx` + `.module.css`,
+`articleColumns.jsx`, `ArticleFormPage.jsx` + `.module.css`,
+`ArticleStatusCard.jsx`, `ArticleChecksCard.jsx`, `ArticleTaxonomyCard.jsx`,
+`ArticleImageCard.jsx`, `ArticleRelatedCard.jsx`, `ArticleFaqsCard.jsx`,
+`CategoryQuickCreateDialog.jsx`, `useArticleForm.js`, `useArticleTaxonomy.js`,
+`taxonomyConfigs.js` + `.module.css`, `CategoriesPage.jsx`, `TagsPage.jsx`,
+`AuthorsPage.jsx`.
+
+Tests added (4): `src/utils/__tests__/articleUtils.test.js` (20),
+`src/services/__tests__/articleService.test.js` (7),
+`src/pages/admin/articles/__tests__/ArticlesListPage.test.jsx` (12),
+`ArticleFormPage.test.jsx` (14).
+
+Changed (5): `src/routes/adminRouteConfig.js` (five lazy screens replace two, and
+the three `soon()` placeholders become pages), `src/services/articleService.js`
+(`duplicate`), `src/services/masterDataService.js` (`articleCategories`,
+`articleTags`, `authors`), `src/pages/public/ArticleDetail.js` (one word of a
+comment, so the acceptance grep is clean),
+`src/components/editor/toolbar/BubbleMenuBar.jsx` (one line Prettier rewrapped).
+
+Removed (3): `src/pages/admin/AdminArticles.js`, `src/pages/admin/ArticleForm.jsx`,
+`src/utils/adapters/legacyArticle.js` (and with it `src/utils/adapters/`).
+
+**Endpoints / dependencies / env vars / npm scripts**
+
+No endpoint, dependency, environment or script changes. Every call is a registry
+entry that already existed: `GET|POST /admin/articles`,
+`GET|PUT|PATCH|DELETE /admin/articles/:id`, `POST /admin/articles/bulk`,
+`GET /admin/articles/check-slug`, `GET /admin/articles/:id/preview-token`,
+`/admin/article-categories*`, `/admin/article-tags*`, `/admin/authors*` and
+`GET /admin/properties?ids=` for the related-listings picker. Storage key
+`sna_article_draft:<id|new>` (§4.2, already reserved).
+
+**Acceptance checklist**
+
+- [x] `/admin/articles` lists server-side with the thumbnail, title + slug,
+      category, author, status (a scheduled row showing its moment in IST),
+      published date, views, SEO chip and updated date; the six filters travel in
+      the URL; the four sortable headers are the four orders the API answers;
+      the six bulk actions and the six row actions all work. Verified in
+      Chromium: 12 rows, `2 articles updated.` from a bulk archive, a duplicate
+      landing on `…-checklist-copy` as a draft with `isFeatured: false` and
+      `publishedAt: null`.
+- [x] `/admin/articles/add|edit/:id` writes the record: a new article created,
+      scheduled for +30 h, previewed behind a token, then published — `Live since
+17 Sep 2026, 05:31 pm` — and the public URL renders it with no token.
+      Publishing an empty article reports all seven rules at once; a scheduled
+      moment in the past is refused inline **and** by the API (422 on
+      `publishedAt`, painted onto the scheduling field).
+- [x] Autosave and restore work: a headline typed and left for eleven seconds
+      lands in `sna_article_draft:new`, the banner offers it back after a reload,
+      "Restore the draft" applies it and "Discard it" removes the key. A save
+      clears the draft.
+- [x] Tags typed with capitals and spaces are created lower-cased and slugged
+      (`BBMP Khata` → `{ name: 'bbmp khata', slug: 'bbmp-khata' }`), and an
+      existing name is selected rather than duplicated.
+- [x] `/admin/articles/categories|tags|authors` all work; deleting a category
+      four articles use and an author two articles use both raise the "Still in
+      use" dialog listing them (D88).
+- [x] Legacy files deleted; `grep -rn "legacyArticle\|Markdown" src` → **0**.
+- [x] `npm run lint` (0 findings, 543 files), `npm run test:ci`
+      (**1 782 tests, 90 suites**), `npm run build:ci` ("Compiled successfully",
+      no warnings), `npm run check:traces` (0 findings over 834 files),
+      `npm run format:check` and `npm run smoke` (274/274) all pass. The editor
+      stays out of `main.js`: `prosemirror` appears in one async chunk only.
+- [x] No console output on any screen walked, at 1440 px and at 390 px.
+- [x] One commit, clean tree.
+
+**Manual QA (headless Chromium over the DevTools protocol, 1440 px and 390 px)**
+
+Desktop: the list draws its eleven columns and 12 rows with the thumbnails and
+the SEO chips; the scheduled seed article reads "Scheduled" over its moment. The
+new-article form mounts five rail cards, four sections, the 24-button editor
+toolbar and the four status radios. Publishing an empty article reports the
+title, the URL, the excerpt, the word count, the category, the author and the
+featured image together. A 480-word body gives the slug
+`khata-transfer-in-bengaluru-the-2026-checklist`, "Generate from content" fills
+the excerpt from the first paragraph, and the checks card moves to five passes
+and two recommendations. Scheduling for +30 h saves and lands on
+`/admin/articles/edit/13` with "Article scheduled."; reopening it shows the
+moment as IST wall-clock time. Preview opens
+`/insights/articles/…?preview=<token>` and the public page renders while the
+article is still scheduled; without the token the same URL answered 404 until
+"Publish now". Duplicate opens the copy; bulk archive reports two rows updated.
+The three taxonomy screens list, filter and open their dialogs (the author form
+draws nine fields, the compact editor and the SEO placeholder), and both delete
+guards list what still points at the record.
+
+At 390 px: no horizontal overflow on any of the five screens
+(`scrollWidth === clientWidth === 390`), the tables become cards, the rail sits
+above the body and the sticky Save / Publish bar is pinned to the bottom. The
+five controls measuring under 40 px in their short dimension are all existing kit
+pieces (the topbar's "View site", a breadcrumb link, two `SwitchField`s and
+`SlugField`'s regenerate button), not anything this prompt drew.
+
+One measurement worth recording: at 1440 px the article table is 1 335 px wide
+inside `DataTable`'s 1 118 px `overflow-x: auto` scroller, so its last column is
+reached by scrolling the table rather than the page — eleven columns do not fit a
+1 118 px content width whatever they are trimmed to, and the kit's scroller is
+what that container is for. The **page** does not scroll: `html` and `body` are
+`overflow-x: clip` (§8.1), and hiding the table takes
+`documentElement.scrollWidth - clientWidth` from 168 to 0. The property table
+(1 795 px) and the leads table (1 228 px) have measured the same since prompts 22
+and 29; the article table is the narrowest of the three.
+
+**Found and fixed in this prompt**
+
+A self-review of the change before committing turned up three defects, all now
+fixed and covered by tests:
+
+1. **Ctrl+S had no re-entrancy guard.** Every button that saves is `disabled`
+   while a save is in flight; the keyboard was not, so a held Ctrl+S on
+   `/admin/articles/add` fired several `POST`s and created several articles. The
+   handler now refuses `event.repeat` and anything while a save is open.
+2. **A duplicate inherited the original's canonical and redirect.** `seo` travels
+   with a copy, but `canonicalUrl` and `redirect` each name **one** page — a copy
+   of an article with either set would have quietly canonicalised to the original
+   or redirected away, with no screen in the panel showing the field until prompt 36. `articleService.duplicate` now clears both, along with the score and the
+   analysis, which is what §5.14 has the property `duplicate` endpoint do.
+3. **The same tag could land in `tagIds` twice.** Typing `stamp-duty` over an
+   already-selected "Stamp Duty" is the same slug but a different label, so the
+   creatable path was offered and `MultiSelect` appended the id it was handed. The
+   tag control and `toPayload` both de-duplicate now: `tagIds`,
+   `relatedArticleIds` and `relatedPropertyIds` are ordered sets, never bags.
+
+**Issues left**
+
+None. **NEW-36** — the CMS pages list's "Duplicate" action posting `slug: ''` —
+was found during this prompt's QA and recorded rather than fixed; it was then
+fixed in this prompt, on request, as a second commit. See the addendum below.
+
+Two things worth knowing about the test output: the suites report React's
+"An update to … was not wrapped in act(…)" warnings in the same volume the
+existing admin suites do (NEW-33 — a `user-event@13` and MUI-transition
+artefact of jsdom, not of these screens), and Chromium's `Log` domain records
+the deliberate 409 of a delete guard and its own "Blocked attempt to show a
+'beforeunload' confirmation panel" note when the unsaved-changes guard fires
+without a prior user gesture. Neither is output the application writes: the
+`console` was clean on every page walked.
+
+#### Prompt 33 addendum — NEW-36: the CMS pages "Duplicate" action (2026-09-17)
+
+Recorded during this prompt's QA and fixed in it on request, as a second commit.
+
+**What was wrong.** `PagesListPage`'s row action assembled the copy itself and
+posted `slug: ''` with `seo: { …, slug: '' }`. §6.10 types a page's slug as a
+path-slug **pattern** (`^[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*$`),
+which the empty string does not match, so `mock-server/middleware/validate.js`
+refused the write before `resolveSlug` in `lib/crud.js` was ever reached. The
+action could never succeed, in any circumstance, since prompt 30.
+
+**Why the article fix does not transfer verbatim.** An article's slug is optional
+with a default, so `articleService.duplicate` leaves the key **out** and §5.9 has
+the API derive and de-duplicate one. A page's slug is `required` **with no
+default**, so an absent key is refused just as firmly — measured, not assumed:
+
+```
+slug: ''       → 422 {"slug":["The slug field is required."],
+                      "seo.slug":["The seo.slug format is invalid."]}
+slug omitted   → 422 {"slug":["The slug field is required."]}
+```
+
+**The fix.** The payload moved out of the screen into `pageService.duplicate()`,
+beside the article one, and the copy **chooses** its slug: `<slug>-copy` — the
+suffix landing on the last segment of a path, so `buyer-assistance/home-loan`
+copies to `buyer-assistance/home-loan-copy` — trimmed to keep the suffix inside
+the 120-character budget, and replaced by `check-slug`'s free variant when that
+name is taken. That is what §5.14 has the property `duplicate` **endpoint** do
+server-side. `seo.slug` is set to the same string, because the two are one URL
+(D34). A failed availability check is not fatal: the candidate is posted anyway
+and a genuinely taken slug comes back as the 409 the screen already reports.
+
+The copy is also a draft in **neither** menu with neither menu set
+(`showInHeader`/`showInFooter` false and `headerMenu`/`footerColumn` null, which
+is what the form itself writes when a placement switch is off), and its title is
+shortened so `" (Copy)"` fits the 150 characters §6.10 allows.
+
+**What both copies now share.** `src/utils/duplicateRecord.js` holds the two
+rules neither service should own alone: `copyTitle(title, { maxLength })` and
+`copySeo(seo, { slug })`. The second is why this fix reaches further than the
+slug: `seo.canonicalUrl` and `seo.redirect` each name **one** page, so a copy
+that inherited them would quietly canonicalise itself to the original or
+redirect away — with no screen showing either field until prompt 36's SEO panel.
+Both are cleared, along with the score, the test counts and the analysis, which
+are an answer about the original's text. `articleService.duplicate` was
+refactored onto the same two helpers with no change in behaviour (its seven
+existing tests still pass unchanged).
+
+**One thing the build taught us.** The first version of this fix computed the
+copy's slug with `slugifyPath` from `src/utils/slug.js`, and `npm run build:ci`
+stopped compiling: `mini-css-extract-plugin` reported a "Conflicting order"
+between `FaqAccordion.module.css` and `finance.module.css`. `pageService` is
+imported by the **public** `CmsPage` route as well as by the two admin screens,
+so pulling another module into it moved what the chunks contain and exposed an
+order ambiguity between two stylesheets that had never shared a chunk group
+before. The import was not needed in the first place: `record.slug` comes **from
+the API**, which is what canonicalises a slug (§5.9), so re-slugifying it is
+work with no effect — and the ceiling it also imported, `PATH_SLUG_MAX_LENGTH`,
+is exported by `src/services/schemas/page.js`, which is the descriptor that
+defines it and a same-layer import. The "derive from the title" fallback went
+with it: §6.10 makes a page's slug `required`, so a stored page without one
+cannot exist, and the API naming the field in its refusal beats a slug nobody
+chose. Confirmed by building `HEAD` (clean) against the working tree (failing)
+rather than by guessing at it.
+
+**Files**
+
+Added (2): `src/utils/duplicateRecord.js`,
+`src/services/__tests__/pageService.test.js` (11 tests).
+
+Changed (3): `src/services/pageService.js` (`duplicate`, `copySlugOf`,
+`freeCopySlug`), `src/services/articleService.js` (onto the shared helpers),
+`src/pages/admin/pages/PagesListPage.jsx` (the row action is now one call).
+
+**Verification**
+
+`npm run lint` (0 findings), `npm run test:ci` (**1 793 tests, 91 suites**),
+`npm run build:ci` ("Compiled successfully", no warnings),
+`npm run check:traces` (0 findings), `npm run format:check` and `npm run smoke`
+(274/274) all pass.
+
+Against the running mock: the old payload answers 422, the omitted-slug payload
+answers 422, and the new one answers **201** with `slug: partnership-copy`,
+`seo.slug` matching, the title suffixed, `status: draft`, both placements off and
+null, five blocks carried, `canonicalUrl: null` and the redirect disabled. A
+second copy of the same page takes `partnership-copy-2`. Driven through the
+screen itself at 1440 px: "Duplicate" on `/admin/pages` toasts
+`“Home (Copy)” created as a draft.`, opens `/admin/pages/edit/16`, and the stored
+record reads `home-copy` / draft / out of both menus, with a clean console.

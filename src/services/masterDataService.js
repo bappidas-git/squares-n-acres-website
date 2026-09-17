@@ -1,11 +1,12 @@
 /**
  * Master data — localities, cities, property types, amenities, badges,
  * developers, banks — and the small content collections that behave the same
- * way: FAQs, testimonials, team members and partners
- * (00_MASTER_CONTEXT.md §6.2–§6.9, §5.14).
+ * way: article categories, article tags, authors, FAQs, testimonials, team
+ * members and partners (00_MASTER_CONTEXT.md §6.2–§6.9, §5.14).
  *
- * The public lists are loaded once per session by `MasterDataContext` (D93);
- * the admin screens of prompts 14–17 use the `admin*` half.
+ * The public lists of the seven property collections are loaded once per
+ * session by `MasterDataContext` (D93); the admin screens of prompts 14–17 and
+ * 33 use the `admin*` half.
  *
  * Every collection follows the same registry-driven shape, so one factory
  * builds them all rather than ninety hand-written one-liners.
@@ -69,6 +70,16 @@ export const amenities = collection(endpoints.amenities, endpoints.adminAmenitie
 export const badges = collection(endpoints.badges, endpoints.adminBadges);
 export const developers = collection(endpoints.developers, endpoints.adminDevelopers);
 export const banks = collection(endpoints.banks, endpoints.adminBanks);
+// An article's taxonomy behaves exactly like the rest of the master data — a
+// slugged name with a count of what points at it and a delete guard (§6.8) —
+// so it is read and written through the same three collections rather than
+// through `articleService`, which owns the articles themselves.
+export const articleCategories = collection(
+  endpoints.articleCategories,
+  endpoints.adminArticleCategories
+);
+export const articleTags = collection(endpoints.articleTags, endpoints.adminArticleTags);
+export const authors = collection(endpoints.authors, endpoints.adminAuthors);
 export const faqs = collection(endpoints.faqs, endpoints.adminFaqs);
 export const testimonials = collection(endpoints.testimonials, endpoints.adminTestimonials);
 export const team = collection(endpoints.team, endpoints.adminTeam);
@@ -82,6 +93,9 @@ const masterDataService = {
   badges,
   developers,
   banks,
+  articleCategories,
+  articleTags,
+  authors,
   faqs,
   testimonials,
   team,

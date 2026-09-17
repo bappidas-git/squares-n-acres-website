@@ -1,0 +1,284 @@
+/* Admin → Articles → add / edit: the two columns, the rail cards and the
+   counters under the three fields a search result is built from. */
+
+.loading {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* From 1200 px the rail rides alongside the article and stays with it (§6). */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--space-6);
+  align-items: start;
+  padding-bottom: var(--space-6);
+}
+
+.stacked {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  padding-bottom: calc(var(--space-16) + var(--safe-bottom));
+}
+
+.railColumn {
+  position: sticky;
+  /* Clear of the admin topbar, whatever its height. */
+  top: var(--space-6);
+  max-height: calc(100vh - var(--space-12));
+  overflow-y: auto;
+  /* The sticky column scrolls on its own; the scrollbar must not clip a focus
+     ring on the control beside it. */
+  padding: 2px;
+  margin: -2px;
+}
+
+.main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.rail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------------------ *
+ * Rail cards
+ * ------------------------------------------------------------------ */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.cardNote {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-snug);
+  color: var(--color-text-muted);
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------------------ *
+ * Content checks
+ * ------------------------------------------------------------------ */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  min-width: 0;
+}
+
+.stat dt {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.stat dd {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.checks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.check {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: start;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-snug);
+}
+
+.check svg {
+  margin-top: 2px;
+}
+
+.checkDone {
+  color: var(--color-success-dark);
+}
+
+.checkBlocked {
+  color: var(--color-error-dark);
+}
+
+.checkTodo {
+  color: var(--color-text-muted);
+}
+
+.checkHint {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * The excerpt and the search-result counters
+ * ------------------------------------------------------------------ */
+
+.excerptFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.counterPlain,
+.counter {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.counter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.counterOk {
+  color: var(--color-success-dark);
+}
+
+.counterWarn {
+  color: var(--color-warning-dark);
+}
+
+/* ------------------------------------------------------------------ *
+ * The FAQ repeater
+ * ------------------------------------------------------------------ */
+
+.faqRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.faqHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: end;
+}
+
+.faqAdd {
+  margin-top: var(--space-3);
+}
+
+.emptyHint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* The draft banner's two buttons */
+.draftActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* The phone's primary writes, always within thumb's reach */
+.bottomBar {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  gap: var(--space-2);
+  margin: 0 calc(var(--container-padding) * -1) calc(var(--safe-bottom) * -1);
+  padding: var(--space-3) var(--container-padding) calc(var(--space-3) + var(--safe-bottom));
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border);
+}
+
+.bottomBar > * {
+  flex: 1 1 auto;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 1199.98px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .railColumn {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  /* Stacked above the body, the five cards read as a row of panels rather than
+     a column as tall as the article. */
+  .rail {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}

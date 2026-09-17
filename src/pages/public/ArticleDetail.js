@@ -19,7 +19,7 @@ import { leadFormProps } from '../../utils/leadSources';
  * One article.
  *
  * The body arrives as HTML from the CMS (§6.8), so it is rendered as HTML
- * through `SafeHtml` instead of the boilerplate's hand-written Markdown
+ * through `SafeHtml` instead of the boilerplate's hand-written lightweight-markup
  * renderer — which duplicated tables on every `|` line and turned ordered
  * lists into bullets (ADD-16). `SafeHtml` sanitises against the editor's
  * allow-list and turns the `data-sna-block` placeholders into live blocks.
