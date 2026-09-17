@@ -168,6 +168,50 @@ module.exports = ({ db, getModel }) => {
     );
   });
 
+  /**
+   * The two articles either side of this one, by `publishedAt`.
+   *
+   * Beyond the §5.14 catalogue (prompt 34): an article page's previous/next
+   * pair is two rows, and `GET /articles` has no "published before this"
+   * filter, so the alternative was reading a whole category into the browser
+   * to find the two neighbours of one row.
+   *
+   * `prev` is the article published **before** this one and `next` the one
+   * published after it, so the pair walks the category in the order it was
+   * written. `categoryId` narrows the pool — what the blog asks for; without it
+   * the neighbours are taken from everything published. Either side is `null`
+   * at the ends, and both are `null` when the article is not in the pool.
+   */
+  router.get('/articles/:id/adjacent', (req, res, next) => {
+    settle();
+
+    const article = rows().find((row) => sameId(row.id, req.params.id));
+    if (!article || !isLive(article)) {
+      next(notFound());
+      return;
+    }
+
+    const collections = source();
+    const categoryId = first(req.query.categoryId);
+    const wanted = categoryId === undefined || categoryId === '' ? null : String(categoryId);
+
+    const pool = liveArticles(rows())
+      .filter((row) => wanted === null || sameId(row.categoryId, wanted))
+      .sort(
+        (left, right) =>
+          Date.parse(left.publishedAt) - Date.parse(right.publishedAt) ||
+          Number(left.id) - Number(right.id)
+      );
+
+    const index = pool.findIndex((row) => sameId(row.id, article.id));
+    const at = (offset) => {
+      const neighbour = index < 0 ? undefined : pool[index + offset];
+      return neighbour ? summary(present(neighbour, collections)) : null;
+    };
+
+    res.ok({ prev: at(-1), next: at(1) });
+  });
+
   router.get('/articles/slug/:slug', (req, res, next) => {
     settle();
 

@@ -126,6 +126,59 @@ describe('GET /articles', () => {
   });
 });
 
+describe('GET /articles/:id/adjacent', () => {
+  it('answers with the pieces published either side, and null at the ends', async () => {
+    await withServer(async ({ request }) => {
+      // The fixture publishes 1, then 2, then 3, each in its own category.
+      const first = await request('GET', '/articles/1/adjacent');
+      assert.equal(first.status, 200);
+      assert.equal(first.body.data.prev, null, 'nothing was published before the first');
+      assert.equal(first.body.data.next.id, 2);
+
+      const middle = await request('GET', '/articles/2/adjacent');
+      assert.equal(middle.body.data.prev.id, 1);
+      assert.equal(middle.body.data.next.id, 3);
+
+      const last = await request('GET', '/articles/3/adjacent');
+      assert.equal(last.body.data.prev.id, 2);
+      assert.equal(last.body.data.next, null);
+
+      // A summary row, not the whole article: the pair is two links.
+      assert.ok(!('content' in middle.body.data.prev));
+      assert.equal(typeof middle.body.data.prev.title, 'string');
+    });
+  });
+
+  it('narrows the pool to one category, and never reaches a draft', async () => {
+    const seed = seedWith({
+      articles: (articles) => {
+        articles[1].categoryId = articles[0].categoryId;
+        articles[2].categoryId = articles[0].categoryId;
+        articles[2].status = 'draft';
+      },
+    });
+
+    await withServer({ seed }, async ({ request }) => {
+      const within = await request('GET', '/articles/2/adjacent?categoryId=3');
+      assert.equal(within.body.data.prev.id, 1, 'the piece before it in the same category');
+      assert.equal(within.body.data.next, null, 'the draft after it is not published');
+
+      const elsewhere = await request('GET', '/articles/1/adjacent?categoryId=4');
+      assert.equal(elsewhere.body.data.prev, null);
+      assert.equal(elsewhere.body.data.next, null);
+    });
+  });
+
+  it('is a 404 for an unknown id and for an article nobody may read', async () => {
+    const seed = seedWith({ articles: (articles) => void (articles[0].status = 'draft') });
+
+    await withServer({ seed }, async ({ request }) => {
+      assert.equal((await request('GET', '/articles/9999/adjacent')).status, 404);
+      assert.equal((await request('GET', '/articles/1/adjacent')).status, 404);
+    });
+  });
+});
+
 describe('preview tokens', () => {
   it('opens a draft for the holder and nobody else', async () => {
     resetPreviewTokens();

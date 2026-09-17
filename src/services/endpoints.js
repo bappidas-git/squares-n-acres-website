@@ -474,6 +474,21 @@ const articles = {
     response: 'ArticleList',
     example: 1,
   },
+  // Beyond the §5.14 catalogue, by the decision recorded for prompt 34: the
+  // article page's previous/next pair is two rows, and the only way to get
+  // them from `/articles` is to read the whole category into the browser.
+  adjacent: {
+    key: 'articles.adjacent',
+    method: 'GET',
+    path: '/articles/:id/adjacent',
+    auth: 'public',
+    module: 'articles',
+    description: 'The published articles either side of this one by publishedAt',
+    query: { categoryId: 'int' },
+    body: null,
+    response: 'ArticleAdjacent',
+    example: 1,
+  },
 };
 
 const articleCategories = {

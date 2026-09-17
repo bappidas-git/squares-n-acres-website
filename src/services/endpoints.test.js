@@ -28,6 +28,9 @@ const PUBLIC_PATHS = [
   'GET /articles',
   'GET /articles/slug/:slug',
   'GET /articles/trending',
+  // Not in §5.14: added by prompt 34 for the article page's previous/next pair
+  // (see docs/DECISIONS.md and docs/API_CONTRACT.md).
+  'GET /articles/:id/adjacent',
   'GET /article-categories',
   'GET /article-tags',
   'GET /authors',

@@ -58,3 +58,27 @@
     font-size: var(--font-size-2xl);
   }
 }
+
+/* ── Compact: the same ask as a sidebar card (prompt 34) ───────────────── */
+
+.newsletter.compact {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+
+.compact .inner {
+  max-width: none;
+  text-align: left;
+}
+
+.compact .heading {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-2);
+}
+
+.compact .subtitle {
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+}

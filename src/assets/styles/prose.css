@@ -80,7 +80,18 @@
 
 /* ── Text ──────────────────────────────────────────────────────────────── */
 
-.prose p {
+/*
+ * The margin resets below are written inside `:where()` so that they score
+ * nothing and the flow rules above own the vertical rhythm.
+ *
+ * `.prose p { margin: 0 }` is one class and one element, which outranks
+ * `.prose > * + *` whatever the source order — so every paragraph in every CMS
+ * body on the site was pinned to a zero top margin and the rule that was meant
+ * to space them did nothing (found in the browser while building the article
+ * page, prompt 34). `:where()` keeps the reset — a paragraph still has no
+ * bottom margin of its own — and hands `margin-top` back to the flow.
+ */
+:where(.prose) p {
   margin: 0;
 }
 
@@ -208,7 +219,7 @@
   border-radius: var(--radius-md);
 }
 
-.prose figure {
+:where(.prose) figure {
   margin: 0;
 }
 
@@ -232,7 +243,7 @@
  * both attributes are on the sanitiser's allow-list, where a `class` is
  * narrowed to `sna-*` and `prose-*`.
  */
-.prose .sna-figure {
+:where(.prose .sna-figure) {
   margin: 0;
 }
 

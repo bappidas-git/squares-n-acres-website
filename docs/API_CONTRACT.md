@@ -153,15 +153,16 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 
 #### Public — articles
 
-| Method | Path                   | Auth/role | Purpose                                                       | Query                                                                                                                                    | Body schema | Response shape        | Side effects |
-| ------ | ---------------------- | --------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------------------- | ------------ |
-| GET    | `/articles`            | public    | Published articles, newest or most read first                 | `page`, `perPage`, `sort`, `order`, `q`, `categoryId`, `categorySlug`, `tagId`, `tagSlug`, `authorId`, `authorSlug`, `isFeatured`, `ids` | —           | `ArticleList`         | —            |
-| GET    | `/articles/slug/:slug` | public    | Article by slug; a matching preview token also returns drafts | `preview`                                                                                                                                | —           | `Article`             | —            |
-| GET    | `/articles/trending`   | public    | The six most read published articles                          | `perPage`                                                                                                                                | —           | `ArticleList`         | —            |
-| GET    | `/article-categories`  | public    | Article categories with their published article count         | `page`, `perPage`, `sort`, `order`, `q`                                                                                                  | —           | `ArticleCategoryList` | —            |
-| GET    | `/article-tags`        | public    | Article tags with their published article count               | `page`, `perPage`, `sort`, `order`, `q`                                                                                                  | —           | `ArticleTagList`      | —            |
-| GET    | `/authors`             | public    | Active authors, public fields only                            | `page`, `perPage`, `sort`, `order`, `q`                                                                                                  | —           | `AuthorList`          | —            |
-| GET    | `/authors/slug/:slug`  | public    | Author page by slug                                           | —                                                                                                                                        | —           | `Author`              | —            |
+| Method | Path                     | Auth/role | Purpose                                                         | Query                                                                                                                                    | Body schema | Response shape        | Side effects |
+| ------ | ------------------------ | --------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------------------- | ------------ |
+| GET    | `/articles`              | public    | Published articles, newest or most read first                   | `page`, `perPage`, `sort`, `order`, `q`, `categoryId`, `categorySlug`, `tagId`, `tagSlug`, `authorId`, `authorSlug`, `isFeatured`, `ids` | —           | `ArticleList`         | —            |
+| GET    | `/articles/slug/:slug`   | public    | Article by slug; a matching preview token also returns drafts   | `preview`                                                                                                                                | —           | `Article`             | —            |
+| GET    | `/articles/trending`     | public    | The six most read published articles                            | `perPage`                                                                                                                                | —           | `ArticleList`         | —            |
+| GET    | `/articles/:id/adjacent` | public    | The published articles either side of this one by `publishedAt` | `categoryId`                                                                                                                             | —           | `ArticleAdjacent`     | —            |
+| GET    | `/article-categories`    | public    | Article categories with their published article count           | `page`, `perPage`, `sort`, `order`, `q`                                                                                                  | —           | `ArticleCategoryList` | —            |
+| GET    | `/article-tags`          | public    | Article tags with their published article count                 | `page`, `perPage`, `sort`, `order`, `q`                                                                                                  | —           | `ArticleTagList`      | —            |
+| GET    | `/authors`               | public    | Active authors, public fields only                              | `page`, `perPage`, `sort`, `order`, `q`                                                                                                  | —           | `AuthorList`          | —            |
+| GET    | `/authors/slug/:slug`    | public    | Author page by slug                                             | —                                                                                                                                        | —           | `Author`              | —            |
 
 #### Public — content, leads and settings
 
@@ -819,6 +820,19 @@ compared on its digits rather than dropped.
 returns) drops `content`, `contentText`, `faqs`, `relatedArticleIds`,
 `relatedPropertyIds` and the full `seo` object, keeping `seo.title` and
 `seo.description`.
+
+### `ArticleAdjacent`
+
+The two articles either side of one, by `publishedAt`, within the category
+`categoryId` names (all published articles when it is omitted). `prev` is the
+one published **before** the article and `next` the one published after it, so
+the pair walks a category in the order it was written; either is `null` at the
+end of the category, and both are `null` when the article is not in the pool.
+The rows are `ArticleSummary`, never the bodies.
+
+```jsonc
+{ "data": { "prev": {/* ArticleSummary */}, "next": null } }
+```
 
 ### `Locality`, `Developer`, `PropertyType`, `Amenity`, `Badge`, `Bank`, `City`
 

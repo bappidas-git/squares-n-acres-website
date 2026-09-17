@@ -1,0 +1,8 @@
+/**
+ * The author's own header. The archive below it is `Articles.module.css`, the
+ * blog listing's own stylesheet, because it is the same page.
+ */
+
+.authorBox {
+  background: var(--color-bg);
+}

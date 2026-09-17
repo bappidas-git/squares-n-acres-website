@@ -10,7 +10,7 @@ import { LISTING_ROUTES } from '../components/listing/listingRoutes';
  * Moved out of `routes/index.js` in prompt 12 so that the admin table can grow
  * without the file becoming unreadable. Prompt 14 added the two locality URLs,
  * prompt 16 the two builder ones and prompt 31 the job detail route; prompt 34
- * adds the article ones.
+ * added the category, tag and author archives of the blog.
  *
  * Prompt 26 replaced the five hand-written category pages (`PreLaunch`,
  * `UnderConstruction`, `ReadyToMove`, `RentApartments`, `RentVillas`) with the
@@ -48,6 +48,9 @@ const BuilderDetail = lazy(() => import('../pages/public/BuilderDetail'));
 const Shortlist = lazy(() => import('../pages/public/Shortlist'));
 const Articles = lazy(() => import('../pages/public/Articles'));
 const ArticleDetail = lazy(() => import('../pages/public/ArticleDetail'));
+const ArticleCategory = lazy(() => import('../pages/public/ArticleCategory'));
+const ArticleTag = lazy(() => import('../pages/public/ArticleTag'));
+const AuthorPage = lazy(() => import('../pages/public/AuthorPage'));
 const FAQs = lazy(() => import('../pages/public/FAQs'));
 const JobDetail = lazy(() => import('../pages/public/JobDetail'));
 const CmsPage = lazy(() => import('../pages/public/CmsPage'));
@@ -68,7 +71,14 @@ const PUBLIC_PAGES = [
   ['/builders/:slug', BuilderDetail],
 
   ['/insights/articles', Articles],
+  // The two archives are spelled out **above** `/insights/articles/:slug`, so
+  // `category` and `tag` are never read as an article's slug. React Router
+  // ranks a static segment above a dynamic one whatever the order, but the
+  // order is what makes that obvious to the next reader.
+  ['/insights/articles/category/:slug', ArticleCategory],
+  ['/insights/articles/tag/:slug', ArticleTag],
   ['/insights/articles/:slug', ArticleDetail],
+  ['/insights/authors/:slug', AuthorPage],
   ['/insights/faqs', FAQs],
 
   ['/careers/:jobSlug', JobDetail],

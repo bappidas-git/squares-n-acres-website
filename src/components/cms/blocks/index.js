@@ -1,18 +1,40 @@
-import ArticlesBlock from './ArticlesBlock';
+/**
+ * The four blocks whose stylesheets the rest of the site also loads lead the
+ * imports, in the order the property page loads the same four in:
+ *
+ *   `LeadFormBlock` → `LeadForm.module.css`             (its enquiry section)
+ *   `FaqBlock` → `FaqAccordion.module.css`              (its FAQ section)
+ *   `BanksBlock` → `finance.module.css`                 (its finance section)
+ *
+ * `PropertiesBlock` stays where the alphabet put it: `PropertyCard.module.css`
+ * already arrives after all three, and hoisting it moved it in front of the
+ * home page's partners band, which is a conflict of its own.
+ *
+ * A route's stylesheets are extracted in the order its modules are pulled in,
+ * and two routes that disagree about the order of one of them is the
+ * `mini-css-extract-plugin` "Conflicting order" that stops `build:ci`, where a
+ * warning is an error. Alphabetical order put `BanksBlock` before `FaqBlock`
+ * and `LeadFormBlock` after both, which is the property page's order backwards;
+ * it survived only while no third route pulled all four together. The blog
+ * (prompt 34) is that route, and `components/sections/article/index.js` carries
+ * the same note.
+ */
+import LeadFormBlock from './LeadFormBlock';
+import FaqBlock from './FaqBlock';
 import BanksBlock from './BanksBlock';
+
+import ArticlesBlock from './ArticlesBlock';
 import ChecklistBlock from './ChecklistBlock';
 import ContactInfoBlock from './ContactInfoBlock';
 import CtaBlock from './CtaBlock';
 import ExpandableCardsBlock from './ExpandableCardsBlock';
 import FactsBlock from './FactsBlock';
-import FaqBlock from './FaqBlock';
 import FeaturesBlock from './FeaturesBlock';
 import GalleryBlock from './GalleryBlock';
 import HeroBlock from './HeroBlock';
 import HtmlBlock from './HtmlBlock';
 import ImageBlock from './ImageBlock';
 import JobsBlock from './JobsBlock';
-import LeadFormBlock from './LeadFormBlock';
 import MapBlock from './MapBlock';
 import PackagesBlock from './PackagesBlock';
 import PartnersBlock from './PartnersBlock';

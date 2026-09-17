@@ -4,6 +4,11 @@
  * `list({ ids })` is what the detail page uses for `relatedArticleIds`: the
  * API returns the given ids in the given order, so the editor's ordering
  * survives (§5.7 `ids`).
+ *
+ * `prevNext(article)` is the article page's previous/next pair, over
+ * `GET /articles/:id/adjacent` — the one endpoint prompt 34 added beyond the
+ * §5.14 catalogue, because the alternative was reading a whole category into
+ * the browser to find the two rows either side of one.
  */
 
 import { copySeo, copyTitle } from '../utils/duplicateRecord';
@@ -20,6 +25,35 @@ export const getBySlug = (slug, params, opts) =>
 /** The six most-read published articles. */
 export const trending = (params, opts) =>
   http.request(endpoints.articles.trending, { params, ...opts });
+
+/**
+ * The articles published either side of one, within its category.
+ *
+ * `{ data: { prev, next } }`, where `prev` is the older piece and `next` the
+ * newer one, so the pair walks the category in the order it was written.
+ *
+ * @param {number|string} id
+ * @param {object} [params] `{ categoryId }`
+ * @param {object} [opts] `{ signal }`
+ */
+export const adjacent = (id, params, opts) =>
+  http.request(endpoints.articles.adjacent, { pathParams: { id }, params, ...opts });
+
+/**
+ * The previous and next articles of the one given, ready for the page.
+ *
+ * The article carries its own category, so a caller passes the record rather
+ * than repeating its id twice; an article with no category asks for the
+ * neighbours among everything published rather than for none.
+ *
+ * @param {object} article a §6.8 article
+ * @param {object} [opts] `{ signal }`
+ * @returns {Promise<{data: {prev: object|null, next: object|null}}>}
+ */
+export const prevNext = (article, opts) => {
+  const categoryId = article?.categoryId ?? article?.category?.id ?? undefined;
+  return adjacent(article?.id, categoryId ? { categoryId } : undefined, opts);
+};
 
 export const categories = (params, opts) =>
   http.request(endpoints.articleCategories.list, { params, ...opts });
@@ -127,6 +161,8 @@ const articleService = {
   list,
   getBySlug,
   trending,
+  adjacent,
+  prevNext,
   categories,
   tags,
   authors,

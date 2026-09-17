@@ -966,6 +966,29 @@ async function targetedChecks() {
     );
   }
 
+  // The pair either side of one article, in publication order within its
+  // category (prompt 34). The seed's second Legal & RERA piece has one on each
+  // side; the answer is two summary rows, never the bodies.
+  const legal = await api('GET', '/articles?categorySlug=legal-rera&sort=newest&perPage=all');
+  const legalRows = Array.isArray(legal.json?.data) ? legal.json.data : [];
+  const middle = legalRows[Math.floor(legalRows.length / 2)];
+
+  if (middle) {
+    const pair = await api(
+      `GET`,
+      `/articles/${middle.id}/adjacent?categoryId=${legalRows[0]?.categoryId ?? ''}`
+    );
+    const { prev, next } = pair.json?.data ?? {};
+    check(
+      'articles.adjacent-pair',
+      pair.status === 200 &&
+        'prev' in (pair.json?.data ?? {}) &&
+        'next' in (pair.json?.data ?? {}) &&
+        [prev, next].every((row) => row === null || (row.id !== undefined && !('content' in row))),
+      `status ${pair.status}, prev ${prev?.id ?? 'null'}, next ${next?.id ?? 'null'}`
+    );
+  }
+
   const localityInUse = await api('DELETE', '/admin/localities/1', { token: admin });
   check(
     'delete-guard.409-with-usedBy',
