@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { leadStorage } from '../utils/leadStorage';
+import { LEAD_CHANGE_EVENT, leadStorage } from '../utils/leadStorage';
 
 /**
  * Whether this visitor may already see one kind of gated content on one
@@ -9,6 +9,11 @@ import { leadStorage } from '../utils/leadStorage';
  * The answer lives in `sna_lead` (sessionStorage), so it survives a move to the
  * amenities section and back but not a new visit — which is the point: the
  * gate exists to collect a lead, and a new session is a new conversation.
+ *
+ * The hook also listens for `LEAD_CHANGE_EVENT`, because a gate can be opened
+ * somewhere else on the same page: an enquiry, or either eligibility check,
+ * identifies the visitor for the whole listing, and the documents section must
+ * notice without a reload.
  *
  *   const { unlocked, unlock } = useGatedContent(property.id, 'floorPlans');
  *
@@ -20,9 +25,13 @@ export default function useGatedContent(propertyId, kind) {
   const [unlocked, setUnlocked] = useState(() => leadStorage.isUnlocked(propertyId, kind));
 
   // Moving between two listings in the same visit must not carry one's unlock
-  // over to the other.
+  // over to the other, and a lead filed elsewhere on this page must land here.
   useEffect(() => {
-    setUnlocked(leadStorage.isUnlocked(propertyId, kind));
+    const read = () => setUnlocked(leadStorage.isUnlocked(propertyId, kind));
+
+    read();
+    window.addEventListener(LEAD_CHANGE_EVENT, read);
+    return () => window.removeEventListener(LEAD_CHANGE_EVENT, read);
   }, [propertyId, kind]);
 
   const unlock = useCallback(() => {

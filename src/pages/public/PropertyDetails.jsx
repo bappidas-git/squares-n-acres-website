@@ -18,7 +18,10 @@ import NotFound from './NotFound';
 import AmenitiesSection from '../../components/sections/property/AmenitiesSection';
 import BuilderSection from '../../components/sections/property/BuilderSection';
 import ConstructionSection from '../../components/sections/property/ConstructionSection';
+import DocumentsSection from '../../components/sections/property/DocumentsSection';
+import EnquirySection from '../../components/sections/property/EnquirySection';
 import FaqsSection from '../../components/sections/property/FaqsSection';
+import FinanceSection from '../../components/sections/property/finance/FinanceSection';
 import FloorPlansSection from '../../components/sections/property/FloorPlansSection';
 import GallerySection from '../../components/sections/property/GallerySection';
 import HighlightsSection from '../../components/sections/property/HighlightsSection';
@@ -30,8 +33,9 @@ import OverviewSection from '../../components/sections/property/OverviewSection'
 import PATHS from '../../routes/paths';
 import PriceCard from '../../components/sections/property/PriceCard';
 import PropertyGallery from '../../components/sections/property/PropertyGallery';
+import RecentlyViewedSection from '../../components/sections/property/RecentlyViewedSection';
 import SectionNav, { sectionElementId } from '../../components/sections/property/SectionNav';
-import SectionPlaceholder from '../../components/sections/property/SectionPlaceholder';
+import SimilarSection from '../../components/sections/property/SimilarSection';
 import SpecificationsSection from '../../components/sections/property/SpecificationsSection';
 import TitleBlock from '../../components/sections/property/TitleBlock';
 import UnitConfigurationsSection from '../../components/sections/property/UnitConfigurationsSection';
@@ -46,11 +50,12 @@ import styles from './PropertyDetails.module.css';
 const PREVIEW_TOKEN = 'admin';
 
 /**
- * The component each `sectionVisibility` key is printed by (prompt 24).
+ * The component each `sectionVisibility` key is printed by.
  *
- * A key absent from this map has no section component yet; the page renders the
- * wrapper the navigation scrolls to and, in development only, a note saying
- * which prompt writes it.
+ * Sixteen of the eighteen keys of §6.1 are here; the other two are
+ * `MEDIA_SECTION_KEYS`, whose content is the gallery at the top of the page.
+ * Between the two lists every key a listing can switch on has somewhere to be,
+ * which is what the section navigation promises when it offers the item.
  */
 const SECTION_COMPONENTS = {
   overview: OverviewSection,
@@ -60,28 +65,24 @@ const SECTION_COMPONENTS = {
   amenities: AmenitiesSection,
   floorPlans: FloorPlansSection,
   gallery: GallerySection,
+  documents: DocumentsSection,
   construction: ConstructionSection,
   builder: BuilderSection,
   nearby: NearbySection,
   location: LocationSection,
+  finance: FinanceSection,
   faqs: FaqsSection,
+  similar: SimilarSection,
+  enquiry: EnquirySection,
 };
 
 /**
- * Which prompt writes the content of a key that has no component yet.
- *
- * `video` and `virtualTour` are already on the page — the gallery at the top
- * shows them as tabs — so what remains for them is the navigation, not the
- * content; prompt 25 owns the last four sections and deletes the placeholder.
+ * The two keys whose section *is* the gallery at the top of the page: the
+ * walkthrough and the 360° tour are tabs of `PropertyGallery`, not bands of
+ * their own. Their navigation items scroll to the gallery, which is where the
+ * thing they name actually is.
  */
-const SECTION_OWNER = {
-  video: 25,
-  virtualTour: 25,
-  documents: 25,
-  finance: 25,
-  similar: 25,
-  enquiry: 25,
-};
+const MEDIA_SECTION_KEYS = ['video', 'virtualTour'];
 
 /** The listing index a property belongs to: `/buy`, `/rent` or `/lease`. */
 const LISTING_PATH = { sale: PATHS.buy, rent: PATHS.rent, lease: PATHS.lease };
@@ -103,8 +104,9 @@ const pixels = (value, fallback) => {
  * a section with no data is a section that is not here, and is not in the
  * navigation either (BUG-05).
  *
- * The four sections prompt 25 owns still render an empty wrapper with a
- * development-only note in it, so the navigation has something to scroll to.
+ * Under the eighteen sections comes "Recently viewed", which belongs to the
+ * visitor rather than to the listing and therefore has no toggle and no
+ * navigation item.
  *
  * An unpublished listing is readable at `?preview=admin` while somebody is
  * signed in to the admin, through the admin endpoint (prompt 21); the public
@@ -133,6 +135,17 @@ const PropertyDetails = () => {
   );
 
   const [lead, setLead] = useState({ open: false, source: 'property-enquiry' });
+
+  // The similar row is fetched here rather than inside its section because the
+  // navigation may only offer the item once the API has answered with
+  // something: the endpoint applies the editor's picks first and tops the list
+  // up by locality and type, so only it knows whether there is a row (BUG-07).
+  const { data: similar } = useApi(
+    (signal) => propertyService.similar(property?.id, undefined, { signal }),
+    [property?.id],
+    { enabled: Boolean(property?.id), initialData: [] }
+  );
+  const similarProperties = Array.isArray(similar) ? similar : [];
 
   const openLead = useCallback((source) => setLead({ open: true, source }), []);
   const closeLead = useCallback(() => setLead((current) => ({ ...current, open: false })), []);
@@ -176,10 +189,10 @@ const PropertyDetails = () => {
       property
         ? getVisibleSections(property, {
             banksAvailable: banks.length > 0,
-            similarAvailable: true,
+            similarAvailable: similarProperties.length > 0,
           })
         : [],
-    [property, banks.length]
+    [property, banks.length, similarProperties.length]
   );
 
   if (loading) return <PropertyDetailSkeleton />;
@@ -260,15 +273,30 @@ const PropertyDetails = () => {
       <Container className={styles.page}>
         <Breadcrumbs items={crumbs} className={styles.crumbs} />
 
-        <PropertyGallery
-          images={property.images}
-          title={property.title}
-          videoUrl={property.videoUrl}
-          virtualTourUrl={property.virtualTourUrl}
-          showVideo={visibility.video !== false}
-          showVirtualTour={visibility.virtualTour !== false}
-          propertyId={property.id}
-        />
+        <div className={styles.media}>
+          {/* The navigation items for the walkthrough and the tour land here:
+              both are tabs of the gallery rather than bands of their own. */}
+          {visibleSections
+            .filter((section) => MEDIA_SECTION_KEYS.includes(section.key))
+            .map((section) => (
+              <span
+                key={section.key}
+                id={sectionElementId(section.key)}
+                className={styles.anchor}
+                aria-hidden="true"
+              />
+            ))}
+
+          <PropertyGallery
+            images={property.images}
+            title={property.title}
+            videoUrl={property.videoUrl}
+            virtualTourUrl={property.virtualTourUrl}
+            showVideo={visibility.video !== false}
+            showVirtualTour={visibility.virtualTour !== false}
+            propertyId={property.id}
+          />
+        </div>
 
         <TitleBlock property={property} />
 
@@ -280,25 +308,27 @@ const PropertyDetails = () => {
 
             {visibleSections.map((section, index) => {
               const Section = SECTION_COMPONENTS[section.key];
+              if (!Section) return null;
+
               // Bands alternate so two long lists of facts never run together.
               const background = index % 2 === 1 ? 'surface' : 'bg';
 
-              return Section ? (
-                <Section key={section.key} property={property} background={background} />
-              ) : (
-                <section
+              return section.key === 'similar' ? (
+                <Section
                   key={section.key}
-                  id={sectionElementId(section.key)}
-                  className={styles.section}
-                  aria-label={section.label}
-                >
-                  <SectionPlaceholder
-                    label={section.label}
-                    prompt={SECTION_OWNER[section.key] ?? 25}
-                  />
-                </section>
+                  property={property}
+                  properties={similarProperties}
+                  background={background}
+                />
+              ) : (
+                <Section key={section.key} property={property} background={background} />
               );
             })}
+
+            <RecentlyViewedSection
+              exclude={property.id}
+              background={visibleSections.length % 2 === 1 ? 'surface' : 'bg'}
+            />
           </div>
 
           <div className={styles.aside}>

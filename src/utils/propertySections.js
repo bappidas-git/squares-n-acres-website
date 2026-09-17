@@ -58,8 +58,11 @@ const hasProjectSnapshot = (property) =>
  *
  * `context` carries the two facts a property record cannot answer on its own:
  * `banksAvailable` (is any lender active? — without one the finance section has
- * nothing to compare, §6.6) and `similarAvailable` (the API tops the editor's
- * picks up to six by locality and type, §5.14).
+ * nothing to compare, §6.6) and `similarAvailable` (did `GET /properties/:id/
+ * similar` answer with anything? — the endpoint applies the editor's picks and
+ * then tops the list up by locality and type, so only it knows, §5.14). Leaving
+ * `similarAvailable` out — which the admin's visibility tab does, having made
+ * no such request — falls back to the editor's own picks.
  *
  * @type {Array<{key: string, label: string, description: string, anchor: string,
  *   hasData: (property: object, context: object) => boolean}>}
@@ -196,7 +199,9 @@ export const SECTION_DEFINITIONS = [
     description: 'Your picks first; the API tops them up to six.',
     anchor: 'similar',
     hasData: (property, context = {}) =>
-      list(property.similarPropertyIds).length > 0 || context.similarAvailable === true,
+      context.similarAvailable === undefined
+        ? list(property.similarPropertyIds).length > 0
+        : context.similarAvailable === true,
   },
   {
     key: 'enquiry',

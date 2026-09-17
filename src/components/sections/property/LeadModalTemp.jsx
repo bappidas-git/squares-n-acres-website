@@ -33,6 +33,10 @@ import styles from './LeadModalTemp.module.css';
  * @param {string} [props.message] prefills the message box, e.g. "Price for 3 BHK"
  * @param {(values: object) => void} [props.onCaptured] runs after the lead is
  *   filed — what a gated section unlocks itself with
+ * @param {string} [props.successTitle] the heading of the success panel
+ * @param {{label: string, icon?: string, onClick: () => void}|null} [props.successAction]
+ *   the first button of the success panel — how the documents section offers
+ *   the file again when a pop-up blocker swallowed the tab it opened (BUG-08)
  * @param {{phone?: string, whatsapp?: string}|null} [props.agent]
  */
 export default function LeadModalTemp({
@@ -44,6 +48,8 @@ export default function LeadModalTemp({
   hiddenFields = null,
   message: prefilledMessage = '',
   onCaptured,
+  successTitle = 'Request received',
+  successAction = null,
   agent = null,
 }) {
   const { getContact, getWhatsappLink } = useSiteSettings();
@@ -122,12 +128,25 @@ export default function LeadModalTemp({
       {done ? (
         <div className={styles.done}>
           <Icon icon="mdi:check-circle-outline" className={styles.doneIcon} aria-hidden="true" />
-          <h3 className={styles.doneTitle}>Request received</h3>
+          <h3 className={styles.doneTitle}>{successTitle}</h3>
           <p className={styles.doneText}>
             An advisor will get back to you as soon as possible. If it is urgent, reach us straight
             away.
           </p>
           <div className={styles.doneActions}>
+            {successAction ? (
+              <Button
+                variant="primary"
+                onClick={successAction.onClick}
+                icon={
+                  successAction.icon ? (
+                    <Icon icon={successAction.icon} aria-hidden="true" />
+                  ) : undefined
+                }
+              >
+                {successAction.label}
+              </Button>
+            ) : null}
             {whatsappHref ? (
               <Button
                 variant="secondary"
