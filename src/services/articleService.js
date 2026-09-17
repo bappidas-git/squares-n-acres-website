@@ -6,6 +6,7 @@
  * survives (§5.7 `ids`).
  */
 
+import { copySeo, copyTitle } from '../utils/duplicateRecord';
 import { endpoints } from './endpoints';
 import http from './http';
 
@@ -76,21 +77,8 @@ const DERIVED_FIELDS = [
   'author',
 ];
 
-/** What a copy is called, and the length §6.8 gives an article's title. */
-const COPY_SUFFIX = ' (Copy)';
+/** The length §6.8 gives an article's title. */
 const TITLE_MAX_LENGTH = 100;
-
-/**
- * `"<title> (Copy)"`, shortened so the result still fits the field.
- *
- * A title of 98 characters plus the suffix would be 105, which the API refuses
- * with a 422 on a field nobody typed into.
- */
-const copyTitleOf = (title) => {
-  const base = String(title ?? '');
-  const room = TITLE_MAX_LENGTH - COPY_SUFFIX.length;
-  return `${base.length <= room ? base : base.slice(0, room).trimEnd()}${COPY_SUFFIX}`;
-};
 
 /**
  * A copy of one article, as a draft.
@@ -109,7 +97,7 @@ const copyTitleOf = (title) => {
  * the `seo.slug` that mirrors it (D34).
  *
  * The `seo` branch travels with the copy except for the parts that name *one*
- * page: see {@link copySeoOf}.
+ * page: see `utils/duplicateRecord`'s `copySeo`.
  *
  * @param {number|string} id
  * @param {object} [opts] `{ signal }`
@@ -125,50 +113,15 @@ export const duplicate = async (id, opts) => {
   return create(
     {
       ...body,
-      title: copyTitleOf(record.title),
+      title: copyTitle(record.title, { maxLength: TITLE_MAX_LENGTH }),
       status: 'draft',
       publishedAt: null,
       isFeatured: false,
-      seo: copySeoOf(record.seo),
+      seo: copySeo(record.seo),
     },
     opts
   );
 };
-
-/**
- * The `seo` branch a copy starts from (§9.6).
- *
- * The keywords, the title, the description, the social cards, the schema and the
- * sitemap settings are editorial and belong to a copy as much as the body does.
- * Four things do not:
- *
- *   - `slug` mirrors the entity slug, which the API is about to derive (D34);
- *   - `canonicalUrl` and `redirect` each name **one** page, and the copy is a
- *     different page: inherited, they would quietly canonicalise the copy to the
- *     original or redirect it away, and nothing in the admin panel shows either
- *     field until the SEO panel arrives;
- *   - the score and the analysis are an answer about the original's text, so they
- *     are cleared for the panel to compute again — which is what §5.14 has the
- *     property `duplicate` endpoint do.
- *
- * @param {object|null|undefined} seo
- * @returns {object}
- */
-function copySeoOf(seo) {
-  const { slug: _slug, ...rest } = seo ?? {};
-
-  return {
-    ...rest,
-    canonicalUrl: null,
-    redirect: { enabled: false, toPath: '', statusCode: 301 },
-    score: null,
-    scoreBand: 'none',
-    testsPassed: 0,
-    testsTotal: 0,
-    analysis: { basic: [], additional: [], titleReadability: [], contentReadability: [] },
-    lastAnalyzedAt: null,
-  };
-}
 
 const articleService = {
   list,

@@ -142,25 +142,18 @@ export default function PagesListPage() {
 
   /**
    * "Duplicate" is a create, not an API call of its own (§5.14 has no copy
-   * endpoint): the record is posted back with a new title, no slug — which the
-   * API derives and de-duplicates — and the status forced to draft, because a
-   * copy nobody has read should not be live the moment it exists.
+   * endpoint for pages): `pageService.duplicate` reads the record, chooses the
+   * copy's `<slug>-copy` and posts it back as a draft that is in neither menu.
+   *
+   * The payload lives in the service rather than here because it is the whole of
+   * the feature — what a copy may inherit and what names only the original — and
+   * it is worth a unit test of its own (NEW-36).
    */
   const duplicate = useCallback(
     async (row) => {
       setBusy(true);
       try {
-        const { data: full } = await pageService.adminGet(row.id);
-        const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = full;
-        const { data: copy } = await pageService.create({
-          ...rest,
-          title: `${full.title} (Copy)`,
-          slug: '',
-          status: 'draft',
-          showInHeader: false,
-          showInFooter: false,
-          seo: { ...(full.seo ?? {}), slug: '' },
-        });
+        const { data: copy } = await pageService.duplicate(row.id);
         toast.success(`“${copy.title}” created as a draft.`);
         navigate(PATHS.adminPageEdit(copy.id));
       } catch (thrown) {
