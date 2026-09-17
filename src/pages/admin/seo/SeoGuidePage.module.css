@@ -1,0 +1,205 @@
+/* Admin → SEO → Playbook: the intro card, the search box, the topic
+   accordions, the good/bad examples and the weight table. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 76ch;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.intro p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.bands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.band {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+}
+
+.dot-success,
+.dot-warning,
+.dot-error,
+.dot-neutral {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex: none;
+}
+
+.dot-success {
+  background: var(--color-success);
+}
+
+.dot-warning {
+  background: var(--color-warning);
+}
+
+.dot-error {
+  background: var(--color-error);
+}
+
+.dot-neutral {
+  background: var(--color-border-strong);
+}
+
+.search {
+  max-width: 28rem;
+}
+
+.noMatch {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.topicTitle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  text-align: left;
+}
+
+.topicTitle small {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.topic {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.points {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-text);
+  line-height: 1.65;
+}
+
+.points strong {
+  font-weight: var(--font-weight-semibold);
+}
+
+.example {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--font-size-sm);
+}
+
+.good,
+.bad,
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.good {
+  color: var(--color-success-dark);
+}
+
+.bad {
+  color: var(--color-error-dark);
+}
+
+.note {
+  color: var(--color-text-muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * The weight table
+ * ------------------------------------------------------------------ */
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-xs);
+}
+
+.tableCaption {
+  padding: var(--space-3);
+  text-align: left;
+  color: var(--color-text-muted);
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.table th[scope='row'],
+.table thead th:first-child {
+  text-align: left;
+}
+
+.table th[scope='row'] {
+  font-weight: var(--font-weight-regular);
+}
+
+.table code {
+  font-family: var(--font-mono);
+}
+
+@media (max-width: 899.98px) {
+  .page {
+    max-width: none;
+  }
+}

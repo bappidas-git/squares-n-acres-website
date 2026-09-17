@@ -559,6 +559,24 @@ const SPECIAL = {
     return { body: { separator: current.json?.data?.separator ?? '|' } };
   },
   'adminSeo.overview': () => ({ path: '/admin/seo/overview?type=property&perPage=5' }),
+
+  // `resolve` needs a path to resolve, and the seed redirects `/blog`.
+  'redirects.resolve': () => ({ path: '/redirects/resolve?path=/blog' }),
+
+  // The import is an upsert keyed on `fromPath`, so it is pointed at the
+  // redirect the walk already created: the run updates its own fixture rather
+  // than leaving a record behind that cleanup does not know about.
+  'adminRedirects.import': () => ({
+    body: {
+      rows: [
+        {
+          fromPath: fixtures.adminRedirects?.fromPath ?? '/smoke-import',
+          toPath: '/properties',
+          statusCode: 301,
+        },
+      ],
+    },
+  }),
 };
 
 /** The account the run creates for the `/auth/*` endpoints. */

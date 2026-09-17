@@ -51,7 +51,10 @@ const JobApplicationsPage = lazy(() => import('../pages/admin/content/JobApplica
 const NewsletterSubscribersPage = lazy(
   () => import('../pages/admin/content/NewsletterSubscribersPage')
 );
-const SeoPlaceholderPage = lazy(() => import('../pages/admin/seo/SeoPlaceholderPage'));
+const SeoDashboardPage = lazy(() => import('../pages/admin/seo/SeoDashboardPage'));
+const SeoSettingsPage = lazy(() => import('../pages/admin/seo/SeoSettingsPage'));
+const RedirectsPage = lazy(() => import('../pages/admin/seo/RedirectsPage'));
+const SeoGuidePage = lazy(() => import('../pages/admin/seo/SeoGuidePage'));
 const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
 const ProfilePage = lazy(() => import('../pages/admin/settings/ProfilePage'));
 const UsersPage = lazy(() => import('../pages/admin/settings/UsersPage'));
@@ -151,10 +154,10 @@ export const ADMIN_ROUTES = [
 
   soon('media', 'Media library', ['media', 'view'], 39),
 
-  page('seo', 'SEO dashboard', ['seo', 'view'], <SeoPlaceholderPage />),
-  soon('seo/settings', 'SEO settings', ['seo', 'view'], 37),
-  soon('seo/redirects', 'Redirects', ['seo', 'view'], 37),
-  soon('seo/guide', 'SEO guide', ['seo', 'view'], 37),
+  page('seo', 'SEO dashboard', ['seo', 'view'], <SeoDashboardPage />),
+  page('seo/settings', 'SEO settings', ['seo', 'view'], <SeoSettingsPage />),
+  page('seo/redirects', 'Redirects', ['seo', 'view'], <RedirectsPage />),
+  page('seo/guide', 'SEO playbook', ['seo', 'view'], <SeoGuidePage />),
 
   page('settings', 'Site settings', ['settings', 'view'], <AdminSettings />),
   page('settings/users', 'Users', ['users', 'view'], <UsersPage />),

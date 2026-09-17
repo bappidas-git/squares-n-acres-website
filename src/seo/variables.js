@@ -192,11 +192,28 @@ export function buildVariables(entityType, entity = {}, context = {}) {
   };
 }
 
-/** Which `seoSettings.titleTemplates` key an entity type uses (§9.5). */
+/**
+ * Which `seoSettings.titleTemplates` key a page type uses (§9.5).
+ *
+ * The list is every key §6.14 stores, not only the eight record types: `home`,
+ * `listing` and `search` are pages rather than records, and a template an
+ * editor can write but nothing can ever select would be a field that does
+ * nothing (found while building the SEO settings screen's head preview,
+ * prompt 37).
+ */
 export const templateKeyFor = (entityType) =>
-  ['property', 'locality', 'developer', 'article', 'articleCategory', 'page', 'author'].includes(
-    entityType
-  )
+  [
+    'home',
+    'property',
+    'listing',
+    'locality',
+    'developer',
+    'article',
+    'articleCategory',
+    'page',
+    'author',
+    'search',
+  ].includes(entityType)
     ? entityType
     : 'default';
 

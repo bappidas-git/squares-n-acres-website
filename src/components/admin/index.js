@@ -34,7 +34,6 @@ export { default as PageHeader } from './PageHeader';
 export { default as ProtectedRoute } from './ProtectedRoute';
 export { default as RoleRoute } from './RoleRoute';
 export { default as RowActions } from './RowActions';
-export { default as SeoGuidelines } from './SeoGuidelines';
 export { default as SlugField, CHECK_DEBOUNCE_MS } from './SlugField';
 export { default as SortableList } from './SortableList';
 export { default as StatusChip } from './StatusChip';

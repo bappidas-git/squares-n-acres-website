@@ -255,6 +255,32 @@ const redirect = {
   note: { type: 'string', nullable: true, maxLength: 300, default: null },
 };
 
+/**
+ * `POST /admin/redirects/import` — the rows a pasted or uploaded CSV parses to.
+ *
+ * Deliberately looser than `redirect.create`: an import is a bulk paste from a
+ * spreadsheet, and a row the rules refuse is counted as skipped rather than
+ * failing the whole file (§4.12 of prompt 37). The envelope is checked here;
+ * each row is checked by the same rules a single create is.
+ */
+const redirectImport = {
+  rows: {
+    type: 'array',
+    required: true,
+    min: 1,
+    max: 5000,
+    items: {
+      type: 'object',
+      shape: {
+        fromPath: { type: 'string', required: true, maxLength: 500 },
+        toPath: { type: 'string', required: true, maxLength: 500 },
+        statusCode: { type: 'int', nullable: true, default: 301 },
+        note: { type: 'string', nullable: true, maxLength: 300, default: null },
+      },
+    },
+  },
+};
+
 const media = {
   url: { type: 'url', required: true },
   publicId: { type: 'string', nullable: true, maxLength: 200, default: null },
@@ -306,7 +332,7 @@ module.exports = {
   teamMember: entity(teamMember),
   partner: entity(partner),
   job: entity(job),
-  redirect: entity(redirect),
+  redirect: { ...entity(redirect), import: redirectImport },
   media: entity(media),
   user: entity(user, userUpdate),
 };

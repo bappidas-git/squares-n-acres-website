@@ -1,0 +1,168 @@
+/* Admin → SEO → Redirects: the tester, the table cells, the import dialog and
+   the Nginx snippet. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------------------ *
+ * "Check a URL"
+ * ------------------------------------------------------------------ */
+
+.tester {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.testerInput {
+  font-family: var(--font-mono);
+}
+
+.tester > :first-child {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.testerResult {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.testerResult strong {
+  color: var(--color-text);
+}
+
+/* ------------------------------------------------------------------ *
+ * Table cells
+ * ------------------------------------------------------------------ */
+
+.path {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.toCell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--color-text-muted);
+}
+
+.hits {
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------------ *
+ * Dialogs
+ * ------------------------------------------------------------------ */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.importBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.importActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.importCount {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.importRejected {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  font-size: var(--font-size-sm);
+  color: var(--color-warning-dark);
+}
+
+.importRejectedTitle {
+  margin: 0 0 var(--space-2);
+  font-weight: var(--font-weight-semibold);
+}
+
+.importRejected ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.importRejected code {
+  overflow-wrap: anywhere;
+}
+
+.importSummary {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success-dark);
+}
+
+.snippet {
+  max-height: 50vh;
+  margin: 0;
+  padding: var(--space-4);
+  overflow: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  white-space: pre;
+}

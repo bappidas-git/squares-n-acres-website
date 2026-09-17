@@ -1,0 +1,463 @@
+/* Admin → SEO: the dashboard, its cards, its table cells, the duplicates and
+   issues lists, the edit dialog and the bulk-run progress. One stylesheet for
+   the whole screen, because every part of it is a view of the same table. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------------------ *
+ * The six cards (§6: 6-up → 3 → 2)
+ * ------------------------------------------------------------------ */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+@media (max-width: 1199.98px) {
+  .cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 599.98px) {
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* The whole card is the control, so the hit target is the card and not a
+   12-pixel number inside it (§8.3: ≥ 44 px). */
+.cardButton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.cardButton:hover .cardValue {
+  text-decoration: underline;
+}
+
+.cardLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cardValue {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+.cardValue small {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.value-warning {
+  color: var(--color-warning-dark);
+}
+
+.value-error {
+  color: var(--color-error-dark);
+}
+
+.value-success {
+  color: var(--color-success-dark);
+}
+
+.value-neutral {
+  color: var(--color-text);
+}
+
+.cardHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.bandList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bandButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 24px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.bandButton:hover .bandLabel {
+  text-decoration: underline;
+}
+
+.bandLabel {
+  flex: 1;
+  text-align: left;
+  color: var(--color-text-muted);
+}
+
+.bandCount {
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.dot-success,
+.dot-warning,
+.dot-error,
+.dot-neutral {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex: none;
+}
+
+.dot-success {
+  background: var(--color-success);
+}
+
+.dot-warning {
+  background: var(--color-warning);
+}
+
+.dot-error {
+  background: var(--color-error);
+}
+
+.dot-neutral {
+  background: var(--color-border-strong);
+}
+
+/* ------------------------------------------------------------------ *
+ * Toolbar and bulk tools
+ * ------------------------------------------------------------------ */
+
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.bulkTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.overwriteToggle {
+  margin: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Table cells
+ * ------------------------------------------------------------------ */
+
+.recordCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 200px;
+  max-width: 44ch;
+}
+
+.recordTitle {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.recordMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.recordSlug {
+  overflow-wrap: anywhere;
+}
+
+.keyword {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.missing {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-warning-dark);
+}
+
+.mobileCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mobileTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.mobileKeyword {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * Duplicates
+ * ------------------------------------------------------------------ */
+
+.duplicates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.duplicateSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.sectionCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.duplicateGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.duplicateValue {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.duplicateCount {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.duplicateRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.duplicateRows li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.duplicateActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------------------ *
+ * Issues
+ * ------------------------------------------------------------------ */
+
+.issueCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 52ch;
+}
+
+.issueLabel {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-error-dark);
+}
+
+.issueMessage {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * The edit dialog
+ * ------------------------------------------------------------------ */
+
+.dialogLoading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dialogFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.dialogSpacer {
+  flex: 1;
+}
+
+.dialogWarning {
+  font-size: var(--font-size-sm);
+  color: var(--color-warning-dark);
+}
+
+.dialogText {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * Bulk progress
+ * ------------------------------------------------------------------ */
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.progressBar {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  overflow: hidden;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  background: var(--color-primary);
+  transition: width 120ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressFill {
+    transition: none;
+  }
+}
+
+.progressText {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.progressCounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.progressErrors {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-error-bg);
+  font-size: var(--font-size-sm);
+  color: var(--color-error-dark);
+}
+
+.progressErrorsTitle {
+  margin: 0 0 var(--space-2);
+  font-weight: var(--font-weight-semibold);
+}
+
+.progressErrors ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}

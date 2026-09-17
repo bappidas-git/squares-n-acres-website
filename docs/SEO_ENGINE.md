@@ -334,6 +334,48 @@ with `<Seo>`.
 
 ---
 
+## 6b. What the desk does with it (prompt 37)
+
+`/admin/seo` runs the same engine over the whole site rather than over one
+record, which is three jobs and one rule.
+
+**Re-analyse all** (`SeoBulkTools.planReanalysis`) reads each record in full,
+calls `analyze`, and stores `{ score, scoreBand, testsPassed, testsTotal,
+analysis, lastAnalyzedAt }` through `PATCH { seo }` — **only when the answer
+differs from what is stored**. The comparison is on the answer, not the run:
+the score, the two counts and every test's `id:status:message`. A second pass
+over an unchanged site writes nothing (measured on the seed: 47 written, 72
+skipped).
+
+**Auto-generate missing** (`planGeneration`) calls `generateDefaults` and stores
+the difference. Without `overwrite` the generator returns the editor's own
+values unchanged, so the difference is empty and the record is counted as
+skipped — which is how "never overwrite what somebody wrote" is enforced rather
+than merely intended. `overwrite: true` is a separate, confirmed decision.
+
+Both runs are **sequential** and both keep everything written before a stop: the
+loop breaks at the record it is on, and the records before it are saved.
+
+**The issues tab** reads the stored `analysis` rather than re-analysing. Eight
+tests count as critical — `focus-keyword-set`, `keyword-in-title`,
+`title-length`, `description-length`, `indexable`, `og-image-set`,
+`canonical-set`, `image-count` — and each row carries the dotted path the fix
+dialog opens on. A record nobody has analysed contributes nothing: an empty
+analysis is "no answer", not "failed".
+
+**Duplicates** are not computed here at all. `GET /admin/seo/overview` returns
+`duplicateOf: { title, description, focusKeyword }` per row, because grouping
+eight collections by three values is a pairwise comparison the browser would
+repeat on every render (`docs/API_CONTRACT.md` → `SeoOverviewRow`).
+
+`resolveSeoOutput` also answers for the three page types that are not records:
+`templateKeyFor` selects the `home`, `listing` and `search` templates of §6.14
+as well as the eight record types, so the settings screen's head preview and
+prompt 38's `<Seo type="home">` resolve the template an editor wrote rather than
+falling through to `default`.
+
+---
+
 ## 7. Adding a test
 
 1. Add its id to the right list in `TEST_GROUPS` (`score.js`) and its importance

@@ -1,0 +1,201 @@
+/* Admin → SEO → Settings: the tab panels, the template rows with their live
+   examples, the monospace documents and the head preview. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-bottom: var(--space-16);
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding-top: var(--space-4);
+}
+
+.notice,
+.warning {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.notice {
+  background: var(--color-info-bg);
+  color: var(--color-info-dark);
+}
+
+.warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-dark);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.list strong {
+  color: var(--color-text);
+}
+
+.linkRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+/* ------------------------------------------------------------------ *
+ * Title templates
+ * ------------------------------------------------------------------ */
+
+.templateRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.templateTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.templateExample {
+  flex: 1 1 18rem;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.exampleLabel {
+  color: var(--color-text-muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * Sitemap rows
+ * ------------------------------------------------------------------ */
+
+.sitemapRow {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) minmax(0, 0.8fr);
+  align-items: end;
+  gap: var(--space-3);
+}
+
+@media (max-width: 899.98px) {
+  .sitemapRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Head preview
+ * ------------------------------------------------------------------ */
+
+.previewList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.previewRow {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.previewRow dt {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.previewRow dd {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  min-width: 0;
+}
+
+.previewValue {
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+}
+
+.previewNote {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 599.98px) {
+  .previewRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.jsonBlock {
+  max-height: 24rem;
+  margin: 0;
+  padding: var(--space-4);
+  overflow: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------ *
+ * The save bar
+ * ------------------------------------------------------------------ */
+
+.saveBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+}
+
+.saveText {
+  margin-right: auto;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
