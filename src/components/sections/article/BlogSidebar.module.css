@@ -1,0 +1,55 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.newsletter {
+  border-radius: var(--radius-lg);
+}
+
+.lead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-light);
+}
+
+.leadIcon {
+  color: var(--color-primary-dark);
+}
+
+.leadTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.leadText {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+}
+
+@media (min-width: 1100px) {
+  .sidebar {
+    position: sticky;
+    top: calc(var(--header-height) + var(--space-4));
+    max-height: calc(100vh - var(--header-height) - var(--space-8));
+    overflow-y: auto;
+    padding-right: var(--space-1);
+  }
+}

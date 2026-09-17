@@ -1,13 +1,13 @@
 import { Icon } from '@iconify/react';
 import { Link } from 'react-router-dom';
 
+import ArticleCard from '../article/ArticleCard';
 import PATHS from '../../../routes/paths';
 import articleService from '../../../services/articleService';
 import styles from './LatestInsights.module.css';
 import useApi from '../../../hooks/useApi';
-import { Container, LazyImage, Section, SectionHeader } from '../../ui';
+import { Container, Section, SectionHeader } from '../../ui';
 import { HOME } from '../../../config/copy';
-import { formatDate } from '../../../utils/format';
 
 /**
  * The three newest published articles.
@@ -16,6 +16,10 @@ import { formatDate } from '../../../utils/format';
  * published and already ordered (§5.14), so this section neither sorts nor
  * filters — it replaces the "Trending topics" strip, which ranked by view
  * count and therefore showed the same three pieces for months.
+ *
+ * The cards are the blog's own `ArticleCard` (prompt 34): a card on the home
+ * page and a card on `/insights/articles` are the same card, so the ratios,
+ * the clamp and the byline cannot drift apart.
  */
 
 const PARAMS = { perPage: 3, sort: 'newest' };
@@ -45,27 +49,7 @@ export default function LatestInsights() {
         <ul className={styles.grid}>
           {articles.map((article) => (
             <li key={article.id}>
-              <Link to={PATHS.article(article.slug)} className={styles.card}>
-                <LazyImage
-                  src={article.featuredImage?.url}
-                  alt={article.featuredImage?.alt || ''}
-                  ratio="16/9"
-                  className={styles.media}
-                />
-                <div className={styles.body}>
-                  {article.category?.name ? (
-                    <span className={styles.category}>{article.category.name}</span>
-                  ) : null}
-                  <h3 className={styles.title}>{article.title}</h3>
-                  {article.excerpt ? <p className={styles.excerpt}>{article.excerpt}</p> : null}
-                  <span className={styles.meta}>
-                    {article.publishedAt ? <span>{formatDate(article.publishedAt)}</span> : null}
-                    {article.readingTimeMinutes ? (
-                      <span>{article.readingTimeMinutes} min read</span>
-                    ) : null}
-                  </span>
-                </div>
-              </Link>
+              <ArticleCard article={article} />
             </li>
           ))}
         </ul>

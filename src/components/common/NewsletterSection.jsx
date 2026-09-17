@@ -12,15 +12,27 @@ import styles from './NewsletterSection.module.css';
  *
  * The reCAPTCHA notice only appears when a site key is actually configured;
  * the boilerplate showed it unconditionally, which was untrue (BUG-15).
+ *
+ * `compact` is the same band as a sidebar card: no gradient, no centring and a
+ * heading at the size the cards around it use. The copy, the form and the
+ * notice are the ones the full-width band shows, so the ask is identical
+ * wherever a reader meets it.
+ *
+ * @param {object} props
+ * @param {boolean} [props.compact]
  */
-const NewsletterSection = () => {
+const NewsletterSection = ({ compact = false, className = '' }) => {
   const { settings } = useSiteSettings();
 
   const copy = settings?.newsletter ?? {};
   const hasRecaptcha = Boolean(settings?.integrations?.recaptchaSiteKey);
 
   return (
-    <section className={styles.newsletter}>
+    <section
+      className={[styles.newsletter, compact ? styles.compact : '', className]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <div className={styles.inner}>
         <h2 className={styles.heading}>{copy.title || 'Property insight, once a month'}</h2>
         {copy.subtitle ? <p className={styles.subtitle}>{copy.subtitle}</p> : null}

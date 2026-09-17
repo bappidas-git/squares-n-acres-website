@@ -1,7 +1,7 @@
 import { Suspense, createContext, lazy, useContext, useEffect, useMemo, useRef } from 'react';
 
 import sanitizeHtml from './sanitize';
-import { slugify } from '../../utils/slug';
+import { assignHeadingIds } from '../../utils/toc';
 
 /**
  * The three blocks are fetched only by a body that actually contains one.
@@ -84,24 +84,13 @@ function readBlock(element) {
  * The tidying every rendered body gets, done once on the parsed document.
  *
  * Heading ids are what a table of contents and an in-page anchor need and the
- * sanitiser does not let an editor write one; `rel="noopener"` and
- * `loading="lazy"` are the two things a hand-written link and a hand-written
- * `<img>` are always missing.
+ * sanitiser does not let an editor write one — `utils/toc` owns that rule, so
+ * the ids here and the list the article page draws are the same strings;
+ * `rel="noopener"` and `loading="lazy"` are the two things a hand-written link
+ * and a hand-written `<img>` are always missing.
  */
 function enhance(body) {
-  const used = new Set();
-
-  body.querySelectorAll('h2, h3').forEach((heading) => {
-    const base = slugify(heading.textContent) || 'section';
-    let id = base;
-    let suffix = 2;
-    while (used.has(id)) {
-      id = `${base}-${suffix}`;
-      suffix += 1;
-    }
-    used.add(id);
-    heading.setAttribute('id', id);
-  });
+  assignHeadingIds(body);
 
   body.querySelectorAll('a[href]').forEach((anchor) => {
     const href = anchor.getAttribute('href') ?? '';
@@ -180,14 +169,19 @@ function parse(html, withBlocks) {
  * @param {string} [props.className] added beside `prose`
  * @param {boolean} [props.propertyCards] `false` leaves listings blocks out —
  *   for the places that must not fire an extra request, such as a card preview
+ * @param {boolean} [props.faqBlocks] `false` leaves FAQ blocks out of the body
+ *   while still reporting their questions through `onFaqItems` — for a page
+ *   that gathers every question of an article into one accordion of its own and
+ *   must not print the same question twice
  * @param {(items: Array<{question: string, answer: string}>) => void} [props.onFaqItems]
  *   every question found in the body, for a page merging them into its
- *   `FAQPage` structured data
+ *   accordion and into its `FAQPage` structured data
  */
 export default function SafeHtml({
   html,
   className = '',
   propertyCards = true,
+  faqBlocks = true,
   onFaqItems,
   ...rest
 }) {
@@ -237,6 +231,7 @@ export default function SafeHtml({
           const Block = BLOCKS[segment.type];
           if (!Block) return null;
           if (segment.type === 'properties' && !propertyCards) return null;
+          if (segment.type === 'faq' && !faqBlocks) return null;
 
           return (
             <Suspense key={`block-${index}`} fallback={null}>
