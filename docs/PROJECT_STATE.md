@@ -4123,9 +4123,12 @@ is reading.
 **Files removed**
 
 `src/components/sections/property/LeadModalTemp.jsx` and its stylesheet.
-1 204 lines in against 2 250 out across 60 files — the hand-rolled forms of
-`Contact.jsx` and `Careers.jsx` and the eight `leadFields` arrays account for
-most of the difference.
+
+The whole diff is 64 files, **4 399 lines in against 2 310 out**; `src/` alone
+is 4 118 in / 2 250 out across 62 files, of which 856 added lines are the four
+new test suites. What came out is the duplication: the hand-rolled forms of
+`Contact.jsx` and `Careers.jsx`, the eight `leadFields` arrays, the nine
+`tel:`/`wa.me` anchors and `LeadModalTemp` itself.
 
 **Endpoints / env vars / npm scripts**
 
