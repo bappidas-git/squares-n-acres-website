@@ -13,11 +13,19 @@
  * so once here is clearer than a subset nobody can justify later.
  *
  * The **overview** is the SEO Manager's index: eight entity types flattened
- * into one list of `{ id, type, title, slug, url, seo, … }` rows, so the
- * dashboard can rank the whole site by score and the panel can check that a
- * focus keyword is not already taken (§9.1). Scores are computed in the
- * browser by `src/seo` and stored on the record; this endpoint reads them back
- * and never recomputes.
+ * into one list of `{ key, id, type, title, slug, url, seo, duplicateOf, … }`
+ * rows, so the dashboard can rank the whole site by score and the panel can
+ * check that a focus keyword is not already taken (§9.1). Scores are computed
+ * in the browser by `src/seo` and stored on the record; this endpoint reads
+ * them back and never recomputes.
+ *
+ * `duplicateOf` is computed **here** rather than in the dashboard: finding the
+ * records that share a title, a description or a focus keyword is a pairwise
+ * comparison, and doing it in the browser over every row of eight collections
+ * is the O(n²) the SEO desk would pay on every render. The server groups by
+ * value once, in one pass, and each row carries the keys of the records it
+ * collides with. Empty values never collide — two records nobody has written a
+ * description for are not duplicates of each other.
  */
 
 const express = require('express');
@@ -25,6 +33,7 @@ const express = require('express');
 const { SEO_ENTITY_TYPES } = require('../lib/enums');
 const { absoluteUrl, generateLlms, publicPathOf } = require('../lib/sitemapBuilder');
 const { applySettingsUpdate } = require('./settings');
+const { forbidden } = require('../middleware/errors');
 const { inCsv, matchesQ, toBool } = require('../lib/filters');
 const { paginate, toPositiveInt, DEFAULT_PER_PAGE_ADMIN } = require('../lib/paginate');
 const { publicSeoSettings } = require('../lib/scope');
@@ -59,6 +68,51 @@ const LLMS_SOURCES = ['properties', 'localities', 'propertyTypes', 'articles'];
 
 const first = (value) => (Array.isArray(value) ? value[0] : value);
 
+/** The three `seo` fields a duplicate is reported for (§4.12 of prompt 37). */
+const DUPLICATE_FIELDS = ['title', 'description', 'focusKeyword'];
+
+/** Case and surrounding whitespace do not make two titles different. */
+const normaliseValue = (value) =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+
+/**
+ * The two fields an editor may not write — §9.3 renders them into the head
+ * verbatim, so they are a script tag on every page of the site.
+ */
+const CUSTOM_HTML_FIELDS = ['customHeadHtml', 'customBodyEndHtml'];
+
+/** `null` and `''` mean the same thing here: nothing is rendered. */
+const sameHtml = (left, right) => String(left ?? '') === String(right ?? '');
+
+/**
+ * Refuses a manager's attempt to change the custom HTML (§7, §9.3).
+ *
+ * The SEO area is admin **and** manager, and a manager edits every other field
+ * on the screen. These two are different in kind: what they hold is executed in
+ * every visitor's browser, which is an administrator's decision. A `PUT` that
+ * carries the stored value unchanged — which is what saving another tab of the
+ * same form does — is not a change and is allowed through.
+ *
+ * @param {{role?: string}|undefined} user
+ * @param {object} stored the settings as they are
+ * @param {object} body the request body
+ * @throws {import('../middleware/errors').ApiError} 403
+ */
+function assertMayWriteCustomHtml(user, stored, body) {
+  if (!user || user.role === 'admin') return;
+
+  const changed = CUSTOM_HTML_FIELDS.filter(
+    (field) => field in (body ?? {}) && !sameHtml(body[field], stored?.[field])
+  );
+
+  if (changed.length > 0) {
+    throw forbidden('Only an administrator can change the custom head or body HTML.');
+  }
+}
+
 /**
  * The SEO router.
  *
@@ -82,6 +136,10 @@ module.exports = ({ db, getModel }) => {
     const path = publicPathOf(type, record);
 
     return {
+      // An id is only unique inside its collection, so the row that eight
+      // collections share a list with needs a key of its own — and
+      // `duplicateOf` points at these, not at bare ids.
+      key: `${type}:${record.id}`,
       id: record.id,
       type,
       title: ENTITY_SOURCES[type].title(record) ?? null,
@@ -91,6 +149,7 @@ module.exports = ({ db, getModel }) => {
       isActive: record.isActive ?? null,
       status: record.status ?? null,
       updatedAt: record.updatedAt ?? null,
+      duplicateOf: { title: [], description: [], focusKeyword: [] },
     };
   }
 
@@ -101,6 +160,39 @@ module.exports = ({ db, getModel }) => {
         .getCollection(ENTITY_SOURCES[type].collection)
         .map((record) => overviewRow(type, record, siteUrl))
     );
+  }
+
+  /**
+   * Fills every row's `duplicateOf` from the whole site.
+   *
+   * Always from the whole site, never from the filtered page: "this title is
+   * also an article's" is only true if the articles were looked at, and a desk
+   * filtered to properties still has to be told.
+   *
+   * @param {Array<object>} rows every row, of every type
+   */
+  function markDuplicates(rows) {
+    for (const field of DUPLICATE_FIELDS) {
+      /** @type {Map<string, Array<object>>} */
+      const byValue = new Map();
+
+      for (const row of rows) {
+        const value = normaliseValue(row.seo?.[field]);
+        if (value === '') continue; // Two blanks are not a collision.
+        const group = byValue.get(value);
+        if (group) group.push(row);
+        else byValue.set(value, [row]);
+      }
+
+      for (const group of byValue.values()) {
+        if (group.length < 2) continue;
+        for (const row of group) {
+          row.duplicateOf[field] = group.filter((other) => other !== row).map((other) => other.key);
+        }
+      }
+    }
+
+    return rows;
   }
 
   /* ---------------------------------------------------------------- *
@@ -117,6 +209,8 @@ module.exports = ({ db, getModel }) => {
 
   router.put('/admin/seo/settings', (req, res, next) => {
     try {
+      assertMayWriteCustomHtml(req.user, current(), req.body);
+
       const updated = applySettingsUpdate(current(), req.body, {
         schema: 'seoSettings.update',
         fields: model.fields,
@@ -140,7 +234,13 @@ module.exports = ({ db, getModel }) => {
     const requested = inCsv(req.query.type).filter((type) => SEO_ENTITY_TYPES.has(type));
     const types = requested.length > 0 ? requested : SEO_ENTITY_TYPES.values;
 
-    let rows = overviewRows(types, siteUrl);
+    // The whole site is read whatever the filter asks for, because the
+    // duplicate flags are a statement about the site rather than about the page.
+    const all = markDuplicates(overviewRows(SEO_ENTITY_TYPES.values, siteUrl));
+    let rows =
+      types.length === SEO_ENTITY_TYPES.values.length
+        ? all
+        : all.filter((row) => types.includes(row.type));
 
     const q = first(req.query.q);
     if (q) rows = rows.filter((row) => matchesQ(row, ['title', 'slug', 'seo.focusKeyword'], q));
@@ -196,3 +296,4 @@ module.exports = ({ db, getModel }) => {
 };
 
 module.exports.ENTITY_SOURCES = ENTITY_SOURCES;
+module.exports.CUSTOM_HTML_FIELDS = CUSTOM_HTML_FIELDS;

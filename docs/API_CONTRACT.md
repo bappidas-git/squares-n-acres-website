@@ -644,47 +644,53 @@ none; `ipAddress` and `userAgent` are stored but returned to admins only.
 
 #### Admin — media, SEO, settings and users
 
-| Method | Path                    | Auth/role       | Purpose                                                             | Query                                                                                    | Body schema          | Response shape       | Side effects                                                     |
-| ------ | ----------------------- | --------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------- | -------------------- | ---------------------------------------------------------------- |
-| GET    | `/admin/media`          | admin · manager | List media items for the admin table                                | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `type`, `provider`, `folder` | —                    | `MediaList`          | —                                                                |
-| POST   | `/admin/media`          | admin · manager | Create a media item                                                 | —                                                                                        | `media.create`       | `Media`              | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
-| GET    | `/admin/media/:id`      | admin · manager | Read one media item with every admin field                          | `withUsage`                                                                              | —                    | `Media`              | —                                                                |
-| PUT    | `/admin/media/:id`      | admin · manager | Replace a media item with the full record from the form             | —                                                                                        | `media.update`       | `Media`              | Replaces the record; regenerates the slug when it changed        |
-| PATCH  | `/admin/media/:id`      | admin · manager | Update the given fields of a media item (toggles, order, SEO panel) | —                                                                                        | `media.patch`        | `Media`              | —                                                                |
-| DELETE | `/admin/media/:id`      | admin · manager | Delete a media item; 409 when it is still in use                    | —                                                                                        | —                    | `Null`               | 409 with `data.usedBy` when the record is still referenced       |
-| POST   | `/admin/media/bulk`     | admin · manager | Apply one action to several media items                             | —                                                                                        | `bulk`               | `BulkResult`         | activate · deactivate · delete (plus the resource’s own actions) |
-| GET    | `/admin/redirects`      | admin · manager | List redirects for the admin table                                  | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`                               | —                    | `RedirectList`       | —                                                                |
-| POST   | `/admin/redirects`      | admin · manager | Create a redirect                                                   | —                                                                                        | `redirect.create`    | `Redirect`           | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
-| GET    | `/admin/redirects/:id`  | admin · manager | Read one redirect with every admin field                            | `withUsage`                                                                              | —                    | `Redirect`           | —                                                                |
-| PUT    | `/admin/redirects/:id`  | admin · manager | Replace a redirect with the full record from the form               | —                                                                                        | `redirect.update`    | `Redirect`           | Replaces the record; regenerates the slug when it changed        |
-| PATCH  | `/admin/redirects/:id`  | admin · manager | Update the given fields of a redirect (toggles, order, SEO panel)   | —                                                                                        | `redirect.patch`     | `Redirect`           | —                                                                |
-| DELETE | `/admin/redirects/:id`  | admin · manager | Delete a redirect; 409 when it is still in use                      | —                                                                                        | —                    | `Null`               | 409 with `data.usedBy` when the record is still referenced       |
-| POST   | `/admin/redirects/bulk` | admin · manager | Apply one action to several redirects                               | —                                                                                        | `bulk`               | `BulkResult`         | activate · deactivate · delete (plus the resource’s own actions) |
-| GET    | `/admin/seo/settings`   | admin · manager | The complete SEO settings singleton                                 | —                                                                                        | —                    | `SeoSettings`        | —                                                                |
-| PUT    | `/admin/seo/settings`   | admin · manager | Replace the SEO settings; known keys are deep-merged                | —                                                                                        | `seoSettings.update` | `SeoSettings`        | Deep-merges the known keys only                                  |
-| GET    | `/admin/seo/overview`   | admin · manager | Lightweight SEO rows for the dashboard and the uniqueness checks    | `page`, `perPage`, `sort`, `order`, `q`, `type`, `scoreBand`, `index`                    | —                    | `SeoOverviewRowList` | —                                                                |
-| GET    | `/admin/settings`       | admin · manager | The complete site settings singleton, including the lead branch     | —                                                                                        | —                    | `Settings`           | —                                                                |
-| PUT    | `/admin/settings`       | admin           | Replace the site settings; known keys are deep-merged               | —                                                                                        | `settings.update`    | `Settings`           | Deep-merges the known keys only                                  |
-| GET    | `/admin/users`          | admin · manager | List users for the admin table                                      | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `role`                       | —                    | `UserList`           | —                                                                |
-| POST   | `/admin/users`          | admin           | Create a user                                                       | —                                                                                        | `user.create`        | `User`               | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
-| GET    | `/admin/users/:id`      | admin · manager | Read one user with every admin field                                | —                                                                                        | —                    | `User`               | —                                                                |
-| PUT    | `/admin/users/:id`      | admin           | Replace a user with the full record from the form                   | —                                                                                        | `user.update`        | `User`               | Replaces the record; regenerates the slug when it changed        |
-| PATCH  | `/admin/users/:id`      | admin           | Update the given fields of a user (toggles, order, SEO panel)       | —                                                                                        | `user.patch`         | `User`               | —                                                                |
-| DELETE | `/admin/users/:id`      | admin           | Delete a user; 409 when it is still in use                          | —                                                                                        | —                    | `Null`               | 409 with `data.usedBy` when the record is still referenced       |
-| POST   | `/admin/users/bulk`     | admin           | Apply one action to several users                                   | —                                                                                        | `bulk`               | `BulkResult`         | activate · deactivate · delete (plus the resource’s own actions) |
+| Method | Path                    | Auth/role       | Purpose                                                             | Query                                                                                    | Body schema          | Response shape       | Side effects                                                                                            |
+| ------ | ----------------------- | --------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------- | -------------------- | ------------------------------------------------------------------------------------------------------- |
+| GET    | `/admin/media`          | admin · manager | List media items for the admin table                                | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `type`, `provider`, `folder` | —                    | `MediaList`          | —                                                                                                       |
+| POST   | `/admin/media`          | admin · manager | Create a media item                                                 | —                                                                                        | `media.create`       | `Media`              | Generates and de-duplicates the slug; mirrors it into `seo.slug`                                        |
+| GET    | `/admin/media/:id`      | admin · manager | Read one media item with every admin field                          | `withUsage`                                                                              | —                    | `Media`              | —                                                                                                       |
+| PUT    | `/admin/media/:id`      | admin · manager | Replace a media item with the full record from the form             | —                                                                                        | `media.update`       | `Media`              | Replaces the record; regenerates the slug when it changed                                               |
+| PATCH  | `/admin/media/:id`      | admin · manager | Update the given fields of a media item (toggles, order, SEO panel) | —                                                                                        | `media.patch`        | `Media`              | —                                                                                                       |
+| DELETE | `/admin/media/:id`      | admin · manager | Delete a media item; 409 when it is still in use                    | —                                                                                        | —                    | `Null`               | 409 with `data.usedBy` when the record is still referenced                                              |
+| POST   | `/admin/media/bulk`     | admin · manager | Apply one action to several media items                             | —                                                                                        | `bulk`               | `BulkResult`         | activate · deactivate · delete (plus the resource’s own actions)                                        |
+| GET    | `/admin/redirects`      | admin · manager | List redirects for the admin table                                  | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`                               | —                    | `RedirectList`       | —                                                                                                       |
+| POST   | `/admin/redirects`      | admin · manager | Create a redirect                                                   | —                                                                                        | `redirect.create`    | `Redirect`           | Generates and de-duplicates the slug; mirrors it into `seo.slug`                                        |
+| GET    | `/admin/redirects/:id`  | admin · manager | Read one redirect with every admin field                            | `withUsage`                                                                              | —                    | `Redirect`           | —                                                                                                       |
+| PUT    | `/admin/redirects/:id`  | admin · manager | Replace a redirect with the full record from the form               | —                                                                                        | `redirect.update`    | `Redirect`           | Replaces the record; regenerates the slug when it changed                                               |
+| PATCH  | `/admin/redirects/:id`  | admin · manager | Update the given fields of a redirect (toggles, order, SEO panel)   | —                                                                                        | `redirect.patch`     | `Redirect`           | —                                                                                                       |
+| DELETE | `/admin/redirects/:id`  | admin · manager | Delete a redirect; 409 when it is still in use                      | —                                                                                        | —                    | `Null`               | 409 with `data.usedBy` when the record is still referenced                                              |
+| POST   | `/admin/redirects/bulk` | admin · manager | Apply one action to several redirects                               | —                                                                                        | `bulk`               | `BulkResult`         | activate · deactivate · delete (plus the resource’s own actions)                                        |
+| GET    | `/admin/seo/settings`   | admin · manager | The complete SEO settings singleton                                 | —                                                                                        | —                    | `SeoSettings`        | —                                                                                                       |
+| PUT    | `/admin/seo/settings`   | admin · manager | Replace the SEO settings; known keys are deep-merged                | —                                                                                        | `seoSettings.update` | `SeoSettings`        | Deep-merges the known keys only; **403** when a manager changes `customHeadHtml` or `customBodyEndHtml` |
+| GET    | `/admin/seo/overview`   | admin · manager | Lightweight SEO rows for the dashboard and the uniqueness checks    | `page`, `perPage`, `sort`, `order`, `q`, `type`, `scoreBand`, `index`                    | —                    | `SeoOverviewRowList` | —                                                                                                       |
+| GET    | `/admin/settings`       | admin · manager | The complete site settings singleton, including the lead branch     | —                                                                                        | —                    | `Settings`           | —                                                                                                       |
+| PUT    | `/admin/settings`       | admin           | Replace the site settings; known keys are deep-merged               | —                                                                                        | `settings.update`    | `Settings`           | Deep-merges the known keys only                                                                         |
+| GET    | `/admin/users`          | admin · manager | List users for the admin table                                      | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `role`                       | —                    | `UserList`           | —                                                                                                       |
+| POST   | `/admin/users`          | admin           | Create a user                                                       | —                                                                                        | `user.create`        | `User`               | Generates and de-duplicates the slug; mirrors it into `seo.slug`                                        |
+| GET    | `/admin/users/:id`      | admin · manager | Read one user with every admin field                                | —                                                                                        | —                    | `User`               | —                                                                                                       |
+| PUT    | `/admin/users/:id`      | admin           | Replace a user with the full record from the form                   | —                                                                                        | `user.update`        | `User`               | Replaces the record; regenerates the slug when it changed                                               |
+| PATCH  | `/admin/users/:id`      | admin           | Update the given fields of a user (toggles, order, SEO panel)       | —                                                                                        | `user.patch`         | `User`               | —                                                                                                       |
+| DELETE | `/admin/users/:id`      | admin           | Delete a user; 409 when it is still in use                          | —                                                                                        | —                    | `Null`               | 409 with `data.usedBy` when the record is still referenced                                              |
+| POST   | `/admin/users/bulk`     | admin           | Apply one action to several users                                   | —                                                                                        | `bulk`               | `BulkResult`         | activate · deactivate · delete (plus the resource’s own actions)                                        |
 
-#### Operational endpoints (outside the registry)
+#### The SEO desk's four endpoints
 
-Four endpoints exist on the API but not in `src/services/endpoints.js`, because no screen
-of the frontend calls them: the SPA resolves redirects in the browser (D30) and the other
-three are tools. They are part of the contract the Laravel implementation follows.
+These four existed on the API from prompt 09 and were outside
+`src/services/endpoints.js` while no screen called them. **Prompt 37 registered all
+four**: the redirects screen imports, exports and tests paths with them, and the SEO
+settings screen regenerates `llms.txt` with them.
 
-| Method | Path                      | Auth/role       | Purpose                                                                    | Query  | Body                                           | Response                                     |
-| ------ | ------------------------- | --------------- | -------------------------------------------------------------------------- | ------ | ---------------------------------------------- | -------------------------------------------- |
-| GET    | `/redirects/resolve`      | public          | Resolve one path and count the hit; used by the smoke test and by QA       | `path` | —                                              | `{ data: { fromPath, toPath, statusCode } }` |
-| POST   | `/admin/redirects/import` | admin · manager | Upsert redirects by `fromPath`; an unusable row is counted and skipped     | —      | `{ rows: [{ fromPath, toPath, statusCode }] }` | `{ data: { created, updated, skipped } }`    |
-| GET    | `/admin/redirects/export` | admin · manager | CSV of the whole redirect table                                            | —      | —                                              | `Csv`                                        |
-| GET    | `/admin/seo/llms-preview` | admin · manager | The `llms.txt` that "regenerate from data" would write, without storing it | —      | —                                              | `{ data: { llmsTxt } }`                      |
+| Method | Path                      | Auth/role       | Purpose                                                                    | Query  | Body              | Response                |
+| ------ | ------------------------- | --------------- | -------------------------------------------------------------------------- | ------ | ----------------- | ----------------------- |
+| GET    | `/redirects/resolve`      | public          | The rule for one path, or 404; the only place `hits` is counted            | `path` | —                 | `Redirect`              |
+| POST   | `/admin/redirects/import` | admin · manager | Upsert redirects by `fromPath`; an unusable row is counted and skipped     | —      | `redirect.import` | `RedirectImportSummary` |
+| GET    | `/admin/redirects/export` | admin · manager | CSV of the whole redirect table                                            | —      | —                 | `Csv`                   |
+| GET    | `/admin/seo/llms-preview` | admin · manager | The `llms.txt` that "regenerate from data" would write, without storing it | —      | —                 | `LlmsPreview`           |
+
+`GET /redirects/resolve` answers **404** when no active rule matches the path, which is
+the answer "there is no redirect" rather than a failure; `redirectService.resolve()`
+resolves to `null` for it. It is the one endpoint that increments `hits`, so a path
+checked in the admin tester is a path with one more hit against it (D30, §9.10).
 
 ---
 
@@ -904,6 +910,15 @@ and the `sitemap` branch only describes files a crawler can fetch — so there i
 in the model to withhold, and a subset would be a rule nobody could justify later
 (prompt 09 §4.8).
 
+**Reading it is not writing it.** `customHeadHtml` and `customBodyEndHtml` are rendered
+verbatim into every page of the public site, which makes them a way to run a script in
+every visitor's browser — an administrator's decision rather than an editor's (§7, §9.3).
+`PUT /admin/seo/settings` therefore answers **403** to a manager whose body changes either
+field, while every other field on the screen stays a manager's to write. A body that
+carries the stored value unchanged — which is what saving another tab of the same form
+does — is not a change and is allowed through. The SEO settings screen enforces the same
+rule by not offering the tab to a manager at all (prompt 37).
+
 ### `DashboardData`
 
 ```jsonc
@@ -969,6 +984,7 @@ figures stay global.
 
 ```jsonc
 {
+  "key": "property:1", // `<type>:<id>` — unique across the eight collections
   "id": 1,
   "type": "property",
   "title": "…",
@@ -988,10 +1004,38 @@ figures stay global.
   "isActive": true,
   "status": "published",
   "updatedAt": "…",
+  "duplicateOf": {
+    // the `key`s of the records that share this row's value, per field
+    "title": ["article:3"],
+    "description": [],
+    "focusKeyword": [],
+  },
 }
 ```
 
 `GET /admin/seo/overview` returns `SeoOverviewRowList` and accepts `perPage=all`.
+
+**`duplicateOf` is computed by the API** (prompt 37). Grouping eight collections by three
+values is a pairwise comparison, and doing it in the browser on every render of the SEO
+dashboard is an O(n²) the desk would pay for nothing; the server groups once, in one pass.
+Three rules: values are compared trimmed, lower-cased and with runs of whitespace
+collapsed; an **empty** value never collides, so two records nobody has written a
+description for are not duplicates of each other; and the comparison is always over the
+**whole site**, never over the filtered page, so `?type=property` still reports a title a
+locality has taken. Entries are row `key`s rather than bare ids, because an id alone is
+ambiguous across eight collections.
+
+### `RedirectImportSummary`
+
+```jsonc
+{ "data": { "created": 12, "updated": 3, "skipped": 1 } }
+```
+
+### `LlmsPreview`
+
+```jsonc
+{ "data": { "llmsTxt": "# Squares N Acres\n…" } }
+```
 
 ### `Suggestions`
 

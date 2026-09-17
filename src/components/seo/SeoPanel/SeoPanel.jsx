@@ -106,6 +106,9 @@ const TABS = [
  * @param {Function} [props.checkSlug] the host's availability check
  * @param {number|string|null} [props.excludeId]
  * @param {string} [props.slugBase] e.g. `/properties/`
+ * @param {string} [props.initialField] a dotted path to open on and focus — what
+ *   the SEO dashboard's "Fix" hands the panel when a failed test is clicked
+ *   (prompt 37); ignored for a path the panel does not own
  */
 export default function SeoPanel({
   entityType,
@@ -123,8 +126,11 @@ export default function SeoPanel({
   checkSlug,
   excludeId,
   slugBase,
+  initialField,
 }) {
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState(
+    () => (initialField ? tabOfSeoField(initialField) : null) ?? 'general'
+  );
   const masterData = useMasterData();
   const { rows: siteIndex } = useSiteSeoIndex();
   const { settings: loadedSettings } = useSeoSettings();
@@ -192,7 +198,9 @@ export default function SeoPanel({
 
   // Focusing a control that has just been revealed has to wait for the render
   // that reveals it, which is what the pending ref and the effect below are.
-  const pendingFocus = useRef(null);
+  // It starts holding `initialField`, so the effect's first run — which happens
+  // on mount — focuses the field the host asked the panel to open on.
+  const pendingFocus = useRef(initialField && tabOfSeoField(initialField) ? initialField : null);
 
   const focusField = useCallback(
     (path) => {

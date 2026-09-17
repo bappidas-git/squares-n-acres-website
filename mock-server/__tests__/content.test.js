@@ -776,6 +776,80 @@ describe('SEO', () => {
     });
   });
 
+  it('flags the records that share a title, a description or a keyword', async () => {
+    // Two listings written by two people on the same afternoon: the flag is
+    // what the SEO desk groups its duplicates tab by (§4.1 of prompt 37).
+    const seed = seedWith({
+      properties: (rows) => {
+        rows[0].seo = { ...rows[0].seo, title: 'Flats in Whitefield', description: '' };
+        rows[1].seo = { ...rows[1].seo, title: 'FLATS IN  WHITEFIELD ', description: '' };
+      },
+    });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const all = await request('GET', '/admin/seo/overview?perPage=all', { token });
+      const rows = all.body.data;
+
+      const first = rows.find((row) => row.key === `property:${seed.properties[0].id}`);
+      const second = rows.find((row) => row.key === `property:${seed.properties[1].id}`);
+
+      assert.deepEqual(first.duplicateOf.title, [second.key], 'case and spacing do not differ');
+      assert.deepEqual(second.duplicateOf.title, [first.key]);
+      assert.deepEqual(first.duplicateOf.description, [], 'two empty values are not duplicates');
+
+      // The flags describe the site, not the page: filtering to properties
+      // still has to report a collision with an article.
+      const filtered = await request('GET', '/admin/seo/overview?type=property&perPage=all', {
+        token,
+      });
+      const filteredFirst = filtered.body.data.find((row) => row.key === first.key);
+      assert.deepEqual(filteredFirst.duplicateOf.title, [second.key]);
+    });
+  });
+
+  it('refuses a manager the custom head and body HTML (§7)', async () => {
+    await withServer(async ({ request, login }) => {
+      const manager = await login(MANAGER);
+
+      // Every other field on the screen is a manager's to write.
+      const allowed = await request('PUT', '/admin/seo/settings', {
+        token: manager,
+        body: { separator: '\u2013', breadcrumbs: { homeLabel: 'Start' } },
+      });
+      assert.equal(allowed.status, 200);
+      assert.equal(allowed.body.data.breadcrumbs.homeLabel, 'Start');
+
+      const refused = await request('PUT', '/admin/seo/settings', {
+        token: manager,
+        body: { customHeadHtml: '<script>alert(1)</script>' },
+      });
+      assert.equal(refused.status, 403);
+
+      const stored = await request('GET', '/admin/seo/settings', { token: manager });
+      assert.notEqual(stored.body.data.customHeadHtml, '<script>alert(1)</script>');
+
+      // Saving another tab while the field is echoed back unchanged is not a
+      // change, and must keep working.
+      const echoed = await request('PUT', '/admin/seo/settings', {
+        token: manager,
+        body: {
+          customHeadHtml: stored.body.data.customHeadHtml,
+          breadcrumbs: { homeLabel: 'Home' },
+        },
+      });
+      assert.equal(echoed.status, 200);
+
+      const admin = await login(ADMIN);
+      const written = await request('PUT', '/admin/seo/settings', {
+        token: admin,
+        body: { customHeadHtml: '<meta name="x" content="y">' },
+      });
+      assert.equal(written.status, 200);
+      assert.equal(written.body.data.customHeadHtml, '<meta name="x" content="y">');
+    });
+  });
+
   it('previews the generated llms.txt without storing it', async () => {
     await withServer(async ({ request, login }) => {
       const token = await login(ADMIN);

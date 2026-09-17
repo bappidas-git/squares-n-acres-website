@@ -157,6 +157,11 @@ describe('resolveTitleTemplate', () => {
   it('uses the type template of the settings', () => {
     expect(templateKeyFor('property')).toBe('property');
     expect(templateKeyFor('propertyType')).toBe('default');
+    // The three page types §6.14 stores a template for are selectable too, or
+    // the fields would be ones nothing can ever read (prompt 37).
+    expect(templateKeyFor('home')).toBe('home');
+    expect(templateKeyFor('listing')).toBe('listing');
+    expect(templateKeyFor('search')).toBe('search');
 
     expect(resolveTitleTemplate('property', property, context)).toBe(
       '3 BHK Apartments for Sale in Whitefield, Bengaluru – ₹1.24 Cr | Squares N Acres'

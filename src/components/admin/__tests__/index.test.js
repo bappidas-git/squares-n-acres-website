@@ -37,7 +37,6 @@ const EXPECTED = [
   'Forbidden',
   'ProtectedRoute',
   'RoleRoute',
-  'SeoGuidelines',
 ];
 
 describe('the admin kit barrel', () => {

@@ -47,6 +47,9 @@ const PUBLIC_PATHS = [
   'GET /settings',
   'GET /seo/settings',
   'GET /redirects',
+  // Not in §5.14: the SEO desk's "Check a URL" tester, and the one endpoint
+  // that counts a hit (prompt 37; see docs/API_CONTRACT.md).
+  'GET /redirects/resolve',
   'POST /leads',
   'POST /newsletter/subscribe',
   'GET /sitemap.xml',
@@ -92,6 +95,10 @@ const ADMIN_NAMED_PATHS = [
   'GET /admin/seo/settings',
   'PUT /admin/seo/settings',
   'GET /admin/seo/overview',
+  // Added by prompt 37 for the SEO settings and redirects screens.
+  'GET /admin/seo/llms-preview',
+  'POST /admin/redirects/import',
+  'GET /admin/redirects/export',
   'GET /admin/articles/:id/preview-token',
   'GET /admin/pages/:id/preview-token',
 ];

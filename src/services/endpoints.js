@@ -759,6 +759,18 @@ const redirects = {
     response: 'RedirectList',
     example: 1,
   },
+  resolve: {
+    key: 'redirects.resolve',
+    method: 'GET',
+    path: '/redirects/resolve',
+    auth: 'public',
+    module: 'seo',
+    description: 'The active rule for one path, or 404; the only place hits are counted',
+    query: { path: 'string' },
+    body: null,
+    response: 'Redirect',
+    example: null,
+  },
 };
 
 const sitemap = {
@@ -1456,16 +1468,45 @@ const adminMedia = adminResource({
   },
 });
 
-const adminRedirects = adminResource({
-  group: 'adminRedirects',
-  path: '/admin/redirects',
-  module: 'seo',
-  singular: 'redirect',
-  plural: 'redirects',
-  schema: 'redirect',
-  response: 'Redirect',
-  slugged: false,
-});
+const adminRedirects = {
+  ...adminResource({
+    group: 'adminRedirects',
+    path: '/admin/redirects',
+    module: 'seo',
+    singular: 'redirect',
+    plural: 'redirects',
+    schema: 'redirect',
+    response: 'Redirect',
+    slugged: false,
+  }),
+  // A migration arrives as a spreadsheet, not as four hundred POSTs: the rows
+  // are sent once and the answer counts what was created, updated and refused
+  // (prompt 37 §4.12).
+  import: {
+    key: 'adminRedirects.import',
+    method: 'POST',
+    path: '/admin/redirects/import',
+    auth: 'manager',
+    module: 'seo',
+    description: 'Create or update redirects from parsed CSV rows; invalid rows are skipped',
+    query: {},
+    body: 'redirect.import',
+    response: 'RedirectImportSummary',
+    example: null,
+  },
+  exportCsv: {
+    key: 'adminRedirects.exportCsv',
+    method: 'GET',
+    path: '/admin/redirects/export',
+    auth: 'manager',
+    module: 'seo',
+    description: 'Every redirect as a CSV file',
+    query: {},
+    body: null,
+    response: 'Csv',
+    example: null,
+  },
+};
 
 const adminSeo = {
   settings: {
@@ -1490,6 +1531,18 @@ const adminSeo = {
     query: {},
     body: 'seoSettings.update',
     response: 'SeoSettings',
+    example: null,
+  },
+  llmsPreview: {
+    key: 'adminSeo.llmsPreview',
+    method: 'GET',
+    path: '/admin/seo/llms-preview',
+    auth: 'manager',
+    module: 'seo',
+    description: 'The llms.txt the current data would generate, without storing it',
+    query: {},
+    body: null,
+    response: 'LlmsPreview',
     example: null,
   },
   overview: {
