@@ -13,6 +13,12 @@
   text-decoration: underline;
 }
 
+@media (max-width: 899.98px) {
+  .viewAll {
+    min-height: 44px;
+  }
+}
+
 .carousel {
   margin-top: var(--space-2);
 }

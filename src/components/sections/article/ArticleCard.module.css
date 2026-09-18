@@ -153,3 +153,10 @@
 .compact .title {
   font-size: var(--font-size-md);
 }
+
+/* The category pill on a card is a link of its own, so it is a target. */
+@media (max-width: 899.98px) {
+  .category {
+    min-height: 44px;
+  }
+}

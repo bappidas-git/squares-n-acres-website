@@ -25,6 +25,24 @@
   text-decoration: none;
 }
 
+/* A crumb is a target, not a word in a sentence: on a phone the hit area is
+   44px tall. The list absorbs the padding with a matching negative margin, so
+   the bar looks exactly as it did and the finger has somewhere to land. */
+@media (max-width: 899.98px) {
+  .list {
+    margin: calc(var(--space-3) * -1) 0;
+  }
+
+  .link,
+  .current {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 .link:hover {
   color: var(--color-primary-dark);
   text-decoration: underline;
@@ -53,4 +71,8 @@
 
 .onDark .current {
   color: var(--color-text-inverse);
+}
+
+.onDark .link:focus-visible {
+  outline-color: var(--color-text-inverse);
 }

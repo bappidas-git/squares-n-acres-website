@@ -2,6 +2,7 @@
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);
   max-height: 92vh;
+  max-height: 92dvh;
   padding-bottom: var(--safe-bottom);
   background: var(--color-bg);
 }

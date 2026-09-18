@@ -38,6 +38,10 @@
   text-decoration: underline;
 }
 
+.onDark:focus-visible {
+  outline-color: var(--color-text-inverse);
+}
+
 .chevron {
   width: 16px;
   height: 16px;

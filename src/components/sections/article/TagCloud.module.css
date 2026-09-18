@@ -55,3 +55,10 @@
 .active .count {
   color: var(--color-primary-dark);
 }
+
+/* A tag is a chip, and a chip is one of the targets prompt 42 sizes by hand. */
+@media (max-width: 899.98px) {
+  .tag {
+    min-height: 44px;
+  }
+}

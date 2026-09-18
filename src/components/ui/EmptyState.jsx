@@ -10,6 +10,9 @@ import styles from './EmptyState.module.css';
  * @param {React.ReactNode} [props.text]
  * @param {React.ReactNode} [props.action] a `Button`, usually
  * @param {boolean} [props.compact]
+ * @param {'p'|'h1'|'h2'|'h3'} [props.titleAs] a paragraph inside a page that
+ *   has its own heading; the heading itself when the empty state *is* the page
+ *   (the 403 screen), because every page needs exactly one `<h1>` (§8.3)
  */
 export default function EmptyState({
   icon,
@@ -17,6 +20,7 @@ export default function EmptyState({
   text,
   action,
   compact = false,
+  titleAs: TitleTag = 'p',
   className = '',
   ...rest
 }) {
@@ -30,7 +34,7 @@ export default function EmptyState({
           {icon}
         </span>
       ) : null}
-      {title ? <p className={styles.title}>{title}</p> : null}
+      {title ? <TitleTag className={styles.title}>{title}</TitleTag> : null}
       {text ? <p className={styles.text}>{text}</p> : null}
       {action ? <div className={styles.action}>{action}</div> : null}
     </div>

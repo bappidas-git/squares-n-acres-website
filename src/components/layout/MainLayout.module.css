@@ -2,6 +2,7 @@
   /* The header is fixed, so the page starts below it. */
   padding-top: var(--header-height);
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: clip;
 }
 
@@ -15,5 +16,13 @@
 @media (max-width: 899.98px) {
   .main {
     padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
+  }
+}
+
+/* The bar is shorter on a phone held sideways, so the page gives back the
+   difference rather than reserving room for a bar that is no longer there. */
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 899.98px) {
+  .main {
+    padding-bottom: calc(52px + var(--safe-bottom));
   }
 }

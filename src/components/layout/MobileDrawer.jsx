@@ -60,7 +60,7 @@ export default function MobileDrawer({ open, onClose }) {
 
   return (
     <>
-      <Drawer open={open} onClose={onClose} anchor="right" padded={false}>
+      <Drawer open={open} onClose={onClose} anchor="right" padded={false} label="Menu">
         <div className={styles.head}>
           <Link to={PATHS.home} onClick={onClose} className={styles.logo}>
             <Logo height={32} />

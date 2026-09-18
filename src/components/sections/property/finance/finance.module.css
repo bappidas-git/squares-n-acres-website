@@ -91,6 +91,10 @@
 
 .slider {
   width: 100%;
+  /* 44px of draggable box around a track the browser still draws at its own
+     height: the thumb is the target, and on a phone it needs somewhere to be
+     grabbed (§8.1). */
+  height: 44px;
   accent-color: var(--color-primary);
 }
 

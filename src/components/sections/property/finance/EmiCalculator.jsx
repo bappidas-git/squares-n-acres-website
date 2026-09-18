@@ -65,7 +65,7 @@ export function downPaymentTip({ price, loanPercent, rate, years, loanMax }) {
   return saved > 0 ? { downPaymentPercent: 100 - next, saved } : null;
 }
 
-const Slider = ({ id, label, value, min, max, step = 1, onChange, scale }) => (
+const Slider = ({ id, label, value, valueText, min, max, step = 1, onChange, scale }) => (
   <div className={styles.sliderBlock}>
     <div className={styles.sliderHead}>
       <label htmlFor={id}>{label}</label>
@@ -78,6 +78,10 @@ const Slider = ({ id, label, value, min, max, step = 1, onChange, scale }) => (
       max={max}
       step={step}
       value={value}
+      // Without this the thumb announces the bare number: "1 800 000", not
+      // "72% of the price — ₹18 L". `min`/`max`/`value` already give the
+      // range's own three ARIA properties (§4.3).
+      aria-valuetext={valueText}
       onChange={(event) => onChange(Number(event.target.value))}
     />
     <div className={styles.sliderScale}>
@@ -126,6 +130,7 @@ export default function EmiCalculator({ price, banks = [] }) {
           id="emi-loan-percent"
           label={`${copy.EMI_LABELS.loanPercent} — ${share}% (${formatPrice(result.principal)})`}
           value={share}
+          valueText={`${share}% — ${formatPrice(result.principal)}`}
           min={LOAN_MIN}
           max={bounds.loanMax}
           onChange={setLoanPercent}
@@ -136,6 +141,7 @@ export default function EmiCalculator({ price, banks = [] }) {
           id="emi-rate"
           label={`${copy.EMI_LABELS.rate} — ${rate}% p.a.`}
           value={rate}
+          valueText={`${rate}% per year`}
           min={RATE_MIN}
           max={RATE_MAX}
           step={0.05}
@@ -147,6 +153,7 @@ export default function EmiCalculator({ price, banks = [] }) {
           id="emi-years"
           label={`${copy.EMI_LABELS.years} — ${years} years`}
           value={years}
+          valueText={`${years} years`}
           min={TENURE_MIN}
           max={bounds.tenureMax}
           onChange={setYears}

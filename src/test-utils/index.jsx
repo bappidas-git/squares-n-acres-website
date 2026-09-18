@@ -3,9 +3,9 @@ import { HelmetProvider } from 'react-helmet-async';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 
-import theme from './theme';
-import ToastProvider from './components/common/ToastProvider';
-import { ShortlistProvider } from './contexts/ShortlistContext';
+import theme from '../theme';
+import ToastProvider from '../components/common/ToastProvider';
+import { ShortlistProvider } from '../contexts/ShortlistContext';
 
 /**
  * Render with the providers every UI-kit component may reach for.

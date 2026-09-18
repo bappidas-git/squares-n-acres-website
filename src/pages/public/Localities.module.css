@@ -55,7 +55,7 @@
 
 .chip {
   flex: 0 0 auto;
-  min-height: 40px;
+  min-height: 44px;
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
@@ -97,7 +97,7 @@
 }
 
 .sortSelect {
-  min-height: 40px;
+  min-height: 44px;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -176,5 +176,19 @@
 @media (max-width: 599.98px) {
   .grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A hidden scrollbar needs something else to say the strip keeps going, and a
+   finger that flicks it should land on a chip rather than between two. */
+@media (max-width: 899.98px) {
+  .chips {
+    -webkit-mask-image: var(--edge-fade);
+    mask-image: var(--edge-fade);
+    scroll-snap-type: x proximity;
+  }
+
+  .chip {
+    scroll-snap-align: start;
   }
 }

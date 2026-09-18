@@ -3,6 +3,7 @@
 .shell {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--color-surface);
 }
@@ -11,6 +12,7 @@
   flex-shrink: 0;
   width: 264px;
   height: 100vh;
+  height: 100dvh;
   transition: width var(--transition-base);
 }
 
@@ -28,6 +30,7 @@
   flex-direction: column;
   min-width: 0;
   height: 100vh;
+  height: 100dvh;
 }
 
 /* The page canvas scrolls on its own; the shell never does. */

@@ -57,7 +57,16 @@ export default function LeadsByStatusChart({ data = [] }) {
             ))}
           </Pie>
           <Tooltip formatter={(value, name) => [value, name]} />
-          <Legend verticalAlign="bottom" height={48} iconType="circle" />
+          {/* Recharts paints a legend label in its series' colour, and the
+              status tones are swatch colours: `--color-warning` is 2.68:1 on
+              white and `--color-success` 4.14:1, neither of which may carry
+              text (§2.4). The dot keeps the colour; the word is body text. */}
+          <Legend
+            verticalAlign="bottom"
+            height={48}
+            iconType="circle"
+            formatter={(value) => <span style={{ color: 'var(--color-text)' }}>{value}</span>}
+          />
         </PieChart>
       </ResponsiveContainer>
     </ChartFrame>

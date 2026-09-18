@@ -63,9 +63,14 @@
 
 .searchBox:focus-within {
   border-color: var(--color-primary);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .searchBox .input {
+  /* `stretch`, not `auto`: flush inside a 44px box the input's own hit area was
+     one line of text tall, and tapping the padding around it did nothing. */
+  align-self: stretch;
   height: auto;
   padding: 0;
   border: 0;

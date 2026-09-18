@@ -180,7 +180,9 @@ export default function PropertyGallery({
           ref={stageRef}
           role="button"
           tabIndex={0}
-          aria-label={`${title || 'Property'} — photograph ${index + 1} of ${count}. Press Enter to view full screen.`}
+          // The counter inside the stage is its visible label, so the name
+          // begins with it (WCAG 2.5.3, NEW-45) and then says what it opens.
+          aria-label={`${index + 1} / ${count} — ${title || 'Property'} photograph. Press Enter to view full screen.`}
           onClick={openLightbox}
           onKeyDown={onStageKeyDown}
           onTouchStart={onTouchStart}

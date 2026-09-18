@@ -54,6 +54,12 @@
   position: absolute;
   inset: 0;
   height: 100%;
+  /* `LazyImage`'s own placeholder is `--color-surface-2`, a light grey. With
+     the scrim at 60% that put the white hero text on rgb(114, 114, 115) —
+     3.63:1 — for as long as the photograph was missing, slow or absent, which
+     is exactly when a visitor is reading it. The hero's charcoal has to be
+     what the scrim lands on, the way the home hero already does it. */
+  background-color: var(--color-charcoal);
 }
 
 .heroScrim {

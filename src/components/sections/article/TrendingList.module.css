@@ -40,7 +40,10 @@
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-extrabold);
   line-height: 1.2;
-  color: var(--color-border-strong);
+  /* Was `--color-border-strong`: 1.47:1, a watermark rather than a numeral, and
+     the only place the ranking is shown (the `<ol>` hides its own markers).
+     NEW-43, found by Lighthouse in prompt 41. */
+  color: var(--color-text-muted);
 }
 
 .body {
@@ -74,4 +77,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+/* The headline is the whole target of the row it sits in. */
+@media (max-width: 899.98px) {
+  .link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
 }

@@ -115,6 +115,19 @@
   color: var(--color-error-dark);
 }
 
+/* The box and its label are one target — a tap anywhere on the sentence ticks
+   it — and on a phone that target is 44px tall. The box drops by the same
+   amount the label gains so the two stay on the same line. */
+@media (max-width: 899.98px) {
+  .consentLabel {
+    padding: var(--space-1) 0;
+  }
+
+  .consentBox {
+    margin-top: var(--space-1);
+  }
+}
+
 .submitError {
   display: flex;
   align-items: center;

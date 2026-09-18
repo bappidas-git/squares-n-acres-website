@@ -101,3 +101,9 @@
 .cta:hover {
   text-decoration: underline;
 }
+
+@media (max-width: 899.98px) {
+  .cta {
+    min-height: 44px;
+  }
+}

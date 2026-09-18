@@ -140,6 +140,14 @@
   overflow-wrap: anywhere;
 }
 
+@media (max-width: 899.98px) {
+  .rowLink {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
 a.rowLink:hover,
 a.rowLink:focus-visible {
   color: var(--color-primary-dark);

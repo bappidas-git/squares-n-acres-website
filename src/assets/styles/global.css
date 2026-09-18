@@ -141,6 +141,13 @@
   --transition-base: 250ms ease;
   --transition-slow: 400ms ease;
 
+  /* ── Affordances ───────────────────────────────────────────────────────── */
+  /* The fade at the end of a horizontal strip that keeps going. A chip bar
+     hides its scrollbar, so without this there is nothing on a phone to say
+     that there are more chips to the right (prompt 42 §4.3). It is a mask, so
+     it costs nothing when the strip's content already fits. */
+  --edge-fade: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+
   /* ── Layout ────────────────────────────────────────────────────────────── */
   --container-max: 1280px;
   --container-padding: 16px;
@@ -153,6 +160,17 @@
   :root {
     --container-padding: 24px;
     --header-height: 72px;
+  }
+}
+
+/* Captions, chips and helper text are 12px on a desktop and 13px on a phone:
+   prompt 42 sets the mobile floor at 14px for body copy and 13px for captions,
+   and `--font-size-xs` is the caption token. The desktop value is untouched —
+   a 12px caption read at arm's length on a large screen is not the same
+   problem as a 12px caption read on a phone. */
+@media (max-width: 899.98px) {
+  :root {
+    --font-size-xs: 0.8125rem;
   }
 }
 
@@ -257,6 +275,21 @@ ol {
   outline-offset: 2px;
 }
 
+/* On a charcoal band or over a photograph the blue ring disappears into the
+   surface. The controls that live there already carry the design system's
+   `onDark` class, and each of those modules switches its ring to white
+   (§6 of prompt 42) — there is no second mechanism for it.
+
+   `<main>` takes focus from the skip link but is not a tab stop of its own. */
+main:focus {
+  outline: none;
+}
+
+main:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
 /* ── Section spacing utility ────────────────────────────────────────────── */
 .section-padding {
   padding: var(--space-16) 0;
@@ -305,7 +338,12 @@ ol {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    /* A staggered reveal shortens its transition but still waits out its
+       delay, so the page arrives in the same slow ripple it was asked not to
+       perform; both delays have to go with the durations. */
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
     scroll-behavior: auto !important;
   }
 }

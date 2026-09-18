@@ -123,6 +123,21 @@
   text-decoration: underline;
 }
 
+/* 44px hit areas on a phone: the column links grow their own padding, the
+   contact rows grow theirs, and neither changes size on a desktop where the
+   pointer is a mouse. */
+@media (max-width: 899.98px) {
+  .link {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .contactItem {
+    min-height: 44px;
+  }
+}
+
 /* D79: the boilerplate's image collage, off unless settings switch it on. */
 .gallery {
   display: grid;
