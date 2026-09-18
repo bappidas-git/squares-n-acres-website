@@ -191,111 +191,96 @@ forbids putting `lighthouse` in `package.json`:
 
 ## 4. Results
 
-_Measured by prompt 41. Prompt 46 re-measures on real hardware and replaces
-this table._
+_Re-measured by prompt 46 on 2026-09-18. The full run, with the failing audits
+and what was fixed, is in
+[`docs/QA/46-cross-device-lighthouse-seo.md`](./QA/46-cross-device-lighthouse-seo.md)._
 
 ### 4.1 What was measured
 
-`npx lighthouse@latest 13.4.1`, mobile preset (Moto-G-class emulation, 1.6 Mbps
-/ 150 ms RTT, `cpuSlowdownMultiplier: 4`), Chromium 141 headless, against
-`serve -s build -l 5000` with the mock running. `benchmarkIndex: 1698`.
+`lighthouse@13.5.0` run ad hoc (no dependency in `package.json`), mobile form
+factor, simulated throttling (1.6 Mbps / 150 ms RTT, `cpuSlowdownMultiplier: 4`),
+Chromium **141.0.7390.37** headless, a fresh profile per run, against
+`npm run serve:build` on port 5000 with the mock running and the build made as
+`REACT_APP_API_URL=http://localhost:4000/api npm run build:ci`.
+`benchmarkIndex` 2170–2242.
 
-Both variants of the build were run so the prerender could be compared with the
-single-page app it replaces: `npm run build` (SPA) and `npm run build:prerender`.
+The six pages of §8.6: `/`, `/buy`,
+`/properties/lakeview-heights-3-bhk-whitefield`, `/localities/whitefield`,
+`/insights/articles`, `/insights/articles/karnataka-rera-guide-for-homebuyers`.
 
-### 4.2 The two categories that were measurable
+### 4.2 The three categories that were measurable — all pass
 
 | Page             | Accessibility | Best Practices | SEO      | CLS       |
 | ---------------- | ------------- | -------------- | -------- | --------- |
-| Home             | 100           | 96             | 100      | 0         |
-| Listing          | 100           | 96             | 100      | 0         |
-| Property details | 97            | 96             | 100      | 0         |
-| Locality         | 97            | 96             | 100      | 0         |
-| Article index    | 96            | 96             | 100      | 0         |
-| Article          | 100           | 96             | 100      | 0         |
+| Home             | 100           | 96             | 100      | 0.000     |
+| Listing (`/buy`) | 100           | 96             | 100      | 0.000     |
+| Property details | 100           | 96             | 100      | 0.001     |
+| Locality         | 100           | 96             | 100      | 0.000     |
+| Article index    | 100           | 96             | 100      | 0.000     |
+| Article          | 100           | 96             | 100      | 0.000     |
 | **Target**       | **≥ 95**      | **≥ 95**       | **≥ 95** | **< 0.1** |
 
-All four pass on all six pages, in both variants (the figures above are the
-SPA build; the prerendered build scored the same, ±0). **CLS is 0 on every one
-of the twelve runs** — the fixed-ratio boxes of `LazyImage`, the reserved
-carousel heights and the layout-identical skeletons do what they were built to
-do.
+Accessibility is **100 on all six**, up from 96–100 in prompt 41: prompt 42's
+pass closed NEW-43 to NEW-45, and prompt 46 closed the one that survived it —
+the locality hero's placeholder, which was still painting light grey behind the
+scrim because two CSS-module classes were fighting over the same element
+(§5.3 of the QA report). Locality went 97 → 100.
 
 The single Best-Practices deduction on every page is `errors-in-console`, and
-every one of those errors is a blocked external request — see §4.4.
+every console error on every page is a blocked third-party request. **None
+comes from application code.**
 
-### 4.3 Performance: **not validly measured here**
+### 4.3 Performance: **still not validly measured here**
 
-| Page             | Performance | FCP   | LCP         | TBT          | Requests blocked |
-| ---------------- | ----------- | ----- | ----------- | ------------ | ---------------- |
-| Home             | 53          | 2.2 s | 7.1 s       | 830 ms       | 16 / 68          |
-| Listing          | 60          | 2.2 s | 6.1 s       | 610 ms       | 18 / 45          |
-| Property details | 55          | 2.2 s | 5.3 s       | 1 140 ms     | 31 / 62          |
-| Locality         | 56          | 2.2 s | 6.1 s       | 760 ms       | 23 / 58          |
-| Article index    | 60          | 2.1 s | 5.8 s       | 630 ms       | 20 / 53          |
-| Article          | 49          | 2.9 s | 6.1 s       | 960 ms       | 23 / 60          |
-| **Target**       | **≥ 85**    |       | **< 2.5 s** | **< 200 ms** |                  |
+| Page             | Performance | FCP   | LCP         | TBT          | Requests failed |
+| ---------------- | ----------- | ----- | ----------- | ------------ | --------------- |
+| Home             | 50          | 2.9 s | 7.2 s       | 751 ms       | 16 / 68         |
+| Listing (`/buy`) | 59          | 2.2 s | 6.3 s       | 605 ms       | 14 / 41         |
+| Property details | 55          | 2.2 s | 5.4 s       | 1 027 ms     | 25 / 56         |
+| Locality         | 52          | 3.0 s | 6.0 s       | 733 ms       | 20 / 55         |
+| Article index    | 57          | 2.8 s | 5.7 s       | 556 ms       | 17 / 50         |
+| Article          | 55          | 3.0 s | 6.1 s       | 610 ms       | 23 / 60         |
+| **Target**       | **≥ 85**    |       | **< 2.5 s** | **< 200 ms** |                 |
 
-Prerendered, for comparison: Performance 47–57, FCP 3.0–3.4 s, LCP 5.9–7.5 s,
-TBT 480–810 ms. Parsing 70–146 kB of saved markup costs about a second of FCP
-against an empty shell; the TBT difference is inside the run-to-run noise of a
-shared machine, so no claim is made about it.
+The container prompt 46 ran in has the same limitation prompt 41 recorded, and
+it was re-verified rather than assumed: the egress proxy re-terminates TLS with
+a CA Chromium will not trust, so `fonts.googleapis.com`, `res.cloudinary.com`,
+`picsum.photos` and the Iconify API all fail with `ERR_CERT_AUTHORITY_INVALID`
+— **including every page's LCP image**. Two remedies were attempted (Chromium's
+`CACertificates` enterprise policy, which this build ignores; `certutil` into
+the NSS store, which is not permitted here). Disabling certificate verification
+would replace one wrong number with another.
 
-**These numbers do not measure the application.** The container this was run in
-routes outbound HTTPS through a proxy that re-terminates TLS, and Chromium
-cannot be made to trust that proxy's CA — its trust store is NSS and the image
-has no `certutil` to import a certificate with. So between **16 and 41 of every
-page's requests fail**, and they are the same ones every time:
+**These figures are evidence that the environment is wrong, not that the
+application is slow.** They are recorded so the next run has something to
+compare against, and they are not the verdict on §8.6.
 
-- the Google Fonts stylesheet,
-- every Cloudinary image, including the wordmark,
-- every `picsum.photos` seed photograph — **including the page's LCP image**,
-- the Iconify icon API.
+### 4.4 What the run does say
 
-With no LCP image, LCP is whatever text paints last. On every page it came out
-equal to Time to Interactive to the millisecond, which is the signature of that
-substitution rather than of a slow image. Performance is 40 % LCP-weighted, so
-the score follows it down. Verified, so that this is not a guess: every request
-the mock answers completes inside **750 ms**, the last request of any kind ends
-at **1.9 s**, and the failures fail fast (200–270 ms each) rather than timing
-out. The 7 s is not the network.
+- **The bundle is inside budget.** `npm run analyze`: entry chunk 286.03 kB of
+  300 kB gzip (13.97 kB spare), 174 lazy chunks, no admin marker in the entry.
+- **CLS is 0 with the images missing**, which is the harder case: a layout that
+  does not move when a photograph never arrives has real boxes reserved for it.
+- Prompt 41's two observations about the main thread still stand and still need
+  a valid run to re-check: `main.js` evaluation was 1 504 ms at 4× with two long
+  tasks over 200 ms, and 107 kB of the entry chunk is unused on the home page.
 
-`--ignore-certificate-errors` would have made the assets load and the numbers
-meaningful. It was not used: this session's rules forbid disabling TLS
-verification, and a measurement taken that way would be worth less than an
-honest "not measured".
+### 4.5 What is still owed
 
-### 4.4 What the trace does say
+Run [`docs/QA/46-lighthouse-howto.md`](./QA/46-lighthouse-howto.md) on a
+machine with ordinary network access — it is a fifteen-minute runbook with the
+exact commands, and it names what to look at first for each possible failure.
 
-Two things in the trace are the app's own and survive the caveat:
-
-- **`main.js` evaluation is 1 504 ms of the main thread** at 4× throttling
-  (≈ 375 ms unthrottled), with two long tasks over 200 ms — 427 ms and 256 ms —
-  both inside `main.js`. The manual-QA target of §9 ("no long tasks > 200 ms")
-  passes unthrottled and fails at 4×.
-- **107 kB of the 275 kB entry chunk is unused on the home page.** That is the
-  only opportunity Lighthouse reports with a saving attached (600 ms), and it is
-  the shape of a route-split bundle: the chunk carries the UI kit, the router,
-  MUI and the SEO resolver, and one page uses a subset.
-
-### 4.5 Checklist for prompt 46
-
-Re-measure on real hardware, on a network that can reach Cloudinary, Google
-Fonts and the Iconify API, and then:
-
-- [ ] Performance ≥ 85 on all six pages. If LCP is still over 2.5 s with the
-      hero image loading, the preload of §2.3 is the first thing to check in
-      the trace — it should appear as a high-priority image request beside the
-      stylesheet, not after the route chunk.
-- [ ] TBT < 200 ms. The lever is §4.4: split more out of the entry chunk. The
-      admin panel is already out; what is left is the public site's own UI kit.
-- [ ] The home page fires **25 `GET /properties?…&perPage=1` requests** for the
-      category tiles' counts (`useCategoryCounts`, prompt 27). They complete in
-      under 100 ms each against the mock and they are 25 round trips and 25
-      state updates against a real API. Recorded as **NEW-42**.
-- [ ] Confirm CLS stays 0 with the images actually loading.
-- [ ] The four accessibility findings recorded as **NEW-43** to **NEW-45** are
-      prompt 42's; re-run this table after that pass.
+- [ ] Performance ≥ 85 on all six pages.
+- [ ] LCP < 2.5 s with the hero image actually loading.
+- [ ] TBT < 200 ms.
+- [ ] Confirm CLS stays 0 once the images load.
+- [x] Accessibility ≥ 95 — **100 on all six**.
+- [x] Best Practices ≥ 95 — **96 on all six**.
+- [x] SEO ≥ 95 — **100 on all six**.
+- [ ] **NEW-42**: the home page still fires 25 `GET /properties?…&perPage=1`
+      requests for the category tiles. The aggregate endpoint that replaces
+      them is specified in §9.2 of the QA report, for prompt 47 to document.
 
 ---
 
@@ -413,3 +398,4 @@ fixes it: a hidden tab has no frames to throttle.
 | `npm run build:prerender` | Does every public URL render and save? (needs Chrome and the mock)   |
 | `npm run check:links`     | Does every link on every page go somewhere? (prompt 38)              |
 | `npm run check:jsonld`    | Is the structured data on every page valid? (prompt 38)              |
+| `npm run check:sitemap`   | Does the site render an indexable page no sitemap lists? (prompt 46) |

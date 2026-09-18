@@ -224,6 +224,31 @@ describe('the other child sitemaps', () => {
     });
   });
 
+  it('lists every active property-type landing page under its segment (D25)', async () => {
+    await withServer(async ({ request }) => {
+      const found = locations((await request('GET', '/sitemap-pages.xml')).text);
+
+      for (const type of SEED.propertyTypes.filter((entity) => entity.isActive)) {
+        const path = type.segment === 'commercial' ? '/commercial' : '/buy';
+        assert.ok(found.includes(`${SITE}${path}/${type.slug}`), `${path}/${type.slug}`);
+      }
+    });
+  });
+
+  it('leaves an inactive property type out', async () => {
+    const seed = seedWith({
+      propertyTypes: (types) => void (types[0].isActive = false),
+    });
+
+    await withServer({ seed }, async ({ request }) => {
+      const found = locations((await request('GET', '/sitemap-pages.xml')).text);
+      const gone = SEED.propertyTypes[0];
+      const path = gone.segment === 'commercial' ? '/commercial' : '/buy';
+
+      assert.ok(!found.includes(`${SITE}${path}/${gone.slug}`), `${path}/${gone.slug}`);
+    });
+  });
+
   it('answers with an empty urlset when the sitemap is switched off', async () => {
     const seed = seedWith({
       seoSettings: (unused, database) => void (database.seoSettings.sitemap.enabled = false),

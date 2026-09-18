@@ -18,8 +18,11 @@
      the scrim at 60% that put the white hero text on rgb(114, 114, 115) —
      3.63:1 — for as long as the photograph was missing, slow or absent, which
      is exactly when a visitor is reading it. The hero's charcoal has to be
-     what the scrim lands on, the way the home hero already does it. */
-  background-color: var(--color-charcoal);
+     what the scrim lands on, the way the home hero already does it.
+     Set as `LazyImage`'s own token rather than as a `background-color` here:
+     the class lands on the same element as `.wrapper`, so a plain declaration
+     only wins while its chunk happens to load second (NEW-43). */
+  --lazy-image-placeholder: var(--color-charcoal);
 }
 
 .heroScrim {

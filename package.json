@@ -82,6 +82,7 @@
     "check:contrast": "node scripts/contrast-check.js",
     "check:endpoints": "node scripts/check-endpoints.js",
     "check:links": "node scripts/check-links.js",
+    "check:sitemap": "node scripts/check-sitemap-coverage.js",
     "check:jsonld": "node scripts/validate-jsonld.js",
     "smoke": "node scripts/smoke-api.js",
     "e2e": "playwright test",

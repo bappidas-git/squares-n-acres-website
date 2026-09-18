@@ -484,13 +484,39 @@ function audit(options) {
 
   const docWidth = document.documentElement.scrollWidth;
   const viewportWidth = window.innerWidth;
-  if (docWidth > viewportWidth + 1) {
+
+  /**
+   * Whether the page really scrolls sideways — asked by trying it.
+   *
+   * `documentElement.scrollWidth` is not the question. Chromium counts a wide
+   * element inside its **own** `overflow-x: auto` scroller towards the root's
+   * scroll width, so `/admin/properties` reports 721 px of overflow in a
+   * 1280 px viewport while the page does not move a pixel: the table scrolls,
+   * the document does not, and a data table that scrolls inside its own box is
+   * the correct design rather than the defect §8.1 forbids (NEW-48).
+   *
+   * So: remember where we are, ask the window to go as far right as it can,
+   * read back whether it went, and put it back. A page that cannot scroll
+   * answers 0 and nothing moved for the next rule to see.
+   */
+  const reachedX = (() => {
+    const before = window.scrollX;
+    try {
+      window.scrollTo(document.documentElement.clientWidth, window.scrollY);
+      return window.scrollX;
+    } finally {
+      window.scrollTo(before, window.scrollY);
+    }
+  })();
+
+  if (reachedX > 1) {
     add(
       'error',
       'horizontal-scroll',
-      `The document is ${docWidth}px wide in a ${viewportWidth}px viewport.`,
+      `The page scrolls ${reachedX}px sideways in a ${viewportWidth}px viewport ` +
+        `(document ${docWidth}px).`,
       null,
-      { scrollWidth: docWidth, innerWidth: viewportWidth }
+      { scrollWidth: docWidth, innerWidth: viewportWidth, scrolledBy: reachedX }
     );
   }
 

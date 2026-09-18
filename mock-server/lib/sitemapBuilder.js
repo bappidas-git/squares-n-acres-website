@@ -227,6 +227,28 @@ function sitemapSets(data, now = Date.now()) {
     : [];
 
   const cmsPages = rows('pages').filter((page) => page.status === 'published');
+
+  // A property-type landing page (`/buy/apartments`, `/commercial/warehouses`,
+  // D25) is a listing route like `/buy/ready-to-move` next to it, so it takes
+  // the `page` defaults when `seoSettings.sitemap` names none of its own — and
+  // an admin who later adds a `propertyType` key still wins.
+  const typeSettings = {
+    ...settings,
+    changefreq: {
+      ...settings.changefreq,
+      propertyType: settings.changefreq.propertyType ?? settings.changefreq.page,
+    },
+    priority: {
+      ...settings.priority,
+      propertyType: settings.priority.propertyType ?? settings.priority.page,
+    },
+  };
+
+  const propertyTypes = rows('propertyTypes')
+    .filter((type) => type.isActive)
+    .map((entity) => urlEntry({ type: 'propertyType', entity, siteUrl, settings: typeSettings }))
+    .filter(Boolean);
+
   const pages = settings.includePages
     ? [
         ...STATIC_ROUTES.map((path) =>
@@ -237,6 +259,7 @@ function sitemapSets(data, now = Date.now()) {
             lastmod: latest(build('page', cmsPages)),
           })
         ).filter(Boolean),
+        ...propertyTypes,
         ...build('page', cmsPages).filter((entry) => entry.loc !== absoluteUrl(siteUrl, '/')),
       ]
     : [];
