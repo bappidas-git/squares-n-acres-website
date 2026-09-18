@@ -122,3 +122,29 @@ test('buildAuditSource can ship the focus reader instead', () => {
   assert.ok(source.includes('return readFocusRing;'));
   assert.ok(source.includes('function accessibleNameOf'));
 });
+
+test('the horizontal-scroll probe scrolls instantly, not smoothly', () => {
+  const source = buildAuditSource('audit');
+
+  // `global.css` sets `scroll-behavior: smooth` on the document. A smooth
+  // scroll is asynchronous, so a probe that asks the window to move and then
+  // reads `scrollX` on the next line reads the position it started from —
+  // every page answers 0 and a real sideways scroll is never reported. That
+  // is a worse failure than the `scrollWidth` false positive this replaced
+  // (NEW-48), and it is invisible: the rule simply stops finding anything.
+  //
+  // Measured in Chromium 141 on a 390px viewport over a 3000px document:
+  // `window.scrollTo(clientWidth, y)` answers 0, `behavior: 'instant'`
+  // answers 390. The assertion is on the source because the behaviour itself
+  // needs a browser, and the browser is optional (D16).
+  assert.match(
+    source,
+    /window\.scrollTo\(\{\s*left: document\.documentElement\.clientWidth,\s*behavior: 'instant'\s*\}\)/,
+    'the probe must pass `behavior: "instant"` so `scroll-behavior: smooth` cannot swallow it'
+  );
+  assert.doesNotMatch(
+    source,
+    /window\.scrollTo\(document\.documentElement\.clientWidth/,
+    'a positional scrollTo inherits `scroll-behavior: smooth` and reads back the old position'
+  );
+});

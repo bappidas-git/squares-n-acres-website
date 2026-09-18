@@ -108,6 +108,23 @@ function verbOf(config, effective) {
 }
 
 /**
+ * `%listingtype%` for the title: {@link verbOf}'s decision, in §9.5's casing.
+ *
+ * The heading and the description have always honoured a route's `verb`; the
+ * title resolved the token straight from the listing type instead, so the four
+ * `/buy/<status>` pages announced themselves as "Under-construction properties
+ * **for Sale**" — the same claim twice, and "Resale properties for Sale" says
+ * it twice in one breath. It also cost nine characters of a 60-character
+ * result (NEW-40). Empty verb in, empty token out; otherwise the title case
+ * §9.5 gives the token ("for Sale", not "for sale").
+ */
+function titleVerbOf(config, effective) {
+  const verb = verbOf(config, effective);
+  if (!verb) return '';
+  return effective.listingType ? LISTING_TYPES.verbOf(effective.listingType) : verb;
+}
+
+/**
  * The `<h1>`: what this page is, in the visitor's words and without the brand.
  *
  * Built from the filters rather than from the route, so narrowing a search
@@ -203,7 +220,7 @@ export function buildListingSeo({
 
   const resolved = withCount
     .replace(/%propertytype%/g, [vars.bedroomLabel, vars.noun].filter(Boolean).join(' '))
-    .replace(/%listingtype%/g, LISTING_TYPES.verbOf(effective.listingType))
+    .replace(/%listingtype%/g, titleVerbOf(config, effective))
     .replace(/%locality%/g, vars.locality?.name ?? '')
     .replace(/%city%/g, vars.city)
     .replace(/%page%/g, page > 1 ? `Page ${page}` : '')
