@@ -62,7 +62,14 @@ const create = {
     required: true,
     default: 'available',
   },
-  possessionDate: { type: 'date', nullable: true, default: null },
+  // §6.1: a date the buyer is being promised. It is only optional while there is
+  // nothing to promise — a home that is finished is available now.
+  possessionDate: {
+    type: 'date',
+    nullable: true,
+    default: null,
+    requiredIf: { field: 'constructionStatus', in: ['pre-launch', 'under-construction'] },
+  },
   ageOfPropertyYears: { type: 'int', nullable: true, min: 0, max: 100, default: null },
   furnishing: { type: 'enum', enum: FURNISHING.values, nullable: true, default: null },
   facing: { type: 'enum', enum: FACING.values, nullable: true, default: null },
@@ -182,7 +189,15 @@ const create = {
       address: { type: 'string', maxLength: 300, default: '' },
       localityId: { type: 'int', required: true },
       cityId: { type: 'int', required: true },
-      pincode: { type: 'string', nullable: true, maxLength: 6, default: null },
+      // An Indian PIN code is six digits and nothing else; `maxLength` alone let
+      // `'12'` through, which the form rejects and the API stored.
+      pincode: {
+        type: 'string',
+        nullable: true,
+        maxLength: 6,
+        pattern: '^\\d{6}$',
+        default: null,
+      },
       landmark: { type: 'string', nullable: true, maxLength: 200, default: null },
       latitude: { type: 'number', nullable: true, min: -90, max: 90, default: null },
       longitude: { type: 'number', nullable: true, min: -180, max: 180, default: null },
