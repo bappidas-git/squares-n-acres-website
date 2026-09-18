@@ -6716,15 +6716,16 @@ after it stops being true.
 | ------------------------ | ----------------------------------------------------------- |
 | `npm run lint`           | 0 errors, 0 warnings                                        |
 | `npm run format:check`   | clean                                                       |
-| `npm run test:ci`        | 143 suites, 2 964 tests, all green                          |
+| `npm run test:ci`        | 147 suites, 3 347 tests, all green                          |
 | `npm run test:scripts`   | 28 cases (1 skipped: no Chrome in a standard location)      |
-| `npm run test:mock`      | 150 cases, all green                                        |
+| `npm run test:mock`      | 157 cases, all green                                        |
 | `npm run build:ci`       | success, 0 warnings                                         |
-| `npm run check:traces`   | 1 085 files, 0 findings                                     |
+| `npm run check:traces`   | 1 090 files, 0 findings                                     |
 | `npm run check:contrast` | 29 gated pairs, all pass                                    |
 | `npm run validate:seed`  | `db.json` is valid                                          |
 
-Run after merging `main` at prompt 44, so the counts include its suites.
+Run after merging `main` at prompt 45, so the counts include its suites and
+prompt 44's.
 
 `npm run a11y:audit` was **not** re-run for this commit: the fixes are in a
 component's CSS, a theme override, one `aria-hidden` and the checker itself, and
