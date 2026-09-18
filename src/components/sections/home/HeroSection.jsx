@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import HeroSearch from './HeroSearch';
+import Picture from '../../ui/Picture';
 import styles from './HeroSection.module.css';
-import useBreakpoint from '../../../hooks/useBreakpoint';
 import useCountUp from '../../../hooks/useCountUp';
 import useInView from '../../../hooks/useInView';
 import { formatNumber } from '../../../utils/format';
@@ -20,6 +20,13 @@ import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
  *
  * The media box reserves its height in CSS before the image loads, so nothing
  * below it moves when it arrives (§6, CLS).
+ *
+ * The plate itself is a `<picture>`: a wide 21:9 photograph on a desktop and
+ * `hero.mobileImageUrl` on a phone, chosen by the browser from a media query
+ * rather than by JavaScript after the first paint. It is the page's LCP image,
+ * so it loads eagerly and at high priority, and — when it is a Cloudinary
+ * file — at the width of the screen it is being shown on rather than at 2400px
+ * (§8.6).
  */
 
 /** One figure of the stats row, counted up once its row is on screen. */
@@ -41,7 +48,6 @@ function HeroStat({ label, value, suffix, active }) {
 
 export default function HeroSection() {
   const { settings } = useSiteSettings();
-  const { isMobile } = useBreakpoint();
   const [mediaError, setMediaError] = useState(false);
   const { ref: statsRef, inView: statsInView } = useInView({ threshold: 0.3 });
 
@@ -51,8 +57,8 @@ export default function HeroSection() {
   const badges = Array.isArray(hero.badges) ? hero.badges.filter(Boolean) : [];
   const stats = Array.isArray(hero.stats) ? hero.stats.filter((stat) => stat?.label) : [];
 
-  const imageUrl =
-    (isMobile ? hero.mobileImageUrl : hero.backgroundImageUrl) || hero.backgroundImageUrl || '';
+  const imageUrl = hero.backgroundImageUrl || hero.mobileImageUrl || '';
+  const mobileImageUrl = hero.mobileImageUrl || '';
   const videoUrl = hero.backgroundVideoUrl || '';
 
   return (
@@ -70,11 +76,22 @@ export default function HeroSection() {
             preload="metadata"
             onError={() => setMediaError(true)}
           />
-        ) : (
-          <div
-            className={styles.mediaLayer}
-            style={imageUrl ? { backgroundImage: `url(${imageUrl})` } : undefined}
+        ) : imageUrl ? (
+          <Picture
+            src={imageUrl}
+            sources={
+              mobileImageUrl && mobileImageUrl !== imageUrl
+                ? [{ media: '(max-width: 599px)', src: mobileImageUrl, ratio: '4/5' }]
+                : []
+            }
+            alt=""
+            ratio="auto"
+            sizes="100vw"
+            priority
+            className={styles.heroImage}
           />
+        ) : (
+          <div className={styles.mediaLayer} />
         )}
         <div className={styles.overlay} />
       </div>

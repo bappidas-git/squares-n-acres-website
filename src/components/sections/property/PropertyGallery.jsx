@@ -191,8 +191,7 @@ export default function PropertyGallery({
             alt={current?.alt || title}
             ratio={stageRatio}
             sizes="(min-width: 900px) 60vw, 100vw"
-            loading={index === 0 ? 'eager' : 'lazy'}
-            fetchPriority={index === 0 ? 'high' : undefined}
+            priority={index === 0}
             className={styles.stageImage}
           />
 

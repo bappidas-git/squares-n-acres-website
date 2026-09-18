@@ -9,9 +9,16 @@
  * formats the price and the area a title template prints, and
  * `scripts/validate-jsonld.js` has to `require` that chain from Node with no
  * bundler in front of it.
+ *
+ * That is also why nothing here `require`s a package: Create React App's
+ * catch-all asset rule excludes `.js`, `.mjs`, `.jsx`, `.ts`, `.tsx`, `.html`
+ * and `.json` and **nothing else**, so a `require()` that resolves to a `.cjs`
+ * entry — which is what `date-fns` 4's `require` condition points at — is
+ * emitted as a *file* and the call returns its URL as a string. That is not an
+ * error anywhere; it just leaves the import silently undefined, which is how
+ * `formatRelative` took the whole admin shell down with it. Everything below
+ * is either self-contained or built on `Intl`, which is in the platform.
  */
-
-const { formatDistanceToNowStrict } = require('date-fns');
 
 /** What every formatter renders when it has nothing to render. */
 const EMPTY = '—';
@@ -163,11 +170,51 @@ function formatTime(value) {
   return new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', ...TIME_PARTS }).format(date);
 }
 
-/** `3 hours ago`, `2 days ago` — `date-fns` does the arithmetic (D22). */
+/**
+ * The units a distance is expressed in, and how many of each make the next one.
+ *
+ * `Infinity` on the last is what stops the walk: anything a year or more is
+ * counted in years.
+ */
+const RELATIVE_UNITS = [
+  ['second', 60],
+  ['minute', 60],
+  ['hour', 24],
+  ['day', 30],
+  ['month', 12],
+  ['year', Infinity],
+];
+
+const RELATIVE_FORMAT = new Intl.RelativeTimeFormat('en-IN', { numeric: 'always' });
+
+/**
+ * `3 hours ago`, `2 days ago`, `in 5 minutes` (D22).
+ *
+ * The largest unit that still counts more than one of itself, rounded — the
+ * same reading `date-fns`'s `formatDistanceToNowStrict` gave, from `Intl`
+ * instead, which is in the platform and needs no import (see the note at the
+ * top of this file).
+ *
+ * @param {string|number|Date} value
+ * @returns {string} `'—'` when it is not a date
+ */
 function formatRelative(value) {
   const date = parse(value);
   if (!date) return EMPTY;
-  return `${formatDistanceToNowStrict(date)} ago`;
+
+  const elapsed = Date.now() - date.getTime();
+  let amount = Math.abs(elapsed) / 1000;
+  let unit = 'second';
+
+  for (const [name, perNext] of RELATIVE_UNITS) {
+    unit = name;
+    if (amount < perNext) break;
+    amount /= perNext;
+  }
+
+  // Never "0 seconds ago": the smallest thing worth saying is one of something.
+  const rounded = Math.max(1, Math.round(amount));
+  return RELATIVE_FORMAT.format(elapsed >= 0 ? -rounded : rounded, unit);
 }
 
 /**

@@ -365,7 +365,15 @@ const WRITABLE = {
   adminPartners: { path: '/admin/partners', schema: 'partner.create', patch: { order: 9 } },
   adminPages: { path: '/admin/pages', schema: 'page.create', patch: { order: 9 } },
   adminJobs: { path: '/admin/jobs', schema: 'job.create', patch: { isActive: true } },
-  adminMedia: { path: '/admin/media', schema: 'media.create', patch: { alt: 'Smoke alt text' } },
+  adminMedia: {
+    path: '/admin/media',
+    schema: 'media.create',
+    // A unique address per record: media's delete guard refuses a file that
+    // something else points at (prompt 39 §5), and the sample body would give
+    // every fixture in the run the same URL.
+    overrides: (seed) => ({ url: `https://picsum.photos/seed/smoke-${seed}/1200/800` }),
+    patch: { alt: 'Smoke alt text' },
+  },
   adminRedirects: {
     path: '/admin/redirects',
     schema: 'redirect.create',
@@ -1014,6 +1022,11 @@ async function targetedChecks() {
     `got ${localityInUse.status}`
   );
 
+  // Media's own guard: a file something still shows cannot be removed from the
+  // library without saying so, and `?force=true` is the editor's answer to the
+  // list it is shown (prompt 39 §5).
+  await checkMediaForceDelete(admin);
+
   const authors = await api('GET', '/authors');
   check(
     'authors.no-email',
@@ -1102,6 +1115,48 @@ async function setup() {
     fixtures.adminNewsletterSubscribers = subscriber.json.data;
     created.unshift({ path: `/admin/newsletter-subscribers/${subscriber.json.data.id}` });
   }
+}
+
+/**
+ * Media's delete guard, both ways round.
+ *
+ * A record is made pointing at a picture a seeded listing already shows, so the
+ * usage search finds it: the plain `DELETE` must refuse with the list, and the
+ * same call with `?force=true` must go through. The Cloudinary asset is never
+ * touched either way — this API has never held it (D12).
+ *
+ * @param {string} admin the admin token
+ */
+async function checkMediaForceDelete(admin) {
+  const listing = await api('GET', '/properties?perPage=1');
+  const url = listing.json?.data?.[0]?.images?.[0]?.url;
+  if (!url) {
+    check('media.force-delete', false, 'no seeded listing image to point at');
+    return;
+  }
+
+  const record = await api('POST', '/admin/media', {
+    token: admin,
+    body: { url, alt: 'Smoke — a picture a listing already uses' },
+  });
+  if (record.status !== 201) {
+    check('media.force-delete', false, `could not create the record (${record.status})`);
+    return;
+  }
+
+  const id = record.json.data.id;
+  const refused = await api('DELETE', `/admin/media/${id}`, { token: admin });
+  check(
+    'media.delete-guard-409',
+    refused.status === 409 && Array.isArray(refused.json?.data?.usedIn),
+    `got ${refused.status}`
+  );
+
+  const forced = await api('DELETE', `/admin/media/${id}?force=true`, { token: admin });
+  check('media.force-delete', forced.status === 200, `got ${forced.status}`);
+
+  // Whatever happened above, the run leaves nothing behind.
+  if (forced.status !== 200) created.unshift({ path: `/admin/media/${id}?force=true` });
 }
 
 /** Removes everything the run created, newest first. */

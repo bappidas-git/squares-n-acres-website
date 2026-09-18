@@ -28,6 +28,7 @@ export { default as LazyImage } from './LazyImage';
 export { default as Logo } from './Logo';
 export { default as Modal } from './Modal';
 export { default as Pagination } from './Pagination';
+export { default as Picture } from './Picture';
 export { default as Price } from './Price';
 export { default as Rating } from './Rating';
 export { default as Section } from './Section';

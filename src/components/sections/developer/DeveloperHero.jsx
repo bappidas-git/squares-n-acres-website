@@ -34,7 +34,8 @@ export default function DeveloperHero({ developer, breadcrumbs = [] }) {
             src={coverImageUrl}
             alt=""
             ratio="auto"
-            loading="eager"
+            sizes="100vw"
+            priority
             className={styles.heroImage}
           />
           <span className={styles.heroScrim} aria-hidden="true" />

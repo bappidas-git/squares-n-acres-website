@@ -47,6 +47,7 @@ export default function ArticleCard({
           src={image.url}
           alt=""
           ratio="16/9"
+          sizes="(max-width: 599px) 100vw, (max-width: 1199px) 50vw, 33vw"
           loading={loading}
           className={styles.coverImage}
         />

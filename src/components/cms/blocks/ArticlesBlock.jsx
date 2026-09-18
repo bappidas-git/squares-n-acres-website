@@ -61,6 +61,7 @@ export default function ArticlesBlock({ data = {}, background = 'surface' }) {
                   src={article.featuredImage?.url}
                   alt={article.featuredImage?.alt || ''}
                   ratio="16/9"
+                  sizes="(max-width: 599px) 100vw, (max-width: 1199px) 50vw, 33vw"
                   className={styles.articleMedia}
                 />
                 <span className={styles.articleBody}>

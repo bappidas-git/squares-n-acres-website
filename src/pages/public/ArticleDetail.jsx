@@ -187,8 +187,8 @@ export default function ArticleDetail() {
                 src={image.url}
                 alt={image.alt || ''}
                 ratio="16/9"
-                loading="eager"
-                fetchPriority="high"
+                sizes="(max-width: 899px) 100vw, 760px"
+                priority
                 className={styles.figureImage}
               />
               {image.caption ? (

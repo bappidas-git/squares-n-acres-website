@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import PATHS from '../../routes/paths';
 import ShortlistButton from './ShortlistButton';
 import styles from './PropertyCard.module.css';
-import { Area, Chip, Price } from '../ui';
+import { Area, Chip, LazyImage, Price } from '../ui';
 import { CONSTRUCTION_STATUS } from '../../config/enums';
 import { EMPTY, formatBhk } from '../../utils/format';
 
@@ -16,6 +16,10 @@ import { EMPTY, formatBhk } from '../../utils/format';
  * `images[].isCover`, the badges are the master-data records the API embeds —
  * each painted from its own tone token by `ui/Chip` (§2.4, §6.4) — and the
  * price knows whether it is a sale or a monthly rent (D33).
+ *
+ * The cover goes through `LazyImage`, so a Cloudinary photograph arrives at the
+ * width this card is actually drawn at rather than at 1600 px (§8.6), and a
+ * `picsum.photos` one is used exactly as it is.
  *
  * What the boilerplate card did and this one does not: no autoplaying videos
  * in a grid and no per-card image carousel. The heart is `ShortlistButton`,
@@ -75,11 +79,14 @@ const PropertyCard = memo(({ property, variant = 'grid' }) => {
     <div className={[styles.card, variant === 'list' ? styles.list : ''].filter(Boolean).join(' ')}>
       <div className={styles.imageWrapper}>
         {cover?.url ? (
-          <img
+          <LazyImage
             src={cover.url}
             alt={cover.alt || property.title}
-            className={styles.image}
-            loading="lazy"
+            ratio="4/3"
+            // One card per row on a phone, two on a tablet, three in the grid.
+            sizes="(max-width: 599px) 100vw, (max-width: 1199px) 50vw, 33vw"
+            className={styles.imageBox}
+            imageClassName={styles.image}
           />
         ) : (
           <div className={styles.imagePlaceholder} />

@@ -39,6 +39,7 @@ export default function DeveloperLogo({ name, logoUrl, size = 'md', loading, cla
         alt=""
         ratio="2/1"
         fit="contain"
+        sizes="(max-width: 899px) 120px, 200px"
         loading={loading}
         className={styles.logoImage}
         onErrorFallback={

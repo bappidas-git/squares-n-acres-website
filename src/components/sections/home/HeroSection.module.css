@@ -33,6 +33,17 @@
   background-repeat: no-repeat;
 }
 
+/* `Picture`'s own box, filling the media band rather than reserving a ratio of
+   its own: the hero's height is set by `.hero`, and the plate covers it. */
+.heroImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-charcoal);
+  border-radius: 0;
+}
+
 .overlay {
   position: absolute;
   inset: 0;

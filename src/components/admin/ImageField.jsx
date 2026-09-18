@@ -1,11 +1,17 @@
-import { useId } from 'react';
+import { Suspense, lazy, useId } from 'react';
 import { Icon } from '@iconify/react';
 
 import Button from '../ui/Button';
 import LazyImage from '../ui/LazyImage';
+import useMediaField from './useMediaField';
 import { URL_PATTERN } from '../../utils/validation';
 
 import styles from './ImageField.module.css';
+
+// The picker carries the whole library — the grid, the upload queue, the URL
+// form — and most forms never open it. It arrives when somebody presses a
+// button, not when a form renders.
+const MediaPickerDialog = lazy(() => import('./MediaPickerDialog'));
 
 /**
  * What each kind of image slot needs, from the layouts that render them.
@@ -54,11 +60,18 @@ export function ImageHint({ hint }) {
 }
 
 /**
- * An image slot: a URL, a preview, and — once prompt 39 wires them — a way to
- * upload or to pick from the media library.
+ * An image slot: a URL, a preview, and the two ways of filling it that do not
+ * involve typing an address.
  *
- * The two buttons are rendered **only** when their handler is given, because a
- * button that does nothing is worse than no button at all.
+ * The URL box is the constant. Everything else is offered when it can work:
+ * "Media library" always, because its Library and URL tabs need no
+ * configuration, and "Upload" only once a Cloudinary cloud name and preset
+ * exist (§7) — `useMediaField` decides, this component only renders what it
+ * is handed, and a caller may still pass its own handlers to override either.
+ *
+ * Because every image field in the admin is this component, wiring it here
+ * wired all of them: the developer logo, the locality photograph, the author's
+ * avatar, the page block's picture, the floor plan's drawing.
  *
  * @param {object} props
  * @param {string} props.label
@@ -67,8 +80,12 @@ export function ImageHint({ hint }) {
  * @param {'gallery'|'floorPlan'|'logo'|'og'|'avatar'|'hero'} [props.hint]
  * @param {boolean} [props.preview]
  * @param {string} [props.ratio] overrides the hint's ratio
- * @param {() => void} [props.onUpload] renders "Upload" (prompt 39)
- * @param {() => void} [props.onOpenMedia] renders "Media library" (prompt 39)
+ * @param {'image'|'document'|'video'|'any'} [props.accept] what the picker offers
+ * @param {string} [props.folder] where an upload from this field is filed
+ * @param {(picked: object) => void} [props.onPick] replaces "set the URL" — a
+ *   caller that also wants the alt text or the dimensions
+ * @param {() => void} [props.onUpload] overrides the built-in upload button
+ * @param {() => void} [props.onOpenMedia] overrides the built-in library button
  * @param {string} [props.error]
  * @param {boolean} [props.required]
  * @param {string} [props.alt] the preview's alt text
@@ -80,6 +97,9 @@ export default function ImageField({
   hint,
   preview = true,
   ratio,
+  accept = 'image',
+  folder = '',
+  onPick,
   onUpload,
   onOpenMedia,
   error,
@@ -89,6 +109,18 @@ export default function ImageField({
   alt = '',
 }) {
   const id = useId();
+  const media = useMediaField({
+    accept,
+    folder,
+    onPick: (picked) => {
+      if (onPick) onPick(picked);
+      else onChange?.(picked.url);
+    },
+  });
+
+  // A caller's own handler wins; otherwise the picker's, unless it is disabled.
+  const openMedia = onOpenMedia ?? (disabled ? undefined : media.onOpenMedia);
+  const upload = onUpload ?? (disabled ? undefined : media.onUpload);
   const preset = IMAGE_HINTS[hint] ?? {};
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
@@ -127,22 +159,22 @@ export default function ImageField({
             Clear
           </Button>
         ) : null}
-        {onUpload ? (
+        {upload ? (
           <Button
             variant="outline"
             size="sm"
-            onClick={onUpload}
+            onClick={upload}
             disabled={disabled}
             icon={<Icon icon="mdi:tray-arrow-up" width="16" height="16" />}
           >
             Upload
           </Button>
         ) : null}
-        {onOpenMedia ? (
+        {openMedia ? (
           <Button
             variant="outline"
             size="sm"
-            onClick={onOpenMedia}
+            onClick={openMedia}
             disabled={disabled}
             icon={<Icon icon="mdi:image-multiple-outline" width="16" height="16" />}
           >
@@ -165,8 +197,18 @@ export default function ImageField({
             alt={alt}
             ratio={ratio ?? preset.ratio ?? '16 / 9'}
             fit="contain"
+            sizes="(max-width: 899px) 100vw, 480px"
           />
         </div>
+      ) : null}
+
+      {media.isOpen ? (
+        <Suspense fallback={null}>
+          <MediaPickerDialog
+            {...media.dialogProps}
+            title={`Choose ${accept === 'image' ? 'an image' : 'a file'} for “${label}”`}
+          />
+        </Suspense>
       ) : null}
     </div>
   );

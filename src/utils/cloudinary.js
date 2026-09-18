@@ -18,8 +18,12 @@
  *     on every Cloudinary image. A URL from anywhere else is returned exactly
  *     as it came in, so a caller never has to ask where a picture is hosted.
  *
- * Prompt 39 extends this file (the media library, `ImageField`, `LazyImage`);
- * it does not replace it.
+ * Prompt 39 added the responsive half of §8.6 on top of those three:
+ * `parseCloudinary()` answers whether a URL is ours at all (and what its parts
+ * are), `buildSrcSet()` turns one URL into the six widths a browser picks from,
+ * and `blurThumb()` gives the 24-pixel thumbnail `LazyImage` blurs up from. All
+ * three are pure, and all three hand back `null` for a URL from anywhere else,
+ * so a caller never has to ask where a picture is hosted.
  */
 
 /** The delivery host. Anything else is somebody else's URL (`picsum.photos`). */
@@ -235,16 +239,25 @@ function parseResponse(text) {
  * Exported for the unit test.
  *
  * @param {{w?: number, h?: number, crop?: string, quality?: string|number|null,
- *          format?: string|null, dpr?: string|number}} [options]
+ *          format?: string|null, effect?: string|null, dpr?: string|number}} [options]
  * @returns {string} `''` when there is nothing to ask for
  */
-export function buildTransformation({ w, h, crop, quality = 'auto', format = 'auto', dpr } = {}) {
+export function buildTransformation({
+  w,
+  h,
+  crop,
+  quality = 'auto',
+  format = 'auto',
+  effect,
+  dpr,
+} = {}) {
   return [
     format ? `f_${format}` : '',
     quality ? `q_${quality}` : '',
     w ? `w_${Math.round(w)}` : '',
     h ? `h_${Math.round(h)}` : '',
     crop ? `c_${crop}` : '',
+    effect ? `e_${effect}` : '',
     dpr ? `dpr_${dpr}` : '',
   ]
     .filter(Boolean)
@@ -265,17 +278,22 @@ function isTransformationSegment(segment) {
  * A Cloudinary delivery URL with `f_auto,q_auto,w_…` applied (§8.6).
  *
  * A URL from anywhere else — `picsum.photos`, a client's own CDN, a relative
- * path — is returned untouched, which is what lets `LazyImage` (prompt 39)
- * call this on every `src` it is given without knowing where the file lives.
+ * path — is returned untouched, which is what lets `LazyImage` call this on
+ * every `src` it is given without knowing where the file lives.
  *
- * A URL that already carries a transformation is also returned untouched: it
- * was written that way deliberately (the brand favicons of §2.3 are crops),
- * and a second segment in front of it would chain onto the crop rather than
- * replace it.
+ * A URL that already carries a transformation is returned untouched too,
+ * unless `merge` is asked for. It was written that way deliberately (the brand
+ * favicons of §2.3 are crops), and a segment inserted *in front* of it would
+ * decide the size before the crop narrowed it — the wrong way round. `merge`
+ * is the right way round: the new transformation is chained **after** the one
+ * that is already there (`/upload/<theirs>/<ours>/…`), so the crop happens and
+ * the result of the crop is then scaled. That is what `buildSrcSet` and
+ * `LazyImage` want, and why neither of them ever doubles `/upload/`.
  *
  * @param {string} url
  * @param {{w?: number, h?: number, crop?: string, quality?: string|number|null,
- *          format?: string|null, dpr?: string|number}} [options]
+ *          format?: string|null, effect?: string|null, dpr?: string|number,
+ *          merge?: boolean}} [options]
  * @returns {string}
  */
 export function cloudinaryUrl(url, options = {}) {
@@ -286,16 +304,178 @@ export function cloudinaryUrl(url, options = {}) {
 
   const head = url.slice(0, at + UPLOAD_MARKER.length);
   const tail = url.slice(at + UPLOAD_MARKER.length);
-  if (tail === '' || isTransformationSegment(tail.split('/')[0])) return url;
+  if (tail === '') return url;
 
-  const transformation = buildTransformation(options);
-  return transformation ? `${head}${transformation}/${tail}` : url;
+  const { merge = false, ...rest } = options;
+  const transformation = buildTransformation(rest);
+  if (!transformation) return url;
+
+  // Everything the URL already asks for, kept in front of what we add.
+  const segments = tail.split('/');
+  const existing = [];
+  while (segments.length > 1 && isTransformationSegment(segments[0])) {
+    existing.push(segments.shift());
+  }
+
+  if (existing.length === 0) return `${head}${transformation}/${tail}`;
+  if (!merge) return url;
+
+  return `${head}${existing.join('/')}/${transformation}/${segments.join('/')}`;
+}
+
+/**
+ * The parts of a Cloudinary delivery URL, or `null` for a URL from anywhere
+ * else.
+ *
+ * This is the question `LazyImage` asks before it builds a `srcSet`: a
+ * `picsum.photos` photograph has no widths to offer, so it gets a plain `src`
+ * and nothing else. Callers that only need the yes/no can read it as a
+ * predicate — `null` is the "somebody else's URL" answer.
+ *
+ * @param {string} url
+ * @returns {{cloudName: string, resourceType: string|null, deliveryType: string,
+ *            transformation: string, version: string|null, publicId: string,
+ *            format: string|null}|null}
+ */
+export function parseCloudinary(url) {
+  if (typeof url !== 'string' || !DELIVERY_HOST.test(url)) return null;
+
+  const at = url.indexOf(UPLOAD_MARKER);
+  if (at === -1) return null;
+
+  const tail = url.slice(at + UPLOAD_MARKER.length);
+  if (tail === '') return null;
+
+  // `…/res.cloudinary.com/<cloud>/<resourceType>` — or `…/<cloud>` on the
+  // short form, where the host is the segment before the cloud name.
+  const head = url.slice(0, at).split('/');
+  const last = head[head.length - 1] ?? '';
+  const beforeLast = head[head.length - 2] ?? '';
+  const shortForm = /res\.cloudinary\.com$/i.test(beforeLast);
+  const cloudName = shortForm ? last : beforeLast;
+  const resourceType = shortForm ? null : last;
+  if (!cloudName) return null;
+
+  const segments = tail.split('/');
+  const transformation = [];
+  while (segments.length > 1 && isTransformationSegment(segments[0])) {
+    transformation.push(segments.shift());
+  }
+
+  const version = segments.length > 1 && /^v\d+$/.test(segments[0]) ? segments.shift() : null;
+
+  const rest = segments.join('/');
+  if (rest === '') return null;
+
+  const dot = rest.lastIndexOf('.');
+  const hasFormat = dot > 0 && !rest.slice(dot + 1).includes('/');
+
+  return {
+    cloudName,
+    resourceType,
+    deliveryType: 'upload',
+    transformation: transformation.join('/'),
+    version,
+    publicId: hasFormat ? rest.slice(0, dot) : rest,
+    format: hasFormat ? rest.slice(dot + 1).toLowerCase() : null,
+  };
+}
+
+/** The widths every responsive image is offered in (§8.6). */
+export const SRCSET_WIDTHS = [320, 480, 640, 960, 1280, 1600];
+
+/**
+ * A CSS `aspect-ratio` as a number, or `null` when it is not one.
+ *
+ * `'16/9'`, `'4 / 3'`, `'1'` and `1.91` all arrive here, because `ratio` is a
+ * `LazyImage` prop authors write by hand.
+ *
+ * @param {string|number|null|undefined} ratio
+ * @returns {number|null}
+ */
+export function parseRatio(ratio) {
+  if (typeof ratio === 'number') return Number.isFinite(ratio) && ratio > 0 ? ratio : null;
+  if (typeof ratio !== 'string') return null;
+
+  const [left, right] = ratio.split('/');
+  const width = Number(String(left).trim());
+  const height = right === undefined ? 1 : Number(String(right).trim());
+
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null;
+  return width / height;
+}
+
+/**
+ * The `srcSet` of a Cloudinary image: one `f_auto,q_auto,dpr_auto` variant per
+ * width, so the browser downloads the one it needs and not the 1600px original
+ * (§8.6).
+ *
+ * `ratio` makes every variant that shape — `c_fill` with the height the box
+ * implies — which is what keeps a 4:3 card from downloading a 16:9 picture and
+ * cropping it in CSS.
+ *
+ * `null` for a URL that is not Cloudinary's: there is nothing to offer, and a
+ * caller that spreads the result onto an `<img>` gets no `srcset` attribute at
+ * all rather than a broken one.
+ *
+ * @param {string} url
+ * @param {number[]} [widths]
+ * @param {{ratio?: string|number|null, crop?: string}} [options]
+ * @returns {string|null}
+ */
+export function buildSrcSet(url, widths = SRCSET_WIDTHS, { ratio, crop = 'fill' } = {}) {
+  if (!parseCloudinary(url)) return null;
+
+  const wanted = [
+    ...new Set(
+      (Array.isArray(widths) ? widths : [])
+        .map((width) => Math.round(Number(width)))
+        .filter((width) => Number.isFinite(width) && width > 0)
+    ),
+  ].sort((left, right) => left - right);
+
+  if (wanted.length === 0) return null;
+
+  const aspect = parseRatio(ratio);
+
+  return wanted
+    .map((w) => {
+      const variant = cloudinaryUrl(url, {
+        w,
+        h: aspect ? Math.round(w / aspect) : undefined,
+        crop: aspect ? crop : undefined,
+        dpr: 'auto',
+        merge: true,
+      });
+      return `${variant} ${w}w`;
+    })
+    .join(', ');
+}
+
+/**
+ * The 24-pixel blur a picture fades in from (§6 of prompt 39).
+ *
+ * It is two or three kilobytes, so it arrives with the markup rather than
+ * after it, and the box is never an empty grey rectangle while the real
+ * photograph is still coming. `null` for anything not Cloudinary's — those
+ * boxes keep the surface tint instead.
+ *
+ * @param {string} url
+ * @returns {string|null}
+ */
+export function blurThumb(url) {
+  if (!parseCloudinary(url)) return null;
+  return cloudinaryUrl(url, { w: 24, quality: 1, effect: 'blur:200', merge: true });
 }
 
 const cloudinary = {
+  blurThumb,
+  buildSrcSet,
   cloudinaryConfig,
   cloudinaryUrl,
   isCloudinaryConfigured,
+  parseCloudinary,
+  parseRatio,
   uploadEndpoint,
   uploadToCloudinary,
 };

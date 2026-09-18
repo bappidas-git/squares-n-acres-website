@@ -8,6 +8,19 @@
   aspect-ratio: var(--ratio, 4 / 3);
 }
 
+/* The blur-up: a 24px thumbnail of the same picture, scaled to fill the box
+   and covered by the real one as soon as it decodes. */
+.blurred {
+  background-image: var(--blur);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.picture {
+  display: contents;
+}
+
 .image {
   position: absolute;
   inset: 0;

@@ -633,6 +633,7 @@ export const banksConfig = ({ onMutated } = {}) => ({
           src={row.logoUrl}
           alt=""
           ratio="5/2"
+          sizes="88px"
           className={styles.logo}
           onErrorFallback={<span className={styles.logoEmpty} aria-hidden="true" />}
         />

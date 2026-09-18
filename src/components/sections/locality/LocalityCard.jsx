@@ -38,7 +38,13 @@ const LocalityCard = memo(function LocalityCard({ locality, variant = 'default' 
       className={[styles.card, compact ? styles.compact : ''].filter(Boolean).join(' ')}
     >
       <div className={styles.mediaBox}>
-        <LazyImage src={heroImageUrl} alt="" ratio="4/3" className={styles.media} />
+        <LazyImage
+          src={heroImageUrl}
+          alt=""
+          ratio="4/3"
+          sizes="(max-width: 599px) 100vw, (max-width: 1199px) 50vw, 25vw"
+          className={styles.media}
+        />
         {compact ? <span className={styles.scrim} aria-hidden="true" /> : null}
         {isFeatured && !compact ? (
           <span className={styles.featured}>

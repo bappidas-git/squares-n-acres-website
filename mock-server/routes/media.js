@@ -11,15 +11,24 @@
  * result afterwards, which is exactly what Laravel will do. So a `DELETE` here
  * removes the library entry and never an asset, and `usedIn` — where a picture
  * appears across properties, articles, pages and the settings — is a
- * best-effort URL search (`lib/usage.js`), reported so an editor can decide,
- * never used to refuse the delete.
+ * best-effort URL search (`lib/usage.js`).
+ *
+ * That search is also what a delete asks first (prompt 39 §5). Removing the
+ * entry for a photograph that eight listings still show would leave those
+ * listings pointing at a picture nobody can find again, so a `DELETE` of a
+ * used file is a 409 that lists where it is used. `?force=true` goes ahead
+ * anyway, because the search is a *string* search and can be wrong, and an
+ * editor who has looked at the list is better placed to decide than a
+ * `JSON.stringify` is. Either way the asset itself stays on Cloudinary: this
+ * API has never had it to delete.
  *
  * Two fields are inferred rather than demanded: `provider` from the host and
  * `type` from the extension, because the one thing an upload widget always
  * knows is the URL.
  */
 
-const { findMediaUsages } = require('../lib/usage');
+const { conflict } = require('../middleware/errors');
+const { describeUsages, findMediaUsages } = require('../lib/usage');
 const { makeCrudRouter } = require('../lib/crud');
 const { toBool } = require('../lib/filters');
 
@@ -80,6 +89,27 @@ function inferFromUrl(body) {
 }
 
 /**
+ * Refuses a delete that would strand a picture somebody is still showing
+ * (prompt 39 §5), unless `?force=true` says to go ahead.
+ *
+ * @param {object} record the media row
+ * @param {{query: object, collections: object}} ctx
+ * @throws {import('../middleware/errors').ApiError} 409, carrying `usedIn`
+ */
+function guardMediaDelete(record, { query, collections }) {
+  if (toBool(query?.force) === true) return;
+
+  const usedIn = findMediaUsages(record.url, collections);
+  if (usedIn.length === 0) return;
+
+  throw conflict(
+    'This file is still in use.',
+    { id: [describeUsages(usedIn)] },
+    { usedIn, usedBy: usedIn }
+  );
+}
+
+/**
  * The media router.
  *
  * @param {{db: object, getModel: Function}} deps
@@ -106,6 +136,7 @@ module.exports = ({ db, getModel }) =>
       'siteSettings',
     ],
     beforeValidate: inferFromUrl,
+    beforeDelete: guardMediaDelete,
     // A list of 400 assets would mean 400 JSON searches, so the usage hint is
     // computed for a single read and, on a list, only when it is asked for.
     afterRead: (record, { collections, query, list }) => {
@@ -125,3 +156,4 @@ module.exports = ({ db, getModel }) =>
 
 module.exports.inferFromUrl = inferFromUrl;
 module.exports.extensionOf = extensionOf;
+module.exports.guardMediaDelete = guardMediaDelete;

@@ -158,7 +158,8 @@ function matchesFilter(record, descriptor, raw, context) {
  *   client is not expected to send
  * @param {Function} [options.beforeSave] `(record, ctx) => record`
  * @param {Function} [options.afterSave] `(record, ctx) => void`
- * @param {Function} [options.beforeDelete] `(record, ctx) => void`
+ * @param {Function} [options.beforeDelete] `(record, ctx) => void`, where `ctx`
+ *   is `{ user, db, query, collections }` — throw to refuse the delete
  * @param {string|false} [options.deleteGuard] a `lib/usage.js` type
  * @param {object} [options.bulkActions] extra actions, `{ name: changes|null }`
  * @param {{one: string, many: string}} [options.noun] for the bulk message
@@ -648,7 +649,17 @@ function makeCrudRouter(options) {
         if (!existing) throw notFound();
 
         guardDelete(existing);
-        if (beforeDelete) beforeDelete(existing, { user: req.user, db });
+        // The same context `afterRead` gets, plus the query: a resource whose
+        // delete rule depends on a parameter — media's `?force=true` (§5) —
+        // needs to read one.
+        if (beforeDelete) {
+          beforeDelete(existing, {
+            user: req.user,
+            db,
+            query: req.query,
+            collections: source(),
+          });
+        }
 
         db.removeRecord(name, existing.id);
         res.message('Deleted');
