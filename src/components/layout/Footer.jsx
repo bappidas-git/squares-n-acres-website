@@ -9,6 +9,7 @@ import { buildFooterColumns, buildLegalLinks } from '../../config/navigation';
 import { formatPhoneForTel } from '../../utils/format';
 import { useMasterData } from '../../contexts/MasterDataContext';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
+import { FOOTER, fill } from '../../config/copy';
 
 /**
  * The site footer: `siteSettings.footer` plus the columns the data already
@@ -90,8 +91,8 @@ export default function Footer() {
   // The firm's own registrations (§6.13 `general`), not a listing's: a RERA
   // registration is required to be displayed, and the footer is where it goes.
   const registration = [
-    general.reraNumber ? `RERA ${general.reraNumber}` : '',
-    general.gstNumber ? `GST ${general.gstNumber}` : '',
+    general.reraNumber ? `${FOOTER.reraPrefix} ${general.reraNumber}` : '',
+    general.gstNumber ? `${FOOTER.gstPrefix} ${general.gstNumber}` : '',
   ].filter(Boolean);
 
   const addressLine = [
@@ -155,7 +156,7 @@ export default function Footer() {
             ) : null}
           </div>
 
-          <nav className={styles.columns} aria-label="Footer">
+          <nav className={styles.columns} aria-label={FOOTER.landmark}>
             {columns.map((column) => (
               <div key={column.key} className={styles.column}>
                 <h2 className={styles.columnTitle}>{column.title}</h2>
@@ -186,7 +187,7 @@ export default function Footer() {
             <p className={styles.copyright}>
               {footer.copyrightText
                 ? withYear(footer.copyrightText)
-                : `© ${new Date().getFullYear()} ${siteName}. All rights reserved.`}
+                : fill(FOOTER.copyright, { year: new Date().getFullYear(), siteName })}
             </p>
             {legal.length > 0 ? (
               <p className={styles.legalLinks}>

@@ -9,6 +9,7 @@ import ListingEngine from '../../components/listing/ListingEngine';
 import styles from './PropertyListing.module.css';
 import { Breadcrumbs, Container, Skeleton } from '../../components/ui';
 import { resolveListingRoute } from '../../components/listing/listingRoutes';
+import { ERRORS } from '../../config/copy';
 import { useMasterData } from '../../contexts/MasterDataContext';
 
 /**
@@ -34,12 +35,7 @@ export default function PropertyListing({ routeKey = 'properties' }) {
   );
 
   if (state === 'not-found') {
-    return (
-      <NotFound
-        title="Page not found"
-        subtitle="We have no listings under that address. Search below, or browse every property we have."
-      />
-    );
+    return <NotFound {...ERRORS.notFound.pages.listing} />;
   }
 
   return (

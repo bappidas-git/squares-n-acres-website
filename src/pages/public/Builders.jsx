@@ -18,6 +18,7 @@ import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './Builders.module.css';
 import usePrerenderReady from '../../hooks/usePrerenderReady';
+import { EMPTY, ERRORS, fill } from '../../config/copy';
 
 /** §8.6 caps a page at 24 items; the whole set fits in one. */
 const PER_PAGE = 24;
@@ -45,7 +46,7 @@ const SORT_OPTIONS = [
  * at the moment: the card says "0 projects" rather than hiding the company
  * whose page the rest of the site links to (§7).
  *
- * The `<title>` is a temporary Helmet tag; prompt 38 replaces it with `<Seo>`.
+ * The head is `<Seo type="builders">` with the `ItemList` of the page (§9.3).
  */
 export default function Builders() {
   const { items, meta, loading, error, params, setFilters, setPage, refetch } = useApiList(
@@ -137,25 +138,17 @@ export default function Builders() {
           </div>
 
           {error ? (
-            <ErrorState
-              title="We could not load the builders"
-              text={error.message}
-              onRetry={refetch}
-            />
+            <ErrorState title={ERRORS.builders} text={error.message} onRetry={refetch} />
           ) : loading ? (
             <BuilderGridSkeleton />
           ) : items.length === 0 ? (
             <EmptyState
-              title="No builders match that search"
-              text={
-                q
-                  ? `Nothing here is called “${q}”. Try part of the name, or clear the search.`
-                  : 'Builders will appear here as soon as they are published.'
-              }
+              title={EMPTY.builders.title}
+              text={q ? fill(EMPTY.builders.filtered, { term: q }) : EMPTY.builders.text}
               action={
                 q ? (
                   <Button variant="outline" onClick={() => setFilters({ q: '' })}>
-                    Clear the search
+                    {EMPTY.builders.action}
                   </Button>
                 ) : null
               }

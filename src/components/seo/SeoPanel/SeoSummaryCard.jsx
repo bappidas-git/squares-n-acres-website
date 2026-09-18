@@ -4,6 +4,7 @@ import Button from '../../ui/Button';
 import SeoScoreChip from '../SeoScoreChip';
 
 import styles from './SeoSummaryCard.module.css';
+import { SEO } from '../../../config/adminCopy';
 
 /**
  * The first failing test of a record, in the order the panel lists them.
@@ -44,7 +45,7 @@ export default function SeoSummaryCard({ seo, onOpen, compact = false }) {
     <div className={styles.summary}>
       {compact ? null : (
         <h2 className={styles.heading} id="rail-seo">
-          Search engines
+          {SEO.panelTitle}
         </h2>
       )}
 

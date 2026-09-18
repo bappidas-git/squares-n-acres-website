@@ -64,7 +64,7 @@
     "build:prerender": "npm run build && node scripts/prerender.js",
     "serve:build": "serve -s build -l 5000",
     "test": "react-scripts test",
-    "test:ci": "cross-env CI=true react-scripts test --watchAll=false --passWithNoTests",
+    "test:ci": "cross-env CI=true react-scripts test --watchAll=false",
     "test:mock": "cd mock-server && node --test",
     "test:scripts": "node --test \"scripts/__tests__/**/*.test.js\"",
     "eject": "react-scripts eject",

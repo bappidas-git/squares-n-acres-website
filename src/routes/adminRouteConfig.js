@@ -15,10 +15,9 @@ import { can, hasRouteAccess } from '../config/rbac';
  * whether a role may be sent to the location it came from — so a new screen is
  * one row, not four edits.
  *
- * Every screen in the table is now a screen: the media library (prompt 39) was
- * the last one still routed to `AdminPlaceholderPage`, so the placeholder and
- * the `soon()` helper that produced it are gone from here. The component itself
- * stays in the admin kit for a screen that is stubbed in future.
+ * Every screen in the table is a real screen. The stub page the early prompts
+ * routed to, and the `soon()` helper that produced it, are gone from the
+ * repository: a route either renders its screen or does not exist.
  */
 
 const DashboardPage = lazy(() => import('../pages/admin/dashboard/DashboardPage'));

@@ -7,6 +7,7 @@ import newsletterService from '../../services/newsletterService';
 import { Button } from '../ui';
 import { ENTRY_POINTS } from '../../utils/leadSources';
 import { EVENTS, track } from '../../utils/analytics';
+import { LEADS } from '../../config/copy';
 import { THROTTLE_MS } from './LeadForm';
 import { getEmailErrorMessage, getNameErrorMessage, sanitizeInput } from '../../utils/validators';
 import { useToast } from './ToastProvider';
@@ -14,7 +15,7 @@ import { useToast } from './ToastProvider';
 import styles from './LeadForm.module.css';
 
 /** What an address that is already on the list hears back. */
-const ALREADY_SUBSCRIBED = "You're already subscribed";
+const ALREADY_SUBSCRIBED = LEADS.newsletter.alreadySubscribed;
 
 /**
  * The newsletter sign-up.
@@ -34,7 +35,7 @@ const ALREADY_SUBSCRIBED = "You're already subscribed";
  */
 export default function NewsletterForm({
   withName = false,
-  submitLabel = 'Subscribe',
+  submitLabel = LEADS.newsletter.submit,
   className = '',
   successMessage,
 }) {
@@ -78,7 +79,10 @@ export default function NewsletterForm({
     const emailError = getEmailErrorMessage(values.email, true);
     if (emailError) found.email = emailError;
     if (withName) {
-      const nameError = getNameErrorMessage(values.name, { required: false, label: 'Your name' });
+      const nameError = getNameErrorMessage(values.name, {
+        required: false,
+        label: LEADS.newsletter.nameLabel,
+      });
       if (nameError) found.name = nameError;
     }
     setErrors(found);
@@ -103,14 +107,14 @@ export default function NewsletterForm({
       setDone(
         already
           ? ALREADY_SUBSCRIBED
-          : successMessage || response?.message || 'Thank you for subscribing.'
+          : successMessage || response?.message || LEADS.newsletter.success
       );
     } catch (error) {
       if (error?.status === 429) {
-        toast.error('Too many requests, please wait a minute');
+        toast.error(LEADS.rateLimited);
       } else {
         setErrors({ email: error?.fieldError?.('email') || '' });
-        toast.error(error?.message ?? 'Something went wrong. Please try again.');
+        toast.error(error?.message ?? LEADS.failed);
       }
     } finally {
       setSubmitting(false);

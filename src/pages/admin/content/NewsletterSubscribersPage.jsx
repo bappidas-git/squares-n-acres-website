@@ -18,6 +18,7 @@ import { formatDate, formatNumber } from '../../../utils/format';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './JobApplicationsPage.module.css';
+import { TABLES, TOASTS } from '../../../config/adminCopy';
 
 /** What the table asks for before anybody touches a control (§5.6, D47). */
 const LIST_DEFAULTS = { page: 1, perPage: DEFAULT_PER_PAGE, sort: 'createdAt', order: 'desc' };
@@ -88,7 +89,7 @@ export default function NewsletterSubscribersPage() {
     setDeleteBusy(true);
     try {
       await newsletterService.remove(deleting.id);
-      toast.success(`“${deleting.email}” was removed from the list.`);
+      toast.success(TOASTS.deleted(`“${deleting.email}”`));
       setDeleting(null);
       refetch();
     } catch (thrown) {
@@ -109,7 +110,7 @@ export default function NewsletterSubscribersPage() {
         csvFileName('newsletter-subscribers'),
         { type: 'text/csv;charset=utf-8' }
       );
-      toast.success('The CSV is in your downloads.');
+      toast.success(TOASTS.csvReady);
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'The export could not be built.'));
     } finally {
@@ -204,8 +205,8 @@ export default function NewsletterSubscribersPage() {
   const emptyState = useMemo(() => {
     if (params.page > 1) {
       return {
-        title: 'Nothing on this page',
-        text: 'The list is shorter than the address you opened.',
+        title: TABLES.emptyPage,
+        text: TABLES.emptyPageText,
       };
     }
     if (filtered) {
@@ -214,7 +215,7 @@ export default function NewsletterSubscribersPage() {
         text: 'Nothing on the list answers every filter you have set.',
         action: (
           <Button variant="outline" onClick={resetFilters}>
-            Reset filters
+            {TABLES.resetFilters}
           </Button>
         ),
       };

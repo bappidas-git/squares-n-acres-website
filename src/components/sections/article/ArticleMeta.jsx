@@ -6,6 +6,7 @@ import { Avatar } from '../../ui';
 import { formatDate } from '../../../utils/format';
 
 import styles from './article.module.css';
+import { BLOG, fill } from '../../../config/copy';
 
 /**
  * The line under an article's headline: who wrote it, when it was published,
@@ -78,7 +79,7 @@ export default function ArticleMeta({
       {article.readingTimeMinutes ? (
         <span className={styles.metaItem}>
           <Icon icon="mdi:clock-outline" width="16" height="16" aria-hidden="true" />
-          {article.readingTimeMinutes} min read
+          {fill(BLOG.readTime, { minutes: article.readingTimeMinutes })}
         </span>
       ) : null}
     </div>

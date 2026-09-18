@@ -16,7 +16,6 @@
  * is a `mini-css-extract-plugin` conflict, and `build:ci` treats it as an error.
  */
 
-export { default as AdminPlaceholderPage } from './AdminPlaceholderPage';
 export { default as AdminTabs, AdminTabPanel } from './AdminTabs';
 export { default as BulkActionsBar } from './BulkActionsBar';
 export { default as DataTable, PER_PAGE_OPTIONS, DEFAULT_PER_PAGE } from './DataTable';

@@ -2,6 +2,7 @@ import LeadForm from '../../common/LeadForm';
 import { leadFormProps } from '../../../utils/leadSources';
 
 import styles from './ArticleCta.module.css';
+import { BLOG } from '../../../config/copy';
 
 /**
  * The enquiry band under an article.
@@ -18,7 +19,7 @@ import styles from './ArticleCta.module.css';
  */
 export default function ArticleCta({
   articleId = null,
-  title = 'Want help with your property search?',
+  title = BLOG.cta,
   text = 'Tell us what you are looking for and an advisor will come back with a shortlist and the trade-offs of each option.',
   className = '',
 }) {

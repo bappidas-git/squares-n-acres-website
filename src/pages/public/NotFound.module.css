@@ -1,7 +1,7 @@
 /* ── Page ──────────────────────────────────────── */
 .page {
   width: 100%;
-  min-height: 80vh;
+  min-height: 70vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,32 +13,28 @@
   text-align: center;
   max-width: 560px;
   margin: 0 auto;
+  width: 100%;
 }
 
-/* ── 404 Typography ───────────────────────────── */
-.errorCode {
+/* ── Brand mark ───────────────────────────────── */
+.mark {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-8);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
 }
 
-.digit {
+.code {
   font-family: var(--font-heading);
-  font-size: 8rem;
+  font-size: 4rem;
   font-weight: 800;
-  color: var(--color-primary-dark);
   line-height: 1;
+  color: var(--color-primary-dark);
+  letter-spacing: 0.02em;
 }
 
-.houseIcon {
-  font-size: 5rem;
-  color: var(--color-primary-dark);
-  line-height: 1;
-}
-
-/* ── Title & Subtitle ─────────────────────────── */
+/* ── Title & subtitle ─────────────────────────── */
 .title {
   font-family: var(--font-heading);
   font-size: 1.75rem;
@@ -55,164 +51,81 @@
   margin-bottom: var(--space-8);
 }
 
-/* ── Search Form ──────────────────────────────── */
-.searchForm {
+/* ── Search ───────────────────────────────────── */
+.search {
   margin-bottom: var(--space-8);
+  text-align: left;
 }
 
-.searchWrapper {
-  display: flex;
-  align-items: center;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  padding: 4px;
-}
-
-.searchIcon {
-  font-size: 1.25rem;
-  color: var(--color-text-muted);
-  margin-left: 12px;
-  flex-shrink: 0;
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.searchInput {
-  flex: 1;
-  min-height: 44px;
-  padding: 12px;
-  border: none;
-  background: transparent;
+.searchLabel {
+  display: block;
+  margin-bottom: var(--space-2);
   font-family: var(--font-body);
-  font-size: 0.9rem;
-  color: var(--color-text);
-  outline: none;
-  min-width: 0;
-}
-
-.searchInput::placeholder {
-  color: var(--color-text-muted);
-}
-
-.searchBtn {
-  min-height: 44px;
-  padding: 10px 20px;
-  background: var(--color-primary);
-  color: var(--color-text-inverse);
-  border: none;
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-  white-space: nowrap;
+  color: var(--color-text);
 }
 
-.searchBtn:hover {
-  background: var(--color-primary-dark);
-}
-
-/* ── Action Buttons ───────────────────────────── */
+/* ── Actions ──────────────────────────────────── */
 .actions {
   display: flex;
-  gap: var(--space-4);
+  gap: var(--space-3);
   justify-content: center;
   flex-wrap: wrap;
   margin-bottom: var(--space-8);
 }
 
-.btnPrimary,
-.btnSecondary {
-  display: inline-flex;
+/* ── Popular links ────────────────────────────── */
+.popular {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  border-radius: var(--radius-md);
+  justify-content: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.popularLabel {
   font-family: var(--font-body);
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all var(--transition-fast);
-  text-decoration: none;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }
 
-.btnPrimary {
-  background: var(--color-primary);
-  color: var(--color-text-inverse);
-}
-
-.btnPrimary:hover {
-  background: var(--color-primary-dark);
-  color: var(--color-text-inverse);
-}
-
-.btnSecondary {
-  background: transparent;
-  color: var(--color-primary-dark);
-  border: 1px solid var(--color-border);
-}
-
-.btnSecondary:hover {
-  background: var(--color-surface);
-  color: var(--color-primary-dark);
-}
-
-/* ── Quick Links ──────────────────────────────── */
-.quickLinks {
+.popularList {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-4);
   flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.quickLinksLabel {
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-}
-
-.quickLink {
+.popularLink {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
   font-family: var(--font-body);
-  font-size: 0.85rem;
-  color: var(--color-primary-dark);
+  font-size: var(--font-size-sm);
   font-weight: 500;
+  color: var(--color-primary-dark);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
-.quickLink:hover {
-  color: var(--color-primary-dark);
+.popularLink:hover {
+  text-decoration: underline;
 }
 
 /* ── Responsive ───────────────────────────────── */
 @media (max-width: 599.98px) {
   .page {
     padding: var(--space-12) var(--space-4);
-    min-height: 70vh;
+    min-height: 60vh;
   }
 
-  .digit {
-    font-size: 5rem;
-  }
-
-  .houseIcon {
-    font-size: 3.5rem;
+  .code {
+    font-size: 3rem;
   }
 
   .title {
@@ -225,10 +138,10 @@
 
   .actions {
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
   }
 
-  .quickLinks {
+  .popular {
     flex-direction: column;
     gap: var(--space-2);
   }

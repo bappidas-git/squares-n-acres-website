@@ -15,6 +15,7 @@ import { formatRelative, formatTime } from '../../../../utils/format';
 import { completenessTone } from './completeness';
 
 import styles from './StatusRail.module.css';
+import { FORMS } from '../../../../config/adminCopy';
 
 /**
  * The right-hand rail of the property form: everything about the listing that
@@ -143,7 +144,7 @@ export default function StatusRail({ form, collapsible = false }) {
           </summary>
           <ul className={styles.items}>
             {completeness.items.map((item) => (
-              <li key={item.key} className={item.done ? styles.done : styles.todo}>
+              <li key={item.key} className={item.done ? styles.done : styles.pending}>
                 <Icon
                   icon={item.done ? 'mdi:check-circle' : 'mdi:circle-outline'}
                   width="16"
@@ -353,7 +354,7 @@ function SaveMenu({ save, working, isNew, published }) {
         icon={<Icon icon="mdi:content-save-outline" width="18" height="18" />}
         onClick={() => run('save')}
       >
-        {isNew ? 'Create property' : 'Save'}
+        {isNew ? 'Create property' : FORMS.save}
       </Button>
 
       <Button

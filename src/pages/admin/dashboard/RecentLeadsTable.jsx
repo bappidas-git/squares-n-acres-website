@@ -8,6 +8,7 @@ import { LEAD_SOURCES, LEAD_STATUS } from '../../../config/enums';
 import { formatRelative } from '../../../utils/format';
 
 import styles from './DashboardPage.module.css';
+import { DASHBOARD } from '../../../config/adminCopy';
 
 /**
  * The ten newest leads (§6.16 `recentLeads`).
@@ -32,7 +33,7 @@ export default function RecentLeadsTable({ leads = [] }) {
       </div>
 
       {leads.length === 0 ? (
-        <p className={styles.emptyLine}>No leads yet.</p>
+        <p className={styles.emptyLine}>{DASHBOARD.leadsEmpty}</p>
       ) : (
         <div className={styles.tableScroller}>
           <table className={styles.table}>

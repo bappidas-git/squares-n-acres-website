@@ -35,6 +35,7 @@ import { useLeadNotifications } from '../../../contexts/LeadNotificationsContext
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './LeadsListPage.module.css';
+import { TABLES, TOASTS } from '../../../config/adminCopy';
 
 /** The bulk actions `POST /admin/leads/bulk` accepts (§5.14). */
 const BULK_ACTIONS = [
@@ -49,7 +50,7 @@ const BULK_ACTIONS = [
     confirm: {
       title: 'Delete the selected leads?',
       message:
-        '{count} will be deleted, with their notes and their timeline. This cannot be undone.',
+        '{count} will be deleted, with the notes and the timeline of each. This cannot be undone.',
     },
   },
 ];
@@ -194,7 +195,7 @@ export default function LeadsListPage() {
       setDialogBusy(true);
       try {
         const { message } = await leadService.bulk({ ids, action, payload });
-        toast.success(message || `${ids.length} leads updated.`);
+        toast.success(message || TOASTS.updatedCount(ids.length, 'lead'));
         setSelectedIds([]);
         refetch();
       } catch (thrown) {
@@ -224,7 +225,7 @@ export default function LeadsListPage() {
     setDialogBusy(true);
     try {
       await leadService.remove(deleting.id);
-      toast.success(`“${deleting.name}” deleted.`);
+      toast.success(TOASTS.deleted(`“${deleting.name}”`));
       setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
       setDeleting(null);
       refetch();
@@ -254,7 +255,7 @@ export default function LeadsListPage() {
         csvFileName('leads'),
         { type: 'text/csv;charset=utf-8' }
       );
-      toast.success('The CSV is in your downloads.');
+      toast.success(TOASTS.csvReady);
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'The export could not be built.'));
     } finally {
@@ -353,11 +354,11 @@ export default function LeadsListPage() {
   const emptyState = useMemo(() => {
     if (params.page > 1) {
       return {
-        title: 'Nothing on this page',
-        text: 'The list is shorter than the address you opened.',
+        title: TABLES.emptyPage,
+        text: TABLES.emptyPageText,
         action: (
           <Button variant="outline" onClick={() => setPage(1)}>
-            Go to first page
+            {TABLES.firstPage}
           </Button>
         ),
       };
@@ -369,7 +370,7 @@ export default function LeadsListPage() {
         text: 'Nothing in the pipeline answers every filter you have set.',
         action: (
           <Button variant="outline" onClick={resetFilters}>
-            Reset filters
+            {TABLES.resetFilters}
           </Button>
         ),
       };
@@ -441,6 +442,8 @@ export default function LeadsListPage() {
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           bulkActions={canBulk ? BULK_ACTIONS : []}
+          bulkNounOne="lead"
+          bulkNounMany="leads"
           onBulkAction={onBulkAction}
           bulkBusy={dialogBusy}
           rowActions={rowActions}

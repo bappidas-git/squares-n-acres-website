@@ -34,6 +34,7 @@ import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './SeoSettingsPage.module.css';
+import { SEO } from '../../../config/adminCopy';
 
 /** The ten panels, in the order an editor meets them. */
 export const SETTINGS_TABS = [
@@ -144,7 +145,7 @@ export default function SeoSettingsPage() {
       return;
     }
 
-    toast.success('The SEO settings are saved.');
+    toast.success(SEO.settingsSaved);
     // The public site reads `seoSettings` through this context, so the header,
     // the head component and the sitemap links are stale until it re-reads.
     siteSettings.refresh();

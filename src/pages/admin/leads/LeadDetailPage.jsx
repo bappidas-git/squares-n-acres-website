@@ -34,6 +34,7 @@ import { useToast } from '../../../components/common/ToastProvider';
 import { viewUrlOf } from '../properties/publicUrl';
 
 import styles from './LeadDetailPage.module.css';
+import { TOASTS } from '../../../config/adminCopy';
 
 /**
  * Admin → Leads → one lead (`/admin/leads/:id`).
@@ -146,7 +147,7 @@ export default function LeadDetailPage() {
     setBusy(true);
     try {
       await leadService.remove(id);
-      toast.success('The lead was deleted.');
+      toast.success(TOASTS.deleted('Lead'));
       navigate(PATHS.adminLeads);
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'The lead could not be deleted.'));

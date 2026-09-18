@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 
 import storage from '../../utils/storage';
 import styles from './ListingEngine.module.css';
+import { LISTING } from '../../config/copy';
 
 /** Where the chosen layout is remembered (§4.2). */
 export const VIEW_KEY = 'sna_listing_view';
@@ -40,8 +41,8 @@ export function useListingView() {
 }
 
 const OPTIONS = [
-  { value: 'grid', label: 'Grid view', icon: 'mdi:view-grid-outline' },
-  { value: 'list', label: 'List view', icon: 'mdi:view-list-outline' },
+  { value: 'grid', label: LISTING.gridView, icon: 'mdi:view-grid-outline' },
+  { value: 'list', label: LISTING.listView, icon: 'mdi:view-list-outline' },
 ];
 
 /**
@@ -51,7 +52,7 @@ const OPTIONS = [
  */
 export default function ViewToggle({ value, onChange }) {
   return (
-    <div className={styles.viewToggle} role="group" aria-label="Result layout">
+    <div className={styles.viewToggle} role="group" aria-label={LISTING.viewLabel}>
       {OPTIONS.map((option) => (
         <button
           key={option.value}

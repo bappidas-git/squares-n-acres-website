@@ -11,6 +11,7 @@ import {
   PRICE_BUCKETS_SALE,
 } from '../../../config/enums';
 import { EVENTS, track } from '../../../utils/analytics';
+import { HERO, NAV } from '../../../config/copy';
 import { serializeFilters } from '../../../utils/listingFilters';
 import { usePropertyTypes } from '../../../hooks/useMasterData';
 
@@ -42,8 +43,8 @@ const TABS = {
     // Commercial space is bought as often as it is leased, and the two are
     // different routes; the toggle picks which one the form submits to.
     intents: [
-      { value: 'buy', label: 'Buy', path: PATHS.commercial, buckets: PRICE_BUCKETS_SALE },
-      { value: 'lease', label: 'Lease', path: PATHS.lease, buckets: PRICE_BUCKETS_RENT },
+      { value: 'buy', label: NAV.buy, path: PATHS.commercial, buckets: PRICE_BUCKETS_SALE },
+      { value: 'lease', label: NAV.lease, path: PATHS.lease, buckets: PRICE_BUCKETS_RENT },
     ],
   },
   plots: { path: PATHS.plots, segment: 'land', buckets: PRICE_BUCKETS_SALE, bedrooms: false },
@@ -186,7 +187,7 @@ export default function HeroSearch({ tabs }) {
   return (
     <div className={styles.card}>
       {available.length > 1 ? (
-        <div className={styles.tabs} role="tablist" aria-label="What are you looking for?">
+        <div className={styles.tabs} role="tablist" aria-label={HERO.tabsLabel}>
           {available.map((entry) => (
             <button
               key={entry.value}
@@ -221,7 +222,7 @@ export default function HeroSearch({ tabs }) {
             <GlobalSearch
               variant="inline"
               inputId="hero-search-place"
-              placeholder="Try “Whitefield”, a project or a builder"
+              placeholder={HERO.searchPlaceholder}
               value={draft.localityName || draft.q}
               // A suggestion picked from the list is a filter, not a search:
               // "Whitefield" becomes `localityId=4` rather than `q=Whitefield`.
@@ -250,7 +251,7 @@ export default function HeroSearch({ tabs }) {
               value={draft.propertyTypeId}
               onChange={(event) => patch({ propertyTypeId: event.target.value })}
             >
-              <option value="">Any type</option>
+              <option value="">{HERO.anyType}</option>
               {propertyTypes.map((type) => (
                 <option key={type.id} value={type.id}>
                   {type.name}
@@ -269,7 +270,7 @@ export default function HeroSearch({ tabs }) {
               value={draft.budget}
               onChange={(event) => patch({ budget: event.target.value })}
             >
-              <option value="">Any budget</option>
+              <option value="">{HERO.anyBudget}</option>
               {bucketOptions(buckets).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -286,7 +287,7 @@ export default function HeroSearch({ tabs }) {
         {config.intents ? (
           <div className={styles.extras}>
             <span className={styles.extrasLabel}>I want to</span>
-            <div className={styles.intents} role="group" aria-label="Buy or lease">
+            <div className={styles.intents} role="group" aria-label={HERO.intentLabel}>
               {config.intents.map((entry) => (
                 <button
                   key={entry.value}

@@ -6,6 +6,7 @@ import Picture from '../../ui/Picture';
 import styles from './HeroSection.module.css';
 import useCountUp from '../../../hooks/useCountUp';
 import useInView from '../../../hooks/useInView';
+import { HERO } from '../../../config/copy';
 import { formatNumber } from '../../../utils/format';
 import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 
@@ -52,7 +53,7 @@ export default function HeroSection() {
   const { ref: statsRef, inView: statsInView } = useInView({ threshold: 0.3 });
 
   const hero = settings?.hero ?? {};
-  const title = hero.title || 'Find your next home in Bengaluru';
+  const title = hero.title || HERO.title;
   const subtitle = hero.subtitle || '';
   const badges = Array.isArray(hero.badges) ? hero.badges.filter(Boolean) : [];
   const stats = Array.isArray(hero.stats) ? hero.stats.filter((stat) => stat?.label) : [];

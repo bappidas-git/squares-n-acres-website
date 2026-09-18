@@ -21,6 +21,7 @@ import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './PagesListPage.module.css';
+import { TABLES } from '../../../config/adminCopy';
 
 /**
  * Admin → Pages (`/admin/pages`) — the CMS list.
@@ -49,7 +50,7 @@ const BULK_ACTIONS = [
     danger: true,
     confirm: {
       title: 'Delete the selected pages?',
-      message: '{count} will be deleted, with their blocks. This cannot be undone.',
+      message: '{count} will be deleted, with the blocks of each. This cannot be undone.',
     },
   },
 ];
@@ -351,7 +352,7 @@ export default function PagesListPage() {
         text: 'Nothing in the CMS answers every filter you have set.',
         action: (
           <Button variant="outline" onClick={resetFilters}>
-            Reset filters
+            {TABLES.resetFilters}
           </Button>
         ),
       };
@@ -402,6 +403,8 @@ export default function PagesListPage() {
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           bulkActions={canEdit ? BULK_ACTIONS : []}
+          bulkNounOne="page"
+          bulkNounMany="pages"
           onBulkAction={runBulk}
           bulkBusy={busy}
           rowActions={rowActions}

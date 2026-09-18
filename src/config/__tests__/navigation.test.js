@@ -265,7 +265,7 @@ describe('collapseMenus', () => {
 
     expect(more.columns.map((column) => column.title)).toEqual([
       'Builders',
-      'Buyer Assistance',
+      'Buyer assistance',
       'Insights',
       'Company',
       'Contact',

@@ -16,6 +16,7 @@ import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './ProfilePage.module.css';
+import { TOASTS } from '../../../config/adminCopy';
 
 /**
  * The one screen every role has (§7 `profile`): your own name, phone, avatar
@@ -79,7 +80,7 @@ const ProfileCard = () => {
         avatarUrl: values.avatarUrl.trim() || null,
       });
       updateUser(data);
-      toast.success('Profile updated.');
+      toast.success(TOASTS.saved('Profile'));
     } catch (error) {
       if (error?.status === 422) {
         setErrors({

@@ -42,6 +42,7 @@ import { useMasterData } from '../../../contexts/MasterDataContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './DeveloperFormPage.module.css';
+import { TOASTS } from '../../../config/adminCopy';
 
 const developerService = adminCrud(developers);
 
@@ -250,7 +251,7 @@ export default function DeveloperFormPage() {
     // The redirect this record's `seo` asks for, against the slug the API
     // answered with — a new record has none until now (§9.6).
     await applySeoSideEffects('developer', saved);
-    toast.success(isEdit ? 'Developer updated.' : 'Developer created.');
+    toast.success(isEdit ? TOASTS.saved('Developer') : TOASTS.created('Developer'));
     // The property form's developer select reads the cached list (D93).
     refreshMasterData('developers');
 

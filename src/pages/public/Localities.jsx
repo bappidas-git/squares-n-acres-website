@@ -17,6 +17,7 @@ import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './Localities.module.css';
 import usePrerenderReady from '../../hooks/usePrerenderReady';
+import { EMPTY, ERRORS } from '../../config/copy';
 
 /** §8.6 caps a page at 24 items; the whole Bengaluru set fits in one. */
 const PER_PAGE = 24;
@@ -134,25 +135,17 @@ export default function Localities() {
           </div>
 
           {error ? (
-            <ErrorState
-              title="We could not load the localities"
-              text={error.message}
-              onRetry={refetch}
-            />
+            <ErrorState title={ERRORS.localities} text={error.message} onRetry={refetch} />
           ) : loading ? (
             <LocalityGridSkeleton />
           ) : items.length === 0 ? (
             <EmptyState
-              title="No localities here yet"
-              text={
-                zone
-                  ? 'Nothing is listed in this zone at the moment. Try another one.'
-                  : 'Localities will appear here as soon as they are published.'
-              }
+              title={EMPTY.localities.title}
+              text={zone ? EMPTY.localities.filtered : EMPTY.localities.text}
               action={
                 zone ? (
                   <Button variant="outline" onClick={() => setFilters({ zone: '' })}>
-                    Show all zones
+                    {EMPTY.localities.action}
                   </Button>
                 ) : null
               }

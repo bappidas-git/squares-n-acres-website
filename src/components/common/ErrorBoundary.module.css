@@ -41,3 +41,19 @@
   gap: var(--space-3);
   margin-top: var(--space-2);
 }
+
+/*
+ * The admin variant. It sits inside `AdminLayout`'s content column, which
+ * already has the topbar above it and the sidebar beside it, so it fills that
+ * column rather than the viewport and keeps the panel navigable.
+ */
+.inline {
+  min-height: 60vh;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.inline .title {
+  font-size: var(--font-size-2xl);
+}

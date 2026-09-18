@@ -8,6 +8,7 @@ import storage from '../../utils/storage';
 import styles from './GlobalSearch.module.css';
 import useDebounce from '../../hooks/useDebounce';
 import { EVENTS, track } from '../../utils/analytics';
+import { LISTING, fill } from '../../config/copy';
 import { formatPrice } from '../../utils/format';
 import { isCanceled } from '../../services/apiError';
 
@@ -34,7 +35,7 @@ const DEBOUNCE_MS = 300;
 const GROUPS = [
   {
     key: 'localities',
-    label: 'Localities',
+    label: LISTING.groups.localities,
     icon: 'mdi:map-marker-outline',
     to: (row) => PATHS.locality(row.slug),
     primary: (row) => row.name,
@@ -45,7 +46,7 @@ const GROUPS = [
   },
   {
     key: 'properties',
-    label: 'Properties',
+    label: LISTING.groups.properties,
     icon: 'mdi:home-outline',
     to: (row) => PATHS.propertyDetails(row.slug),
     primary: (row) => row.title,
@@ -54,7 +55,7 @@ const GROUPS = [
   },
   {
     key: 'propertyTypes',
-    label: 'Property types',
+    label: LISTING.groups.propertyTypes,
     icon: 'mdi:home-city-outline',
     to: (row, { rentContext }) =>
       rentContext ? PATHS.rentType(row.slug) : PATHS.buyType(row.slug),
@@ -63,7 +64,7 @@ const GROUPS = [
   },
   {
     key: 'developers',
-    label: 'Developers',
+    label: LISTING.groups.developers,
     icon: 'mdi:domain',
     to: (row) => PATHS.builder(row.slug),
     primary: (row) => row.name,
@@ -117,7 +118,7 @@ export default function GlobalSearch({
   onChange,
   onSelect,
   autoFocus = false,
-  placeholder = 'Search by locality, project or builder',
+  placeholder = LISTING.searchPlaceholder,
   onNavigate,
 }) {
   const navigate = useNavigate();
@@ -272,6 +273,8 @@ export default function GlobalSearch({
   };
 
   const showPopover = open && options.length > 0;
+  /** How many real suggestions the popover has, the query row aside. */
+  const suggestionCount = options.filter((option) => option.kind === 'suggestion').length;
   const optionId = (position) => `${listId}-option-${position}`;
   const Field = inline ? 'div' : 'form';
 
@@ -303,7 +306,7 @@ export default function GlobalSearch({
           value={query}
           placeholder={placeholder}
           // A host that renders a visible `<label>` owns the accessible name.
-          aria-label={inputId ? undefined : 'Search properties'}
+          aria-label={inputId ? undefined : LISTING.searchLabel}
           autoComplete="off"
           role="combobox"
           aria-expanded={showPopover}
@@ -322,17 +325,22 @@ export default function GlobalSearch({
         {loading ? <span className={styles.spinner} aria-hidden="true" /> : null}
         {variant === 'compact' || inline ? null : (
           <button type="submit" className={styles.submit}>
-            Search
+            {LISTING.search}
           </button>
         )}
       </Field>
 
       {showPopover ? (
-        <ul className={styles.popover} id={listId} role="listbox" aria-label="Search suggestions">
+        <ul
+          className={styles.popover}
+          id={listId}
+          role="listbox"
+          aria-label={LISTING.suggestionsLabel}
+        >
           {term.length < MIN_QUERY ? (
             <>
               <li className={styles.groupLabel} role="presentation">
-                Recent searches
+                {LISTING.recentSearches}
               </li>
               {recent.map((entry) => {
                 index += 1;
@@ -357,6 +365,14 @@ export default function GlobalSearch({
             </>
           ) : (
             <>
+              {/* Nothing came back, so the popover says so rather than
+                  offering the raw search as if it were a result (§4.1). */}
+              {suggestionCount === 0 && !loading ? (
+                <li className={styles.groupLabel} role="presentation">
+                  {LISTING.noMatches}
+                </li>
+              ) : null}
+
               {GROUPS.map((group) => {
                 const rows = suggestions?.[group.key] ?? [];
                 if (rows.length === 0) return null;
@@ -412,7 +428,7 @@ export default function GlobalSearch({
                 onClick={() => runSearch(term)}
               >
                 <Icon icon="mdi:magnify" className={styles.rowIcon} aria-hidden="true" />
-                <span className={styles.rowMain}>Search for “{term}”</span>
+                <span className={styles.rowMain}>{fill(LISTING.searchFor, { term })}</span>
               </li>
             </>
           )}

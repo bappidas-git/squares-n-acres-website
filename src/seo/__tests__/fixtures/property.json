@@ -142,7 +142,7 @@
       "price": 8850000,
       "priceOnRequest": false,
       "floorPlanImageUrl": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-1/900/600",
-      "floorPlanPdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "floorPlanPdfUrl": "https://res.cloudinary.com/demo/image/upload/sample-brochure.pdf",
       "availableUnits": 4,
       "isActive": true
     },
@@ -157,7 +157,7 @@
       "price": 12400000,
       "priceOnRequest": false,
       "floorPlanImageUrl": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-2/900/600",
-      "floorPlanPdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "floorPlanPdfUrl": "https://res.cloudinary.com/demo/image/upload/sample-brochure.pdf",
       "availableUnits": 6,
       "isActive": true
     },
@@ -172,7 +172,7 @@
       "price": 14200000,
       "priceOnRequest": false,
       "floorPlanImageUrl": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-3/900/600",
-      "floorPlanPdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "floorPlanPdfUrl": "https://res.cloudinary.com/demo/image/upload/sample-brochure.pdf",
       "availableUnits": 2,
       "isActive": true
     }
@@ -182,7 +182,7 @@
       "id": 1,
       "title": "2 BHK — 1,180 sq ft",
       "imageUrl": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-1/900/600",
-      "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "pdfUrl": "https://res.cloudinary.com/demo/image/upload/sample-brochure.pdf",
       "area": 1180,
       "areaUnit": "sqft",
       "bedrooms": 2,
@@ -193,7 +193,7 @@
       "id": 2,
       "title": "3 BHK — 1,650 sq ft",
       "imageUrl": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-2/900/600",
-      "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "pdfUrl": "https://res.cloudinary.com/demo/image/upload/sample-brochure.pdf",
       "area": 1650,
       "areaUnit": "sqft",
       "bedrooms": 3,
@@ -204,7 +204,7 @@
       "id": 3,
       "title": "3 BHK + Study — 1,860 sq ft",
       "imageUrl": "https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-3/900/600",
-      "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "pdfUrl": "https://res.cloudinary.com/demo/image/upload/sample-brochure.pdf",
       "area": 1860,
       "areaUnit": "sqft",
       "bedrooms": 3,
@@ -280,13 +280,13 @@
   ],
   "videoUrl": "https://www.youtube.com/watch?v=ysz5S6PUM-U",
   "virtualTourUrl": "https://www.squaresnacres.com/virtual-tour/placeholder",
-  "brochureUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+  "brochureUrl": "https://res.cloudinary.com/demo/image/upload/sample-brochure.pdf",
   "brochureLeadGated": true,
   "documents": [
     {
       "id": 1,
       "title": "Project brochure",
-      "url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "url": "https://res.cloudinary.com/demo/image/upload/sample-brochure.pdf",
       "type": "brochure",
       "leadGated": true,
       "order": 1
@@ -294,7 +294,7 @@
     {
       "id": 2,
       "title": "Approved plan sanction",
-      "url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "url": "https://res.cloudinary.com/demo/image/upload/sample-brochure.pdf",
       "type": "approval",
       "leadGated": true,
       "order": 2
@@ -302,7 +302,7 @@
     {
       "id": 3,
       "title": "Title and encumbrance summary",
-      "url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "url": "https://res.cloudinary.com/demo/image/upload/sample-brochure.pdf",
       "type": "legal",
       "leadGated": true,
       "order": 3
@@ -310,7 +310,7 @@
     {
       "id": 4,
       "title": "Current price list",
-      "url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "url": "https://res.cloudinary.com/demo/image/upload/sample-brochure.pdf",
       "type": "price-list",
       "leadGated": true,
       "order": 4

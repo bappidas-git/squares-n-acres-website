@@ -28,6 +28,7 @@ import { useToast } from '../../../components/common/ToastProvider';
 import { viewUrlOf } from './publicUrl';
 
 import styles from './PropertiesListPage.module.css';
+import { TABLES, TOASTS } from '../../../config/adminCopy';
 
 /** The bulk actions `POST /admin/properties/bulk` accepts for properties (§5.8). */
 const BULK_ACTIONS = [
@@ -45,17 +46,10 @@ const BULK_ACTIONS = [
     confirm: {
       title: 'Delete the selected properties?',
       message:
-        '{count} will be deleted, and their public pages will answer 404. This cannot be undone.',
+        '{count} will be deleted, and the public pages will answer 404. This cannot be undone.',
     },
   },
 ];
-
-/** What a successful flag change says, in the words of the thing that changed. */
-const FLAG_MESSAGE = {
-  isActive: (on) => (on ? 'is now live.' : 'is no longer live.'),
-  isFeatured: (on) => (on ? 'is now featured.' : 'is no longer featured.'),
-  isVerified: (on) => (on ? 'is now verified.' : 'is no longer verified.'),
-};
 
 /**
  * Admin → Properties (`/admin/properties`).
@@ -143,7 +137,7 @@ export default function PropertiesListPage() {
 
       try {
         await propertyService.patch(row.id, { [field]: value });
-        toast.success(`“${row.title}” ${FLAG_MESSAGE[field]?.(value) ?? 'was updated.'}`);
+        toast.success(TOASTS.flagged(`“${row.title}”`, field, value));
       } catch (thrown) {
         setOverrides((current) => {
           const { [id]: _reverted, ...rest } = current;
@@ -343,11 +337,11 @@ export default function PropertiesListPage() {
   const emptyState = useMemo(() => {
     if (params.page > 1) {
       return {
-        title: 'Nothing on this page',
-        text: 'The list is shorter than the address you opened.',
+        title: TABLES.emptyPage,
+        text: TABLES.emptyPageText,
         action: (
           <Button variant="outline" onClick={() => setPage(1)}>
-            Go to first page
+            {TABLES.firstPage}
           </Button>
         ),
       };
@@ -359,7 +353,7 @@ export default function PropertiesListPage() {
         text: 'Nothing in the catalogue answers every filter you have set.',
         action: (
           <Button variant="outline" onClick={resetFilters}>
-            Reset filters
+            {TABLES.resetFilters}
           </Button>
         ),
       };
@@ -430,6 +424,8 @@ export default function PropertiesListPage() {
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           bulkActions={canBulk ? BULK_ACTIONS : []}
+          bulkNounOne="property"
+          bulkNounMany="properties"
           onBulkAction={runBulk}
           bulkBusy={bulkBusy}
           rowActions={rowActions}

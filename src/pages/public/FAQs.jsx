@@ -22,6 +22,7 @@ import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './FAQs.module.css';
 import usePrerenderReady from '../../hooks/usePrerenderReady';
+import { EMPTY, ERRORS, fill } from '../../config/copy';
 
 /** The API hears the last keystroke, not every one (§5.6). */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -44,8 +45,8 @@ const CATEGORY_PROBE = { perPage: 100, sort: 'category' };
  * `siteSettings.general` (D83) — the boilerplate printed a US phone number
  * here (ADD-17).
  *
- * The `<title>` is a temporary Helmet tag; prompt 38 replaces it with `<Seo>`
- * and adds the `FAQPage` structured data these answers deserve.
+ * The head is `<Seo type="faqs">`, which publishes the `FAQPage` structured
+ * data these answers deserve (§9.3).
  */
 export default function FAQs() {
   const { items, loading, error, params, setFilters, refetch } = useApiList(
@@ -173,30 +174,22 @@ export default function FAQs() {
           ) : null}
 
           {error ? (
-            <ErrorState
-              title="We could not load the questions"
-              text={error.message}
-              onRetry={refetch}
-            />
+            <ErrorState title={ERRORS.faqs} text={error.message} onRetry={refetch} />
           ) : loading && items.length === 0 ? (
             <FaqListSkeleton />
           ) : items.length === 0 ? (
             <EmptyState
               icon={<Icon icon="mdi:help-circle-outline" width="40" height="40" />}
-              title="No questions match"
-              text={
-                search
-                  ? `Nothing here mentions “${search}”. Try another word, or ask us below.`
-                  : 'There is nothing in this category yet. Try another one, or ask us below.'
-              }
+              title={EMPTY.faqs.title}
+              text={search ? fill(EMPTY.faqs.filtered, { term: search }) : EMPTY.faqs.text}
               action={
                 search ? (
                   <Button variant="outline" onClick={() => setFilters({ q: '' })}>
-                    Clear search
+                    {EMPTY.faqs.action}
                   </Button>
                 ) : (
                   <Button variant="outline" onClick={() => setFilters({ category: '' })}>
-                    Show all questions
+                    {EMPTY.faqs.actionCategory}
                   </Button>
                 )
               }

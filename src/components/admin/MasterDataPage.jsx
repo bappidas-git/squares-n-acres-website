@@ -15,6 +15,7 @@ import SortableList from './SortableList';
 import useApiList from '../../hooks/useApiList';
 import useForm from '../../hooks/useForm';
 import useUnsavedChanges from '../../hooks/useUnsavedChanges';
+import { DIALOGS, FORMS, TABLES, TOASTS } from '../../config/adminCopy';
 import { applySeoSideEffects, validateSeoBranch } from '../seo/seoSideEffects';
 import { firstFieldMessage } from '../../services/apiError';
 import { toSeoPayload, withSeoDefaults } from '../seo/seoValues';
@@ -61,6 +62,7 @@ export function useMasterDataCrud(config) {
   const {
     key: collectionKey,
     service,
+    columns = [],
     filters = [],
     defaultSort = { field: 'createdAt', order: 'desc' },
     paramKeys: extraParamKeys,
@@ -118,6 +120,9 @@ export function useMasterDataCrud(config) {
       try {
         await service.patch(row.id, { [field]: value });
         onMutated?.(collectionKey);
+        // The switch moved before the request went out; this is the receipt
+        // that it landed, in the same words every other list uses (§8.2).
+        toast.success(TOASTS.flagged(`“${labelOf(row, columns)}”`, field, value));
       } catch (thrown) {
         setOverrides((current) => {
           const { [id]: _reverted, ...rest } = current;
@@ -128,7 +133,7 @@ export function useMasterDataCrud(config) {
         setBusyIds((current) => current.filter((entry) => entry !== id));
       }
     },
-    [service, toast, onMutated, collectionKey]
+    [service, toast, onMutated, collectionKey, columns]
   );
 
   return {
@@ -354,7 +359,9 @@ export default function MasterDataPage({ config }) {
     // The redirect this record's `seo` asks for, against the slug the API
     // answered with — a new record has none until now (§9.6).
     if (seoPanel && seoEntityType) await applySeoSideEffects(seoEntityType, saved);
-    toast.success(`${capitalise(singular)} ${editing?.id ? 'updated' : 'created'}.`);
+    toast.success(
+      editing?.id ? TOASTS.saved(capitalise(singular)) : TOASTS.created(capitalise(singular))
+    );
     closeForm();
     onMutated?.(collectionKey);
     refetch();
@@ -398,7 +405,7 @@ export default function MasterDataPage({ config }) {
     setDeletingBusy(true);
     try {
       await service.remove(deleting.id);
-      toast.success(`${capitalise(singular)} deleted.`);
+      toast.success(TOASTS.deleted(`“${labelOf(deleting, columns)}”`));
       setDeleting(null);
       setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
       onMutated?.(collectionKey);
@@ -430,7 +437,7 @@ export default function MasterDataPage({ config }) {
     setBulkBusy(true);
     try {
       const { message } = await service.bulk({ ids, action });
-      toast.success(message || `${ids.length} records updated.`);
+      toast.success(message || TOASTS.updatedCount(ids.length, 'record'));
       setSelectedIds([]);
       onMutated?.(collectionKey);
       refetch();
@@ -648,7 +655,7 @@ export default function MasterDataPage({ config }) {
       message={saveWarning?.message}
       usedBy={saveWarning?.usedBy ?? []}
       hint={saveWarning?.hint ?? ''}
-      confirmLabel={saveWarning?.confirmLabel ?? 'Save anyway'}
+      confirmLabel={saveWarning?.confirmLabel ?? FORMS.saveAnyway}
       loading={form.submitting}
       onClose={() => setSaveWarning(null)}
       onConfirm={async () => {
@@ -760,24 +767,34 @@ export default function MasterDataPage({ config }) {
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           bulkActions={bulkActions}
+          bulkNounOne={singular}
+          bulkNounMany={title.toLowerCase()}
           bulkBusy={bulkBusy}
           onBulkAction={runBulk}
           rowActions={rowActions}
           groupBy={grouping}
           caption={title}
           emptyState={{
-            title: emptyState?.title ?? `No ${title.toLowerCase()} yet`,
+            // A filtered list is not an empty collection: "No localities yet"
+            // over "No records match the current filters" told an operator two
+            // contradictory things at once (prompt 43 §4.1).
+            title:
+              activeFilterCount > 0
+                ? `No ${title.toLowerCase()} match`
+                : (emptyState?.title ?? `No ${title.toLowerCase()} yet`),
             text:
               activeFilterCount > 0
-                ? 'No records match the current filters.'
+                ? TABLES.emptyFiltered
                 : (emptyState?.text ?? `Add the first ${singular} to get started.`),
+            // §8.2: "Add your first …", and only for somebody who may
+            // (`canEdit` is §7's `can(area, 'create')`, resolved by the screen).
             action:
               activeFilterCount > 0 ? (
                 <Button variant="outline" onClick={resetFilters}>
-                  Reset filters
+                  {TABLES.resetFilters}
                 </Button>
               ) : canEdit ? (
-                <Button onClick={startCreate}>Add {singular}</Button>
+                <Button onClick={startCreate}>Add your first {singular}</Button>
               ) : null,
           }}
         />
@@ -807,11 +824,9 @@ export default function MasterDataPage({ config }) {
 
       <ConfirmDialog
         open={Boolean(deleting)}
-        title={`Delete ${singular}?`}
-        message={
-          deleting ? `“${labelOf(deleting, columns)}” will be removed. This cannot be undone.` : ''
-        }
-        confirmLabel="Delete"
+        title={DIALOGS.deleteTitle(singular)}
+        message={deleting ? DIALOGS.deleteMessage(labelOf(deleting, columns)) : ''}
+        confirmLabel={DIALOGS.deleteConfirm}
         danger
         loading={deletingBusy}
         onClose={() => setDeleting(null)}
@@ -820,10 +835,10 @@ export default function MasterDataPage({ config }) {
 
       <ConfirmDialog
         open={confirmDiscard}
-        title="Discard unsaved changes?"
+        title={DIALOGS.discardTitle}
         message={DISCARD_MESSAGE}
-        confirmLabel="Discard changes"
-        cancelLabel="Keep editing"
+        confirmLabel={DIALOGS.discardConfirm}
+        cancelLabel={DIALOGS.discardCancel}
         danger
         onClose={() => setConfirmDiscard(false)}
         onConfirm={closeForm}

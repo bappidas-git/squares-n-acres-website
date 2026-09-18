@@ -9,6 +9,7 @@ import { formatNumber } from '../../../utils/format';
 import { publicUrlOf } from '../properties/publicUrl';
 
 import styles from './DashboardPage.module.css';
+import { DASHBOARD } from '../../../config/adminCopy';
 
 /**
  * The five listings doing the most work (§6.16 `topProperties`).
@@ -34,7 +35,7 @@ export default function TopPropertiesCard({ properties = [], canEdit = false }) 
       </div>
 
       {properties.length === 0 ? (
-        <p className={styles.emptyLine}>No listings have been viewed yet.</p>
+        <p className={styles.emptyLine}>{DASHBOARD.propertiesEmpty}</p>
       ) : (
         <ul className={styles.list}>
           {properties.map((property) => (

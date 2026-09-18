@@ -7,6 +7,7 @@ import { Button } from '../../ui';
 import { useLeadCapture } from '../../../contexts/LeadCaptureContext';
 
 import styles from './BlogSidebar.module.css';
+import { BLOG } from '../../../config/copy';
 
 /**
  * The rail beside every blog listing: what is being read, what the archive is
@@ -39,7 +40,7 @@ export default function BlogSidebar({ tags, activeTagSlug = '', className = '' }
           className={styles.leadIcon}
           aria-hidden="true"
         />
-        <h2 className={styles.leadTitle}>Need advice on a purchase?</h2>
+        <h2 className={styles.leadTitle}>{BLOG.sidebarLead}</h2>
         <p className={styles.leadText}>
           Tell an advisor what you are weighing up and get the trade-offs in writing, with no
           obligation.

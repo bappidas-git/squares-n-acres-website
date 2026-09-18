@@ -245,7 +245,7 @@ it('sends the whole record when one nested field changes', async () => {
     'Bengaluru property, plainly explained'
   );
   expect(siteSettings.refresh).toHaveBeenCalled();
-  expect(await screen.findByText(/site settings are saved/i)).toBeInTheDocument();
+  expect(await screen.findByText(/site settings saved/i)).toBeInTheDocument();
 });
 
 it('refuses a measurement id that is not one, on the tab that holds it', async () => {

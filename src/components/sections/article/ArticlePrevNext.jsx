@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import PATHS from '../../../routes/paths';
 
 import styles from './ArticlePrevNext.module.css';
+import { BLOG } from '../../../config/copy';
 
 /**
  * Where to go from the end of an article: the pieces published either side of
@@ -23,7 +24,7 @@ export default function ArticlePrevNext({ prev, next, className = '' }) {
   return (
     <nav
       className={[styles.nav, className].filter(Boolean).join(' ')}
-      aria-label="More in this category"
+      aria-label={BLOG.moreInCategory}
     >
       {prev ? (
         <Link to={PATHS.article(prev.slug)} className={[styles.link, styles.prev].join(' ')}>

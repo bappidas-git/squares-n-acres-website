@@ -4,6 +4,7 @@ import useApi from '../../../hooks/useApi';
 import { Skeleton } from '../../ui';
 
 import styles from './RelatedArticles.module.css';
+import { BLOG } from '../../../config/copy';
 
 /** Three is what the row has space for at every width it is drawn at. */
 const LIMIT = 3;
@@ -27,7 +28,7 @@ export default function RelatedArticles({
   articleId,
   relatedIds = [],
   categorySlug = '',
-  title = 'Read next',
+  title = BLOG.relatedArticles,
   className = '',
 }) {
   const chosen = relatedIds.filter(Boolean);
