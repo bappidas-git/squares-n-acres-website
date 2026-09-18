@@ -6,8 +6,14 @@ three roles at two viewports, the seed reset flow exercised end to end, the
 prerender executed, the handover package regenerated, and the dependency list
 verified by hand.
 
-**Verdict: release-ready.** Three defects were found and fixed in this prompt
-(§9); nothing is left open.
+**Verdict: release-ready**, with one check reported amber rather than green.
+`npm run check:all` — the gate — passes from a clean `npm ci`. Six defects were
+found and fixed in this prompt (§9). `npm run a11y:audit`, which is not part of
+`check:all`, exits 1 on 12 errors across four admin screens: it had never run to
+completion before (it hung, §9.2), and the two findings it surfaces are
+pre-existing, admin-only, and fixable only by a design-token or global-CSS change
+that does not belong on the commit being tagged. Both are measured in §3.5 and
+deferred with the measurement, not dropped.
 
 | Environment    | Value                                                        |
 | -------------- | ------------------------------------------------------------ |
@@ -123,7 +129,7 @@ string. Both are inside the budget.
 | Bundle report      | `npm run analyze`        | **passed** — 286.02 kB of a 300 kB budget, 13.97 kB to spare; no admin marker in the entry chunk |
 | Link check         | `npm run check:links`    | **144 pages opened, 143 internal links followed, 0 broken** |
 | Sitemap coverage   | `npm run check:sitemap`  | **0 missing, 0 extra** — 145 pages crawled to depth 4, 144 indexable routes, matching the 144 URLs the sitemaps list |
-| Accessibility      | `npm run a11y:audit`     | §3.5 |
+| Accessibility      | `npm run a11y:audit`     | **378 pages, 12 errors, 1 138 warnings — exit 1** (§3.5). It had never completed before this prompt. |
 | Prerender          | `npm run build:prerender`| **144 of 144 pages saved**, 0 failures |
 | End-to-end         | `npm run e2e`            | **53 passed in 1.9 min**, 0 failed |
 
@@ -170,6 +176,93 @@ without reading a QA report.
 **Proved, not argued:** re-run against the correctly built bundle,
 `check:sitemap` reports **0 missing, 0 extra** over the same 144 URLs. All 26
 "extra" were the one absent environment variable.
+
+### 3.5 Accessibility — the one check that is not green, and why
+
+```
+npm run a11y:audit
+```
+
+| Measure | Result |
+| ------- | ------ |
+| Pages audited | **378** (every route in `src/routes/paths.js` × 390 and 1280 px) |
+| Errors | **12** |
+| Warnings | 1 138 |
+| Exit code | **1** |
+| Report | `docs/QA/42-a11y-audit.md` (generated, git-ignored) |
+
+`a11y:audit` is not in `check:all` — it needs a browser and is run explicitly —
+so this does not fail the gate. But it is not green, and it is reported as not
+green.
+
+**It had never completed before.** The script hung indefinitely on the admin
+article edit form (§9.2), so the 378-page run above is the first complete one.
+Prompt 46's grid covered 63 curated routes; this covers every route the app can
+navigate to, at both widths, which is why it surfaces findings no earlier prompt
+saw.
+
+#### The 12 errors
+
+**1 — Four admin list pages really do scroll sideways at 1280 px** (4 errors):
+`/admin/properties` (721 px), `/admin/articles` (270 px), `/admin/leads`
+(180 px), `/admin/jobs` (61 px). No public page is affected, at either width.
+
+This is measured, not inferred. Probed directly on `/admin/properties` at
+1280 px:
+
+| Measurement | Value |
+| ----------- | ----- |
+| `.scroller` (`overflow-x: auto`) | `clientWidth` 966, `scrollWidth` 1728 — **the table scroller works correctly** |
+| every ancestor above it | `scrollWidth === clientWidth` (968, 968, 968); `main` is `overflow-x: hidden` |
+| `document.body.scrollWidth` | **1280** — body does not overflow |
+| `document.documentElement.scrollWidth` | **2001** |
+| `window.scrollTo({left: 5000})` then `window.scrollX` | **721** |
+| `document.body.getBoundingClientRect().left` before → during | **0 → −721** |
+| the sidebar's `left` before → during | **0 → −721** |
+| the `<h1>`'s `left` before → during | 288 → −433 |
+
+The last three lines are what settle it: the body, the sidebar and the heading
+all move. A person at 1280 px can drag the entire admin shell 721 px sideways
+and see blank space. That is the defect §8.1 forbids.
+
+**This corrects the record.** NEW-48 (closed in prompt 46) held that
+`/admin/properties` "reported 721 px of overflow … while the page did not move a
+pixel", and prompt 46's width grid concluded "63 of 63 clean; no horizontal
+scroll at any width on any route". The rule change prompt 46 made was right —
+attempting the scroll is the correct probe — but the premise was wrong: the page
+does move, by exactly the 721 px the old rule reported. The number was never the
+false positive; the conclusion drawn about it was.
+
+**Not fixed here.** The root scrolls because Chromium counts the wide table
+inside its own `overflow-x: auto` scroller toward the *root's* scrollable
+overflow, even though body and every ancestor are viewport-width. The fix is
+`overflow-x: clip` (or `hidden`) on the document in `src/assets/styles/global.css`
+— a global change that lands underneath every `position: sticky` header, the
+mobile CTA bar and the scroll-anchoring behaviour prompt 42 tuned. That is not a
+change to make on the commit being tagged, on a defect that is pre-existing,
+admin-only and cosmetic. Deferred with the measurement above so nobody has to
+re-derive it.
+
+**2 — Placeholder text at 4.30:1 on four master-data forms** (8 errors, the same
+four pages at both widths): `/admin/master-data/localities/add` and `/edit/1`,
+`/admin/master-data/developers/add` and `/edit/1`. WCAG wants 4.5:1; this is
+4.30:1.
+
+`.control::placeholder` in `src/components/ui/FormField.module.css` uses
+`var(--color-text-muted)`. Fixing it means either darkening that token — which
+is muted text *everywhere* on the site — or adding a placeholder-specific token,
+since §2.4 forbids a hex literal outside `theme.js` and `global.css`. Either is a
+design-system change. `npm run check:contrast` passes on all 11 declared pairs;
+placeholders are not among them, which is the gap worth closing when the token is
+revisited. Deferred, not silently dropped.
+
+#### The 1 138 warnings
+
+Not counted as failures, and the two classes that dominate are already recorded:
+**NEW-47** (contrast over a photograph cannot be computed from CSS, so the rule
+reports "background unknown") and **NEW-52** (the rule measures `aria-hidden`
+decoration, e.g. the breadcrumb `/` separator at 1.47:1). Both are deferred with
+rationale in `docs/PROJECT_STATE.md`.
 
 ### 3.6 End-to-end — 53 specs, all passing
 
@@ -524,6 +617,12 @@ implementation and its tests are unchanged, so nothing else moves.
 
 ## 9. Defects found and fixed in this prompt
 
+**Four defects found in this prompt** (§9.1–§9.4), **three previously-known
+issues closed** (§9.6) and **one unused dependency removed** (§9.5). Three of the
+four new ones were in the project's own tooling, which is the part nobody checks:
+each would have kept misreporting or hanging indefinitely.
+
+
 ### 9.1 `npm run mock:reset` reported success while being silently undone
 
 **Severity: high.** It destroyed the one recovery path the mock has, in the
@@ -566,7 +665,37 @@ it is read as "not running", so the reset still goes ahead in the safe
 direction. Verified both ways in §5, steps 4–6. No endpoint was added and the
 API contract is untouched.
 
-### 9.2 The handover package quoted values a fresh seed never produces
+### 9.2 `npm run a11y:audit` hung forever on an admin form's "Leave site?" dialog
+
+**Severity: high for the tool.** The project's accessibility check could not
+complete, and nothing said so.
+
+The audit walks every route in `src/routes/paths.js`, which includes the admin
+edit forms. `src/hooks/useUnsavedChanges.js` registers a `beforeunload` handler,
+so navigating away from a dirty form raises the browser's own "Leave site?"
+confirmation — and Puppeteer does not dismiss a dialog by itself. The dialog
+stayed up, `page.goto` never resolved, and every later navigation queued behind
+it.
+
+What made it costly: the script only prints a page when that page **has errors**,
+so a wedged run and a clean run look identical from the terminal. Measured here —
+42 minutes on the article edit form, CPU time frozen at 10 s, no further requests
+to the mock, and not one line of output. The first diagnosis of "it is just slow"
+was wrong, and the thing that disproved it was the request count to the mock
+standing still for 25 s, not the CPU number.
+
+**Fix.** Both page-creation sites in `scripts/a11y-audit.js` now accept the
+dialog, which is what a person clicking "Leave" does. The guard itself is correct
+behaviour and is untouched — it is what stops an editor losing a half-written
+article. After the fix the audit completed 378 pages.
+
+This is the **second** instance of this bug in this audit: the route-walk harness
+of §4 hit it first (§4.4). Any Puppeteer script in this repository that navigates
+across admin forms needs a dialog handler. `scripts/prerender.js`,
+`check-links.js` and `validate-jsonld.js` crawl public URLs only and are
+unaffected — checked, not assumed.
+
+### 9.3 The handover package quoted values a fresh seed never produces
 
 **Severity: medium**, and invisible without regenerating. Covered in §7: prompt
 47 captured its examples from a drifted runtime database, so
@@ -578,12 +707,29 @@ would have found mismatches that were never the API's fault.
 **Fix.** Regenerated from a freshly reset seed (§5 runs first, deliberately) and
 committed. `check:guidelines` passes 12/12.
 
-### 9.3 `date-fns` was installed and never used
+### 9.4 `check:guidelines` overstated its own coverage
+
+**Severity: low, but it is a checker lying about a handover package.** It printed
+`captured examples (242)` while three endpoints — `jobs.apply`, `leads.create`
+and `auth.updatePassword` — carry no example payload at all. §7.1 has the detail:
+it tested only for one of the two phrasings the generator can write. It now
+reports `239 captured, 3 explained skips, of 242` and names them, and still fails
+only on a real hole.
+
+### 9.5 `date-fns` was installed and never used
 
 **Severity: low** — 1 package of install weight and a misleading dependency
 list. Covered in §8. Removed.
 
 ---
+
+### 9.6 Three previously-known issues closed
+
+| Id | What it was | Fix |
+| --- | --- | --- |
+| NEW-29 | The "Ready to Move" badge seeded `mdi:home-check-outline`, which is not in the MDI set, so the badge rendered blank. Owner prompt 15 never picked it up. | Seeded `mdi:home-city-outline` instead — an id from `IconPicker`'s curated list, which is the set the project itself vouches for. Iconify resolves ids over the network, so validity cannot be checked offline; seeding from the picker's list is the rule that stops this recurring. |
+| NEW-30 | Every counted statistic prerendered as `0`. | `scripts/prerender.js` emulates `prefers-reduced-motion: reduce`. Proved in §6.1 against the seed's own numbers. |
+| NEW-50 | `e2e/**` was outside the `lint` and `format` globs. | Added to all four globs, with a dedicated `eslintConfig` override. The one real finding the new coverage produced was fixed in the test, not silenced. |
 
 ## 10. Acceptance criteria
 
