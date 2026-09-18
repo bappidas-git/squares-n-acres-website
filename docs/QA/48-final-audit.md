@@ -121,7 +121,7 @@ string. Both are inside the budget.
 | API smoke          | `npm run smoke`          | **282/282 checks passed, 0 failed** |
 | Structured data    | `npm run check:jsonld`   | **144 pages, 0 errors**, 36 advisory warnings (§3.2) |
 | Bundle report      | `npm run analyze`        | **passed** — 286.02 kB of a 300 kB budget, 13.97 kB to spare; no admin marker in the entry chunk |
-| Link check         | `npm run check:links`    | §3.3 |
+| Link check         | `npm run check:links`    | **144 pages opened, 143 internal links followed, 0 broken** |
 | Sitemap coverage   | `npm run check:sitemap`  | §3.4 |
 | Accessibility      | `npm run a11y:audit`     | §3.5 |
 | Prerender          | `npm run build:prerender`| §6 |
