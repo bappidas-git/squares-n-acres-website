@@ -578,14 +578,28 @@ module.exports = ({ db, getModel }) => {
         updatedAt: now,
       };
 
-      // The copy is a different page, so its score is somebody else's answer:
-      // it is recomputed when the SEO panel next analyses it (§5.14).
+      // The copy is a different page, so three parts of the original's `seo`
+      // branch are not its to inherit — the same three `src/utils/
+      // duplicateRecord.js` `copySeo()` clears for the articles and the pages
+      // that are duplicated in the browser (§9.6, §5.14):
+      //
+      //   - the score and the analysis are an answer about the original's text;
+      //   - `canonicalUrl` names one page, and inherited it would quietly
+      //     canonicalise the copy to the original;
+      //   - `redirect` would send every visitor of the copy somewhere else.
+      //
+      // `analysis` is reset to the model's own object of four lists rather than
+      // to `[]`: §9.6 types it as an object, and a panel reading
+      // `analysis.basic` on an array gets `undefined`.
       copy.seo = {
         ...copy.seo,
+        canonicalUrl: null,
+        redirect: { enabled: false, toPath: '', statusCode: 301 },
         score: null,
         scoreBand: 'none',
         testsPassed: 0,
-        analysis: [],
+        testsTotal: 0,
+        analysis: { basic: [], additional: [], titleReadability: [], contentReadability: [] },
         lastAnalyzedAt: null,
       };
 

@@ -463,6 +463,159 @@ describe('/admin/properties', () => {
     });
   });
 
+  /* ---------------------------------------------------------------- *
+   * Regressions found by the prompt 44 bug bash
+   * ---------------------------------------------------------------- */
+
+  it('derives the slug from the title when the client sends an empty one (§5.9)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      // The form posts `slug: ''` and `seo.slug: ''` whenever the editor has
+      // not chosen a URL; §5.9 has the API derive one. Before prompt 44 the
+      // validator refused both as malformed slugs, so the record could not be
+      // created at all.
+      const created = await request('POST', '/admin/properties', {
+        token,
+        body: {
+          ...NEW_PROPERTY,
+          title: 'Empty Slug Tower — 2 BHK Apartments in Hebbal',
+          slug: '',
+          seo: { slug: '' },
+        },
+      });
+
+      assert.equal(created.status, 201);
+      assert.equal(created.body.data.slug, 'empty-slug-tower-2-bhk-apartments-in-hebbal');
+      assert.equal(created.body.data.seo.slug, created.body.data.slug);
+    });
+  });
+
+  it('refuses a pincode that is not six digits (§6.1)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const short = await request('POST', '/admin/properties', {
+        token,
+        body: {
+          ...NEW_PROPERTY,
+          title: 'Bad Pincode Tower — 2 BHK Apartments in Hebbal',
+          location: { ...NEW_PROPERTY.location, pincode: '12' },
+        },
+      });
+      assert.equal(short.status, 422);
+      assert.ok(short.body.errors['location.pincode']);
+
+      const letters = await request('POST', '/admin/properties', {
+        token,
+        body: {
+          ...NEW_PROPERTY,
+          title: 'Bad Pincode Tower — 2 BHK Apartments in Hebbal',
+          location: { ...NEW_PROPERTY.location, pincode: 'abc123' },
+        },
+      });
+      assert.equal(letters.status, 422);
+
+      const good = await request('POST', '/admin/properties', {
+        token,
+        body: {
+          ...NEW_PROPERTY,
+          title: 'Good Pincode Tower — 2 BHK Apartments in Hebbal',
+          location: { ...NEW_PROPERTY.location, pincode: '560024' },
+        },
+      });
+      assert.equal(good.status, 201);
+      assert.equal(good.body.data.location.pincode, '560024');
+    });
+  });
+
+  it('requires a possession date while a project is pre-launch or under construction', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      for (const constructionStatus of ['pre-launch', 'under-construction']) {
+        const missing = await request('POST', '/admin/properties', {
+          token,
+          body: {
+            ...NEW_PROPERTY,
+            title: `No Possession Tower — ${constructionStatus} Apartments in Hebbal`,
+            constructionStatus,
+          },
+        });
+        assert.equal(missing.status, 422, constructionStatus);
+        assert.deepEqual(missing.body.errors.possessionDate, [
+          'The possessionDate field is required.',
+        ]);
+
+        const given = await request('POST', '/admin/properties', {
+          token,
+          body: {
+            ...NEW_PROPERTY,
+            title: `Possession Tower — ${constructionStatus} Apartments in Hebbal`,
+            constructionStatus,
+            possessionDate: '2029-06-30',
+          },
+        });
+        assert.equal(given.status, 201, constructionStatus);
+      }
+
+      // A home that is finished promises nothing, so it needs no date.
+      const ready = await request('POST', '/admin/properties', {
+        token,
+        body: { ...NEW_PROPERTY, title: 'Ready Tower — 2 BHK Apartments in Hebbal' },
+      });
+      assert.equal(ready.status, 201);
+
+      // A `PATCH` that moves a listing into one of those states must say when.
+      const moved = await request('PATCH', '/admin/properties/1', {
+        token,
+        body: { constructionStatus: 'under-construction' },
+      });
+      assert.equal(moved.status, 422);
+      assert.ok(moved.body.errors.possessionDate);
+    });
+  });
+
+  it('clears the seo branch a copy cannot inherit (§9.6)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      await request('PATCH', '/admin/properties/1', {
+        token,
+        body: {
+          seo: {
+            canonicalUrl: 'https://www.squaresnacres.com/properties/the-original',
+            redirect: { enabled: true, toPath: '/somewhere-else', statusCode: 301 },
+            score: 88,
+            scoreBand: 'good',
+            testsPassed: 44,
+            testsTotal: 50,
+          },
+        },
+      });
+
+      const copy = await request('POST', '/admin/properties/1/duplicate', { token });
+      assert.equal(copy.status, 201);
+
+      const { seo } = copy.body.data;
+      assert.equal(seo.canonicalUrl, null, 'a copy is not the original page');
+      assert.equal(seo.redirect.enabled, false);
+      assert.equal(seo.score, null);
+      assert.equal(seo.scoreBand, 'none');
+      assert.equal(seo.testsPassed, 0);
+      assert.equal(seo.testsTotal, 0);
+      // §9.6 types `analysis` as an object of four lists; it was reset to `[]`,
+      // so a panel reading `analysis.basic` got `undefined`.
+      assert.ok(seo.analysis && !Array.isArray(seo.analysis));
+      assert.deepEqual(seo.analysis, {
+        basic: [],
+        additional: [],
+        titleReadability: [],
+        contentReadability: [],
+      });
+    });
+  });
+
   it('lets a sales user read the desk but not write to it', async () => {
     await withServer(async ({ request, login }) => {
       const token = await login(SALES);

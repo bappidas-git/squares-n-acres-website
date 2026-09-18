@@ -45,7 +45,11 @@ const locality = {
   heroImageUrl: { type: 'url', nullable: true, default: null },
   latitude: { type: 'number', nullable: true, min: -90, max: 90, default: null },
   longitude: { type: 'number', nullable: true, min: -180, max: 180, default: null },
-  pincodes: { type: 'array', items: { type: 'string', maxLength: 6 }, default: [] },
+  pincodes: {
+    type: 'array',
+    items: { type: 'string', maxLength: 6, pattern: '^\\d{6}$' },
+    default: [],
+  },
   highlights: { type: 'array', items: { type: 'string', maxLength: 200 }, default: [] },
   connectivity: {
     type: 'array',
