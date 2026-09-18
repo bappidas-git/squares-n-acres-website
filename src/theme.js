@@ -208,6 +208,20 @@ const theme = createTheme(base, {
     MuiFormHelperText: {
       styleOverrides: { root: { fontSize: 'var(--font-size-xs)' } },
     },
+    // MUI answers focus by thickening the outlined input's own fieldset
+    // border, which is not the ring §8.3 asks for and is what a keyboard found
+    // on the admin's autocompletes. `:has(:focus-visible)` keeps it to the
+    // keyboard; a browser without `:has` falls back to MUI's border.
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          '&:has(:focus-visible)': {
+            outline: '2px solid var(--color-focus)',
+            outlineOffset: 2,
+          },
+        },
+      },
+    },
     MuiTextField: {
       defaultProps: { variant: 'outlined' },
       styleOverrides: {

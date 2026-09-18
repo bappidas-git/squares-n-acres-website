@@ -70,6 +70,12 @@ const DEFAULTS = {
   // audited as it stands rather than costing the whole budget.
   readyTimeout: 8000,
   focusStops: 30,
+  // How many navigations one tab takes before it is replaced. A tab that has
+  // loaded a hundred and fifty documents starts timing out on the next one —
+  // measured: every admin route after roughly the 155th navigation failed,
+  // identically at both widths — and a fresh tab costs a few hundred
+  // milliseconds. Storage is per origin, so a new tab is still signed in.
+  recycle: 40,
   // The pair of files this run writes into `docs/QA/`. The default is the run
   // of record; a sweep across the other five test widths writes its own.
   outName: '42-a11y-audit',
@@ -95,6 +101,7 @@ function parseArgs(argv) {
   options.timeout = Number(options.timeout) || DEFAULTS.timeout;
   options.readyTimeout = Number(options.readyTimeout) || DEFAULTS.readyTimeout;
   options.focusStops = Number(options.focusStops) || DEFAULTS.focusStops;
+  options.recycle = Number(options.recycle) || DEFAULTS.recycle;
   options.widths = String(options.widths)
     .split(',')
     .map((value) => Number(value.trim()))
@@ -417,6 +424,33 @@ async function auditFocusRing(page, pathname) {
 }
 
 /**
+ * Forgets everything the site remembers about this visitor.
+ *
+ * `signIn` below survives a live session, which is what kept the admin screens
+ * in the sweep. This is the other half: storage belongs to the origin rather
+ * than to the tab, so without it `/admin/login` — a route the *public* pass
+ * audits — redirects to the dashboard at every width after the first, and the
+ * audit records having seen a login screen it never rendered. Each width opens
+ * as a stranger so that page is the page it claims to be.
+ *
+ * @param {import('puppeteer-core').Page} page
+ */
+async function forgetSession(page) {
+  await page.goto(`${options.baseUrl}/`, {
+    waitUntil: 'domcontentloaded',
+    timeout: options.timeout,
+  });
+  await page.evaluate(() => {
+    try {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+    } catch {
+      // A browser with storage blocked has nothing to forget.
+    }
+  });
+}
+
+/**
  * Signs in through the login form, exactly as a person would.
  *
  * **Unless there is already a session.** Every width opens a new page but the
@@ -663,18 +697,55 @@ async function main() {
   const stats = [];
   let audited = 0;
 
+  /** A tab at this width, ready to be audited in. */
+  const openPage = async (width) => {
+    const tab = await browser.newPage();
+    // Every tab needs the listener, and a recycled tab is a new tab: hanging
+    // it here rather than beside one `newPage` call is what keeps the fortieth
+    // route from meeting an unhandled "Leave site?" dialog.
+    acceptLeaveDialogs(tab);
+    const isPhone = width < 900;
+    await tab.setViewport({
+      width,
+      height: isPhone ? 844 : 900,
+      isMobile: isPhone,
+      hasTouch: isPhone,
+      deviceScaleFactor: 1,
+    });
+    return tab;
+  };
+
+  // The tab in use, and how many documents it has loaded — held here rather
+  // than in the width loop so `visit` is declared once.
+  const tab = { page: null, sinceFresh: 0 };
+
+  /** Audits one route, replacing the tab before it gets tired. */
+  const visit = async (width, pathname) => {
+    if (tab.sinceFresh >= options.recycle) {
+      await tab.page.close();
+      tab.page = await openPage(width);
+      tab.sinceFresh = 0;
+    }
+    tab.sinceFresh += 1;
+
+    const result = await auditPage(tab.page, pathname, width);
+    findings.push(...result.findings);
+    stats.push({ path: pathname, width, ...result.stats });
+    audited += 1;
+    if (options.verbose) {
+      const errors = result.findings.filter((finding) => finding.level === 'error').length;
+      console.log(`  ${width}px ${pathname} — ${errors} error(s)`);
+    }
+  };
+
   try {
     for (const width of options.widths) {
-      const page = await browser.newPage();
-      acceptLeaveDialogs(page);
-      const isPhone = width < 900;
-      await page.setViewport({
-        width,
-        height: isPhone ? 844 : 900,
-        isMobile: isPhone,
-        hasTouch: isPhone,
-        deviceScaleFactor: 1,
-      });
+      tab.page = await openPage(width);
+      tab.sinceFresh = 0;
+
+      // Every width starts as a stranger, so `/admin/login` is the login
+      // screen rather than a redirect to the dashboard.
+      await forgetSession(tab.page);
 
       const routes = [...publicPaths];
 
@@ -684,36 +755,18 @@ async function main() {
         routes.push(PATHS.adminLogin);
       }
 
-      for (const pathname of routes) {
-        const result = await auditPage(page, pathname, width);
-        findings.push(...result.findings);
-        stats.push({ path: pathname, width, ...result.stats });
-        audited += 1;
-        if (options.verbose) {
-          const errors = result.findings.filter((finding) => finding.level === 'error').length;
-          console.log(`  ${width}px ${pathname} — ${errors} error(s)`);
-        }
-      }
+      for (const pathname of routes) await visit(width, pathname);
 
       if (adminPaths.length) {
-        const signedIn = await signIn(page);
+        const signedIn = await signIn(tab.page);
         if (!signedIn) {
           console.warn(`a11y audit: could not sign in at ${width}px; admin screens skipped.`);
         } else {
-          for (const pathname of adminPaths) {
-            const result = await auditPage(page, pathname, width);
-            findings.push(...result.findings);
-            stats.push({ path: pathname, width, ...result.stats });
-            audited += 1;
-            if (options.verbose) {
-              const errors = result.findings.filter((finding) => finding.level === 'error').length;
-              console.log(`  ${width}px ${pathname} — ${errors} error(s)`);
-            }
-          }
+          for (const pathname of adminPaths) await visit(width, pathname);
         }
       }
 
-      await page.close();
+      await tab.page.close();
     }
 
     // The keyboard pass, on one width: a focus ring does not change with the
@@ -723,6 +776,7 @@ async function main() {
     await page.setViewport({ width: 1280, height: 900 });
     const needsSession = FOCUS_ROUTES.some((route) => route.startsWith('/admin'));
     if (needsSession && adminPaths.length) await signIn(page);
+    else await forgetSession(page);
 
     for (const pathname of FOCUS_ROUTES) {
       if (pathname.startsWith('/admin') && !adminPaths.length) continue;

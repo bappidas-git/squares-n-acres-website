@@ -10,6 +10,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 
 import Accordion from '../Accordion';
+import Avatar from '../Avatar';
 import BottomSheet from '../BottomSheet';
 import Carousel from '../Carousel';
 import Drawer from '../Drawer';
@@ -124,5 +125,30 @@ describe('Drawer', () => {
 
     expectDialogSemantics(screen.getByRole('dialog'));
     expect(screen.getByRole('dialog')).toHaveAccessibleName('Menu');
+  });
+});
+
+describe('Avatar', () => {
+  it('keeps its initials out of the accessibility tree', () => {
+    renderWith(<Avatar name="Priya Sharma" />);
+
+    expect(screen.getByText('PS')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('does not put its initials into the name of the control around it', () => {
+    renderWith(
+      <button type="button">
+        <Avatar name="Admin User" />
+        Account
+      </button>
+    );
+
+    expect(screen.getByRole('button')).toHaveAccessibleName('Account');
+  });
+
+  it('still names the photograph it shows when there is one', () => {
+    renderWith(<Avatar src="/uploads/priya.jpg" name="Priya Sharma" />);
+
+    expect(screen.getByRole('img')).toHaveAccessibleName('Priya Sharma');
   });
 });

@@ -405,12 +405,21 @@ removed it. Anything added here from now on is a bug until it is closed again.
 
 ## Known issues (open) — id, description, found by, owner prompt
 
-**None.** Prompt 48 walked the whole list and gave every row a disposition: the
-ones whose owner prompt had already fixed them are annotated in the tables under
-"Known issues (closed) — the audit's own tables" below, three were fixed in 48
-itself, one is closed as by-design, and five are deliberately **not** in 1.0.0
-and are listed under "Deferred (post-1.0)". Nothing is unaccounted for and
-nothing is silently carried.
+Prompt 48 walked the whole list and gave every row a disposition: the ones whose
+owner prompt had already fixed them are annotated in the tables under "Known
+issues (closed) — the audit's own tables" below, three were fixed in 48 itself,
+one is closed as by-design, and five are deliberately **not** in 1.0.0 and are
+listed under "Deferred (post-1.0)". Nothing is unaccounted for and nothing is
+silently carried.
+
+**Two rows were added after that pass**, by the prompt 42 addendum below, which
+was open across 43–48. Both are documentation or tooling rather than the
+product, both are still true on the 1.0.0 tree, and both are cheap:
+
+| Id | Description | Found by | Owner prompt |
+| --- | --- | --- | --- |
+| NEW-55 | **`docs/QA/42-mobile-a11y-checklist.md` §2, the per-route × per-width grid, is still the `<!-- GRID -->` placeholder**, while prompt 42's acceptance checklist claimed it was filled for every route at all seven widths. The verdict behind it is real — §7 of that report, and prompt 48's own 378-page run — but the table was never transcribed. The acceptance box is corrected in the addendum. The cheapest honest close is to point §2 at prompt 46's seven-width grid in `docs/QA/46-cross-device-lighthouse-seo.md` and prompt 48's run, rather than re-crawling for a table. | 42 addendum, re-reading the merged file | post-1.0 |
+| NEW-56 | **`scripts/smoke-api.js` is not Prettier-clean.** Prompt 47 rewrote it (363 lines changed) and `npm run format:check` has reported it ever since; every other file in the glob passes. Nothing is gated on it — `check:all` runs lint, the test suites, `build:ci`, `check:traces`, `validate:seed` and `check:contrast`, not `format:check` — which is presumably how it got through. `npx prettier --write scripts/smoke-api.js` is the whole fix; filed rather than done in the addendum because that file is unrelated to an accessibility pass. | 42 addendum, verifying after merging prompt 47 | post-1.0 |
 
 Closed in prompt 48:
 
@@ -6696,7 +6705,10 @@ in `check:all`: it needs a running mock, a served build and Chrome.
 
 **Acceptance checklist**
 
-- [x] `docs/QA/42-mobile-a11y-checklist.md` filled for every route at all seven widths, zero open ✗.
+- [ ] `docs/QA/42-mobile-a11y-checklist.md` — §1, §3 (per route *shape*) and §4 are
+      filled with zero open ✗, but §2's per-route grid shipped **empty**: the
+      tables the two runs print were never transcribed into it. Corrected below
+      and opened as **NEW-55**; this box was ticked in error.
 - [x] `docs/QA/42-mobile-a11y-report.md` lists every finding with the file that fixed it.
 - [x] `scripts/a11y-audit.js` passes with Chrome — zero error-level findings.
 - [x] The new a11y component tests pass; lint, `test:ci`, `build:ci`, `check:traces`, `check:contrast` and `smoke` all pass; no console warnings.
@@ -6729,6 +6741,114 @@ in `check:all`: it needs a running mock, a served build and Chrome.
   a future pass could sample the rendered pixels instead (owner 46).
 
 **Next prompt: 43 — UX polish, states and copy.**
+
+---
+
+#### Prompt 42 addendum — the focus ring, the avatar, and standing down on two checker changes (2026-09-18)
+
+Written after prompt 42 merged, from re-reading the audit's own output rather
+than the site. It stayed open across prompts 43, 44, 45 and 46, and what
+survives is smaller than what it started as: prompts 44 and 46 reached two of
+its findings first, and on both, the version that landed on `main` is better.
+
+**Three defects in the site — the part that stands.**
+
+- **F17 — the kit's text field suppressed the ring it had been given.**
+  `FormField`'s `.control:focus` set `outline: none` and drew a 3 px
+  `--color-primary-ring` halo instead. That halo is 1.36:1 on white, under the
+  3:1 WCAG 1.4.11 asks of a focus indicator, and because `.control:focus`
+  outranks the global `:focus-visible` every input, select and textarea in the
+  kit *lost* the ring rather than gaining a second one. The `outline: none` and
+  the halo are gone; the border still warms and the ring is the global one.
+- **F18 — MUI's outlined inputs answered focus with a thicker fieldset border**,
+  which is MUI's default and not the ring §8.3 fixes. `src/theme.js` gives
+  `MuiOutlinedInput` the ring on `&:has(:focus-visible)`, so it stays a keyboard
+  affordance and a browser without `:has` keeps MUI's border rather than nothing.
+- **F19 — every avatar announced its initials.** `Avatar` hid them only when
+  there were none, so "AU" was read in front of the account menu's own label and
+  "PS" inside an author byline. The span is now always `aria-hidden`; a real
+  photograph still carries the name as its `alt`. Three cases in
+  `src/components/ui/__tests__/a11y.test.jsx`. `announcedText` already skips an
+  `aria-hidden` subtree, so this is the whole of what the avatars needed — see
+  the stood-down `ownLabelText` below.
+
+**Two fixes to the audit's driver** (`scripts/a11y-audit.js`). Storage belongs to
+the origin, so the session the first width signed in with made `/admin/login`
+redirect to the dashboard at every later width, and the audit recorded a login
+screen it never rendered; each width now opens as a stranger (`forgetSession`).
+Prompt 46 fixed the other half of that problem — `signIn` surviving a live
+session, which is what kept the admin screens in the sweep at all — and its
+version is the one kept here. Separately, one tab that has loaded about 155
+documents starts timing out on the next (31 admin routes lost per width,
+identically at both), so a tab is replaced every 40 navigations.
+
+**Two changes to the checker, both stood down.** Each was written before the
+prompt that reached it, and on both `main` is right:
+
+- **Horizontal scroll.** This branch replaced `documentElement.scrollWidth` with
+  "does any element escape the viewport with no scrolling ancestor?". Prompt 44
+  filed the same defect as NEW-48 and prompt 46 fixed it by *trying to scroll*,
+  with `behavior: 'instant'` so `global.css`'s `scroll-behavior: smooth` cannot
+  swallow the probe — which answers the objection this branch had raised against
+  that measure. Main's probe is kept and this branch's is dropped, because a
+  checker should not be forked over a measure that is already in the tree and
+  reads the symptom directly. A rationale offered here earlier — that
+  `global.css` sets `html, body { overflow-x: clip }`, so an element past the
+  viewport is clipped rather than reachable — **was wrong**, and prompt 48's own
+  audit disproved it: `/admin/properties` really does move, `window.scrollX`
+  reaching 721 px with `body`, the sidebar and the `<h1>` all going with it
+  (NEW-53). Both measures would have caught that; the probe is simply the
+  shorter road to it.
+- **`ownLabelText`.** This branch narrowed the label-in-name comparison to a
+  control's own text, stopping at any nested control, because the property
+  gallery stage's "visible label" was three nested buttons' names. Prompt 46's
+  Lighthouse run then filed that same stage as **NEW-51**, and the defect
+  underneath is real: a `role="button"` region containing three real buttons is
+  invalid widget semantics whatever the labels say. Narrowing the rule would
+  have deleted the evidence for an issue that is open and owned by 48, so it is
+  dropped. The avatars, the other thing it was written for, are covered by F19.
+
+**Documentation corrected rather than restated.** `docs/QA/42-mobile-a11y-checklist.md`
+§2 shipped with its grid placeholder still in it while the acceptance checklist
+above claimed it was filled for every route at all seven widths; both now say
+what is true, and the transcription is **NEW-55**. The audit's two
+output files are gitignored beside `lighthouse-*.json`, and
+`42-mobile-a11y-report.md` §7 says so — 450 KB of machine output that is stale
+the moment a component changes is evidence that gets quoted after it stops being
+true.
+
+| Command                    | Result                                                 |
+| -------------------------- | ------------------------------------------------------ |
+| `npm run lint`             | 0 errors, 0 warnings                                   |
+| `npm run format:check`     | fails on `scripts/smoke-api.js` — NEW-56, see below     |
+| `npm run test:ci`          | 147 suites, 3 347 tests, all green                     |
+| `npm run test:scripts`     | 54 cases (1 skipped: no Chrome in a standard location) |
+| `npm run test:mock`        | 159 cases, all green                                   |
+| `npm run build:ci`         | success, 0 warnings                                    |
+| `npm run check:traces`     | 1 122 files, 0 findings                                |
+| `npm run check:contrast`   | 29 gated pairs, all pass                               |
+| `npm run check:guidelines` | 12/12                                                  |
+| `npm run check:env`        | 8/8                                                    |
+| `npm run validate:seed`    | `db.json` is valid                                     |
+
+Run after merging `main` at prompt 48 (the 1.0.0 release), so the counts
+include prompts 43 to 48.
+`format:check` is red on `main` itself, not here: prompt 47 landed
+`scripts/smoke-api.js` unformatted, and every file this branch touches passes.
+`check:all` does not run `format:check`, so nothing is gated on it; it is
+**NEW-56**, and fixing it belongs to whoever owns that script rather than to an
+accessibility pass.
+
+`npm run a11y:audit` was **not** re-run for this commit: what is left of it is a
+component's CSS, a theme override, one `aria-hidden` and two driver fixes, and
+prompt 46's seven-width grid is the current reading of the site.
+
+**Issues opened:** NEW-55 (the empty grid) and NEW-56 (`smoke-api.js` is not
+Prettier-clean), both listed under "Known issues (open)" above and both deferred
+past 1.0.0. They were filed as 53 and 54 and renumbered when prompt 48 took
+those ids for the admin shell's sideways scroll and the placeholder contrast.
+**No issue closed** — NEW-48 was closed by prompt 46 rather than here, and
+NEW-47 and NEW-51 are untouched.
 
 ---
 

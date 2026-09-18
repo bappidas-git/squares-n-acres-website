@@ -66,6 +66,8 @@ of every route shape (`--sample=1 --outName=42-a11y-widths`).
 | F13 | **Six wrapper-focus controls showed a border-colour change instead of a ring.** The Tab walk reported the listing's search box with no focus indicator at all; the same pattern was in the admin's filter bar, the entity picker, the icon picker, the media drop zone and the editor shell. | A 2 px `--color-focus` ring on `:focus-within` in `GlobalSearch`, `FilterBar`, `EntityPicker`, `IconPicker`, `MediaLibraryPage` and `RichTextEditor` module CSS.                                                 |
 | F14 | **The amenities chip ringed itself in red.** §6 fixes the ring at `--color-focus`.                                                                                                                                                                                                        | `src/pages/admin/properties/property-form/tabs/AmenitiesTab.module.css`.                                                                                                                                         |
 | F15 | **The blue ring disappears on the dark surfaces the `onDark` variants exist for.**                                                                                                                                                                                                        | A white ring for `.onDark` in `IconButton`, `MegaMenu`, `Header`, `MobileHeader` and `Breadcrumbs` module CSS.                                                                                                   |
+| F17 | **The design system's own text field suppressed the ring it had been given.** `FormField`'s `.control:focus` set `outline: none` and drew a 3 px `--color-primary-ring` halo in its place; that halo is `rgba(207, 63, 56, 0.22)` over white — **1.36:1**, under the 3:1 WCAG 1.4.11 asks of a focus indicator. `.control:focus` outranks the global `:focus-visible`, so every input, select and textarea in the kit *lost* the ring rather than gaining a second one. | `src/components/ui/FormField.module.css`: the `outline: none` and the halo are gone. The border still warms on focus; the ring is the global one (2 px `--color-focus`, offset 2 px). |
+| F18 | **MUI's outlined inputs answered focus by thickening their own fieldset border.** That is MUI's default and it is not the ring §8.3 fixes; a keyboard found it on the admin's autocompletes and selects, which are MUI rather than the kit. | `src/theme.js`: `MuiOutlinedInput` draws the ring on `&:has(:focus-visible)`, so it stays a keyboard affordance and a browser without `:has` falls back to MUI's border rather than to nothing. |
 
 ### 2.5 Tap targets (≥ 44 px, phone tier)
 
@@ -104,6 +106,7 @@ absorbs its new padding with a matching negative margin.
 | #   | Finding                                                                                                                                                                | Fix                                                                                                                             |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | F16 | **The sliders announced a bare number.** A range input supplies `aria-valuemin/max/now` from its own attributes, but "1 800 000" is not what the label on screen says. | `aria-valuetext` on all four: `src/components/sections/property/finance/EmiCalculator.jsx` (loan share with the rupee figure, rate, tenure) and `AssessmentForm.jsx` (down payment). |
+| F19 | **Every avatar announced its initials.** `Avatar` hid them only when there were none, so "AU" was read out in front of the account menu's own label and "PS" inside an author's byline — and each one put its control in front of the label-in-name check, because two letters are never the words on the control. | `src/components/ui/Avatar.jsx`: the initials span is always `aria-hidden`. A real photograph still carries the name as its `alt`; asserted in `src/components/ui/__tests__/a11y.test.jsx`. |
 
 ### 2.7 The three findings prompt 41's Lighthouse run left here
 
@@ -134,6 +137,48 @@ page, the listing, the locality index, the article index and a property: on all
 ten, **no element** has a transition or animation over 50 ms once its delay is
 counted, nothing animates infinitely, `scroll-behavior` computes to `auto`, and
 the carousel's pause button is correctly absent because nothing is moving.
+
+---
+
+### 2.9 Two corrections to the audit, both withdrawn
+
+This pass wrote two changes to `scripts/lib/inPageAudit.js`, and neither is in
+the tree. Recorded here because the reasoning is worth keeping and because a
+later reader will otherwise wonder why the report names findings the code does
+not have.
+
+- **Horizontal scroll read straight off `document.documentElement.scrollWidth`.**
+  Every admin list screen scrolls its table inside its own `overflow-x: auto`
+  box by design (prompt 13 §6), which makes the root's scroll width large while
+  the page itself never moves sideways — 721 px of phantom overflow on
+  `/admin/properties`, 161 px on `/admin/leads`. This pass replaced the reading
+  with "does any element reach past the viewport with **no scrolling ancestor**?",
+  which has the merit of naming the offenders. Prompt 44 filed the same defect
+  as NEW-48 and **prompt 46 fixed it first, by trying to scroll** —
+  `scrollTo({ left: clientWidth, behavior: 'instant' })`, read back, restore —
+  with the `instant` answering the one objection raised against that measure,
+  that `global.css` sets `scroll-behavior: smooth` and a smooth scroll would be
+  read back before it happened. Main's probe stands, because a checker is not
+  worth forking over a measure already in the tree that reads the symptom
+  directly. One argument made for it here earlier — that
+  `html, body { overflow-x: clip }` leaves an escaping element *clipped* rather
+  than reachable — **was wrong**, and prompt 48's 378-page run disproved it:
+  `/admin/properties` really does move, `window.scrollX` reaching 721 px with
+  `body`, the sidebar and the `<h1>` going with it (NEW-53). Both measures would
+  have caught that one; the probe is the shorter road.
+- **The label-in-name check compared a name against the whole subtree.**
+  `announcedText` is right for computing a name and, on the face of it, wrong
+  for reading a *visible label*: the gallery stage holds three buttons of its
+  own, so its label read "1 / 6 Previous photograph Next photograph View all 6
+  photos" and no name could contain it — 98 warnings, almost all that shape. The
+  narrower `ownLabelText`, stopping at any nested control, was written for it.
+  Then prompt 46's Lighthouse run filed that same stage as **NEW-51** and named
+  what is actually wrong: a `role="button"` region *containing* three real
+  buttons is invalid widget semantics whatever the labels say, and axe reads the
+  subtree precisely because nested interactive content should not exist. The
+  narrower rule would have deleted the evidence for an open issue, so it is
+  withdrawn. The avatars — the other thing it was written for — are covered by
+  F19 on its own, because `announcedText` already skips an `aria-hidden` subtree.
 
 ---
 
@@ -199,5 +244,11 @@ against the production build. 18 of 18 steps pass:
 `node scripts/a11y-audit.js --baseUrl=http://localhost:5000 --widths=390,1280`
 over every public URL and every admin route: **0 error-level findings**. The
 width sweep at 360, 414, 768, 1024 and 1536 px over one page of every route
-shape: **0 error-level findings**. The counts, and every remaining warning, are
-in `42-a11y-audit.md` and `42-a11y-widths.md`.
+shape: **0 error-level findings**.
+
+Each run writes its own findings beside this file, as
+`docs/QA/42-a11y-audit.{json,md}` and, for the sweep,
+`docs/QA/42-a11y-widths.{json,md}`. That pair is the tool's raw output and is
+**not** kept in the repository (`.gitignore`, beside `lighthouse-*.json`): it is
+regenerated by the commands above and is stale the moment a component changes,
+where this report is written to stay true. Re-run it and read it there.
