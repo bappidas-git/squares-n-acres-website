@@ -1,0 +1,291 @@
+# Backend notes — deployment
+
+Merged into `backend_developer_guidelines/07_DEPLOYMENT.md`. Two applications
+are deployed: a **static React build** and a **Laravel API**. They share nothing
+but the contract, and the only thing that binds them is one environment
+variable.
+
+Edit this file, never the generated one.
+
+## Environment variables
+
+**The site** (`.env.production`, read by `npm run build`; every `REACT_APP_*`
+value is baked into the bundle, so changing one needs a rebuild):
+
+| Variable                             | Required   | Production value                    | What it does                                                                                                                                                                                                                                            |
+| ------------------------------------ | ---------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REACT_APP_API_URL`                  | **yes**    | `https://api.squaresnacres.com/api` | the API base, `/api` included. **The one switch of the handover.** There is no fallback: the app throws at startup when it is missing, which is deliberate — a site silently talking to `localhost` in production is worse than one that will not start |
+| `REACT_APP_SITE_URL`                 | no         | `https://www.squaresnacres.com`     | canonical and Open Graph URLs                                                                                                                                                                                                                           |
+| `REACT_APP_SITE_NAME`                | no         | `Squares N Acres`                   | display name                                                                                                                                                                                                                                            |
+| `REACT_APP_CLOUDINARY_CLOUD_NAME`    | no         | the cloud                           | enables uploads from the media library; empty disables the upload button, and the library still works with external URLs                                                                                                                                |
+| `REACT_APP_CLOUDINARY_UPLOAD_PRESET` | no         | an **unsigned** preset              | as above                                                                                                                                                                                                                                                |
+| `REACT_APP_GOOGLE_MAPS_KEY`          | no         | a browser key                       | enables the property map; empty hides the map, nothing breaks                                                                                                                                                                                           |
+| `CHROME_PATH`                        | build only | path to Chrome                      | needed by `npm run build:prerender`, never by `npm run build`                                                                                                                                                                                           |
+
+**The API** (`.env` on the server, never committed):
+
+| Variable                                                                                | Example                                                   | Notes                                                                                                               |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `APP_ENV`                                                                               | `production`                                              |                                                                                                                     |
+| `APP_DEBUG`                                                                             | `false`                                                   | a stack trace in a 500 body leaks the schema                                                                        |
+| `APP_KEY`                                                                               | `base64:…`                                                | `php artisan key:generate` once, then never again — rotating it invalidates every encrypted value                   |
+| `APP_URL`                                                                               | `https://api.squaresnacres.com`                           |                                                                                                                     |
+| `DB_CONNECTION` / `DB_HOST` / `DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | `mysql` / …                                               | the database user needs no `DROP`                                                                                   |
+| `CORS_ALLOWED_ORIGINS`                                                                  | `https://www.squaresnacres.com,https://squaresnacres.com` | comma-separated, explicit, never `*` (see `01_api_contract.md`)                                                     |
+| `SANCTUM_TOKEN_TTL_MINUTES`                                                             | `1440`                                                    | 24 hours, matching the mock                                                                                         |
+| `SITE_URL`                                                                              | `https://www.squaresnacres.com`                           | what the sitemaps, RSS and llms.txt build absolute URLs from when `seoSettings.siteUrl` is empty                    |
+| `CACHE_DRIVER` / `SESSION_DRIVER`                                                       | `redis` / `file`                                          | the view debounce and the sitemap cache need a cache that is shared across workers; `file` works on a single server |
+| `QUEUE_CONNECTION`                                                                      | `redis` or `database`                                     | lead notification e-mails belong on a queue                                                                         |
+| `MAIL_*`                                                                                |                                                           | the addresses in `siteSettings.leads.notificationEmails` receive new-lead alerts                                    |
+| `LOG_CHANNEL` / `LOG_LEVEL`                                                             | `daily` / `warning`                                       |                                                                                                                     |
+
+Two rules worth writing down:
+
+- **No secret belongs in a `REACT_APP_*` variable.** Everything in the bundle is
+  public — the Google Maps key must be domain-restricted in the Google console,
+  and the Cloudinary preset must be unsigned and upload-only.
+- The site and the API have separate `.env` files on separate machines or paths.
+  A single `.env` shared by both is how an API secret ends up in a bundle.
+
+## Nginx — the site
+
+One server block serves the static build and proxies the eight paths that must
+come from the API on the site's own hostname, so that `robots.txt` and the
+sitemaps are where a crawler looks for them.
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name www.squaresnacres.com;
+
+    root /var/www/squaresnacres/current;
+    index index.html;
+
+    gzip on;
+    gzip_vary on;
+    gzip_types text/plain text/css text/xml application/javascript application/json
+               image/svg+xml application/manifest+json;
+    gzip_min_length 1024;
+    # brotli_static on;   # when ngx_brotli is available — pre-compressed assets
+
+    # Hashed assets never change under their name.
+    location /static/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    location = /index.html   { add_header Cache-Control "no-cache"; }
+    location = /manifest.json { add_header Cache-Control "public, max-age=3600"; }
+    location = /favicon.ico  { expires 30d; }
+
+    # The API owns these, and they must answer on the site's hostname.
+    location ~ ^/(robots\.txt|rss\.txt|rss\.xml|llms\.txt|sitemap.*\.xml)$ {
+        proxy_pass         https://api.squaresnacres.com;
+        proxy_set_header   Host api.squaresnacres.com;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_cache_valid  200 1h;
+    }
+
+    location /api/ {
+        proxy_pass         https://api.squaresnacres.com;
+        proxy_set_header   Host api.squaresnacres.com;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+
+    # Client-side routing. `index.spa.html` is the plain shell that
+    # `npm run build:prerender` leaves behind; with an ordinary
+    # `npm run build`, use `/index.html` here instead.
+    location / {
+        try_files $uri $uri/index.html /index.spa.html;
+    }
+}
+
+server {
+    listen 80;
+    server_name www.squaresnacres.com squaresnacres.com;
+    return 301 https://www.squaresnacres.com$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name squaresnacres.com;
+    return 301 https://www.squaresnacres.com$request_uri;
+}
+```
+
+The `try_files` line is the one to get right:
+
+- With **prerendering** (`npm run build:prerender`), every route has a real
+  `build/<path>/index.html` with its head and body already rendered, so
+  `$uri/index.html` serves it and `/index.spa.html` catches everything else.
+- With a **plain build**, there are no per-route files: use
+  `try_files $uri /index.html;` and let React render.
+- Getting it backwards means either a 404 on every deep link, or the unrendered
+  shell served to a crawler that was about to index a listing.
+
+Proxying `/api/` through the site's origin is optional — the frontend can talk to
+`api.squaresnacres.com` directly — but it removes CORS from the picture entirely.
+If you use it, set `REACT_APP_API_URL=https://www.squaresnacres.com/api`.
+
+## Nginx — the API
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name api.squaresnacres.com;
+
+    root /var/www/squaresnacres-api/current/public;
+    index index.php;
+
+    client_max_body_size 8m;   # media metadata and CSV imports, not binaries
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass  unix:/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include       fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* { deny all; }
+}
+```
+
+The API is never the origin a browser loads a page from, so it needs no SPA
+fallback and no static caching beyond what Laravel sends.
+
+## Security headers
+
+On the **site** block. The content security policy has to name every third party
+the pages actually load, and the list below is exactly that list:
+
+```nginx
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+add_header X-Content-Type-Options    "nosniff" always;
+add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+add_header X-Frame-Options           "SAMEORIGIN" always;
+add_header Permissions-Policy        "geolocation=(), microphone=(), camera=()" always;
+add_header Content-Security-Policy "
+  default-src 'self';
+  script-src  'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://maps.googleapis.com;
+  style-src   'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src    'self' data: https://fonts.gstatic.com;
+  img-src     'self' data: blob: https://res.cloudinary.com https://picsum.photos https://fastly.picsum.photos https://api.iconify.design https://www.google-analytics.com https://www.facebook.com https://maps.gstatic.com https://maps.googleapis.com https://i.ytimg.com;
+  media-src   'self' https://res.cloudinary.com;
+  connect-src 'self' https://api.squaresnacres.com https://api.iconify.design https://api.cloudinary.com https://www.google-analytics.com https://region1.google-analytics.com https://maps.googleapis.com;
+  frame-src   https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com https://maps.google.com;
+  object-src  'none';
+  base-uri    'self';
+  form-action 'self';
+  frame-ancestors 'self';
+  upgrade-insecure-requests;
+" always;
+```
+
+- `'unsafe-inline'` in `script-src` is what Google Tag Manager and the analytics
+  snippet need. Drop it the day those are removed, not before — a policy that
+  breaks the page is a policy somebody switches off.
+- `style-src 'unsafe-inline'` is required by MUI's emotion runtime.
+- `img-src` must list every image host the seed and the media library use:
+  Cloudinary for brand and uploads, `picsum.photos` for the seed photographs,
+  the Iconify API for icons, and the analytics pixels.
+- Add the API's own origin to `connect-src`, or every request fails with a CSP
+  violation and no useful error.
+- Test with `Content-Security-Policy-Report-Only` first, load every page type
+  once, and read the console before switching it on.
+
+On the **API** block: `X-Content-Type-Options`, `Referrer-Policy: no-referrer`,
+and `X-Frame-Options: DENY`. The API has no pages to frame.
+
+## Switch-over
+
+Pointing the site at the Laravel API is **one line and one command**:
+
+```bash
+# on the build machine
+sed -i 's|^REACT_APP_API_URL=.*|REACT_APP_API_URL=https://api.squaresnacres.com/api|' .env.production
+npm ci && npm run build          # or npm run build:prerender
+rsync -a --delete build/ deploy@web:/var/www/squaresnacres/releases/<stamp>/
+ssh deploy@web 'ln -sfn /var/www/squaresnacres/releases/<stamp> /var/www/squaresnacres/current && nginx -s reload'
+```
+
+There is no second step. No source file names a backend, no adapter translates a
+payload, and no feature flag chooses between them: the whole application reaches
+the API through `src/services/endpoints.js` and `src/services/http.js`, and both
+read that one variable.
+
+Before you cut over, prove the new API answers the same contract:
+
+```bash
+npm run mock                                                   # terminal 1
+npm run smoke -- --baseUrl=https://api.squaresnacres.com/api \
+                 --compare=http://localhost:4000/api           # terminal 2
+```
+
+An empty difference table is the go signal.
+
+## Rollback
+
+Releases are directories and `current` is a symlink, so a rollback is a symlink
+swap — seconds, and it needs no build:
+
+```bash
+ssh deploy@web 'ln -sfn /var/www/squaresnacres/releases/<previous> /var/www/squaresnacres/current && nginx -s reload'
+```
+
+Keep at least three releases. Two things do **not** roll back with the symlink,
+and both need a plan before the first deployment:
+
+- **The database.** A migration that dropped a column cannot be undone by
+  redeploying the old code. Take a dump immediately before every deployment that
+  migrates, and write the `down()` of any destructive migration before you write
+  the `up()`.
+- **Cached documents.** The sitemaps and the settings are cached for up to an
+  hour; run `php artisan cache:clear` after a rollback or the old data outlives
+  the old code.
+
+Reverting the site to the **mock** is the same one line in reverse
+(`REACT_APP_API_URL=http://localhost:4000/api`) — which is also how a developer
+keeps working while the API is down.
+
+## Go-live checklist
+
+Run in order. Nothing here takes more than a minute, and every line has burned
+somebody.
+
+1. `REACT_APP_API_URL` points at the production API, and the built bundle really
+   contains it: `grep -r 'api.squaresnacres.com' build/static/js | head -1`.
+2. **The three seed passwords are rotated** and the three seed accounts are
+   either renamed to real people or deactivated (`02_auth.md`).
+3. `APP_DEBUG=false`, `APP_ENV=production`, and `/api/nonexistent` answers the
+   §5.3 envelope rather than a stack trace.
+4. `CORS_ALLOWED_ORIGINS` lists the production origins and **not** `*`, and the
+   site can actually call the API from a browser (open the network tab, not
+   `curl`).
+5. HTTPS everywhere: HTTP redirects with 301, and so does the apex to `www`.
+6. `seoSettings.siteUrl` equals the canonical host Nginx redirects to.
+7. `robots.txt` on the **production** host is the real one, and on staging it is
+   the blanket disallow. Fetch both and read them.
+8. `/sitemap.xml` returns the index, and one of its documents opens and contains
+   absolute canonical URLs. Submit the index in Search Console.
+9. `/rss.xml` and `/llms.txt` answer with the right content types.
+10. A deep link works: open `https://www.squaresnacres.com/properties/<a slug>`
+    in a fresh tab. A 404 here means the `try_files` line is wrong.
+11. Sign in to `/admin`, create a draft property, publish it, find it on the
+    public listing, then delete it.
+12. Submit the public enquiry form; the lead appears in the CRM with its source,
+    the property's `enquiryCount` moved, and the notification e-mail arrived.
+13. Rate limiting works: eleven enquiries in a minute, the eleventh is a 429 with
+    the documented message.
+14. `npm run smoke -- --baseUrl=<production>` passes, and
+    `--compare=<mock>` shows no differences.
+15. Import the Postman collection, select the production environment, run the
+    collection: every test green.
+16. A database backup exists, is scheduled, and has been **restored once** into a
+    scratch database. A backup nobody has restored is a hope, not a backup.

@@ -51,6 +51,9 @@ const SKIP_PATHS = [
   'docs/QA',
   // This file contains the patterns themselves.
   'scripts/check-traces.js',
+  // So does the guidelines checker: the handover package must not carry a
+  // boilerplate trace either, and naming one is how it looks for it.
+  'scripts/check-guidelines.js',
 ];
 
 /** Extensions treated as binary and skipped. */
