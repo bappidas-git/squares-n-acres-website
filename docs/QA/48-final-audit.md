@@ -76,18 +76,25 @@ One command, ten checks, **exit 0**, no browser and no API needed.
 npm run check:all
 ```
 
+**Run twice, and the numbers below are the second run's.** The first was taken
+straight after `npm ci`, before this prompt had changed anything; `package.json`
+(version, `check:env`, the widened lint globs), `db.json` (the badge icon of
+NEW-29) and four scripts all moved afterwards, so the acceptance criterion —
+"`check:all` passes on a clean `npm ci`" — is only honestly met by a run made on
+the final tree. Both runs exited 0.
+
 | Step                | Measure                                                      | Result |
 | ------------------- | ------------------------------------------------------------ | ------ |
-| `lint`              | ESLint over `src/`, `mock-server/`, `scripts/`, `--max-warnings=0` | **0 errors, 0 warnings** |
+| `lint`              | ESLint over `src/`, `mock-server/`, `scripts/`, **`e2e/`** and `playwright.config.js`, `--max-warnings=0` | **0 errors, 0 warnings** |
 | `lint` → `check:endpoints` | 752 files scanned                                     | **0 blocking findings** |
 | `test:ci`           | Jest                                                          | **147 suites, 3 344 tests, all passed** |
 | `test:mock`         | `node --test` over the mock server                             | **39 suites ok, 0 fail** |
 | `test:scripts`      | `node --test` over the tooling                                 | **18 suites ok, 0 fail** |
 | `build:ci`          | `CI=true react-scripts build`                                  | **Compiled successfully**, 0 warnings |
-| `check:traces`      | 1 121 files scanned                                            | **0 brand traces, 0 hex literals, 0 copy placeholders** |
+| `check:traces`      | 1 122 files scanned                                            | **0 brand traces, 0 hex literals, 0 copy placeholders** |
 | `validate:seed`     | 28 collections                                                 | **`db.json` is valid**, 0 errors |
 | `check:contrast`    | 11 text/background pairs                                       | **11 pass** (lowest 4.24:1 against a 3.0 minimum for display text) |
-| `check:guidelines`  | 12 coverage assertions                                         | **12/12 passed** |
+| `check:guidelines`  | 12 coverage assertions                                         | **12/12 passed** — `captured examples (239 captured, 3 explained skips, of 242)` |
 | `check:env`         | 8 assertions (new in this prompt)                              | **8/8 passed** — 12 variables read, 12 declared |
 
 ### Bundle sizes (gzip, from `build:ci`)
@@ -99,9 +106,10 @@ npm run check:all
 | second lazy chunk      | 108.81 kB     | —            |
 | `static/css/main.*.css`| 14.82 kB      | —            |
 
-A second build with `REACT_APP_API_URL` on the command line — the one the
-browser-driven checks need — came to **286.02 kB (+80 B)**, the embedded URL
-string. Both are inside the budget.
+The build with `REACT_APP_API_URL` on the command line — the one the
+browser-driven checks and the prerender need — came to **286.02 kB**, the extra
+80 B being the embedded URL string. Both are inside the budget, and the figure
+did not move between the first and the final `check:all`.
 
 ### Seed counts (`validate:seed`)
 
@@ -751,4 +759,12 @@ list. Covered in §8. Removed.
 - [x] `package.json` version `1.0.0`.
 - [x] `docs/PROJECT_STATE.md` status **COMPLETE** with the final metrics.
 - [x] `git tag v1.0.0` on the final commit; `git status` clean.
-- [x] `npm run check:all` passes on a clean `npm ci`.
+- [x] `npm run check:all` passes on a clean `npm ci` — run twice, exit 0 both
+      times, the second on the final tree (§2).
+
+One criterion needs a caveat rather than a tick: the prompt asks every check to
+be recorded green, and **`npm run a11y:audit` exits 1** on 12 errors (§3.5). It is
+not part of `check:all`, it had never completed before this prompt, and both
+findings are pre-existing, admin-only and fixable only by a global-CSS or
+design-token change. They are deferred as NEW-53 and NEW-54 with their
+measurements. Recorded as amber, not as green.
