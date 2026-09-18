@@ -140,17 +140,41 @@ the carousel's pause button is correctly absent because nothing is moving.
 
 ---
 
-### 2.9 Two corrections to the audit itself
+### 2.9 Two corrections to the audit, both withdrawn
 
-Both were found by the checker disagreeing with the page in front of it, and
-both are in `scripts/lib/inPageAudit.js`:
+This pass wrote two changes to `scripts/lib/inPageAudit.js`, and neither is in
+the tree. Recorded here because the reasoning is worth keeping and because a
+later reader will otherwise wonder why the report names findings the code does
+not have.
 
-- **Horizontal scroll was read straight off `document.documentElement.scrollWidth`.** Every admin list screen scrolls its table inside its own `overflow-x: auto` box by design (prompt 13 §6), which makes the root's scroll width large while the page itself never moves sideways and nothing is out of reach. That cheap signal now only opens the question; what settles it is whether any element reaches past the viewport **without** a scroller of its own to reach it by. The finding names the first five that do, so it can be acted on rather than only believed. Prompt 44 filed the same defect as **NEW-48** while this commit was in flight, having measured 721 px of phantom overflow on `/admin/properties` and 161 px on `/admin/leads`; its own remedy — scroll, read back, restore — is right for Playwright and wrong here, because `global.css` sets `html { scroll-behavior: smooth }` and the scroll would both animate and move the viewport out from under the measurements that follow.
-- **The label-in-name check compared a name against the whole subtree.** `announcedText` is right for computing a name and wrong for reading a *visible label*: the gallery stage holds three buttons of its own, so its label came out as "1 / 6 Previous photograph Next photograph View all 6 photos" and no name could have contained it — 98 warnings, almost all of them that shape. `ownLabelText` stops at a nested control, which is what WCAG 2.5.3 means by the text on *this* control.
-
-Neither changed a verdict: the run of record was already at zero errors with the
-coarse check, and the label-in-name findings are warnings. They change what a
-**re-run** reports, which is the only thing a checker is for.
+- **Horizontal scroll read straight off `document.documentElement.scrollWidth`.**
+  Every admin list screen scrolls its table inside its own `overflow-x: auto`
+  box by design (prompt 13 §6), which makes the root's scroll width large while
+  the page itself never moves sideways — 721 px of phantom overflow on
+  `/admin/properties`, 161 px on `/admin/leads`. This pass replaced the reading
+  with "does any element reach past the viewport with **no scrolling ancestor**?",
+  which has the merit of naming the offenders. Prompt 44 filed the same defect
+  as NEW-48 and **prompt 46 fixed it first, by trying to scroll** —
+  `scrollTo({ left: clientWidth, behavior: 'instant' })`, read back, restore —
+  with the `instant` answering the one objection raised against that measure,
+  that `global.css` sets `scroll-behavior: smooth` and a smooth scroll would be
+  read back before it happened. It is also the more correct measure on this
+  site: `global.css` sets `html, body { overflow-x: clip }`, so an element that
+  escapes the viewport is *clipped* rather than reachable, and the geometric
+  test would have failed a page that does not move. Main's probe stands.
+- **The label-in-name check compared a name against the whole subtree.**
+  `announcedText` is right for computing a name and, on the face of it, wrong
+  for reading a *visible label*: the gallery stage holds three buttons of its
+  own, so its label read "1 / 6 Previous photograph Next photograph View all 6
+  photos" and no name could contain it — 98 warnings, almost all that shape. The
+  narrower `ownLabelText`, stopping at any nested control, was written for it.
+  Then prompt 46's Lighthouse run filed that same stage as **NEW-51** and named
+  what is actually wrong: a `role="button"` region *containing* three real
+  buttons is invalid widget semantics whatever the labels say, and axe reads the
+  subtree precisely because nested interactive content should not exist. The
+  narrower rule would have deleted the evidence for an open issue, so it is
+  withdrawn. The avatars — the other thing it was written for — are covered by
+  F19 on its own, because `announcedText` already skips an `aria-hidden` subtree.
 
 ---
 

@@ -187,7 +187,7 @@ module.exports = function pages({ stamps, media, lookup }) {
       leadSource: 'contact-page',
       header: 'company',
       footer: 'company',
-      seoTitle: 'About Squares N Acres',
+      seoTitle: 'About Squares N Acres – Bengaluru Property Advisory',
       seoDescription:
         'Who we are, how we work and what we will and will not say about a property. The Squares N Acres approach to buying, selling and renting in Bengaluru.',
       focusKeyword: 'about squares n acres',
@@ -282,7 +282,7 @@ module.exports = function pages({ stamps, media, lookup }) {
       leadSource: 'contact-page',
       header: null,
       footer: 'company',
-      seoTitle: 'Contact Squares N Acres',
+      seoTitle: 'Contact Squares N Acres – Bengaluru Property Team',
       seoDescription:
         'Call, message or write to Squares N Acres about buying, selling, renting or letting property in Bengaluru. We reply as soon as we can.',
       focusKeyword: 'contact squares n acres',
@@ -428,7 +428,7 @@ module.exports = function pages({ stamps, media, lookup }) {
       leadSource: 'careers',
       header: 'company',
       footer: 'company',
-      seoTitle: 'Careers at Squares N Acres',
+      seoTitle: 'Careers at Squares N Acres – Jobs in Bengaluru',
       seoDescription:
         'Open roles at Squares N Acres in Bengaluru, what it is like to work here, and how to send us your profile when nothing on the list fits.',
       focusKeyword: 'real estate jobs in bengaluru',
@@ -530,7 +530,7 @@ module.exports = function pages({ stamps, media, lookup }) {
       leadSource: 'partnership',
       header: 'company',
       footer: 'company',
-      seoTitle: 'Partner With Squares N Acres',
+      seoTitle: 'Partner With Squares N Acres – Channel Partners',
       seoDescription:
         'Channel partnerships, developer mandates, lending and professional services — how Squares N Acres works with partners in Bengaluru.',
       focusKeyword: 'real estate partnership bengaluru',
@@ -1560,7 +1560,7 @@ module.exports = function pages({ stamps, media, lookup }) {
       leadSource: null,
       header: null,
       footer: 'company',
-      seoTitle: 'Privacy Policy',
+      seoTitle: 'Privacy Policy – How We Use Your Data',
       seoDescription:
         'How Squares N Acres collects, uses and stores the information you share through this website. Placeholder text pending the client’s own policy.',
       focusKeyword: 'squares n acres privacy policy',
@@ -1591,7 +1591,7 @@ module.exports = function pages({ stamps, media, lookup }) {
       leadSource: null,
       header: null,
       footer: 'company',
-      seoTitle: 'Terms of Use',
+      seoTitle: 'Terms of Use – Squares N Acres Website Terms',
       seoDescription:
         'The terms on which this website may be used, including listings, accuracy and intellectual property. Placeholder text pending the client’s own terms.',
       focusKeyword: 'squares n acres terms of use',
@@ -1622,7 +1622,7 @@ module.exports = function pages({ stamps, media, lookup }) {
       leadSource: null,
       header: null,
       footer: 'company',
-      seoTitle: 'Disclaimer',
+      seoTitle: 'Disclaimer – Listings and Guidance on This Site',
       seoDescription:
         'The basis on which listings, prices, areas and guidance on this site are published. Placeholder text pending the client’s own disclaimer.',
       focusKeyword: 'squares n acres disclaimer',

@@ -88,6 +88,22 @@ export default function MultiSelect({
         multiple
         disableCloseOnSelect
         disabled={disabled}
+        // MUI sets `outline: none` on its own input and shows focus by
+        // thickening the notched fieldset in the primary colour. That is a
+        // visible marker, but it is not the one the rest of the admin uses:
+        // the native `<select>`s either side of this control in a filter bar
+        // light up the 2px `--color-focus` ring of `global.css`, and a
+        // keyboard user moving along the row should not watch the marker
+        // change shape and colour halfway. Written as `sx` rather than in the
+        // module's stylesheet because a `:global(.MuiOutlinedInput-root)` rule
+        // there reorders the admin CSS chunk and `build:ci` refuses it
+        // (mini-css-extract "Conflicting order"). Prompt 46.
+        sx={{
+          '& .MuiOutlinedInput-root:focus-within': {
+            outline: '2px solid var(--color-focus)',
+            outlineOffset: '2px',
+          },
+        }}
         options={options}
         value={selected}
         onChange={handleChange}

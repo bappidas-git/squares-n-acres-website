@@ -3,7 +3,13 @@
   display: block;
   width: 100%;
   overflow: hidden;
-  background: var(--color-surface-2);
+  /* The tone the box shows before — or instead of — the photograph. A caller
+     that puts white text over this box (a hero behind a scrim) has to be able
+     to darken it, and doing that with a plain `background` on the same element
+     is a source-order race between two CSS modules: both selectors are one
+     class, so whichever chunk loads last wins. A custom property resolves at
+     use time and has no such fight. */
+  background: var(--lazy-image-placeholder, var(--color-surface-2));
   border-radius: inherit;
   aspect-ratio: var(--ratio, 4 / 3);
 }
@@ -49,7 +55,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-surface-2);
+  background: var(--lazy-image-placeholder, var(--color-surface-2));
 }
 
 .fallbackMark {

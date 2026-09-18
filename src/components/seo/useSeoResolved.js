@@ -76,13 +76,23 @@ function queryOf(search) {
   return params;
 }
 
-/** The favicons of §9.3: the committed copies, with Cloudinary behind them. */
-function iconLinks(siteUrl) {
-  const local = (path) => absolute(siteUrl, path);
+/**
+ * The favicons of §9.3: the committed copies, with Cloudinary behind them.
+ *
+ * The three local hrefs stay **root-relative**. A canonical or an `og:image`
+ * has to name an absolute URL because it is read off-site, but a favicon is
+ * fetched by the browser that already has the page: absolute against
+ * `seoSettings.siteUrl` would make every host that is not production — a
+ * staging deploy, a preview, `serve:build` on port 5000 — reach across to
+ * `https://www.squaresnacres.com` for an icon sitting in its own `build/`.
+ * `public/index.html` already emits these three relative, and Helmet replaces
+ * those tags (`data-rh`), so this is also the one form the page ever shows.
+ */
+function iconLinks() {
   return [
-    { rel: 'icon', type: 'image/png', sizes: '32x32', href: local('/brand/favicon-32.png') },
-    { rel: 'icon', type: 'image/png', sizes: '16x16', href: local('/brand/favicon-16.png') },
-    { rel: 'apple-touch-icon', href: local('/brand/apple-touch-icon.png') },
+    { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/brand/favicon-32.png' },
+    { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/brand/favicon-16.png' },
+    { rel: 'apple-touch-icon', href: '/brand/apple-touch-icon.png' },
     // The brand asset itself, so a build whose `public/brand/` was never
     // generated still has an icon rather than four 404s (§2.3).
     { rel: 'icon', type: 'image/png', sizes: '192x192', href: BRAND.iconUrl },
@@ -342,7 +352,7 @@ export default function useSeoResolved({
     preload: preloadLink,
 
     verification,
-    icons: iconLinks(siteUrl),
+    icons: iconLinks(),
     themeColor: THEME_COLOR,
     applicationName: settings?.general?.siteName || BRAND.name,
 

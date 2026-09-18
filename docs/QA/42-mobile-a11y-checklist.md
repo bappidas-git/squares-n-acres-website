@@ -58,7 +58,7 @@ because somebody remembered to list it. Both files are the tool's raw output and
 are not kept in the repository (`.gitignore`); the two commands at the top of
 this file rebuild them._
 
-**Not transcribed here — open as NEW-51.** Prompt 42's commit left this section
+**Not transcribed here — open as NEW-53.** Prompt 42's commit left this section
 empty. Copying 172 routes × 2 widths and 30 route shapes × 5 widths into
 Markdown is a mechanical step, but it has to follow a *fresh* run rather than a
 finished one, so it is owned by the next QA prompt rather than back-filled from
