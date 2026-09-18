@@ -10,6 +10,7 @@ import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { PageLoader } from '../../components/common/SkeletonLoaders';
 
 import styles from './AuthorPage.module.css';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 
 /**
  * `/insights/authors/:slug` — who wrote it, and everything they have written.
@@ -30,6 +31,11 @@ export default function AuthorPage() {
     loading,
     error,
   } = useApi((signal) => articleService.authorBySlug(slug, { signal }), [slug]);
+
+  // The prerender crawler saves this page once its primary query has settled
+  // (§9.9) — settling on an error state counts, so a crawl never hangs on a
+  // URL the API cannot answer.
+  usePrerenderReady(loading);
 
   if (loading) return <PageLoader />;
   if (error?.status === 404 || (!loading && !author)) {

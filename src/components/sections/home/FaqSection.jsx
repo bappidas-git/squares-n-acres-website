@@ -6,6 +6,7 @@ import FaqAccordion from '../shared/FaqAccordion';
 import PATHS from '../../../routes/paths';
 import masterDataService from '../../../services/masterDataService';
 import useApi from '../../../hooks/useApi';
+import useDeferredSection from '../../../hooks/useDeferredSection';
 import { Container, Section, SectionHeader } from '../../ui';
 import { FAQ_CATEGORIES } from '../../../config/enums';
 
@@ -24,11 +25,12 @@ const HOME_FAQ_PARAMS = { showOnHome: true, perPage: 24, sort: 'order' };
 
 export default function FaqSection() {
   const [activeCategory, setActiveCategory] = useState(null);
+  const { ref, ready } = useDeferredSection();
 
   const { data, loading } = useApi(
     (signal) => masterDataService.faqs.list(HOME_FAQ_PARAMS, { signal }),
     [],
-    { initialData: [] }
+    { enabled: ready, initialData: [] }
   );
 
   const faqs = useMemo(() => (Array.isArray(data) ? data : []), [data]);
@@ -48,7 +50,11 @@ export default function FaqSection() {
 
   // Nothing to answer yet, or the answer is still on its way: the home page
   // goes straight from one band to the next rather than showing an empty one.
-  if (loading || faqs.length === 0) return null;
+  // Until the band is scrolled to, the answer has not even been asked for
+  // (§8.6); the empty div is the observer's target and draws no box.
+  if (!ready || loading || faqs.length === 0) {
+    return <div ref={ref} aria-hidden="true" />;
+  }
 
   return (
     <Section background="bg" spacing="lg">

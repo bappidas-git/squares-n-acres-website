@@ -3,6 +3,7 @@ import { useReducedMotion } from 'framer-motion';
 
 import masterDataService from '../../../services/masterDataService';
 import useApi from '../../../hooks/useApi';
+import useDeferredSection from '../../../hooks/useDeferredSection';
 import { Container, LazyImage, Section, SectionHeader } from '../../ui';
 
 import styles from './PartnersSection.module.css';
@@ -33,6 +34,7 @@ export default function PartnersSection({
   subtitle = 'Developers, lenders and specialists we work with',
 }) {
   const reduceMotion = useReducedMotion();
+  const { ref, ready } = useDeferredSection();
 
   const params = useMemo(
     () => ({ perPage: PER_PAGE, sort: 'order', ...(category ? { category } : null) }),
@@ -42,11 +44,16 @@ export default function PartnersSection({
   const { data, loading } = useApi(
     (signal) => masterDataService.partners.list(params, { signal }),
     [params],
-    { initialData: [] }
+    { enabled: ready, initialData: [] }
   );
 
   const partners = Array.isArray(data) ? data : [];
-  if (loading || partners.length === 0) return null;
+
+  // The last band but one on a long page: it asks for its logos when the
+  // scroll reaches it (§8.6). The empty div is the observer's target.
+  if (!ready || loading || partners.length === 0) {
+    return <div ref={ref} aria-hidden="true" />;
+  }
 
   return (
     <Section background="surface" spacing="lg">

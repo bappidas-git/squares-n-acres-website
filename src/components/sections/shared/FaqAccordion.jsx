@@ -1,5 +1,5 @@
 import { Fragment, useId, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 
 import SafeHtml from '../../editor/SafeHtml';
@@ -100,7 +100,7 @@ export default function FaqAccordion({
 
             <AnimatePresence initial={false}>
               {isOpen ? (
-                <motion.div
+                <m.div
                   key="panel"
                   className={styles.panelWrapper}
                   initial={reduceMotion ? false : { height: 0, opacity: 0 }}
@@ -111,7 +111,7 @@ export default function FaqAccordion({
                   <div id={panelId} role="region" aria-labelledby={triggerId}>
                     <SafeHtml className={styles.answer} html={item.answer} />
                   </div>
-                </motion.div>
+                </m.div>
               ) : null}
             </AnimatePresence>
           </div>

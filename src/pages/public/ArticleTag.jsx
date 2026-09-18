@@ -4,6 +4,7 @@ import NotFound from './NotFound';
 import PATHS from '../../routes/paths';
 import articleService from '../../services/articleService';
 import useApi from '../../hooks/useApi';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 import { ArticleIndex } from './Articles';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { PageLoader } from '../../components/common/SkeletonLoaders';
@@ -32,6 +33,11 @@ export default function ArticleTag() {
   } = useApi((signal) => articleService.tags({ perPage: TAXONOMY_PER_PAGE }, { signal }), [], {
     initialData: [],
   });
+
+  // The prerender crawler saves this page once its primary query has settled
+  // (§9.9) — settling on an error state counts, so a crawl never hangs on a
+  // URL the API cannot answer.
+  usePrerenderReady(loading);
 
   const list = Array.isArray(tags) ? tags : [];
   const tag = list.find((record) => record.slug === slug) ?? null;

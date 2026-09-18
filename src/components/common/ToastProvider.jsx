@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 
 import { toneStyles } from '../ui/tones';
 
@@ -109,7 +109,7 @@ const ToastProvider = ({ children }) => {
                 {toasts.map((toast) => {
                   const palette = toneStyles(TONE_BY_SEVERITY[toast.severity] || 'info');
                   return (
-                    <motion.div
+                    <m.div
                       key={toast.id}
                       layout={!reducedMotion}
                       initial={offscreen}
@@ -132,7 +132,7 @@ const ToastProvider = ({ children }) => {
                       >
                         &times;
                       </button>
-                    </motion.div>
+                    </m.div>
                   );
                 })}
               </AnimatePresence>

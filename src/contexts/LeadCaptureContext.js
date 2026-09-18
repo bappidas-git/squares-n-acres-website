@@ -1,6 +1,14 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  Suspense,
+  createContext,
+  lazy,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
-import LeadCaptureModal from '../components/common/LeadCaptureModal';
 import storage from '../utils/storage';
 import { AUTH_STORAGE_KEYS } from '../services/http';
 import { LEAD_CHANGE_EVENT, captureUtm, leadStorage } from '../utils/leadStorage';
@@ -24,9 +32,46 @@ import { entryPoint, leadFormProps } from '../utils/leadSources';
  * visitor is currently reading — a page registers itself with
  * `setPageContext()` so the floating WhatsApp button can name the property in
  * its message instead of sending a bare "I would like to know more".
+ *
+ * The dialog itself is a chunk of its own (prompt 41 §4.2). It is reachable
+ * from every page and opened on none of them until somebody asks for it, so
+ * the form, its validation and its success states are not bytes a visitor
+ * reading a listing has to download first. What makes that free rather than a
+ * pause after the click is {@link leadTriggerProps}: a trigger spreads it and
+ * the chunk is fetched while the pointer is still on its way.
  */
 
 const LeadCaptureContext = createContext(null);
+
+const LeadCaptureModal = lazy(() => import('../components/common/LeadCaptureModal'));
+
+/** The in-flight (or finished) import, so warming twice costs one request. */
+let modalChunk = null;
+
+/**
+ * Starts downloading the dialog's chunk, if it is not already on its way.
+ *
+ * `React.lazy` and this call name the same module, so webpack gives them one
+ * chunk and whichever asks first is the one request that happens.
+ */
+export function prefetchLeadModal() {
+  modalChunk = modalChunk ?? import('../components/common/LeadCaptureModal');
+  return modalChunk;
+}
+
+/**
+ * Spread onto anything that opens the dialog.
+ *
+ *   <Button {...leadTriggerProps} onClick={() => openLeadModal({ entry })}>
+ *
+ * Hover and focus cover a mouse and a keyboard; `pointerdown` covers a finger,
+ * which never hovers and would otherwise be the one visitor who waits.
+ */
+export const leadTriggerProps = {
+  onMouseEnter: prefetchLeadModal,
+  onFocus: prefetchLeadModal,
+  onPointerDown: prefetchLeadModal,
+};
 
 /** No listing in view — every page but a property's. */
 const EMPTY_PAGE = { propertyId: null, title: '' };
@@ -108,6 +153,8 @@ export function LeadCaptureProvider({ children }) {
     () => ({
       openLeadModal,
       closeLeadModal,
+      prefetchLeadModal,
+      leadTriggerProps,
       setPageContext,
       page,
       isIdentified: Boolean(visitor),
@@ -120,7 +167,9 @@ export function LeadCaptureProvider({ children }) {
     <LeadCaptureContext.Provider value={value}>
       {children}
       {modal ? (
-        <LeadCaptureModal key={modal.key} open onClose={closeLeadModal} {...modal.props} />
+        <Suspense fallback={null}>
+          <LeadCaptureModal key={modal.key} open onClose={closeLeadModal} {...modal.props} />
+        </Suspense>
       ) : null}
     </LeadCaptureContext.Provider>
   );
@@ -134,7 +183,8 @@ export function LeadCaptureProvider({ children }) {
  * provider tree and a click-tracking button still behaves correctly.
  *
  * @returns {{openLeadModal: Function, closeLeadModal: Function,
- *   setPageContext: Function, page: {propertyId: number|string|null, title: string},
+ *   prefetchLeadModal: Function, leadTriggerProps: object, setPageContext: Function,
+ *   page: {propertyId: number|string|null, title: string},
  *   isIdentified: boolean, visitor: object|null}}
  */
 export function useLeadCapture() {
@@ -145,6 +195,8 @@ export function useLeadCapture() {
   return {
     openLeadModal: () => {},
     closeLeadModal: () => {},
+    prefetchLeadModal,
+    leadTriggerProps,
     setPageContext: () => {},
     page: EMPTY_PAGE,
     isIdentified: Boolean(visitor),

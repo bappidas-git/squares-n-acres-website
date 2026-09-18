@@ -23,6 +23,8 @@ import masterDataService from '../../services/masterDataService';
 import pageService from '../../services/pageService';
 import styles from './Home.module.css';
 import useApi from '../../hooks/useApi';
+import useDeferredSection from '../../hooks/useDeferredSection';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 import { Container, Section } from '../../components/ui';
 import { HOME } from '../../config/copy';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
@@ -91,16 +93,24 @@ export default function Home() {
 
   // The CMS page behind the home page. A 404 — an editor unpublished it —
   // leaves `features` and `steps` empty, and both sections stand down (§7).
-  const { data: page } = useApi(
+  const { data: page, loading: pageLoading } = useApi(
     (signal) => pageService.getBySlug('home', undefined, { signal }),
     []
   );
 
+  // The testimonials band is eight bands down, so its request waits for the
+  // scroll to get near it (§8.6) — the same deal every other lower band got.
+  const { ref: testimonialsRef, ready: testimonialsReady } = useDeferredSection();
+
   const { data: testimonialData } = useApi(
     (signal) => masterDataService.testimonials.list(TESTIMONIAL_PARAMS, { signal }),
     [],
-    { initialData: [] }
+    { enabled: testimonialsReady, initialData: [] }
   );
+
+  // The CMS record is this page's primary query: once it has answered (or
+  // failed), the prerender may save the HTML (§9.9).
+  usePrerenderReady(pageLoading);
 
   const blocks = useMemo(() => {
     const list = Array.isArray(page?.blocks) ? page.blocks : [];
@@ -111,6 +121,13 @@ export default function Home() {
   }, [page]);
 
   const testimonials = Array.isArray(testimonialData) ? testimonialData : [];
+
+  // What `HeroSection` will draw, so the head can preload it. The mobile
+  // plate is the fallback for a hero configured with only that one, which is
+  // the same order the section itself reads them in.
+  const heroImageUrl = settings?.hero?.backgroundVideoUrl
+    ? ''
+    : settings?.hero?.backgroundImageUrl || settings?.hero?.mobileImageUrl || '';
 
   // The CMS page owns the words; with no page published, the site's own
   // tagline is the next honest thing to say about it. The `home` template
@@ -128,6 +145,13 @@ export default function Home() {
         title={page?.seo?.title || tagline || siteName}
         description={description}
         testimonials={testimonials}
+        // The hero plate is the home page's LCP and `HeroSection` is inside
+        // the route's lazy chunk, so the head names the file first (§8.6).
+        // A hero that is a video has a poster rather than a picture, and a
+        // video is not preloaded at all.
+        preloadImage={
+          heroImageUrl ? { src: heroImageUrl, ratio: 'auto', sizes: '100vw' } : undefined
+        }
       />
 
       <div className={styles.home}>
@@ -153,12 +177,14 @@ export default function Home() {
         <StepsBlock data={blocks.steps ?? {}} background="bg" />
 
         {testimonials.length > 0 ? (
-          <Section background="surface" spacing="lg">
+          <Section background="surface" spacing="lg" ref={testimonialsRef}>
             <Container>
               <TestimonialsSection items={testimonials} title={HOME.testimonials.title} />
             </Container>
           </Section>
-        ) : null}
+        ) : (
+          <div ref={testimonialsRef} aria-hidden="true" />
+        )}
 
         <LatestInsights />
         <FaqSection />

@@ -17,6 +17,7 @@ import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 import styles from './JobDetail.module.css';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 
 /** The id `JobHeader`'s Apply button scrolls to. */
 const APPLY_ID = 'apply';
@@ -94,6 +95,11 @@ export default function JobDetail() {
     error,
     refetch,
   } = useApi((signal) => careerService.jobBySlug(jobSlug, { signal }), [jobSlug]);
+
+  // The prerender crawler saves this page once its primary query has settled
+  // (§9.9) — settling on an error state counts, so a crawl never hangs on a
+  // URL the API cannot answer.
+  usePrerenderReady(loading);
 
   if (error?.status === 404) {
     return (

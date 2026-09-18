@@ -18,7 +18,7 @@ import styles from './blocks.module.css';
  * tier the enquiry came from.
  */
 export default function PackagesBlock({ data = {}, page = {}, background = 'surface' }) {
-  const { openLeadModal } = useLeadCapture();
+  const { openLeadModal, leadTriggerProps } = useLeadCapture();
 
   const items = (Array.isArray(data.items) ? data.items : []).filter((item) => item?.name);
   if (items.length === 0) return null;
@@ -72,6 +72,7 @@ export default function PackagesBlock({ data = {}, page = {}, background = 'surf
                     meta: { package: item.name },
                   })
                 }
+                {...leadTriggerProps}
               >
                 {item.ctaLabel || `Ask about ${item.name}`}
               </Button>

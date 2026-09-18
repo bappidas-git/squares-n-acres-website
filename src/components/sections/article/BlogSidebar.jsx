@@ -21,7 +21,7 @@ import styles from './BlogSidebar.module.css';
  * @param {string} [props.activeTagSlug]
  */
 export default function BlogSidebar({ tags, activeTagSlug = '', className = '' }) {
-  const { openLeadModal } = useLeadCapture();
+  const { openLeadModal, leadTriggerProps } = useLeadCapture();
 
   return (
     <aside className={[styles.sidebar, className].filter(Boolean).join(' ')}>
@@ -44,7 +44,9 @@ export default function BlogSidebar({ tags, activeTagSlug = '', className = '' }
           Tell an advisor what you are weighing up and get the trade-offs in writing, with no
           obligation.
         </p>
-        <Button onClick={() => openLeadModal({ entry: 'article' })}>Talk to an advisor</Button>
+        <Button onClick={() => openLeadModal({ entry: 'article' })} {...leadTriggerProps}>
+          Talk to an advisor
+        </Button>
       </section>
     </aside>
   );

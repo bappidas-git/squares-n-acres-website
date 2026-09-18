@@ -69,7 +69,7 @@ function configurationLine(unit) {
 export default function UnitConfigurationsSection({ property, background = 'bg' }) {
   const { isMobile } = useBreakpoint();
   const [lightbox, setLightbox] = useState(null);
-  const { openLeadModal } = useLeadCapture();
+  const { openLeadModal, leadTriggerProps } = useLeadCapture();
 
   const units = useMemo(() => activeUnits(property?.unitConfigurations), [property]);
 
@@ -149,6 +149,7 @@ export default function UnitConfigurationsSection({ property, background = 'bg' 
       variant={unit.priceOnRequest === true || !has(unit.price) ? 'primary' : 'outline'}
       size="sm"
       onClick={() => askForPrice(unit)}
+      {...leadTriggerProps}
     >
       {unit.priceOnRequest === true || !has(unit.price) ? 'Get price' : 'Enquire'}
     </Button>

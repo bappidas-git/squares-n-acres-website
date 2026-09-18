@@ -25,8 +25,17 @@
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/brand/apple-touch-icon.png" data-rh="true" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
+    <!--
+      Three origins are on the critical path of the first paint: the two that
+      serve the fonts, and the one that serves every picture on the site
+      (§8.6). Opening the connections here costs nothing and saves the DNS
+      lookup, the TCP handshake and the TLS negotiation at the moment the hero
+      image is requested. `picsum.photos` — the seed photography — is
+      deliberately not listed: it is not what production serves.
+    -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@600;700;800&display=swap"
       rel="stylesheet"

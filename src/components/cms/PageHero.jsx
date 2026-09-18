@@ -22,9 +22,12 @@ import styles from './PageHero.module.css';
  * @param {string} [props.imageUrl]
  * @param {Array<{label: string, to?: string}>} [props.breadcrumbs]
  * @param {{label: string, href?: string, onClick?: () => void}|null} [props.action]
+ *   anything else on the object is spread onto the button, which is how a lead
+ *   trigger passes the handlers that warm the dialog's chunk (prompt 41)
  */
 export default function PageHero({ title, subtitle, imageUrl, breadcrumbs = [], action = null }) {
   const hasImage = Boolean(imageUrl);
+  const { label: _label, ...actionProps } = action ?? {};
 
   return (
     <header
@@ -45,9 +48,8 @@ export default function PageHero({ title, subtitle, imageUrl, breadcrumbs = [], 
             <Button
               variant="primary"
               size="lg"
-              href={action.href}
-              onClick={action.onClick}
               iconRight={<Icon icon="mdi:arrow-right" width="18" height="18" />}
+              {...actionProps}
             >
               {action.label}
             </Button>

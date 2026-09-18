@@ -21,8 +21,10 @@ export const INITIAL_BANKS = 3;
  * @param {object} props
  * @param {Array<object>} props.banks the active lenders
  * @param {(bank: object) => void} props.onCheckEligibility
+ * @param {object} [props.triggerProps] spread onto each button — `leadTriggerProps`
+ *   of `LeadCaptureContext`, which warms the dialog's chunk before the click
  */
-export default function BankCards({ banks = [], onCheckEligibility }) {
+export default function BankCards({ banks = [], onCheckEligibility, triggerProps }) {
   const [showAll, setShowAll] = useState(false);
 
   if (banks.length === 0) return <p className={styles.empty}>{copy.BANK_EMPTY}</p>;
@@ -39,6 +41,7 @@ export default function BankCards({ banks = [], onCheckEligibility }) {
             key={bank.id ?? bank.slug}
             bank={bank}
             onCheckEligibility={onCheckEligibility}
+            triggerProps={triggerProps}
           />
         ))}
       </div>

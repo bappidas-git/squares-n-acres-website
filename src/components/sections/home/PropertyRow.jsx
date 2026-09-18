@@ -6,6 +6,7 @@ import PropertyCard from '../../common/PropertyCard';
 import propertyService from '../../../services/propertyService';
 import styles from './PropertyRow.module.css';
 import useApi from '../../../hooks/useApi';
+import useDeferredSection from '../../../hooks/useDeferredSection';
 import { Carousel, Container, Section, SectionHeader } from '../../ui';
 import { HOME } from '../../../config/copy';
 import { PropertyCardSkeleton } from '../../common/SkeletonLoaders';
@@ -22,6 +23,12 @@ import { PropertyCardSkeleton } from '../../common/SkeletonLoaders';
  *
  * "View all" carries the row's own filters, so the listing it lands on is the
  * same search this row is a window onto.
+ *
+ * The request waits until the row is nearly on screen
+ * (`useDeferredSection`, §8.6). Four of these bands on one page is four
+ * `GET /properties` calls, and on a phone three of them are a scroll away from
+ * mattering — while the hero image they would have queued behind is the
+ * number Lighthouse reports as LCP.
  */
 
 /** The home rows show eight (D23). */
@@ -48,6 +55,7 @@ export default function PropertyRow({
   minItems = 3,
 }) {
   const request = useMemo(() => ({ ...(params ?? {}), perPage: PER_PAGE }), [params]);
+  const { ref, ready } = useDeferredSection();
 
   const { data, loading, error } = useApi(
     (signal) =>
@@ -55,14 +63,17 @@ export default function PropertyRow({
         ? propertyService.featured({ perPage: PER_PAGE }, { signal })
         : propertyService.list(request, { signal }),
     [featured, request],
-    { initialData: [] }
+    { enabled: ready, initialData: [] }
   );
 
   const properties = Array.isArray(data) ? data : [];
 
-  if (loading) {
+  // The skeleton is also what a row that has not been scrolled to looks like,
+  // and it is the element the observer watches — a row that rendered nothing
+  // would never come into view and would never ask for anything.
+  if (!ready || loading) {
     return (
-      <Section background="bg" spacing="lg" aria-busy="true">
+      <Section background="bg" spacing="lg" aria-busy="true" ref={ref}>
         <Container>
           <SectionHeader title={title} subtitle={subtitle} />
           <div className={styles.skeletons}>
@@ -80,7 +91,7 @@ export default function PropertyRow({
   if (error || properties.length < minItems) return null;
 
   return (
-    <Section background="bg" spacing="lg">
+    <Section background="bg" spacing="lg" ref={ref}>
       <Container>
         <SectionHeader
           title={title}

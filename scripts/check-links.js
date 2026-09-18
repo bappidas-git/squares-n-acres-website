@@ -26,6 +26,7 @@
  * Exits non-zero when anything is broken.
  */
 
+const { launchChrome } = require('./lib/chrome');
 const { routeFor } = require('./lib/renderJsonLd');
 
 /* ------------------------------------------------------------------ *
@@ -192,11 +193,7 @@ const cleanPath = (href) => {
 const NOT_FOUND = /page not found|not found/i;
 
 async function checkRenderedLinks(urls) {
-  const puppeteer = require('puppeteer-core');
-  const browser = await puppeteer.launch({
-    executablePath: process.env.CHROME_PATH,
-    args: ['--no-sandbox', '--disable-dev-shm-usage'],
-  });
+  const browser = await launchChrome({ what: 'the rendered-link check' });
 
   const visited = new Set();
   let checked = 0;

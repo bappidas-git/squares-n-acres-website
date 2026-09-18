@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import PATHS from '../../routes/paths';
 import useBreakpoint from '../../hooks/useBreakpoint';
 import Header from './Header';
@@ -47,7 +47,7 @@ const MainLayout = ({ children }) => {
           .join(' ')}
       >
         <AnimatePresence mode="wait">
-          <motion.div
+          <m.div
             key={location.pathname}
             variants={pageVariants}
             initial="initial"
@@ -55,7 +55,7 @@ const MainLayout = ({ children }) => {
             exit="exit"
           >
             {children}
-          </motion.div>
+          </m.div>
         </AnimatePresence>
       </main>
 

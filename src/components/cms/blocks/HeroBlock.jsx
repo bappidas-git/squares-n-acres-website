@@ -16,7 +16,7 @@ import { useLeadCapture } from '../../../contexts/LeadCaptureContext';
  * @param {Array<{label: string, to?: string}>} [props.breadcrumbs]
  */
 export default function HeroBlock({ data = {}, page = {}, breadcrumbs = [] }) {
-  const { openLeadModal } = useLeadCapture();
+  const { openLeadModal, leadTriggerProps } = useLeadCapture();
 
   const entry = data.leadSource || page.leadSource || null;
   const label = data.ctaLabel?.trim();
@@ -25,7 +25,11 @@ export default function HeroBlock({ data = {}, page = {}, breadcrumbs = [] }) {
     ? data.ctaHref
       ? { label, href: data.ctaHref }
       : entry
-        ? { label, onClick: () => openLeadModal({ entry, pageSlug: page.slug }) }
+        ? {
+            label,
+            onClick: () => openLeadModal({ entry, pageSlug: page.slug }),
+            ...leadTriggerProps,
+          }
         : null
     : null;
 

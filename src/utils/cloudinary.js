@@ -453,6 +453,31 @@ export function buildSrcSet(url, widths = SRCSET_WIDTHS, { ratio, crop = 'fill' 
 }
 
 /**
+ * The `src` and `srcSet` one picture is served at — the pair `LazyImage` puts
+ * on its `<img>` and `<Seo preloadImage>` puts on its `<link rel="preload">`.
+ *
+ * It exists so that those two cannot disagree. A preload whose candidate list
+ * differs from the one the `<img>` publishes by a single width is not a
+ * preload: the browser downloads the preloaded file, the element then asks for
+ * a different one, and the page has paid twice for its LCP.
+ *
+ * `srcSet` is `null` for a URL that is not Cloudinary's — a `picsum.photos`
+ * seed photograph, a client's own CDN — because there are no variants of it to
+ * offer (§8.6).
+ *
+ * @param {string} url
+ * @param {{ratio?: string|number|null, fit?: 'cover'|'contain', widths?: number[]}} [options]
+ *   `fit: 'contain'` drops the crop: a logo or a floor plan is fitted inside
+ *   its box, never cut to it (§2.2)
+ * @returns {{src: string, srcSet: string|null}}
+ */
+export function responsiveImage(url, { ratio, fit = 'cover', widths = SRCSET_WIDTHS } = {}) {
+  const srcSet = buildSrcSet(url, widths, { ratio: fit === 'cover' ? ratio : null });
+  if (!srcSet) return { src: url, srcSet: null };
+  return { src: cloudinaryUrl(url, { w: 960, merge: true }), srcSet };
+}
+
+/**
  * The 24-pixel blur a picture fades in from (§6 of prompt 39).
  *
  * It is two or three kilobytes, so it arrives with the markup rather than
@@ -476,6 +501,7 @@ const cloudinary = {
   isCloudinaryConfigured,
   parseCloudinary,
   parseRatio,
+  responsiveImage,
   uploadEndpoint,
   uploadToCloudinary,
 };

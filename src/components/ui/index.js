@@ -38,6 +38,7 @@ export { default as StatCard } from './StatCard';
 export { default as Stepper } from './Stepper';
 export { default as Tabs } from './Tabs';
 export { default as Tooltip } from './Tooltip';
+export { default as VideoEmbed } from './VideoEmbed';
 
 export {
   CheckboxGroup,

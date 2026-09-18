@@ -16,7 +16,7 @@ import styles from './rendered.module.css';
  * @param {object} props the block's data attributes
  */
 export default function RenderedCta({ title, text, buttonLabel, buttonHref, leadSource }) {
-  const { openLeadModal } = useLeadCapture();
+  const { openLeadModal, leadTriggerProps } = useLeadCapture();
 
   if (!title && !text) return null;
 
@@ -34,7 +34,7 @@ export default function RenderedCta({ title, text, buttonLabel, buttonHref, lead
         <Button
           variant="primary"
           {...(leadSource
-            ? { onClick: () => openLeadModal({ entry: leadSource }) }
+            ? { onClick: () => openLeadModal({ entry: leadSource }), ...leadTriggerProps }
             : href?.startsWith('/')
               ? { to: href }
               : { href: href || undefined })}

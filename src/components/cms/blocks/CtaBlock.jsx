@@ -14,7 +14,7 @@ import styles from './blocks.module.css';
  * source it is an ordinary link, internal or external.
  */
 export default function CtaBlock({ data = {}, page = {} }) {
-  const { openLeadModal } = useLeadCapture();
+  const { openLeadModal, leadTriggerProps } = useLeadCapture();
 
   if (!data.title && !data.text) return null;
 
@@ -35,7 +35,10 @@ export default function CtaBlock({ data = {}, page = {} }) {
             variant="primary"
             size="lg"
             {...(entry
-              ? { onClick: () => openLeadModal({ entry, pageSlug: page.slug }) }
+              ? {
+                  onClick: () => openLeadModal({ entry, pageSlug: page.slug }),
+                  ...leadTriggerProps,
+                }
               : href?.startsWith('/')
                 ? { to: href }
                 : { href: href || undefined })}

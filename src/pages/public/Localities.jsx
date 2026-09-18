@@ -16,6 +16,7 @@ import { LOCALITY_ZONES } from '../../config/enums';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './Localities.module.css';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 
 /** §8.6 caps a page at 24 items; the whole Bengaluru set fits in one. */
 const PER_PAGE = 24;
@@ -54,6 +55,11 @@ export default function Localities() {
       ),
     { syncToUrl: true, paramKeys: LIST_PARAM_KEYS, defaults: LIST_DEFAULTS }
   );
+
+  // The prerender crawler saves this page once its primary query has settled
+  // (§9.9) — settling on an error state counts, so a crawl never hangs on a
+  // URL the API cannot answer.
+  usePrerenderReady(loading);
 
   const zone = knownZone(params.zone);
   const sort = params.sort ?? 'order';

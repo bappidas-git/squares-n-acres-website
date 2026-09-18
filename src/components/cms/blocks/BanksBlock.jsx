@@ -26,7 +26,7 @@ const DEFAULT_PRICE = 8000000;
 
 export default function BanksBlock({ data = {}, page = {}, background = 'bg' }) {
   const { banks } = useMasterData();
-  const { openLeadModal } = useLeadCapture();
+  const { openLeadModal, leadTriggerProps } = useLeadCapture();
   const [price, setPrice] = useState(DEFAULT_PRICE);
 
   const active = banks.filter((bank) => bank?.isActive !== false);
@@ -55,6 +55,7 @@ export default function BanksBlock({ data = {}, page = {}, background = 'bg' }) 
 
         <BankCards
           banks={active}
+          triggerProps={leadTriggerProps}
           onCheckEligibility={(bank) =>
             openLeadModal({
               entry: 'bank-eligibility',

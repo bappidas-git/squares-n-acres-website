@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import PATHS from '../../routes/paths';
 import Seo from '../../components/seo/Seo';
 import styles from './NotFound.module.css';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 
 /**
  * The 404 page — the route fallback, and what a public detail page renders
@@ -27,6 +28,11 @@ const NotFound = ({
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
+  // A 404 has no query to wait for, so it is ready the moment it renders. That
+  // matters to the prerender crawl (§9.9): a sitemap that has gone stale would
+  // otherwise cost the full timeout on every URL whose record has gone.
+  usePrerenderReady(false);
+
   const handleSearch = (e) => {
     e.preventDefault();
     // `q` is the contract's search parameter (§5.7); the boilerplate sent
@@ -41,7 +47,7 @@ const NotFound = ({
       <Seo type="notFound" title={title} description={description} />
 
       <div className={styles.page}>
-        <motion.div
+        <m.div
           className={styles.content}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -50,13 +56,13 @@ const NotFound = ({
           {/* 404 Typography */}
           <div className={styles.errorCode}>
             <span className={styles.digit}>4</span>
-            <motion.div
+            <m.div
               className={styles.houseIcon}
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             >
               <Icon icon="mdi:home-outline" />
-            </motion.div>
+            </m.div>
             <span className={styles.digit}>4</span>
           </div>
 
@@ -106,7 +112,7 @@ const NotFound = ({
               Articles
             </Link>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </>
   );

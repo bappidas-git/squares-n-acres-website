@@ -24,6 +24,7 @@
  * Exits non-zero on the first error class it finds; warnings do not fail it.
  */
 
+const { launchChrome } = require('./lib/chrome');
 const { renderHead, routeFor } = require('./lib/renderJsonLd');
 const schema = require('../src/seo/schema');
 
@@ -336,11 +337,7 @@ const READ_PAGE = `(() => {
 })()`;
 
 async function runWithChrome(urls) {
-  const puppeteer = require('puppeteer-core');
-  const browser = await puppeteer.launch({
-    executablePath: process.env.CHROME_PATH,
-    args: ['--no-sandbox', '--disable-dev-shm-usage'],
-  });
+  const browser = await launchChrome({ what: 'the rendered-page checks' });
 
   let checked = 0;
   try {

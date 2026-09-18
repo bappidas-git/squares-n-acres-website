@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useMemo } from 'react';
+import { Fragment, memo, useCallback, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import Checkbox from '@mui/material/Checkbox';
 import Table from '@mui/material/Table';
@@ -134,13 +134,19 @@ export default function DataTable({
     onSelectionChange?.(merged);
   };
 
-  const toggleRow = (id) => {
-    if (selected.has(String(id))) {
-      onSelectionChange?.(selectedIds.filter((entry) => String(entry) !== String(id)));
-      return;
-    }
-    onSelectionChange?.([...selectedIds, id]);
-  };
+  // Stable, so a row that was given nothing new has nothing new to render:
+  // `DataRow` and `MobileCard` are both `memo`, and a callback rebuilt on
+  // every render of the table would be a prop change for all twenty of them.
+  const toggleRow = useCallback(
+    (id) => {
+      if (selected.has(String(id))) {
+        onSelectionChange?.(selectedIds.filter((entry) => String(entry) !== String(id)));
+        return;
+      }
+      onSelectionChange?.([...selectedIds, id]);
+    },
+    [selected, selectedIds, onSelectionChange]
+  );
 
   const handleSort = (column) => {
     if (!column.sortable || !onSortChange) return;
@@ -271,11 +277,11 @@ export default function DataTable({
                     selectable={selectable}
                     selected={selected.has(String(id))}
                     highlighted={Boolean(rowHighlight?.(row))}
-                    onToggle={() => toggleRow(id)}
-                    actions={rowActions?.(row) ?? []}
-                    actionsLabel={rowActionsLabel?.(row)}
+                    onToggle={toggleRow}
+                    rowActions={rowActions}
+                    rowActionsLabel={rowActionsLabel}
                     to={rowLink?.(row)}
-                    onOpen={onRowClick ? () => onRowClick(row) : undefined}
+                    onRowClick={onRowClick}
                     render={mobileCard}
                   />
                 </Fragment>
@@ -392,63 +398,20 @@ export default function DataTable({
                         </th>
                       </TableRow>
                     ) : null}
-                    <TableRow
-                      className={[
-                        styles.row,
-                        isSelected ? styles.rowSelected : '',
-                        rowHighlight?.(row) ? styles.rowHighlight : '',
-                        clickable ? styles.rowClickable : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      tabIndex={clickable ? 0 : undefined}
-                      onClick={clickable ? () => openRow(row) : undefined}
-                      onKeyDown={
-                        clickable
-                          ? (event) => {
-                              if (event.key !== 'Enter' && event.key !== ' ') return;
-                              if (event.target !== event.currentTarget) return;
-                              event.preventDefault();
-                              openRow(row);
-                            }
-                          : undefined
-                      }
-                    >
-                      {selectable ? (
-                        <td className={[styles.cell, styles.checkboxCell].join(' ')}>
-                          <Checkbox
-                            size="small"
-                            disableRipple
-                            checked={isSelected}
-                            onClick={(event) => event.stopPropagation()}
-                            onChange={() => toggleRow(id)}
-                            slotProps={{ input: { 'aria-label': `Select row ${id}` } }}
-                          />
-                        </td>
-                      ) : null}
-
-                      {columns.map((column) => (
-                        <td
-                          key={column.key}
-                          style={{ textAlign: column.align || 'left' }}
-                          className={[styles.cell, HIDE_CLASS[column.hideBelow]]
-                            .filter(Boolean)
-                            .join(' ')}
-                        >
-                          {column.render ? column.render(row) : (row[column.key] ?? '—')}
-                        </td>
-                      ))}
-
-                      {rowActions ? (
-                        <td className={[styles.cell, styles.actionsCell].join(' ')}>
-                          <RowActions
-                            actions={rowActions(row)}
-                            compact={rowActionsMenu}
-                            menuLabel={rowActionsLabel?.(row)}
-                          />
-                        </td>
-                      ) : null}
-                    </TableRow>
+                    <DataRow
+                      row={row}
+                      id={id}
+                      columns={columns}
+                      selectable={selectable}
+                      selected={isSelected}
+                      highlighted={Boolean(rowHighlight?.(row))}
+                      clickable={clickable}
+                      onToggle={toggleRow}
+                      onOpen={openRow}
+                      rowActions={rowActions}
+                      rowActionsMenu={rowActionsMenu}
+                      rowActionsLabel={rowActionsLabel}
+                    />
                   </Fragment>
                 );
               })
@@ -462,13 +425,102 @@ export default function DataTable({
 }
 
 /**
+ * One row of the desktop table.
+ *
+ * Its own component, and `memo`, because a table of a hundred properties runs
+ * every cell renderer of every row whenever anything above it changes — a
+ * checkbox ticked, a poller answering, a word typed in the search box (§8.6).
+ * Given the same row and the same handlers it now draws nothing at all, which
+ * is what a `memo` boundary is for.
+ *
+ * The per-row decisions a caller owns — the link, the highlight, the actions —
+ * stay the caller's functions rather than becoming state here, so a row is
+ * never showing a stale action.
+ */
+const DataRow = memo(function DataRow({
+  row,
+  id,
+  columns,
+  selectable,
+  selected,
+  highlighted,
+  clickable,
+  onToggle,
+  onOpen,
+  rowActions,
+  rowActionsMenu,
+  rowActionsLabel,
+}) {
+  return (
+    <TableRow
+      className={[
+        styles.row,
+        selected ? styles.rowSelected : '',
+        highlighted ? styles.rowHighlight : '',
+        clickable ? styles.rowClickable : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={clickable ? () => onOpen(row) : undefined}
+      onKeyDown={
+        clickable
+          ? (event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              if (event.target !== event.currentTarget) return;
+              event.preventDefault();
+              onOpen(row);
+            }
+          : undefined
+      }
+    >
+      {selectable ? (
+        <td className={[styles.cell, styles.checkboxCell].join(' ')}>
+          <Checkbox
+            size="small"
+            disableRipple
+            checked={selected}
+            onClick={(event) => event.stopPropagation()}
+            onChange={() => onToggle(id)}
+            slotProps={{ input: { 'aria-label': `Select row ${id}` } }}
+          />
+        </td>
+      ) : null}
+
+      {columns.map((column) => (
+        <td
+          key={column.key}
+          style={{ textAlign: column.align || 'left' }}
+          className={[styles.cell, HIDE_CLASS[column.hideBelow]].filter(Boolean).join(' ')}
+        >
+          {column.render ? column.render(row) : (row[column.key] ?? '—')}
+        </td>
+      ))}
+
+      {rowActions ? (
+        <td className={[styles.cell, styles.actionsCell].join(' ')}>
+          <RowActions
+            actions={rowActions(row)}
+            compact={rowActionsMenu}
+            menuLabel={rowActionsLabel?.(row)}
+          />
+        </td>
+      ) : null}
+    </TableRow>
+  );
+});
+
+/**
  * One row as a card. `mobileCard` replaces the body entirely; otherwise the
  * card is built from the `primary` column plus three others: the ones a column
  * asks for with `mobile: true` first — a status belongs on the card even when
  * it is the last column of the table — then the rest, in order, skipping any
  * marked `mobile: false`.
+ *
+ * `memo` for the same reason as `DataRow`: the phone shows the same rows and
+ * re-renders them for the same reasons.
  */
-function MobileCard({
+const MobileCard = memo(function MobileCard({
   row,
   id,
   columns,
@@ -476,10 +528,10 @@ function MobileCard({
   selected,
   highlighted = false,
   onToggle,
-  actions,
-  actionsLabel,
+  rowActions,
+  rowActionsLabel,
   to,
-  onOpen,
+  onRowClick,
   render,
 }) {
   const primary = columns.find((column) => column.primary) ?? columns[0];
@@ -506,7 +558,7 @@ function MobileCard({
           size="small"
           disableRipple
           checked={selected}
-          onChange={onToggle}
+          onChange={() => onToggle(id)}
           slotProps={{ input: { 'aria-label': `Select row ${id}` } }}
         />
       ) : null}
@@ -521,8 +573,12 @@ function MobileCard({
                 <Link className={styles.cardTitleLink} to={to}>
                   {title}
                 </Link>
-              ) : onOpen ? (
-                <button type="button" className={styles.cardTitleButton} onClick={onOpen}>
+              ) : onRowClick ? (
+                <button
+                  type="button"
+                  className={styles.cardTitleButton}
+                  onClick={() => onRowClick(row)}
+                >
                   {title}
                 </button>
               ) : (
@@ -541,7 +597,7 @@ function MobileCard({
         )}
       </div>
 
-      <RowActions actions={actions} menuLabel={actionsLabel} compact />
+      <RowActions actions={rowActions?.(row) ?? []} menuLabel={rowActionsLabel?.(row)} compact />
     </article>
   );
-}
+});

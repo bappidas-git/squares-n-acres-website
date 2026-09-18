@@ -34,5 +34,9 @@ yarn-error.log*
 /e2e/test-results/
 /playwright-report/
 
+# Lighthouse reports written by hand (`npx lighthouse`, docs/PERFORMANCE.md §3)
+/lighthouse-*.html
+/lighthouse-*.json
+
 # logs
 *.log

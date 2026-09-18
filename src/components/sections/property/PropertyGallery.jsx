@@ -1,7 +1,7 @@
 import { Suspense, lazy, useCallback, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 
-import { LazyImage, Tabs } from '../../ui';
+import { LazyImage, Tabs, VideoEmbed } from '../../ui';
 import { track } from '../../../utils/analytics';
 import useBreakpoint from '../../../hooks/useBreakpoint';
 
@@ -273,24 +273,28 @@ export default function PropertyGallery({
     items.push({
       value: 'video',
       label: 'Video',
-      content: (
-        <div className={styles.frame}>
-          {video.kind === 'file' ? (
-            <video className={styles.media} src={video.src} controls preload="metadata">
-              <track kind="captions" />
-            </video>
-          ) : (
-            <iframe
+      content:
+        video.kind === 'file' ? (
+          <div className={styles.frame}>
+            {/* `preload="none"` and a poster: a walkthrough behind a tab
+                nobody has opened should cost one picture, not a video's
+                first megabyte (§8.6). The cover is the poster, so the tab
+                looks like the listing rather than like a black rectangle. */}
+            <video
               className={styles.media}
               src={video.src}
-              title={`${title} — video walkthrough`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              loading="lazy"
-            />
-          )}
-        </div>
-      ),
+              poster={current?.url || undefined}
+              controls
+              preload="none"
+            >
+              <track kind="captions" />
+            </video>
+          </div>
+        ) : (
+          // A YouTube embed is a megabyte of player; the facade is a
+          // thumbnail until somebody presses play (§8.6).
+          <VideoEmbed src={video.src} title={`${title} — video walkthrough`} />
+        ),
     });
   }
 
@@ -298,17 +302,7 @@ export default function PropertyGallery({
     items.push({
       value: 'tour',
       label: 'Virtual tour',
-      content: (
-        <div className={styles.frame}>
-          <iframe
-            className={styles.media}
-            src={tour}
-            title={`${title} — virtual tour`}
-            allowFullScreen
-            loading="lazy"
-          />
-        </div>
-      ),
+      content: <VideoEmbed src={tour} title={`${title} — virtual tour`} />,
     });
   }
 

@@ -4,17 +4,18 @@ import sanitizeHtml from './sanitize';
 import { assignHeadingIds } from '../../utils/toc';
 
 /**
- * The three blocks are fetched only by a body that actually contains one.
+ * The four blocks are fetched only by a body that actually contains one.
  *
  * Almost all CMS HTML is plain prose — a description, an answer, a guide — and
- * every public page renders some, so the listing cards, the accordion and the
- * enquiry band stay out of the page's own bundle until a body asks for them.
- * The dynamic import also breaks the cycle `FaqAccordion` would otherwise close
- * by rendering its answers through this component.
+ * every public page renders some, so the listing cards, the accordion, the
+ * enquiry band and the video facade stay out of the page's own bundle until a
+ * body asks for them. The dynamic import also breaks the cycle `FaqAccordion`
+ * would otherwise close by rendering its answers through this component.
  */
 const RenderedCta = lazy(() => import('./blocks/RenderedCta'));
 const RenderedFaq = lazy(() => import('./blocks/RenderedFaq'));
 const RenderedProperties = lazy(() => import('./blocks/RenderedProperties'));
+const RenderedYoutube = lazy(() => import('./blocks/RenderedYoutube'));
 
 /**
  * How deep a `data-sna-block` may be rendered.
@@ -27,12 +28,55 @@ const MAX_BLOCK_DEPTH = 1;
 
 const DepthContext = createContext(0);
 
-/** The block renderers, by the value of `data-sna-block`. */
+/** The block renderers, by block type. */
 const BLOCKS = {
   cta: RenderedCta,
   properties: RenderedProperties,
   faq: RenderedFaq,
+  youtube: RenderedYoutube,
 };
+
+/**
+ * A YouTube embed in the body, as the facade's props — or `null`.
+ *
+ * The editor's YouTube node serialises to a `<div data-youtube-video>` holding
+ * an `<iframe>`; a body that predates the editor may carry the bare iframe.
+ * Either way what comes back out is not markup: it is a component that shows a
+ * thumbnail until somebody presses play, because an embedded player is a
+ * megabyte nobody asked for (§8.6).
+ *
+ * `editor/sanitize.js` has already dropped every iframe pointing anywhere but
+ * the four allowed hosts, so the address here is one of those four; only the
+ * YouTube ones have a facade, and a Vimeo player or a map is left alone.
+ *
+ * The element has to *be* the embed, not merely contain one: a wrapper counts
+ * only when the iframe is its whole content. Anything looser and a blockquote
+ * with a clip in the middle of it would be replaced by the clip.
+ *
+ * @param {Element} element a top-level node of the parsed body
+ * @returns {{src: string, title: string}|null}
+ */
+function readYoutubeEmbed(element) {
+  let iframe = null;
+
+  if (element.tagName === 'IFRAME') {
+    iframe = element;
+  } else if (element.tagName === 'DIV' || element.tagName === 'FIGURE') {
+    const children = [...element.children];
+    const wrapsOnlyAnIframe =
+      children.length === 1 &&
+      children[0].tagName === 'IFRAME' &&
+      (element.textContent ?? '').trim() === '';
+    if (wrapsOnlyAnIframe) iframe = children[0];
+  }
+
+  if (!iframe) return null;
+
+  const src = (iframe.getAttribute('src') ?? '').trim();
+  if (!/^https:\/\/(?:www\.)?youtube(?:-nocookie)?\.com\//i.test(src)) return null;
+
+  return { src, title: (iframe.getAttribute('title') ?? '').trim() };
+}
 
 /** A `data-` attribute read off a placeholder, as a trimmed string. */
 const attr = (element, name) => (element.getAttribute(name) ?? '').trim();
@@ -129,19 +173,22 @@ function parse(html, withBlocks) {
   };
 
   [...body.childNodes].forEach((node) => {
-    const isBlock =
-      withBlocks &&
-      node.nodeType === 1 &&
-      node.tagName === 'DIV' &&
-      node.hasAttribute('data-sna-block');
+    const element = node.nodeType === 1 ? node : null;
+    const isPlaceholder =
+      withBlocks && element?.tagName === 'DIV' && element.hasAttribute('data-sna-block');
 
-    if (!isBlock) {
-      buffer += node.nodeType === 1 ? node.outerHTML : (node.textContent ?? '');
+    // A video facade is not opt-in: it replaces an embed wherever one is, even
+    // in a body nested deep enough that `withBlocks` has run out (a FAQ answer
+    // inside a FAQ block). It fetches nothing and cannot recurse.
+    const youtube = isPlaceholder || !element ? null : readYoutubeEmbed(element);
+
+    if (!isPlaceholder && !youtube) {
+      buffer += element ? element.outerHTML : (node.textContent ?? '');
       return;
     }
 
     flush();
-    const block = readBlock(node);
+    const block = youtube ? { type: 'youtube', props: youtube } : readBlock(element);
     if (block.type === 'faq') faqItems.push(...block.props.items);
     segments.push({ kind: 'block', ...block });
   });

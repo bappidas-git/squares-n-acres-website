@@ -1,4 +1,5 @@
 import React, { Suspense, lazy } from 'react';
+import { LazyMotion } from 'framer-motion';
 import {
   Outlet,
   Route,
@@ -40,35 +41,48 @@ import ToastProvider from '../components/common/ToastProvider';
  * prompt 38's "in `App`" is where those providers lived before D97 moved them
  * (D104). Mounted once, above the outlet, they survive every route change —
  * which is the whole point of a tag manager that must not re-run.
+ *
+ * `LazyMotion` is the outermost of them (prompt 41, D107). Every animated
+ * element on the site is an `m.*` component, which carries no features of its
+ * own, and this is the one ancestor that hands them the `domAnimation` bundle —
+ * asynchronously, so the library's feature code is a chunk that arrives after
+ * the first paint rather than bytes in front of it. `strict` is on: it turns a
+ * future `motion.div` into an error at the point somebody writes it, which is
+ * the only thing that keeps the saving from leaking back in.
  */
+
+/** `domAnimation`, imported only when the first animated element mounts. */
+const loadMotionFeatures = () => import('../utils/motionFeatures').then((mod) => mod.default);
 
 const NotFound = lazy(() => import('../pages/public/NotFound'));
 
 /** The app's providers, mounted once inside the router. */
 const AppShell = () => (
-  <ToastProvider>
-    <SiteSettingsProvider>
-      <MasterDataProvider>
-        <AdminAuthProvider>
-          <NavigationGuardProvider>
-            <ShortlistProvider>
-              <LeadCaptureProvider>
-                <RedirectHandler />
-                <AnalyticsScripts />
-                {/* Inside the router, so a page that throws still gets a head
+  <LazyMotion features={loadMotionFeatures} strict>
+    <ToastProvider>
+      <SiteSettingsProvider>
+        <MasterDataProvider>
+          <AdminAuthProvider>
+            <NavigationGuardProvider>
+              <ShortlistProvider>
+                <LeadCaptureProvider>
+                  <RedirectHandler />
+                  <AnalyticsScripts />
+                  {/* Inside the router, so a page that throws still gets a head
                     that says `noindex` rather than indexing a crash (§9.3). */}
-                <ErrorBoundary head={<Seo type="error" />}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Outlet />
-                  </Suspense>
-                </ErrorBoundary>
-              </LeadCaptureProvider>
-            </ShortlistProvider>
-          </NavigationGuardProvider>
-        </AdminAuthProvider>
-      </MasterDataProvider>
-    </SiteSettingsProvider>
-  </ToastProvider>
+                  <ErrorBoundary head={<Seo type="error" />}>
+                    <Suspense fallback={<PageLoader />}>
+                      <Outlet />
+                    </Suspense>
+                  </ErrorBoundary>
+                </LeadCaptureProvider>
+              </ShortlistProvider>
+            </NavigationGuardProvider>
+          </AdminAuthProvider>
+        </MasterDataProvider>
+      </SiteSettingsProvider>
+    </ToastProvider>
+  </LazyMotion>
 );
 
 export const router = createBrowserRouter(

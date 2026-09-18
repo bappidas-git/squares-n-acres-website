@@ -20,8 +20,9 @@ import styles from './MobileCtaBar.module.css';
  * @param {object} props
  * @param {object} props.property
  * @param {(entry: string) => void} props.onEnquire
+ * @param {object} [props.triggerProps] spread onto the enquiry button — see `PriceCard`
  */
-export default function MobileCtaBar({ property, onEnquire }) {
+export default function MobileCtaBar({ property, onEnquire, triggerProps }) {
   if (!property) return null;
 
   const agent = property.agent ?? {};
@@ -54,6 +55,7 @@ export default function MobileCtaBar({ property, onEnquire }) {
         type="button"
         className={`${styles.action} ${styles.primary}`}
         onClick={() => onEnquire?.('property-enquiry')}
+        {...triggerProps}
       >
         <Icon icon="mdi:email-fast-outline" className={styles.icon} aria-hidden="true" />
         <span>Enquire</span>

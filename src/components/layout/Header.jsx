@@ -41,7 +41,7 @@ export default function Header() {
   const { settings } = useSiteSettings();
   const { propertyTypes, localities } = useMasterData();
   const { header: pages } = useNavPages();
-  const { openLeadModal } = useLeadCapture();
+  const { openLeadModal, leadTriggerProps } = useLeadCapture();
 
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -92,6 +92,7 @@ export default function Header() {
                   type="button"
                   className={styles.cta}
                   onClick={() => openLeadModal({ entry: 'post-requirement' })}
+                  {...leadTriggerProps}
                 >
                   {action.label}
                 </button>
