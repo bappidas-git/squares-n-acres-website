@@ -56,7 +56,7 @@ const SeoDashboardPage = lazy(() => import('../pages/admin/seo/SeoDashboardPage'
 const SeoSettingsPage = lazy(() => import('../pages/admin/seo/SeoSettingsPage'));
 const RedirectsPage = lazy(() => import('../pages/admin/seo/RedirectsPage'));
 const SeoGuidePage = lazy(() => import('../pages/admin/seo/SeoGuidePage'));
-const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
+const SettingsPage = lazy(() => import('../pages/admin/settings/SettingsPage'));
 const ProfilePage = lazy(() => import('../pages/admin/settings/ProfilePage'));
 const UsersPage = lazy(() => import('../pages/admin/settings/UsersPage'));
 
@@ -150,7 +150,7 @@ export const ADMIN_ROUTES = [
   page('seo/redirects', 'Redirects', ['seo', 'view'], <RedirectsPage />),
   page('seo/guide', 'SEO playbook', ['seo', 'view'], <SeoGuidePage />),
 
-  page('settings', 'Site settings', ['settings', 'view'], <AdminSettings />),
+  page('settings', 'Site settings', ['settings', 'view'], <SettingsPage />),
   page('settings/users', 'Users', ['users', 'view'], <UsersPage />),
 
   page('profile', 'My profile', ['profile', 'view'], <ProfilePage />),

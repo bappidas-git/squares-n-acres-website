@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { BRAND, SITE } from '../config/site';
 import { formatPhoneForTel, whatsappLink } from '../utils/format';
@@ -30,6 +38,12 @@ export const SiteSettingsProvider = ({ children }) => {
   const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState(null);
 
+  // The SEO half, readable without subscribing to it: `updateLocal` rewrites
+  // the session cache, which holds both, and must not drop the one it is not
+  // changing.
+  const seoRef = useRef(seoSettings);
+  seoRef.current = seoSettings;
+
   const load = useCallback(async (signal) => {
     setError(null);
     try {
@@ -37,17 +51,19 @@ export const SiteSettingsProvider = ({ children }) => {
         settingsService.public({ signal }),
         seoService.settings({ signal }),
       ]);
-      if (signal?.aborted) return;
+      if (signal?.aborted) return null;
 
       const next = { settings: site?.data ?? null, seoSettings: seo?.data ?? null };
       setSettings(next.settings);
       setSeoSettings(next.seoSettings);
       writeCache(next);
       setLoading(false);
+      return next.settings;
     } catch (thrown) {
-      if (isCanceled(thrown) || signal?.aborted) return;
+      if (isCanceled(thrown) || signal?.aborted) return null;
       setError(thrown);
       setLoading(false);
+      return null;
     }
   }, []);
 
@@ -57,7 +73,30 @@ export const SiteSettingsProvider = ({ children }) => {
     return () => controller.abort();
   }, [load]);
 
+  /**
+   * Re-reads both singletons from the API.
+   *
+   * @returns {Promise<object|null>} the new site settings, so a screen that
+   *   saved them can act on the server's own copy rather than on its own
+   */
   const refresh = useCallback(() => load(), [load]);
+
+  /**
+   * Puts a freshly saved record on screen without waiting for the round trip —
+   * the admin settings form saves, and the header, the hero and the footer are
+   * already showing the new name while `refresh()` is still in flight.
+   *
+   * The `leads` branch is dropped on the way in: this context holds the public
+   * subset (§5.10), and what it holds is what the session cache keeps.
+   *
+   * @param {object} next the whole settings record, as `PUT /admin/settings` answers it
+   */
+  const updateLocal = useCallback((next) => {
+    if (!next || typeof next !== 'object') return;
+    const { leads: _admin, ...publicSubset } = next;
+    setSettings(publicSubset);
+    writeCache({ settings: publicSubset, seoSettings: seoRef.current });
+  }, []);
 
   const value = useMemo(() => {
     const general = settings?.general ?? {};
@@ -68,6 +107,7 @@ export const SiteSettingsProvider = ({ children }) => {
       loading,
       error,
       refresh,
+      updateLocal,
 
       /** The brand name, always something printable. */
       siteName: general.siteName || SITE.name,
@@ -91,7 +131,7 @@ export const SiteSettingsProvider = ({ children }) => {
       getWhatsappLink: (message) =>
         whatsappLink(general.whatsappNumber, message ?? general.whatsappDefaultMessage),
     };
-  }, [settings, seoSettings, loading, error, refresh]);
+  }, [settings, seoSettings, loading, error, refresh, updateLocal]);
 
   return <SiteSettingsContext.Provider value={value}>{children}</SiteSettingsContext.Provider>;
 };
@@ -110,7 +150,8 @@ const FALLBACK = {
   seoSettings: null,
   loading: false,
   error: null,
-  refresh: () => {},
+  refresh: () => Promise.resolve(null),
+  updateLocal: () => {},
   siteName: SITE.name,
   tagline: '',
   getContact: () => ({
