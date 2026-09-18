@@ -106,6 +106,7 @@ function TeamCard({ member, getWhatsappLink }) {
             src={member.photoUrl}
             alt={member.name}
             ratio="1"
+            sizes="(max-width: 599px) 45vw, (max-width: 899px) 30vw, 220px"
             className={styles.image}
             onErrorFallback={<Avatar name={member.name} size={96} />}
           />

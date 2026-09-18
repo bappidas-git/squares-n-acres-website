@@ -20,6 +20,7 @@ export default function ImageBlock({ data = {}, background = 'bg' }) {
             src={data.url}
             alt={data.alt || ''}
             ratio="16/9"
+            sizes="(max-width: 899px) 100vw, 900px"
             className={styles.figureImage}
           />
           {data.caption ? <figcaption className={styles.caption}>{data.caption}</figcaption> : null}

@@ -1156,3 +1156,132 @@ describe('redirects', () => {
     });
   });
 });
+
+/* ------------------------------------------------------------------ *
+ * Media (§6.12, prompt 39 §5)
+ * ------------------------------------------------------------------ */
+
+describe('/admin/media', () => {
+  it('infers the provider, the type and the format from a URL alone', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const created = await request('POST', '/admin/media', {
+        token,
+        body: { url: 'https://images.example.com/sna/whitefield.jpg', alt: 'A new picture' },
+      });
+
+      assert.equal(created.status, 201);
+      assert.equal(created.body.data.provider, 'external');
+      assert.equal(created.body.data.type, 'image');
+      assert.equal(created.body.data.format, 'jpg');
+
+      const pdf = await request('POST', '/admin/media', {
+        token,
+        body: {
+          url: 'https://res.cloudinary.com/dn9gyaiik/image/upload/v1/sna/docs/price-list.pdf',
+          alt: 'Price list',
+        },
+      });
+
+      assert.equal(pdf.body.data.provider, 'cloudinary');
+      assert.equal(pdf.body.data.type, 'document');
+      assert.equal(pdf.body.data.format, 'pdf');
+    });
+  });
+
+  it('takes the type the client worked out for an extension-less URL', async () => {
+    // `picsum.photos/seed/x/1600/900` has no extension to read, so the API
+    // would file it as a document. `MediaAddUrlDialog` knows better — it reads
+    // the host as well — and says so, which is what the seed rows do too.
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const created = await request('POST', '/admin/media', {
+        token,
+        body: {
+          url: 'https://picsum.photos/seed/sna-new/1600/900',
+          alt: 'A new picture',
+          type: 'image',
+        },
+      });
+
+      assert.equal(created.body.data.type, 'image');
+      assert.equal(created.body.data.provider, 'external');
+    });
+  });
+
+  it('reports where a file is used, on a single read and on the list when asked', async () => {
+    await withServer(async ({ request, login, db }) => {
+      const token = await login(ADMIN);
+      const used = db.getCollection('properties')[0].images[0].url;
+      const record = db.getCollection('media').find((row) => row.url === used);
+
+      const one = await request('GET', `/admin/media/${record.id}`, { token });
+      assert.ok(one.body.data.usedIn.length > 0);
+      assert.equal(one.body.data.usedIn[0].type, 'property');
+
+      // The list stays cheap unless the caller asks for the search.
+      const plain = await request('GET', '/admin/media?perPage=5', { token });
+      assert.equal(plain.body.data[0].usedIn, undefined);
+
+      const withUsage = await request('GET', '/admin/media?perPage=5&withUsage=true', { token });
+      assert.ok(Array.isArray(withUsage.body.data[0].usedIn));
+    });
+  });
+
+  it('refuses to delete a file something still shows, and lists where (§5)', async () => {
+    await withServer(async ({ request, login, db }) => {
+      const token = await login(ADMIN);
+      const used = db.getCollection('properties')[0].images[0].url;
+      const record = db.getCollection('media').find((row) => row.url === used);
+
+      const refused = await request('DELETE', `/admin/media/${record.id}`, { token });
+
+      assert.equal(refused.status, 409);
+      assert.ok(refused.body.data.usedIn.length > 0);
+      assert.match(refused.body.errors.id[0], /Used by/);
+      // Nothing was removed.
+      assert.ok(db.getCollection('media').some((row) => row.id === record.id));
+    });
+  });
+
+  it('deletes it anyway when the editor forces it — the asset stays on Cloudinary', async () => {
+    await withServer(async ({ request, login, db }) => {
+      const token = await login(ADMIN);
+      const used = db.getCollection('properties')[0].images[0].url;
+      const record = db.getCollection('media').find((row) => row.url === used);
+
+      const forced = await request('DELETE', `/admin/media/${record.id}?force=true`, { token });
+
+      assert.equal(forced.status, 200);
+      assert.ok(!db.getCollection('media').some((row) => row.id === record.id));
+      // The listing that used it is untouched: only the library entry went.
+      assert.equal(db.getCollection('properties')[0].images[0].url, used);
+    });
+  });
+
+  it('deletes a file nobody uses without being asked twice', async () => {
+    await withServer(async ({ request, login, db }) => {
+      const token = await login(ADMIN);
+
+      const created = await request('POST', '/admin/media', {
+        token,
+        body: { url: 'https://picsum.photos/seed/sna-orphan/800/600', alt: 'Nobody uses this' },
+      });
+
+      const removed = await request('DELETE', `/admin/media/${created.body.data.id}`, { token });
+      assert.equal(removed.status, 200);
+      assert.ok(!db.getCollection('media').some((row) => row.id === created.body.data.id));
+    });
+  });
+
+  it('is closed to sales and has no public route at all (§7, §5.10)', async () => {
+    await withServer(async ({ request, login }) => {
+      const sales = await login(SALES);
+
+      assert.equal((await request('GET', '/admin/media', { token: sales })).status, 403);
+      assert.equal((await request('GET', '/media')).status, 404);
+    });
+  });
+});

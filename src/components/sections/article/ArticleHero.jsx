@@ -35,8 +35,8 @@ export default function ArticleHero({ article, className = '' }) {
           src={image.url}
           alt=""
           ratio="21/9"
-          loading="eager"
-          fetchPriority="high"
+          sizes="100vw"
+          priority
           className={styles.image}
         />
       </Link>

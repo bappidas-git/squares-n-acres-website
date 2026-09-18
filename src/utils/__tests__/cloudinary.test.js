@@ -10,15 +10,25 @@
  * The upload is driven against a fake `XMLHttpRequest`, because the real one
  * would need a network and jsdom's has no `upload` object to report progress
  * through.
+ *
+ * Prompt 39 added the responsive builders — `parseCloudinary`, `buildSrcSet`,
+ * `blurThumb` — and they are the part worth asserting hardest, because every
+ * image on the site now goes through them and a wrong answer for a
+ * `picsum.photos` URL would be a broken `srcset` on every card.
  */
 
 import cloudinary, {
   NETWORK_MESSAGE,
   NOT_CONFIGURED_MESSAGE,
+  SRCSET_WIDTHS,
+  blurThumb,
+  buildSrcSet,
   buildTransformation,
   cloudinaryConfig,
   cloudinaryUrl,
   isCloudinaryConfigured,
+  parseCloudinary,
+  parseRatio,
   toUploadResult,
   uploadEndpoint,
   uploadToCloudinary,
@@ -132,6 +142,17 @@ describe('cloudinaryUrl', () => {
   it('leaves a URL that already carries a transformation alone', () => {
     const cropped = `${CLOUD}/w_16,h_16,c_pad,b_white,f_png/v1789465791/sna-icon.png`;
     expect(cloudinaryUrl(cropped, { w: 640 })).toBe(cropped);
+  });
+
+  it('chains behind an existing transformation when asked to merge (§7)', () => {
+    const cropped = `${CLOUD}/c_crop,x_375,y_655,w_395,h_390/v1789465791/sna-icon.png`;
+
+    // The crop stays first — it narrows the source — and the resize acts on
+    // what the crop produced. One `/upload/`, two components.
+    expect(cloudinaryUrl(cropped, { w: 640, merge: true })).toBe(
+      `${CLOUD}/c_crop,x_375,y_655,w_395,h_390/f_auto,q_auto,w_640/v1789465791/sna-icon.png`
+    );
+    expect(cloudinaryUrl(cropped, { w: 640, merge: true }).match(/\/upload\//g)).toHaveLength(1);
   });
 
   it('returns anything that is not a Cloudinary delivery URL untouched', () => {
@@ -321,4 +342,145 @@ it('exports the same helpers on the default object', () => {
   expect(cloudinary.cloudinaryUrl).toBe(cloudinaryUrl);
   expect(cloudinary.isCloudinaryConfigured).toBe(isCloudinaryConfigured);
   expect(cloudinary.uploadToCloudinary).toBe(uploadToCloudinary);
+});
+
+describe('parseCloudinary', () => {
+  it('takes a delivery URL apart', () => {
+    expect(parseCloudinary(`${CLOUD}/v1789465788/sna-logo_o09ugt.png`)).toEqual({
+      cloudName: 'demo',
+      resourceType: 'image',
+      deliveryType: 'upload',
+      transformation: '',
+      version: 'v1789465788',
+      publicId: 'sna-logo_o09ugt',
+      format: 'png',
+    });
+  });
+
+  it('keeps the folders of a public id and reads the transformation back', () => {
+    expect(parseCloudinary(`${CLOUD}/w_320,c_fill/sna/properties/lakeview.jpg`)).toMatchObject({
+      transformation: 'w_320,c_fill',
+      version: null,
+      publicId: 'sna/properties/lakeview',
+      format: 'jpg',
+    });
+  });
+
+  it('reads the short form that names no resource type', () => {
+    expect(parseCloudinary('https://res.cloudinary.com/demo/upload/v1/sample.jpg')).toMatchObject({
+      cloudName: 'demo',
+      resourceType: null,
+      publicId: 'sample',
+    });
+  });
+
+  it('is `null` for every URL that is somebody else’s', () => {
+    [
+      'https://picsum.photos/seed/whitefield/1200/800',
+      'https://api.cloudinary.com/v1_1/demo/auto/upload',
+      'https://res.cloudinary.com/demo/image/upload/',
+      '/brand/logo.png',
+      '',
+      null,
+      undefined,
+      42,
+    ].forEach((url) => expect(parseCloudinary(url)).toBeNull());
+  });
+});
+
+describe('parseRatio', () => {
+  it('reads every shape a `ratio` prop is written in', () => {
+    expect(parseRatio('16/9')).toBeCloseTo(16 / 9);
+    expect(parseRatio('4 / 3')).toBeCloseTo(4 / 3);
+    expect(parseRatio('1')).toBe(1);
+    expect(parseRatio(1.91)).toBe(1.91);
+  });
+
+  it('is `null` for anything that is not a ratio', () => {
+    ['', 'auto', '0/3', '4/0', '-1', null, undefined, {}].forEach((value) =>
+      expect(parseRatio(value)).toBeNull()
+    );
+  });
+});
+
+describe('buildSrcSet', () => {
+  const url = `${CLOUD}/v1/lakeview.jpg`;
+
+  it('offers the six widths of §8.6, each with `f_auto,q_auto,dpr_auto`', () => {
+    const set = buildSrcSet(url);
+
+    expect(SRCSET_WIDTHS).toEqual([320, 480, 640, 960, 1280, 1600]);
+    expect(set.split(', ')).toHaveLength(6);
+    expect(set.split(', ')[0]).toBe(`${CLOUD}/f_auto,q_auto,w_320,dpr_auto/v1/lakeview.jpg 320w`);
+    expect(set).toContain(`${CLOUD}/f_auto,q_auto,w_1600,dpr_auto/v1/lakeview.jpg 1600w`);
+  });
+
+  it('adds the height and `c_fill` when the box has a ratio', () => {
+    const set = buildSrcSet(url, [320, 640], { ratio: '16/9' });
+
+    expect(set).toBe(
+      [
+        `${CLOUD}/f_auto,q_auto,w_320,h_180,c_fill,dpr_auto/v1/lakeview.jpg 320w`,
+        `${CLOUD}/f_auto,q_auto,w_640,h_360,c_fill,dpr_auto/v1/lakeview.jpg 640w`,
+      ].join(', ')
+    );
+  });
+
+  it('takes the crop mode it is given', () => {
+    expect(buildSrcSet(url, [320], { ratio: '1', crop: 'pad' })).toContain('c_pad');
+  });
+
+  it('sorts, de-duplicates and drops widths that are not widths', () => {
+    expect(buildSrcSet(url, [640, 320, 640, 0, -5, NaN, 'wide'])).toBe(
+      [
+        `${CLOUD}/f_auto,q_auto,w_320,dpr_auto/v1/lakeview.jpg 320w`,
+        `${CLOUD}/f_auto,q_auto,w_640,dpr_auto/v1/lakeview.jpg 640w`,
+      ].join(', ')
+    );
+  });
+
+  it('merges rather than doubling `/upload/` on a URL that is already cropped (§7)', () => {
+    const cropped = `${CLOUD}/c_crop,x_375,y_655,w_395,h_390/v1789465791/sna-icon.png`;
+    const set = buildSrcSet(cropped, [320]);
+
+    expect(set).toBe(
+      `${CLOUD}/c_crop,x_375,y_655,w_395,h_390/f_auto,q_auto,w_320,dpr_auto/v1789465791/sna-icon.png 320w`
+    );
+    expect(set.match(/\/upload\//g)).toHaveLength(1);
+  });
+
+  it('is `null` when there is nothing to offer', () => {
+    expect(buildSrcSet('https://picsum.photos/seed/whitefield/1200/800')).toBeNull();
+    expect(buildSrcSet('/brand/logo.png')).toBeNull();
+    expect(buildSrcSet(url, [])).toBeNull();
+    expect(buildSrcSet(null)).toBeNull();
+  });
+});
+
+describe('blurThumb', () => {
+  it('is a 24-pixel blur of the same picture', () => {
+    expect(blurThumb(`${CLOUD}/v1/lakeview.jpg`)).toBe(
+      `${CLOUD}/f_auto,q_1,w_24,e_blur:200/v1/lakeview.jpg`
+    );
+  });
+
+  it('chains behind an existing transformation', () => {
+    const cropped = `${CLOUD}/c_crop,w_395,h_390/v1/sna-icon.png`;
+    expect(blurThumb(cropped)).toBe(
+      `${CLOUD}/c_crop,w_395,h_390/f_auto,q_1,w_24,e_blur:200/v1/sna-icon.png`
+    );
+  });
+
+  it('is `null` for a picture we cannot transform', () => {
+    expect(blurThumb('https://picsum.photos/seed/whitefield/1200/800')).toBeNull();
+    expect(blurThumb('')).toBeNull();
+  });
+});
+
+describe('the default export', () => {
+  it('carries the responsive builders too', () => {
+    expect(cloudinary.buildSrcSet).toBe(buildSrcSet);
+    expect(cloudinary.blurThumb).toBe(blurThumb);
+    expect(cloudinary.parseCloudinary).toBe(parseCloudinary);
+  });
 });

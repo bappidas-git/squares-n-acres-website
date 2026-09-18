@@ -1,6 +1,9 @@
-import { useId, useState } from 'react';
+import { Suspense, lazy, useId, useState } from 'react';
 import { Icon } from '@iconify/react';
 
+import MediaUploadZone from '../../../media/MediaUploadZone';
+import useCloudinaryConfig from '../../../../../hooks/useCloudinaryConfig';
+import useMediaUpload from '../../../media/useMediaUpload';
 import { ImageHint } from '../../../../../components/admin/ImageField';
 import {
   Button,
@@ -12,6 +15,14 @@ import {
 import { URL_PATTERN } from '../../../../../utils/validation';
 
 import styles from './ImageGalleryEditor.module.css';
+
+// Eight photographs of a project is the commonest thing an editor does here,
+// and the library is the fastest way to do it — but it is still a dialog most
+// visits never open, so it arrives when the button is pressed.
+const MediaPickerDialog = lazy(() => import('../../../../../components/admin/MediaPickerDialog'));
+
+/** The Cloudinary folder a listing's photographs are filed under. */
+const GALLERY_FOLDER = 'properties';
 
 /** One URL per line, blanks and duplicates dropped, order kept. */
 export function parseUrlList(text, existing = []) {
@@ -61,7 +72,8 @@ export function coverAfterRemoval(images = [], id) {
  * @param {Array<object>} props.images `{ id, url, alt, caption, isCover }`
  * @param {Record<string, string>} props.errors keyed `images.<i>.<field>`
  * @param {string} [props.altHint] the focus keyword, when the SEO tab has one
- * @param {(urls: string[]) => void} props.onAdd one or many
+ * @param {(images: Array<{url: string, alt?: string, caption?: string}>) => void} props.onAdd
+ *   one or many; a photograph chosen from the library brings its alt text with it
  * @param {(id: string|number, patch: object) => void} props.onUpdate
  * @param {(id: string|number) => void} props.onRemove
  * @param {(from: number, to: number) => void} props.onMove
@@ -79,13 +91,40 @@ export default function ImageGalleryEditor({
   onSetCover,
 }) {
   const coverName = useId();
+  const { configured } = useCloudinaryConfig();
   const [single, setSingle] = useState('');
   const [bulk, setBulk] = useState('');
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [dragging, setDragging] = useState(null);
   const [announcement, setAnnouncement] = useState('');
 
   const urls = images.map((image) => image.url).filter(Boolean);
+
+  /**
+   * Appends files the library gave us, skipping the ones already in the
+   * gallery (§7: "appends without duplicates, by URL").
+   */
+  const addPicked = (items) => {
+    const known = new Set(urls);
+    const fresh = items
+      .filter((item) => item?.url && !known.has(item.url))
+      .map((item) => ({ url: item.url, alt: item.alt ?? '', caption: '' }));
+
+    if (fresh.length === 0) {
+      setAnnouncement('Those photographs are already in the gallery.');
+      return;
+    }
+    onAdd?.(fresh);
+    setAnnouncement(`${fresh.length} ${fresh.length === 1 ? 'image' : 'images'} added.`);
+  };
+
+  const queue = useMediaUpload({
+    folder: GALLERY_FOLDER,
+    accept: 'image',
+    onUploaded: addPicked,
+  });
   const missingAlt = images.filter((image) => String(image.alt ?? '').trim() === '').length;
 
   const move = (from, to) => {
@@ -96,17 +135,20 @@ export default function ImageGalleryEditor({
     );
   };
 
+  /** A typed or pasted list of addresses, as gallery rows. */
+  const asRows = (found) => found.map((url) => ({ url, alt: '', caption: '' }));
+
   const addSingle = () => {
     const found = parseUrlList(single, urls);
     if (found.length === 0) return;
-    onAdd?.(found);
+    onAdd?.(asRows(found));
     setSingle('');
   };
 
   const addBulk = () => {
     const found = parseUrlList(bulk, urls);
     if (found.length === 0) return;
-    onAdd?.(found);
+    onAdd?.(asRows(found));
     setBulk('');
     setBulkOpen(false);
     setAnnouncement(`${found.length} ${found.length === 1 ? 'image' : 'images'} added.`);
@@ -278,6 +320,27 @@ export default function ImageGalleryEditor({
             Add
           </Button>
           <Button
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            onClick={() => setPickerOpen(true)}
+            icon={<Icon icon="mdi:image-multiple-outline" width="16" height="16" />}
+          >
+            Add from library
+          </Button>
+          {configured ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={disabled}
+              aria-expanded={uploadOpen}
+              onClick={() => setUploadOpen((open) => !open)}
+              icon={<Icon icon="mdi:tray-arrow-up" width="16" height="16" />}
+            >
+              Upload photographs
+            </Button>
+          ) : null}
+          <Button
             variant="ghost"
             size="sm"
             disabled={disabled}
@@ -312,6 +375,24 @@ export default function ImageGalleryEditor({
             Add these images
           </Button>
         </div>
+      ) : null}
+
+      {configured && uploadOpen ? (
+        <MediaUploadZone queue={queue} accept="image" disabled={disabled} />
+      ) : null}
+
+      {pickerOpen ? (
+        <Suspense fallback={null}>
+          <MediaPickerDialog
+            open
+            multiple
+            accept="image"
+            folder={GALLERY_FOLDER}
+            title="Add photographs to this listing"
+            onClose={() => setPickerOpen(false)}
+            onSelect={addPicked}
+          />
+        </Suspense>
       ) : null}
 
       <p className={styles.announcer} role="status" aria-live="polite" aria-label="Gallery order">

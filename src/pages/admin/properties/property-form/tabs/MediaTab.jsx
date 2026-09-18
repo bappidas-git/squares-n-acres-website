@@ -1,6 +1,7 @@
 import { Icon } from '@iconify/react';
 
 import FormSection, { FormColumn } from '../../../../../components/admin/FormSection';
+import ImageField from '../../../../../components/admin/ImageField';
 import { LazyImage, SwitchField, UrlField } from '../../../../../components/ui';
 import { makeImage } from '../initialState';
 import ImageGalleryEditor, { coverAfterRemoval } from '../components/ImageGalleryEditor';
@@ -29,10 +30,11 @@ export function videoKind(url) {
 /**
  * Tab 6 — Media.
  *
- * Photographs, and the three links that are not photographs. Everything here is
- * a URL: uploads and the media library arrive in prompt 39, and `ImageField`'s
- * contract already reserves the two buttons for them, so nothing on this tab
- * has to move when they do.
+ * Photographs, and the three links that are not photographs. The gallery takes
+ * files from the media library, from an upload, or from a pasted address; the
+ * brochure is an `ImageField`-style file slot with the same three ways in. A
+ * URL typed by hand is never taken away — it is the only way that works before
+ * a client has given us a Cloudinary cloud name (§7).
  */
 export default function MediaTab() {
   const { values, errors, setField, addItem, removeItem, moveItem, updateItem, disabled } =
@@ -43,10 +45,24 @@ export default function MediaTab() {
   const kind = videoKind(values.videoUrl);
   const youTube = youTubeId(values.videoUrl);
 
-  /** Appends URLs as rows; the first photograph of an empty gallery is its cover. */
-  const addImages = (urls) => {
-    urls.forEach((url, offset) =>
-      addItem('images', makeImage({ url, isCover: images.length === 0 && offset === 0 }))
+  /**
+   * Appends photographs as rows; the first one in an empty gallery is its cover.
+   *
+   * Each entry carries whatever the source knew: a typed address knows only
+   * itself, a file from the library brings its alt text along, so the row is
+   * already described and the editor has one less box to fill (§4.6).
+   */
+  const addImages = (added) => {
+    added.forEach((image, offset) =>
+      addItem(
+        'images',
+        makeImage({
+          url: image.url,
+          alt: image.alt ?? '',
+          caption: image.caption ?? '',
+          isCover: images.length === 0 && offset === 0,
+        })
+      )
     );
   };
 
@@ -147,14 +163,19 @@ export default function MediaTab() {
         description="The download most enquiries start from. Everything else a buyer can download lives on the Documents tab."
       >
         <FormColumn half>
-          <UrlField
-            label="Brochure URL"
+          <ImageField
+            label="Brochure (PDF)"
+            accept="document"
+            folder="brochures"
+            preview={false}
             value={values.brochureUrl ?? ''}
             error={errors.brochureUrl}
             disabled={disabled}
-            hint="A PDF. It is linked from the listing header and the enquiry form."
-            onChange={(event) => setField('brochureUrl', event.target.value)}
+            onChange={(url) => setField('brochureUrl', url)}
           />
+          <p className={styles.counter}>
+            A PDF. It is linked from the listing header and the enquiry form.
+          </p>
         </FormColumn>
 
         <FormColumn half>

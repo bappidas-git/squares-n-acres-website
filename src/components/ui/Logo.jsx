@@ -1,4 +1,5 @@
 import { BRAND } from '../../config/site';
+import { buildSrcSet, cloudinaryUrl } from '../../utils/cloudinary';
 
 import styles from './Logo.module.css';
 
@@ -8,6 +9,14 @@ const RATIO = { wordmark: 540 / 231, monogram: 1 };
 /**
  * The brand mark, always with explicit dimensions so nothing shifts while the
  * image loads, and never recoloured.
+ *
+ * It is a plain `<img>` rather than a `LazyImage`: the mark is a fixed size in
+ * the header, it is wanted immediately, and a ratio box and a fade-in would be
+ * the wrong treatment for it. What it does share is §8.6 — a Cloudinary asset
+ * is asked for at the size it is drawn at and at two and three times that, so a
+ * 103-pixel-wide wordmark is not a 540-pixel PNG on every page. Scaling is by
+ * width only, so the mark is never stretched or cropped (§2.2). A logo a client
+ * hosts elsewhere is used exactly as given.
  *
  * @param {object} props
  * @param {'wordmark'|'monogram'} [props.variant]
@@ -27,6 +36,7 @@ export default function Logo({
 }) {
   const source = src || (variant === 'monogram' ? BRAND.iconUrl : BRAND.logoUrl);
   const width = Math.round(height * RATIO[variant]);
+  const srcSet = buildSrcSet(source, [width, width * 2, width * 3]);
 
   return (
     <span
@@ -34,7 +44,9 @@ export default function Logo({
       {...rest}
     >
       <img
-        src={source}
+        src={srcSet ? cloudinaryUrl(source, { w: width * 2, merge: true }) : source}
+        srcSet={srcSet ?? undefined}
+        sizes={srcSet ? `${width}px` : undefined}
         alt={alt}
         width={width}
         height={height}

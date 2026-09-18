@@ -831,6 +831,7 @@ export const partnersConfig = ({ onMutated } = {}) => ({
           alt=""
           ratio="5/2"
           fit="contain"
+          sizes="88px"
           className={styles.logo}
           onErrorFallback={<span className={styles.logoEmpty} aria-hidden="true" />}
         />

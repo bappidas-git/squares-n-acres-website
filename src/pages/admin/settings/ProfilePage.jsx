@@ -143,6 +143,7 @@ const ProfileCard = () => {
               src={values.avatarUrl.trim()}
               alt={`${values.name || 'Avatar'} preview`}
               ratio="1"
+              sizes="96px"
               className={styles.previewImage}
             />
             <span className={styles.previewLabel}>Avatar preview</span>

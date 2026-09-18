@@ -60,6 +60,7 @@ export default function LocalitiesPage() {
               src={row.heroImageUrl}
               alt=""
               ratio="4/3"
+              sizes="72px"
               className={styles.thumb}
               onErrorFallback={<span className={styles.thumbEmpty} aria-hidden="true" />}
             />

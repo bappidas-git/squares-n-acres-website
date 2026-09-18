@@ -1,7 +1,6 @@
 import React, { lazy } from 'react';
 import { matchPath } from 'react-router-dom';
 
-import AdminPlaceholderPage from '../components/admin/AdminPlaceholderPage';
 import Forbidden from '../components/admin/Forbidden';
 import PATHS from './paths';
 import { can, hasRouteAccess } from '../config/rbac';
@@ -16,9 +15,10 @@ import { can, hasRouteAccess } from '../config/rbac';
  * whether a role may be sent to the location it came from — so a new screen is
  * one row, not four edits.
  *
- * Screens a later prompt writes are already routed: they render
- * `AdminPlaceholderPage` and name the prompt that replaces them. Nothing may
- * still point at the placeholder after prompt 43.
+ * Every screen in the table is now a screen: the media library (prompt 39) was
+ * the last one still routed to `AdminPlaceholderPage`, so the placeholder and
+ * the `soon()` helper that produced it are gone from here. The component itself
+ * stays in the admin kit for a screen that is stubbed in future.
  */
 
 const DashboardPage = lazy(() => import('../pages/admin/dashboard/DashboardPage'));
@@ -51,6 +51,7 @@ const JobApplicationsPage = lazy(() => import('../pages/admin/content/JobApplica
 const NewsletterSubscribersPage = lazy(
   () => import('../pages/admin/content/NewsletterSubscribersPage')
 );
+const MediaLibraryPage = lazy(() => import('../pages/admin/media/MediaLibraryPage'));
 const SeoDashboardPage = lazy(() => import('../pages/admin/seo/SeoDashboardPage'));
 const SeoSettingsPage = lazy(() => import('../pages/admin/seo/SeoSettingsPage'));
 const RedirectsPage = lazy(() => import('../pages/admin/seo/RedirectsPage'));
@@ -62,22 +63,12 @@ const UsersPage = lazy(() => import('../pages/admin/settings/UsersPage'));
 /** A screen that exists. */
 const page = (path, title, permission, element) => ({ path, title, permission, element });
 
-/** A screen prompt `owner` writes; the route, title and guard already work. */
-const soon = (path, title, permission, owner) => ({
-  path,
-  title,
-  permission,
-  owner,
-  element: <AdminPlaceholderPage title={title} prompt={owner} />,
-});
-
 /**
  * @type {Array<{
  *   path: string,            // relative to `/admin`
  *   title: string,           // topbar + document title
  *   permission: [string, string]|null,  // `[area, action]` of `config/rbac.js`
  *   element: React.ReactElement,
- *   owner?: number,          // the prompt that replaces the placeholder
  * }>}
  */
 export const ADMIN_ROUTES = [
@@ -152,7 +143,7 @@ export const ADMIN_ROUTES = [
   page('jobs/applications', 'Job applications', ['content', 'view'], <JobApplicationsPage />),
   page('newsletter', 'Newsletter subscribers', ['content', 'view'], <NewsletterSubscribersPage />),
 
-  soon('media', 'Media library', ['media', 'view'], 39),
+  page('media', 'Media library', ['media', 'view'], <MediaLibraryPage />),
 
   page('seo', 'SEO dashboard', ['seo', 'view'], <SeoDashboardPage />),
   page('seo/settings', 'SEO settings', ['seo', 'view'], <SeoSettingsPage />),

@@ -1452,7 +1452,7 @@ const adminNewsletterSubscribers = {
  * Admin — media, SEO, settings, users
  * ------------------------------------------------------------------ */
 
-const adminMedia = adminResource({
+const adminMediaBase = adminResource({
   group: 'adminMedia',
   path: '/admin/media',
   module: 'media',
@@ -1465,8 +1465,30 @@ const adminMedia = adminResource({
     type: enumOf(MEDIA_TYPES),
     provider: enumOf(MEDIA_PROVIDERS),
     folder: 'string',
+    // Where each file is used, on the list as well as on a single read: the
+    // library prints a "Used in 3" badge per card, and one request for the
+    // page beats one request per card (§5.14).
+    withUsage: 'bool',
   },
 });
+
+/**
+ * Media, with the two parameters the library needs beyond the usual CRUD.
+ *
+ * `force` is the one rule this resource adds to §5.8: a `DELETE` of a file
+ * something still shows is a 409 listing the usages, and `force=true` is the
+ * editor's answer to that list (prompt 39 §5). The record goes; the Cloudinary
+ * asset was never ours to delete.
+ */
+const adminMedia = {
+  ...adminMediaBase,
+  remove: {
+    ...adminMediaBase.remove,
+    query: { force: 'bool' },
+    description:
+      'Delete a media record; 409 listing `usedIn` when the file is still in use, unless `force=true`',
+  },
+};
 
 const adminRedirects = {
   ...adminResource({

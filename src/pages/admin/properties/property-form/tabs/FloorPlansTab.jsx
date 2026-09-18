@@ -11,7 +11,6 @@ import {
   IconButton,
   NumberField,
   SelectField,
-  UrlField,
   TextField,
 } from '../../../../../components/ui';
 import { AREA_UNITS } from '../../../../../config/enums';
@@ -199,6 +198,7 @@ export default function FloorPlansTab() {
                         <ImageField
                           label="Floor plan image"
                           hint="floorPlan"
+                          folder="floor-plans"
                           required
                           value={plan.imageUrl ?? ''}
                           error={errors[`${path}.imageUrl`]}
@@ -209,16 +209,19 @@ export default function FloorPlansTab() {
                       </div>
 
                       <div className={styles.unitWide}>
-                        <UrlField
+                        <ImageField
                           label="PDF"
+                          accept="document"
+                          folder="floor-plans"
+                          preview={false}
                           value={plan.pdfUrl ?? ''}
                           error={errors[`${path}.pdfUrl`]}
                           disabled={disabled}
-                          hint="Optional. Offered as a download beside the drawing."
-                          onChange={(event) =>
-                            updateItem('floorPlans', plan.id, { pdfUrl: event.target.value })
-                          }
+                          onChange={(url) => updateItem('floorPlans', plan.id, { pdfUrl: url })}
                         />
+                        <p className={styles.counter}>
+                          Optional. Offered as a download beside the drawing.
+                        </p>
                       </div>
                     </div>
                   </div>

@@ -61,6 +61,7 @@ export default function DevelopersPage() {
               alt=""
               ratio="2/1"
               fit="contain"
+              sizes="88px"
               className={styles.logo}
               onErrorFallback={<span className={styles.logoEmpty} aria-hidden="true" />}
             />

@@ -54,7 +54,8 @@ export default function LocalityHero({ locality, breadcrumbs = [] }) {
         src={heroImageUrl}
         alt=""
         ratio="auto"
-        loading="eager"
+        sizes="100vw"
+        priority
         className={styles.heroImage}
       />
       <span className={styles.heroScrim} aria-hidden="true" />

@@ -97,6 +97,7 @@ function PartnerCard({ partner, tabbable = true }) {
       alt={partner.name}
       ratio="5/2"
       fit="contain"
+      sizes="180px"
       className={styles.logo}
       onErrorFallback={<span className={styles.fallback}>{partner.name}</span>}
     />

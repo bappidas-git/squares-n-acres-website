@@ -25,24 +25,39 @@
   background: var(--color-surface);
 }
 
+/* `LazyImage`'s own box, told to fill the 4:3 frame the card already reserves. */
+.imageBox {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+/* The zoom rides alongside the fade-in `LazyImage` applies, rather than
+   replacing it: one `transition` declaration wins, so it names both. */
 .image {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.4s ease;
-}
-
-/* Video elements within the card — same sizing as images, no layout shift */
-video.image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+  transition:
+    transform 0.4s ease,
+    opacity var(--transition-base);
 }
 
 .card:hover .image {
   transform: scale(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image {
+    transition: none;
+  }
+
+  .card:hover .image {
+    transform: none;
+  }
 }
 
 .badge {

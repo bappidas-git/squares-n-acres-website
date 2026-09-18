@@ -1,6 +1,7 @@
 import { Icon } from '@iconify/react';
 
 import FormSection, { FormColumn } from '../../../../../components/admin/FormSection';
+import ImageField from '../../../../../components/admin/ImageField';
 import SortableList from '../../../../../components/admin/SortableList';
 import {
   Button,
@@ -8,7 +9,6 @@ import {
   SelectField,
   SwitchField,
   TextField,
-  UrlField,
 } from '../../../../../components/ui';
 import { DOCUMENT_TYPES } from '../../../../../config/enums';
 import { makeDocument } from '../initialState';
@@ -27,6 +27,10 @@ import styles from './PropertyTabs.module.css';
  * The brochure is not a row here: it is a field of its own on the record and a
  * field of its own on Media (§6.1). The card at the top says what that field
  * holds so nobody adds the brochure twice.
+ *
+ * Every row's file comes from the same three places as every picture in the
+ * admin — the library, an upload, or a pasted address (prompt 39 §4.6) — with
+ * the picker limited to documents, because a JPEG is not a price list.
  */
 export default function DocumentsTab() {
   const { values, errors, addItem, removeItem, moveItem, updateItem, goToTab, disabled } =
@@ -114,16 +118,17 @@ export default function DocumentsTab() {
                           updateItem('documents', row.id, { title: event.target.value })
                         }
                       />
-                      <UrlField
-                        label="File address"
+                      <ImageField
+                        label="File"
+                        accept="document"
+                        folder="documents"
+                        preview={false}
                         required
                         value={row.url ?? ''}
                         error={errors[`${path}.url`]}
                         disabled={disabled}
-                        hint="A PDF or any other file, on https://"
-                        onChange={(event) =>
-                          updateItem('documents', row.id, { url: event.target.value })
-                        }
+                        placeholder="https://… (PDF, DOC or DOCX)"
+                        onChange={(url) => updateItem('documents', row.id, { url })}
                       />
                       <SelectField
                         label="Type"

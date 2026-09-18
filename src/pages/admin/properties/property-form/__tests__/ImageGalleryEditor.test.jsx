@@ -20,11 +20,16 @@ function Harness({ initial = [], errors = {}, altHint, disabled = false, onMoveS
         errors={errors}
         altHint={altHint}
         disabled={disabled}
-        onAdd={(urls) =>
+        onAdd={(added) =>
           setImages((current) => [
             ...current,
-            ...urls.map((url, offset) =>
-              makeImage({ url, isCover: current.length === 0 && offset === 0 })
+            ...added.map((image, offset) =>
+              makeImage({
+                url: image.url,
+                alt: image.alt ?? '',
+                caption: image.caption ?? '',
+                isCover: current.length === 0 && offset === 0,
+              })
             ),
           ])
         }
