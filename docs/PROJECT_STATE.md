@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 44 — QA bug bash: property module Next prompt: 45
+Last prompt executed: 45 — QA bug bash: leads, articles, SEO, CMS, settings, auth Next prompt: 46
 
 ## Executed prompts
 
@@ -50,7 +50,8 @@ Last prompt executed: 44 — QA bug bash: property module Next prompt: 45
 | 41  | Code splitting, lazy sections, LCP preloads, web-vitals, prerender | `3a89808`                                                                          | 2026-09-18 |
 | 42  | Mobile UX and accessibility pass across public and admin           | `e950419`                                                                          | 2026-09-18 |
 | 43  | UX polish: loading/empty/error/success states, 404/500, copy       | `042066b`                                                                          | 2026-09-18 |
-| 44  | QA bug bash: property module, seed render/payload tests, Playwright | HEAD of this branch (a commit cannot contain its own hash — prompt 45 fills it in) | 2026-09-18 |
+| 44  | QA bug bash: property module, seed render/payload tests, Playwright | `58f1b11`                                                                            | 2026-09-18 |
+| 45  | QA bug bash: leads, articles, SEO, CMS, settings, auth               | HEAD of this branch (a commit cannot contain its own hash — prompt 46 fills it in) | 2026-09-18 |
 
 ## Baseline (prompt 01)
 
@@ -418,10 +419,10 @@ removed it. Anything added here from now on is a bug until it is closed again.
 | NEW-36 (closed in 33)     | ~~`PagesListPage`'s "Duplicate" row action cannot succeed~~: it posted the copy with `slug: ''` and `seo.slug: ''`, and §6.10 types a page's slug as a patterned string that the empty string does not match, so the API answered `422 {slug, seo.slug}` before `resolveSlug` was ever reached. **Closed:** the payload moved into `pageService.duplicate()` beside the article one, and the copy now **chooses** its slug — `<slug>-copy`, or the free variant `check-slug` suggests — rather than sending an empty one. Omitting the key, which is what fixed the article copy, is refused here too (`{ slug: ['The slug field is required.'] }`): unlike an article's, a page's slug is `required` with no default, so the API cannot be left to derive it. The copy also drops `seo.canonicalUrl`, `seo.redirect`, the score and the analysis, and is a draft in neither menu with neither menu set. Verified against the running mock (422 before, 201 with `partnership-copy` and then `partnership-copy-2` after) and through the screen itself; covered by `src/services/__tests__/pageService.test.js` (11). | 33 (QA of the article duplicate, which had the same bug)                                                                                                                                                                                                                                                                                                                                        | —                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | NEW-35                    | For about half a second after a route change, every `position: fixed` element **inside** `<main>` is positioned against `MainLayout`'s framer-motion page-transition wrapper rather than the viewport, because that wrapper carries a `transform` while the spring settles (a transform on an ancestor makes it the containing block for fixed descendants). Measured at 390 px on `/properties/:slug`: the mobile CTA bar reads `top: 9041` in a 780 px viewport at 0 ms and `top: 715` (pinned to the bottom) from ~500 ms on. It self-corrects and affects only the property page's own CTA bar — the floating WhatsApp button sits outside `<main>` and is never affected. Pre-existing (the wrapper is prompt 04's, the bar prompt 23's); the fix is either rendering the bar in a portal or dropping the transform once the animation ends.                                                                                                                                                                                                                                                                     | 28                                                                                                                                                                                                                                                                                                                                                                                              | 41 (performance/animation pass)                                                                                                                                                                                                                                                                                                                                                                                      |
 | NEW-37 (closed in 34)     | ~~Every paragraph of every CMS body on the site ran into the one above it~~: `prose.css`'s `.prose p { margin: 0 }` is one class and one element, so it outranked the `.prose > * + *` flow rule written to space them, whatever the source order — measured with `getComputedStyle` in the browser, `margin-top: 0px` on every paragraph of an article, a listing description, a locality guide and a page's rich text. **Closed:** the three margin resets (`p`, `figure`, `.sna-figure`) are wrapped in `:where()`, which scores nothing and hands `margin-top` back to the flow rule (`16px` after).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | 34, in the browser                                                                                                                                                                                                                                                                                                                                                                              | 34                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| NEW-38                    | **`ArticleRelatedCard`'s pickers render two children with the same key.** Adding a related article to an article that already has one logs React's "Encountered two children with the same key" from `EntityPicker` → `SortableList`: the picker's value array can hold the same id twice, so the list keys collide. Found while wiring the SEO panel into the article form; **verified against `HEAD` before this prompt's changes**, so it is prompt 33's and not 36's. Nothing renders wrongly today — React keeps the first child — but the warning is the shape of a row that disappears on the next reorder. The fix belongs with `EntityPicker`, which should refuse a duplicate before it reaches the list.                                                                                                                                                                                                                                                                                                                                                                                                   | 36, running the article form's tests                                                                                                                                                                                                                                                                                                                                                            | 45                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| NEW-39                    | **`cleanTitle` leaves a comma standing in front of the separator.** `'%bhk% in %locality%, %developer% %sep% %sitename%'` on a listing with no builder resolves to `"3 BHK in Whitefield,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Squares N Acres"`: §9.5's cleanup removes the unresolved variable and handles a leading `–                                                                                                                                                                                                                                                                                                      | `, a doubled separator and `in , Bengaluru`, but not punctuation left immediately before the separator. Found while writing the SEO settings screen's live template examples; the engine belongs to prompt 35 and its tests assert the current behaviour, so 37 left it alone and documented it rather than changing a scorer mid-prompt. The fix is one more rule in `cleanTitle`plus a case in`variables.test.js`. | 37, writing `TitlesMetaTab.test.jsx` | 45  |
+| ~~NEW-38~~ (closed in 45) | **`ArticleRelatedCard`'s pickers render two children with the same key.** Adding a related article to an article that already has one logs React's "Encountered two children with the same key" from `EntityPicker` → `SortableList`: the picker's value array can hold the same id twice, so the list keys collide. Found while wiring the SEO panel into the article form; **verified against `HEAD` before this prompt's changes**, so it is prompt 33's and not 36's. Nothing renders wrongly today — React keeps the first child — but the warning is the shape of a row that disappears on the next reorder. The fix belongs with `EntityPicker`, which should refuse a duplicate before it reaches the list. **Closed in 45:** `EntityPicker` de-duplicates the ids where it reads them, first occurrence winning, so the editor's order survives and the next change writes the clean list back. `src/components/admin/__tests__/EntityPicker.test.jsx` covers the chip row, the orderable list, the counter and the write-back. | 36, running the article form's tests                                                                                                                                                                                                                                                                                                                                                            | ~~45~~ closed in 45 |
+| ~~NEW-39~~ (closed in 45) | **`cleanTitle` leaves a comma standing in front of the separator.** `'%bhk% in %locality%, %developer% %sep% %sitename%'` on a listing with no builder resolves to `"3 BHK in Whitefield, **Closed in 45:** one more rule in `cleanTitle`, written so that a comma doing its job (`Whitefield, Bengaluru`, `₹1,20,000 - ₹1,50,000`) is untouched, plus two cases in `variables.test.js`. | Squares N Acres"`: §9.5's cleanup removes the unresolved variable and handles a leading `–                                                                                                                                                                                                                                                                                                      | `, a doubled separator and `in , Bengaluru`, but not punctuation left immediately before the separator. Found while writing the SEO settings screen's live template examples; the engine belongs to prompt 35 and its tests assert the current behaviour, so 37 left it alone and documented it rather than changing a scorer mid-prompt. The fix is one more rule in `cleanTitle`plus a case in`variables.test.js`. | 37, writing `TitlesMetaTab.test.jsx` | ~~45~~ closed in 45 |
 | NEW-40                    | **Four status-listing titles run past the 60 characters a result shows.** `npm run check:jsonld` warns on `/buy/pre-launch` (72), `/buy/under-construction` (82), `/buy/ready-to-move` (73) and `/buy/resale` (70): the §9.5 `listing` template appends `for Sale` to a noun that already contains the status, so "Under-construction properties for Sale in Bengaluru – 6 Listings                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Squares N Acres" says "sale" twice and is cut off in the result. The same warning flags seven CMS pages whose titles are _short_ (`/disclaimer` at 10 characters). Both are copy rather than code: the fix is the `verb` of the four status entries in `listingRoutes.js` and the `seo.title` of the CMS records, which is prompt 46's SEO pass. Warnings, not errors — `check:jsonld` exits 0. | 38, running `check:jsonld` against the rendered site                                                                                                                                                                                                                                                                                                                                                                 | 46                                   |
-| NEW-41                    | **Two seeded links point at articles that are not published.** `npm run check:links` (Chrome) reports `/insights/articles/under-construction-vs-ready-to-move`, linked from the bodies of articles 4 and 6, and `/insights/articles/first-time-homebuyer-checklist-bengaluru`, linked from the body of page 12 (`insights/real-estate-awareness`). The first record is `status: "draft"`; the second is `status: "scheduled"` for 2026-10-31, so it starts resolving on that date on its own. The 404 is correct behaviour (§5.4: a public detail endpoint answers 404 for an unpublished slug) — the defect is in the seed copy, and `db.json` is off-limits to prompt 38 (§12 guardrails). The checker is left reporting them rather than taught to forgive them, so `check:links` exits 1 on these two until the seed is corrected.                                                                                                                                                                                                                                                                                | 38, running `check:links` against the rendered site                                                                                                                                                                                                                                                                                                                                             | 46                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ~~NEW-41~~ (closed in 45) | **Two seeded links point at articles that are not published.** `npm run check:links` (Chrome) reports `/insights/articles/under-construction-vs-ready-to-move`, linked from the bodies of articles 4 and 6, and `/insights/articles/first-time-homebuyer-checklist-bengaluru`, linked from the body of page 12 (`insights/real-estate-awareness`). The first record is `status: "draft"`; the second is `status: "scheduled"` for 2026-10-31, so it starts resolving on that date on its own. The 404 is correct behaviour (§5.4: a public detail endpoint answers 404 for an unpublished slug) — the defect is in the seed copy, and `db.json` is off-limits to prompt 38 (§12 guardrails). The checker is left reporting them rather than taught to forgive them, so `check:links` exits 1 on these two until the seed is corrected. **Closed in 45:** `check:links` is an acceptance criterion of prompt 45 and the fix is seed copy inside its modules, so the three anchors were retargeted at published guides that carry the same information and `db.json` was rebuilt. The draft and the scheduled article keep their statuses, which `docs/SEED_GUIDE.md` pins and the schedule tests need. `check:links` now reports 0 broken links. | 38, running `check:links` against the rendered site                                                                                                                                                                                                                                                                                                                                             | ~~46~~ closed in 45 |
 | NEW-42                    | **The home page fires 25 `GET /properties?…&perPage=1` requests to count the category tiles.** `useCategoryCounts` (prompt 27) asks for one result per tile — six segment/listing-type tiles and seventeen property types — purely to read `meta.total`. Against the mock each answers in under 100 ms and the page is fine; against a real API it is 25 round trips and 25 state updates for a row of six numbers. The fix is one aggregate response (a `counts` branch on an existing endpoint, or `GET /properties/counts`), which needs an API change and is therefore prompt 46's to specify and prompt 47's to document. Seen in the Lighthouse network trace of `/`.                                                                                                                                                                                                                                                                                                                                                                                                                                           | 41, reading the Lighthouse trace of the home page                                                                                                                                                                                                                                                                                                                                               | 46                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | NEW-47                    | **Text over a photograph cannot be contrast-checked from CSS.** `npm run a11y:audit` composites scrims, translucent layers and positioned siblings, and reports "background unknown" the moment the thing behind the text is a picture — a hero, a locality card, the gallery counter. Every such case was checked by eye at 390 px in prompt 42 and the one that was wrong is NEW-43 (the placeholder behind the scrim, now charcoal), but the check is blind there by construction. Sampling the rendered pixels — a screenshot of the text's box, the modal background colour, the ratio against the computed foreground — would close it. | 42, writing the in-page audit | 46 |
 | NEW-46 (re-tested in 44)  | **Not observed on the current build.** Prompt 44 drove the two in-page transitions a property page still offers — to `/buy` and to `/localities` through the header — and watched every `/api/` request and every console line: no `GET /properties/slug/<wrong>` and no console error. The transition the row names, a property page to `/localities/:slug`, can no longer be started from the page itself, which renders no locality link at 1280 px or 390 px. The console audit over 74 property-related page loads found no such error either. Kept open rather than closed because the transition could not be reproduced end to end, and because the fix the row proposes is in the router setup (D97) — shared code prompt 44 is told not to touch. Original row: **navigating away from a property page fires one doomed request for the new slug.** `MainLayout` wraps the outlet in `<AnimatePresence mode="wait">` keyed on the pathname, so the outgoing page stays mounted through its exit animation while `useParams()` already reports the new location: leaving `/properties/aurelia-court-duplex-koramangala` for `/localities/koramangala` makes `PropertyDetails` fetch `GET /properties/slug/koramangala`, which answers 404 and logs an error in the console. One wasted request per navigation away from a property page, and a console error on a page that is otherwise clean. The fix is React Router's own remedy — render the outlet against a pinned `location` so the exiting subtree keeps the params it was mounted with — which is a change to the router setup (D97) rather than to this page.                                                                                                                                                                                                                                                               | 41, watching the mock's log during a prerender verification                                                                                                                                                                                                                                                                                                                                     | 44                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -6984,3 +6985,151 @@ names can no longer be started from the page, and because its fix is in the
 router setup (D97), which this prompt is told not to touch.
 
 **Next prompt: 45 — QA bug bash: leads, articles, SEO, CMS, settings, auth.**
+
+### Prompt 45 — QA bug bash: leads, articles, SEO, CMS, careers, media, settings, auth (2026-09-18)
+
+**What this prompt did**
+
+Exercised every module prompt 44 did not — leads and the CRM, articles and the
+blog, the SEO Manager, the pages CMS, careers and the newsletter, the media
+library, site settings, users and profiles, and authentication itself — for
+**admin, manager and sales**, at **1280 px and 390 px**, with the console open.
+579 role/endpoint pairs, 197 request-level scenarios, 23 auth-and-expiry
+scenarios against a mock issuing thirty-six-second tokens, 352
+instrumented page loads and 52 browser specs. **Seven defects found, seven
+fixed**, each with a regression test.
+`docs/QA/45-modules-bug-bash.md` is the record and
+`docs/QA/45-rbac-matrix-verified.md` is the matrix, route by route and endpoint
+by endpoint, for all three roles and on both sides — the screen and the API.
+
+**Defects found and fixed**
+
+| Id         | What was wrong                                                                                                                                                                                                 | Fixed in                                                              |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **MB-02**  | **(high)** `lead.pageSlug` was typed as a single-segment slug, so **every lead sent from a nested CMS page was a 422** — the Home Loan, Legal Assistance, Interior Designing and Real Estate Awareness pages, four of the site's lead-generating pages | `src/services/schemas/lead.js`                                        |
+| MB-01      | `SlugField` fired `check-slug` while `disabled`, so a sales user opening the property form read-only collected a **403 and a console error** on a screen they may read                                             | `src/components/admin/SlugField.jsx`                                  |
+| MB-03      | A CMS page refused an empty slug instead of deriving one from its title, although §5.9 says the API derives it and prompt 44 settled that for every other slugged resource                                          | `src/services/schemas/page.js`                                        |
+| MB-04      | The reserved-path rule lived only in `PageFormPage`: the API stored a page under `/properties`, which exists and can never be opened (D11)                                                                          | `mock-server/routes/pages.js`                                         |
+| NEW-38     | `EntityPicker` rendered two children with the same key when its value carried a repeated id — a row that disappears on the next reorder                                                                             | `src/components/admin/EntityPicker.jsx`                               |
+| NEW-39     | `cleanTitle` left a comma leaning on the separator when the variable between them resolved to nothing                                                                                                               | `src/seo/variables.js`                                                |
+| NEW-41     | Two seeded links pointed at a draft and a scheduled article, so `check:links` exited 1                                                                                                                              | `scripts/seed/data/articles.js`, `scripts/seed/data/pages.js`, `db.json` |
+
+**Files added**
+
+- `docs/QA/45-modules-bug-bash.md` — the 197-row scenario matrix grouped by
+  module, the 23 auth scenarios, the seven defects with their fixes and
+  regression tests, seven observations that are not defects, the three SEO
+  walk-throughs from Poor to Good step by step, the console audit and the
+  verification table.
+- `docs/QA/45-rbac-matrix-verified.md` — §7 verified three times over: every
+  screen × every role as `RoleRoute` actually rendered it, every admin endpoint
+  × every role as the server actually answered it, and the sidebar of each role
+  walked for a link that would lead to a 403. Plus the five rules a yes/no
+  cannot express (the sales lead scoping and export, the manager's read-only
+  settings and custom HTML) and what each role is sent to when it asks for a
+  route it may not open.
+- `src/__tests__/rbac.routes.test.jsx` — 146 cases. Every `adminRouteConfig.js`
+  entry is rendered through `RoleRoute` as each of the three roles and the
+  result read from the output — the screen or the `Forbidden` page, never both.
+  The same answer is then checked against the login redirect
+  (`canAccessAdminRoute`), against the navigation (`getNavItemsForRole`, in both
+  directions: no link that 403s, and no area silently missing from the sidebar),
+  and against the permission the **API** derives for the same resource
+  (`mock-server/lib/routePermissions.js`). The failure it exists to catch is not
+  one guard being wrong but two of them disagreeing.
+- `src/seo/__tests__/seedEntities.analyze.test.js` — 143 cases. `analyze()` run
+  over all 119 records the seed publishes, of all eight entity types, with the
+  context `SeoPanel` builds: no exception, a finite score in 0–100, one of the
+  three bands, the fifty results §9.6 counts, counters that agree with the
+  results they count, and the same answer twice. Then the walk that matters: the
+  seed's lowest-scoring listing taken from **Poor 50 to Good 88** by applying
+  its own panel messages, asserting that the score never goes backwards and that
+  no failing test is left behind.
+- `src/components/cms/__tests__/allBlocks.render.test.jsx` — 82 cases. All
+  twenty-five block components rendered twice — with the `defaultData()` an
+  editor gets on insert, and with every field of the block's own schema filled —
+  with and without site settings, plus all twenty-five in one `PageRenderer`
+  tree. A `console.error` or `console.warn` fails the test. The filled data is
+  derived from `blockSchemas.js` rather than written out, so it cannot drift
+  from what the editor produces.
+- `src/components/cms/__fixtures__/blocks.js` — the seed records the
+  data-driven blocks are given, so a block that draws a listing card draws a
+  real one.
+- `src/components/admin/__tests__/EntityPicker.test.jsx` — eight cases, the
+  NEW-38 regression among them.
+- `e2e/tests/article-publish.spec.js`, `seo-panel.spec.js`, `cms-page.spec.js`,
+  `settings.spec.js` — fourteen specs: writing an article in the editor and
+  publishing it (with the draft 404 and the preview token on the way), the SEO
+  panel saving only the `seo` branch and storing the score, a CMS page built out
+  of blocks and published, and the settings saved and read back in the public
+  footer — each with its RBAC half.
+
+**Files changed**
+
+- `src/services/schemas/lead.js`, `src/services/schemas/page.js`,
+  `mock-server/routes/pages.js` — MB-02, MB-03, MB-04.
+- `src/components/admin/SlugField.jsx`, `src/components/admin/EntityPicker.jsx`,
+  `src/seo/variables.js` — MB-01, NEW-38, NEW-39.
+- `src/components/sections/developer/DeveloperCta.jsx` — a comment that MB-02
+  made untrue.
+- `scripts/seed/data/articles.js`, `scripts/seed/data/pages.js`, `db.json` —
+  NEW-41, rebuilt with `npm run seed:build`.
+- `mock-server/__tests__/content.test.js` (+5), `mock-server/__tests__/leads.test.js` (+2),
+  `src/components/admin/__tests__/SlugField.test.jsx` (+2),
+  `src/seo/__tests__/variables.test.js` (+2) — the regressions.
+- `e2e/playwright.config.js`, `e2e/README.md` — the suite honours `CHROME_PATH`
+  (D16), and the README records the login rate limit a repeated run trips.
+- `package-lock.json` — `npm install` normalised the `@playwright/test` entry to
+  the exact pin `package.json` already carried (§3.3).
+
+**Endpoints added / changed**
+
+None. Three request **contracts** changed, all documented in
+`docs/API_CONTRACT.md`: `lead.pageSlug` accepts a slug path, `page.slug` accepts
+the empty string and is derived from the title, and `POST`/`PUT`/`PATCH` on a
+page refuse a slug under a reserved prefix with a 422 keyed `slug`.
+
+**Env vars, npm scripts**
+
+None added. `MOCK_TOKEN_TTL_HOURS=0.01` was used as §4.2 asks; `CHROME_PATH` now
+also reaches the e2e suite.
+
+**Acceptance checklist (copied from the prompt, ticked)**
+
+- [x] `docs/QA/45-modules-bug-bash.md` and `docs/QA/45-rbac-matrix-verified.md`
+      complete, with every defect fixed and referenced by id from both.
+- [x] Console clean on every route for all roles: **352 page loads** — 50 public
+      URLs at 1280 px and 390 px, 42 admin URLs for each of the three roles at
+      both widths — with **0** application `console.error`/`console.warn`, 0
+      page errors, 0 failed requests, 0 horizontal scroll, 0 routes landing
+      anywhere but where they were asked for, and 0 pages rendering an empty
+      shell. Both route lists are printed in §6 of the report. The one HTTP 4xx
+      is `/this-route-does-not-exist` asking the API for a page that does not
+      exist, which is the 404 page working (prompt 44's OBS-3).
+- [x] New Jest suites pass: `rbac.routes` (146), `seedEntities.analyze` (143),
+      `allBlocks.render` (82), `EntityPicker` (8).
+- [x] e2e extended: four new spec files, fourteen new specs, **52 / 52** green.
+- [x] `npm run lint`, `npm run test:ci` (147 suites, 3 344 tests),
+      `npm run build:ci` (compiled successfully, 0 warnings),
+      `npm run check:traces`, `npm run check:contrast`, `npm run test:mock`
+      (157), `npm run test:scripts`, `npm run smoke` (282),
+      `npm run check:links` (**0 broken**), `npm run check:jsonld` (0 errors)
+      all pass. `npm run format:check` and `npm run validate:seed` too.
+- [x] "Known issues (open)" carries no row this prompt owns and none of
+      severity high; every remaining row names a later prompt and a reason.
+- [x] One commit, clean tree.
+
+**Issues left → "Known issues"**
+
+None added. Three rows are **closed**: **NEW-38** (the duplicate key in
+`EntityPicker`), **NEW-39** (the comma in front of the separator) — the two this
+prompt owned — and **NEW-41** (the seed's dead internal links), which was owned
+by prompt 46 and is closed here because `check:links` is an acceptance criterion
+of this one and the fix is seed copy inside this prompt's modules.
+
+The rows that stay open are the ones later prompts own and this prompt's
+guardrails do not reach: **NEW-40**, **NEW-42**, **NEW-47**, **NEW-48** (owner
+46 — the SEO-validation and a11y run), **NEW-49**, **NEW-50** (owner 48), and
+**NEW-30**, **NEW-35** (owner 41). None is of high severity.
+
+**Next prompt: 46 — QA: cross-device, Lighthouse and SEO validation.**

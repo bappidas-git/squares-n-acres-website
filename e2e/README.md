@@ -1,10 +1,11 @@
 # End-to-end suite (Playwright)
 
-Six specs that drive the real application in a real browser, against the real
+Ten specs that drive the real application in a real browser, against the real
 mock API: **login**, **create a property**, **view a property**, **submit a
-lead**, **filter the listing** and **shortlist**. They were written for prompt
-44's property-module bug bash and are the only tests in the repository that
-exercise the browser; everything else is Jest in jsdom.
+lead**, **filter the listing** and **shortlist** (prompt 44), plus **publish an
+article**, **the SEO panel**, **publish a CMS page** and **site settings**
+(prompt 45). They are the only tests in the repository that exercise the
+browser; everything else is Jest in jsdom.
 
 ```
 npm run e2e                       # the whole suite, headless
@@ -19,8 +20,22 @@ npx playwright show-report        # the HTML report of the last CI run
 | Requirement    | Why                                                                     |
 | -------------- | ----------------------------------------------------------------------- |
 | **Node ≥ 20**  | `@playwright/test@1.63.0` does not support Node 18 (D6).                 |
-| **A browser**  | `npx playwright install chromium` — about 150 MB, downloaded once.       |
+| **A browser**  | `npx playwright install chromium` — about 150 MB, downloaded once. A machine that already has Chrome can point `CHROME_PATH` at it instead (below). |
 | **Ports 3000 and 4000 free** | The suite starts `npm run mock` and `npm start` itself. |
+
+### `CHROME_PATH`
+
+`CHROME_PATH` is already how `check:links`, `check:jsonld` and the prerender
+find a browser (D16, `scripts/lib/chrome.js`), and the suite honours it too:
+
+```
+CHROME_PATH=/path/to/chrome npm run e2e
+```
+
+Set, it is passed to Chromium as `launchOptions.executablePath`, so a machine
+that has a Chromium build but not the exact one `npx playwright install` would
+fetch runs the suite by naming it. Unset, Playwright uses its own download, as
+before.
 
 If Node is older than 20, or the browser download is blocked, the specs still
 belong in the repository and `npm run e2e` still exists — it will simply say
@@ -42,7 +57,12 @@ that Playwright is not installed. Install Node 20 (`.nvmrc` pins it) and run
   the one spec that drives the form itself. `api` and `adminApi` are request
   contexts for fixtures and clean-up. A session is issued **once per role per
   run** because `POST /auth/login` is throttled to ten attempts a minute
-  (§5.11).
+  (§5.11). A whole run therefore spends three of those ten: running the suite
+  three or four times inside the same minute trips the limit and every spec
+  fails with `429` at `signIn`. `POST /leads` is throttled the same way and
+  `lead-submit.spec.js` spends seven of its ten. Both are the rate limiter
+  working — wait a minute, or restart the mock, which clears the in-memory
+  counters.
 - **One worker, no parallelism.** Every spec writes to the same mock database;
   two workers publishing and counting at the same time would be flaky for
   reasons that have nothing to do with the application.

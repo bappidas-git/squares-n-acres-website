@@ -673,6 +673,109 @@ describe('pages', () => {
       assert.ok(!listed.body.data.some((row) => row.slug === PAGE.slug));
     });
   });
+
+  // MB-03: §5.9 has the API derive a slug from the title when the client sends
+  // an empty one. Pages were the one collection that answered 422 instead,
+  // because their slug is a path and so carried a descriptor of its own.
+  it('derives a page slug from the title when the client sends an empty one', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const created = await request('POST', '/admin/pages', {
+        token,
+        body: { ...PAGE, slug: '', title: 'Our Approach To Advisory' },
+      });
+
+      assert.equal(created.status, 201);
+      assert.equal(created.body.data.slug, 'our-approach-to-advisory');
+      // The entity slug and `seo.slug` are always the same string (§5.9, D34).
+      assert.equal(created.body.data.seo.slug, created.body.data.slug);
+    });
+  });
+
+  it('de-duplicates a derived page slug rather than refusing it', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const body = { ...PAGE, slug: '', title: 'Our Approach To Advisory' };
+
+      const first = await request('POST', '/admin/pages', { token, body });
+      const second = await request('POST', '/admin/pages', { token, body });
+
+      assert.equal(second.status, 201);
+      assert.notEqual(second.body.data.slug, first.body.data.slug);
+      assert.match(second.body.data.slug, /^our-approach-to-advisory-\d+$/);
+    });
+  });
+
+  // MB-04: the reserved-path rule lived only in `PageFormPage`, so the API
+  // stored a page under a prefix the router owns — one that exists and can
+  // never be opened (D11).
+  it('refuses a slug whose first segment belongs to a static route', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      for (const slug of ['properties', 'buy/apartments', 'admin', 'insights/notes']) {
+        const refused = await request('POST', '/admin/pages', { token, body: { ...PAGE, slug } });
+        assert.equal(refused.status, 422, `POST /admin/pages with slug "${slug}"`);
+        assert.ok(refused.body.errors.slug, `errors.slug for "${slug}"`);
+      }
+    });
+  });
+
+  it('refuses a title that would derive a reserved slug', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const refused = await request('POST', '/admin/pages', {
+        token,
+        body: { ...PAGE, slug: '', title: 'Insights' },
+      });
+
+      assert.equal(refused.status, 422);
+      assert.ok(refused.body.errors.slug);
+    });
+  });
+
+  it('lets a page already living under a reserved prefix keep its slug', async () => {
+    // The shipped seed puts the awareness page at `insights/real-estate-
+    // awareness`, served by a route that spells its prefix out, so the rule
+    // has to let an existing page stay where it is.
+    const seed = seedWith({
+      pages: (pages) => {
+        pages.push({
+          ...pages[0],
+          id: 900,
+          slug: 'insights/real-estate-awareness',
+          title: 'Real estate awareness',
+        });
+      },
+    });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      // A `PATCH` that does not mention the slug, and one that repeats it,
+      // both leave the page where it is.
+      const touched = await request('PATCH', '/admin/pages/900', {
+        token,
+        body: { title: 'Real estate awareness, updated' },
+      });
+      assert.equal(touched.status, 200);
+      assert.equal(touched.body.data.slug, 'insights/real-estate-awareness');
+
+      const repeated = await request('PATCH', '/admin/pages/900', {
+        token,
+        body: { slug: 'insights/real-estate-awareness' },
+      });
+      assert.equal(repeated.status, 200);
+
+      // Moving it to a *different* reserved prefix is still refused.
+      const moved = await request('PATCH', '/admin/pages/900', {
+        token,
+        body: { slug: 'properties/notes' },
+      });
+      assert.equal(moved.status, 422);
+      assert.ok(moved.body.errors.slug);
+    });
+  });
 });
 
 /* ------------------------------------------------------------------ *

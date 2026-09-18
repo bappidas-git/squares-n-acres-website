@@ -385,7 +385,7 @@ ${figure}
 <p>Interest on a home loan is front-loaded, which means an early prepayment removes far more interest than the same amount does later. A lump sum in year three does considerably more work than the same lump sum in year twelve.</p>
 <p>Two mechanics are worth knowing. Reducing the tenure while keeping the EMI saves more interest than reducing the EMI while keeping the tenure, and most lenders will do either on request. And on a floating-rate loan to an individual, part-prepayment generally carries no charge — confirm it in your own sanction letter rather than taking it as given.</p>
 ${props('2,5')}
-<p>For an under-construction purchase there is one more mechanic to understand: the lender disburses in stages against the builder’s demand letters, and you pay interest on what has been disbursed until the loan is fully drawn. Our comparison of <a href="/insights/articles/under-construction-vs-ready-to-move">under-construction and ready-to-move</a> homes goes through what that does to the total cost.</p>
+<p>For an under-construction purchase there is one more mechanic to understand: the lender disburses in stages against the builder’s demand letters, and you pay interest on what has been disbursed until the loan is fully drawn. What the builder may demand at each stage is fixed by the project’s registration, which our <a href="/insights/articles/karnataka-rera-guide-for-homebuyers">Karnataka RERA guide</a> sets out.</p>
 ${CTA}
 `,
   },
@@ -531,7 +531,7 @@ ${figure}
 <ol>
 <li><strong>Two- and three-bedroom apartments near the Ibblur end.</strong> Shortest vacancy, widest tenant pool, easiest resale. The yield is unspectacular and the exit is reliable.</li>
 <li><strong>Approved plots past Dommasandra, held long.</strong> No rent, no maintenance, and a return that depends entirely on the corridor continuing to build out. The approval status is the whole investment — see our <a href="/insights/articles/plot-buying-checklist-bda-bmrda-biaapa">plot approvals guide</a>.</li>
-<li><strong>Under-construction units bought early in a credible project.</strong> The discount to completion price is real, and so is the risk. Our <a href="/insights/articles/under-construction-vs-ready-to-move">comparison of the two</a> sets out the trade.</li>
+<li><strong>Under-construction units bought early in a credible project.</strong> The discount to completion price is real, and so is the risk. Read the project’s own declarations before its brochure — our <a href="/insights/articles/karnataka-rera-guide-for-homebuyers">Karnataka RERA guide</a> sets out what they have to contain.</li>
 </ol>
 <h2>Where the risk sits</h2>
 <p>Not in vacancy. The risks on this corridor are three:</p>

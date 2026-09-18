@@ -104,6 +104,11 @@ Both collections also carry `propertyCount` (read: active listings that carry th
 
 `name` (N), `email?`, `phone` (N, Indian mobile), `message?`, `source` (LEAD_SOURCES), `propertyId?`, `property` (read `{id,title,slug}`), `articleId?`, `pageSlug?`, `pageUrl?`, `requirement` (`{ listingType?, propertyTypeId?, localityId?, bedrooms?, budgetMin?, budgetMax?, timeline? (immediate|1-3-months|3-6-months|6-12-months|exploring) }`), `status` (`new|contacted|qualified|site-visit|negotiation|converted|lost`, default new), `priority` (`low|medium|high`, default from `siteSettings.leads.defaultPriority`), `assignedTo?` (user id), `assignedUser` (read `{id,name}`), `followUpAt?`, `lostReason?`, `notes[]` (`{ id, text, createdBy, createdByName, createdAt }`), `activities[]` (`{ id, type (created|status-changed|assigned|note-added|follow-up-set|contacted|email-sent|call-logged|priority-changed), description, createdBy?, createdAt }`), `utm` (`{source?, medium?, campaign?, term?, content?}`), `consent` (bool), `meta?` (object — **D56**: free-form source-specific payload, e.g. the financial assessment answers/score and the bank name), `ipAddress?`, `userAgent?`.
 
+`pageSlug` holds a CMS page's **whole** slug, which §6.10 types as a URL path:
+a lead sent from `buyer-assistance/home-loan` carries that string, separators
+and all. It is a slug path and never a URL — a leading `/` is a 422 (prompt 45,
+MB-02) — and it is capped at the page's own 120 characters.
+
 ### 6.8 `articles`, `articleCategories`, `articleTags`, `authors`
 
 `articles`: `slug`, `title` (20–100), `excerpt` (≤ 300), `content` (sanitised HTML), `contentText` (read: plain text generated on save), `featuredImage` (`{url, alt, caption?}`), `categoryId`, `category` (read `{id,name,slug}`), `tagIds[]`, `tags` (read), `authorId`, `author` (read `{id,name,slug,avatarUrl,designation}`), `status` (`draft|scheduled|published|archived`), `publishedAt?`, `updatedAtDisplay?`, `readingTimeMinutes` (computed: ceil(words/200)), `wordCount` (computed), `isFeatured`, `allowComments` (false, reserved), `relatedArticleIds[]`, `relatedPropertyIds[]`, `faqs[]` (`{question, answer}`), `tableOfContents` (true), `seo`, `viewCount`.
@@ -121,6 +126,17 @@ Both collections also carry `propertyCount` (read: active listings that carry th
 ### 6.10 `pages` (CMS)
 
 `slug`, `title`, `template` (`standard|service|about|contact|careers|awareness|legal|landing`), `status` (`draft|published`), `heroImageUrl?`, `blocks[]` (`{ id, type, order, data }`), `leadSource?`, `seo`, `order`, `showInFooter` (bool), `footerColumn?` (`company|services|insights`), `showInHeader` (bool), `headerMenu?` (`buyer-assistance|company|insights`).
+
+A page's `slug` is a URL **path** — one or more slug segments joined by `/`,
+≤ 120 characters — and `seo.slug` mirrors it. Two rules the API enforces (prompt
+45): an **empty** slug is a request to derive one from the title, exactly as it
+is for every other slugged resource (§5.9, MB-03); and a slug whose first
+segment is one of `RESERVED_PATH_PREFIXES` is refused with a 422 keyed `slug`,
+because the router answers those paths before the CMS catch-all, so such a page
+would exist and never be reachable (D11, MB-04). A page **already** living under
+one keeps its slug — the rule fires on a create and on an update that changes
+the slug, which is how the seeded `insights/real-estate-awareness` page stays
+where it is.
 
 Block types and `data` shapes (BLOCK_TYPES):
 

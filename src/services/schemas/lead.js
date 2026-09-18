@@ -16,6 +16,7 @@ const {
   LISTING_TYPES,
   REQUIREMENT_TIMELINES,
 } = require('../../config/enums');
+const { PATH_SLUG_PATTERN, PATH_SLUG_MAX_LENGTH } = require('./page');
 
 /** What the visitor is looking for; attached to most lead forms. */
 const requirement = {
@@ -66,7 +67,18 @@ const create = {
   },
   propertyId: { type: 'int', nullable: true, default: null },
   articleId: { type: 'int', nullable: true, default: null },
-  pageSlug: { type: 'slug', nullable: true, maxLength: 120, default: null },
+  // A page's slug is a URL **path** (§6.10): the four seeded pages under
+  // `buyer-assistance/` and `insights/` all carry one, and every lead-capture
+  // block hands `page.slug` through verbatim. Typing this as a single-segment
+  // slug meant a lead sent from any of them was refused with 422 (MB-02), so
+  // it carries the page's own pattern.
+  pageSlug: {
+    type: 'string',
+    nullable: true,
+    maxLength: PATH_SLUG_MAX_LENGTH,
+    pattern: PATH_SLUG_PATTERN,
+    default: null,
+  },
   pageUrl: { type: 'url', nullable: true, default: null },
   requirement,
   consent: { type: 'bool', default: false },

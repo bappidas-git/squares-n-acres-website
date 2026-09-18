@@ -155,6 +155,43 @@ test.describe('submitting a lead', () => {
     expect(leads[0].meta).toBeTruthy();
   });
 
+  // MB-02 as a visitor meets it. §6.10 types a CMS page's slug as a URL path
+  // and every lead-capture block passes `page.slug` through verbatim, so the
+  // four seeded pages under `buyer-assistance/` and `insights/` send a slug
+  // with a separator in it. `lead.pageSlug` used to refuse one, which made
+  // every enquiry from three of the site's service pages fail for the visitor.
+  test('an enquiry from a nested CMS page files a lead that names the page', async ({
+    page,
+    adminApi,
+  }) => {
+    await page.goto('/buyer-assistance/home-loan');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    // The page's own CTAs open the shared lead modal; the lenders band is the
+    // one that passes `pageSlug` (`BanksBlock`, §6.10).
+    await page.getByRole('button', { name: 'Check eligibility' }).first().click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByLabel('Your name').fill(NAME);
+    await dialog.getByLabel('Phone', { exact: false }).fill(PHONE);
+    await dialog.getByLabel('E-mail', { exact: false }).fill('e2e.borrower@example.com');
+    await dialog.getByRole('button', { name: 'Send', exact: true }).click();
+
+    await expect(dialog.getByText(/An advisor will get back to you/i)).toBeVisible({
+      timeout: 20_000,
+    });
+
+    const listed = await adminApi.get(`${API_URL}/admin/leads`, {
+      params: { q: PHONE, perPage: 'all' },
+    });
+    const leads = (await listed.json()).data;
+
+    expect(leads.length).toBeGreaterThan(0);
+    expect(leads[0].pageSlug).toBe('buyer-assistance/home-loan');
+  });
+
   test('a second enquiry from the same visitor is stored and shown beside the first', async ({
     page,
     signIn,
