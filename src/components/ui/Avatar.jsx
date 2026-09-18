@@ -31,7 +31,9 @@ export default function Avatar({
   return (
     <span
       className={[styles.avatar, square ? styles.square : '', className].filter(Boolean).join(' ')}
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}
+      // 38 % of the circle, but never under 13px: a 28px avatar's initials
+      // came out at 11 and are the only thing in it (§8.1's mobile floor).
+      style={{ width: size, height: size, fontSize: Math.max(13, Math.round(size * 0.38)) }}
       {...rest}
     >
       {src && !failed ? (

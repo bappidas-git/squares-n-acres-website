@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { m } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
@@ -26,6 +26,7 @@ const NotFound = ({
   description = "The page you're looking for doesn't exist. Browse our properties or return to the homepage.",
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const searchId = useId();
   const navigate = useNavigate();
 
   // A 404 has no query to wait for, so it is ready the moment it renders. That
@@ -69,12 +70,18 @@ const NotFound = ({
           <h1 className={styles.title}>{title}</h1>
           <p className={styles.subtitle}>{subtitle}</p>
 
-          {/* Search Bar */}
-          <form onSubmit={handleSearch} className={styles.searchForm}>
+          {/* Search Bar — the label is off-screen rather than absent: the
+              magnifier and the button say what the box is for to anybody who
+              can see it, and a placeholder is not a label (§8.3). */}
+          <form onSubmit={handleSearch} className={styles.searchForm} role="search">
+            <label htmlFor={searchId} className={styles.srOnly}>
+              Search properties
+            </label>
             <div className={styles.searchWrapper}>
-              <Icon icon="mdi:magnify" className={styles.searchIcon} />
+              <Icon icon="mdi:magnify" className={styles.searchIcon} aria-hidden="true" />
               <input
-                type="text"
+                id={searchId}
+                type="search"
                 placeholder="Search for properties..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

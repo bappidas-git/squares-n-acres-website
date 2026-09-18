@@ -47,3 +47,15 @@
   background: var(--color-primary);
   color: var(--color-text-inverse);
 }
+
+/* The byline's links — the author, the date, the category pill — are targets
+   on a phone; the row absorbs the extra height with its own negative margin so
+   the meta strip stays where it was. */
+@media (max-width: 899.98px) {
+  .metaLink,
+  .metaCategory {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}

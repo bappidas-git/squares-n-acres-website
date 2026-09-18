@@ -218,3 +218,10 @@
 .relatedWrap {
   margin-top: var(--space-16);
 }
+
+/* The tag chips under an article are links, and a chip is a target (§8.1). */
+@media (max-width: 899.98px) {
+  .tag {
+    min-height: 44px;
+  }
+}

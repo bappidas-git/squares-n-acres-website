@@ -171,25 +171,40 @@
   position: relative;
   flex-shrink: 0;
   width: 44px;
-  height: 24px;
+  /* The button is 44 square so a thumb can find it; the 24px track it looks
+     like is painted by `::before` inside that box (§8.1 — a toggle that is
+     44×24 is a target under half the minimum height). */
+  height: 44px;
   padding: 0;
   border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.switch::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 44px;
+  height: 24px;
+  transform: translateY(-50%);
   border-radius: var(--radius-full);
   background: var(--color-border-strong);
-  cursor: pointer;
   transition: background-color var(--transition-fast);
 }
 
-.switchOn {
+.switchOn::before {
   background: var(--color-primary);
 }
 
 .knob {
   position: absolute;
-  top: 3px;
+  top: 50%;
   left: 3px;
   width: 18px;
   height: 18px;
+  margin-top: -9px;
   border-radius: var(--radius-full);
   background: var(--color-bg);
   box-shadow: var(--shadow-sm);
@@ -202,7 +217,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .knob,
-  .switch {
+  .switch::before {
     transition: none;
   }
 }

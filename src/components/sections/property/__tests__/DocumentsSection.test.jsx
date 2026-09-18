@@ -106,7 +106,7 @@ describe('<DocumentsSection>', () => {
   it('asks first for a gated brochure, then delivers the file (BUG-08)', async () => {
     renderWith(<DocumentsSection property={property} />);
 
-    await userEvent.click(screen.getByRole('button', { name: /download the project brochure/i }));
+    await userEvent.click(screen.getByRole('button', { name: /download brochure/i }));
     expect(window.open).not.toHaveBeenCalled();
 
     await shareDetails();
@@ -156,7 +156,7 @@ describe('<DocumentsSection>', () => {
     window.open = jest.fn(() => null);
     renderWith(<DocumentsSection property={property} />);
 
-    await userEvent.click(screen.getByRole('button', { name: /download the project brochure/i }));
+    await userEvent.click(screen.getByRole('button', { name: /download brochure/i }));
     await shareDetails();
 
     // A real link rather than a second `window.open`: a blocker that ate the
@@ -170,7 +170,7 @@ describe('<DocumentsSection>', () => {
   it('remembers the unlock for the rest of the visit', async () => {
     renderWith(<DocumentsSection property={property} />);
 
-    await userEvent.click(screen.getByRole('button', { name: /download the project brochure/i }));
+    await userEvent.click(screen.getByRole('button', { name: /download brochure/i }));
     await shareDetails();
 
     expect(leadStorage.isUnlocked(7, 'documents')).toBe(true);
@@ -183,7 +183,7 @@ describe('<DocumentsSection>', () => {
 
     expect(screen.queryByText(/shared on request/i)).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: /download the project brochure/i }));
+    await userEvent.click(screen.getByRole('button', { name: /download brochure/i }));
 
     expect(leadService.create).not.toHaveBeenCalled();
     expect(window.open).toHaveBeenCalledWith(

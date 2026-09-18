@@ -28,7 +28,8 @@
 
 .editor:focus-within {
   border-color: var(--color-focus);
-  box-shadow: 0 0 0 3px var(--color-info-bg);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .invalid {
@@ -68,6 +69,9 @@
 
 .surface {
   max-width: none;
+  /* An empty editor collapses to one line; a surface a thumb has to land in
+     is never smaller than a tap target (§8.1). */
+  min-height: 44px;
   outline: none;
 }
 

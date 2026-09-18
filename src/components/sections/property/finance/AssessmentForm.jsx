@@ -245,6 +245,9 @@ export default function AssessmentForm({
             step="5"
             className={styles.slider}
             value={values.downPayment}
+            aria-valuetext={`${values.downPayment}%${
+              downPayment ? ` — ${formatPrice(downPayment)}` : ''
+            }`}
             onChange={(event) => set('downPayment', event.target.value)}
           />
           <div className={styles.sliderScale}>

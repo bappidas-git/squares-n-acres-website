@@ -182,6 +182,12 @@
 }
 
 @media (max-width: 899.98px) {
+  .pill {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 899.98px) {
   .row {
     grid-template-columns: 1fr 1fr;
   }
@@ -216,5 +222,19 @@
   .pill,
   .submit {
     transition: none;
+  }
+}
+
+/* A hidden scrollbar needs something else to say the strip keeps going, and a
+   finger that flicks it should land on a chip rather than between two. */
+@media (max-width: 899.98px) {
+  .tabs {
+    -webkit-mask-image: var(--edge-fade);
+    mask-image: var(--edge-fade);
+    scroll-snap-type: x proximity;
+  }
+
+  .tab {
+    scroll-snap-align: start;
   }
 }

@@ -83,7 +83,8 @@
     "check:links": "node scripts/check-links.js",
     "check:jsonld": "node scripts/validate-jsonld.js",
     "smoke": "node scripts/smoke-api.js",
-    "analyze": "node scripts/bundle-report.js"
+    "analyze": "node scripts/bundle-report.js",
+    "a11y:audit": "node scripts/a11y-audit.js"
   },
   "eslintConfig": {
     "extends": [

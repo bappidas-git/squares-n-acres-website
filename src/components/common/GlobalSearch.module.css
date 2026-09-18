@@ -19,6 +19,8 @@
 
 .form:focus-within {
   border-color: var(--color-primary);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .icon {
@@ -106,7 +108,9 @@
 }
 
 .compact .input {
-  min-height: 40px;
+  /* 44, not 40: the compact box sits above the listing results, which is the
+     one place on the site a visitor uses it with a thumb. */
+  min-height: 44px;
   font-size: var(--font-size-sm);
 }
 

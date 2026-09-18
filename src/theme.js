@@ -131,11 +131,11 @@ const base = createTheme({
     body1: { fontWeight: 400, fontSize: '1rem', lineHeight: 1.6 },
     body2: { fontWeight: 400, fontSize: '0.875rem', lineHeight: 1.6 },
     button: { fontWeight: 600, fontSize: '0.875rem', textTransform: 'none', letterSpacing: 0 },
-    caption: { fontWeight: 400, fontSize: '0.75rem', lineHeight: 1.5 },
+    caption: { fontWeight: 400, fontSize: 'var(--font-size-xs)', lineHeight: 1.5 },
     overline: {
       fontFamily: FONT_HEADING,
       fontWeight: 600,
-      fontSize: '0.75rem',
+      fontSize: 'var(--font-size-xs)',
       lineHeight: 1.5,
       letterSpacing: '0.1em',
       textTransform: 'uppercase',
@@ -202,6 +202,11 @@ const theme = createTheme(base, {
     },
     MuiPaper: {
       styleOverrides: { rounded: { borderRadius: 12 } },
+    },
+    // The line under a field is the smallest text the admin shows; it follows
+    // the caption token so it lifts to 13px on a phone with everything else.
+    MuiFormHelperText: {
+      styleOverrides: { root: { fontSize: 'var(--font-size-xs)' } },
     },
     MuiTextField: {
       defaultProps: { variant: 'outlined' },

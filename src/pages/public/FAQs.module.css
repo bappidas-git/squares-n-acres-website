@@ -230,3 +230,9 @@
     max-width: none;
   }
 }
+
+@media (max-width: 899.98px) {
+  .tab {
+    min-height: 44px;
+  }
+}

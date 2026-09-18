@@ -14,6 +14,19 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* Same rule as the bottom bar on a phone held sideways: the bar stays and
+   gives back what it can (prompt 42 §7). */
+@media (max-height: 500px) and (orientation: landscape) {
+  .action {
+    min-height: 40px;
+  }
+
+  .bar {
+    padding-top: var(--space-1);
+    padding-bottom: calc(var(--space-1) + var(--safe-bottom));
+  }
+}
+
 @media (min-width: 900px) {
   .bar {
     display: none;

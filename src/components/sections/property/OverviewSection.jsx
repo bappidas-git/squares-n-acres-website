@@ -159,15 +159,15 @@ export default function OverviewSection({ property, background = 'bg', onFaqItem
       ) : null}
 
       {chips.length > 0 ? (
-        <dl className={styles.snapshot}>
+        <ul className={styles.snapshot}>
           {chips.map((chip) => (
-            <div key={chip.key} className={styles.chip}>
+            <li key={chip.key} className={styles.chip}>
               <Icon icon={chip.icon} className={styles.chipIcon} aria-hidden="true" />
-              <dt className={styles.chipLabel}>{chip.label}</dt>
-              <dd className={styles.chipValue}>{chip.value}</dd>
-            </div>
+              <span className={styles.chipLabel}>{chip.label}</span>
+              <span className={styles.chipValue}>{chip.value}</span>
+            </li>
           ))}
-        </dl>
+        </ul>
       ) : null}
     </SectionShell>
   );

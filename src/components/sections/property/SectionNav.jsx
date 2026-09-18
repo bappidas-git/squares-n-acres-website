@@ -75,14 +75,24 @@ export default function SectionNav({ sections = [], offset = 0 }) {
   }, [sections, offset]);
 
   // Keep the active chip inside the scrollable strip on a phone.
+  //
+  // By moving the strip's own `scrollLeft`, never `chip.scrollIntoView()`:
+  // `scrollIntoView` scrolls *every* scrollable ancestor including the
+  // document, so on load — when the strip is still below the fold and the
+  // effect runs once for the first section — it jumped the visitor 1 300px
+  // down the page, past the gallery, the price and the `<h1>` (found by
+  // `npm run a11y:audit`, which reported the heading as scrolled out of view).
   useEffect(() => {
-    if (!active || !listRef.current) return;
-    const chip = listRef.current.querySelector(`[data-section="${active}"]`);
-    if (!chip || typeof chip.scrollIntoView !== 'function') return;
-    chip.scrollIntoView({
+    const list = listRef.current;
+    if (!active || !list) return;
+    const chip = list.querySelector(`[data-section="${active}"]`);
+    if (!chip || typeof list.scrollTo !== 'function') return;
+
+    const centred = chip.offsetLeft - (list.clientWidth - chip.offsetWidth) / 2;
+    const furthest = Math.max(0, list.scrollWidth - list.clientWidth);
+    list.scrollTo({
+      left: Math.min(Math.max(centred, 0), furthest),
       behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      block: 'nearest',
-      inline: 'nearest',
     });
   }, [active]);
 

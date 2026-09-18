@@ -16,6 +16,10 @@ const DEFAULT_ITEMS_PER_VIEW = { xs: 1.15, sm: 2, md: 3, lg: 4 };
  * when everything already fits, arrow keys move by one page, and autoplay
  * pauses on hover, on focus and under `prefers-reduced-motion`.
  *
+ * An autoplaying carousel also offers a pause button, because hovering is not
+ * a gesture every visitor has and WCAG 2.2.2 asks for a way to stop moving
+ * content that a keyboard can reach.
+ *
  * @param {object} props
  * @param {{ xs?: number, sm?: number, md?: number, lg?: number }} [props.itemsPerView]
  * @param {boolean} [props.autoplay]
@@ -45,6 +49,9 @@ export default function Carousel({
   const [page, setPage] = useState(0);
   const [scrollable, setScrollable] = useState(false);
   const [paused, setPaused] = useState(false);
+  // Hover and focus pause it while they last; this one is the visitor saying
+  // "stop", and it outlives both.
+  const [stopped, setStopped] = useState(false);
 
   const perView = itemsPerView[width] ?? itemsPerView.md ?? DEFAULT_ITEMS_PER_VIEW.md ?? 1;
   const pages = Math.max(1, Math.ceil(items.length / Math.floor(perView || 1)));
@@ -86,7 +93,7 @@ export default function Carousel({
   );
 
   useEffect(() => {
-    if (!autoplay || paused || !scrollable || prefersReducedMotion()) return undefined;
+    if (!autoplay || paused || stopped || !scrollable || prefersReducedMotion()) return undefined;
     const timer = setInterval(() => {
       const next = page + 1;
       if (next >= pages) {
@@ -97,7 +104,7 @@ export default function Carousel({
       }
     }, interval);
     return () => clearInterval(timer);
-  }, [autoplay, paused, scrollable, page, pages, loop, interval, goTo]);
+  }, [autoplay, paused, stopped, scrollable, page, pages, loop, interval, goTo]);
 
   const onKeyDown = (event) => {
     if (event.key === 'ArrowRight') {
@@ -112,6 +119,7 @@ export default function Carousel({
   if (!items.length) return null;
 
   const showControls = scrollable && items.length > 1;
+  const showPause = autoplay && showControls && !prefersReducedMotion();
 
   return (
     <div
@@ -172,6 +180,16 @@ export default function Carousel({
         >
           &rsaquo;
         </IconButton>
+      ) : null}
+
+      {showPause ? (
+        <button
+          type="button"
+          className={styles.pause}
+          onClick={() => setStopped((previous) => !previous)}
+        >
+          {stopped ? 'Play' : 'Pause'}
+        </button>
       ) : null}
 
       {dots && showControls && pages > 1 ? (

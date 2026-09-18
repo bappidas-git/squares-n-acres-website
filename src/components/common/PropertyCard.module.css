@@ -347,6 +347,26 @@
     height: 44px;
     opacity: 1;
   }
+
+  /* The card's small print predates the tokens and reads at 11–12px on a
+     phone; prompt 42 sets the floor at 13px for a caption. The desktop sizes
+     are left alone — the card is the one component where a dozen literal rem
+     values would otherwise all have to move at once. */
+  .badge,
+  .swipeLeft,
+  .swipeRight {
+    font-size: var(--font-size-xs);
+  }
+
+  .detailLabel {
+    font-size: var(--font-size-xs);
+  }
+
+  .detailValue,
+  .location,
+  .priceUnit {
+    font-size: var(--font-size-sm);
+  }
 }
 
 /* List view (prompt 26): the same card on its side once there is room for it.

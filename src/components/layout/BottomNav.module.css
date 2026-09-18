@@ -72,6 +72,30 @@
   outline-offset: -2px;
 }
 
+/* A phone on its side is 390px tall: the bottom bar and a listing's CTA bar
+   would take a third of it. The decision (prompt 42 §7) is that the bars stay
+   — hiding navigation to win pixels is the worse trade — and shrink instead:
+   the label goes, the icon stays, and the `aria-label` on every item means
+   nothing is lost to a screen reader. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .bottomNav {
+    height: calc(52px + var(--safe-bottom));
+  }
+
+  .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .icon {
+    font-size: 24px;
+  }
+}
+
 /* The bar belongs to the phone; the desktop header carries the same links. */
 @media (min-width: 900px) {
   .bottomNav {

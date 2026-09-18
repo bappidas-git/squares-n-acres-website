@@ -119,9 +119,11 @@ export default function DocumentsSection({ property, background = 'bg' }) {
             entry: 'brochure-download',
             event: 'brochure_download',
             action: 'Download brochure',
+            // The name begins with the words on the button (WCAG 2.5.3,
+            // NEW-45) and then says which file it is.
             // Four rows whose buttons all read "Open" sound identical to a
             // screen reader, so each button is named after its own file.
-            actionLabel: 'Download the project brochure',
+            actionLabel: 'Download brochure — project brochure (PDF)',
             highlight: true,
           },
         ]

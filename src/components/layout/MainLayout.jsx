@@ -40,8 +40,13 @@ const MainLayout = ({ children }) => {
       {/* Main Content */}
       {/* D52: the header is transparent over the home hero, so the home page
           starts at the top of the viewport rather than below the bar. */}
+      {/* `tabIndex={-1}` is what makes the skip link work: without it the
+          browser moves the scroll position to `#main-content` and leaves focus
+          in the header, so the next Tab goes back to the navigation the
+          visitor just skipped. It is not a tab stop — only a focus target. */}
       <main
         id="main-content"
+        tabIndex={-1}
         className={[styles.main, location.pathname === PATHS.home ? styles.flush : '']
           .filter(Boolean)
           .join(' ')}

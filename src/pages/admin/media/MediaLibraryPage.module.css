@@ -158,13 +158,13 @@
    valid HTML nor reachable by keyboard. */
 .copy {
   position: absolute;
-  top: var(--space-3);
-  left: var(--space-3);
+  top: var(--space-2);
+  left: var(--space-2);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   color: var(--color-text);
   cursor: pointer;
   background: var(--color-bg);
@@ -254,6 +254,8 @@
 
 .dropzone:focus-within {
   border-color: var(--color-focus);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .fileInput {

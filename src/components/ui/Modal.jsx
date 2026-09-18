@@ -2,6 +2,7 @@ import { useId } from 'react';
 import Dialog from '@mui/material/Dialog';
 
 import useBreakpoint from '../../hooks/useBreakpoint';
+import useScrollLock from '../../hooks/useScrollLock';
 
 import BottomSheet from './BottomSheet';
 import IconButton from './IconButton';
@@ -43,6 +44,7 @@ export default function Modal({
   const { isMobile } = useBreakpoint();
   const titleId = useId();
   const descriptionId = useId();
+  useScrollLock(open);
 
   const handleClose = (event, reason) => {
     if (!dismissible && (reason === 'backdropClick' || reason === 'escapeKeyDown')) return;

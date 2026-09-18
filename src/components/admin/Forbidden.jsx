@@ -17,6 +17,7 @@ export default function Forbidden() {
   return (
     <EmptyState
       className={styles.forbidden}
+      titleAs="h1"
       icon={
         <span className={styles.mark}>
           <img src={BRAND.iconUrl} alt="" width={48} height={48} className={styles.monogram} />

@@ -123,6 +123,10 @@
   outline-offset: 2px;
 }
 
+.onDark:focus-visible {
+  outline-color: var(--color-text-inverse);
+}
+
 /* Below 1200px the CTA keeps its words and everything else gives up room: the
    menu tail has already folded into "More" (see `Header.jsx`). */
 @media (max-width: 1199.98px) {

@@ -59,11 +59,25 @@ const AdminShell = () => {
         description={`${title} — ${BRAND.name} admin panel.`}
       />
 
+      {/* Thirty sidebar links stand between the topbar and the page: a
+          keyboard reaches the content in one stop instead of thirty-one. */}
+      <a href="#admin-main" className="skip-to-main">
+        Skip to main content
+      </a>
+
       {isMobile ? (
         <Drawer
           open={drawerOpen}
           onClose={closeDrawer}
-          slotProps={{ paper: { className: styles.drawerPaper, style: { width: DRAWER_WIDTH } } }}
+          slotProps={{
+            paper: {
+              className: styles.drawerPaper,
+              style: { width: DRAWER_WIDTH },
+              role: 'dialog',
+              'aria-modal': 'true',
+              'aria-label': 'Admin menu',
+            },
+          }}
         >
           <AdminSidebar mobile onNavigate={closeDrawer} />
         </Drawer>
@@ -86,7 +100,7 @@ const AdminShell = () => {
           onOpenDrawer={() => setDrawerOpen(true)}
         />
 
-        <main id="admin-main" className={styles.main}>
+        <main id="admin-main" tabIndex={-1} className={styles.main}>
           <div className={styles.content}>
             <Suspense fallback={<PageLoader />}>
               <Outlet />
