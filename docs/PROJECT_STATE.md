@@ -436,6 +436,7 @@ removed it. Anything added here from now on is a bug until it is closed again.
 | NEW-51                    | **The property gallery stage fails `label-content-name-mismatch`.** Lighthouse on the property page and 27 warnings across the width grid: the stage is a `role="button"` region whose accessible name begins with its visible counter (prompt 42's NEW-45 fix, which is right), but it also *contains* a real `<button>` reading "View all N photos", and axe collects the visible text of the whole subtree. The defect underneath is the nesting — a `role="button"` region containing three real buttons (previous, next, view-all) is invalid widget semantics whatever the labels say. The fix is to lift the counter and the three controls out of the clickable region and position them over it against a new wrapper, which leaves the stage with no visible text and makes the rule inapplicable rather than merely satisfied. Not fixed in 46: Accessibility is **100** on that page and every §8.6 target passes, and restructuring a gallery prompt 44 bug-bashed — swipe handlers, a lightbox, absolute positioning — at the end of a QA pass with no way to verify the result visually would risk more than it buys. | 46, Lighthouse and the width grid | 48 |
 | NEW-52                    | **The a11y audit measures the contrast of `aria-hidden` decoration.** 63 of the width grid's 454 warnings are one element: the breadcrumb `/` separator, `aria-hidden="true"`, at 1.47:1. axe's own `color-contrast` rule skips anything outside the accessibility tree; ours does not, so the rule reports a class of finding that is not a defect and trains people to ignore it. Either skip `aria-hidden` subtrees as axe does, or treat an inactive separator as the incidental text WCAG 1.4.3 exempts. Left alone in 46 because loosening a contrast rule is a deliberate decision, not a tail-end QA tweak, and a rule that over-reports is the safer failure. | 46, the width grid | 48 |
 | NEW-53                    | **`docs/QA/42-mobile-a11y-checklist.md` §2, the per-route × per-width grid, is empty.** Prompt 42 audited every route at all seven widths and §7 of its report carries the verdict (0 error-level findings), but the grid itself — 172 routes × 2 widths from the run of record, 30 route shapes × 5 widths from the sweep — was never transcribed out of the runs' JSON into the file, which shipped with the placeholder still in it. The acceptance box claiming otherwise is corrected in the prompt 42 addendum. Transcribing it has to follow a fresh run rather than prompt 42's, because prompt 46 replaced the horizontal-scroll rule (NEW-48) and its own seven-width grid in `docs/QA/46-cross-device-lighthouse-seo.md` is closer to the current build; the cheapest honest close may be to point §2 at that grid and re-run only the two record widths. | 42 addendum, re-reading the merged file | 48 |
+| NEW-54                    | **`scripts/smoke-api.js` is not Prettier-clean on `main`.** Prompt 47 rewrote it (363 lines changed) and `npm run format:check` has reported it ever since; every other file in the glob passes. Nothing is gated on it — `check:all` runs lint, the four test suites, `build:ci`, `check:traces`, `validate:seed` and `check:contrast`, not `format:check` — which is presumably how it got through. `npx prettier --write scripts/smoke-api.js` is the whole fix; it is filed rather than done here because the file is unrelated to an accessibility pass and the diff would be noise in it. | 42 addendum, verifying after merging prompt 47 | 48 |
 
 ## Known issues (closed)
 
@@ -6735,22 +6736,28 @@ true.
 | Command                  | Result                                                 |
 | ------------------------ | ------------------------------------------------------ |
 | `npm run lint`           | 0 errors, 0 warnings                                   |
-| `npm run format:check`   | clean                                                  |
+| `npm run format:check`   | fails on `scripts/smoke-api.js` — see the note below   |
 | `npm run test:ci`        | 147 suites, 3 347 tests, all green                     |
-| `npm run test:scripts`   | 29 cases (1 skipped: no Chrome in a standard location) |
+| `npm run test:scripts`   | 54 cases (1 skipped: no Chrome in a standard location) |
 | `npm run test:mock`      | 159 cases, all green                                   |
 | `npm run build:ci`       | success, 0 warnings                                    |
-| `npm run check:traces`   | 1 091 files, 0 findings                                |
+| `npm run check:traces`   | 1 120 files, 0 findings                                |
 | `npm run check:contrast` | 29 gated pairs, all pass                               |
 | `npm run validate:seed`  | `db.json` is valid                                     |
 
-Run after merging `main` at prompt 46, so the counts include prompts 43 to 46.
+Run after merging `main` at prompt 47, so the counts include prompts 43 to 47.
+`format:check` is red on `main` itself, not here: prompt 47 landed
+`scripts/smoke-api.js` unformatted, and every file this branch touches passes.
+`check:all` does not run `format:check`, so nothing is gated on it; it is
+**NEW-54**, and fixing it belongs to whoever owns that script rather than to an
+accessibility pass.
 
 `npm run a11y:audit` was **not** re-run for this commit: what is left of it is a
 component's CSS, a theme override, one `aria-hidden` and two driver fixes, and
 prompt 46's seven-width grid is the current reading of the site.
 
-**Issues opened:** NEW-53 (the empty grid, owner 48). **No issue closed** —
+**Issues opened:** NEW-53 (the empty grid, owner 48) and NEW-54 (`smoke-api.js`
+is not Prettier-clean on `main`, owner 48). **No issue closed** —
 NEW-48 was closed by prompt 46 rather than here; NEW-47 (contrast over a
 photograph) and NEW-51 (the gallery stage's nesting) are untouched, owned by 46
 and 48.
