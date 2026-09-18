@@ -24,7 +24,10 @@ describe('formatPrice', () => {
   it('uses lakh between 1,00,000 and 1 Cr', () => {
     expect(formatPrice(8550000)).toBe('₹85.5 L');
     expect(formatPrice(100000)).toBe('₹1 L');
-    expect(formatPrice(9999999)).toBe('₹100 L');
+    expect(formatPrice(9994999)).toBe('₹99.95 L');
+    // Prompt 44: the unit is chosen after rounding, so a figure that would
+    // print as "₹100 L" — a quantity nobody writes — is a crore instead.
+    expect(formatPrice(9999999)).toBe('₹1 Cr');
   });
 
   it('uses Indian grouping below a lakh', () => {

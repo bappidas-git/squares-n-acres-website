@@ -25,8 +25,18 @@ const EMPTY = '—';
 
 const RUPEE = '₹';
 
+/**
+ * The number a value stands for, or `null`.
+ *
+ * `Number()` is too generous to be asked directly: `Number('   ')`,
+ * `Number([])`, `Number(null)` and `Number(false)` are all `0`, so a field the
+ * editor left as spaces and an empty list both rendered as `₹0` — a price of
+ * zero, shown to a visitor, where there is no price at all. Only a number and a
+ * string that says a number count.
+ */
 const toNumber = (value) => {
-  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value !== 'string' || value.trim() === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 };
@@ -43,6 +53,29 @@ function formatNumber(value, { maximumFractionDigits = 0 } = {}) {
   const n = toNumber(value);
   if (n === null) return EMPTY;
   return n.toLocaleString('en-IN', { maximumFractionDigits });
+}
+
+const CRORE = 10000000;
+const LAKH = 100000;
+
+/**
+ * The unit a figure reads in, chosen **after** rounding.
+ *
+ * Picking the unit from the raw number and rounding afterwards makes
+ * ₹99,99,999 come out as `₹100 L`, which is a quantity nobody writes: past
+ * ninety-nine and a half lakh an Indian price is quoted in crore. Rounding
+ * first is what puts the boundary where a reader expects it.
+ *
+ * @param {number} value
+ * @returns {{divisor: number, suffix: string}|null} `null` below a lakh
+ */
+function unitOf(value) {
+  const abs = Math.abs(value);
+  if (abs >= CRORE) return { divisor: CRORE, suffix: ' Cr' };
+  if (abs < LAKH) return null;
+  return Number((abs / LAKH).toFixed(2)) >= 100
+    ? { divisor: CRORE, suffix: ' Cr' }
+    : { divisor: LAKH, suffix: ' L' };
 }
 
 /**
@@ -67,8 +100,8 @@ function formatPrice(value, { priceOnRequest = false, listingType, perMonth } = 
 
   const suffix = perMonth || listingType === 'rent' || listingType === 'lease' ? '/month' : '';
 
-  if (Math.abs(n) >= 10000000) return `${RUPEE}${trim((n / 10000000).toFixed(2))} Cr${suffix}`;
-  if (Math.abs(n) >= 100000) return `${RUPEE}${trim((n / 100000).toFixed(2))} L${suffix}`;
+  const unit = unitOf(n);
+  if (unit) return `${RUPEE}${trim((n / unit.divisor).toFixed(2))}${unit.suffix}${suffix}`;
   return `${RUPEE}${n.toLocaleString('en-IN')}${suffix}`;
 }
 

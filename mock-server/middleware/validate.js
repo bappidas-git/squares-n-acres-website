@@ -11,13 +11,24 @@
  *   { "message": "The given data was invalid.",
  *     "errors": { "location.localityId": ["The location.localityId field is required."],
  *                 "images.0.alt": ["The images.0.alt field is required."] } }
+ *
+ * Besides `required`, a descriptor may carry `requiredIf: { field, in: [...] }`
+ * — Laravel's `required_if:<field>,<values>` — for a field that is only
+ * mandatory in some states, such as a property's `possessionDate` while it is
+ * pre-launch or under construction (§6.1). Like Laravel, the rule reads the
+ * **body** rather than the stored record, so it fires on a `PATCH` exactly when
+ * that `PATCH` is the write setting the state it depends on.
  */
 
 const { validation } = require('./errors');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const INDIAN_MOBILE_RE = /^(\+91)?[6-9]\d{9}$/;
-const SLUG_RE = /^[a-z0-9-]+$/;
+// §5.9: the API derives a slug from the title when the client sends an empty
+// one, so the empty string is a *request to derive* rather than a bad slug. A
+// slug that must be there is `required`, and an empty one is caught by that
+// rule before this pattern is ever consulted.
+const SLUG_RE = /^[a-z0-9-]*$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const isPlainObject = (value) =>
@@ -32,6 +43,25 @@ const isEmpty = (value) =>
 
 /** True when the client may never send this field (§5.5). */
 const isReadOnly = (descriptor) => Boolean(descriptor?.read || descriptor?.serverManaged);
+
+/**
+ * Whether a `requiredIf` descriptor is armed by the body it sits in.
+ *
+ * The sibling has to be **present** for the rule to fire: on a partial write
+ * that says nothing about `constructionStatus`, the possession date is not this
+ * request's business, which is the `required_if` semantics Laravel applies to
+ * the payload it is handed.
+ *
+ * @param {object} descriptor
+ * @param {object} siblings the object the field belongs to
+ * @returns {boolean}
+ */
+function requiredIfArmed(descriptor, siblings) {
+  const rule = descriptor?.requiredIf;
+  if (!rule || !isPlainObject(siblings)) return false;
+  if (!Object.prototype.hasOwnProperty.call(siblings, rule.field)) return false;
+  return (rule.in ?? []).includes(siblings[rule.field]);
+}
 
 /**
  * Checks one scalar against its descriptor's `type`.
@@ -195,6 +225,8 @@ function validateShape(shape, body, prefix, errors, options) {
     const key = prefix ? `${prefix}.${field}` : field;
     const present = Object.prototype.hasOwnProperty.call(body, field);
 
+    const conditionallyRequired = requiredIfArmed(descriptor, body);
+
     if (!present || body[field] === undefined) {
       // A create may leave out any field the model gives a default: the server
       // fills it, which is what makes `POST /leads` work without `status` or
@@ -203,7 +235,7 @@ function validateShape(shape, body, prefix, errors, options) {
       const filledByServer =
         options.fillDefaults && Object.prototype.hasOwnProperty.call(descriptor, 'default');
 
-      if (!options.partial && descriptor.required && !filledByServer) {
+      if (conditionallyRequired || (!options.partial && descriptor.required && !filledByServer)) {
         errors[key] = errors[key] ?? [];
         errors[key].push(`The ${key} field is required.`);
       }
@@ -211,7 +243,7 @@ function validateShape(shape, body, prefix, errors, options) {
     }
 
     const value = body[field];
-    if (descriptor.required && isEmpty(value)) {
+    if ((descriptor.required || conditionallyRequired) && isEmpty(value)) {
       errors[key] = errors[key] ?? [];
       errors[key].push(`The ${key} field is required.`);
       continue;
