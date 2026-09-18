@@ -28,6 +28,7 @@ import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './RedirectsPage.module.css';
+import { FORMS, SEO, TOASTS } from '../../../config/adminCopy';
 
 /** What the table asks for before anybody touches a control (D23, D47). */
 const LIST_DEFAULTS = { page: 1, perPage: DEFAULT_PER_PAGE, sort: 'fromPath', order: 'asc' };
@@ -134,7 +135,7 @@ export default function RedirectsPage() {
     setDeletingBusy(true);
     try {
       await redirectService.remove(deleting.id);
-      toast.success('The redirect is deleted.');
+      toast.success(SEO.redirects.deleted);
       setDeleting(null);
       refetch();
     } catch (thrown) {
@@ -150,7 +151,7 @@ export default function RedirectsPage() {
       await redirectService.bulk({ ids: ids.map(Number), action });
       setSelectedIds([]);
       refetch();
-      toast.success(`${ids.length} ${ids.length === 1 ? 'redirect' : 'redirects'} updated.`);
+      toast.success(TOASTS.updatedCount(ids.length, SEO.redirects.one, SEO.redirects.many));
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'That action could not be completed.'));
     } finally {
@@ -169,7 +170,7 @@ export default function RedirectsPage() {
         csvFileName('redirects'),
         { type: 'text/csv;charset=utf-8' }
       );
-      toast.success('The CSV is in your downloads.');
+      toast.success(TOASTS.csvReady);
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'The export could not be built.'));
     } finally {
@@ -189,9 +190,9 @@ export default function RedirectsPage() {
   const copySnippet = async () => {
     try {
       await navigator.clipboard.writeText(snippet ?? '');
-      toast.success('The snippet is on your clipboard.');
+      toast.success(TOASTS.copied('Snippet'));
     } catch {
-      toast.error('Your browser did not allow copying. Select the text and copy it instead.');
+      toast.error(TOASTS.copyBlocked);
     }
   };
 
@@ -389,6 +390,8 @@ export default function RedirectsPage() {
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
         bulkActions={canBulk ? BULK_ACTIONS : []}
+        bulkNounOne="redirect"
+        bulkNounMany="redirects"
         onBulkAction={runBulk}
         bulkBusy={bulkBusy}
         rowActions={rowActions}
@@ -535,7 +538,7 @@ export function RedirectFormDialog({ record, onClose, onSaved }) {
             Cancel
           </Button>
           <Button onClick={save} loading={form.submitting}>
-            {editing ? 'Save' : 'Create'}
+            {editing ? FORMS.save : FORMS.create}
           </Button>
         </>
       }

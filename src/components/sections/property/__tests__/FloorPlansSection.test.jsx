@@ -49,11 +49,7 @@ const property = {
 };
 
 /**
- * Fills the temporary lead dialog in and waits for the success panel.
- *
- * The boxes are found by their placeholders because `LeadForm` still has no
- * `<label>`s — that is ADD-09, which prompt 28 closes when every form on the
- * site moves behind `LeadCaptureModal`.
+ * Fills the lead dialog in and waits for the success panel.
  */
 async function shareDetails() {
   await userEvent.click(screen.getByRole('button', { name: /view floor plans/i }));

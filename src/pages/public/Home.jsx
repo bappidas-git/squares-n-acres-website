@@ -25,7 +25,7 @@ import styles from './Home.module.css';
 import useApi from '../../hooks/useApi';
 import useDeferredSection from '../../hooks/useDeferredSection';
 import usePrerenderReady from '../../hooks/usePrerenderReady';
-import { Container, Section } from '../../components/ui';
+import { Container, ErrorState, Section } from '../../components/ui';
 import { HOME } from '../../config/copy';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
@@ -93,10 +93,12 @@ export default function Home() {
 
   // The CMS page behind the home page. A 404 — an editor unpublished it —
   // leaves `features` and `steps` empty, and both sections stand down (§7).
-  const { data: page, loading: pageLoading } = useApi(
-    (signal) => pageService.getBySlug('home', undefined, { signal }),
-    []
-  );
+  const {
+    data: page,
+    loading: pageLoading,
+    error: pageError,
+    refetch: refetchPage,
+  } = useApi((signal) => pageService.getBySlug('home', undefined, { signal }), []);
 
   // The testimonials band is eight bands down, so its request waits for the
   // scroll to get near it (§8.6) — the same deal every other lower band got.
@@ -121,6 +123,9 @@ export default function Home() {
   }, [page]);
 
   const testimonials = Array.isArray(testimonialData) ? testimonialData : [];
+
+  /** The API is unreachable, rather than the page being unpublished (§7). */
+  const outage = Boolean(pageError) && pageError.status !== 404;
 
   // What `HeroSection` will draw, so the head can preload it. The mobile
   // plate is the fallback for a hero configured with only that one, which is
@@ -173,8 +178,24 @@ export default function Home() {
         <PropertyTypeGrid />
         <TopBuilders />
 
-        <FeaturesBlock data={blocks.features ?? {}} background="surface" />
-        <StepsBlock data={blocks.steps ?? {}} background="bg" />
+        {/* Every band on this page hides itself when it has nothing to show,
+            which is right for a section an editor emptied and wrong for a
+            server nobody can reach: with the API down the page would be a hero
+            and a footer, and no way to ask for it again. A failure that is not
+            a 404 therefore gets one error band with a Retry, and refetching it
+            re-renders the whole page (prompt 43 §4.1). */}
+        {outage ? (
+          <Section background="surface" spacing="lg">
+            <Container>
+              <ErrorState text={pageError.message} onRetry={refetchPage} />
+            </Container>
+          </Section>
+        ) : (
+          <>
+            <FeaturesBlock data={blocks.features ?? {}} background="surface" />
+            <StepsBlock data={blocks.steps ?? {}} background="bg" />
+          </>
+        )}
 
         {testimonials.length > 0 ? (
           <Section background="surface" spacing="lg" ref={testimonialsRef}>

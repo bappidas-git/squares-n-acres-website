@@ -13,6 +13,7 @@ import ErrorState from '../ui/ErrorState';
 import Pagination from '../ui/Pagination';
 import RowActions from './RowActions';
 import useBreakpoint from '../../hooks/useBreakpoint';
+import { TABLES } from '../../config/adminCopy';
 import { TableSkeleton } from '../common/SkeletonLoaders';
 
 import styles from './DataTable.module.css';
@@ -64,6 +65,9 @@ const defaultRowId = (row) => row?.id;
  *   name, so twenty of them are not twenty buttons called "Row actions"
  * @param {(row: object) => string|number} [props.getRowId]
  * @param {{title: string, text?: string, action?: React.ReactNode}} [props.emptyState]
+ * @param {string} [props.bulkNounOne] what one selected row is ("property"), so
+ *   the bulk confirm can name it rather than say "3 records"
+ * @param {string} [props.bulkNounMany]
  * @param {(row: object) => string} [props.rowLink]
  * @param {(row: object) => void} [props.onRowClick] opens the row in place — a
  *   drawer rather than a route, for a record that has no page of its own
@@ -97,6 +101,8 @@ export default function DataTable({
   rowActionsLabel,
   getRowId = defaultRowId,
   emptyState = null,
+  bulkNounOne = 'record',
+  bulkNounMany = 'records',
   rowLink,
   onRowClick,
   stickyHeader = false,
@@ -200,6 +206,8 @@ export default function DataTable({
       busy={bulkBusy}
       onAction={onBulkAction}
       onClear={() => onSelectionChange?.([])}
+      nounOne={bulkNounOne}
+      nounMany={bulkNounMany}
     />
   ) : null;
 
@@ -246,7 +254,7 @@ export default function DataTable({
   ) : isEmpty ? (
     <EmptyState
       icon={<Icon icon="mdi:table-search" width="40" height="40" />}
-      title={emptyState?.title ?? 'Nothing here yet'}
+      title={emptyState?.title ?? TABLES.empty}
       text={emptyState?.text}
       action={emptyState?.action}
     />

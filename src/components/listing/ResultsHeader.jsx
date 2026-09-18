@@ -4,6 +4,7 @@ import GlobalSearch from '../common/GlobalSearch';
 import SortSelect from './SortSelect';
 import ViewToggle from './ViewToggle';
 import styles from './ListingEngine.module.css';
+import { LISTING } from '../../config/copy';
 import { formatNumber } from '../../utils/format';
 
 /**
@@ -49,10 +50,10 @@ export default function ResultsHeader({
         {intro ? <p className={styles.intro}>{intro}</p> : null}
         <p className={styles.count} aria-live="polite">
           {loading && total === null
-            ? 'Searching…'
+            ? LISTING.searching
             : total === null
               ? ''
-              : `${formatNumber(total)} ${total === 1 ? 'property' : 'properties'}`}
+              : `${formatNumber(total)} ${total === 1 ? LISTING.resultOne : LISTING.resultMany}`}
         </p>
       </div>
 
@@ -65,7 +66,7 @@ export default function ResultsHeader({
       <div className={styles.controls}>
         <button type="button" className={styles.filtersButton} onClick={onOpenFilters}>
           <Icon icon="mdi:tune-variant" width="18" height="18" aria-hidden="true" />
-          Filters
+          {LISTING.filters}
           {activeCount > 0 ? <span className={styles.filtersCount}>{activeCount}</span> : null}
         </button>
 

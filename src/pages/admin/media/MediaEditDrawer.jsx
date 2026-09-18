@@ -333,9 +333,12 @@ export default function MediaEditDrawer({
             {confirming ? (
               <>
                 <p className={styles.dangerText}>
-                  This removes the library entry only. The file itself stays on Cloudinary — this
-                  site has never held it — so anything already pointing at the address keeps
-                  working.
+                  {/* §8.2: a destructive confirm names the record it is about
+                      to change, even when it is an in-place one rather than a
+                      dialog — a drawer over a drawer is worse than this. */}
+                  “{item.title || item.alt || item.url}” is removed from the library. The file
+                  itself stays on Cloudinary — this site has never held it — so anything already
+                  pointing at the address keeps working.
                 </p>
                 <label className={styles.forceLabel}>
                   <input

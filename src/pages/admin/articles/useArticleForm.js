@@ -215,10 +215,10 @@ export function toPayload(values) {
 
 /**
  * Everything the rail's "Content checks" card lists — the rules a publish must
- * satisfy and the three recommendations it need not (§4.4 of this prompt).
+ * satisfy and the three recommendations it need not.
  *
- * The full SEO analysis arrives in prompt 36; these six are what an editor can
- * act on from the form itself.
+ * The full analysis lives in the SEO panel on the form's second tab; these six
+ * are what an editor can act on without leaving the Content tab.
  *
  * @param {object} values
  * @param {number} words the body's word count

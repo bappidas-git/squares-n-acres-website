@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import IconButton from '../ui/IconButton';
 
 import styles from './RowActions.module.css';
+import { TABLES } from '../../config/adminCopy';
 
 /** What an `href` action adds: a new tab, without handing it this one. */
 const EXTERNAL = { target: '_blank', rel: 'noopener noreferrer' };
@@ -29,7 +30,11 @@ const EXTERNAL = { target: '_blank', rel: 'noopener noreferrer' };
  * @param {boolean} [props.compact] render the kebab menu
  * @param {string} [props.menuLabel]
  */
-export default function RowActions({ actions = [], compact = false, menuLabel = 'Row actions' }) {
+export default function RowActions({
+  actions = [],
+  compact = false,
+  menuLabel = TABLES.rowActions,
+}) {
   const [anchor, setAnchor] = useState(null);
 
   if (actions.length === 0) return null;

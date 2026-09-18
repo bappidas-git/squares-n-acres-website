@@ -1,6 +1,7 @@
 import FaqAccordion from '../shared/FaqAccordion';
 
 import styles from './ArticleFaqs.module.css';
+import { BLOG } from '../../../config/copy';
 
 /**
  * The questions under an article: the ones the record carries (§6.8 `faqs`)
@@ -16,11 +17,7 @@ import styles from './ArticleFaqs.module.css';
  * @param {Array<{id: string|number, question: string, answer: string}>} props.items
  * @param {string} [props.title]
  */
-export default function ArticleFaqs({
-  items = [],
-  title = 'Frequently asked questions',
-  className = '',
-}) {
+export default function ArticleFaqs({ items = [], title = BLOG.faqs, className = '' }) {
   if (items.length === 0) return null;
 
   return (

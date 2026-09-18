@@ -18,6 +18,7 @@ import { formatRelative } from '../../../utils/format';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './JobApplicationsPage.module.css';
+import { TABLES, TOASTS } from '../../../config/adminCopy';
 
 /** What the table asks for before anybody touches a control (§5.6, D47). */
 const LIST_DEFAULTS = { page: 1, perPage: DEFAULT_PER_PAGE, sort: 'createdAt', order: 'desc' };
@@ -189,7 +190,7 @@ export default function JobApplicationsPage() {
     setDeleteBusy(true);
     try {
       await careerService.removeApplication(deleting.id);
-      toast.success(`The application from “${deleting.name}” was deleted.`);
+      toast.success(TOASTS.deleted(`The application from “${deleting.name}”`));
       if (String(openId) === String(deleting.id)) setOpenId(null);
       setDeleting(null);
       refetch();
@@ -373,8 +374,8 @@ export default function JobApplicationsPage() {
   const emptyState = useMemo(() => {
     if (params.page > 1) {
       return {
-        title: 'Nothing on this page',
-        text: 'The list is shorter than the address you opened.',
+        title: TABLES.emptyPage,
+        text: TABLES.emptyPageText,
       };
     }
 

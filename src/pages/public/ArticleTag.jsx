@@ -7,7 +7,8 @@ import useApi from '../../hooks/useApi';
 import usePrerenderReady from '../../hooks/usePrerenderReady';
 import { ArticleIndex } from './Articles';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
-import { PageLoader } from '../../components/common/SkeletonLoaders';
+import { ERRORS } from '../../config/copy';
+import { ArticleIndexSkeleton } from '../../components/common/SkeletonLoaders';
 
 /**
  * Every category and every tag in one request: both collections are far under
@@ -42,11 +43,9 @@ export default function ArticleTag() {
   const list = Array.isArray(tags) ? tags : [];
   const tag = list.find((record) => record.slug === slug) ?? null;
 
-  if (loading) return <PageLoader />;
+  if (loading) return <ArticleIndexSkeleton />;
   if (error?.status === 404 || (!loading && !tag)) {
-    return (
-      <NotFound title="Tag not found" subtitle="Nothing on the site is filed under this tag." />
-    );
+    return <NotFound {...ERRORS.notFound.pages.articleTag} />;
   }
 
   return (

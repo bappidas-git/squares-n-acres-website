@@ -17,6 +17,7 @@ import { formatNumber } from '../../../utils/format';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './MediaLibraryPage.module.css';
+import { TABLES, TOASTS } from '../../../config/adminCopy';
 
 /** A page of tiles: two full rows on a desktop grid of six. */
 export const MEDIA_PER_PAGE = 24;
@@ -81,9 +82,9 @@ export default function MediaLibraryPage() {
     async (url) => {
       try {
         await navigator.clipboard.writeText(url ?? '');
-        toast.success('The address is on your clipboard.');
+        toast.success(TOASTS.copied('Address'));
       } catch (_thrown) {
-        toast.error('Your browser did not allow copying. Select the address and copy it instead.');
+        toast.error(TOASTS.addressCopyBlocked);
       }
     },
     [toast]
@@ -138,8 +139,8 @@ export default function MediaLibraryPage() {
   const emptyState = useMemo(() => {
     if (params.page > 1) {
       return {
-        title: 'Nothing on this page',
-        text: 'The library is shorter than the address you opened.',
+        title: TABLES.emptyPage,
+        text: TABLES.emptyPageText,
       };
     }
     if (filtered) {
@@ -148,7 +149,7 @@ export default function MediaLibraryPage() {
         text: 'Nothing in the library answers every filter you have set.',
         action: (
           <Button variant="outline" onClick={resetFilters}>
-            Reset filters
+            {TABLES.resetFilters}
           </Button>
         ),
       };
@@ -264,7 +265,7 @@ export default function MediaLibraryPage() {
         onCopy={copy}
         onClose={() => setEditing(null)}
         onSaved={() => {
-          toast.success('Saved.');
+          toast.success(TOASTS.saved('File'));
           setEditing(null);
           refetch();
         }}

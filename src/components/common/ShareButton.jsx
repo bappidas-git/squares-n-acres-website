@@ -5,6 +5,7 @@ import { track } from '../../utils/analytics';
 import { useToast } from './ToastProvider';
 
 import styles from './ShareButton.module.css';
+import { PROPERTY } from '../../config/copy';
 
 /**
  * Share this page.
@@ -76,7 +77,7 @@ export default function ShareButton({
   const copyLink = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(href);
-      toast.success('Link copied');
+      toast.success(PROPERTY.linkCopied);
     } catch {
       toast.error('Could not copy the link. Please copy it from the address bar.');
     }
@@ -181,7 +182,7 @@ export default function ShareButton({
         >
           <button type="button" role="menuitem" className={styles.item} onClick={copyLink}>
             <Icon icon="mdi:link-variant" aria-hidden="true" />
-            Copy link
+            {PROPERTY.copyLink}
           </button>
           {targets.map((target) => (
             <a

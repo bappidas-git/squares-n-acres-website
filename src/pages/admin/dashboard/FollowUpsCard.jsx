@@ -7,6 +7,7 @@ import { LEAD_STATUS } from '../../../config/enums';
 import { formatDateTime } from '../../../utils/format';
 
 import styles from './DashboardPage.module.css';
+import { DASHBOARD } from '../../../config/adminCopy';
 
 /**
  * The follow-ups that are due (§6.16 `upcomingFollowUps`).
@@ -33,7 +34,7 @@ export default function FollowUpsCard({ followUps = [], scoped = false }) {
       </div>
 
       {followUps.length === 0 ? (
-        <p className={styles.emptyLine}>Nothing is due in the next two weeks.</p>
+        <p className={styles.emptyLine}>{DASHBOARD.followUpsEmpty}</p>
       ) : (
         <ul className={styles.list}>
           {followUps.map((entry) => {

@@ -10,9 +10,10 @@ import articleService from '../../services/articleService';
 import sanitizeHtml from '../../components/editor/sanitize';
 import useApi from '../../hooks/useApi';
 import { Breadcrumbs, Container, ErrorState, LazyImage } from '../../components/ui';
-import { PageLoader } from '../../components/common/SkeletonLoaders';
+import { ArticleDetailSkeleton } from '../../components/common/SkeletonLoaders';
 import { SITE } from '../../config/site';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
+import { ERRORS } from '../../config/copy';
 import { buildToc, tocIds } from '../../utils/toc';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import {
@@ -115,23 +116,18 @@ export default function ArticleDetail() {
     [article, blockFaqs]
   );
 
-  if (loading) return <PageLoader />;
+  if (loading) return <ArticleDetailSkeleton />;
 
   // The API answers 404 for an unknown slug, for a draft or a scheduled piece
   // with no token, and for a token that has expired: all three are this page.
   if (error?.status === 404 || (!loading && !article)) {
-    return (
-      <NotFound
-        title="Article not found"
-        subtitle="There is nothing published at this address. It may have moved, or never existed."
-      />
-    );
+    return <NotFound {...ERRORS.notFound.pages.article} />;
   }
 
   if (error) {
     return (
       <Container className={styles.errorWrap}>
-        <ErrorState title="We could not load this article" text={error.message} onRetry={refetch} />
+        <ErrorState title={ERRORS.article} text={error.message} onRetry={refetch} />
       </Container>
     );
   }

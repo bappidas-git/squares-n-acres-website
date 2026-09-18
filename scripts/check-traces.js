@@ -3,8 +3,10 @@
  * check-traces.js — scans the repository for leftover traces of the
  * "H.O.M Advisory" boilerplate (brand strings, the Cloudways API host, the HOM
  * palette and fonts, the old Cloudinary cloud, Gumlet videos and placehold.co
- * placeholders) and for hex colour literals outside the two files that are
- * allowed to hold them.
+ * placeholders), for hex colour literals outside the files that are allowed to
+ * hold them, and — in `src/` only — for the placeholder copy and the
+ * scaffolding markers of prompt 43 (lorem ipsum, TODO, FIXME, "Coming in
+ * prompt", "placeholder until", "dummy").
  *
  * Patterns and scanned paths follow 00_MASTER_CONTEXT.md §13 D17.
  *
@@ -101,6 +103,28 @@ const TRACE_PATTERNS = [
   { id: 'placehold', re: /placehold\.co/gi, label: 'placehold.co placeholder' },
   { id: 'goldenrod', re: /goldenrod/gi, label: 'goldenrod placeholder colour' },
 ];
+
+/**
+ * Copy patterns — the leftovers of writing the site rather than of the
+ * boilerplate (prompt 43, §14). Placeholder prose, scaffolding notes and the
+ * two comment markers that always promise a later edit that never comes.
+ *
+ * They are scanned in **`src/` only** (COPY_SCAN_PREFIX): `prompts/` is the
+ * specification, which says "Coming in prompt" on purpose, and `docs/` records
+ * what was found — a report that may not quote its own findings is useless.
+ * Both are still scanned for the brand traces above.
+ */
+const COPY_PATTERNS = [
+  { id: 'lorem', re: /lorem ipsum/gi, label: 'lorem ipsum placeholder text' },
+  { id: 'todo', re: /\btodo\b/gi, label: 'TODO marker' },
+  { id: 'fixme', re: /\bfixme\b/gi, label: 'FIXME marker' },
+  { id: 'coming-in-prompt', re: /coming in prompt/gi, label: '"Coming in prompt" placeholder' },
+  { id: 'placeholder-until', re: /placeholder until/gi, label: '"placeholder until" note' },
+  { id: 'dummy', re: /\bdummy\b/gi, label: 'dummy placeholder' },
+];
+
+/** Only files under this prefix are scanned for `COPY_PATTERNS`. */
+const COPY_SCAN_PREFIX = 'src/';
 
 /**
  * Trace patterns that are colour literals. Together with the generic hex scan
@@ -311,6 +335,7 @@ function scanFile(relPath) {
 
   const findings = [];
   const lines = content.split(/\r?\n/);
+  const scanCopy = relPath.startsWith(COPY_SCAN_PREFIX);
 
   lines.forEach((line, i) => {
     for (const pattern of TRACE_PATTERNS) {
@@ -331,6 +356,28 @@ function scanFile(relPath) {
           match: match[0],
           text: line.trim().slice(0, 160),
         });
+      }
+    }
+
+    if (scanCopy) {
+      for (const pattern of COPY_PATTERNS) {
+        pattern.re.lastIndex = 0;
+        let match;
+        while ((match = pattern.re.exec(line)) !== null) {
+          if (match[0].length === 0) {
+            pattern.re.lastIndex += 1;
+            continue;
+          }
+          findings.push({
+            file: relPath,
+            line: i + 1,
+            kind: 'copy',
+            id: pattern.id,
+            label: pattern.label,
+            match: match[0],
+            text: line.trim().slice(0, 160),
+          });
+        }
       }
     }
 
@@ -372,6 +419,7 @@ function main() {
 
   const traces = findings.filter((f) => f.kind === 'trace');
   const hexes = findings.filter((f) => f.kind === 'hex');
+  const copies = findings.filter((f) => f.kind === 'copy');
 
   if (!REPORT_ONLY && findings.length > 0) {
     const byFile = new Map();
@@ -399,6 +447,7 @@ function main() {
   console.log(`files scanned:      ${files.length}`);
   console.log(`brand/legacy traces: ${traces.length}`);
   console.log(`hex colour literals: ${hexes.length}`);
+  console.log(`copy placeholders:   ${copies.length}`);
   console.log(`total findings:      ${findings.length}`);
   if (deferred.size > 0) {
     console.log(
@@ -437,5 +486,8 @@ if (require.main === module) main();
  * same regexes to `db.json` without restating them — two copies would drift,
  * and a copy in another file would itself be a finding (this file is the one
  * path the scan skips).
+ *
+ * `COPY_PATTERNS` is exported beside it for the same reason, and because the
+ * scan's own unit tests assert the list rather than re-typing it.
  */
-module.exports = { TRACE_PATTERNS, ALLOW_LIST, HEX_RE };
+module.exports = { TRACE_PATTERNS, COPY_PATTERNS, COPY_SCAN_PREFIX, ALLOW_LIST, HEX_RE };

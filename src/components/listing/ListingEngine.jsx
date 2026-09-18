@@ -15,6 +15,7 @@ import useBreakpoint from '../../hooks/useBreakpoint';
 import useListingParams from './useListingParams';
 import usePrerenderReady from '../../hooks/usePrerenderReady';
 import { ErrorState, Pagination } from '../ui';
+import { ERRORS, LISTING } from '../../config/copy';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { buildListingSeo } from './listingSeo';
 import { useListingView } from './ViewToggle';
@@ -201,11 +202,7 @@ export default function ListingEngine({
           />
 
           {error ? (
-            <ErrorState
-              title="We could not load these properties"
-              text={error.message}
-              onRetry={listing.refetch}
-            />
+            <ErrorState title={ERRORS.properties} text={error.message} onRetry={listing.refetch} />
           ) : items.length === 0 && !loading ? (
             <ListingEmpty
               params={params}
@@ -226,14 +223,14 @@ export default function ListingEngine({
                 page={params.page}
                 totalPages={totalPages}
                 onChange={listing.setPage}
-                label="Property results"
+                label={LISTING.resultsLabel}
               />
             </>
           )}
         </div>
       </div>
 
-      {embedded ? null : <RecentlyViewed heading="Recently viewed" />}
+      {embedded ? null : <RecentlyViewed heading={LISTING.recentlyViewed} />}
 
       <FilterSheet
         open={sheetOpen}

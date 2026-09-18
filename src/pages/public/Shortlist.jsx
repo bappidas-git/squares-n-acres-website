@@ -17,6 +17,7 @@ import {
   EmptyState,
   ErrorState,
 } from '../../components/ui';
+import { EMPTY, ERRORS, PROPERTY, fill } from '../../config/copy';
 import { PropertyGridSkeleton } from '../../components/common/SkeletonLoaders';
 import { SITE } from '../../config/site';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
@@ -78,34 +79,39 @@ export default function Shortlist() {
     const added = ids.filter((id) => !shortlist.has(id));
     added.forEach((id) => shortlist.add(id));
     toast.success(
-      added.length > 0
-        ? `${added.length} propert${added.length === 1 ? 'y' : 'ies'} saved to your shortlist`
-        : 'Everything here is already in your shortlist'
+      added.length === 0
+        ? PROPERTY.shortlist.allSaved
+        : added.length === 1
+          ? PROPERTY.shortlist.savedOne
+          : fill(PROPERTY.shortlist.savedMany, { count: added.length })
     );
   };
 
   const clearAll = () => {
     shortlist.clear();
     setConfirmClear(false);
-    toast.success('Shortlist cleared');
+    toast.success(PROPERTY.shortlist.cleared);
   };
 
   const crumbs = breadcrumbsFor('shortlist');
 
   return (
     <>
-      <Seo type="shortlist" title={shared ? 'A shared shortlist' : 'Your shortlist'} />
+      <Seo
+        type="shortlist"
+        title={shared ? PROPERTY.shortlist.sharedTitle : PROPERTY.shortlist.title}
+      />
 
       <Container className={styles.page}>
         <Breadcrumbs items={crumbs} className={styles.breadcrumbs} />
 
         <header className={styles.header}>
           <div>
-            <h1 className={styles.title}>{shared ? 'A shared shortlist' : 'Your shortlist'}</h1>
+            <h1 className={styles.title}>
+              {shared ? PROPERTY.shortlist.sharedTitle : PROPERTY.shortlist.title}
+            </h1>
             <p className={styles.subtitle}>
-              {shared
-                ? 'Somebody sent you these properties. Save them to keep them on this device.'
-                : 'Saved on this device. Prices and availability are read live, so nothing here is out of date.'}
+              {shared ? PROPERTY.shortlist.sharedSubtitle : PROPERTY.shortlist.subtitle}
             </p>
           </div>
 
@@ -116,19 +122,19 @@ export default function Shortlist() {
                   onClick={saveAll}
                   icon={<Icon icon="mdi:heart-plus-outline" width="18" height="18" />}
                 >
-                  Save all
+                  {PROPERTY.shortlist.saveAll}
                 </Button>
               ) : (
                 <>
                   <ShareButton
                     variant="button"
                     url={shareUrl}
-                    title="My property shortlist"
-                    text="Have a look at these properties"
+                    title={PROPERTY.shortlist.shareTitle}
+                    text={PROPERTY.shortlist.shareText}
                     context="shortlist"
                   />
                   <Button variant="ghost" onClick={() => setConfirmClear(true)}>
-                    Clear shortlist
+                    {PROPERTY.shortlist.clear}
                   </Button>
                 </>
               )}
@@ -139,23 +145,15 @@ export default function Shortlist() {
         {loading && properties.length === 0 && ids.length > 0 ? (
           <PropertyGridSkeleton count={Math.min(ids.length, 6)} />
         ) : error ? (
-          <ErrorState
-            title="We could not load your shortlist"
-            text={error.message}
-            onRetry={refetch}
-          />
+          <ErrorState title={ERRORS.shortlist} text={error.message} onRetry={refetch} />
         ) : properties.length === 0 ? (
           <EmptyState
             icon={<Icon icon="mdi:heart-outline" width="40" height="40" />}
-            title={shared ? 'These properties are no longer listed' : 'Your shortlist is empty'}
-            text={
-              shared
-                ? 'The listings in this link have been taken down. Browse what is available now.'
-                : 'Tap the heart on any property to keep it here and compare later.'
-            }
+            title={shared ? EMPTY.shortlist.sharedTitle : EMPTY.shortlist.title}
+            text={shared ? EMPTY.shortlist.sharedText : EMPTY.shortlist.text}
             action={
               <Button to={PATHS.properties} variant="primary">
-                Browse properties
+                {EMPTY.shortlist.action}
               </Button>
             }
           />
@@ -179,7 +177,7 @@ export default function Shortlist() {
                     height="16"
                     aria-hidden="true"
                   />
-                  {shortlist.has(property.id) ? 'Remove' : 'Save'}
+                  {shortlist.has(property.id) ? PROPERTY.remove : PROPERTY.save}
                   <span className={styles.srOnly}> — {property.title}</span>
                 </button>
               </li>
@@ -189,18 +187,22 @@ export default function Shortlist() {
 
         {properties.length > 0 && properties.length < ids.length ? (
           <p className={styles.note}>
-            {ids.length - properties.length} saved{' '}
-            {ids.length - properties.length === 1 ? 'property is' : 'properties are'} no longer
-            listed and {ids.length - properties.length === 1 ? 'is' : 'are'} not shown.
+            {ids.length - properties.length === 1
+              ? PROPERTY.shortlist.goneOne
+              : fill(PROPERTY.shortlist.goneMany, { count: ids.length - properties.length })}
           </p>
         ) : null}
       </Container>
 
       <ConfirmDialog
         open={confirmClear}
-        title="Clear your shortlist?"
-        message={`This removes all ${ids.length} saved propert${ids.length === 1 ? 'y' : 'ies'} from this device.`}
-        confirmLabel="Clear shortlist"
+        title={PROPERTY.shortlist.clearTitle}
+        message={
+          ids.length === 1
+            ? PROPERTY.shortlist.clearMessageOne
+            : fill(PROPERTY.shortlist.clearMessageMany, { count: ids.length })
+        }
+        confirmLabel={PROPERTY.shortlist.clear}
         danger
         onConfirm={clearAll}
         onClose={() => setConfirmClear(false)}

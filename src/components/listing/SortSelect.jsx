@@ -1,6 +1,7 @@
 import { useId } from 'react';
 
 import styles from './ListingEngine.module.css';
+import { LISTING } from '../../config/copy';
 import { SORT_OPTIONS } from '../../config/enums';
 
 /**
@@ -20,7 +21,7 @@ export default function SortSelect({ value, onChange }) {
   return (
     <div className={styles.sort}>
       <label className={styles.sortLabel} htmlFor={id}>
-        Sort
+        {LISTING.sortLabel}
       </label>
       <select
         id={id}

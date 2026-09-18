@@ -33,7 +33,6 @@ const EXPECTED = [
   'MasterDataForm',
   'FormFieldControl',
   // what was already here
-  'AdminPlaceholderPage',
   'Forbidden',
   'ProtectedRoute',
   'RoleRoute',

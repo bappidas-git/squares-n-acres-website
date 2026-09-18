@@ -19,6 +19,7 @@ import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './LocalityDetail.module.css';
 import usePrerenderReady from '../../hooks/usePrerenderReady';
+import { ERRORS } from '../../config/copy';
 
 /**
  * `/localities/:slug` — the guide to one neighbourhood.
@@ -61,11 +62,7 @@ export default function LocalityDetail() {
   if (error || !locality) {
     return (
       <Container className={styles.stateWrap}>
-        <ErrorState
-          title="We could not load this locality"
-          text={error?.message}
-          onRetry={refetch}
-        />
+        <ErrorState title={ERRORS.locality} text={error?.message} onRetry={refetch} />
       </Container>
     );
   }

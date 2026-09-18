@@ -13,8 +13,8 @@ import styles from './DeveloperSections.module.css';
  *
  * Embedded: filters, facets, sort and pagination all work, the builder is a
  * locked chip, and the page number travels as `?p=` so the second page of a
- * long portfolio is a shareable address. The temporary twelve-card grid this
- * replaces linked away to `/properties?developerId=…` instead.
+ * long portfolio is a shareable address — rather than a fixed grid of cards
+ * that could only link away to `/properties?developerId=…`.
  *
  * A builder with nothing listed renders nothing at all — the index card
  * already says the count is zero.

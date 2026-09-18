@@ -24,6 +24,7 @@ import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './Articles.module.css';
 import usePrerenderReady from '../../hooks/usePrerenderReady';
+import { EMPTY, ERRORS } from '../../config/copy';
 
 /**
  * `/insights/articles` and the three archives that are the same page with one
@@ -100,7 +101,7 @@ export function ArticleIndex({
   activeCategorySlug = '',
   withCategoryTabs = false,
   activeTagSlug = '',
-  emptyText = 'Try another category, or a different search.',
+  emptyText = EMPTY.articles.text,
   seo,
   seoType = 'blog',
   seoEntity,
@@ -263,11 +264,7 @@ export function ArticleIndex({
             </div>
 
             {error ? (
-              <ErrorState
-                title="We could not load the articles"
-                text={error.message}
-                onRetry={refetch}
-              />
+              <ErrorState title={ERRORS.articles} text={error.message} onRetry={refetch} />
             ) : loading ? (
               <div className={styles.grid} aria-busy="true">
                 {Array.from({ length: SKELETONS }, (_, index) => (
@@ -277,12 +274,12 @@ export function ArticleIndex({
             ) : items.length === 0 ? (
               <EmptyState
                 icon={<Icon icon="mdi:file-search-outline" width="40" height="40" />}
-                title="No articles found"
+                title={EMPTY.articles.title}
                 text={emptyText}
                 action={
                   filtered ? (
                     <Button variant="secondary" onClick={resetFilters}>
-                      Clear the filters
+                      {EMPTY.articles.action}
                     </Button>
                   ) : null
                 }

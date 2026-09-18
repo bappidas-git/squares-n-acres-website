@@ -20,6 +20,7 @@ import useSeoOverview, {
 } from './useSeoOverview';
 import { CSV_MIME, csvFileName, toCsv } from '../../../utils/csv';
 import { formatDate } from '../../../utils/format';
+import { SEO, TABLES, TOASTS } from '../../../config/adminCopy';
 import { SEO_ENTITY_TYPES, SEO_SCORE_BANDS } from '../../../config/enums';
 import { buildSeoColumns, renderSeoCard } from './SeoEntityTable';
 import { downloadBlob } from '../../../utils/download';
@@ -137,7 +138,7 @@ export default function SeoDashboardPage() {
         const url = await previewUrlOfRow(row);
         if (!url) {
           tab_?.close();
-          toast.error('This record has no public page yet.');
+          toast.error(TOASTS.noPublicPage);
           return;
         }
         if (tab_) tab_.location.href = url;
@@ -322,15 +323,29 @@ export default function SeoDashboardPage() {
           getRowId={(row) => row.key ?? `${row.type}:${row.id}`}
           mobileCard={renderSeoCard}
           caption="Every optimisable record, with its SEO score"
-          emptyState={{
-            title: 'No records match these filters',
-            text: 'Clear the filters to see the whole site.',
-            action: (
-              <Button variant="outline" onClick={resetFilters}>
-                Clear filters
-              </Button>
-            ),
-          }}
+          emptyState={
+            activeFilters > 0
+              ? {
+                  title: 'No records match these filters',
+                  text: 'Clear the filters to see the whole site.',
+                  action: (
+                    <Button variant="outline" onClick={resetFilters}>
+                      {TABLES.clearFilters}
+                    </Button>
+                  ),
+                }
+              : {
+                  // Nothing is filtered and nothing came back: the index has
+                  // not been built yet rather than the site being empty (§8.2).
+                  title: SEO.dashboard.empty,
+                  text: SEO.dashboard.emptyText,
+                  action: (
+                    <Button variant="outline" onClick={afterWrite} loading={allLoading}>
+                      {SEO.dashboard.reanalyse}
+                    </Button>
+                  ),
+                }
+          }
         />
       </AdminTabPanel>
 

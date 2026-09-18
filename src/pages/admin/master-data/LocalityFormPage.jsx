@@ -42,6 +42,7 @@ import { useMasterData } from '../../../contexts/MasterDataContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './LocalityFormPage.module.css';
+import { TOASTS } from '../../../config/adminCopy';
 
 const localityService = adminCrud(localities);
 
@@ -258,7 +259,7 @@ export default function LocalityFormPage() {
     // The redirect this record's `seo` asks for, against the slug the API
     // answered with — a new record has none until now (§9.6).
     await applySeoSideEffects('locality', saved);
-    toast.success(isEdit ? 'Locality updated.' : 'Locality created.');
+    toast.success(isEdit ? TOASTS.saved('Locality') : TOASTS.created('Locality'));
     // The home strip and every locality picker read the cached list (D93).
     refreshMasterData();
 

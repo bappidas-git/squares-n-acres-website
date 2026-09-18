@@ -214,7 +214,7 @@ describe('LocalityDetail', () => {
     render();
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: /Page Not Found/i })
+      await screen.findByRole('heading', { level: 1, name: /couldn’t find that page/i })
     ).toBeInTheDocument();
     expect(screen.queryByText('Properties in Whitefield')).toBeNull();
   });

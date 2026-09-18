@@ -6,6 +6,7 @@ import {
   RouterProvider,
   createBrowserRouter,
   createRoutesFromElements,
+  useLocation,
 } from 'react-router-dom';
 
 import AnalyticsScripts from '../components/seo/AnalyticsScripts';
@@ -57,33 +58,40 @@ const loadMotionFeatures = () => import('../utils/motionFeatures').then((mod) =>
 const NotFound = lazy(() => import('../pages/public/NotFound'));
 
 /** The app's providers, mounted once inside the router. */
-const AppShell = () => (
-  <LazyMotion features={loadMotionFeatures} strict>
-    <ToastProvider>
-      <SiteSettingsProvider>
-        <MasterDataProvider>
-          <AdminAuthProvider>
-            <NavigationGuardProvider>
-              <ShortlistProvider>
-                <LeadCaptureProvider>
-                  <RedirectHandler />
-                  <AnalyticsScripts />
-                  {/* Inside the router, so a page that throws still gets a head
-                    that says `noindex` rather than indexing a crash (§9.3). */}
-                  <ErrorBoundary head={<Seo type="error" />}>
-                    <Suspense fallback={<PageLoader />}>
-                      <Outlet />
-                    </Suspense>
-                  </ErrorBoundary>
-                </LeadCaptureProvider>
-              </ShortlistProvider>
-            </NavigationGuardProvider>
-          </AdminAuthProvider>
-        </MasterDataProvider>
-      </SiteSettingsProvider>
-    </ToastProvider>
-  </LazyMotion>
-);
+const AppShell = () => {
+  const location = useLocation();
+
+  return (
+    <LazyMotion features={loadMotionFeatures} strict>
+      <ToastProvider>
+        <SiteSettingsProvider>
+          <MasterDataProvider>
+            <AdminAuthProvider>
+              <NavigationGuardProvider>
+                <ShortlistProvider>
+                  <LeadCaptureProvider>
+                    <RedirectHandler />
+                    <AnalyticsScripts />
+                    {/* Inside the router, so a page that throws still gets a head
+                    that says `noindex` rather than indexing a crash (§9.3).
+                    Keyed on the pathname so the boundary remounts on the next
+                    navigation: a crashed page recovers by being navigated away
+                    from, without a full reload (§7). */}
+                    <ErrorBoundary key={location.pathname} head={<Seo type="error" />}>
+                      <Suspense fallback={<PageLoader />}>
+                        <Outlet />
+                      </Suspense>
+                    </ErrorBoundary>
+                  </LeadCaptureProvider>
+                </ShortlistProvider>
+              </NavigationGuardProvider>
+            </AdminAuthProvider>
+          </MasterDataProvider>
+        </SiteSettingsProvider>
+      </ToastProvider>
+    </LazyMotion>
+  );
+};
 
 export const router = createBrowserRouter(
   createRoutesFromElements(

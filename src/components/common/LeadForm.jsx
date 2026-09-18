@@ -10,6 +10,7 @@ import leadService from '../../services/leadService';
 import { Button } from '../ui';
 import { DEFAULT_FIELDS } from '../../utils/leadSources';
 import { EVENTS, track } from '../../utils/analytics';
+import { LEADS } from '../../config/copy';
 import { getUtm, leadStorage } from '../../utils/leadStorage';
 import { useToast } from './ToastProvider';
 import {
@@ -31,7 +32,7 @@ export const THROTTLE_MS = 10000;
 const TOP_LEVEL = new Set(['name', 'phone', 'email', 'message']);
 
 /** What the API says when it is rate limiting us (§5.11). */
-const RATE_LIMIT_MESSAGE = 'Too many requests, please wait a minute';
+const RATE_LIMIT_MESSAGE = LEADS.rateLimited;
 
 const isBlank = (value) => value === '' || value === null || value === undefined;
 
@@ -196,7 +197,7 @@ export default function LeadForm({
   meta = null,
   requirement = false,
   consent = true,
-  submitLabel = 'Submit',
+  submitLabel = LEADS.submit,
   successMessage,
   successActions = ['whatsapp', 'call'],
   variant = 'card',
@@ -272,7 +273,7 @@ export default function LeadForm({
       if (message) found[field.name] = message;
     }
     if (consent && !agreed) {
-      found.consent = 'Please agree to be contacted so we can reply';
+      found.consent = LEADS.consentRequired;
     }
     setErrors(found);
     return Object.keys(found).length === 0;
@@ -323,9 +324,9 @@ export default function LeadForm({
         setSubmitError(RATE_LIMIT_MESSAGE);
       } else if (error?.status === 422) {
         setErrors((current) => ({ ...current, ...mapServerErrors(error.errors, allFields) }));
-        setSubmitError(error.message || 'Please check the highlighted fields.');
+        setSubmitError(error.message || LEADS.invalidFields);
       } else {
-        setSubmitError(error?.message || 'Something went wrong. Please try again.');
+        setSubmitError(error?.message || LEADS.failed);
       }
     } finally {
       setSubmitting(false);

@@ -5,6 +5,7 @@ import { EVENTS, track } from '../../../utils/analytics';
 import { useToast } from '../../common/ToastProvider';
 
 import styles from './ArticleShareBar.module.css';
+import { BLOG, PROPERTY, fill } from '../../../config/copy';
 
 /**
  * The four networks a Bengaluru reader actually forwards an article on, plus
@@ -68,7 +69,7 @@ export default function ArticleShareBar({
   const copy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(href);
-      toast.success('Link copied');
+      toast.success(PROPERTY.linkCopied);
     } catch {
       toast.error('Could not copy the link. Please copy it from the address bar.');
     }
@@ -90,7 +91,9 @@ export default function ArticleShareBar({
               onClick={() => track(EVENTS.shareClick, { method: network.key, context: 'article' })}
             >
               <Icon icon={network.icon} width="20" height="20" aria-hidden="true" />
-              <span className={styles.srOnly}>Share on {network.label}</span>
+              <span className={styles.srOnly}>
+                {fill(BLOG.shareOn, { network: network.label })}
+              </span>
             </a>
           </li>
         ))}

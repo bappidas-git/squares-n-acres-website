@@ -184,10 +184,152 @@ export const ArticleGridSkeleton = ({ count = 6 }) => (
 );
 
 export const PageHeroSkeleton = () => (
-  <Box sx={{ py: 8, px: 2, textAlign: 'center', bgcolor: 'background.surface' }}>
+  <Box
+    aria-busy="true"
+    aria-live="polite"
+    sx={{ py: 8, px: 2, textAlign: 'center', bgcolor: 'background.surface' }}
+  >
     <Skeleton variant="text" width={120} height={24} animation="wave" sx={{ mx: 'auto' }} />
     <Skeleton variant="text" width="40%" height={44} animation="wave" sx={{ mx: 'auto', mt: 1 }} />
     <Skeleton variant="text" width="60%" height={24} animation="wave" sx={{ mx: 'auto', mt: 1 }} />
+  </Box>
+);
+
+/**
+ * Mirrors the article page: breadcrumb, eyebrow, headline, byline, the 16/9
+ * cover and the body column with its sidebar, in the same two-column
+ * proportions `ArticleDetail` uses above 1200 px.
+ *
+ * A page whose loading state is a spinner tells a reader nothing about what is
+ * coming and shifts the whole layout when it arrives; this one reserves the
+ * space (§8.2, prompt 43 §4.1).
+ */
+export const ArticleDetailSkeleton = () => (
+  <Box
+    aria-busy="true"
+    aria-live="polite"
+    sx={{ maxWidth: 'var(--container-max)', mx: 'auto', px: 'var(--container-padding)', py: 3 }}
+  >
+    <Skeleton variant="text" width={260} height={20} animation="wave" />
+
+    <Box sx={{ mt: 2, maxWidth: 760 }}>
+      <Skeleton variant="text" width={110} height={20} animation="wave" />
+      <Skeleton variant="text" width="90%" height={44} animation="wave" sx={{ mt: 1 }} />
+      <Skeleton variant="text" width="70%" height={44} animation="wave" />
+      <Skeleton variant="text" width="45%" height={20} animation="wave" sx={{ mt: 1.5 }} />
+    </Box>
+
+    <Skeleton
+      variant="rectangular"
+      width="100%"
+      animation="wave"
+      sx={{ aspectRatio: '16/9', borderRadius: 'var(--radius-lg)', mt: 3 }}
+    />
+
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 8fr) minmax(280px, 4fr)' },
+        gap: 4,
+        mt: 4,
+      }}
+    >
+      <Box>
+        {Array.from({ length: 10 }).map((_, i) => (
+          <Skeleton
+            key={i}
+            variant="text"
+            height={20}
+            animation="wave"
+            width={i % 4 === 3 ? '65%' : '100%'}
+            sx={{ mt: i === 0 ? 0 : 0.5 }}
+          />
+        ))}
+      </Box>
+      <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
+        <Skeleton
+          variant="rectangular"
+          height={180}
+          animation="wave"
+          sx={{ borderRadius: 'var(--radius-lg)' }}
+        />
+        <Skeleton
+          variant="rectangular"
+          height={220}
+          animation="wave"
+          sx={{ borderRadius: 'var(--radius-lg)', mt: 2 }}
+        />
+      </Box>
+    </Box>
+  </Box>
+);
+
+/**
+ * Mirrors a CMS page: the hero band, then three stacked block-sized boxes.
+ *
+ * A page assembled from blocks cannot have a skeleton that matches it exactly —
+ * nothing knows which blocks it holds until the record arrives — so it reserves
+ * a hero and three bands of the height a band usually is, which is what keeps
+ * the footer from jumping up the screen and back down (§8.2).
+ */
+export const CmsPageSkeleton = () => (
+  <Box aria-busy="true" aria-live="polite">
+    <PageHeroSkeleton />
+    <Box
+      sx={{
+        maxWidth: 'var(--container-max)',
+        mx: 'auto',
+        px: 'var(--container-padding)',
+        py: 5,
+        display: 'grid',
+        gap: 5,
+      }}
+    >
+      {Array.from({ length: 3 }).map((_, band) => (
+        <Box key={band}>
+          <Skeleton variant="text" width="35%" height={32} animation="wave" />
+          <Skeleton variant="text" width="55%" height={20} animation="wave" sx={{ mt: 1 }} />
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+              gap: 3,
+              mt: 3,
+            }}
+          >
+            {Array.from({ length: 3 }).map((__, cell) => (
+              <Skeleton
+                key={cell}
+                variant="rectangular"
+                height={160}
+                animation="wave"
+                sx={{ borderRadius: 'var(--radius-lg)' }}
+              />
+            ))}
+          </Box>
+        </Box>
+      ))}
+    </Box>
+  </Box>
+);
+
+/**
+ * Mirrors an article archive: the hero band the category, tag and author pages
+ * put their name in, then the grid of cards below it.
+ */
+export const ArticleIndexSkeleton = ({ count = 6 }) => (
+  <Box aria-busy="true" aria-live="polite">
+    <PageHeroSkeleton />
+    <Box
+      sx={{
+        maxWidth: 'var(--container-max)',
+        mx: 'auto',
+        px: 'var(--container-padding)',
+        py: 5,
+      }}
+    >
+      <ArticleGridSkeleton count={count} />
+    </Box>
   </Box>
 );
 

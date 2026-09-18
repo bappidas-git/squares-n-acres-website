@@ -6,6 +6,7 @@ import useApi from '../../../hooks/useApi';
 import { Skeleton } from '../../ui';
 
 import styles from './TagCloud.module.css';
+import { BLOG } from '../../../config/copy';
 
 /** Enough tags to describe the archive without becoming a wall of pills. */
 const LIMIT = 20;
@@ -34,7 +35,7 @@ export default function TagCloud({
   tags,
   activeSlug = '',
   limit = LIMIT,
-  title = 'Browse by topic',
+  title = BLOG.tags,
   className = '',
 }) {
   const provided = Array.isArray(tags);

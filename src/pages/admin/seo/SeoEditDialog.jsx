@@ -13,6 +13,7 @@ import { toSeoPayload, withSeoDefaults } from '../../../components/seo/seoValues
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './SeoDashboardPage.module.css';
+import { SEO } from '../../../config/adminCopy';
 
 /**
  * The SEO panel over one record, without leaving the desk (§4.3 of prompt 37).
@@ -148,7 +149,7 @@ export default function SeoEditDialog({
         setDirty(false);
       }
       onSaved?.({ id: saved.id, type: rowType, seo: saved.seo ?? payload });
-      toast.success('The SEO of this record is saved.');
+      toast.success(SEO.saved);
       onClose?.();
     } catch (thrown) {
       const fields = thrown?.errors ?? {};
@@ -160,7 +161,7 @@ export default function SeoEditDialog({
           ])
         )
       );
-      toast.error(firstFieldMessage(thrown, 'The SEO of this record could not be saved.'));
+      toast.error(firstFieldMessage(thrown, SEO.saveFailed));
     } finally {
       if (alive.current) setSaving(false);
     }

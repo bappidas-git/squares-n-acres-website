@@ -32,6 +32,7 @@ import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './SettingsPage.module.css';
+import { TOASTS } from '../../../config/adminCopy';
 
 /** The seven panels of §6.13, in the order an editor meets them. */
 export const SETTINGS_TABS = [
@@ -165,7 +166,7 @@ export default function SettingsPage() {
     siteSettings.updateLocal(record);
     siteSettings.refresh();
     emit(EVENTS.settingsChanged, record);
-    toast.success('The site settings are saved.');
+    toast.success(TOASTS.saved('Site settings'));
   }, [form, siteSettings, toast]);
 
   const errorsByTab = useMemo(() => {

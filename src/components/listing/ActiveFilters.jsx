@@ -1,6 +1,7 @@
 import { Icon } from '@iconify/react';
 
 import styles from './ListingEngine.module.css';
+import { LISTING } from '../../config/copy';
 import { hasValue } from '../../utils/listingFilters';
 import { formatArea, formatMonthYear, formatPriceRange } from '../../utils/format';
 import { useMasterData } from '../../contexts/MasterDataContext';
@@ -126,14 +127,14 @@ export default function ActiveFilters({ params, fixed = {}, onRemove, onClear })
 
   return (
     <div className={styles.chips}>
-      <span className={styles.chipsLabel}>Filters:</span>
+      <span className={styles.chipsLabel}>{LISTING.filtersChipLabel}</span>
       <ul className={styles.chipList}>
         {chips.map((chip) =>
           chip.patch === null ? (
             <li key={chip.id} className={`${styles.filterChip} ${styles.filterChipLocked}`}>
               <Icon icon="mdi:lock-outline" width="14" height="14" aria-hidden="true" />
               <span>{chip.label}</span>
-              <span className={styles.srOnly}>(set by this page)</span>
+              <span className={styles.srOnly}>{LISTING.filtersLocked}</span>
             </li>
           ) : (
             <li key={chip.id}>

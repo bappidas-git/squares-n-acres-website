@@ -212,7 +212,7 @@ describe('ArticlesListPage', () => {
       expect(await screen.findByText('2 articles updated.')).toBeInTheDocument();
     });
 
-    it('confirms before deleting, naming how many records it is about to remove', async () => {
+    it('confirms before deleting, naming what it is about to remove', async () => {
       renderList();
       await screen.findByText('Karnataka RERA: A Complete Guide');
 
@@ -220,7 +220,7 @@ describe('ArticlesListPage', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
       const dialog = await screen.findByRole('dialog');
-      expect(within(dialog).getByText(/1 record will be deleted/)).toBeInTheDocument();
+      expect(within(dialog).getByText(/1 article will be deleted/)).toBeInTheDocument();
       expect(articleService.bulk).not.toHaveBeenCalled();
 
       await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));

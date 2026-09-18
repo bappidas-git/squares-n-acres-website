@@ -279,7 +279,7 @@ describe('PropertiesListPage', () => {
       expect(await screen.findByText('1 property updated.')).toBeInTheDocument();
     });
 
-    it('confirms before deleting, naming how many records it is about to remove', async () => {
+    it('confirms before deleting, naming what it is about to remove', async () => {
       renderAs('admin');
       await screen.findByText('Lakeview Heights');
 
@@ -287,7 +287,7 @@ describe('PropertiesListPage', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
       const dialog = await screen.findByRole('dialog');
-      expect(within(dialog).getByText(/1 record will be deleted/)).toBeInTheDocument();
+      expect(within(dialog).getByText(/1 property will be deleted/)).toBeInTheDocument();
       expect(propertyService.bulk).not.toHaveBeenCalled();
 
       await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));

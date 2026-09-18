@@ -4,6 +4,7 @@ import useApi from '../../../hooks/useApi';
 import { Skeleton } from '../../ui';
 
 import styles from './RelatedProperties.module.css';
+import { BLOG } from '../../../config/copy';
 
 /**
  * The listings an editor attached to an article (§6.8 `relatedPropertyIds`).
@@ -19,7 +20,7 @@ import styles from './RelatedProperties.module.css';
  */
 export default function RelatedProperties({
   ids = [],
-  title = 'Listings mentioned in this article',
+  title = BLOG.relatedProperties,
   className = '',
 }) {
   const key = ids.filter(Boolean).join(',');

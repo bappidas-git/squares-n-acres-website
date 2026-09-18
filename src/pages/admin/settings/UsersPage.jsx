@@ -128,7 +128,8 @@ export default function UsersPage() {
           danger: true,
           confirm: {
             title: 'Delete the selected users?',
-            message: '{count} will be deleted and their leads unassigned. This cannot be undone.',
+            message:
+              '{count} will be deleted, and the leads of each unassigned. This cannot be undone.',
           },
         },
       ],

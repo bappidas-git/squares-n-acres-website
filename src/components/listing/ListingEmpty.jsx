@@ -2,6 +2,7 @@ import { Icon } from '@iconify/react';
 
 import styles from './ListingEngine.module.css';
 import { Button, EmptyState } from '../ui';
+import { EMPTY, LISTING, fill } from '../../config/copy';
 import {
   clearAllFilters,
   clearGroups,
@@ -41,12 +42,8 @@ export default function ListingEmpty({ params, fixed = {}, onWiden, onClear }) {
     <EmptyState
       className={styles.empty}
       icon={<Icon icon="mdi:home-search-outline" width="40" height="40" />}
-      title="No properties match these filters"
-      text={
-        suggestions.length > 0
-          ? 'Widening one of these usually brings results back.'
-          : 'Try a different locality, or tell us what you are looking for and we will find it.'
-      }
+      title={EMPTY.listing.title}
+      text={suggestions.length > 0 ? EMPTY.listing.widen : EMPTY.listing.text}
       action={
         <div className={styles.emptyActions}>
           {suggestions.length > 0 ? (
@@ -74,7 +71,7 @@ export default function ListingEmpty({ params, fixed = {}, onWiden, onClear }) {
           <div className={styles.emptyButtons}>
             {locality ? (
               <Button variant="outline" onClick={viewAllInLocality}>
-                View all in {locality.name}
+                {fill(EMPTY.listing.viewAllIn, { locality: locality.name })}
               </Button>
             ) : null}
             <Button
@@ -82,7 +79,7 @@ export default function ListingEmpty({ params, fixed = {}, onWiden, onClear }) {
               onClick={onClear}
               disabled={!hasSomethingToClear(params, fixed)}
             >
-              Clear all filters
+              {LISTING.clearAll}
             </Button>
           </div>
         </div>

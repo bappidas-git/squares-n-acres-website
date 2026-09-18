@@ -1,5 +1,6 @@
 import Button from './Button';
 import EmptyState from './EmptyState';
+import { ERRORS } from '../../config/copy';
 
 /**
  * The failure twin of `EmptyState`: same layout, error tone, and a retry button
@@ -13,10 +14,10 @@ import EmptyState from './EmptyState';
  */
 export default function ErrorState({
   icon = '!',
-  title = 'Something went wrong',
-  text = 'We could not load this right now. Please try again.',
+  title = ERRORS.title,
+  text = ERRORS.text,
   onRetry,
-  retryLabel = 'Try again',
+  retryLabel = ERRORS.retry,
   action,
   ...rest
 }) {

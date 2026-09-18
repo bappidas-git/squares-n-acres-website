@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import LeadForm from './LeadForm';
 import { Button, Modal } from '../ui';
 import { LEAD_SOURCES } from '../../config/enums';
+import { LEADS } from '../../config/copy';
 import { leadStorage } from '../../utils/leadStorage';
 
 import styles from './LeadCaptureModal.module.css';
@@ -110,7 +111,7 @@ export default function LeadCaptureModal({
   }, [open, skipped, delivered, runDelivery]);
 
   const heading = useMemo(
-    () => title || LEAD_SOURCES.labelOf(source) || 'Enquiry',
+    () => title || LEAD_SOURCES.labelOf(source) || LEADS.enquiryTitle,
     [title, source]
   );
 
@@ -162,7 +163,7 @@ export default function LeadCaptureModal({
           compact
           propertyTitle={propertyTitle}
           agent={agent}
-          submitLabel="Send"
+          submitLabel={LEADS.send}
           successAction={
             deliver?.kind === 'file' && deliver.fileUrl
               ? {

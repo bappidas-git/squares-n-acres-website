@@ -4,6 +4,7 @@ import FilterGroups from './FilterGroups';
 import styles from './filters.module.css';
 import useDebounce from '../../hooks/useDebounce';
 import { Button } from '../ui';
+import { LISTING, fill } from '../../config/copy';
 import { serializeFilters } from '../../utils/listingFilters';
 
 /** How long the rail waits after the last click before it asks the API. */
@@ -63,7 +64,7 @@ export default function FilterRail({ params, fixed, facets, onApply, onReset, ac
   };
 
   return (
-    <aside className={styles.rail} aria-label="Filters">
+    <aside className={styles.rail} aria-label={LISTING.filtersLandmark}>
       <div className={styles.railScroll}>
         <FilterGroups value={draft} fixed={fixed} facets={facets} onChange={change} />
       </div>
@@ -71,11 +72,13 @@ export default function FilterRail({ params, fixed, facets, onApply, onReset, ac
       <div className={styles.railFooter}>
         <span className={styles.railCount}>
           {activeCount > 0
-            ? `${activeCount} filter${activeCount === 1 ? '' : 's'} applied`
-            : 'No filters applied'}
+            ? fill(activeCount === 1 ? LISTING.filtersAppliedOne : LISTING.filtersAppliedMany, {
+                count: activeCount,
+              })
+            : LISTING.noFilters}
         </span>
         <Button variant="outline" size="sm" onClick={onReset} disabled={activeCount === 0}>
-          Reset
+          {LISTING.reset}
         </Button>
       </div>
     </aside>

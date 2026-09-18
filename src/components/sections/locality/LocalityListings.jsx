@@ -14,8 +14,8 @@ import styles from './LocalitySections.module.css';
  *
  * The full listing engine, embedded (D94): the same rail, the same facets and
  * the same sort a visitor gets on `/properties`, with the locality fixed and
- * shown as a locked chip they cannot remove. The temporary six-card row this
- * replaces linked away to the search instead.
+ * shown as a locked chip they cannot remove — rather than a fixed row of cards
+ * that could only link away to the search.
  *
  * A tab with nothing behind it is not drawn — an empty "Rent" tab in a locality
  * nobody lets reads as a fault — and a locality with no listings at all leaves

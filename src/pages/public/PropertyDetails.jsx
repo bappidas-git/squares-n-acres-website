@@ -4,6 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { Breadcrumbs, Container, ErrorState } from '../../components/ui';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
+import { ERRORS } from '../../config/copy';
 import { PropertyDetailSkeleton } from '../../components/common/SkeletonLoaders';
 import { getVisibleSections } from '../../utils/propertySections';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
@@ -222,22 +223,15 @@ const PropertyDetails = () => {
   if (loading) return <PropertyDetailSkeleton />;
 
   if (error?.status === 404) {
-    return (
-      <NotFound
-        title="Property not found"
-        subtitle="This listing is no longer available, or the address has changed. Browse what is on the market instead."
-      />
-    );
+    return <NotFound {...ERRORS.notFound.pages.property} />;
   }
 
   if (error || !property) {
     return (
       <Container className={styles.stateWrap}>
-        <ErrorState
-          title="We could not load this property"
-          text="Something went wrong on the way. Please try again."
-          onRetry={refetch}
-        />
+        {/* The `ApiError`'s own message, so an outage reads "unable to reach
+            the server" and a 500 reads what the server said (§8.2). */}
+        <ErrorState title={ERRORS.property} text={error?.message} onRetry={refetch} />
       </Container>
     );
   }

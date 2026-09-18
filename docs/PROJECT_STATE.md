@@ -1,7 +1,7 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 42 — mobile UX and accessibility pass Next prompt: 43
+Last prompt executed: 43 — UX polish: states and copy Next prompt: 44
 
 ## Executed prompts
 
@@ -48,7 +48,8 @@ Last prompt executed: 42 — mobile UX and accessibility pass Next prompt: 43
 | 39  | Media library, Cloudinary uploads, picker, responsive images       | `b54145e`                                                                          | 2026-09-18 |
 | 40  | Site settings admin, context refresh, public subset verified       | `f88a01d`                                                                          | 2026-09-18 |
 | 41  | Code splitting, lazy sections, LCP preloads, web-vitals, prerender | `3a89808`                                                                          | 2026-09-18 |
-| 42  | Mobile UX and accessibility pass across public and admin           | HEAD of this branch (a commit cannot contain its own hash — prompt 43 fills it in) | 2026-09-18 |
+| 42  | Mobile UX and accessibility pass across public and admin           | `e950419`                                                                          | 2026-09-18 |
+| 43  | UX polish: loading/empty/error/success states, 404/500, copy       | HEAD of this branch (a commit cannot contain its own hash — prompt 44 fills it in) | 2026-09-18 |
 
 ## Baseline (prompt 01)
 
@@ -318,11 +319,16 @@ The boilerplate's own endpoint surface stays inventoried in
 
 ## Pending rewrites (temporary adapters that must be removed; owner prompt)
 
+**Empty as of prompt 43.** Every row below is struck through and closed; the
+table is kept as the record of what each temporary adapter was and which prompt
+removed it. Anything added here from now on is a bug until it is closed again.
+
+
 | Item                                             | Why it is temporary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Owner prompt     |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| `test:ci --passWithNoTests`                      | Needed only while `src/` contains no test file; drop the flag once real tests exist.                                                                                                                                                                                                                                                                                                                                                                                                                            | 35               |
-| Header / MobileHeader / BottomNav nav arrays     | The three components still declare the same `navItems` / `sideMenuItems` literals. Prompt 04 restyled and unified their breakpoints but left the data alone, as its §9 requires ("nav data still hardcoded until prompt 27"). Prompt 27 moves it to `src/config/navigation.js`.                                                                                                                                                                                                                                 | 27               |
-| 501 on the sitemap / robots / RSS / llms paths   | The routes are mounted and mirrored at the root (D21) but answer `501` until prompt 09 generates the documents from `seoSettings` and the seed.                                                                                                                                                                                                                                                                                                                                                                 | 09               |
+| ~~`test:ci --passWithNoTests`~~                  | **Closed in 43.** The flag is gone from `package.json`: `src/` holds 138 suites and 2 642 tests, so `react-scripts test --watchAll=false` has something to run and an empty run is a failure again, which is what the flag was hiding.                                                                                                       | ~~35~~ closed in 43 |
+| ~~Header / MobileHeader / BottomNav nav arrays~~ | **Closed in 27, verified in 42 and re-verified in 43.** `src/config/navigation.js` is the one source of every public menu — `buildHeaderNav()`, `buildBottomNav()`, `buildFooterNav()` — and its labels are `NAV` in `src/config/copy.js`. There is no `navItems` or `sideMenuItems` literal anywhere in the public tree; the one `navItems` left is `AdminSidebar`'s, which reads `getNavItemsForRole()` from `config/rbac.js` and is the admin rail, not this row. | ~~04~~ closed in 27 |
+| ~~501 on the sitemap / robots / RSS / llms paths~~ | **Closed in 09, verified in 43.** `/sitemap.xml`, `/robots.txt`, `/rss.xml`, `/llms.txt` and their `/api/` mirrors all answer **200** from the running mock.                                                                                                                                                                       | ~~09~~ closed in 09 |
 | ~~`src/utils/adapters/legacyArticle.js`~~        | **Closed in 33.** The file is deleted with the two screens that read it. `/admin/articles` and its form now speak the §6.8 record: `featuredImage{url,alt,caption}`, `categoryId`/`category`, `authorId`/`author`, `tagIds[]`/`tags[]` and `readingTimeMinutes`. `src/utils/adapters/` is gone.                                                                                                                                                                                                                 | —                |
 | ~~`src/components/common/LegacyHtml.jsx`~~       | **Closed in 32.** The file is deleted. `src/components/editor/SafeHtml.jsx` holds the only `dangerouslySetInnerHTML` in `src/`: it sanitises against the allow-list `RichTextEditor` writes with, renders the result inside `.prose`, gives every H2/H3 an id, and turns the three `data-sna-block` placeholders into live components.                                                                                                                                                                          | 32               |
 | ~~FAQ answers textarea → `RichTextEditor`~~      | **Closed in 32.** The FAQs tab draws `RichTextField variant="compact"`; the field, the validator key and the payload did not move. The script/iframe/handler regex stays as the cheap guard against a value that never went through the editor (an import, a payload assembled by hand) rather than as the sanitiser it never was.                                                                                                                                                                              | 32               |
@@ -403,7 +409,7 @@ The boilerplate's own endpoint surface stays inventoried in
 | NEW-15                    | `useThrottledScroll` has a single consumer (`BackToTop`); Header, MobileHeader, BottomNav and StickyNav each re-implement scroll handling                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 01                                                                                                                                                                                                                                                                                                                                                                                              | 04                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | NEW-17                    | `global.css` loads Google Fonts through a render-blocking CSS `@import` instead of a `<link>` in `index.html`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | 01                                                                                                                                                                                                                                                                                                                                                                                              | 02, 04                                                                                                                                                                                                                                                                                                                                                                                                               |
 | NEW-18                    | `public/robots.txt` is the CRA default with no `Sitemap:`; `index.html` has no manifest, no OG tags, and a `theme-color` in the boilerplate navy                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | 01                                                                                                                                                                                                                                                                                                                                                                                              | 02                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| NEW-20                    | No test file exists anywhere (119 files checked, 0 matches), so `test:ci` needs `--passWithNoTests` until the first tests land                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | 01                                                                                                                                                                                                                                                                                                                                                                                              | partially closed in 01; 35                                                                                                                                                                                                                                                                                                                                                                                           |
+| ~~NEW-20~~ (closed in 43) | ~~No test file exists anywhere, so `test:ci` needs `--passWithNoTests`~~ **Closed in 43:** `src/` holds 138 suites and 2 642 tests and the flag is gone from `package.json`, so an empty run is a failure again. | 01 | ~~35~~ closed in 43 |
 | NEW-28                    | `src/pages/public/RealEstateAwareness.js` uses `mdi:stamp`, which is not in the Iconify MDI set — the tile renders blank. Found while verifying every icon id of prompt 13.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | 13                                                                                                                                                                                                                                                                                                                                                                                              | 31                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | NEW-29                    | `db.json` seeds `icon: "mdi:home-check-outline"`, which is not in the Iconify MDI set. `db.json` is off-limits to prompt 13 (§12 guardrails), so the seed keeps a blank icon until its owner prompt fixes it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | 13                                                                                                                                                                                                                                                                                                                                                                                              | 15                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | NEW-30                    | `useCountUp` figures are still at their start value when a page is rendered by a browser that never delivers a second animation frame — headless Chrome with `--virtual-time-budget` grants exactly one. Every counted statistic (`DeveloperStats`, `BuilderOverview`, and the home figures of 27) therefore prerenders as `0`. The prerenderer must emulate `prefers-reduced-motion: reduce`, which makes `useCountUp` jump straight to the value; a real browser is unaffected.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | 16                                                                                                                                                                                                                                                                                                                                                                                              | 41                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -6639,3 +6645,140 @@ in `check:all`: it needs a running mock, a served build and Chrome.
   a future pass could sample the rendered pixels instead (owner 46).
 
 **Next prompt: 43 — UX polish, states and copy.**
+
+---
+
+### Prompt 43 — UX polish: loading/empty/error/success states, 404/500 pages, centralised copy (2026-09-18)
+
+**What this prompt did**
+
+Audited every route, public and admin, in a real Chromium at 1280 px and
+390 px, under four conditions — a 1 500 ms network, the API stopped, a filter
+that matches nothing, and the real action — then fixed the sixteen gaps that
+audit found, moved every string the product says on its own behalf into two
+copy files, rebuilt the 404 and the crash screen, and taught `check:traces` to
+find placeholder copy.
+
+`docs/QA/43-states-and-copy-report.md` is the audit: the route × state grid,
+the sixteen fixes, the copy review and the verification table.
+
+**Files added**
+
+- `src/config/adminCopy.js` — the admin panel's own words: `TABLES`, `FORMS`,
+  `TOASTS`, `DIALOGS`, `SEO`, `DASHBOARD`. 76 strings, every one with a call
+  site. `TOASTS` is a vocabulary rather than a list: `saved(entity)`,
+  `created`, `published`, `unpublished`, `deleted`, `duplicated`,
+  `updatedCount(n, one, many)`, `copied(what)`, `flagged(entity, field, on)`.
+- `src/config/__tests__/copy.test.js` — 14 cases over **both** copy files: no
+  empty strings, no placeholder copy, no boilerplate brand, no invented SLA, no
+  exclamation marks, sentence case for buttons and labels, toasts under 60
+  characters, the admin vocabulary's exact output, a confirm that names its
+  record, `fill()`'s behaviour, and `INDEX_PAGES === SEO.indexPages`. The two
+  pattern checks import `COPY_PATTERNS` and `TRACE_PATTERNS` from
+  `scripts/check-traces.js`, so the suite and the scan cannot disagree.
+- `src/components/common/__tests__/ErrorBoundary.test.jsx` — 7 cases: children
+  while nothing throws, the branded screen, the logged error, the injected
+  head, the admin variant's "Reload this page", the Reload and Go home
+  handlers, and **recovery on a key change without a reload**.
+- `src/pages/public/__tests__/NotFound.test.jsx` — 7 cases: the branded mark and
+  the single `<h1>`, the labelled search box, `?q=` (BUG-10), the five popular
+  links in order, the two actions, a page-specific title, and `noindex`.
+- `docs/QA/43-states-and-copy-report.md`, `docs/CONTENT_TO_BE_PROVIDED_BY_CLIENT.md`.
+
+**Files deleted**
+
+- `src/components/admin/AdminPlaceholderPage.jsx` and its stylesheet, with the
+  barrel export and the entry in `components/admin/__tests__/index.test.js`.
+  No route had used it since prompt 39.
+
+**Files changed** — 111 in the tree (105 under `src/`). The shape of it:
+
+| Category                                   | Count | Where |
+| ------------------------------------------ | ----- | ----- |
+| Copy moved into `copy.js` / `adminCopy.js` | 61    | nav, hero, home, listing, property, leads, blog, footer, forms, errors, empty, seo; admin tables, forms, toasts, dialogs, SEO, dashboard |
+| Loading states that were a spinner         | 5     | `ArticleDetail`, `CmsPage`, `ArticleCategory`, `ArticleTag`, `AuthorPage` |
+| Error-state defects                        | 4     | `CmsPage`'s outage-as-404, `PropertyDetails`' swallowed message, the home page's silence, the master-data filtered title |
+| Confirmation and toast defects             | 5     | the bulk bar's fallback title, five ungrammatical singulars, the media drawer's unnamed file, the inconsistent toggle toast, five clipboard/delete/save wordings |
+| Rebuilt screens                            | 2     | `NotFound`, `ErrorBoundary` (+ the route key and the admin variant) |
+| Stale scaffolding comments and a CSS class | 10    | nine "arrives in prompt NN" comments, `.todo` → `.pending` |
+
+**Endpoints** — none added or changed.
+
+**npm scripts** — none added. `test:ci` **lost** `--passWithNoTests`: `src/`
+holds 138 suites, so an empty run is a failure again.
+
+**Env vars** — none.
+
+**`check:traces`** — six copy patterns added (`lorem ipsum`, `TODO`, `FIXME`,
+`Coming in prompt`, `placeholder until`, `dummy`), scanned in `src/` **only**:
+`prompts/` is the specification and says "Coming in prompt" on purpose, `docs/`
+records what was found. Both are still scanned for the brand traces. The scan
+exports `COPY_PATTERNS` and `COPY_SCAN_PREFIX` beside `TRACE_PATTERNS`.
+
+**Verification**
+
+| Command                  | Result |
+| ------------------------ | ------ |
+| `npm run lint`           | 0 errors, 0 warnings; `check:endpoints` 742 files, 0 findings |
+| `npm run test:ci`        | **138 suites, 2 642 tests**, all green (three new suites, 28 new cases) |
+| `npm run test:mock`      | green |
+| `npm run test:scripts`   | 28 cases (1 skipped: no Chrome in a standard location) |
+| `npm run build:ci`       | Compiled successfully, 0 warnings |
+| `npm run check:traces`   | 1 080 files, **0 findings** — brand, hex and the six copy patterns |
+| `npm run check:contrast` | 29 gated pairs, all pass |
+| `npm run validate:seed`  | `db.json` is valid |
+| `npm run analyze`        | 285.91 kB / 300 kB gzip — 14.09 kB to spare |
+| `npm run smoke`          | 282/282 |
+
+The three new suites emit no console output of their own; the `act(…)` notices
+in the pre-existing suites are **NEW-33** (owner 44), unchanged.
+
+**Acceptance checklist**
+
+- [x] `docs/QA/43-states-and-copy-report.md` covers every route × {loading, error, empty, success} with ✓ and lists the sixteen fixes.
+- [x] `copy.js` (288 strings) and `adminCopy.js` (76) hold the UI strings; `grep -rn ">Submit<\|'Save'" src/components src/pages` returns nothing; the documented exception list is §5 of the report.
+- [x] `AdminPlaceholderPage.jsx` deleted; "Pending rewrites" empty; `check:traces` extended and passing.
+- [x] `lint`, `test:ci`, `build:ci`, `check:traces`, `smoke` all pass; no console warnings from this prompt's code.
+- [x] One commit, clean tree.
+
+**Issues closed**
+
+- **NEW-20** — `test:ci` no longer carries `--passWithNoTests`.
+- **BUG-12 — verified closed, finally.** The row has been in "Known issues
+  (closed)" since the design-system prompt; this prompt re-measured its four
+  parts and the last one is now gone. Colour literals outside `theme.js`,
+  `global.css`, `src/seo/data/` and `public/brand/`: **0** in JS/JSX and **0**
+  in CSS modules (the four `#`-matches left in `src/` are HTML numeric
+  entities — `&#160;`, `&#8377;` — which the scan discounts). Inline
+  `fontFamily` literals: **0** (the one remaining reads
+  `var(--font-body)`). The boilerplate's SweetAlert popup classes: **0**. And the four components
+  the row named by hand are all rewritten: `ErrorBoundary` is branded, keyed
+  and has an admin variant (this prompt); `PageLoader` is the monogram and is
+  now only a Suspense fallback (this prompt); `BackToTop` and the skeletons
+  were rewritten in 04 and extended here.
+
+**"Additional defects" re-verified**
+
+Every row of `00_MASTER_CONTEXT.md` §11's second list was re-read against the
+tree. ADD-01, ADD-02, ADD-03, ADD-06, ADD-09, ADD-16, ADD-18, ADD-19, ADD-20,
+ADD-21, ADD-27 are closed and stay closed. **ADD-22** (the four property-form
+tab defects) is the one still carrying an open half — the drag's per-drag-over
+state updates — and keeps its owner. **ADD-24** (`PropertyCardSkeleton`'s two
+phantom buttons, no `aria-busy`, `PageLoader`'s boilerplate wordmark) is
+re-verified closed and is extended by this prompt: every skeleton preset now
+carries `aria-busy`, and three new presets replace the five spinner-only pages.
+
+**Issues left → "Known issues"**
+
+Unchanged and still owned by 44–46: NEW-33 (act notices, 44), NEW-35 (fixed
+elements during the page transition, 44), NEW-38 (duplicate React keys in
+`ArticleRelatedCard`, 44), NEW-39 (`cleanTitle`'s dangling comma, 45), NEW-40
+(four over-long status titles, 45), NEW-41 (two links to unpublished articles,
+45), NEW-42 (the home page's 25 count requests, 46), NEW-46 (the doomed request
+when navigating off a property page, 44), NEW-47 (contrast over a photograph,
+46). NEW-04, NEW-08, NEW-15, NEW-17, NEW-18, NEW-28, NEW-29, NEW-30 are the
+audit's own historical rows and are unchanged.
+
+**No new issues opened.** Every gap this audit found was fixed in it.
+
+**Next prompt: 44 — QA bug bash: property and listing.**

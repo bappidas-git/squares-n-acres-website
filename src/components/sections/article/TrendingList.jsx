@@ -7,6 +7,7 @@ import { Skeleton } from '../../ui';
 import { formatDate } from '../../../utils/format';
 
 import styles from './TrendingList.module.css';
+import { BLOG } from '../../../config/copy';
 
 /** `GET /articles/trending` answers with six; the sidebar shows all of them. */
 const LIMIT = 6;
@@ -26,7 +27,7 @@ const LIMIT = 6;
 export default function TrendingList({
   articles,
   limit = LIMIT,
-  title = 'Most read',
+  title = BLOG.trending,
   className = '',
 }) {
   const provided = Array.isArray(articles);

@@ -9,6 +9,7 @@ import TABS from './tabs';
 import { PropertyFormProvider } from './PropertyFormContext';
 
 import styles from '../PropertyFormPage.module.css';
+import { FORMS } from '../../../../config/adminCopy';
 
 /**
  * The property form's body: the draft banner, the sixteen tabs, and the rail.
@@ -146,7 +147,7 @@ export default function PropertyFormShell({ form }) {
             onClick={() => save('save')}
             icon={<Icon icon="mdi:content-save-outline" width="18" height="18" />}
           >
-            {isNew ? 'Create' : 'Save'}
+            {isNew ? FORMS.create : FORMS.save}
           </Button>
         </div>
       )}

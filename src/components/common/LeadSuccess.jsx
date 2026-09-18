@@ -3,12 +3,12 @@ import { Icon } from '@iconify/react';
 import { Button } from '../ui';
 import CallButton from './CallButton';
 import WhatsAppButton from './WhatsAppButton';
+import { LEADS } from '../../config/copy';
 
 import styles from './LeadForm.module.css';
 
 /** What a form says when it has nothing more specific to say. */
-export const DEFAULT_SUCCESS_MESSAGE =
-  'Thank you — we have your details. An advisor will get back to you as soon as possible.';
+export const DEFAULT_SUCCESS_MESSAGE = LEADS.successMessage;
 
 /**
  * The panel that replaces a lead form once the lead is filed.
@@ -35,7 +35,7 @@ export const DEFAULT_SUCCESS_MESSAGE =
  * @param {(() => void)|null} [props.onClose]
  */
 export default function LeadSuccess({
-  title = 'Request received',
+  title = LEADS.successTitle,
   message = DEFAULT_SUCCESS_MESSAGE,
   actions = ['whatsapp', 'call'],
   propertyId = null,
@@ -75,7 +75,7 @@ export default function LeadSuccess({
             propertyId={propertyId}
             propertyTitle={propertyTitle}
             number={agent?.whatsapp}
-            label="Message on WhatsApp"
+            label={LEADS.whatsapp}
             context="lead-success"
           />
         ) : null}
@@ -92,7 +92,7 @@ export default function LeadSuccess({
 
         {onClose ? (
           <Button variant="ghost" onClick={onClose}>
-            Close
+            {LEADS.close}
           </Button>
         ) : null}
       </div>

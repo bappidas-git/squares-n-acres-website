@@ -1,4 +1,5 @@
 import NewsletterForm from './NewsletterForm';
+import { LEADS } from '../../config/copy';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 import styles from './NewsletterSection.module.css';
@@ -24,7 +25,7 @@ import styles from './NewsletterSection.module.css';
 const NewsletterSection = ({ compact = false, className = '' }) => {
   const { settings } = useSiteSettings();
 
-  const copy = settings?.newsletter ?? {};
+  const section = settings?.newsletter ?? {};
   const hasRecaptcha = Boolean(settings?.integrations?.recaptchaSiteKey);
 
   return (
@@ -34,10 +35,13 @@ const NewsletterSection = ({ compact = false, className = '' }) => {
         .join(' ')}
     >
       <div className={styles.inner}>
-        <h2 className={styles.heading}>{copy.title || 'Property insight, once a month'}</h2>
-        {copy.subtitle ? <p className={styles.subtitle}>{copy.subtitle}</p> : null}
+        <h2 className={styles.heading}>{section.title || LEADS.newsletter.title}</h2>
+        {section.subtitle ? <p className={styles.subtitle}>{section.subtitle}</p> : null}
 
-        <NewsletterForm className={styles.form} successMessage={copy.successMessage || undefined} />
+        <NewsletterForm
+          className={styles.form}
+          successMessage={section.successMessage || undefined}
+        />
 
         {hasRecaptcha ? (
           <p className={styles.disclaimer}>

@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import { tocIds } from '../../../utils/toc';
 
 import styles from './TableOfContents.module.css';
+import { BLOG } from '../../../config/copy';
 
 /**
  * How much of the viewport counts as "being read": the band the observer
@@ -75,7 +76,7 @@ export function useActiveHeading(ids) {
 export default function TableOfContents({
   items = [],
   activeId = '',
-  title = 'In this article',
+  title = BLOG.contents,
   className = '',
 }) {
   const [open, setOpen] = useState(false);

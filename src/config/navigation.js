@@ -143,9 +143,9 @@ const COMMERCIAL_TYPE_SLUGS = ['office-spaces', 'retail-shops', 'warehouses', 'c
 
 /** The three insight destinations the site owns whatever the CMS holds. */
 const INSIGHT_LINKS = [
-  { key: 'articles', label: 'Articles', to: PATHS.articles },
-  { key: 'faqs', label: 'FAQs', to: PATHS.faqs },
-  { key: 'awareness', label: 'Real Estate Awareness', to: PATHS.awareness },
+  { key: 'articles', label: NAV.articles, to: PATHS.articles },
+  { key: 'faqs', label: NAV.faqs, to: PATHS.faqs },
+  { key: 'awareness', label: NAV.awareness, to: PATHS.awareness },
 ];
 
 /** The Buy mega-menu: status, type, budget and the localities people ask for. */
@@ -216,7 +216,7 @@ function rentMenu(propertyTypes) {
       {
         key: 'rent',
         title: NAV.rent,
-        links: [...links, { key: 'rent-commercial', label: 'Commercial', to: PATHS.lease }],
+        links: [...links, { key: 'rent-commercial', label: NAV.commercial, to: PATHS.lease }],
       },
     ]),
   };
@@ -240,7 +240,7 @@ function commercialMenu(propertyTypes) {
       {
         key: 'commercial',
         title: NAV.commercial,
-        links: [...links, { key: 'commercial-lease', label: 'Lease', to: PATHS.lease }],
+        links: [...links, { key: 'commercial-lease', label: NAV.lease, to: PATHS.lease }],
       },
     ]),
   };

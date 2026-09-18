@@ -1,6 +1,5 @@
 import { Icon } from '@iconify/react';
 
-import Alert from '../../../components/ui/Alert';
 import Chip from '../../../components/ui/Chip';
 import LazyImage from '../../../components/ui/LazyImage';
 import { AMENITY_CATEGORIES, BADGE_TONES, SEGMENTS } from '../../../config/enums';
@@ -272,13 +271,6 @@ export const propertyTypesConfig = ({ onMutated } = {}) => ({
     },
     ...STATE_FIELDS,
   ],
-
-  formFooter: (
-    <Alert tone="info" title="Search appearance">
-      The SEO panel for property types arrives in prompt 36. Until then the title and description
-      the type’s landing page uses are generated from its name.
-    </Alert>
-  ),
 
   newValues: { segment: 'residential', order: 0, isActive: true },
 

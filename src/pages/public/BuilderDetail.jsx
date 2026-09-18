@@ -18,6 +18,7 @@ import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './BuilderDetail.module.css';
 import usePrerenderReady from '../../hooks/usePrerenderReady';
+import { ERRORS } from '../../config/copy';
 
 /**
  * `/builders/:slug` — one builder's profile.
@@ -61,11 +62,7 @@ export default function BuilderDetail() {
   if (error || !developer) {
     return (
       <Container className={styles.stateWrap}>
-        <ErrorState
-          title="We could not load this builder"
-          text={error?.message}
-          onRetry={refetch}
-        />
+        <ErrorState title={ERRORS.builder} text={error?.message} onRetry={refetch} />
       </Container>
     );
   }

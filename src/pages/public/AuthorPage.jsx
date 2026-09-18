@@ -7,7 +7,8 @@ import useApi from '../../hooks/useApi';
 import { ArticleIndex } from './Articles';
 import { AuthorBox } from '../../components/sections/article';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
-import { PageLoader } from '../../components/common/SkeletonLoaders';
+import { ERRORS } from '../../config/copy';
+import { ArticleIndexSkeleton } from '../../components/common/SkeletonLoaders';
 
 import styles from './AuthorPage.module.css';
 import usePrerenderReady from '../../hooks/usePrerenderReady';
@@ -37,9 +38,9 @@ export default function AuthorPage() {
   // URL the API cannot answer.
   usePrerenderReady(loading);
 
-  if (loading) return <PageLoader />;
+  if (loading) return <ArticleIndexSkeleton />;
   if (error?.status === 404 || (!loading && !author)) {
-    return <NotFound title="Author not found" subtitle="Nobody writes here under that name." />;
+    return <NotFound {...ERRORS.notFound.pages.author} />;
   }
 
   return (

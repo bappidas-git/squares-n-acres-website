@@ -11,11 +11,14 @@
  * localities index and a builders index are the same kind of page, and the day
  * one of them stops being indexed the other should too.
  *
- * Authored in CommonJS (D36b, extended in prompt 38) with no imports at all, so
- * that `scripts/validate-jsonld.js` reads exactly the tables the browser does.
+ * Authored in CommonJS (D36b, extended in prompt 38), so that
+ * `scripts/validate-jsonld.js` reads exactly the tables the browser does. Its
+ * one import is `config/copy.js`, which is CommonJS for the same reason (D108).
  * `components/seo/seoDefaults.js` re-exports them beside the one value that
  * does need the design system (the theme colour).
  */
+
+const copy = require('../config/copy');
 
 /** Every value `<Seo type>` accepts (§9.2, extended by prompt 38). */
 const PAGE_TYPES = [
@@ -97,53 +100,15 @@ const DEFAULT_ROBOTS = { index: true, follow: true, maxImagePreview: 'large' };
 /**
  * The index pages, which are routes rather than records.
  *
- * Their titles go **through** the type's title template like any record's
- * would, so "Localities in Bengaluru" becomes "Localities in Bengaluru |
- * Squares N Acres" and changing the separator in Admin → SEO changes it here
- * too. A page may still pass its own `title`/`description` and win.
+ * The words themselves are `config/copy.js` — every string the site says is
+ * reviewed in one place (§8.5, prompt 43) — and this is where the engine picks
+ * them up. Their titles go **through** the type's title template like any
+ * record's would, so "Localities in Bengaluru" becomes "Localities in
+ * Bengaluru | Squares N Acres" and changing the separator in Admin → SEO
+ * changes it here too. A page may still pass its own `title`/`description`
+ * and win.
  */
-const INDEX_PAGES = {
-  localities: {
-    title: 'Localities in Bengaluru',
-    description:
-      'Explore neighbourhoods across Bengaluru: connectivity, prices and lifestyle at a glance.',
-  },
-  builders: {
-    title: 'Builders and developers in Bengaluru',
-    description:
-      'The builders behind the projects we list in Bengaluru — their track record, their registrations and what they have available now.',
-  },
-  blog: {
-    title: 'Real estate insights and guides for Bengaluru',
-    description:
-      'Buying guides, market notes, legal explainers and investment thinking on Bengaluru property, from Squares N Acres.',
-  },
-  faqs: {
-    title: 'Frequently asked questions',
-    description:
-      'Answers to the questions buyers, sellers, tenants and NRIs ask us most often about property in Bengaluru — buying, renting, home loans, legal checks and RERA.',
-  },
-  jobs: {
-    title: 'Careers',
-    description: 'Open roles at Squares N Acres, and what it is like to work here.',
-  },
-  shortlist: {
-    title: 'Your shortlist',
-    description: 'The properties you have saved on this device.',
-  },
-  search: {
-    title: 'Search results',
-    description: 'What we have that matches your search.',
-  },
-  notFound: {
-    title: 'Page not found',
-    description: 'There is nothing published at this address.',
-  },
-  error: {
-    title: 'Something went wrong',
-    description: 'This page could not be loaded.',
-  },
-};
+const INDEX_PAGES = copy.SEO.indexPages;
 
 /** The `<meta name="…">` each verification service looks for (§9.3). */
 const VERIFICATION_META = {

@@ -5,6 +5,7 @@ import propertyService from '../../services/propertyService';
 import styles from './filters.module.css';
 import useDebounce from '../../hooks/useDebounce';
 import { BottomSheet, Button } from '../ui';
+import { LISTING, fill } from '../../config/copy';
 import { formatNumber } from '../../utils/format';
 import { isCanceled } from '../../services/apiError';
 import { serializeFilters } from '../../utils/listingFilters';
@@ -81,13 +82,16 @@ export default function FilterSheet({
     return () => controller.abort();
   }, [open, settledKey, draftKey]);
 
-  const label = counting || count === null ? 'Show results' : `Show ${formatNumber(count)} results`;
+  const label =
+    counting || count === null
+      ? LISTING.showResults
+      : fill(LISTING.showCount, { count: formatNumber(count) });
 
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={activeCount > 0 ? `Filters (${activeCount})` : 'Filters'}
+      title={activeCount > 0 ? `${LISTING.filters} (${activeCount})` : LISTING.filters}
       footer={
         <div className={styles.sheetFooter}>
           <Button variant="outline" onClick={onReset} disabled={activeCount === 0}>
@@ -101,7 +105,7 @@ export default function FilterSheet({
             }}
             disabled={counting || count === 0}
           >
-            {count === 0 ? 'No results' : label}
+            {count === 0 ? LISTING.noResults : label}
           </Button>
         </div>
       }

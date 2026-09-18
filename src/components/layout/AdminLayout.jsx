@@ -4,6 +4,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 
 import AdminSidebar from './AdminSidebar';
 import AdminTopbar from './AdminTopbar';
+import ErrorBoundary from '../common/ErrorBoundary';
 import Seo from '../seo/Seo';
 import useBreakpoint from '../../hooks/useBreakpoint';
 import { BRAND } from '../../config/site';
@@ -20,6 +21,11 @@ import styles from './AdminLayout.module.css';
  * `LeadNotificationsProvider` lives here rather than in `App.js` so the lead
  * poller exists only while an admin screen is open — a visitor on the public
  * site never polls (D45).
+ *
+ * The canvas carries its own `ErrorBoundary` (§8.2). The route boundary in
+ * `routes/index.js` would replace the whole viewport, which for an operator who
+ * can simply open another screen is the wrong answer; this one fills the
+ * content column and leaves the panel navigable.
  */
 
 /** Persisted rail state (§4.2 storage keys). */
@@ -102,9 +108,14 @@ const AdminShell = () => {
 
         <main id="admin-main" tabIndex={-1} className={styles.main}>
           <div className={styles.content}>
-            <Suspense fallback={<PageLoader />}>
-              <Outlet />
-            </Suspense>
+            {/* The inline variant, keyed on the route: a screen that throws
+                leaves the sidebar and the topbar usable, offers "Reload this
+                page", and the next navigation clears it (§4.3). */}
+            <ErrorBoundary key={location.pathname} variant="inline">
+              <Suspense fallback={<PageLoader />}>
+                <Outlet />
+              </Suspense>
+            </ErrorBoundary>
           </div>
         </main>
       </div>

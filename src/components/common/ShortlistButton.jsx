@@ -2,6 +2,7 @@ import { Icon } from '@iconify/react';
 import { Link } from 'react-router-dom';
 
 import PATHS from '../../routes/paths';
+import { PROPERTY } from '../../config/copy';
 import { track } from '../../utils/analytics';
 import { useShortlist } from '../../contexts/ShortlistContext';
 import { useToast } from './ToastProvider';
@@ -51,14 +52,14 @@ export default function ShortlistButton({
     if (nowSaved) {
       toast.success(
         <span className={styles.toast}>
-          Saved to shortlist
+          {PROPERTY.shortlistAdded}
           <Link to={PATHS.shortlist} className={styles.toastLink}>
-            View
+            {PROPERTY.shortlistView}
           </Link>
         </span>
       );
     } else {
-      toast.info('Removed from shortlist');
+      toast.info(PROPERTY.shortlistRemoved);
     }
   };
 
@@ -67,8 +68,10 @@ export default function ShortlistButton({
       type="button"
       onClick={onClick}
       aria-pressed={saved}
-      aria-label={saved ? `Remove from shortlist${named}` : `Save to shortlist${named}`}
-      title={saved ? 'Saved to shortlist' : 'Save to shortlist'}
+      aria-label={
+        saved ? `${PROPERTY.removeFromShortlist}${named}` : `${PROPERTY.saveToShortlist}${named}`
+      }
+      title={saved ? PROPERTY.savedToShortlist : PROPERTY.saveToShortlist}
       className={[
         styles.button,
         styles[size] || styles.md,
@@ -86,7 +89,7 @@ export default function ShortlistButton({
         className={styles.icon}
         aria-hidden="true"
       />
-      {variant === 'button' ? <span>{saved ? 'Saved' : 'Save'}</span> : null}
+      {variant === 'button' ? <span>{saved ? PROPERTY.saved : PROPERTY.save}</span> : null}
     </button>
   );
 }

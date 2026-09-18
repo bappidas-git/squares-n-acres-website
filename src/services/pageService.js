@@ -1,5 +1,6 @@
 /**
- * CMS pages (00_MASTER_CONTEXT.md §6.10). The renderer arrives in prompt 30.
+ * CMS pages (00_MASTER_CONTEXT.md §6.10). `components/cms/PageRenderer.jsx`
+ * draws what these records hold.
  */
 
 import { COPY_SLUG_SUFFIX, copySeo, copyTitle } from '../utils/duplicateRecord';

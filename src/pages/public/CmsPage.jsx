@@ -13,7 +13,8 @@ import pageService from '../../services/pageService';
 import useApi from '../../hooks/useApi';
 import { ErrorState } from '../../components/ui';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
-import { PageLoader } from '../../components/common/SkeletonLoaders';
+import { ERRORS } from '../../config/copy';
+import { CmsPageSkeleton } from '../../components/common/SkeletonLoaders';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 
 import styles from './CmsPage.module.css';
@@ -112,25 +113,25 @@ export default function CmsPage({ slug: fixedSlug, prefix = '' }) {
   const crumbs = useMemo(() => (page ? buildCrumbs(page) : []), [page]);
 
   if (!slug || reserved) return <NotFound />;
-  if (loading) return <PageLoader />;
+  if (loading) return <CmsPageSkeleton />;
 
-  // The API answers 404 for a slug nobody has written, for a draft with no
-  // token and for a token that has expired: all three are the same page.
-  if (error?.status === 404 || (!loading && !page)) {
+  // A failure that is *not* a 404 is an outage, not a missing page: answering
+  // "page not found" for an address that exists would be a lie, and it would
+  // offer no way back once the API returns. The error state comes first, so
+  // only a real 404 — or an answer with no record in it — reaches `NotFound`
+  // (prompt 43 §4.1).
+  if (error && error.status !== 404) {
     return (
-      <NotFound
-        title="Page not found"
-        subtitle="There is nothing published at this address. It may have moved, or never existed."
-      />
+      <div className={styles.error}>
+        <ErrorState title={ERRORS.page} text={error.message} onRetry={refetch} />
+      </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className={styles.error}>
-        <ErrorState title="We could not load this page" text={error.message} onRetry={refetch} />
-      </div>
-    );
+  // The API answers 404 for a slug nobody has written, for a draft with no
+  // token and for a token that has expired: all three are the same page.
+  if (error?.status === 404 || !page) {
+    return <NotFound {...ERRORS.notFound.pages.cms} />;
   }
 
   const previewing = Boolean(previewToken);

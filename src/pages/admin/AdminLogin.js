@@ -19,7 +19,8 @@ import styles from './AdminLogin.module.css';
  * and enforces the expiry client-side, so the checkbox could only have lied.
  * Seed credentials are never printed on the page.
  *
- * `useForm` arrives in prompt 13; until then the two fields are local state.
+ * Two fields and one submit: the screen keeps them in local state rather than
+ * reaching for `useForm`, which exists for the forty-field forms behind it.
  */
 
 const INVALID_CREDENTIALS = 'Invalid email or password.';

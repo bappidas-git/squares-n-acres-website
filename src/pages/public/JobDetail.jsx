@@ -14,6 +14,7 @@ import useApi from '../../hooks/useApi';
 import { Container, ErrorState, Skeleton } from '../../components/ui';
 import { JobApplyForm, JobHeader } from '../../components/sections/careers';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
+import { ERRORS } from '../../config/copy';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 import styles from './JobDetail.module.css';
@@ -102,12 +103,7 @@ export default function JobDetail() {
   usePrerenderReady(loading);
 
   if (error?.status === 404) {
-    return (
-      <NotFound
-        title="This role is no longer listed"
-        subtitle="The opening you followed has been taken down. The current ones are on the careers page."
-      />
-    );
+    return <NotFound {...ERRORS.notFound.pages.job} />;
   }
 
   if (loading) return <JobDetailSkeleton />;
@@ -115,7 +111,7 @@ export default function JobDetail() {
   if (error || !job) {
     return (
       <Container className={styles.stateWrap}>
-        <ErrorState title="We could not load this role" text={error?.message} onRetry={refetch} />
+        <ErrorState title={ERRORS.job} text={error?.message} onRetry={refetch} />
       </Container>
     );
   }

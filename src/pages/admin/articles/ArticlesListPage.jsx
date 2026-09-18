@@ -18,6 +18,7 @@ import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './ArticlesListPage.module.css';
+import { TABLES, TOASTS } from '../../../config/adminCopy';
 
 /**
  * Admin → Articles (`/admin/articles`).
@@ -50,7 +51,7 @@ const BULK_ACTIONS = [
     confirm: {
       title: 'Delete the selected articles?',
       message:
-        '{count} will be deleted, and their public pages will answer 404. This cannot be undone.',
+        '{count} will be deleted, and the public pages will answer 404. This cannot be undone.',
     },
   },
 ];
@@ -165,7 +166,7 @@ export default function ArticlesListPage() {
       setBusyId(row.id);
       try {
         const { data } = await articleService.duplicate(row.id);
-        toast.success(`“${row.title}” duplicated as a draft.`);
+        toast.success(TOASTS.duplicated(`“${row.title}”`));
         if (data?.id) navigate(PATHS.adminArticleEdit(data.id));
         else refetch();
       } catch (thrown) {
@@ -185,9 +186,7 @@ export default function ArticlesListPage() {
 
       try {
         await articleService.patch(row.id, { isFeatured: value });
-        toast.success(
-          `“${row.title}” ${value ? 'is now featured.' : 'is no longer featured.'}`.trim()
-        );
+        toast.success(TOASTS.flagged(`“${row.title}”`, 'isFeatured', value));
       } catch (thrown) {
         setOverrides((current) => {
           const { [id]: _reverted, ...rest } = current;
@@ -205,7 +204,7 @@ export default function ArticlesListPage() {
     setBulkBusy(true);
     try {
       const { message } = await articleService.bulk({ ids, action });
-      toast.success(message || `${ids.length} articles updated.`);
+      toast.success(message || TOASTS.updatedCount(ids.length, 'article'));
       setSelectedIds([]);
       refetch();
     } catch (thrown) {
@@ -220,7 +219,7 @@ export default function ArticlesListPage() {
     setDeletingBusy(true);
     try {
       await articleService.remove(deleting.id);
-      toast.success(`“${deleting.title}” deleted.`);
+      toast.success(TOASTS.deleted(`“${deleting.title}”`));
       setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
       setDeleting(null);
       refetch();
@@ -352,11 +351,11 @@ export default function ArticlesListPage() {
   const emptyState = useMemo(() => {
     if (params.page > 1) {
       return {
-        title: 'Nothing on this page',
-        text: 'The list is shorter than the address you opened.',
+        title: TABLES.emptyPage,
+        text: TABLES.emptyPageText,
         action: (
           <Button variant="outline" onClick={() => setPage(1)}>
-            Go to first page
+            {TABLES.firstPage}
           </Button>
         ),
       };
@@ -368,7 +367,7 @@ export default function ArticlesListPage() {
         text: 'Nothing in the archive answers every filter you have set.',
         action: (
           <Button variant="outline" onClick={resetFilters}>
-            Reset filters
+            {TABLES.resetFilters}
           </Button>
         ),
       };
@@ -428,6 +427,8 @@ export default function ArticlesListPage() {
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           bulkActions={canBulk ? BULK_ACTIONS : []}
+          bulkNounOne="article"
+          bulkNounMany="articles"
           onBulkAction={runBulk}
           bulkBusy={bulkBusy}
           rowActions={rowActions}

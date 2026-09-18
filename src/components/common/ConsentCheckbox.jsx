@@ -1,9 +1,9 @@
 import { useId } from 'react';
 
-import styles from './LeadForm.module.css';
+import { LEADS, fill } from '../../config/copy';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
-/** What the visitor is agreeing to. Kept in one place so every form says it. */
-export const CONSENT_TEXT = 'By submitting you agree to be contacted by Squares N Acres';
+import styles from './LeadForm.module.css';
 
 /**
  * The one box a lead form asks a visitor to tick.
@@ -22,6 +22,9 @@ export const CONSENT_TEXT = 'By submitting you agree to be contacted by Squares 
 export default function ConsentCheckbox({ checked = true, onChange, error }) {
   const id = useId();
   const errorId = error ? `${id}-error` : undefined;
+  // The company's own name is never spelled out in a component (§14): it is
+  // `siteSettings.general.siteName`, which a client can change.
+  const { siteName } = useSiteSettings();
 
   return (
     <div className={styles.consent}>
@@ -35,7 +38,7 @@ export default function ConsentCheckbox({ checked = true, onChange, error }) {
         onChange={(event) => onChange?.(event.target.checked)}
       />
       <label htmlFor={id} className={styles.consentLabel}>
-        {CONSENT_TEXT}.
+        {fill(LEADS.consent, { siteName })}.
       </label>
       {error ? (
         <span className={styles.consentError} id={errorId} role="alert">
