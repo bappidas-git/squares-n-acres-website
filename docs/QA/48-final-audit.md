@@ -125,7 +125,7 @@ string. Both are inside the budget.
 | Sitemap coverage   | `npm run check:sitemap`  | **0 missing, 0 extra** — 145 pages crawled to depth 4, 144 indexable routes, matching the 144 URLs the sitemaps list |
 | Accessibility      | `npm run a11y:audit`     | §3.5 |
 | Prerender          | `npm run build:prerender`| **144 of 144 pages saved**, 0 failures |
-| End-to-end         | `npm run e2e`            | §3.6 |
+| End-to-end         | `npm run e2e`            | **53 passed in 1.9 min**, 0 failed |
 
 ### 3.2 Structured data — 0 errors, 36 title-length advisories
 
@@ -170,6 +170,27 @@ without reading a QA report.
 **Proved, not argued:** re-run against the correctly built bundle,
 `check:sitemap` reports **0 missing, 0 extra** over the same 144 URLs. All 26
 "extra" were the one absent environment variable.
+
+### 3.6 End-to-end — 53 specs, all passing
+
+`npm run e2e` against the running mock and the dev server, one Chromium worker
+(the specs share a database, so a second worker would make both flaky for
+reasons unrelated to the app). Node 22 here; the suite needs ≥ 20.
+
+| Measure | Result |
+| ------- | ------ |
+| Specs | **53 passed**, 0 failed |
+| Wall clock | 1 min 55 s |
+| Files | 10 (`login`, `listing-filters`, `property-details`, `property-create`, `article-publish`, `cms-page`, `lead-submit`, `seo-panel`, `settings`, `shortlist`) |
+
+Four of them are the RBAC matrix driven through the real UI rather than the API:
+a manager reads the settings and is given nothing to save with, sales reach
+neither the settings nor the users screen, only the administrator opens the users
+screen, and a sales user opens the property form read-only. That is the same
+conclusion §4.3 reaches from the route walk, arrived at independently.
+
+`settings.spec.js` is the file whose guarded `expect` this prompt replaced
+(NEW-50); it passes with the stricter unconditional assertion.
 
 ---
 
