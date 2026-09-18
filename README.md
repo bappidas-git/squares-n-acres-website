@@ -49,7 +49,7 @@ articles, SEO and site settings.
 
 ```bash
 npm install
-npm start          # mock server coming in a later step; see "Scripts" below
+npm run dev        # mock API on :4000 and the web app on :3000
 ```
 
 The app starts on <http://localhost:3000>.
@@ -62,7 +62,7 @@ template and edit the copy (`.env` is git-ignored):
 cp .env.example .env
 ```
 
-Once the mock server exists, `npm run dev` will start the API and the web app together.
+`npm start` runs the web app alone; `npm run mock` runs the API alone.
 
 ---
 
@@ -71,7 +71,7 @@ Once the mock server exists, `npm run dev` will start the API and the web app to
 | Script                          | What it does                                                      |
 | ------------------------------- | ----------------------------------------------------------------- |
 | `npm start`                     | CRA dev server on port 3000                                       |
-| `npm run dev`                   | Alias of `npm start` today; becomes "mock server + web app" later |
+| `npm run dev`                   | Mock server and web app together                                  |
 | `npm run build`                 | Production build into `build/`                                    |
 | `npm run build:ci`              | `build` with `CI=true`, so warnings fail the build                |
 | `npm test`                      | Jest in watch mode                                                |
@@ -83,7 +83,10 @@ Once the mock server exists, `npm run dev` will start the API and the web app to
 | `npm run check:traces`          | Fails when boilerplate brand traces or stray hex colours remain   |
 | `npm run check:traces:report`   | Same scan, totals only, always exits 0                            |
 | `npm run generate:brand-assets` | Re-downloads the brand PNGs into `public/brand/`                  |
-| `npm run check:all`             | `lint` + `test:ci` + `build:ci` + `check:traces`                  |
+| `npm run generate:backend-guidelines` | Regenerates `backend_developer_guidelines/` (needs the mock) |
+| `npm run check:guidelines`      | Checks the handover package covers every endpoint and model      |
+| `npm run smoke`                 | Walks the endpoint registry against a running API                |
+| `npm run check:all`             | `lint` + tests + `build:ci` + `check:traces` + `check:guidelines` |
 | `npm run eject`                 | CRA eject — not used                                              |
 
 ---
@@ -118,7 +121,9 @@ Which file is loaded is decided by Create React App: `npm start` reads `.env.dev
 
 ```
 squares-n-acres-website/
+├─ backend_developer_guidelines/  # generated handover package for the API developer
 ├─ docs/                    # project state, decisions, codebase inventory
+│  └─ backend-notes/        # the hand-written half of the handover package
 ├─ prompts/                 # the build plan: master context + one file per step
 ├─ public/                  # index.html, manifest.json, robots.txt
 │  └─ brand/                # brand PNGs (favicons, PWA icons, OG image, wordmark)
@@ -163,12 +168,66 @@ of hardcoding a logo URL, a site name or a domain.
 
 ---
 
+## Handover package
+
+`backend_developer_guidelines/` is everything the Laravel + MySQL API developer needs, and
+it is **generated** — never edited by hand:
+
+| File                                                  | What it is                                                                          |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `README.md`                                           | orientation, the one-line switch-over, the parity checklist, the support matrix     |
+| `01_API_CONTRACT.md`                                  | envelopes, errors, auth, pagination, filters, write semantics, slugs                |
+| `02_AUTH_AND_RBAC.md`                                 | the token flow and who may call what, endpoint by endpoint                          |
+| `03_ENDPOINTS.md`                                     | every endpoint: parameters, Laravel rules, a captured example, errors, side effects |
+| `04_DATA_MODELS.md`, `schema.sql`                     | every collection and field; the MySQL 8 DDL                                         |
+| `05_BUSINESS_RULES.md`                                | the formulas: search, facets, leads, dashboard, exports, guards                     |
+| `06_SEO_SITEMAP_ROBOTS.md`                            | the nine documents the API serves to crawlers                                       |
+| `07_DEPLOYMENT.md`                                    | environment, Nginx, security headers, switch-over, rollback, go-live                |
+| `08_TESTING_AND_PARITY.md`                            | how to prove the two backends answer the same                                       |
+| `postman_collection.json`, `postman_environment.json` | every endpoint as a request, with tests and saved responses                         |
+| `openapi.yaml`                                        | OpenAPI 3.1 for tooling                                                             |
+| `db.json`, `seed-mapping.md`                          | the seed, and how to import it into MySQL                                           |
+
+Regenerate it with the mock running:
+
+```bash
+npm run mock                            # terminal 1 — the examples are captured live
+npm run generate:backend-guidelines     # terminal 2
+npm run check:guidelines                # registry ↔ docs ↔ Postman ↔ OpenAPI coverage
+```
+
+The generator reads the endpoint registry, the schema and model descriptors, the enums, the
+RBAC matrix and the hand-written notes in **`docs/backend-notes/`**, then captures a real
+response for every endpoint from the running mock. It is deterministic: two runs produce no
+diff, and the only line that moves between commits is `generatedFrom: <commit>`.
+
+**To change the package, change its sources.** Prose lives in `docs/backend-notes/*.md`;
+facts live in `src/services/endpoints.js`, `src/services/schemas/`, `src/config/enums.js`
+and `mock-server/schemas/models.js`. An edit to a generated file is thrown away by the next
+run.
+
+### Parity
+
+`npm run smoke` walks the same registry the frontend calls through, against any base URL:
+
+```bash
+npm run smoke -- --baseUrl=https://api.squaresnacres.com/api
+npm run smoke -- --baseUrl=https://api.squaresnacres.com/api --compare=http://localhost:4000/api
+```
+
+`--compare` sends every read to both servers and prints only what differs — status,
+envelope keys, `meta` shape and the key set of `data`. An empty table is the signal that the
+frontend cannot tell the two backends apart.
+
+---
+
 ## Deployment
 
 The production build is a static site (`build/`) served by any web server, with client-side
-routing rewritten to `index.html`. Full deployment instructions — web-server configuration,
-API proxying for `robots.txt`/sitemaps, and the release checklist — are still to be written;
-see `docs/`.
+routing rewritten to `index.html`. Switching the site from the mock to the real API is one
+line — `REACT_APP_API_URL` in `.env.production` — and a rebuild. The full procedure, the
+Nginx server blocks, the security headers, the rollback and the go-live checklist are in
+[`backend_developer_guidelines/07_DEPLOYMENT.md`](./backend_developer_guidelines/07_DEPLOYMENT.md).
 
 ---
 

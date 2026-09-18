@@ -30,6 +30,13 @@
 
 const { allEndpoints } = require('../src/services/endpoints');
 const schemas = require('../src/services/schemas');
+const {
+  TOKEN_FOR,
+  WRITABLE,
+  groupOf,
+  isCreate,
+  sampleBody,
+} = require('./lib/guidelines/fixtures');
 
 /* ------------------------------------------------------------------ *
  * Arguments
@@ -44,6 +51,9 @@ const DEFAULTS = {
   salesEmail: 'sales@squaresnacres.com',
   salesPassword: 'Sales@123',
   verbose: false,
+  // `--compare=<url>` puts the run in comparison mode: the same reads are sent
+  // to `--baseUrl` and to this one, and only the differences are printed.
+  compare: '',
 };
 
 /** `--key=value` and bare `--flag`, with the documented defaults underneath. */
@@ -59,6 +69,7 @@ function parseArgs(argv) {
   }
 
   options.baseUrl = String(options.baseUrl).replace(/\/+$/, '');
+  options.compare = options.compare ? String(options.compare).replace(/\/+$/, '') : '';
   return options;
 }
 
@@ -126,11 +137,12 @@ const MAX_RETRY_WAIT = 65;
  *
  * @param {string} method
  * @param {string} path the path below the base URL, query string included
- * @param {{token?: string, body?: object, retry?: boolean}} [init]
+ * @param {{token?: string, body?: object, retry?: boolean, baseUrl?: string}} [init]
  * @returns {Promise<{status: number, text: string, json: object|null, headers: Headers}>}
  */
-async function api(method, path, { token, body, retry = true } = {}) {
-  const response = await fetch(`${options.baseUrl}${path}`, {
+async function api(method, path, { token, body, retry = true, baseUrl } = {}) {
+  const base = baseUrl ?? options.baseUrl;
+  const response = await fetch(`${base}${path}`, {
     method,
     headers: {
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
@@ -147,7 +159,7 @@ async function api(method, path, { token, body, retry = true } = {}) {
     const wait = Math.min(Number(response.headers.get('retry-after')) || 60, MAX_RETRY_WAIT);
     console.log(`  rate limited on ${method} ${path} — waiting ${wait}s for the window to reset`);
     await sleep((wait + 1) * 1000);
-    return api(method, path, { token, body, retry: false });
+    return api(method, path, { token, body, retry: false, baseUrl: base });
   }
 
   let json = null;
@@ -230,158 +242,16 @@ const RUN_ID = Date.now().toString(36);
 let counter = 0;
 const nextSeed = () => `${RUN_ID}${(counter += 1)}`;
 
-/** A value that satisfies one field descriptor. */
-function sampleValue(descriptor, field, seed) {
-  const pad = (text, min) => {
-    let result = text;
-    while (result.length < (min ?? 0)) result += ' test';
-    return descriptor.maxLength ? result.slice(0, descriptor.maxLength) : result;
-  };
-
-  switch (descriptor.type) {
-    case 'string':
-      // A patterned string cannot be a sentence. The only two in the contract
-      // are a page's path slug and a redirect's `fromPath`, and both are
-      // satisfied by a slug: the caller's `overrides` supply the leading slash
-      // where one is needed.
-      return descriptor.pattern
-        ? `smoke-${field.toLowerCase()}-${seed}`.replace(/[^a-z0-9-]+/g, '-')
-        : pad(`Smoke ${field} ${seed}`, descriptor.min);
-    case 'html':
-      return '<p>Created by the API smoke test; safe to delete.</p>';
-    case 'slug':
-      return `smoke-${field.toLowerCase()}-${seed}`.replace(/[^a-z0-9-]+/g, '-');
-    case 'email':
-      return `smoke.${field.toLowerCase()}.${seed}@example.com`;
-    case 'phone':
-      return '9876543210';
-    case 'url':
-      return 'https://example.com/smoke-test.png';
-    case 'int':
-    case 'number':
-      return descriptor.min ?? 1;
-    case 'bool':
-      return descriptor.default ?? false;
-    case 'enum':
-      return descriptor.default ?? descriptor.enum?.[0] ?? null;
-    case 'date':
-      return new Date().toISOString().slice(0, 10);
-    case 'datetime':
-      return new Date().toISOString();
-    case 'array':
-      return [];
-    case 'object':
-      return descriptor.shape ? sampleBody(descriptor.shape, seed) : {};
-    default:
-      return null;
-  }
-}
-
-/**
- * The smallest body a schema accepts: every required field at a valid value,
- * and nothing else — anything with a default is the server's to fill in.
- *
- * @param {object} shape a `src/services/schemas` descriptor
- * @param {number} seed makes names and e-mail addresses unique per run
- * @returns {object}
+/*
+ * `sampleValue`, `sampleBody`, `WRITABLE`, `CREATES` and `TOKEN_FOR` live in
+ * `scripts/lib/guidelines/fixtures.js`: the guidelines generator captures the
+ * documented examples with exactly the same bodies this run sends, and two
+ * copies of the same knowledge would drift.
  */
-function sampleBody(shape, seed) {
-  const body = {};
-
-  for (const [field, descriptor] of Object.entries(shape ?? {})) {
-    if (descriptor.read || descriptor.serverManaged || !descriptor.required) continue;
-    body[field] = sampleValue(descriptor, field, seed);
-  }
-
-  return body;
-}
 
 /* ------------------------------------------------------------------ *
  * The resources the walk writes to
  * ------------------------------------------------------------------ */
-
-/**
- * One entry per registry group that has writes: where to create a record, what
- * schema its body follows and what a `PATCH` may safely change.
- *
- * `overrides` carries the values a generic sample cannot invent — a foreign key
- * that has to exist, a path that has to start with a slash.
- */
-const WRITABLE = {
-  adminProperties: {
-    path: '/admin/properties',
-    schema: 'property.create',
-    overrides: () => ({ propertyTypeId: 1, location: { localityId: 1, cityId: 1 } }),
-    patch: { isFeatured: true },
-  },
-  adminLocalities: {
-    path: '/admin/localities',
-    schema: 'locality.create',
-    overrides: () => ({ cityId: 1 }),
-    patch: { order: 9 },
-  },
-  adminCities: { path: '/admin/cities', schema: 'city.create', patch: { isActive: true } },
-  adminPropertyTypes: {
-    path: '/admin/property-types',
-    schema: 'propertyType.create',
-    patch: { order: 9 },
-  },
-  adminAmenities: { path: '/admin/amenities', schema: 'amenity.create', patch: { order: 9 } },
-  adminBadges: { path: '/admin/badges', schema: 'badge.create', patch: { order: 9 } },
-  adminDevelopers: {
-    path: '/admin/developers',
-    schema: 'developer.create',
-    patch: { isFeatured: true },
-  },
-  adminBanks: { path: '/admin/banks', schema: 'bank.create', patch: { order: 9 } },
-  adminArticles: {
-    path: '/admin/articles',
-    schema: 'article.create',
-    overrides: (seed) => ({
-      title: `Smoke test article number ${seed} for the contract`,
-      categoryId: 1,
-      authorId: 1,
-    }),
-    patch: { isFeatured: true },
-  },
-  adminArticleCategories: {
-    path: '/admin/article-categories',
-    schema: 'articleCategory.create',
-    patch: { order: 9 },
-  },
-  adminArticleTags: {
-    path: '/admin/article-tags',
-    schema: 'articleTag.create',
-    patch: { name: 'Smoke tag renamed' },
-  },
-  adminAuthors: { path: '/admin/authors', schema: 'author.create', patch: { isActive: true } },
-  adminFaqs: { path: '/admin/faqs', schema: 'faq.create', patch: { order: 9 } },
-  adminTestimonials: {
-    path: '/admin/testimonials',
-    schema: 'testimonial.create',
-    patch: { isFeatured: true },
-  },
-  adminTeam: { path: '/admin/team', schema: 'teamMember.create', patch: { order: 9 } },
-  adminPartners: { path: '/admin/partners', schema: 'partner.create', patch: { order: 9 } },
-  adminPages: { path: '/admin/pages', schema: 'page.create', patch: { order: 9 } },
-  adminJobs: { path: '/admin/jobs', schema: 'job.create', patch: { isActive: true } },
-  adminMedia: {
-    path: '/admin/media',
-    schema: 'media.create',
-    // A unique address per record: media's delete guard refuses a file that
-    // something else points at (prompt 39 §5), and the sample body would give
-    // every fixture in the run the same URL.
-    overrides: (seed) => ({ url: `https://picsum.photos/seed/smoke-${seed}/1200/800` }),
-    patch: { alt: 'Smoke alt text' },
-  },
-  adminRedirects: {
-    path: '/admin/redirects',
-    schema: 'redirect.create',
-    overrides: (seed) => ({ fromPath: `/smoke-${seed}`, toPath: '/properties' }),
-    patch: { isActive: true },
-  },
-  adminUsers: { path: '/admin/users', schema: 'user.create', patch: { phone: '9876543211' } },
-};
 
 /** Ids the run created, newest first, so cleanup unwinds what it built. */
 const created = [];
@@ -458,15 +328,6 @@ const PUBLIC_CREATED = {
   },
 };
 
-/** The POSTs that answer 201: the ones that create a record (§5.8). */
-const CREATES = new Set(['adminProperties.duplicate', 'jobs.apply']);
-
-/** Whether an endpoint's success is a 201 rather than a 200. */
-const isCreate = (endpoint) =>
-  endpoint.method === 'POST' && (endpoint.key.endsWith('.create') || CREATES.has(endpoint.key));
-
-/** The token an endpoint's declared minimum role maps to. */
-const TOKEN_FOR = { public: undefined, user: 'sales', manager: 'manager', admin: 'admin' };
 
 /**
  * The plan for the endpoints whose request cannot be derived from the registry
@@ -598,9 +459,6 @@ const SMOKE_USER = {
 /* ------------------------------------------------------------------ *
  * The walk
  * ------------------------------------------------------------------ */
-
-/** The registry group an endpoint key belongs to (`adminLeads.addNote`). */
-const groupOf = (endpoint) => String(endpoint.key).split('.')[0];
 
 /** Fills `:id`, `:slug` and the other path parameters of one endpoint. */
 function resolvePath(endpoint) {
@@ -1174,10 +1032,189 @@ async function cleanup() {
 }
 
 /* ------------------------------------------------------------------ *
+ * Comparison mode (`--compare=<url>`)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Query strings the reads that need one cannot be sent without.
+ *
+ * Everything else is called bare: the registry's `example` fills the path
+ * parameters and the defaults of §5.6 do the rest.
+ */
+const COMPARE_QUERY = {
+  'properties.suggestions': '?q=whitefield',
+  'redirects.resolve': '?path=/blog',
+  'adminSeo.overview': '?type=property&perPage=5',
+  'adminLeads.exportCsv': '?status=new',
+};
+
+/** The comparable summary of one response. */
+function shapeOf(response) {
+  const { json, status, headers } = response;
+  const contentType = (headers.get('content-type') ?? '').split(';')[0].trim();
+
+  if (!isObject(json)) return { status, contentType, envelope: null, meta: null, data: null };
+
+  const first = Array.isArray(json.data) ? json.data[0] : json.data;
+
+  return {
+    status,
+    contentType,
+    envelope: Object.keys(json).sort().join(','),
+    meta: isObject(json.meta)
+      ? Object.keys(json.meta)
+          .sort()
+          .map((key) => `${key}:${Array.isArray(json.meta[key]) ? 'array' : typeof json.meta[key]}`)
+          .join(',')
+      : null,
+    data: isObject(first)
+      ? Object.keys(first).sort().join(',')
+      : Array.isArray(json.data)
+        ? 'empty list'
+        : json.data === null
+          ? 'null'
+          : json.data === undefined
+            ? 'absent'
+            : typeof json.data,
+  };
+}
+
+/** What `a` has that `b` does not, as a readable list. */
+const onlyIn = (a, b) => {
+  const right = new Set(String(b ?? '').split(','));
+  return String(a ?? '')
+    .split(',')
+    .filter((key) => key !== '' && !right.has(key));
+};
+
+/**
+ * Sends every read to both servers and prints what differs.
+ *
+ * Only reads: the two servers hold different rows, and firing the same write at
+ * both would leave two different databases behind. Writes are covered by
+ * running the whole walk against each server in turn.
+ *
+ * Values are never compared, only shapes — the two databases legitimately
+ * disagree about every `updatedAt`, and a diff full of those hides the one
+ * difference that matters.
+ */
+async function compareRun() {
+  const [left, right] = [options.baseUrl, options.compare];
+  console.log(`Comparing\n  A: ${left}\n  B: ${right}\n`);
+
+  const sessions = {};
+  for (const [role, email, password] of [
+    ['admin', options.email, options.password],
+    ['manager', options.managerEmail, options.managerPassword],
+    ['sales', options.salesEmail, options.salesPassword],
+  ]) {
+    const a = await api('POST', '/auth/login', { body: { email, password }, baseUrl: left });
+    const b = await api('POST', '/auth/login', { body: { email, password }, baseUrl: right });
+    if (a.status !== 200 || b.status !== 200) {
+      throw new Error(
+        `Cannot sign in as ${role}: A answered ${a.status}, B answered ${b.status}. ` +
+          'Both servers need the same accounts before they can be compared.'
+      );
+    }
+    sessions[role] = { a: a.json?.data?.token, b: b.json?.data?.token };
+  }
+
+  const differences = [];
+  const reads = allEndpoints().filter((endpoint) => endpoint.method === 'GET');
+  let identical = 0;
+
+  for (const endpoint of reads) {
+    const role = TOKEN_FOR[endpoint.auth];
+    const path = `${resolvePath(endpoint)}${COMPARE_QUERY[endpoint.key] ?? ''}`;
+    const session = role ? sessions[role] : { a: undefined, b: undefined };
+
+    // eslint-disable-next-line no-await-in-loop -- the walk is a sequence on purpose
+    const [a, b] = await Promise.all([
+      api('GET', path, { token: session.a, baseUrl: left }),
+      api('GET', path, { token: session.b, baseUrl: right }),
+    ]);
+
+    const [shapeA, shapeB] = [shapeOf(a), shapeOf(b)];
+    const found = [];
+
+    if (shapeA.status !== shapeB.status) found.push(`status ${shapeA.status} vs ${shapeB.status}`);
+    if (shapeA.contentType !== shapeB.contentType) {
+      found.push(`content-type ${shapeA.contentType || '—'} vs ${shapeB.contentType || '—'}`);
+    }
+    if (shapeA.envelope !== shapeB.envelope) {
+      if (!shapeB.envelope) found.push('no JSON envelope at all — §5.2 wants { data, … }');
+      else if (!shapeA.envelope) found.push('an envelope where A sends none');
+      else {
+        const missing = onlyIn(shapeA.envelope, shapeB.envelope);
+        const extra = onlyIn(shapeB.envelope, shapeA.envelope);
+        found.push(
+          `envelope${missing.length ? ` missing ${missing.join(', ')}` : ''}${extra.length ? ` extra ${extra.join(', ')}` : ''}`
+        );
+      }
+    }
+
+    // A response with no envelope at all has no `meta` and no `data` to compare
+    // either; saying so once is more use than sixty key names underneath it.
+    const noEnvelope = shapeA.envelope !== shapeB.envelope && (!shapeA.envelope || !shapeB.envelope);
+
+    if (!noEnvelope && shapeA.meta !== shapeB.meta) {
+      found.push(`meta ${shapeA.meta ?? 'none'} vs ${shapeB.meta ?? 'none'}`);
+    }
+    if (!noEnvelope && shapeA.data !== shapeB.data) {
+      const missing = onlyIn(shapeA.data, shapeB.data);
+      const extra = onlyIn(shapeB.data, shapeA.data);
+      found.push(
+        missing.length || extra.length
+          ? `data${missing.length ? ` missing ${missing.join(', ')}` : ''}${extra.length ? ` extra ${extra.join(', ')}` : ''}`
+          : `data ${shapeA.data} vs ${shapeB.data}`
+      );
+    }
+
+    if (found.length === 0) identical += 1;
+    else differences.push({ key: endpoint.key, path, difference: found.join('; ') });
+
+    if (options.verbose) {
+      console.log(`${found.length === 0 ? 'same' : 'DIFF'} GET ${path}`);
+    }
+  }
+
+  if (differences.length === 0) {
+    console.log(`${identical}/${reads.length} reads answer the same shape. No differences.`);
+    return;
+  }
+
+  const widths = [
+    Math.max(3, ...differences.map((row) => row.key.length)),
+    Math.max(4, ...differences.map((row) => row.path.length)),
+  ];
+  console.log(
+    `${'key'.padEnd(widths[0])} | ${'path'.padEnd(widths[1])} | difference\n` +
+      `${'-'.repeat(widths[0])}-+-${'-'.repeat(widths[1])}-+-${'-'.repeat(11)}`
+  );
+  for (const row of differences) {
+    console.log(`${row.key.padEnd(widths[0])} | ${row.path.padEnd(widths[1])} | ${row.difference}`);
+  }
+
+  console.log(
+    `\n${identical}/${reads.length} reads answer the same shape; ` +
+      `${differences.length} differ.\n` +
+      'Fix them in this order: status first (something is missing), then the ' +
+      'envelope (something is shaped wrong), then the `data` keys (something is ' +
+      'named wrong).'
+  );
+  process.exitCode = 1;
+}
+
+/* ------------------------------------------------------------------ *
  * Main
  * ------------------------------------------------------------------ */
 
 async function main() {
+  if (options.compare) {
+    await compareRun();
+    return;
+  }
+
   console.log(`Smoke testing ${options.baseUrl}\n`);
 
   await setup();
