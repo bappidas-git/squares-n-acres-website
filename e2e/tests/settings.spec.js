@@ -55,9 +55,12 @@ test.describe('site settings', () => {
     // §5.8: a settings save deep-merges — the branches it did not mention are
     // still there afterwards.
     const after = (await (await adminApi.get(`${API_URL}/admin/settings`)).json()).data;
-    for (const branch of ['contact', 'hero', 'navigation', 'social', 'footer', 'integrations']) {
-      if (original[branch] !== undefined) expect(after[branch]).toBeDefined();
-    }
+    const BRANCHES = ['contact', 'hero', 'navigation', 'social', 'footer', 'integrations'];
+    const present = (settings) => BRANCHES.filter((branch) => settings[branch] !== undefined);
+    // Comparing the two lists rather than asserting each branch under a guard:
+    // a guarded assertion inside a loop can quietly assert nothing, and this
+    // also catches a branch the save *invented*.
+    expect(present(after)).toEqual(present(original));
     expect(after.general.siteName).toBe(original.general.siteName);
 
     // The public site reads the same record.

@@ -31,7 +31,9 @@ test.describe('the shortlist', () => {
     const heart = page.getByRole('button', { name: `Save to shortlist — ${TITLE}` });
     await heart.click();
 
-    await expect(page.getByRole('button', { name: `Remove from shortlist — ${TITLE}` })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: `Remove from shortlist — ${TITLE}` })
+    ).toBeVisible();
     expect(await stored(page)).toHaveLength(1);
 
     await page.goto('/shortlist');
@@ -41,7 +43,9 @@ test.describe('the shortlist', () => {
   test('removes it again, from either end', async ({ page }) => {
     await page.goto(`/properties/${SLUG}`);
     await page.getByRole('button', { name: `Save to shortlist — ${TITLE}` }).click();
-    await expect(page.getByRole('button', { name: `Remove from shortlist — ${TITLE}` })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: `Remove from shortlist — ${TITLE}` })
+    ).toBeVisible();
 
     await page.goto('/shortlist');
     await page.getByRole('button', { name: `Remove from shortlist — ${TITLE}` }).click();
@@ -53,10 +57,14 @@ test.describe('the shortlist', () => {
   test('survives a reload, because it is the visitor’s own storage', async ({ page }) => {
     await page.goto(`/properties/${SLUG}`);
     await page.getByRole('button', { name: `Save to shortlist — ${TITLE}` }).click();
-    await expect(page.getByRole('button', { name: `Remove from shortlist — ${TITLE}` })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: `Remove from shortlist — ${TITLE}` })
+    ).toBeVisible();
 
     await page.reload();
-    await expect(page.getByRole('button', { name: `Remove from shortlist — ${TITLE}` })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: `Remove from shortlist — ${TITLE}` })
+    ).toBeVisible();
   });
 
   test('keeps several properties in the order they were saved (§7 `ids`)', async ({ page }) => {

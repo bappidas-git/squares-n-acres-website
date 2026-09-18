@@ -513,6 +513,14 @@ async function crawl(browsers, paths) {
       window.__SNA_PRERENDER__ = true;
     });
     await page.setViewport({ width: 1280, height: 1600 });
+    // A counted statistic animates from 0 to its value over ~2 s of animation
+    // frames, and a headless crawl does not reliably grant a second one — so
+    // every figure on the page was being saved as `0` (NEW-30). `useCountUp`
+    // already jumps straight to the end value under `prefers-reduced-motion`,
+    // which is exactly the right answer for a snapshot: the HTML a scraper
+    // receives should carry the number, not the first frame of a count. A real
+    // visitor is unaffected; this emulation exists only inside the crawl.
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
 
     try {
       for (;;) {

@@ -51,9 +51,9 @@ test.describe('submitting a lead', () => {
     await form.getByRole('button', { name: 'Send enquiry' }).click();
 
     // The form replaces itself with its success state rather than reloading.
-    await expect(
-      form.getByText(/request received|advisor will get back/i).first()
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(form.getByText(/request received|advisor will get back/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     const listed = await adminApi.get(`${API_URL}/admin/leads`, {
       params: { q: PHONE, perPage: 'all' },
@@ -125,7 +125,10 @@ test.describe('submitting a lead', () => {
     }
 
     // What the visitor does and what their credit is are chip rows, not selects.
-    await finance.getByRole('group', { name: 'What do you do?' }).getByRole('button', { name: 'Salaried' }).click();
+    await finance
+      .getByRole('group', { name: 'What do you do?' })
+      .getByRole('button', { name: 'Salaried' })
+      .click();
     await finance
       .getByRole('group', { name: 'Credit score' })
       .getByRole('button', { name: /Excellent/ })
@@ -135,7 +138,10 @@ test.describe('submitting a lead', () => {
         (response) => response.url().endsWith('/leads') && response.request().method() === 'POST',
         { timeout: 20_000 }
       ),
-      finance.getByRole('button', { name: /check|assess|see|eligib/i }).first().click(),
+      finance
+        .getByRole('button', { name: /check|assess|see|eligib/i })
+        .first()
+        .click(),
     ]);
 
     expect(created.status()).toBe(201);
@@ -204,7 +210,9 @@ test.describe('submitting a lead', () => {
       propertyId: 1,
       consent: true,
     };
-    expect([200, 201]).toContain((await adminApi.post(`${API_URL}/leads`, { data: body })).status());
+    expect([200, 201]).toContain(
+      (await adminApi.post(`${API_URL}/leads`, { data: body })).status()
+    );
     expect([200, 201]).toContain(
       (await adminApi.post(`${API_URL}/leads`, { data: { ...body, message: 'again' } })).status()
     );

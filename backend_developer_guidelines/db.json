@@ -23006,7 +23006,7 @@
       "name": "Ready to Move",
       "slug": "ready-to-move",
       "color": "success",
-      "icon": "mdi:home-check-outline",
+      "icon": "mdi:home-city-outline",
       "isActive": true,
       "order": 3,
       "createdAt": "2026-03-20T14:30:00.000Z",

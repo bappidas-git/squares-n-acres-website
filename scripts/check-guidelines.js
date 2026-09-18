@@ -203,20 +203,40 @@ function main() {
     }
   );
 
-  /* 5 — the examples were captured */
-  const uncaptured = endpoints.filter((endpoint) => {
-    const section = sectionOf(endpointsDoc, `### ${endpoint.method} ${endpoint.path}\n`);
-    return section.includes('No example was captured');
-  });
+  /* 5 — the examples were captured
+   *
+   * Two absences read alike in the document and are not alike at all
+   * (`lib/guidelines/documents.js`):
+   *
+   *   "No example was captured for this endpoint." — the generator ran with no
+   *     capture, or the capture failed. A hole. This is what fails the check.
+   *   "Not captured: <reason>."                   — a deliberate, explained
+   *     skip: a write aimed at a throwaway fixture the run then deleted, so
+   *     printing the request would document a lead, an application or a
+   *     password change that no longer exists (prompt 47's capture decision).
+   *
+   * Only the first is a defect — but the count has to say so, or the line reads
+   * "captured examples (242)" while three endpoints carry no payload, which is
+   * the checker overstating its own coverage. */
+  const sections = endpoints.map((endpoint) => ({
+    endpoint,
+    section: sectionOf(endpointsDoc, `### ${endpoint.method} ${endpoint.path}\n`),
+  }));
+
+  const holes = sections.filter(({ section }) => section.includes('No example was captured'));
+  const explained = sections.filter(({ section }) => /_Not captured: [^_]+\._/.test(section));
+  const captured = endpoints.length - holes.length - explained.length;
+
   check(
-    `captured examples (${endpoints.length})`,
-    uncaptured.length === 0,
-    uncaptured.length === 0
-      ? ''
-      : `${uncaptured.length} endpoint(s) have no example — run the generator with the mock up: ` +
-          uncaptured
+    `captured examples (${captured} captured, ${explained.length} explained skip` +
+      `${explained.length === 1 ? '' : 's'}, of ${endpoints.length})`,
+    holes.length === 0,
+    holes.length === 0
+      ? explained.map(({ endpoint }) => endpoint.key).join(', ')
+      : `${holes.length} endpoint(s) have no example — run the generator with the mock up: ` +
+          holes
             .slice(0, 8)
-            .map((endpoint) => endpoint.key)
+            .map(({ endpoint }) => endpoint.key)
             .join(', ')
   );
 
