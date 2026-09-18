@@ -55,22 +55,31 @@ const listVariables = () => VARIABLES.map((variable) => ({ ...variable }));
  * Removes the punctuation an unresolved variable leaves behind (§9.5).
  *
  * `"– | Squares N Acres"` is `"Squares N Acres"`; `"Properties in , Bengaluru"`
- * is `"Properties in Bengaluru"`.
+ * is `"Properties in Bengaluru"`; `"3 BHK in Whitefield, – Squares N Acres"` is
+ * `"3 BHK in Whitefield – Squares N Acres"` (NEW-39): a variable that resolved
+ * to nothing between a comma and the separator leaves the comma leaning on the
+ * separator, which no editor typed and no result should show.
  *
  * @param {string} text
  * @returns {string}
  */
 function cleanTitle(text) {
-  return String(text ?? '')
-    .replace(/%\w+%/g, '')
-    .replace(/\s+/g, ' ')
-    .replace(/\s+([,;:])/g, '$1')
-    .replace(/([,–—|])\s*\1/g, '$1')
-    .replace(/\b(in|at|for|near|from|on|by)\s*,\s*/gi, '$1 ')
-    .replace(/[|–—-]\s*(?=[|–—])/g, '')
-    .replace(/^[\s,\-–—|:]+|[\s,\-–—|:]+$/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return (
+    String(text ?? '')
+      .replace(/%\w+%/g, '')
+      .replace(/\s+/g, ' ')
+      .replace(/\s+([,;:])/g, '$1')
+      .replace(/([,–—|])\s*\1/g, '$1')
+      .replace(/\b(in|at|for|near|from|on|by)\s*,\s*/gi, '$1 ')
+      // A comma, semicolon or colon standing immediately in front of a separator.
+      // The separator must be surrounded by space so that "₹1,20,000-₹1,50,000"
+      // and "Whitefield, Bengaluru" are left exactly as they are.
+      .replace(/([,;:])(\s+[|–—-]\s)/g, '$2')
+      .replace(/[|–—-]\s*(?=[|–—])/g, '')
+      .replace(/^[\s,\-–—|:]+|[\s,\-–—|:]+$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
 }
 
 /**

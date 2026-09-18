@@ -67,17 +67,30 @@ export default function EntityPicker({
   selectedRecords.forEach((record) => knownRef.current.set(String(record.id), record));
   results.forEach((record) => knownRef.current.set(String(record.id), record));
 
-  const ids = useMemo(
-    () =>
-      multiple
-        ? Array.isArray(value)
-          ? value
-          : []
-        : value === null || value === undefined
-          ? []
-          : [value],
-    [multiple, value]
-  );
+  const ids = useMemo(() => {
+    const raw = multiple
+      ? Array.isArray(value)
+        ? value
+        : []
+      : value === null || value === undefined
+        ? []
+        : [value];
+
+    // A repeated id is never what an editor meant, and it is not something the
+    // list below can draw: `SortableList` and the chip row both key on the id,
+    // so two of them collide and React keeps only the first — a row that
+    // disappears on the next reorder (NEW-38). `add()` refuses a duplicate it
+    // is asked for, but a value that arrives from outside — a record saved by
+    // an older build, a paste into the form state — has never been through it.
+    // First occurrence wins, so the editor's order survives.
+    const seen = new Set();
+    return raw.filter((entry) => {
+      const key = String(entry);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [multiple, value]);
 
   const full = typeof max === 'number' && ids.length >= max;
 

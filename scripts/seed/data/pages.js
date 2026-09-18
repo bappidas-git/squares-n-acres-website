@@ -1407,7 +1407,7 @@ module.exports = function pages({ stamps, media, lookup }) {
                 icon: 'mdi:clipboard-check-outline',
                 title: 'Documents checklist',
                 summary: 'What to collect, in order.',
-                html: '<p>Title chain and encumbrance certificate, khata and tax receipts, approved plan and commencement certificate, occupancy certificate for a completed building, and the association no-dues for a resale flat.</p><p>Read the full guide: <a href="/insights/articles/first-time-homebuyer-checklist-bengaluru">the first-time buyer checklist</a>.</p>',
+                html: '<p>Title chain and encumbrance certificate, khata and tax receipts, approved plan and commencement certificate, occupancy certificate for a completed building, and the association no-dues for a resale flat.</p><p>The khata is the one buyers most often get wrong: <a href="/insights/articles/bbmp-a-khata-vs-b-khata-explained">A khata and B khata explained</a>.</p>',
               },
             ],
           },

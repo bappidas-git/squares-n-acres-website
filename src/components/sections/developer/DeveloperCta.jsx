@@ -12,9 +12,9 @@ import styles from './DeveloperSections.module.css';
  * The lead is filed with the canonical source `developer-page`, the page it was
  * sent from and a message that already names the builder, so the sales desk
  * opens it knowing what the visitor was reading. The page is carried in both
- * fields §6.7 has for it: `pageSlug` is a slug and not a path, so it holds the
- * builder's own slug — `/builders/aurelia-estates` is a 422 — and `pageUrl`
- * holds the address the seed's own developer-page leads carry.
+ * fields §6.7 has for it: `pageSlug` holds the builder's own slug — it is a
+ * slug or a slug path, never a URL, so a leading `/` is still a 422 — and
+ * `pageUrl` holds the address the seed's own developer-page leads carry.
  *
  * @param {object} props
  * @param {object} props.developer a §6.5 record

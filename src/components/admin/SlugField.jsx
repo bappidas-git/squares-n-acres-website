@@ -128,6 +128,14 @@ export default function SlugField({
   );
 
   useEffect(() => {
+    // A read-only field cannot change its value, so whether the slug is free
+    // is not a question worth asking — and `check-slug` belongs to the area's
+    // `create` permission (§7), so a role that opens the form read-only is
+    // answered 403 and the browser logs it (MB-01).
+    if (disabled) {
+      setStatus({ state: 'idle' });
+      return undefined;
+    }
     // A half-typed slug (`whitefield-`) is not a slug the API can answer about,
     // so the question waits until the value is one.
     if (!value || toSlug(value) !== value) {
@@ -142,7 +150,7 @@ export default function SlugField({
       clearTimeout(timer);
       abort?.();
     };
-  }, [value, check, toSlug]);
+  }, [value, check, toSlug, disabled]);
 
   const edit = (next) => {
     setLocked(false);
