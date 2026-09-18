@@ -113,7 +113,8 @@ test.describe('writing and publishing an article', () => {
     // "published" means (§5.10).
     await expect
       .poll(
-        async () => (await (await adminApi.get(`${API_URL}/admin/articles/${id}`)).json()).data.status,
+        async () =>
+          (await (await adminApi.get(`${API_URL}/admin/articles/${id}`)).json()).data.status,
         { timeout: 20_000 }
       )
       .toBe('published');
@@ -125,9 +126,9 @@ test.describe('writing and publishing an article', () => {
 
     /* ---- And in the index ---- */
     await page.goto('/insights/articles');
-    await expect(page.getByRole('link', { name: new RegExp(`Guide ${STAMP}`) }).first()).toBeVisible(
-      { timeout: 20_000 }
-    );
+    await expect(
+      page.getByRole('link', { name: new RegExp(`Guide ${STAMP}`) }).first()
+    ).toBeVisible({ timeout: 20_000 });
   });
 
   test('a manager may write one; a sales user may not reach the screen', async ({

@@ -633,6 +633,24 @@ function renderMarkdown(report) {
  * Main
  * ------------------------------------------------------------------ */
 
+/**
+ * Accepts the browser's own "Leave site?" confirmation.
+ *
+ * `useUnsavedChanges` registers a `beforeunload` handler, and the route list
+ * below includes the admin edit forms (`adminArticleEdit`, `adminPageEdit`,
+ * `adminPropertyEdit`, …). Puppeteer does not dismiss a dialog by itself: the
+ * dialog stays up, `page.goto` never resolves, and every later navigation on
+ * that page queues behind it — so the audit hung on the article edit form and
+ * stayed hung, with no output, for as long as anybody let it run. Accepting is
+ * what a person clicking "Leave" does; the guard itself is correct behaviour
+ * and is what stops an editor losing a half-written article.
+ */
+function acceptLeaveDialogs(page) {
+  page.on('dialog', (dialog) => {
+    dialog.accept().catch(() => {});
+  });
+}
+
 async function main() {
   if (!hasChrome()) {
     console.log('a11y audit: skipped — no Chrome. Set CHROME_PATH to run it.');
@@ -682,6 +700,10 @@ async function main() {
   /** A tab at this width, ready to be audited in. */
   const openPage = async (width) => {
     const tab = await browser.newPage();
+    // Every tab needs the listener, and a recycled tab is a new tab: hanging
+    // it here rather than beside one `newPage` call is what keeps the fortieth
+    // route from meeting an unhandled "Leave site?" dialog.
+    acceptLeaveDialogs(tab);
     const isPhone = width < 900;
     await tab.setViewport({
       width,
@@ -750,6 +772,7 @@ async function main() {
     // The keyboard pass, on one width: a focus ring does not change with the
     // viewport, and thirty stops on every page would double the run.
     const page = await browser.newPage();
+    acceptLeaveDialogs(page);
     await page.setViewport({ width: 1280, height: 900 });
     const needsSession = FOCUS_ROUTES.some((route) => route.startsWith('/admin'));
     if (needsSession && adminPaths.length) await signIn(page);

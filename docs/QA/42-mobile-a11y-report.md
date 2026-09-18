@@ -158,10 +158,14 @@ not have.
   `scrollTo({ left: clientWidth, behavior: 'instant' })`, read back, restore —
   with the `instant` answering the one objection raised against that measure,
   that `global.css` sets `scroll-behavior: smooth` and a smooth scroll would be
-  read back before it happened. It is also the more correct measure on this
-  site: `global.css` sets `html, body { overflow-x: clip }`, so an element that
-  escapes the viewport is *clipped* rather than reachable, and the geometric
-  test would have failed a page that does not move. Main's probe stands.
+  read back before it happened. Main's probe stands, because a checker is not
+  worth forking over a measure already in the tree that reads the symptom
+  directly. One argument made for it here earlier — that
+  `html, body { overflow-x: clip }` leaves an escaping element *clipped* rather
+  than reachable — **was wrong**, and prompt 48's 378-page run disproved it:
+  `/admin/properties` really does move, `window.scrollX` reaching 721 px with
+  `body`, the sidebar and the `<h1>` going with it (NEW-53). Both measures would
+  have caught that one; the probe is the shorter road.
 - **The label-in-name check compared a name against the whole subtree.**
   `announcedText` is right for computing a name and, on the face of it, wrong
   for reading a *visible label*: the gallery stage holds three buttons of its

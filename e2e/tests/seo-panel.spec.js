@@ -26,9 +26,7 @@ test.describe('the SEO panel', () => {
   let original = null;
 
   test.beforeEach(async ({ adminApi }) => {
-    const record = await (
-      await adminApi.get(`${API_URL}/admin/properties/${PROPERTY_ID}`)
-    ).json();
+    const record = await (await adminApi.get(`${API_URL}/admin/properties/${PROPERTY_ID}`)).json();
     original = record.data;
   });
 
@@ -73,9 +71,8 @@ test.describe('the SEO panel', () => {
       )
       .toBe(KEYWORD);
 
-    const after = (
-      await (await adminApi.get(`${API_URL}/admin/properties/${PROPERTY_ID}`)).json()
-    ).data;
+    const after = (await (await adminApi.get(`${API_URL}/admin/properties/${PROPERTY_ID}`)).json())
+      .data;
 
     expect(after.seo.title).toBe(SEO_TITLE);
     // §9.6: the score and its band are stored with the analysis, so the
@@ -126,10 +123,7 @@ test.describe('the SEO panel', () => {
     });
   });
 
-  test('a manager may use the panel; sales cannot open the dashboard', async ({
-    page,
-    signIn,
-  }) => {
+  test('a manager may use the panel; sales cannot open the dashboard', async ({ page, signIn }) => {
     await signIn('manager');
     await page.goto('/admin/seo');
     await expect(page.getByRole('heading', { name: 'SEO dashboard', level: 1 })).toBeVisible();

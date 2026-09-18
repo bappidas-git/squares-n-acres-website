@@ -1,7 +1,7 @@
 {
   "name": "squares-n-acres-website",
   "description": "Squares N Acres — Bengaluru real-estate portal (public website + admin panel)",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": true,
   "engines": {
     "node": ">=18.18",
@@ -29,7 +29,6 @@
     "@tiptap/react": "3.31.3",
     "@tiptap/starter-kit": "3.31.3",
     "axios": "^1.13.5",
-    "date-fns": "4.4.0",
     "dompurify": "3.4.15",
     "framer-motion": "^12.34.0",
     "react": "^18.2.0",
@@ -69,19 +68,20 @@
     "test:mock": "cd mock-server && node --test",
     "test:scripts": "node --test \"scripts/__tests__/**/*.test.js\"",
     "eject": "react-scripts eject",
-    "lint": "eslint \"src/**/*.{js,jsx}\" \"mock-server/**/*.js\" \"scripts/**/*.js\" --max-warnings=0 && node scripts/check-endpoints.js",
-    "lint:fix": "eslint \"src/**/*.{js,jsx}\" \"mock-server/**/*.js\" \"scripts/**/*.js\" --fix",
-    "format": "prettier --write \"src/**/*.{js,jsx,css,json}\" \"mock-server/**/*.js\" \"scripts/**/*.js\" \"docs/**/*.md\"",
-    "format:check": "prettier --check \"src/**/*.{js,jsx,css,json}\" \"mock-server/**/*.js\" \"scripts/**/*.js\"",
+    "lint": "eslint \"src/**/*.{js,jsx}\" \"mock-server/**/*.js\" \"scripts/**/*.js\" \"e2e/**/*.js\" playwright.config.js --max-warnings=0 && node scripts/check-endpoints.js",
+    "lint:fix": "eslint \"src/**/*.{js,jsx}\" \"mock-server/**/*.js\" \"scripts/**/*.js\" \"e2e/**/*.js\" playwright.config.js --fix",
+    "format": "prettier --write \"src/**/*.{js,jsx,css,json}\" \"mock-server/**/*.js\" \"scripts/**/*.js\" \"e2e/**/*.js\" \"docs/**/*.md\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,css,json}\" \"mock-server/**/*.js\" \"scripts/**/*.js\" \"e2e/**/*.js\"",
     "check:traces": "node scripts/check-traces.js",
     "check:traces:report": "node scripts/check-traces.js --report",
     "validate:seed": "node scripts/validate-seed.js",
     "seed:build": "node scripts/seed/build-seed.js",
     "generate:brand-assets": "node scripts/fetch-brand-assets.js",
     "generate:backend-guidelines": "node scripts/generate-backend-guidelines.js",
-    "check:all": "npm run lint && npm run test:ci && npm run test:mock && npm run test:scripts && npm run build:ci && npm run check:traces && npm run validate:seed && npm run check:contrast && npm run check:guidelines",
+    "check:all": "npm run lint && npm run test:ci && npm run test:mock && npm run test:scripts && npm run build:ci && npm run check:traces && npm run validate:seed && npm run check:contrast && npm run check:guidelines && npm run check:env",
     "check:contrast": "node scripts/contrast-check.js",
     "check:endpoints": "node scripts/check-endpoints.js",
+    "check:env": "node scripts/check-env-example.js",
     "check:guidelines": "node scripts/check-guidelines.js",
     "check:links": "node scripts/check-links.js",
     "check:sitemap": "node scripts/check-sitemap-coverage.js",
@@ -154,6 +154,37 @@
         },
         "rules": {
           "no-console": "off"
+        }
+      },
+      {
+        "files": [
+          "e2e/**/*.js",
+          "playwright.config.js"
+        ],
+        "env": {
+          "node": true
+        },
+        "rules": {
+          "no-console": "off",
+          "testing-library/await-async-queries": "off",
+          "testing-library/await-async-utils": "off",
+          "testing-library/no-await-sync-queries": "off",
+          "testing-library/no-container": "off",
+          "testing-library/no-debugging-utils": "off",
+          "testing-library/no-dom-import": "off",
+          "testing-library/no-node-access": "off",
+          "testing-library/no-promise-in-fire-event": "off",
+          "testing-library/no-render-in-setup": "off",
+          "testing-library/no-unnecessary-act": "off",
+          "testing-library/no-wait-for-multiple-assertions": "off",
+          "testing-library/no-wait-for-side-effects": "off",
+          "testing-library/no-wait-for-snapshot": "off",
+          "testing-library/prefer-find-by": "off",
+          "testing-library/prefer-presence-queries": "off",
+          "testing-library/prefer-query-by-disappearance": "off",
+          "testing-library/prefer-screen-queries": "off",
+          "testing-library/render-result-naming-convention": "off",
+          "no-empty-pattern": "off"
         }
       }
     ]
