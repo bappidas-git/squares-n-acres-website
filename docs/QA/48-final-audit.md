@@ -124,7 +124,7 @@ string. Both are inside the budget.
 | Link check         | `npm run check:links`    | **144 pages opened, 143 internal links followed, 0 broken** |
 | Sitemap coverage   | `npm run check:sitemap`  | **0 missing, 0 extra** — 145 pages crawled to depth 4, 144 indexable routes, matching the 144 URLs the sitemaps list |
 | Accessibility      | `npm run a11y:audit`     | §3.5 |
-| Prerender          | `npm run build:prerender`| §6 |
+| Prerender          | `npm run build:prerender`| **144 of 144 pages saved**, 0 failures |
 | End-to-end         | `npm run e2e`            | §3.6 |
 
 ### 3.2 Structured data — 0 errors, 36 title-length advisories
@@ -314,7 +314,57 @@ including *why* the server has to be stopped first.
 
 ## 6. Prerender
 
-_Filled in from the run below._
+Chromium was available, so this ran for real rather than being documented and
+skipped.
+
+```
+npm run mock                                                          # terminal 1
+REACT_APP_API_URL=http://localhost:4000/api npm run build:prerender   # terminal 2
+```
+
+| Measure | Result |
+| ------- | ------ |
+| Pages prerendered | **144 of 144** — "Every page was saved." |
+| Failures | **0** |
+| Exit code | **0** |
+| Concurrency | 3 browsers, one page each (the script's default) |
+| `index.html` files in `build/` | 144 |
+| `build/index.spa.html` | written — the SPA fallback of `docs/PERFORMANCE.md` §5.4 |
+| Server | reused the `serve:build` already on port 5000 |
+
+`REACT_APP_API_URL` has to be on the command line: `build:prerender` runs
+`npm run build` first, and that build reads `.env.production`, which is not
+committed (§3.1 above).
+
+### 6.1 NEW-30 is fixed, and the prerendered HTML proves it
+
+The reason to run this rather than take prompt 46's word for it. Before this
+prompt, every counted statistic was saved as `0`: `useCountUp` animates over
+animation frames and a headless crawl does not reliably grant a second one.
+`scripts/prerender.js` now emulates `prefers-reduced-motion: reduce`, which
+`useCountUp` answers by jumping straight to the end value.
+
+Read off disk from `build/builders/aurelia-estates/index.html`, against the
+seed's own record:
+
+| Statistic | Seed value | In the prerendered HTML |
+| --------- | ---------: | ----------------------: |
+| `totalProjects` | 26 | **26** |
+| `ongoingProjects` | 5 | **5** |
+| `completedProjects` | 21 | **21** |
+| `establishedYear` | 2004 | **2004** (a label, never counted) |
+
+Each of the first three would have read `0` before the fix. A real visitor still
+sees the count animate — the emulation exists only inside the crawl.
+
+### 6.2 Without Chrome
+
+The step is optional by design (D16): `puppeteer-core` downloads no browser, so
+on a machine with none the script exits 1 with
+`Set CHROME_PATH to run the prerender (optional step).` and **`npm run build`
+keeps working**. `CHROME_PATH` wins when set; otherwise the usual install
+locations of all three platforms are tried, including a per-user Chrome under
+`LOCALAPPDATA` and Edge on Windows.
 
 ---
 
