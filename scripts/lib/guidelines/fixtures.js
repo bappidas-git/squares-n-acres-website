@@ -1,0 +1,226 @@
+/**
+ * Sample request bodies and the resources a walk of the registry writes to.
+ *
+ * Two callers need exactly the same knowledge and must not hold two copies of
+ * it: `scripts/smoke-api.js`, which exercises every endpoint, and
+ * `scripts/lib/guidelines/capture.js`, which records a real request and its
+ * real response for `backend_developer_guidelines/03_ENDPOINTS.md`.
+ *
+ * The two differ only in what they need to be true of the values: the smoke
+ * test wants them unique per run, the generator wants them identical on every
+ * run so that regeneration produces no diff. Both come from the caller —
+ * `seed` and `now` are arguments, never `Date.now()`.
+ */
+
+/**
+ * A value that satisfies one field descriptor.
+ *
+ * @param {object} descriptor a `src/services/schemas` field descriptor
+ * @param {string} field the field's name, which flavours the sample
+ * @param {string} seed makes the sample unique when the caller needs it to be
+ * @param {{now?: string}} [options] the ISO instant dates are sampled from
+ * @returns {*} a value the validator accepts
+ */
+function sampleValue(descriptor, field, seed, options = {}) {
+  const now = options.now ?? new Date().toISOString();
+  const pad = (text, min) => {
+    let result = text;
+    while (result.length < (min ?? 0)) result += ' test';
+    return descriptor.maxLength ? result.slice(0, descriptor.maxLength) : result;
+  };
+
+  switch (descriptor.type) {
+    case 'string':
+      // A patterned string cannot be a sentence. The only two in the contract
+      // are a page's path slug and a redirect's `fromPath`, and both are
+      // satisfied by a slug: the caller's `overrides` supply the leading slash
+      // where one is needed.
+      return descriptor.pattern
+        ? `smoke-${field.toLowerCase()}-${seed}`.replace(/[^a-z0-9-]+/g, '-')
+        : pad(`Smoke ${field} ${seed}`, descriptor.min);
+    case 'html':
+      return '<p>Created by the API smoke test; safe to delete.</p>';
+    case 'slug':
+      return `smoke-${field.toLowerCase()}-${seed}`.replace(/[^a-z0-9-]+/g, '-');
+    case 'email':
+      return `smoke.${field.toLowerCase()}.${seed}@example.com`;
+    case 'phone':
+      return '9876543210';
+    case 'url':
+      return 'https://example.com/smoke-test.png';
+    case 'int':
+    case 'number':
+      return descriptor.min ?? 1;
+    case 'bool':
+      return descriptor.default ?? false;
+    case 'enum':
+      return descriptor.default ?? descriptor.enum?.[0] ?? null;
+    case 'date':
+      return now.slice(0, 10);
+    case 'datetime':
+      return now;
+    case 'array':
+      return [];
+    case 'object':
+      return descriptor.shape ? sampleBody(descriptor.shape, seed, options) : {};
+    default:
+      return null;
+  }
+}
+
+/**
+ * The smallest body a schema accepts: every required field at a valid value,
+ * and nothing else — anything with a default is the server's to fill in.
+ *
+ * @param {object} shape a `src/services/schemas` descriptor
+ * @param {string} seed makes names and e-mail addresses unique per run
+ * @param {{now?: string}} [options]
+ * @returns {object}
+ */
+function sampleBody(shape, seed, options = {}) {
+  const body = {};
+
+  for (const [field, descriptor] of Object.entries(shape ?? {})) {
+    if (descriptor.read || descriptor.serverManaged || !descriptor.required) continue;
+    body[field] = sampleValue(descriptor, field, seed, options);
+  }
+
+  return body;
+}
+
+/**
+ * One entry per registry group that has writes: where to create a record, what
+ * schema its body follows and what a `PATCH` may safely change.
+ *
+ * `overrides` carries the values a generic sample cannot invent — a foreign key
+ * that has to exist, a path that has to start with a slash.
+ */
+const WRITABLE = {
+  adminProperties: {
+    path: '/admin/properties',
+    schema: 'property.create',
+    overrides: () => ({ propertyTypeId: 1, location: { localityId: 1, cityId: 1 } }),
+    patch: { isFeatured: true },
+  },
+  adminLocalities: {
+    path: '/admin/localities',
+    schema: 'locality.create',
+    overrides: () => ({ cityId: 1 }),
+    patch: { order: 9 },
+  },
+  adminCities: { path: '/admin/cities', schema: 'city.create', patch: { isActive: true } },
+  adminPropertyTypes: {
+    path: '/admin/property-types',
+    schema: 'propertyType.create',
+    patch: { order: 9 },
+  },
+  adminAmenities: { path: '/admin/amenities', schema: 'amenity.create', patch: { order: 9 } },
+  adminBadges: { path: '/admin/badges', schema: 'badge.create', patch: { order: 9 } },
+  adminDevelopers: {
+    path: '/admin/developers',
+    schema: 'developer.create',
+    patch: { isFeatured: true },
+  },
+  adminBanks: { path: '/admin/banks', schema: 'bank.create', patch: { order: 9 } },
+  adminArticles: {
+    path: '/admin/articles',
+    schema: 'article.create',
+    overrides: (seed) => ({
+      title: `Smoke test article number ${seed} for the contract`,
+      categoryId: 1,
+      authorId: 1,
+    }),
+    patch: { isFeatured: true },
+  },
+  adminArticleCategories: {
+    path: '/admin/article-categories',
+    schema: 'articleCategory.create',
+    patch: { order: 9 },
+  },
+  adminArticleTags: {
+    path: '/admin/article-tags',
+    schema: 'articleTag.create',
+    patch: { name: 'Smoke tag renamed' },
+  },
+  adminAuthors: { path: '/admin/authors', schema: 'author.create', patch: { isActive: true } },
+  adminFaqs: { path: '/admin/faqs', schema: 'faq.create', patch: { order: 9 } },
+  adminTestimonials: {
+    path: '/admin/testimonials',
+    schema: 'testimonial.create',
+    patch: { isFeatured: true },
+  },
+  adminTeam: { path: '/admin/team', schema: 'teamMember.create', patch: { order: 9 } },
+  adminPartners: { path: '/admin/partners', schema: 'partner.create', patch: { order: 9 } },
+  adminPages: { path: '/admin/pages', schema: 'page.create', patch: { order: 9 } },
+  adminJobs: { path: '/admin/jobs', schema: 'job.create', patch: { isActive: true } },
+  adminMedia: {
+    path: '/admin/media',
+    schema: 'media.create',
+    // A unique address per record: media's delete guard refuses a file that
+    // something else points at (prompt 39 §5), and the sample body would give
+    // every fixture in the run the same URL.
+    overrides: (seed) => ({ url: `https://picsum.photos/seed/smoke-${seed}/1200/800` }),
+    patch: { alt: 'Smoke alt text' },
+  },
+  adminRedirects: {
+    path: '/admin/redirects',
+    schema: 'redirect.create',
+    overrides: (seed) => ({ fromPath: `/smoke-${seed}`, toPath: '/properties' }),
+    patch: { isActive: true },
+  },
+  adminUsers: { path: '/admin/users', schema: 'user.create', patch: { phone: '9876543211' } },
+};
+
+/** The POSTs that answer 201: the ones that create a record (§5.8). */
+const CREATES = new Set(['adminProperties.duplicate', 'jobs.apply']);
+
+/** Whether an endpoint's success is a 201 rather than a 200. */
+const isCreate = (endpoint) =>
+  endpoint.method === 'POST' && (endpoint.key.endsWith('.create') || CREATES.has(endpoint.key));
+
+/** The token an endpoint's declared minimum role maps to. */
+const TOKEN_FOR = { public: undefined, user: 'sales', manager: 'manager', admin: 'admin' };
+
+/** The registry group an endpoint key belongs to (`adminLeads.addNote`). */
+const groupOf = (endpoint) => String(endpoint.key).split('.')[0];
+
+/**
+ * The `db.json` collection a registry group reads and writes.
+ *
+ * Most are the group name with the `admin` prefix dropped; the ones listed here
+ * are the resources whose URL and whose collection were never spelled the same
+ * (`/admin/team` → `teamMembers`). Groups that own no collection — `auth`,
+ * `dashboard`, `seo`, `sitemap` — are absent on purpose.
+ */
+const GROUP_COLLECTIONS = {
+  team: 'teamMembers',
+  jobs: 'jobOpenings',
+  newsletter: 'newsletterSubscribers',
+  users: 'adminUsers',
+  jobApplications: 'jobApplications',
+  settings: 'siteSettings',
+};
+
+/**
+ * @param {string} group a registry group name
+ * @returns {string} the collection it belongs to
+ */
+function collectionOfGroup(group) {
+  const bare =
+    group.startsWith('admin') && group.length > 5
+      ? `${group[5].toLowerCase()}${group.slice(6)}`
+      : group;
+  return GROUP_COLLECTIONS[bare] ?? bare;
+}
+
+module.exports = {
+  CREATES,
+  GROUP_COLLECTIONS,
+  TOKEN_FOR,
+  WRITABLE,
+  collectionOfGroup,
+  groupOf,
+  isCreate,
+  sampleBody,
+  sampleValue,
+};
