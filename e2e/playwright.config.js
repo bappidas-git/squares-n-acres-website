@@ -47,6 +47,14 @@ module.exports = defineConfig({
     screenshot: 'only-on-failure',
     video: 'off',
     actionTimeout: 15_000,
+    // `CHROME_PATH` is already how `check:links`, `check:jsonld` and the
+    // prerender find a browser (D16, `scripts/lib/chrome.js`), so the suite
+    // honours it too: a machine that has Chrome but not the exact build
+    // `npx playwright install` would fetch runs the suite by pointing at it.
+    // Unset, Playwright uses its own download as before.
+    ...(process.env.CHROME_PATH
+      ? { launchOptions: { executablePath: process.env.CHROME_PATH } }
+      : {}),
   },
 
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

@@ -94,7 +94,7 @@ the transaction that writes the moved row.
 
 ### 5.9 Slugs
 
-Every public entity has a unique `slug` (lowercase, `[a-z0-9-]`, ≤ 75 chars). **CMS pages are the one exception:** a page's slug is a URL **path** — one or more slug segments joined by `/`, ≤ 120 chars (`buyer-assistance/home-loan`, §6.10) — because the public route serves the page at exactly that path. Each segment is slugified on its own, and `seo.slug` follows the same rule. Lookup: `GET /<resource>/slug/:slug`. Check: `GET /admin/<resource>/check-slug?slug=&excludeId=` → `{ data: { available: true|false, suggestion } }`. The API auto-generates a slug from the title when the client sends an empty slug and de-duplicates with `-2`, `-3`… A duplicate explicit slug → 409 with `errors.slug`. The entity `slug` and `seo.slug` are always kept identical by the API.
+Every public entity has a unique `slug` (lowercase, `[a-z0-9-]`, ≤ 75 chars). **CMS pages are the one exception:** a page's slug is a URL **path** — one or more slug segments joined by `/`, ≤ 120 chars (`buyer-assistance/home-loan`, §6.10) — because the public route serves the page at exactly that path. Each segment is slugified on its own, and `seo.slug` follows the same rule. Lookup: `GET /<resource>/slug/:slug`. Check: `GET /admin/<resource>/check-slug?slug=&excludeId=` → `{ data: { available: true|false, suggestion } }`. The API auto-generates a slug from the title when the client sends an empty slug and de-duplicates with `-2`, `-3`… A duplicate explicit slug → 409 with `errors.slug`. The entity `slug` and `seo.slug` are always kept identical by the API. **A page is derived from its title like everything else** — an empty `slug` on `POST /admin/pages` is a request to derive one, not a 422 (prompt 45, MB-03). **A page's slug may not begin with a segment a static route owns** — `properties`, `buy`, `rent`, `lease`, `commercial`, `plots`, `localities`, `builders`, `insights`, `careers`, `shortlist`, `admin` (`RESERVED_PATH_PREFIXES` in `src/routes/paths.js`): the router answers those paths first, so a page stored under one exists and can never be opened (D11). A create, or an update that *changes* the slug into a reserved prefix, answers **422** with `errors.slug`; a page already living under one keeps its slug, which is how the seeded `insights/real-estate-awareness` page stays where it is (prompt 45, MB-04).
 
 ### 5.10 Public vs admin reads
 
@@ -804,8 +804,15 @@ The card payload returned inside `PropertyList`:
 ### `Lead`
 
 Every field of §6.7 including `notes[]` and `activities[]`, plus the embeds
-`property {id,title,slug}` and `assignedUser {id,name}`. `ipAddress` and `userAgent` are
-returned to admins only. `LeadList` rows carry the same shape without `activities`.
+`property {id,title,slug}` and `assignedUser {id,name}`. `ipAddress` and
+`userAgent` are returned to admins only. `LeadList` rows carry the same shape
+without `activities`.
+
+**`pageSlug` is a page's whole slug *path*, not a single segment.** §6.10 types
+a CMS page's slug as a URL path and every lead-capture block passes `page.slug`
+through verbatim, so a lead sent from `buyer-assistance/home-loan` carries that
+string. It is still a slug and never a URL: a leading `/` is a 422 (prompt 45,
+MB-02). The ceiling is 120 characters, the page's own.
 
 Admin reads — the list, the detail and every write that answers with a lead —
 also carry the computed boolean **`isPossibleDuplicate`**: `true` when another

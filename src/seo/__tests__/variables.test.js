@@ -32,6 +32,28 @@ describe('cleanTitle', () => {
     expect(cleanTitle('A  title | | Squares N Acres')).toBe('A title | Squares N Acres');
   });
 
+  // NEW-39: a variable that resolves to nothing between a comma and the
+  // separator used to leave the comma leaning on it.
+  it('drops a comma left standing in front of the separator', () => {
+    expect(cleanTitle('%bhk% in %locality%, %developer% %sep% %sitename%')).toBe('in');
+    expect(cleanTitle('3 BHK in Whitefield, – Squares N Acres')).toBe(
+      '3 BHK in Whitefield – Squares N Acres'
+    );
+    expect(cleanTitle('3 BHK in Whitefield, | Squares N Acres')).toBe(
+      '3 BHK in Whitefield | Squares N Acres'
+    );
+    expect(cleanTitle('Guide; — Squares N Acres')).toBe('Guide — Squares N Acres');
+  });
+
+  it('leaves a comma that is doing its job alone', () => {
+    expect(cleanTitle('Whitefield, Bengaluru – Squares N Acres')).toBe(
+      'Whitefield, Bengaluru – Squares N Acres'
+    );
+    expect(cleanTitle('Budget ₹1,20,000 - ₹1,50,000 | Squares N Acres')).toBe(
+      'Budget ₹1,20,000 - ₹1,50,000 | Squares N Acres'
+    );
+  });
+
   it('leaves a title that is already clean alone', () => {
     expect(cleanTitle('3 BHK Apartment in Whitefield | Squares N Acres')).toBe(
       '3 BHK Apartment in Whitefield | Squares N Acres'

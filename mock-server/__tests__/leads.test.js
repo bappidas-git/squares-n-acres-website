@@ -98,6 +98,30 @@ describe('POST /leads', () => {
     });
   });
 
+  // MB-02: `pageSlug` holds a page's slug, and §6.10 types that as a URL
+  // **path** — the four seeded pages under `buyer-assistance/` and `insights/`
+  // all carry one, and every lead-capture block hands `page.slug` through
+  // verbatim. Typing it as a single segment refused every lead sent from them.
+  it('stores the whole slug path of the page a lead came from', async () => {
+    await withServer(async ({ request }) => {
+      for (const pageSlug of ['contact', 'buyer-assistance/home-loan', 'insights/faqs']) {
+        const created = await request('POST', '/leads', { body: { ...ENQUIRY, pageSlug } });
+        assert.equal(created.status, 201, pageSlug);
+        assert.equal(created.body.data.pageSlug, pageSlug);
+      }
+    });
+  });
+
+  it('still refuses a page slug that is a URL rather than a slug', async () => {
+    await withServer(async ({ request }) => {
+      for (const pageSlug of ['/buyer-assistance/home-loan', 'Buyer Assistance', 'a//b']) {
+        const refused = await request('POST', '/leads', { body: { ...ENQUIRY, pageSlug } });
+        assert.equal(refused.status, 422, pageSlug);
+        assert.ok(refused.body.errors.pageSlug, pageSlug);
+      }
+    });
+  });
+
   it('reads the campaign out of the page URL', async () => {
     await withServer(async ({ request }) => {
       const created = await request('POST', '/leads', {

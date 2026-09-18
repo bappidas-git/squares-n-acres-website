@@ -25,11 +25,13 @@
 
 const express = require('express');
 
+const { isReservedPath } = require('../../src/routes/paths');
 const { issueToken, verifyToken } = require('../lib/previewTokens');
 const { makeCrudRouter } = require('../lib/crud');
 const { maxId } = require('../lib/ids');
 const { notFound, validation } = require('../middleware/errors');
 const { paginate, toPositiveInt } = require('../lib/paginate');
+const { slugifyPath } = require('../lib/slug');
 const { toBool } = require('../lib/filters');
 
 /** Block types whose `data.html` is rendered as markup (§6.10). */
@@ -107,6 +109,42 @@ function rejectScripts(body) {
 
   if (Object.keys(errors).length > 0) throw validation(errors);
   return body;
+}
+
+/**
+ * Refuses a slug whose first segment belongs to a static route.
+ *
+ * `/properties`, `/buy`, `/insights` and the nine other prefixes of
+ * `RESERVED_PATH_PREFIXES` are answered by the router before the CMS catch-all
+ * is reached, so a page saved under one exists and is never reachable (D11).
+ * `PageFormPage` has refused it since prompt 30 — in the browser only, which
+ * left the API storing an unreachable page for any other client and left the
+ * Laravel port with no rule to generate (MB-04). A page **already** living
+ * under a reserved prefix keeps its slug, exactly as the form allows: the
+ * seeded awareness page is served by a route that spells its prefix out.
+ *
+ * @param {object} body the request body, copied by the caller
+ * @param {{existing?: object, method?: string}} [context]
+ * @returns {object} the same body
+ * @throws {import('../middleware/errors').ApiError} 422 keyed `slug`
+ */
+function rejectReservedSlug(body, { existing, method } = {}) {
+  const sent = typeof body.slug === 'string' ? body.slug.trim() : '';
+  const mentionsSlug = Object.prototype.hasOwnProperty.call(body, 'slug');
+
+  // What the write will be stored under: the slug the client chose, or — when
+  // it sent an empty one, which asks the API to derive it (§5.9) — the slug
+  // the title makes. A `PATCH` that never mentions the slug keeps the old one.
+  let effective;
+  if (sent) effective = slugifyPath(sent);
+  else if (method === 'PATCH' && !mentionsSlug) effective = String(existing?.slug ?? '');
+  else effective = slugifyPath(String(body.title ?? existing?.title ?? ''));
+
+  if (!effective || effective === existing?.slug || !isReservedPath(effective)) return body;
+
+  throw validation({
+    slug: [`Reserved path — “${effective.split('/')[0]}” belongs to the site’s own pages.`],
+  });
 }
 
 /**
@@ -201,7 +239,8 @@ module.exports = ({ db, getModel }) => {
       // A page's slug is a URL path, so its separators survive slugification
       // and `check-slug` answers about the whole path (§6.10).
       pathSlug: true,
-      beforeValidate: (body) => rejectScripts(normaliseBlocks(body)),
+      beforeValidate: (body, context) =>
+        rejectReservedSlug(rejectScripts(normaliseBlocks(body)), context),
       adminFilters: {
         status: { field: 'status', type: 'csv' },
         template: { field: 'template', type: 'csv' },
@@ -218,3 +257,4 @@ module.exports = ({ db, getModel }) => {
 
 module.exports.normaliseBlocks = normaliseBlocks;
 module.exports.rejectScripts = rejectScripts;
+module.exports.rejectReservedSlug = rejectReservedSlug;

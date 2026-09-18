@@ -24,8 +24,15 @@ const {
 } = require('../../config/enums');
 const { seo } = require('./seo');
 
-/** One or more slug segments joined by `/`: `about`, `buyer-assistance/home-loan`. */
-const PATH_SLUG_PATTERN = '^[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*$';
+/**
+ * One or more slug segments joined by `/`: `about`, `buyer-assistance/home-loan`.
+ *
+ * The empty string is allowed for the same reason the `slug` **type** allows it
+ * (§5.9, prompt 44's BB-01): an empty slug is a *request to derive one from the
+ * title*, which `mock-server/lib/crud.js` `resolveSlug` does. A page that must
+ * carry a slug says so with `required`, not with this pattern.
+ */
+const PATH_SLUG_PATTERN = '^$|^[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*$';
 
 /** The contract's ceiling for a page path (§6.10). */
 const PATH_SLUG_MAX_LENGTH = 120;
@@ -48,7 +55,11 @@ const allOptional = (shape) =>
   );
 
 const create = {
-  slug: pathSlug({ required: true }),
+  // Empty means "derive it from the title", exactly as it does for every other
+  // slugged resource (§5.9); pages were the one collection that answered 422
+  // instead, which is why `pageService.duplicate()` had to resolve a slug of
+  // its own before it could post a copy (MB-03).
+  slug: pathSlug({ default: '' }),
   title: { type: 'string', required: true, min: 2, maxLength: 150 },
   template: { type: 'enum', enum: PAGE_TEMPLATES.values, required: true, default: 'standard' },
   status: { type: 'enum', enum: PAGE_STATUS.values, required: true, default: 'draft' },

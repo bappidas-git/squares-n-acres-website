@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import SlugField from '../SlugField';
+import SlugField, { CHECK_DEBOUNCE_MS } from '../SlugField';
 import renderWith from '../../../test-utils';
 
 /** A controlled host, because the field's whole job is to drive one value. */
-function Harness({ initialSlug = '', title = '', checkSlug, onChangeSpy }) {
+function Harness({ initialSlug = '', title = '', checkSlug, onChangeSpy, disabled = false }) {
   const [slug, setSlug] = useState(initialSlug);
   return (
     <>
@@ -15,6 +15,7 @@ function Harness({ initialSlug = '', title = '', checkSlug, onChangeSpy }) {
         source={title}
         base="/localities/"
         checkSlug={checkSlug}
+        disabled={disabled}
         onChange={(next) => {
           setSlug(next);
           onChangeSpy?.(next);
@@ -115,6 +116,32 @@ describe('SlugField', () => {
 
       await waitFor(() => expect(screen.getByTestId('value')).toHaveTextContent(''));
       expect(checkSlug).not.toHaveBeenCalled();
+    });
+
+    // MB-01: `check-slug` belongs to the area's `create` permission (§7), so a
+    // role that opens a form read-only was answered 403 and the browser logged
+    // it — for a question whose answer it could not have acted on anyway.
+    it('asks nothing at all while the field is read-only', async () => {
+      const checkSlug = jest.fn(available);
+      renderWith(<Harness initialSlug="whitefield" checkSlug={checkSlug} disabled />);
+
+      await new Promise((settle) => setTimeout(settle, CHECK_DEBOUNCE_MS + 60));
+      expect(checkSlug).not.toHaveBeenCalled();
+      expect(screen.queryByText('This URL is available.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Already taken.')).not.toBeInTheDocument();
+    });
+
+    it('starts asking the moment the field becomes editable again', async () => {
+      const checkSlug = jest.fn(available);
+      const { rerender } = renderWith(
+        <Harness initialSlug="whitefield" checkSlug={checkSlug} disabled />
+      );
+
+      await new Promise((settle) => setTimeout(settle, CHECK_DEBOUNCE_MS + 60));
+      expect(checkSlug).not.toHaveBeenCalled();
+
+      rerender(<Harness initialSlug="whitefield" checkSlug={checkSlug} />);
+      await waitFor(() => expect(checkSlug).toHaveBeenCalledWith('whitefield', expect.any(Object)));
     });
   });
 });
