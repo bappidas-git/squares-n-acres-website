@@ -63,7 +63,10 @@ test.describe('creating and publishing a property', () => {
     const locality = panel.getByLabel('Locality', { exact: false }).first();
     await locality.click();
     await locality.fill('Whitefield');
-    await page.getByRole('option', { name: /whitefield/i }).first().click();
+    await page
+      .getByRole('option', { name: /whitefield/i })
+      .first()
+      .click();
     await panel.getByLabel('Address', { exact: true }).fill('1 End To End Road, Whitefield');
     await panel.getByLabel('Pincode').fill('560066');
 

@@ -19,9 +19,9 @@ test.describe('a property page', () => {
     await expect(nav).toBeVisible();
 
     // Every chip points at a section the page printed (BUG-06).
-    const keys = await nav.locator('[data-section]').evaluateAll((chips) =>
-      chips.map((chip) => chip.dataset.section)
-    );
+    const keys = await nav
+      .locator('[data-section]')
+      .evaluateAll((chips) => chips.map((chip) => chip.dataset.section));
     expect(keys.length).toBeGreaterThan(0);
 
     for (const key of keys) {
@@ -98,7 +98,10 @@ test.describe('a property page', () => {
     await page.goto(`/properties/${SLUG}`);
     await page.locator('#section-documents').scrollIntoViewIfNeeded();
 
-    await page.getByRole('button', { name: /Download brochure/i }).first().click();
+    await page
+      .getByRole('button', { name: /Download brochure/i })
+      .first()
+      .click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByLabel('Your name')).toBeVisible();
@@ -106,7 +109,10 @@ test.describe('a property page', () => {
     await dialog.getByLabel('Your name').fill('Playwright Downloader');
     await dialog.getByLabel('Phone', { exact: false }).fill('9876500077');
     await dialog.getByLabel('E-mail', { exact: false }).fill('downloader@example.com');
-    await dialog.getByRole('button', { name: /send|download|get/i }).first().click();
+    await dialog
+      .getByRole('button', { name: /send|download|get/i })
+      .first()
+      .click();
 
     // The dialog stays open and becomes its own success state — the file is
     // what the visitor came for, so it is handed over rather than announced

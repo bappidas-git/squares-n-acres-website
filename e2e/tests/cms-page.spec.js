@@ -42,7 +42,10 @@ test.describe('building and publishing a CMS page', () => {
     await page.goto('/admin/pages/add');
     await expect(page.getByRole('heading', { name: 'New page', level: 1 })).toBeVisible();
 
-    await page.getByRole('group', { name: 'Basics' }).getByLabel('Title', { exact: false }).fill(TITLE);
+    await page
+      .getByRole('group', { name: 'Basics' })
+      .getByLabel('Title', { exact: false })
+      .fill(TITLE);
 
     /* ---- A hero ---- */
     await page.getByRole('button', { name: 'Add block' }).click();
@@ -79,9 +82,12 @@ test.describe('building and publishing a CMS page', () => {
     /* ---- Published ---- */
     await page.getByRole('button', { name: 'Publish', exact: true }).first().click();
     await expect
-      .poll(async () => (await (await adminApi.get(`${API_URL}/admin/pages/${id}`)).json()).data.status, {
-        timeout: 20_000,
-      })
+      .poll(
+        async () => (await (await adminApi.get(`${API_URL}/admin/pages/${id}`)).json()).data.status,
+        {
+          timeout: 20_000,
+        }
+      )
       .toBe('published');
 
     /* ---- Live, with both bands ---- */

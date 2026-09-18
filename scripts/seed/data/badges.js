@@ -12,7 +12,11 @@
 const BADGES = [
   ['New Launch', 'info', 'mdi:new-box'],
   ['Hot Deal', 'error', 'mdi:fire'],
-  ['Ready to Move', 'success', 'mdi:home-check-outline'],
+  // `mdi:home-check-outline` is not in the MDI set (NEW-29, found by prompt 13
+  // while verifying every icon id), so the badge rendered blank. Replaced with
+  // an id the project vouches for: `IconPicker`'s curated list is the set an
+  // editor can choose from, so anything in it is known to resolve.
+  ['Ready to Move', 'success', 'mdi:home-city-outline'],
   ['RERA Approved', 'primary', 'mdi:certificate-outline'],
   ['Verified', 'success', 'mdi:shield-check-outline'],
   ['Premium', 'neutral', 'mdi:diamond-stone'],

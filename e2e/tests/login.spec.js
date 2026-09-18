@@ -25,7 +25,10 @@ test.describe('admin login', () => {
     await expect(page).toHaveURL(/\/admin\/dashboard/);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
-    const token = await page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEYS.token);
+    const token = await page.evaluate(
+      (key) => window.localStorage.getItem(key),
+      STORAGE_KEYS.token
+    );
     expect(token).toBeTruthy();
   });
 
@@ -53,7 +56,10 @@ test.describe('admin login', () => {
     await page.getByRole('button', { name: 'Sign in' }).click();
 
     await expect(page).toHaveURL(/\/admin\/login/);
-    const token = await page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEYS.token);
+    const token = await page.evaluate(
+      (key) => window.localStorage.getItem(key),
+      STORAGE_KEYS.token
+    );
     expect(token).toBeNull();
   });
 
@@ -72,7 +78,10 @@ test.describe('admin login', () => {
     await page.getByRole('menuitem', { name: 'Logout' }).click();
 
     await expect(page).toHaveURL(/\/admin\/login/);
-    const token = await page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEYS.token);
+    const token = await page.evaluate(
+      (key) => window.localStorage.getItem(key),
+      STORAGE_KEYS.token
+    );
     expect(token).toBeNull();
   });
 });
