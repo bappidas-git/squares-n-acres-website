@@ -347,8 +347,20 @@ tried first and reverted.
 in Chromium counts a wide element inside its **own** `overflow-x: auto`
 scroller. `/admin/properties` therefore reported 721 px of overflow in a
 1280 px viewport while the page did not move a pixel. The rule now tries the
-scroll — remember `scrollX`, `scrollTo(clientWidth, scrollY)`, read it back,
-restore — and reports the distance the window actually moved.
+scroll — remember `scrollX`, ask the window to move, read it back, restore —
+and reports the distance it actually moved.
+
+**The first version of that fix was wrong, and the self-review caught it.** It
+used a positional `window.scrollTo(clientWidth, y)`, and `global.css` sets
+`scroll-behavior: smooth` on the document: a smooth scroll is asynchronous, so
+the position read on the next line is still the starting one. Measured in
+Chromium 141 on a 390 px viewport over a 3000 px document, the positional call
+answers **0** and `scrollTo({ left, behavior: 'instant' })` answers **390** —
+the rule had been silently dead on every page, which is a worse failure than
+the false positive it replaced, because nothing looks wrong. It now passes
+`behavior: 'instant'`, `scripts/__tests__/inPageAudit.test.js` asserts the
+built source does so (the behaviour itself needs a browser, and the browser is
+optional per D16), and the grid in §8 was re-run with the rule alive.
 
 ---
 
@@ -495,7 +507,10 @@ node scripts/a11y-audit.js --baseUrl=http://localhost:5000 \
 | `/admin/properties/add` (the property form)              | ✓   | ✓   | ✓   | ✓   | ✓    | ✓    | ✓    |
 
 `✓` = no error-level finding. **63 of 63 clean; no horizontal scroll at any
-width on any route.**
+width on any route** — and that last clause is load-bearing, so it was earned
+twice: the grid was re-run after §5.6 revealed the horizontal-scroll rule had
+been silently answering 0 for every page. The figures here come from the run
+with the rule alive.
 
 ### 8.1 Two tooling defects this grid exposed
 
@@ -529,17 +544,17 @@ showing focus instead by thickening its own fieldset to 2 px of
 halfway along one row of controls. `MultiSelect` now carries the project's
 ring. **Re-measured: 63 audits, 0 errors.**
 
-### 8.3 The 454 warnings
+### 8.3 The 446 warnings
 
 Warnings do not fail the audit. All five classes are known and none is new:
 
 | Rule                                    | Count | What it is                                                                                                                                                                                |
 | --------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Text under the mobile minimum           | 331   | `recharts` axis ticks render at 11 px inside the dashboard's SVGs. Accepted in prompt 42 — every figure is repeated in the table beside the chart.                                        |
+| Text under the mobile minimum           | 327   | `recharts` axis ticks render at 11 px inside the dashboard's SVGs. Accepted in prompt 42 — every figure is repeated in the table beside the chart.                                        |
 | Text contrast below the minimum         | 63    | The breadcrumb `/` separator at 1.47:1. It is `aria-hidden="true"` decoration, which axe's own contrast rule skips; ours does not, so this is a **false-positive class**, recorded below. |
 | Accessible names that omit visible text | 27    | The property gallery stage — **NEW-51**, §9.1.                                                                                                                                            |
 | Missing landmark                        | 22    | Admin screens have no `<header role="banner">`. Accepted in prompt 42: the admin shell is a sidebar, not a site header.                                                                   |
-| Tap targets under 44 px                 | 11    | `StatusRail`'s save-group buttons at 42 × 46 px on the property form — 2 px short on one axis, admin-only.                                                                                |
+| Tap targets under 44 px                 | 7     | `StatusRail`'s save-group buttons at 42 × 46 px on the property form — 2 px short on one axis, admin-only.                                                                                |
 
 ### 8.4 Cross-browser: what could and could not be run
 
@@ -565,7 +580,7 @@ are the table in §8 above.
 | **QA-02**  | Performance, LCP and TBT are unmeasured — see §3.2 and the runbook                                                                                                                                                                                                                                                                                                              | 48 / a machine with network |
 | **QA-07**  | The width grid was run in Chromium only; **Firefox is outstanding**, Edge nominally so (§8.4)                                                                                                                                                                                                                                                                                   | 48 / a Windows machine      |
 | **NEW-51** | The property gallery stage fails `label-content-name-mismatch` — see below                                                                                                                                                                                                                                                                                                      | 48                          |
-| **NEW-52** | The audit's contrast rule measures `aria-hidden` decoration — 63 of the grid's 454 warnings are the breadcrumb `/` separator, which axe's own rule skips. Either skip `aria-hidden` subtrees as axe does, or teach the rule that an inactive separator is incidental text. Left alone here because loosening a contrast rule is a deliberate decision, not a tail-end QA tweak. | 48                          |
+| **NEW-52** | The audit's contrast rule measures `aria-hidden` decoration — 63 of the grid's 446 warnings are the breadcrumb `/` separator, which axe's own rule skips. Either skip `aria-hidden` subtrees as axe does, or teach the rule that an inactive separator is incidental text. Left alone here because loosening a contrast rule is a deliberate decision, not a tail-end QA tweak. | 48                          |
 | NEW-42     | The home page's 25 `perPage=1` count requests — specification below                                                                                                                                                                                                                                                                                                             | 47 (document), backend      |
 | NEW-47     | Contrast over a photograph cannot be computed from CSS                                                                                                                                                                                                                                                                                                                          | 48                          |
 

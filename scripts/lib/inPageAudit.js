@@ -502,10 +502,16 @@ function audit(options) {
   const reachedX = (() => {
     const before = window.scrollX;
     try {
-      window.scrollTo(document.documentElement.clientWidth, window.scrollY);
+      // `behavior: 'instant'` is load-bearing, not decoration. `global.css`
+      // sets `scroll-behavior: smooth` on the document, and a smooth scroll
+      // is asynchronous: the position read on the next line would still be
+      // the starting one, the rule would answer 0 for every page, and a real
+      // sideways scroll would go unreported — a worse failure than the false
+      // positive this replaced.
+      window.scrollTo({ left: document.documentElement.clientWidth, behavior: 'instant' });
       return window.scrollX;
     } finally {
-      window.scrollTo(before, window.scrollY);
+      window.scrollTo({ left: before, behavior: 'instant' });
     }
   })();
 
