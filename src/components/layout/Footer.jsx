@@ -24,8 +24,13 @@ import { useSiteSettings } from '../../contexts/SiteSettingsContext';
  * dead link in every footer of the site.
  *
  * D3: a light surface with charcoal text, so the wordmark sits on it as-is.
- * D79: the boilerplate's image collage survives as an opt-in setting.
+ * D79: the boilerplate's image collage survives as an opt-in setting, drawn
+ * only once it has three pictures to draw.
  */
+
+/** What `footer.showGallery` can draw, and what it takes to be worth drawing. */
+const MAX_GALLERY = 6;
+const MIN_GALLERY = 3;
 
 const SOCIAL = {
   facebook: { icon: 'mdi:facebook', label: 'Facebook' },
@@ -59,6 +64,7 @@ function FooterLink({ link }) {
 
 export default function Footer() {
   const { settings, siteName, tagline, getContact } = useSiteSettings();
+  const general = settings?.general ?? {};
   const { propertyTypes, localities } = useMasterData();
   const { footer: pages } = useNavPages();
 
@@ -66,7 +72,13 @@ export default function Footer() {
   const contact = getContact();
   const columns = buildFooterColumns({ propertyTypes, localities, pages, settings });
   const legal = buildLegalLinks(pages);
-  const gallery = footer.showGallery ? (footer.galleryImageUrls ?? []).slice(0, 6) : [];
+  // D79: the collage is opt-in, and three pictures is the point at which it
+  // reads as one. Below that the footer leaves it out rather than drawing a
+  // lonely picture the row has no shape for.
+  const gallery = footer.showGallery
+    ? (footer.galleryImageUrls ?? []).filter(Boolean).slice(0, MAX_GALLERY)
+    : [];
+  const showGallery = gallery.length >= MIN_GALLERY;
 
   const social = Object.entries(settings?.social ?? {})
     .filter(([key, url]) => Boolean(url) && SOCIAL[key])
@@ -74,6 +86,13 @@ export default function Footer() {
 
   const newsletterEnabled =
     settings?.newsletter?.enabled !== false && footer.showNewsletter !== false;
+
+  // The firm's own registrations (§6.13 `general`), not a listing's: a RERA
+  // registration is required to be displayed, and the footer is where it goes.
+  const registration = [
+    general.reraNumber ? `RERA ${general.reraNumber}` : '',
+    general.gstNumber ? `GST ${general.gstNumber}` : '',
+  ].filter(Boolean);
 
   const addressLine = [
     contact.address?.line1,
@@ -148,7 +167,7 @@ export default function Footer() {
           </nav>
         </div>
 
-        {gallery.length > 0 ? (
+        {showGallery ? (
           <div className={styles.gallery}>
             {gallery.map((src) => (
               <div key={src} className={styles.galleryCell}>
@@ -159,6 +178,9 @@ export default function Footer() {
         ) : null}
 
         <div className={styles.legal}>
+          {registration.length > 0 ? (
+            <p className={styles.registration}>{registration.join(' · ')}</p>
+          ) : null}
           {footer.disclaimer ? <p className={styles.disclaimer}>{footer.disclaimer}</p> : null}
           <div className={styles.legalRow}>
             <p className={styles.copyright}>

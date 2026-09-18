@@ -1,0 +1,343 @@
+/* Admin → Site settings: the seven panels, their previews, the repeaters and
+   the save bar that follows an editor down a long form. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-bottom: var(--space-16);
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding-top: var(--space-4);
+}
+
+.notice,
+.warning {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.notice {
+  background: var(--color-info-bg);
+  color: var(--color-info-dark);
+}
+
+.warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-dark);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ------------------------------------------------------------------ *
+ * Previews
+ * ------------------------------------------------------------------ */
+
+.brandPreview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.brandPreviewItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.brandPreviewLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* The header draws the wordmark at 40 px and the monogram at 32 px; this is
+   the same box, so what an editor sees here is what a visitor sees. */
+.logoImage {
+  height: 40px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
+}
+
+.iconImage {
+  height: 32px;
+  width: 32px;
+  object-fit: contain;
+}
+
+.linkPreview {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.mapPreview {
+  height: 260px;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+/* ------------------------------------------------------------------ *
+ * The hero mini card
+ * ------------------------------------------------------------------ */
+
+.heroCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  min-height: 220px;
+  padding: var(--space-5);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.heroCardMedia {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroCardVeil {
+  position: absolute;
+  inset: 0;
+  background: var(--color-overlay);
+}
+
+.heroCardBody {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.heroCardOnMedia {
+  color: var(--color-text-inverse);
+}
+
+.heroCardTitle {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.heroCardSubtitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.heroCardChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.heroCardChip {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-glass);
+  font-size: var(--font-size-xs);
+}
+
+.heroCardStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.heroCardStat {
+  display: flex;
+  flex-direction: column;
+}
+
+.heroCardStatValue {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.heroCardStatLabel {
+  font-size: var(--font-size-xs);
+}
+
+/* ------------------------------------------------------------------ *
+ * Repeaters (working hours, hero stats, footer columns, gallery)
+ * ------------------------------------------------------------------ */
+
+.repeater {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.repeaterRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.repeaterRowThree {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.8fr) auto;
+}
+
+.repeaterEmpty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.repeaterCount {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.columnCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.columnHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.linkRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto auto;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.galleryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.galleryCell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tabRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.tabRowLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.tabRowPosition {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 899.98px) {
+  .repeaterRow,
+  .repeaterRowThree,
+  .columnHead,
+  .linkRow {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * The save bar
+ * ------------------------------------------------------------------ */
+
+.saveBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+}
+
+.saveText {
+  margin-right: auto;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 899.98px) {
+  .saveBar {
+    position: fixed;
+    right: var(--space-4);
+    bottom: calc(var(--safe-bottom, 0px) + var(--space-4));
+    left: var(--space-4);
+    margin-top: 0;
+  }
+
+  .saveText {
+    width: 100%;
+    margin-right: 0;
+  }
+}

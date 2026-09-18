@@ -23,6 +23,13 @@
 export const EVENTS = {
   /** A record's `seo` branch was saved: every cached SEO index is now stale. */
   seoChanged: 'seo:changed',
+  /**
+   * `siteSettings` was saved, with the new record as the detail. The screen
+   * that saved it has already refreshed `SiteSettingsContext`; this is for
+   * anything else holding a copy — the Cloudinary configuration a media screen
+   * read, a preview built from the brand assets.
+   */
+  settingsChanged: 'settings:changed',
 };
 
 /** @type {Map<string, Set<Function>>} */
