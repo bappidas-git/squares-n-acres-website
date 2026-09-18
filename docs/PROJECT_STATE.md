@@ -424,6 +424,7 @@ removed it. Anything added here from now on is a bug until it is closed again.
 | NEW-42                    | **The home page fires 25 `GET /properties?…&perPage=1` requests to count the category tiles.** `useCategoryCounts` (prompt 27) asks for one result per tile — six segment/listing-type tiles and seventeen property types — purely to read `meta.total`. Against the mock each answers in under 100 ms and the page is fine; against a real API it is 25 round trips and 25 state updates for a row of six numbers. The fix is one aggregate response (a `counts` branch on an existing endpoint, or `GET /properties/counts`), which needs an API change and is therefore prompt 46's to specify and prompt 47's to document. Seen in the Lighthouse network trace of `/`.                                                                                                                                                                                                                                                                                                                                                                                                                                           | 41, reading the Lighthouse trace of the home page                                                                                                                                                                                                                                                                                                                                               | 46                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | NEW-47                    | **Text over a photograph cannot be contrast-checked from CSS.** `npm run a11y:audit` composites scrims, translucent layers and positioned siblings, and reports "background unknown" the moment the thing behind the text is a picture — a hero, a locality card, the gallery counter. Every such case was checked by eye at 390 px in prompt 42 and the one that was wrong is NEW-43 (the placeholder behind the scrim, now charcoal), but the check is blind there by construction. Sampling the rendered pixels — a screenshot of the text's box, the modal background colour, the ratio against the computed foreground — would close it. | 42, writing the in-page audit | 46 |
 | NEW-46                    | **Navigating away from a property page fires one doomed request for the new slug.** `MainLayout` wraps the outlet in `<AnimatePresence mode="wait">` keyed on the pathname, so the outgoing page stays mounted through its exit animation while `useParams()` already reports the new location: leaving `/properties/aurelia-court-duplex-koramangala` for `/localities/koramangala` makes `PropertyDetails` fetch `GET /properties/slug/koramangala`, which answers 404 and logs an error in the console. One wasted request per navigation away from a property page, and a console error on a page that is otherwise clean. The fix is React Router's own remedy — render the outlet against a pinned `location` so the exiting subtree keeps the params it was mounted with — which is a change to the router setup (D97) rather than to this page.                                                                                                                                                                                                                                                               | 41, watching the mock's log during a prerender verification                                                                                                                                                                                                                                                                                                                                     | 44                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| NEW-48                    | **`docs/QA/42-mobile-a11y-checklist.md` §2, the per-route × per-width grid, is empty.** Prompt 42 audited every route at all seven widths and §7 of its report carries the verdict (0 error-level findings), but the grid itself — 172 routes × 2 widths from the run of record, 30 route shapes × 5 widths from the sweep — was never transcribed out of the runs' JSON into the file, which shipped with the placeholder still in it. The acceptance box claiming otherwise is corrected in the prompt 42 addendum. Transcribing it has to follow a fresh run (`npm run a11y:audit` plus the `--outName=42-a11y-widths` sweep), not the finished one, because the audit's own label-in-name and horizontal-scroll checks were corrected afterwards. | 42 addendum, re-reading the merged file | 44 |
 
 ## Known issues (closed)
 
@@ -6612,7 +6613,10 @@ in `check:all`: it needs a running mock, a served build and Chrome.
 
 **Acceptance checklist**
 
-- [x] `docs/QA/42-mobile-a11y-checklist.md` filled for every route at all seven widths, zero open ✗.
+- [ ] `docs/QA/42-mobile-a11y-checklist.md` — §1, §3 (per route *shape*) and §4 are
+      filled with zero open ✗, but §2's per-route grid shipped **empty**: the
+      tables the two runs print were never transcribed into it. Corrected below
+      and opened as **NEW-48**; this box was ticked in error.
 - [x] `docs/QA/42-mobile-a11y-report.md` lists every finding with the file that fixed it.
 - [x] `scripts/a11y-audit.js` passes with Chrome — zero error-level findings.
 - [x] The new a11y component tests pass; lint, `test:ci`, `build:ci`, `check:traces`, `check:contrast` and `smoke` all pass; no console warnings.
@@ -6645,6 +6649,80 @@ in `check:all`: it needs a running mock, a served build and Chrome.
   a future pass could sample the rendered pixels instead (owner 46).
 
 **Next prompt: 43 — UX polish, states and copy.**
+
+---
+
+#### Prompt 42 addendum — the focus ring, the avatar, and two wrong checks (2026-09-18)
+
+Found after prompt 42 merged, while re-reading the audit's own output rather
+than the site's. Landed as a second commit on top of prompt 43.
+
+**Three defects in the site.**
+
+- **F17 — the kit's text field suppressed the focus ring it had been given.**
+  `FormField`'s `.control:focus` set `outline: none` and drew a 3 px
+  `--color-primary-ring` halo instead. That halo is 1.36:1 on white, under the
+  3:1 WCAG 1.4.11 asks of a focus indicator, and because `.control:focus`
+  outranks the global `:focus-visible` every input, select and textarea in the
+  kit *lost* the ring rather than gaining a second one. The `outline: none` and
+  the halo are gone; the border still warms and the ring is the global one.
+- **F18 — MUI's outlined inputs answered focus with a thicker fieldset border**,
+  which is MUI's default and not the ring §8.3 fixes. `src/theme.js` gives
+  `MuiOutlinedInput` the ring on `&:has(:focus-visible)`, so it stays a keyboard
+  affordance and a browser without `:has` keeps MUI's border rather than nothing.
+- **F19 — every avatar announced its initials.** `Avatar` hid them only when
+  there were none, so "AU" was read in front of the account menu's own label and
+  "PS" inside an author byline, and each one put its control in front of the
+  label-in-name check. The span is now always `aria-hidden`; a real photograph
+  still carries the name as its `alt`. Three cases in
+  `src/components/ui/__tests__/a11y.test.jsx`.
+
+**Two defects in the audit** (`scripts/lib/inPageAudit.js`) — the checker
+disagreeing with a page that was right:
+
+- Horizontal scroll was read off `document.documentElement.scrollWidth`, which
+  every admin list inflates by scrolling its table inside its own
+  `overflow-x: auto` box (prompt 13 §6) while the page never moves sideways. The
+  check now asks whether an element escapes the viewport with **no scrolling
+  ancestor**, and names the first five that do.
+- The label-in-name check compared a name against the whole subtree, so the
+  gallery stage's "visible label" was three nested buttons' names and no
+  accessible name could contain it — 98 warnings, almost all that shape.
+  `ownLabelText` stops at a nested control, which is what WCAG 2.5.3 means.
+
+**Two defects in the audit's driver** (`scripts/a11y-audit.js`), both found by a
+full run rather than reasoned about: storage belongs to the origin, so the
+session the first width signed in with made `/admin/login` redirect to the
+dashboard at every later width and hung the sign-in on a field that never
+appeared (`forgetSession` per width, and `signIn` now accepts either the form or
+the redirect); and one tab that has loaded about 155 documents starts timing out
+on the next one — measured, 31 admin routes lost per width, identically at both
+— so a tab is replaced every 40 navigations.
+
+**Documentation corrected rather than restated.** `docs/QA/42-mobile-a11y-checklist.md`
+§2 shipped with its grid placeholder still in it while the acceptance checklist
+above claimed it was filled; both now say what is true, and the transcription is
+**NEW-48** (owner 44). The audit's two output files are gitignored beside
+`lighthouse-*.json` and `42-mobile-a11y-report.md` §7 says so — 450 KB of machine
+output that is stale the moment a component changes is evidence that gets quoted
+after it stops being true.
+
+| Command                  | Result                                                      |
+| ------------------------ | ----------------------------------------------------------- |
+| `npm run lint`           | 0 errors, 0 warnings                                        |
+| `npm run format:check`   | clean                                                       |
+| `npm run test:ci`        | 138 suites, 2 645 tests, all green                          |
+| `npm run test:scripts`   | 28 cases (1 skipped: no Chrome in a standard location)      |
+| `npm run build:ci`       | success, 0 warnings                                         |
+| `npm run check:traces`   | 1 080 files, 0 findings                                     |
+| `npm run check:contrast` | 29 gated pairs, all pass                                    |
+
+`npm run a11y:audit` was **not** re-run for this commit: the fixes are in a
+component's CSS, a theme override, one `aria-hidden` and the checker itself, and
+a fresh crawl belongs with NEW-48 rather than with them.
+
+**Issues opened:** NEW-48. **No issue closed** — NEW-47 (contrast over a
+photograph) is untouched and still owned by 46.
 
 ---
 

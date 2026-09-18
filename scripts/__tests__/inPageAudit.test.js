@@ -104,6 +104,7 @@ test('buildAuditSource ships a self-contained expression, helpers included', () 
     'function isVisibleElement',
     'function coversRect',
     'function announcedText',
+    'function ownLabelText',
     'function accessibleNameOf',
     'function backgroundBehind',
     'function hasOwnText',

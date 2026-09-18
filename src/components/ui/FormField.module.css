@@ -40,10 +40,13 @@
   border-color: var(--color-primary);
 }
 
+/* No `outline: none` here: `.control:focus` is more specific than the global
+   `:focus-visible`, so suppressing it left the field with only a 3px halo in
+   `--color-primary-ring` — 1.36:1 against white, under the 3:1 WCAG 1.4.11
+   asks of a focus indicator. The border still warms; the ring is the global
+   one (§8.3: 2px `--color-focus`, offset 2px). */
 .control:focus {
-  outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-ring);
 }
 
 .control:disabled {

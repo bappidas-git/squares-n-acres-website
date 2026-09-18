@@ -46,7 +46,12 @@ export default function Avatar({
           onError={() => setFailed(true)}
         />
       ) : (
-        <span aria-hidden={initials ? undefined : 'true'}>{initials}</span>
+        // Always hidden: two letters are a picture of a name, not the name.
+        // Whatever the avatar stands for is named beside it — the author's
+        // byline, the account menu's own label — and announcing "AU" only
+        // gets in the way of that (it also put every avatar in front of a
+        // WCAG 2.5.3 "label in name" report).
+        <span aria-hidden="true">{initials}</span>
       )}
     </span>
   );

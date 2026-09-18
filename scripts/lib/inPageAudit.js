@@ -291,6 +291,36 @@ function announcedText(element) {
 }
 
 /**
+ * The words a control shows *of its own*, for the label-in-name comparison.
+ *
+ * `announcedText` walks the whole subtree, which is right for a name and wrong
+ * for this: the property gallery's stage holds three buttons of its own, and
+ * counting "Previous photograph Next photograph View all 8 photos" as the
+ * stage's visible label would ask its name to contain three other controls'.
+ *
+ * @param {Element} element
+ * @returns {string}
+ */
+function ownLabelText(element) {
+  const NESTED =
+    'button, a[href], input, select, textarea, [role="button"], [role="link"], [role="menuitem"], [role="tab"], [role="switch"]';
+  let text = '';
+
+  element.childNodes.forEach((node) => {
+    if (node.nodeType === 3) {
+      text += node.nodeValue;
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    if (node.getAttribute('aria-hidden') === 'true' || node.hasAttribute('hidden')) return;
+    if (node.matches(NESTED)) return;
+    text += ownLabelText(node);
+  });
+
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+/**
  * The accessible name of a control, or `''` when it has none.
  *
  * A deliberate subset of the accname algorithm: the parts that catch the
@@ -484,14 +514,46 @@ function audit(options) {
 
   const docWidth = document.documentElement.scrollWidth;
   const viewportWidth = window.innerWidth;
+
+  // `scrollWidth` alone is not the question. A wide table scrolling inside its
+  // own `overflow-x: auto` box makes the root's scroll width large while the
+  // page itself does not move sideways and nothing is out of reach — which is
+  // what every admin list screen deliberately does (prompt 13 §6). So the
+  // cheap signal only opens the question; what settles it is whether anything
+  // escapes the viewport *without* a scroller of its own to reach it by.
   if (docWidth > viewportWidth + 1) {
-    add(
-      'error',
-      'horizontal-scroll',
-      `The document is ${docWidth}px wide in a ${viewportWidth}px viewport.`,
-      null,
-      { scrollWidth: docWidth, innerWidth: viewportWidth }
-    );
+    const escaped = [];
+
+    document.querySelectorAll('body *').forEach((node) => {
+      if (escaped.length >= 5) return;
+      const box = node.getBoundingClientRect();
+      if (box.width <= 0 || box.right <= viewportWidth + 1) return;
+
+      // Reachable when an ancestor that does fit scrolls horizontally.
+      let ancestor = node.parentElement;
+      while (ancestor && ancestor !== document.documentElement) {
+        const overflow = window.getComputedStyle(ancestor).overflowX;
+        if (
+          (overflow === 'auto' || overflow === 'scroll') &&
+          ancestor.getBoundingClientRect().right <= viewportWidth + 1
+        ) {
+          return;
+        }
+        ancestor = ancestor.parentElement;
+      }
+
+      escaped.push({ selector: describeElement(node), right: Math.round(box.right) });
+    });
+
+    if (escaped.length) {
+      add(
+        'error',
+        'horizontal-scroll',
+        `${escaped.length === 5 ? '5 or more' : escaped.length} element(s) reach past a ${viewportWidth}px viewport with no scroller to reach them by.`,
+        null,
+        { scrollWidth: docWidth, innerWidth: viewportWidth, escaped }
+      );
+    }
   }
 
   const language = document.documentElement.getAttribute('lang');
@@ -606,7 +668,7 @@ function audit(options) {
     // different words makes the control unspeakable.
     const label = control.getAttribute('aria-label');
     if (!label) return;
-    const visible = announcedText(control);
+    const visible = ownLabelText(control);
     if (!visible) return;
 
     const simplify = (text) =>
@@ -880,6 +942,7 @@ const HELPERS = [
   isVisibleElement,
   coversRect,
   announcedText,
+  ownLabelText,
   accessibleNameOf,
   backgroundBehind,
   hasOwnText,

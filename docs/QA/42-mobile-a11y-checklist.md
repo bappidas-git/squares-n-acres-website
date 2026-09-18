@@ -50,11 +50,23 @@ there are none left.
 
 ## 2. The grid
 
-_The two tables below are generated from the runs' own JSON by the two commands
-at the top of this file — a route is in them because a browser opened it, not
-because somebody remembered to list it._
+_The cell-by-cell record is the per-route table each run prints into
+`docs/QA/42-a11y-audit.md` (the run of record, 390 and 1280 px) and
+`docs/QA/42-a11y-widths.md` (360, 414, 768, 1024 and 1536 px over one page of
+every route shape) — a route is in them because a browser opened it, not
+because somebody remembered to list it. Both files are the tool's raw output and
+are not kept in the repository (`.gitignore`); the two commands at the top of
+this file rebuild them._
 
-<!-- GRID -->
+**Not transcribed here — open as NEW-48.** Prompt 42's commit left this section
+empty. Copying 172 routes × 2 widths and 30 route shapes × 5 widths into
+Markdown is a mechanical step, but it has to follow a *fresh* run rather than a
+finished one, so it is owned by the next QA prompt rather than back-filled from
+a run the code has since moved past.
+
+What does not depend on it: **§3 below** is the same coverage by route *shape*,
+filled and with zero open ✗, and **§7 of the report** is the run's own verdict —
+0 error-level findings at every width. Neither is transcribed from memory.
 
 ---
 

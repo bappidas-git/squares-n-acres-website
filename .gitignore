@@ -38,5 +38,12 @@ yarn-error.log*
 /lighthouse-*.html
 /lighthouse-*.json
 
+# a11y audit output (`npm run a11y:audit`) — the run's own raw findings, read
+# once and summarised by hand into docs/QA/42-mobile-a11y-report.md
+/docs/QA/42-a11y-audit.json
+/docs/QA/42-a11y-audit.md
+/docs/QA/42-a11y-widths.json
+/docs/QA/42-a11y-widths.md
+
 # logs
 *.log
