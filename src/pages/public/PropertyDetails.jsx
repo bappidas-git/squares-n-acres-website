@@ -44,6 +44,7 @@ import viewTracker from '../../utils/viewTracker';
 import { useLeadCapture } from '../../contexts/LeadCaptureContext';
 
 import styles from './PropertyDetails.module.css';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 
 /** `?preview=admin` — what the property form's "Preview" link appends (§5.10). */
 const PREVIEW_TOKEN = 'admin';
@@ -134,7 +135,12 @@ const PropertyDetails = () => {
     [slug, preview]
   );
 
-  const { openLeadModal, setPageContext } = useLeadCapture();
+  // The prerender crawler saves this page once its primary query has settled
+  // (§9.9) — settling on a 404 or an error state counts, so a crawl never
+  // hangs on a URL the API cannot answer.
+  usePrerenderReady(loading);
+
+  const { openLeadModal, leadTriggerProps, setPageContext } = useLeadCapture();
 
   // The similar row is fetched here rather than inside its section because the
   // navigation may only offer the item once the API has answered with
@@ -251,6 +257,17 @@ const PropertyDetails = () => {
         breadcrumbs={crumbs}
         faqs={faqs}
         overrides={unpublished ? { noindex: true } : undefined}
+        // The gallery's cover is this page's LCP, and the gallery is inside
+        // the route's lazy chunk. Naming it in the head starts the download
+        // a second earlier than the `<img>` can (§8.6). The ratio and the
+        // `sizes` are `PropertyGallery`'s own, so the preload and the element
+        // ask for one file between them — 4/3 is the phone's stage, which is
+        // the device the budget is measured on.
+        preloadImage={
+          cover?.url
+            ? { src: cover.url, ratio: '4/3', sizes: '(min-width: 900px) 60vw, 100vw' }
+            : undefined
+        }
       />
 
       {preview ? (
@@ -336,12 +353,17 @@ const PropertyDetails = () => {
           </div>
 
           <div className={styles.aside}>
-            <PriceCard property={property} banks={banks} onRequest={openLead} />
+            <PriceCard
+              property={property}
+              banks={banks}
+              onRequest={openLead}
+              triggerProps={leadTriggerProps}
+            />
           </div>
         </div>
       </Container>
 
-      <MobileCtaBar property={property} onEnquire={openLead} />
+      <MobileCtaBar property={property} onEnquire={openLead} triggerProps={leadTriggerProps} />
     </>
   );
 };

@@ -41,6 +41,12 @@ import useSeoResolved from './useSeoResolved';
  * @param {Array<{name: string, path?: string}>} [props.breadcrumbs] the trail
  *   `<Breadcrumbs>` is drawing, from `seo/breadcrumbs.js`
  * @param {{prev?: string, next?: string}} [props.pagination]
+ * @param {{src: string, ratio?: string, sizes?: string, fit?: 'cover'|'contain'}}
+ *   [props.preloadImage] the page's LCP image — a property's cover, an
+ *   article's featured image, a locality's or builder's hero. It is named in
+ *   the head as `<link rel="preload" as="image">` with the same candidate list
+ *   `LazyImage` will publish, so the download starts with the stylesheet
+ *   rather than after the route's chunk has rendered (§8.6)
  * @param {Array<{question: string, answer: string}>} [props.faqs] the questions
  *   this page actually shows, which may be more than the record stores
  * @param {Array<{name?: string, title?: string, url?: string}>} [props.items] what
@@ -91,6 +97,14 @@ export default function Seo(props) {
         {(seo.articleMeta?.tags ?? []).map((tag) => (
           <meta key={`tag-${tag}`} property="article:tag" content={tag} />
         ))}
+
+        {/* Spread rather than named props: `useSeoResolved` has already
+            dropped the keys that do not apply, and Helmet writes every prop it
+            is handed — a named `imagesrcset={undefined}` becomes an empty
+            `imagesrcset=""`, which is a candidate list with nothing in it. */}
+        {seo.preload ? (
+          <link rel="preload" as="image" fetchpriority="high" {...seo.preload} />
+        ) : null}
 
         {seo.links.prev ? <link rel="prev" href={seo.links.prev} /> : null}
         {seo.links.next ? <link rel="next" href={seo.links.next} /> : null}

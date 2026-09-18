@@ -23,6 +23,7 @@ import {
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './Articles.module.css';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 
 /**
  * `/insights/articles` and the three archives that are the same page with one
@@ -112,6 +113,11 @@ export function ArticleIndex({
       fixedParams: fixed,
       debounceMs: SEARCH_DEBOUNCE_MS,
     });
+
+  // The prerender crawler saves this page once its primary query has settled
+  // (§9.9) — settling on an error state counts, so a crawl never hangs on a
+  // URL the API cannot answer.
+  usePrerenderReady(loading);
 
   const { data: categories } = useApi(
     (signal) => articleService.categories({ perPage: TAXONOMY_PER_PAGE }, { signal }),

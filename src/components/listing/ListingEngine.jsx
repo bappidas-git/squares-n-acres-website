@@ -13,6 +13,7 @@ import Seo from '../seo/Seo';
 import styles from './ListingEngine.module.css';
 import useBreakpoint from '../../hooks/useBreakpoint';
 import useListingParams from './useListingParams';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 import { ErrorState, Pagination } from '../ui';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { buildListingSeo } from './listingSeo';
@@ -55,6 +56,13 @@ export default function ListingEngine({
 }) {
   const listing = useListingParams({ routeConfig, fixedParams, embedded, initialSort });
   const { params, meta, items, loading, error, fixed, activeCount } = listing;
+
+  // Every listing URL's primary query is this one, so this is where the
+  // prerender crawler is told the page is worth saving (§9.9). `embedded` is
+  // the locality and builder pages' own results tab, whose page has already
+  // reported for its own record — reporting twice is harmless, and the
+  // attribute is a flag rather than a counter.
+  usePrerenderReady(loading);
 
   const master = useMasterData();
   const { seoSettings, siteName } = useSiteSettings();

@@ -4,29 +4,14 @@ import { Icon } from '@iconify/react';
 import MapEmbed from '../../../../../components/common/MapEmbed';
 import { Alert, Button } from '../../../../../components/ui';
 import loadScript from '../../../../../utils/loadScript';
+import { DEFAULT_CENTRE, hasPin, roundCoordinate } from './coordinates';
 
 import styles from './MapPinPicker.module.css';
 
-/** Bengaluru city centre — where the pin starts when a listing has none (§14). */
-export const DEFAULT_CENTRE = { latitude: 12.9716, longitude: 77.5946 };
-
-/** Six decimals is about 11 cm; beyond that it is noise nobody typed on purpose. */
-export const roundCoordinate = (value) => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return null;
-  return Math.round(parsed * 1e6) / 1e6;
-};
-
-/** Whether a pair is a place rather than an empty field or a broken record. */
-export const hasPin = (latitude, longitude) =>
-  latitude !== null &&
-  latitude !== undefined &&
-  latitude !== '' &&
-  longitude !== null &&
-  longitude !== undefined &&
-  longitude !== '' &&
-  Number.isFinite(Number(latitude)) &&
-  Number.isFinite(Number(longitude));
+// The three coordinate rules moved to `coordinates.js` so that a form can read
+// them without pulling this component in (prompt 41); they are still published
+// from here, where they were first written.
+export { DEFAULT_CENTRE, hasPin, roundCoordinate };
 
 const mapsUrl = (key) =>
   `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly`;

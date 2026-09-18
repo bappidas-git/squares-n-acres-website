@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 
 import PATHS from '../../../routes/paths';
@@ -22,8 +23,12 @@ import styles from './ArticleCard.module.css';
  * @param {'grid'|'compact'} [props.variant] `compact` drops the excerpt and the byline
  * @param {2|3} [props.headingLevel] `3` inside a section that already has an h2
  * @param {'lazy'|'eager'} [props.loading] the cover's loading strategy
+ *
+ * `memo`, like the other three cards (§8.6): a grid of twelve of these is
+ * re-rendered by every keystroke in the filters above it, and none of the
+ * twelve has anything new to draw.
  */
-export default function ArticleCard({
+const ArticleCard = memo(function ArticleCard({
   article,
   variant = 'grid',
   headingLevel = 3,
@@ -93,4 +98,6 @@ export default function ArticleCard({
       </div>
     </article>
   );
-}
+});
+
+export default ArticleCard;

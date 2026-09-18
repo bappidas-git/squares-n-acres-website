@@ -27,6 +27,7 @@ import { BRAND, SITE } from '../../config/site';
 import { buildUrl } from '../../services/http';
 import { endpoints } from '../../services/endpoints';
 import { resolveSeoOutput, robotsContent } from '../../seo/resolve';
+import { responsiveImage } from '../../utils/cloudinary';
 import { useMasterData } from '../../contexts/MasterDataContext';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 import {
@@ -121,6 +122,7 @@ export default function useSeoResolved({
   variables = {},
   breadcrumbs = null,
   pagination = null,
+  preloadImage = null,
   jsonLd = null,
   faqs = null,
   items = null,
@@ -272,6 +274,37 @@ export default function useSeoResolved({
     .map(([key, name]) => ({ name, content: seoSettings?.verification?.[key] ?? '' }))
     .filter((meta) => meta.content);
 
+  /**
+   * The LCP image, as a `<link rel="preload">` (§8.6, prompt 41).
+   *
+   * A property's cover, an article's featured image and a locality's or a
+   * builder's hero are all inside a `React.lazy` route chunk: the browser
+   * cannot see the `<img>` until that chunk has parsed and rendered, which on
+   * a phone is a second after the HTML arrived. Naming the file in the head
+   * starts the download with the stylesheet instead.
+   *
+   * The candidates come from `responsiveImage` — the same helper `LazyImage`
+   * uses — so the file the preload fetches is the file the element then asks
+   * for, rather than a second copy at a different width.
+   */
+  const preloadLink = useMemo(() => {
+    const src = String(preloadImage?.src ?? '').trim();
+    if (!src) return null;
+
+    const built = responsiveImage(src, {
+      ratio: preloadImage.ratio,
+      fit: preloadImage.fit ?? 'cover',
+    });
+
+    return compact({
+      href: built.src,
+      imagesrcset: built.srcSet ?? undefined,
+      // `imagesizes` is only meaningful beside a candidate list, exactly as
+      // `sizes` is on the element itself.
+      imagesizes: built.srcSet ? (preloadImage.sizes ?? undefined) : undefined,
+    });
+  }, [preloadImage]);
+
   return {
     lang: HTML_LANG,
     title: output.title || subject.title,
@@ -305,6 +338,8 @@ export default function useSeoResolved({
         next: pagination?.next ? absolute(siteUrl, pagination.next) : undefined,
         rss: RSS_TYPES.has(type) ? buildUrl(endpoints.sitemap.rss) : undefined,
       }) ?? {},
+
+    preload: preloadLink,
 
     verification,
     icons: iconLinks(siteUrl),

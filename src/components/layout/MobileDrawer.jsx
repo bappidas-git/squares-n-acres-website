@@ -38,7 +38,7 @@ export default function MobileDrawer({ open, onClose }) {
   const { propertyTypes, localities } = useMasterData();
   const { header: pages } = useNavPages();
   const { count } = useShortlist();
-  const { openLeadModal } = useLeadCapture();
+  const { openLeadModal, leadTriggerProps } = useLeadCapture();
 
   const [expanded, setExpanded] = useState(null);
 
@@ -98,6 +98,7 @@ export default function MobileDrawer({ open, onClose }) {
                 onClose?.();
                 openLeadModal({ entry: 'post-requirement' });
               }}
+              {...leadTriggerProps}
             >
               <Icon icon={cta.icon} aria-hidden="true" />
               {cta.label}

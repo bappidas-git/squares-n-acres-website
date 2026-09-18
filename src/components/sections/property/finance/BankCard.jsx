@@ -25,8 +25,9 @@ const percent = (value) => `${Number(Number(value).toFixed(2))}%`;
  * @param {object} props
  * @param {object} props.bank a record of §6.6
  * @param {(bank: object) => void} props.onCheckEligibility
+ * @param {object} [props.triggerProps] spread onto the button — see `BankCards`
  */
-export default function BankCard({ bank, onCheckEligibility }) {
+export default function BankCard({ bank, onCheckEligibility, triggerProps }) {
   const facts = [
     has(bank.interestRateMin)
       ? { id: 'rate', label: copy.BANK_LABELS.rate, value: `${percent(bank.interestRateMin)} p.a.` }
@@ -100,7 +101,7 @@ export default function BankCard({ bank, onCheckEligibility }) {
       ) : null}
 
       <div className={styles.bankActions}>
-        <Button size="sm" onClick={() => onCheckEligibility(bank)}>
+        <Button size="sm" onClick={() => onCheckEligibility(bank)} {...triggerProps}>
           {copy.BANK_LABELS.check}
         </Button>
         {bank.applyUrl ? (

@@ -37,6 +37,8 @@ export const EVENTS = {
   brochureDownload: 'brochure_download',
   documentDownload: 'document_download',
   newsletterSubscribe: 'newsletter_subscribe',
+  // What the visitor's own browser measured of the page (`utils/vitals.js`).
+  webVitals: 'web_vitals',
 };
 
 /** Whether a GA4 tag is on the page and ready to receive events. */

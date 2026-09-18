@@ -21,6 +21,19 @@
   flex: 0 0 var(--item-width, 100%);
   scroll-snap-align: start;
   min-width: 0;
+
+  /* A rail of eight cards paints two of them on a phone. `content-visibility`
+     lets the browser skip the layout and paint of the rest until the scroll
+     brings them close, which is what keeps a home page of four rails off the
+     long-task list (§8.6). The skipped ones stay in the accessibility tree and
+     in find-in-page — this is not `display: none`.
+
+     The fallback height is deliberately smaller than any card: a flex line's
+     height is the tallest item's, so it is the cards actually on screen that
+     set the rail's height and a skipped card can never make it jump (CLS).
+     `auto` means a card that has been measured once keeps its real size. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 }
 
 .arrow {

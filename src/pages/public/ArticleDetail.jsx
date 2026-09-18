@@ -29,6 +29,7 @@ import {
 } from '../../components/sections/article';
 
 import styles from './ArticleDetail.module.css';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 
 /**
  * One article (ART-09).
@@ -84,6 +85,11 @@ export default function ArticleDetail() {
     (signal) => articleService.getBySlug(slug, preview ? { preview } : undefined, { signal }),
     [slug, preview]
   );
+
+  // The prerender crawler saves this page once its primary query has settled
+  // (§9.9) — settling on an error state counts, so a crawl never hangs on a
+  // URL the API cannot answer.
+  usePrerenderReady(loading);
 
   // Sanitised once here and handed to `SafeHtml` already clean: the contents
   // list has to be built from the very markup the page renders, or a heading
@@ -149,6 +155,9 @@ export default function ArticleDetail() {
         breadcrumbs={crumbs}
         faqs={faqs}
         overrides={unpublished ? { noindex: true } : undefined}
+        // The featured image is the article's LCP; `ArticleHero` draws it at
+        // 21/9 across the full width (§8.6).
+        preloadImage={image.url ? { src: image.url, ratio: '21/9', sizes: '100vw' } : undefined}
       />
 
       {previewing ? (

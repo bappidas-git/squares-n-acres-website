@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import useThrottledScroll from '../../hooks/useThrottledScroll';
 import styles from './BackToTop.module.css';
@@ -20,7 +20,7 @@ const BackToTop = () => {
   return (
     <AnimatePresence>
       {visible && (
-        <motion.button
+        <m.button
           onClick={scrollToTop}
           initial={{ opacity: 0, scale: 0.8, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -32,7 +32,7 @@ const BackToTop = () => {
           className={styles.button}
         >
           <Icon icon="mdi:chevron-up" />
-        </motion.button>
+        </m.button>
       )}
     </AnimatePresence>
   );

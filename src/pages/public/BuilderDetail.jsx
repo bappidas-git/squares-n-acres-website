@@ -17,6 +17,7 @@ import {
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './BuilderDetail.module.css';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 
 /**
  * `/builders/:slug` — one builder's profile.
@@ -48,6 +49,11 @@ export default function BuilderDetail() {
     refetch,
   } = useApi((signal) => masterDataService.developers.bySlug(slug, { signal }), [slug]);
 
+  // The prerender crawler saves this page once its primary query has settled
+  // (§9.9) — settling on an error state counts, so a crawl never hangs on a
+  // URL the API cannot answer.
+  usePrerenderReady(loading);
+
   if (error?.status === 404) return <NotFound />;
 
   if (loading) return <BuilderDetailSkeleton />;
@@ -77,6 +83,12 @@ export default function BuilderDetail() {
         description={metaDescription}
         breadcrumbs={crumbs}
         items={listings}
+        // `DeveloperHero`'s cover is the LCP: full width, its own ratio (§8.6).
+        preloadImage={
+          developer.coverImageUrl
+            ? { src: developer.coverImageUrl, ratio: 'auto', sizes: '100vw' }
+            : undefined
+        }
       />
 
       <article className={styles.page}>

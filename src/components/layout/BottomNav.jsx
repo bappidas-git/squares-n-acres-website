@@ -37,7 +37,7 @@ export default function BottomNav() {
   const location = useLocation();
   const { direction } = useScrollDirection();
   const { count } = useShortlist();
-  const { openLeadModal } = useLeadCapture();
+  const { openLeadModal, leadTriggerProps } = useLeadCapture();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -85,6 +85,7 @@ export default function BottomNav() {
                 className={styles.item}
                 onClick={onClick}
                 aria-expanded={item.kind === 'menu' ? drawerOpen : undefined}
+                {...(item.kind === 'lead' ? leadTriggerProps : null)}
               >
                 {iconOf(item, false)}
                 <span className={styles.label}>{item.label}</span>

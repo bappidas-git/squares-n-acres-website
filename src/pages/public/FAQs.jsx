@@ -21,6 +21,7 @@ import { leadFormProps } from '../../utils/leadSources';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './FAQs.module.css';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 
 /** The API hears the last keystroke, not every one (§5.6). */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -56,6 +57,11 @@ export default function FAQs() {
       debounceMs: SEARCH_DEBOUNCE_MS,
     }
   );
+
+  // The prerender crawler saves this page once its primary query has settled
+  // (§9.9) — settling on an error state counts, so a crawl never hangs on a
+  // URL the API cannot answer.
+  usePrerenderReady(loading);
 
   // The tabs describe the whole collection, so they cannot be read off a
   // filtered answer: one unfiltered request on mount tells the page which of

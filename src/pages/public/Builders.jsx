@@ -17,6 +17,7 @@ import {
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './Builders.module.css';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 
 /** §8.6 caps a page at 24 items; the whole set fits in one. */
 const PER_PAGE = 24;
@@ -56,6 +57,11 @@ export default function Builders() {
       debounceMs: SEARCH_DEBOUNCE_MS,
     }
   );
+
+  // The prerender crawler saves this page once its primary query has settled
+  // (§9.9) — settling on an error state counts, so a crawl never hangs on a
+  // URL the API cannot answer.
+  usePrerenderReady(loading);
 
   const q = params.q ?? '';
   const sort = params.sort ?? 'order';

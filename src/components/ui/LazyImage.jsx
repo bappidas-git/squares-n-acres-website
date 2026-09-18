@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { BRAND } from '../../config/site';
-import { SRCSET_WIDTHS, blurThumb, buildSrcSet, cloudinaryUrl } from '../../utils/cloudinary';
+import { SRCSET_WIDTHS, blurThumb, cloudinaryUrl, responsiveImage } from '../../utils/cloudinary';
 
 import styles from './LazyImage.module.css';
 
@@ -73,18 +73,16 @@ export default function LazyImage({
   useEffect(() => setStatus('loading'), [src]);
 
   const responsive = useMemo(() => {
-    // A box the picture is cropped into is a box whose ratio the crop should
-    // respect; a box it is fitted *inside* (a logo, a floor plan) must never be
-    // cropped to it — §2.2 forbids cropping the wordmark, and a plan is
-    // unreadable with its edges cut off.
-    const built = buildSrcSet(src, widths, { ratio: fit === 'cover' ? ratio : null });
-    if (!built) return { srcSet: null, src, blur: null };
+    // `responsiveImage` owns the rule that a box the picture is cropped into is
+    // a box whose ratio the crop should respect, while a box it is fitted
+    // *inside* (a logo, a floor plan) must never be cropped to it — §2.2
+    // forbids cropping the wordmark, and a plan is unreadable with its edges
+    // cut off. `<Seo preloadImage>` reads the same helper, so a preload and
+    // this `<img>` always name the same candidates.
+    const built = responsiveImage(src, { ratio, fit, widths });
+    if (!built.srcSet) return { srcSet: null, src, blur: null };
 
-    return {
-      srcSet: built,
-      src: cloudinaryUrl(src, { w: 960, merge: true }),
-      blur: blurThumb(src),
-    };
+    return { srcSet: built.srcSet, src: built.src, blur: blurThumb(src) };
   }, [src, widths, ratio, fit]);
 
   const failed = status === 'error' || !src;

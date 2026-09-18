@@ -47,8 +47,10 @@ const CTAS = [
  * @param {object} props.property a record of §6.1
  * @param {Array<object>} [props.banks] the active lenders
  * @param {(entry: string) => void} props.onRequest opens the lead dialog
+ * @param {object} [props.triggerProps] spread onto the CTA — `leadTriggerProps`
+ *   of `LeadCaptureContext`, which warms the dialog's chunk before the click
  */
-export default function PriceCard({ property, banks = [], onRequest }) {
+export default function PriceCard({ property, banks = [], onRequest, triggerProps }) {
   if (!property) return null;
 
   const pricing = property.pricing ?? {};
@@ -128,6 +130,7 @@ export default function PriceCard({ property, banks = [], onRequest }) {
             fullWidth
             icon={<Icon icon={cta.icon} aria-hidden="true" />}
             onClick={() => onRequest?.(cta.entry)}
+            {...triggerProps}
           >
             {cta.label}
           </Button>

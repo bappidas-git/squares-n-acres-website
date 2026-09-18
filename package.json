@@ -51,7 +51,8 @@
     "json-server": "^0.17.4",
     "prettier": "^3.9.6",
     "puppeteer-core": "24.43.1",
-    "rimraf": "^5.0.10"
+    "rimraf": "^5.0.10",
+    "serve": "14.2.6"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -60,9 +61,12 @@
     "dev": "concurrently -n mock,web -c blue,green \"npm run mock\" \"npm start\"",
     "build": "react-scripts build",
     "build:ci": "cross-env CI=true react-scripts build",
+    "build:prerender": "npm run build && node scripts/prerender.js",
+    "serve:build": "serve -s build -l 5000",
     "test": "react-scripts test",
     "test:ci": "cross-env CI=true react-scripts test --watchAll=false --passWithNoTests",
     "test:mock": "cd mock-server && node --test",
+    "test:scripts": "node --test \"scripts/__tests__/**/*.test.js\"",
     "eject": "react-scripts eject",
     "lint": "eslint \"src/**/*.{js,jsx}\" \"mock-server/**/*.js\" \"scripts/**/*.js\" --max-warnings=0 && node scripts/check-endpoints.js",
     "lint:fix": "eslint \"src/**/*.{js,jsx}\" \"mock-server/**/*.js\" \"scripts/**/*.js\" --fix",
@@ -73,12 +77,13 @@
     "validate:seed": "node scripts/validate-seed.js",
     "seed:build": "node scripts/seed/build-seed.js",
     "generate:brand-assets": "node scripts/fetch-brand-assets.js",
-    "check:all": "npm run lint && npm run test:ci && npm run test:mock && npm run build:ci && npm run check:traces && npm run validate:seed && npm run check:contrast",
+    "check:all": "npm run lint && npm run test:ci && npm run test:mock && npm run test:scripts && npm run build:ci && npm run check:traces && npm run validate:seed && npm run check:contrast",
     "check:contrast": "node scripts/contrast-check.js",
     "check:endpoints": "node scripts/check-endpoints.js",
     "check:links": "node scripts/check-links.js",
     "check:jsonld": "node scripts/validate-jsonld.js",
-    "smoke": "node scripts/smoke-api.js"
+    "smoke": "node scripts/smoke-api.js",
+    "analyze": "node scripts/bundle-report.js"
   },
   "eslintConfig": {
     "extends": [

@@ -1,9 +1,10 @@
 import { Helmet } from 'react-helmet-async';
 import { createPortal } from 'react-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { EVENTS, track } from '../../utils/analytics';
+import { afterLoadIdle } from '../../utils/idle';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 /**
@@ -22,6 +23,20 @@ import { useSiteSettings } from '../../contexts/SiteSettingsContext';
  * every route change instead. A single-page app fires one automatic page view
  * in its life — the first load — so leaving the default on would report a site
  * where nobody ever reads a second page.
+ *
+ * **Nothing is injected until the page has loaded** (prompt 41 §4.5). A tag
+ * manager's container is a few hundred kilobytes of third-party JavaScript
+ * that parses on the main thread, and a `gtag.js` in the head is a request
+ * ahead of the hero image in the queue — both of them measured as this site's
+ * Total Blocking Time and Largest Contentful Paint, neither of them anything
+ * a visitor is waiting for. So the tags go in after `load`, in an idle slot
+ * (`utils/idle.js`).
+ *
+ * The page view is **not** deferred with them. `track()` pushes onto
+ * `window.dataLayer` whether or not a container is on the page, and a
+ * container reads what is already in the array when it loads, so the first
+ * page view is recorded at the moment it happens and delivered when the tag
+ * arrives.
  *
  * Mounted once, in the app shell inside `SiteSettingsProvider`: Helmet
  * de-duplicates by tag, but a snippet mounted per route would re-run a tag
@@ -70,6 +85,7 @@ fbq('track', 'PageView');`;
 export default function AnalyticsScripts({ integrations }) {
   const { settings } = useSiteSettings();
   const location = useLocation();
+  const [injected, setInjected] = useState(false);
 
   const admin = location.pathname === '/admin' || location.pathname.startsWith('/admin/');
   const ids = admin ? {} : (integrations ?? settings?.integrations ?? {});
@@ -89,7 +105,14 @@ export default function AnalyticsScripts({ integrations }) {
     });
   }, [path, ga4, gtm, pixel]);
 
+  // The one thing that decides when a third-party script reaches the page.
+  useEffect(() => {
+    if (!ga4 && !gtm && !pixel) return undefined;
+    return afterLoadIdle(() => setInjected(true));
+  }, [ga4, gtm, pixel]);
+
   if (!ga4 && !gtm && !pixel) return null;
+  if (!injected) return null;
 
   return (
     <>

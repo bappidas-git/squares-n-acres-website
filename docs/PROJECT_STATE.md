@@ -1,52 +1,53 @@
 # Project state — Squares N Acres website
 
 Status: IN PROGRESS
-Last prompt executed: 40 — the site settings screen, the settings context refresh and the public subset Next prompt: 41
+Last prompt executed: 41 — performance, code splitting, web-vitals and the optional prerender Next prompt: 42
 
 ## Executed prompts
 
-| #   | Title                                                           | Commit                                                                             | Date       |
-| --- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------- |
-| 01  | Repository audit, tooling baseline and project state files      | `c1cc2f7`                                                                          | 2026-09-15 |
-| 02  | Rebrand identity, environment files, brand assets and README    | `376203f`                                                                          | 2026-09-15 |
-| 03  | Purge HOM traces and dead code; strict trace check              | `f82d069`                                                                          | 2026-09-15 |
-| 04  | Design system: tokens, MUI theme, UI kit and layout restyle     | `373e092`                                                                          | 2026-09-15 |
-| 05  | API contract, enums, endpoint registry and schema descriptors   | `1812eae`                                                                          | 2026-09-15 |
-| 06  | Mock server core, runtime db, envelope and starter seed         | `1a2ce23`                                                                          | 2026-09-15 |
-| 07  | Auth tokens, RBAC middleware, users CRUD and profile            | `2383116`                                                                          | 2026-09-15 |
-| 08  | Property search and lead pipeline on the mock                   | `71e0727`                                                                          | 2026-09-15 |
-| 09  | Mock content, master data, SEO, sitemaps and smoke tests        | `92df3cb`                                                                          | 2026-09-16 |
-| 10  | Full Bangalore seed data and seed guide                         | `bdaeaa9`                                                                          | 2026-09-16 |
-| 11  | Frontend data layer, hooks, contexts and page rewiring          | `d60193e`                                                                          | 2026-09-16 |
-| 12  | Auth, admin shell, RBAC routes, notifications and profile       | `d6128b5`                                                                          | 2026-09-16 |
-| 13  | Admin UI kit, `MasterDataPage`, users page, IconPicker fixes    | `651a8cc`                                                                          | 2026-09-16 |
-| 14  | Localities and cities: admin CRUD, public index and guide       | `b3813a1`                                                                          | 2026-09-16 |
-| 15  | Master data: property types, amenities, badges and banks        | `0cc1afc`                                                                          | 2026-09-16 |
-| 16  | Developers: admin CRUD and the public builder pages             | `da19cb5`                                                                          | 2026-09-16 |
-| 17  | FAQs, testimonials, team and partners: admin and sections       | `4dcf5cd`                                                                          | 2026-09-16 |
-| 18  | Property form foundation: reducer, validators, rail, payload    | `c917a9a`                                                                          | 2026-09-16 |
-| 19  | Property form tabs 1–6: basics → media                          | `44122e1`                                                                          | 2026-09-16 |
-| 20  | Property form tabs 7–12: amenities → FAQs                       | `d114794`                                                                          | 2026-09-16 |
-| 21  | Property form tabs 13–16, admin preview, publish polish         | `fb93d0c`                                                                          | 2026-09-16 |
-| 22  | Admin property list: filters, bulk, toggles, CSV export         | `28e892a`                                                                          | 2026-09-16 |
-| 23  | Property details part 1: page shell, gallery, price, shortlist  | `399b188`                                                                          | 2026-09-16 |
-| 24  | Property details part 2: the eleven content sections            | `296deaa`                                                                          | 2026-09-16 |
-| 25  | Property details part 3: documents, finance, similar, enquiry   | `adfe5ad`                                                                          | 2026-09-17 |
-| 26  | Public listing engine, filters, global search and shortlist     | `382e5cf`                                                                          | 2026-09-17 |
-| 27  | Data-driven home page, navigation and footer                    | `f20e4e0`                                                                          | 2026-09-17 |
-| 28  | Unified lead capture, spam protection, click tracking           | `66d200a`                                                                          | 2026-09-17 |
-| 29  | Admin leads CRM and the real-data dashboard                     | `69fd6c5`                                                                          | 2026-09-17 |
-| 30  | Pages CMS: admin block editor, public renderer, CmsPage routes  | `7a161a0`                                                                          | 2026-09-17 |
-| 31  | Careers & jobs, CMS awareness page, newsletter subscribers      | `9e7d1cc`                                                                          | 2026-09-17 |
-| 32  | Tiptap rich text editor, sanitiser, SafeHtml, every textarea    | `42d836f`                                                                          | 2026-09-17 |
-| 33  | Articles admin: list, editor form, scheduling, taxonomy CRUD    | `ad85093`                                                                          | 2026-09-17 |
-| 34  | Public blog: index, taxonomy pages, article page, RSS link      | `6862bf2`                                                                          | 2026-09-17 |
-| 35  | SEO engine core: analyzers, scoring, readability, schema        | `a9e806f`                                                                          | 2026-09-17 |
-| 36  | SEO panel: General/Social/Advanced/Schema, wired into 8 forms   | `e52a9ea`                                                                          | 2026-09-17 |
-| 37  | SEO dashboard, global SEO settings, redirects manager, playbook | `7b179f0`                                                                          | 2026-09-17 |
-| 38  | Public `<Seo>`, JSON-LD graphs, breadcrumbs, redirects, checks  | `261bf66`                                                                          | 2026-09-17 |
-| 39  | Media library, Cloudinary uploads, picker, responsive images    | `b54145e`                                                                          | 2026-09-18 |
-| 40  | Site settings admin, context refresh, public subset verified    | HEAD of this branch (a commit cannot contain its own hash — prompt 41 fills it in) | 2026-09-18 |
+| #   | Title                                                              | Commit                                                                             | Date       |
+| --- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------- | ---------- |
+| 01  | Repository audit, tooling baseline and project state files         | `c1cc2f7`                                                                          | 2026-09-15 |
+| 02  | Rebrand identity, environment files, brand assets and README       | `376203f`                                                                          | 2026-09-15 |
+| 03  | Purge HOM traces and dead code; strict trace check                 | `f82d069`                                                                          | 2026-09-15 |
+| 04  | Design system: tokens, MUI theme, UI kit and layout restyle        | `373e092`                                                                          | 2026-09-15 |
+| 05  | API contract, enums, endpoint registry and schema descriptors      | `1812eae`                                                                          | 2026-09-15 |
+| 06  | Mock server core, runtime db, envelope and starter seed            | `1a2ce23`                                                                          | 2026-09-15 |
+| 07  | Auth tokens, RBAC middleware, users CRUD and profile               | `2383116`                                                                          | 2026-09-15 |
+| 08  | Property search and lead pipeline on the mock                      | `71e0727`                                                                          | 2026-09-15 |
+| 09  | Mock content, master data, SEO, sitemaps and smoke tests           | `92df3cb`                                                                          | 2026-09-16 |
+| 10  | Full Bangalore seed data and seed guide                            | `bdaeaa9`                                                                          | 2026-09-16 |
+| 11  | Frontend data layer, hooks, contexts and page rewiring             | `d60193e`                                                                          | 2026-09-16 |
+| 12  | Auth, admin shell, RBAC routes, notifications and profile          | `d6128b5`                                                                          | 2026-09-16 |
+| 13  | Admin UI kit, `MasterDataPage`, users page, IconPicker fixes       | `651a8cc`                                                                          | 2026-09-16 |
+| 14  | Localities and cities: admin CRUD, public index and guide          | `b3813a1`                                                                          | 2026-09-16 |
+| 15  | Master data: property types, amenities, badges and banks           | `0cc1afc`                                                                          | 2026-09-16 |
+| 16  | Developers: admin CRUD and the public builder pages                | `da19cb5`                                                                          | 2026-09-16 |
+| 17  | FAQs, testimonials, team and partners: admin and sections          | `4dcf5cd`                                                                          | 2026-09-16 |
+| 18  | Property form foundation: reducer, validators, rail, payload       | `c917a9a`                                                                          | 2026-09-16 |
+| 19  | Property form tabs 1–6: basics → media                             | `44122e1`                                                                          | 2026-09-16 |
+| 20  | Property form tabs 7–12: amenities → FAQs                          | `d114794`                                                                          | 2026-09-16 |
+| 21  | Property form tabs 13–16, admin preview, publish polish            | `fb93d0c`                                                                          | 2026-09-16 |
+| 22  | Admin property list: filters, bulk, toggles, CSV export            | `28e892a`                                                                          | 2026-09-16 |
+| 23  | Property details part 1: page shell, gallery, price, shortlist     | `399b188`                                                                          | 2026-09-16 |
+| 24  | Property details part 2: the eleven content sections               | `296deaa`                                                                          | 2026-09-16 |
+| 25  | Property details part 3: documents, finance, similar, enquiry      | `adfe5ad`                                                                          | 2026-09-17 |
+| 26  | Public listing engine, filters, global search and shortlist        | `382e5cf`                                                                          | 2026-09-17 |
+| 27  | Data-driven home page, navigation and footer                       | `f20e4e0`                                                                          | 2026-09-17 |
+| 28  | Unified lead capture, spam protection, click tracking              | `66d200a`                                                                          | 2026-09-17 |
+| 29  | Admin leads CRM and the real-data dashboard                        | `69fd6c5`                                                                          | 2026-09-17 |
+| 30  | Pages CMS: admin block editor, public renderer, CmsPage routes     | `7a161a0`                                                                          | 2026-09-17 |
+| 31  | Careers & jobs, CMS awareness page, newsletter subscribers         | `9e7d1cc`                                                                          | 2026-09-17 |
+| 32  | Tiptap rich text editor, sanitiser, SafeHtml, every textarea       | `42d836f`                                                                          | 2026-09-17 |
+| 33  | Articles admin: list, editor form, scheduling, taxonomy CRUD       | `ad85093`                                                                          | 2026-09-17 |
+| 34  | Public blog: index, taxonomy pages, article page, RSS link         | `6862bf2`                                                                          | 2026-09-17 |
+| 35  | SEO engine core: analyzers, scoring, readability, schema           | `a9e806f`                                                                          | 2026-09-17 |
+| 36  | SEO panel: General/Social/Advanced/Schema, wired into 8 forms      | `e52a9ea`                                                                          | 2026-09-17 |
+| 37  | SEO dashboard, global SEO settings, redirects manager, playbook    | `7b179f0`                                                                          | 2026-09-17 |
+| 38  | Public `<Seo>`, JSON-LD graphs, breadcrumbs, redirects, checks     | `261bf66`                                                                          | 2026-09-17 |
+| 39  | Media library, Cloudinary uploads, picker, responsive images       | `b54145e`                                                                          | 2026-09-18 |
+| 40  | Site settings admin, context refresh, public subset verified       | `f88a01d`                                                                          | 2026-09-18 |
+| 41  | Code splitting, lazy sections, LCP preloads, web-vitals, prerender | HEAD of this branch (a commit cannot contain its own hash — prompt 42 fills it in) | 2026-09-18 |
 
 ## Baseline (prompt 01)
 
@@ -198,33 +199,37 @@ The renormalisation is therefore invisible in the diff.
 
 ### npm scripts
 
-| Script                  | Command                                                                                         | Added by                     |
-| ----------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------- |
-| `start`                 | `react-scripts start`                                                                           | boilerplate                  |
-| `dev`                   | `concurrently -n mock,web -c blue,green "npm run mock" "npm start"`                             | boilerplate (replaced in 06) |
-| `mock`                  | `node mock-server/server.js`                                                                    | 06                           |
-| `mock:reset`            | `node mock-server/reset.js`                                                                     | 06                           |
-| `build`                 | `react-scripts build`                                                                           | boilerplate                  |
-| `test`                  | `react-scripts test`                                                                            | boilerplate                  |
-| `eject`                 | `react-scripts eject`                                                                           | boilerplate                  |
-| `lint`                  | `eslint … --max-warnings=0 && node scripts/check-endpoints.js`                                  | 01 (extended in 05, 06)      |
-| `lint:fix`              | `eslint "src/**/*.{js,jsx}" "mock-server/**/*.js" "scripts/**/*.js" --fix`                      | 01 (extended in 06)          |
-| `format`                | `prettier --write "src/**" "mock-server/**/*.js" "scripts/**" "docs/**/*.md"`                   | 01 (extended in 06)          |
-| `format:check`          | `prettier --check "src/**" "mock-server/**/*.js" "scripts/**/*.js"`                             | 01 (extended in 06)          |
-| `test:ci`               | `cross-env CI=true react-scripts test --watchAll=false --passWithNoTests`                       | 01                           |
-| `test:mock`             | `cd mock-server && node --test`                                                                 | 07                           |
-| `build:ci`              | `cross-env CI=true react-scripts build`                                                         | 01                           |
-| `check:traces`          | `node scripts/check-traces.js`                                                                  | 01                           |
-| `check:traces:report`   | `node scripts/check-traces.js --report`                                                         | 01                           |
-| `generate:brand-assets` | `node scripts/fetch-brand-assets.js`                                                            | 02                           |
-| `check:contrast`        | `node scripts/contrast-check.js`                                                                | 04                           |
-| `check:endpoints`       | `node scripts/check-endpoints.js`                                                               | 05                           |
-| `validate:seed`         | `node scripts/validate-seed.js`                                                                 | 06                           |
-| `seed:build`            | `node scripts/seed/build-seed.js`                                                               | 10                           |
-| `smoke`                 | `node scripts/smoke-api.js` (needs a running mock; deliberately outside `check:all`)            | 09                           |
-| `check:links`           | `node scripts/check-links.js` (needs `npm run dev`; outside `check:all`)                        | 38                           |
-| `check:jsonld`          | `node scripts/validate-jsonld.js` (needs `npm run dev`; outside `check:all`)                    | 38                           |
-| `check:all`             | `… lint && test:ci && test:mock && build:ci && check:traces && validate:seed && check:contrast` | 01 (extended in 04, 06, 07)  |
+| Script                  | Command                                                                                                         | Added by                        |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `start`                 | `react-scripts start`                                                                                           | boilerplate                     |
+| `dev`                   | `concurrently -n mock,web -c blue,green "npm run mock" "npm start"`                                             | boilerplate (replaced in 06)    |
+| `mock`                  | `node mock-server/server.js`                                                                                    | 06                              |
+| `mock:reset`            | `node mock-server/reset.js`                                                                                     | 06                              |
+| `build`                 | `react-scripts build`                                                                                           | boilerplate                     |
+| `test`                  | `react-scripts test`                                                                                            | boilerplate                     |
+| `eject`                 | `react-scripts eject`                                                                                           | boilerplate                     |
+| `lint`                  | `eslint … --max-warnings=0 && node scripts/check-endpoints.js`                                                  | 01 (extended in 05, 06)         |
+| `lint:fix`              | `eslint "src/**/*.{js,jsx}" "mock-server/**/*.js" "scripts/**/*.js" --fix`                                      | 01 (extended in 06)             |
+| `format`                | `prettier --write "src/**" "mock-server/**/*.js" "scripts/**" "docs/**/*.md"`                                   | 01 (extended in 06)             |
+| `format:check`          | `prettier --check "src/**" "mock-server/**/*.js" "scripts/**/*.js"`                                             | 01 (extended in 06)             |
+| `test:ci`               | `cross-env CI=true react-scripts test --watchAll=false --passWithNoTests`                                       | 01                              |
+| `test:mock`             | `cd mock-server && node --test`                                                                                 | 07                              |
+| `build:ci`              | `cross-env CI=true react-scripts build`                                                                         | 01                              |
+| `check:traces`          | `node scripts/check-traces.js`                                                                                  | 01                              |
+| `check:traces:report`   | `node scripts/check-traces.js --report`                                                                         | 01                              |
+| `generate:brand-assets` | `node scripts/fetch-brand-assets.js`                                                                            | 02                              |
+| `check:contrast`        | `node scripts/contrast-check.js`                                                                                | 04                              |
+| `check:endpoints`       | `node scripts/check-endpoints.js`                                                                               | 05                              |
+| `validate:seed`         | `node scripts/validate-seed.js`                                                                                 | 06                              |
+| `seed:build`            | `node scripts/seed/build-seed.js`                                                                               | 10                              |
+| `smoke`                 | `node scripts/smoke-api.js` (needs a running mock; deliberately outside `check:all`)                            | 09                              |
+| `check:links`           | `node scripts/check-links.js` (needs `npm run dev`; outside `check:all`)                                        | 38                              |
+| `check:jsonld`          | `node scripts/validate-jsonld.js` (needs `npm run dev`; outside `check:all`)                                    | 38                              |
+| `serve:build`           | `serve -s build -l 5000` (the production build, for Lighthouse and the prerender)                               | 41                              |
+| `build:prerender`       | `npm run build && node scripts/prerender.js` (needs `CHROME_PATH` + a running mock)                             | 41                              |
+| `analyze`               | `node scripts/bundle-report.js` (the §8.6 budget check; needs `npm run build` first)                            | 41                              |
+| `test:scripts`          | `node --test "scripts/__tests__/**/*.test.js"`                                                                  | 41                              |
+| `check:all`             | `… lint && test:ci && test:mock && test:scripts && build:ci && check:traces && validate:seed && check:contrast` | 01 (extended in 04, 06, 07, 41) |
 
 ### Environment variables
 
@@ -245,6 +250,7 @@ by `npm start`) and `.env.production.example` (template for `.env.production`, g
 | `MOCK_DELAY_MS`                      | no       | `0`                         | 02       | `mock-server/config.js` — latency on every response          |
 | `MOCK_TOKEN_TTL_HOURS`               | no       | `24`                        | 02       | `mock-server/config.js` — token lifetime (used by prompt 07) |
 | `MOCK_FRESH`                         | no       | `0`                         | 02       | `mock-server/config.js` — `1` re-seeds the runtime db        |
+| `MOCK_URL`                           | no       | `http://localhost:4000/api` | 41       | `scripts/prerender.js` — the API whose sitemaps it crawls    |
 
 `.gitignore` (prompt 01) already ignored `.env` and `.env.production`; those rules now
 protect real files instead of being a no-op.
@@ -371,7 +377,6 @@ The boilerplate's own endpoint surface stays inventoried in
 | ADD-01 | `.env` committed with the Cloudways URL; no `.env.example`; README links a non-existent `API_DOCUMENTATION.md`; README says Node 16+ | master spec, confirmed 01 | 02 |
 | ADD-02 | `dev` script equals `start` (no json-server anywhere); `devDependencies` empty; no ESLint/Prettier config beyond CRA | master spec | 01 (tooling half **closed**), 06 (`dev`/`mock`) |
 | ADD-03 | `public/index.html` references a non-existent `favicon.ico`; `robots.txt` allows everything with no sitemap; no `manifest.json` | master spec, confirmed 01 | 02 |
-| ADD-04 | `@mui/icons-material` and `web-vitals` are unused dependencies (0 imports each) | master spec, confirmed 01 | 03, 41 |
 | ADD-06 (partial) | **Closed in 04:** the three scroll-hide copies (now `useScrollDirection`; `useThrottledScroll` stays for `BackToTop`), the 13 local `Section` components (now `ui/Section`), and `tagColors` vs `TAG_OPTIONS` (`PropertyCard` reads `TAG_OPTIONS` tones). **Closed in 36:** `GooglePreview` ×2 and `getTitleLenColor` ×2 — there is one search preview (`SeoPanel/parts/GooglePreview.jsx`, which truncates on pixels rather than characters) and one length verdict (`parts/SeoMeter.jsx`'s `meterState`), and both of the screens that held the duplicates are gone. **Still open:** the five `formatPrice` and three `formatDate` copies still exist at their call sites — `src/utils/format.js` is the single implementation but the call sites move to it with the data hooks; and `leadStatusConfig` in `Dashboard`. The nav data half closed in 27 (`src/config/navigation.js`). | master spec, confirmed 01 | 11 |
 | ADD-09 (closed in 28) | `LeadForm` ignores `required:false`, has no `<label>`s, no `onSuccess`, posts unsanitised values; `NewsletterSection` validation is `includes('@')`, fails silently, shows a false reCAPTCHA notice. **Closed:** every control is a `ui/FormField` with a visible `<label>`, `aria-describedby` and `aria-invalid`; `required` is honoured per field; the payload is sanitised, the phone normalised to `+91XXXXXXXXXX` and unknown answers filed under `meta` (D56); `onSuccess(lead, values)` exists; `NewsletterForm` validates with `EMAIL_PATTERN`, shows its error inline and only claims reCAPTCHA when a key is set. | master spec, confirmed 01 | 28 ✔ |
 | ADD-16 | `ArticleDetail` Markdown renderer: duplicate tables on every `\ **Closed in 11**: the article body is CMS-authored HTML rendered through `LegacyHtml`, and the breadcrumb now goes Home → Articles → category.                                                                                                                                                                                                                                                                                                                                                             | `line, ordered lists rendered as`<ul>`, only `**bold**`inline, breadcrumb "Insights" and "Articles" to the same URL;`Articles` state not URL-synced **Fully closed in 34**: the page is `ArticleDetail.jsx`, the body goes through `SafeHtml`, and the breadcrumb is Home › Insights › Category › Title. | master spec, confirmed 01 | 32, 34 |
@@ -408,11 +413,17 @@ The boilerplate's own endpoint surface stays inventoried in
 | NEW-39                    | **`cleanTitle` leaves a comma standing in front of the separator.** `'%bhk% in %locality%, %developer% %sep% %sitename%'` on a listing with no builder resolves to `"3 BHK in Whitefield,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Squares N Acres"`: §9.5's cleanup removes the unresolved variable and handles a leading `–                                                                                                                                                                                                                                                                                                      | `, a doubled separator and `in , Bengaluru`, but not punctuation left immediately before the separator. Found while writing the SEO settings screen's live template examples; the engine belongs to prompt 35 and its tests assert the current behaviour, so 37 left it alone and documented it rather than changing a scorer mid-prompt. The fix is one more rule in `cleanTitle`plus a case in`variables.test.js`. | 37, writing `TitlesMetaTab.test.jsx` | 45  |
 | NEW-40                    | **Four status-listing titles run past the 60 characters a result shows.** `npm run check:jsonld` warns on `/buy/pre-launch` (72), `/buy/under-construction` (82), `/buy/ready-to-move` (73) and `/buy/resale` (70): the §9.5 `listing` template appends `for Sale` to a noun that already contains the status, so "Under-construction properties for Sale in Bengaluru – 6 Listings                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Squares N Acres" says "sale" twice and is cut off in the result. The same warning flags seven CMS pages whose titles are _short_ (`/disclaimer` at 10 characters). Both are copy rather than code: the fix is the `verb` of the four status entries in `listingRoutes.js` and the `seo.title` of the CMS records, which is prompt 46's SEO pass. Warnings, not errors — `check:jsonld` exits 0. | 38, running `check:jsonld` against the rendered site                                                                                                                                                                                                                                                                                                                                                                 | 46                                   |
 | NEW-41                    | **Two seeded links point at articles that are not published.** `npm run check:links` (Chrome) reports `/insights/articles/under-construction-vs-ready-to-move`, linked from the bodies of articles 4 and 6, and `/insights/articles/first-time-homebuyer-checklist-bengaluru`, linked from the body of page 12 (`insights/real-estate-awareness`). The first record is `status: "draft"`; the second is `status: "scheduled"` for 2026-10-31, so it starts resolving on that date on its own. The 404 is correct behaviour (§5.4: a public detail endpoint answers 404 for an unpublished slug) — the defect is in the seed copy, and `db.json` is off-limits to prompt 38 (§12 guardrails). The checker is left reporting them rather than taught to forgive them, so `check:links` exits 1 on these two until the seed is corrected.                                                                                                                                                                                                                                                                                | 38, running `check:links` against the rendered site                                                                                                                                                                                                                                                                                                                                             | 46                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| NEW-42                    | **The home page fires 25 `GET /properties?…&perPage=1` requests to count the category tiles.** `useCategoryCounts` (prompt 27) asks for one result per tile — six segment/listing-type tiles and seventeen property types — purely to read `meta.total`. Against the mock each answers in under 100 ms and the page is fine; against a real API it is 25 round trips and 25 state updates for a row of six numbers. The fix is one aggregate response (a `counts` branch on an existing endpoint, or `GET /properties/counts`), which needs an API change and is therefore prompt 46's to specify and prompt 47's to document. Seen in the Lighthouse network trace of `/`.                                                                                                                                                                                                                                                                                                                                                                                                                                           | 41, reading the Lighthouse trace of the home page                                                                                                                                                                                                                                                                                                                                               | 46                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| NEW-43                    | **Three colour-contrast failures Lighthouse reports at AA.** (1) `Breadcrumbs` over the locality hero: `#e0e0e0` on the composited scrim `#727273` = 3.64:1 at 14 px, needs 4.5:1. (2) `LocalitySections_heroStatLabel` `#eaeaea` on the same scrim = 3.99:1 at 12 px. (3) `TrendingList_rank` `#d1d5db` on `#f7f7f8` = 1.37:1 at 18 px bold on the article index — that one is `aria-hidden` decoration, so the question is whether it should be darker or is genuinely decorative. (1) and (2) are text over a hero photograph, so what axe measured is the scrim over the placeholder the sandbox left behind rather than over a picture; the hazard is real either way and the scrim is the lever. `npm run check:contrast` does not see any of the three, because it checks token pairs and these are composites.                                                                                                                                                                                                                                                                                                | 41, Lighthouse mobile on `/localities/whitefield` and `/insights/articles`                                                                                                                                                                                                                                                                                                                      | 42                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| NEW-44                    | **The property overview's `<dl>` has children that are neither `<dt>` nor `<dd>`.** `OverviewSection_snapshot` wraps each pair in a `<div>` holding a `<span>`, which axe reports as `dl element has direct children that are not allowed: div > span`. A `<div>` around a `<dt>`/`<dd>` pair is valid HTML5 and axe still fails it, so the fix is either to drop the wrapper and style the pairs with CSS grid, or to stop calling it a description list.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | 41, Lighthouse mobile on a property page                                                                                                                                                                                                                                                                                                                                                        | 42                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| NEW-45                    | **Two controls have an `aria-label` that does not contain their visible text** (WCAG 2.5.3, Label in Name): the gallery stage (`role="button"`, label "… — photograph 1 of 6. Press Enter to view full screen.", visible text "1 / 6" and "View all 6 photos") and the brochure button (label "Download the project brochure", visible text "Brochure"). Somebody using voice control says what they can see, and neither label starts with it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | 41, Lighthouse mobile on a property page                                                                                                                                                                                                                                                                                                                                                        | 42                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| NEW-46                    | **Navigating away from a property page fires one doomed request for the new slug.** `MainLayout` wraps the outlet in `<AnimatePresence mode="wait">` keyed on the pathname, so the outgoing page stays mounted through its exit animation while `useParams()` already reports the new location: leaving `/properties/aurelia-court-duplex-koramangala` for `/localities/koramangala` makes `PropertyDetails` fetch `GET /properties/slug/koramangala`, which answers 404 and logs an error in the console. One wasted request per navigation away from a property page, and a console error on a page that is otherwise clean. The fix is React Router's own remedy — render the outlet against a pinned `location` so the exiting subtree keeps the params it was mounted with — which is a change to the router setup (D97) rather than to this page.                                                                                                                                                                                                                                                               | 41, watching the mock's log during a prerender verification                                                                                                                                                                                                                                                                                                                                     | 44                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ## Known issues (closed)
 
 | Id                       | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Closed by                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ADD-04                   | 41 — the second half, and the last of the row: `web-vitals` is wired. `src/utils/vitals.js` subscribes to `getCLS`/`getFID`/`getLCP`/`getFCP`/`getTTFB` and sends each one through `track()` as a `web_vitals` event with `{ name, value, id, rating }`; `src/index.js` starts it after `render`, in an idle slot, through a dynamic `import()`. Verified in the production build: `window.dataLayer` holds `FCP`, `TTFB` and `LCP` readings after a page load. (`@mui/icons-material` was removed in 03.)                                                                                                                                                                                                                                                                                                           |
 | ADD-19 (settings)        | 40 — `src/pages/admin/AdminSettings.js` is deleted. `/admin/settings` is seven panels over the real §6.13 branches, with `useForm`, a schema mirror, unsaved-changes guard, sticky save bar and a read-only manager view.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | BUG-11 (footer defaults) | 40 — the last of BUG-11: the footer's columns, about text, disclaimer, copyright, collage and the firm's RERA/GST are settings, editable in the admin.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | NEW-10                   | 40 — deleted with `AdminSettings.js`; the tab strip and the panels are rendered from one `SETTINGS_TABS` table.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
@@ -6345,3 +6356,166 @@ manager:
 - NEW-38, NEW-39, NEW-40 and NEW-41 are untouched and still owned by 44–46.
 
 **Next prompt: 41 — performance, code splitting and the optional prerender.**
+
+### Prompt 41 — Performance: code splitting, lazy sections, LCP preloads, web-vitals and the optional prerender (2026-09-18)
+
+**Files added**
+
+- `scripts/lib/chrome.js` — the shared browser launcher: `CHROME_PATH` verbatim
+  when set, otherwise the usual Windows/macOS/Linux install locations; exports
+  `findChrome`, `hasChrome`, `describe`, `requireChrome`, `launchChrome`,
+  `missingChromeMessage`, `candidatePaths`, `DEFAULT_ARGS`
+- `scripts/bundle-report.js` — `npm run analyze`: gzips every asset the manifest
+  names, prints the entry and the largest lazy chunks, and **fails** when the
+  public entry chunk is over 300 000 bytes gzip or contains `SeoPanel`,
+  `RichTextEditor`, `recharts` or `MediaLibrary`
+- `scripts/prerender.js` — `npm run build:prerender`'s second half (§5 of
+  `docs/PERFORMANCE.md`)
+- `scripts/__tests__/chrome.test.js` (17 cases, 1 skipped where no Chrome is
+  installed in a standard location), `scripts/__tests__/bundle-report.test.js`
+  (6 cases)
+- `src/utils/vitals.js` — `reportWebVitals()`, `vitalsPayload`, `ratingFor`,
+  `roundValue`; + `src/utils/__tests__/vitals.test.js` (11 cases)
+- `src/utils/idle.js` — `whenIdle`, `afterLoad`, `afterLoadIdle`
+- `src/utils/motionFeatures.js` — `domAnimation`, re-exported and nothing else
+- `src/utils/prerender.js` — `isPrerendering()`, `PRERENDER_FLAG`,
+  `PRERENDER_READY_ATTRIBUTE`
+- `src/hooks/usePrerenderReady.js`, `src/hooks/useDeferredSection.js`
+- `src/components/ui/VideoEmbed.jsx` (+ `.module.css`) — the click-to-load
+  YouTube facade; exports `youtubeId`, `embedUrl`, `thumbnailUrl`
+- `src/components/editor/blocks/RenderedYoutube.jsx` — the facade inside `.prose`
+- `src/pages/admin/properties/property-form/components/coordinates.js` —
+  `DEFAULT_CENTRE`, `roundCoordinate`, `hasPin`, split out of `MapPinPicker` so
+  the picker could become a lazy boundary
+- `docs/PERFORMANCE.md`
+
+**Files changed** (83 in the tree; the ones that matter)
+
+- `src/routes/index.js` — `<LazyMotion features={loadMotionFeatures} strict>` is
+  now the outermost element of the app shell
+- `BackToTop`, `ToastProvider`, `MainLayout`, `FaqAccordion`, `NotFound` —
+  `motion.*` → `m.*`
+- `src/contexts/LeadCaptureContext.js` — `LeadCaptureModal` is `React.lazy`;
+  exports `prefetchLeadModal` and `leadTriggerProps`
+- `Header`, `BottomNav`, `MobileDrawer`, `CtaBlock`, `HeroBlock`,
+  `PackagesBlock`, `BanksBlock`, `RenderedCta`, `BlogSidebar`,
+  `UnitConfigurationsSection`, `PriceCard`, `MobileCtaBar`, `BankCard(s)`,
+  `PageHero` — every lead trigger spreads `leadTriggerProps`
+- `src/components/admin/DataTable.jsx` — the desktop row is a memoised `DataRow`,
+  `MobileCard` is memoised, `toggleRow` is stable
+- `src/components/sections/article/ArticleCard.jsx` — `memo`
+- `src/components/ui/Section.jsx` — `forwardRef`, merged with its own
+  fade-up observer, so a band can defer its request on the same element
+- `PropertyRow`, `LatestInsights`, `FaqSection`, `PartnersSection`, `Home`
+  (testimonials) — `useDeferredSection` + `enabled`
+- `src/hooks/useInView.js` — reports in view during the prerender crawl
+- `src/components/ui/Carousel.module.css` — `content-visibility: auto`
+- `src/contexts/SiteSettingsContext.js` — the three getters are stable
+  `useCallback`s reading the record through a ref
+- `src/utils/cloudinary.js` — `responsiveImage()`, used by `LazyImage` **and**
+  `<Seo preloadImage>`
+- `src/components/seo/useSeoResolved.js`, `Seo.jsx` — the `preloadImage` prop →
+  `<link rel="preload" as="image" fetchpriority="high">`
+- `Home`, `PropertyDetails`, `ArticleDetail`, `LocalityDetail`, `BuilderDetail` —
+  `preloadImage` wired to the page's LCP image
+- `src/components/sections/property/PropertyGallery.jsx` — `preload="none"` +
+  the cover as poster on a file video; the facade for YouTube and the tour
+- `src/components/editor/SafeHtml.jsx` — a `data-youtube-video` wrapper or a
+  bare YouTube iframe becomes the facade
+- `src/components/seo/AnalyticsScripts.jsx` — the tags are injected after `load`
+  in an idle slot; the page view is not deferred
+- `src/index.js` — `whenIdle(() => reportWebVitals())` after `render`;
+  `createRoot` untouched
+- `public/index.html` — `preconnect` to `res.cloudinary.com`
+- `scripts/check-links.js`, `scripts/validate-jsonld.js` — launch through
+  `scripts/lib/chrome.js` (their `CHROME_PATH`-only gate is unchanged)
+- `src/pages/public/*` (14 pages) + `ListingEngine` — `usePrerenderReady(loading)`
+- `.gitignore` — ad-hoc `lighthouse-*.html/json`
+
+**Endpoints**: none added or changed.
+
+**Env vars**: `MOCK_URL` (prerender, default `http://localhost:4000/api`).
+`CHROME_PATH` gains its second consumer.
+
+**npm scripts**: `serve:build`, `build:prerender`, `analyze`, `test:scripts`
+added; `test:scripts` added to `check:all`. Dev dependency `serve@14.2.6`.
+
+**Bundle**
+
+| Chunk                                | Before    | After         |
+| ------------------------------------ | --------- | ------------- |
+| `main.*.js` (the public entry), gzip | 305.99 kB | **281.92 kB** |
+| `motion-dom` source inside it        | 375 KiB   | 120 KiB       |
+| `framer-motion` source inside it     | 136 KiB   | 69 KiB        |
+| Admin markers in it                  | none      | none          |
+| Lazy chunks                          | 165       | 166           |
+
+`npm run analyze` passes with **18.08 kB to spare**. The whole saving is the
+`LazyMotion`/`m` adoption; the four new lazy boundaries (`LeadCaptureModal`,
+`MapPinPicker`, the video facade, `web-vitals`) move bytes out of _route_
+chunks rather than out of the entry.
+
+**Verification**
+
+`lint` (0 findings), `test:ci` (**126 suites / 2583 tests**), `build:ci`,
+`check:traces` (0 findings), `test:scripts` (17 cases, 1 skipped), `analyze`
+and `smoke` all pass.
+
+`npm run build:prerender` with `CHROME_PATH` set: **127 of 127 pages saved, no
+warnings, no failures** — 15 static routes plus 112 records from the mock's
+sitemaps. Spot-checked: `build/properties/aurelia-court-duplex-koramangala/index.html`
+is 93 kB and carries `<title>3 BHK Duplex in Koramangala</title>`, the
+canonical, one `<h1>`, the LCP preload and a `@graph` of `RealEstateAgent`,
+`WebSite`, `RealEstateListing,House`, `FAQPage`, `BreadcrumbList`; no
+`googletagmanager` or `connect.facebook.net` anywhere in `build/`.
+
+Without `CHROME_PATH` and with no Chrome in a standard location,
+`node scripts/prerender.js` prints `Set CHROME_PATH to run the prerender
+(optional step).` and exits 1. `npm run build` never touches Chrome.
+
+Edge cases of §7, checked in Chromium against `serve:build`:
+
+- a prerendered property page boots, React re-renders it (no hydration API
+  anywhere in `src/`), and a click on an internal link navigates client-side —
+  `/localities/koramangala` with the right `<title>` and `<h1>`, one navigation
+  entry, no reload;
+- `window.dataLayer` holds `web_vitals` entries after the load:
+  `FCP=540(good)`, `TTFB=31(good)`, `LCP=744(good)`;
+- a page whose data fails still reports `data-prerender-ready`, so the crawl
+  never hangs — `NotFound` reports it unconditionally for the same reason;
+- `bundle-report` fails the check when a marker is present: asserted in
+  `scripts/__tests__/bundle-report.test.js` against a fixture chunk.
+
+**Lighthouse**: measured, and **Performance is recorded as not validly
+measurable in this container** — see `docs/PERFORMANCE.md` §4. Accessibility
+96–100, Best Practices 96, SEO 100 and **CLS 0** on all six pages in both
+variants, so three of the four targets pass. Performance came out 47–60 with
+LCP 5.3–7.5 s, and between 16 and 41 of every page's requests are blocked by
+the sandbox's TLS interception — the Google Fonts stylesheet, every Cloudinary
+image and **every page's LCP photograph**. With no LCP image, LCP is the last
+text paint; on every page it equalled Time to Interactive to the millisecond,
+which is the signature of that substitution and not of a slow image. Every
+request the mock answers completes inside 750 ms and the last request of any
+kind ends at 1.9 s, so the 7 s is not the network. `--ignore-certificate-errors`
+would have made the numbers meaningful and was not used. §4.5 of
+`docs/PERFORMANCE.md` is the checklist prompt 46 re-measures against.
+
+**Issues closed**
+
+- **ADD-04** — the second half and the last of the row: `web-vitals` is wired
+  and verified reporting in the production build.
+
+**Issues left → "Known issues"**
+
+- **NEW-42** — the home page's 25 `perPage=1` count requests (owner 46).
+- **NEW-43**, **NEW-44**, **NEW-45** — the three Lighthouse accessibility
+  findings: two composite contrast failures plus a decorative one, a `<dl>` with
+  wrapped pairs, and two `aria-label`s that do not contain their visible text
+  (owner 42). All six pages are already above the ≥ 95 target.
+- **NEW-46** — navigating away from a property page fires one doomed
+  `GET /properties/slug/<new-slug>`, because `AnimatePresence mode="wait"` keeps
+  the outgoing page mounted while `useParams()` already reports the new
+  location (owner 44).
+- NEW-33, NEW-35, NEW-38 to NEW-41 untouched and still owned by 42–46.
+
+**Next prompt: 42 — mobile UX and accessibility pass.**

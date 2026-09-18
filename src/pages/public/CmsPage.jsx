@@ -17,6 +17,7 @@ import { PageLoader } from '../../components/common/SkeletonLoaders';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 
 import styles from './CmsPage.module.css';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 
 /**
  * Every page an editor writes (00_MASTER_CONTEXT.md §6.10, D11).
@@ -102,6 +103,11 @@ export default function CmsPage({ slug: fixedSlug, prefix = '' }) {
     [slug, previewToken],
     { enabled: Boolean(slug) && !reserved }
   );
+
+  // The prerender crawler saves this page once its primary query has settled
+  // (§9.9) — settling on an error state counts, so a crawl never hangs on a
+  // URL the API cannot answer.
+  usePrerenderReady(loading);
 
   const crumbs = useMemo(() => (page ? buildCrumbs(page) : []), [page]);
 

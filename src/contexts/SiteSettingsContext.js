@@ -22,6 +22,14 @@ import storage from '../utils/storage';
  * `GET /settings` on every public page (ADD-08). Now one provider asks once,
  * seeds itself from a session cache so the first paint already has the brand
  * name and the contact details, and refreshes the cache after every load.
+ *
+ * The value is one memo, and the three getters inside it are `useCallback`s
+ * with no dependencies that read the record through a ref (§8.6, prompt 41).
+ * Rebuilt whenever the settings arrived, they would have been a changed
+ * dependency for every consumer that keys a memo or an effect on one — a
+ * WhatsApp link recomputed, a contact block re-rendered — on a value that had
+ * not changed. Now the identity is stable for the life of the provider and
+ * only the data moves.
  */
 
 const CACHE_KEY = 'sna_site_settings_cache';
@@ -43,6 +51,10 @@ export const SiteSettingsProvider = ({ children }) => {
   // changing.
   const seoRef = useRef(seoSettings);
   seoRef.current = seoSettings;
+
+  // What the getters read, so they never have to be rebuilt to see it.
+  const generalRef = useRef(null);
+  generalRef.current = settings?.general ?? {};
 
   const load = useCallback(async (signal) => {
     setError(null);
@@ -98,6 +110,29 @@ export const SiteSettingsProvider = ({ children }) => {
     writeCache({ settings: publicSubset, seoSettings: seoRef.current });
   }, []);
 
+  /** Phone, e-mail, WhatsApp and address, with `tel:` ready to use. */
+  const getContact = useCallback(() => {
+    const general = generalRef.current;
+    return {
+      email: general.contactEmail || '',
+      phone: general.contactPhone || '',
+      phoneHref: general.contactPhone ? `tel:${formatPhoneForTel(general.contactPhone)}` : '',
+      alternatePhone: general.alternatePhone || '',
+      whatsappNumber: general.whatsappNumber || '',
+      address: general.address ?? null,
+      workingHours: general.workingHours ?? [],
+    };
+  }, []);
+
+  /** The configured logo, or the brand asset when settings are unreachable. */
+  const getLogoUrl = useCallback(() => generalRef.current.logoUrl || BRAND.logoUrl, []);
+
+  /** A `wa.me` link carrying the configured default message unless told otherwise. */
+  const getWhatsappLink = useCallback((message) => {
+    const general = generalRef.current;
+    return whatsappLink(general.whatsappNumber, message ?? general.whatsappDefaultMessage);
+  }, []);
+
   const value = useMemo(() => {
     const general = settings?.general ?? {};
 
@@ -113,25 +148,21 @@ export const SiteSettingsProvider = ({ children }) => {
       siteName: general.siteName || SITE.name,
       tagline: general.tagline || '',
 
-      /** Phone, e-mail, WhatsApp and address, with `tel:` ready to use. */
-      getContact: () => ({
-        email: general.contactEmail || '',
-        phone: general.contactPhone || '',
-        phoneHref: general.contactPhone ? `tel:${formatPhoneForTel(general.contactPhone)}` : '',
-        alternatePhone: general.alternatePhone || '',
-        whatsappNumber: general.whatsappNumber || '',
-        address: general.address ?? null,
-        workingHours: general.workingHours ?? [],
-      }),
-
-      /** The configured logo, or the brand asset when settings are unreachable. */
-      getLogoUrl: () => general.logoUrl || BRAND.logoUrl,
-
-      /** A `wa.me` link carrying the configured default message unless told otherwise. */
-      getWhatsappLink: (message) =>
-        whatsappLink(general.whatsappNumber, message ?? general.whatsappDefaultMessage),
+      getContact,
+      getLogoUrl,
+      getWhatsappLink,
     };
-  }, [settings, seoSettings, loading, error, refresh, updateLocal]);
+  }, [
+    settings,
+    seoSettings,
+    loading,
+    error,
+    refresh,
+    updateLocal,
+    getContact,
+    getLogoUrl,
+    getWhatsappLink,
+  ]);
 
   return <SiteSettingsContext.Provider value={value}>{children}</SiteSettingsContext.Provider>;
 };

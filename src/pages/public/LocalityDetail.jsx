@@ -18,6 +18,7 @@ import {
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
 
 import styles from './LocalityDetail.module.css';
+import usePrerenderReady from '../../hooks/usePrerenderReady';
 
 /**
  * `/localities/:slug` — the guide to one neighbourhood.
@@ -48,6 +49,11 @@ export default function LocalityDetail() {
     refetch,
   } = useApi((signal) => masterDataService.localities.bySlug(slug, { signal }), [slug]);
 
+  // The prerender crawler saves this page once its primary query has settled
+  // (§9.9) — settling on an error state counts, so a crawl never hangs on a
+  // URL the API cannot answer.
+  usePrerenderReady(loading);
+
   if (error?.status === 404) return <NotFound />;
 
   if (loading) return <LocalityDetailSkeleton />;
@@ -77,6 +83,13 @@ export default function LocalityDetail() {
         description={description}
         breadcrumbs={crumbs}
         items={listings}
+        // `LocalityHero`'s photograph is the LCP: full width, its own ratio
+        // (§8.6).
+        preloadImage={
+          locality.heroImageUrl
+            ? { src: locality.heroImageUrl, ratio: 'auto', sizes: '100vw' }
+            : undefined
+        }
       />
 
       <article className={styles.page}>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import Autocomplete from '@mui/material/Autocomplete';
 import MuiTextField from '@mui/material/TextField';
@@ -8,6 +8,7 @@ import {
   Button,
   Field,
   SelectField,
+  Skeleton,
   SwitchField,
   TextField,
   TextareaField,
@@ -19,12 +20,21 @@ import { useSiteSettings } from '../../../../../contexts/SiteSettingsContext';
 import { useToast } from '../../../../../components/common/ToastProvider';
 import { makeNearbyPlace } from '../initialState';
 import LocalityQuickCreateDialog from '../components/LocalityQuickCreateDialog';
-import MapPinPicker, { roundCoordinate } from '../components/MapPinPicker';
+import { roundCoordinate } from '../components/coordinates';
 import NearbyPlacesRepeater from '../components/NearbyPlacesRepeater';
 import NumberWithUnit from '../components/NumberWithUnit';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
+
+/**
+ * The map is a chunk of its own (prompt 41 §4.2).
+ *
+ * It carries the Google Maps loader and the keyless fallback iframe, and an
+ * editor filling in a title, a price or a floor plan never opens this tab at
+ * all — so it is fetched when the tab renders rather than when the form does.
+ */
+const MapPinPicker = lazy(() => import('../components/MapPinPicker'));
 
 /** The build-time key; the runtime one in settings wins over it (§5 of prompt 19). */
 const ENV_MAPS_KEY = process.env.REACT_APP_GOOGLE_MAPS_KEY || '';
@@ -250,16 +260,18 @@ export default function LocationTab() {
         </FormColumn>
 
         <FormColumn>
-          <MapPinPicker
-            apiKey={mapsKey}
-            latitude={location.latitude}
-            longitude={location.longitude}
-            disabled={disabled}
-            onChange={writeCoordinates}
-            onScriptError={(message) => toast.warning(message)}
-            onUseLocalityCentre={localityHasCentre ? useLocalityCentre : undefined}
-            localityName={localityRecord?.name}
-          />
+          <Suspense fallback={<Skeleton height={320} />}>
+            <MapPinPicker
+              apiKey={mapsKey}
+              latitude={location.latitude}
+              longitude={location.longitude}
+              disabled={disabled}
+              onChange={writeCoordinates}
+              onScriptError={(message) => toast.warning(message)}
+              onUseLocalityCentre={localityHasCentre ? useLocalityCentre : undefined}
+              localityName={localityRecord?.name}
+            />
+          </Suspense>
         </FormColumn>
 
         <FormColumn>
