@@ -17,6 +17,8 @@ const sameValue = (left, right) => String(left) === String(right);
  *
  * @param {object} props
  * @param {string} [props.label]
+ * @param {string} [props.labelClassName] a caller's own label style — the
+ *   filter bar's small muted one, rather than the form label used everywhere else
  * @param {Array<{value: string|number, label: string}>} props.options
  * @param {Array<string|number>} props.value
  * @param {(value: Array<string|number>) => void} props.onChange
@@ -28,6 +30,7 @@ const sameValue = (left, right) => String(left) === String(right);
  */
 export default function MultiSelect({
   label,
+  labelClassName = '',
   options = [],
   value = [],
   onChange,
@@ -68,7 +71,10 @@ export default function MultiSelect({
   return (
     <div className={styles.field}>
       {label ? (
-        <label className={styles.label} htmlFor={id}>
+        <label
+          className={[styles.label, labelClassName].filter(Boolean).join(' ')}
+          htmlFor={id}
+        >
           {label}
           {required ? (
             <span className={styles.required} aria-hidden="true">

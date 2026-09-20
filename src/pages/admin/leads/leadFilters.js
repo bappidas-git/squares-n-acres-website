@@ -130,7 +130,8 @@ export function assigneeOptions({ users = [], canAssign = false } = {}) {
  * @param {object} [sources]
  * @param {Array<object>} [sources.users] the assignable colleagues
  * @param {boolean} [sources.canAssign] false for a sales user
- * @param {(api: {values: object, onChange: Function}) => React.ReactNode} [sources.renderProperty]
+ * @param {(api: {values: object, onChange: Function, labelClassName: string,
+ *   fieldClassName: string}) => React.ReactNode} [sources.renderProperty]
  * @returns {Array<object>}
  */
 export function buildLeadFilterFields({ users = [], canAssign = false, renderProperty } = {}) {

@@ -86,6 +86,33 @@
   color: var(--color-text-muted);
 }
 
+/* `MultiSelect` and `EntityPicker` carry their own form label — larger, darker
+   and, in the picker's case, spaced for a form. In a row of native selects that
+   read as one field out of line: 3–4px high and a size up. These are handed to
+   them as `labelClassName` / `fieldClassName` rather than added to their own
+   stylesheets, and they are two classes deep so they win over the component's
+   single-class rule whichever order the two files are emitted in. */
+.control .fieldLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+
+.control .fieldBox {
+  gap: var(--space-1);
+}
+
+/* A `<legend>` is not a flex item — the browser lifts it out of the fieldset's
+   flow — so `.control`'s `gap` never applied between "Created" and its inputs,
+   leaving that control 4px shorter than its neighbours. The row is bottom
+   aligned on purpose, so the inputs still lined up and only the label sat low.
+   This gives the legend the gap the layout could not. */
+.range legend {
+  display: block;
+  padding: 0;
+  margin-bottom: var(--space-1);
+}
+
 .range .rangeInputs {
   display: flex;
   align-items: center;

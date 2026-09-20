@@ -39,6 +39,8 @@ const sameId = (left, right) => String(left) === String(right);
  */
 export default function EntityPicker({
   label = 'Records',
+  labelClassName = '',
+  fieldClassName = '',
   fetcher,
   labelKey = 'name',
   value,
@@ -147,8 +149,11 @@ export default function EntityPicker({
   }));
 
   return (
-    <div className={styles.field}>
-      <label className={styles.label} htmlFor={id}>
+    <div className={[styles.field, fieldClassName].filter(Boolean).join(' ')}>
+      <label
+        className={[styles.label, labelClassName].filter(Boolean).join(' ')}
+        htmlFor={id}
+      >
         {label}
         {typeof max === 'number' ? (
           <span className={styles.counter}>
