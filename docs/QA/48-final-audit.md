@@ -203,6 +203,13 @@ npm run a11y:audit
 so this does not fail the gate. But it is not green, and it is reported as not
 green.
 
+> **Superseded by prompt 49.** Both findings below are fixed and the audit exits
+> 0 on 0 errors. Read `docs/QA/49-ui-ux-audit.md` §2.1–2.2 before acting on
+> either: the horizontal-scroll fix named here (`overflow-x: clip`/`hidden` on
+> the document) was applied to the live page and moves the number by zero, and
+> the placeholder finding was not `.control::placeholder`, which measures
+> 6.05:1. The measurements in this section are sound; the two remedies are not.
+
 **It had never completed before.** The script hung indefinitely on the admin
 article edit form (§9.2), so the 378-page run above is the first complete one.
 Prompt 46's grid covered 63 curated routes; this covers every route the app can

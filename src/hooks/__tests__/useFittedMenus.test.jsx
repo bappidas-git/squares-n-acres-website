@@ -80,12 +80,7 @@ function Bar({ total, available, perChild, minimum }) {
 
   return (
     <div>
-      <nav
-        ref={ref}
-        data-available={available}
-        data-content={drawn * perChild}
-        data-testid="bar"
-      >
+      <nav ref={ref} data-available={available} data-content={drawn * perChild} data-testid="bar">
         {Array.from({ length: drawn }, (_, index) => (
           <span key={index}>menu</span>
         ))}

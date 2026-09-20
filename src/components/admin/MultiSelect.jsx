@@ -71,10 +71,7 @@ export default function MultiSelect({
   return (
     <div className={styles.field}>
       {label ? (
-        <label
-          className={[styles.label, labelClassName].filter(Boolean).join(' ')}
-          htmlFor={id}
-        >
+        <label className={[styles.label, labelClassName].filter(Boolean).join(' ')} htmlFor={id}>
           {label}
           {required ? (
             <span className={styles.required} aria-hidden="true">

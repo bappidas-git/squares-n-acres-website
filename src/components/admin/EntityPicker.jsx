@@ -150,10 +150,7 @@ export default function EntityPicker({
 
   return (
     <div className={[styles.field, fieldClassName].filter(Boolean).join(' ')}>
-      <label
-        className={[styles.label, labelClassName].filter(Boolean).join(' ')}
-        htmlFor={id}
-      >
+      <label className={[styles.label, labelClassName].filter(Boolean).join(' ')} htmlFor={id}>
         {label}
         {typeof max === 'number' ? (
           <span className={styles.counter}>
