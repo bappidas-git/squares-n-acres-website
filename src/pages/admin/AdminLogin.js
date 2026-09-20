@@ -8,6 +8,7 @@ import { Alert, Button, IconButton, Logo, TextField } from '../../components/ui'
 import { BRAND } from '../../config/site';
 import { GENERIC_MESSAGE } from '../../services/apiError';
 import { canAccessAdminRoute } from '../../routes/adminRouteConfig';
+import { getEmailErrorMessage } from '../../utils/validators';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 
 import styles from './AdminLogin.module.css';
@@ -70,6 +71,18 @@ const AdminLogin = () => {
     event.preventDefault();
     setFormError('');
     setFieldErrors({});
+
+    // `POST /auth/login` allows ten attempts a minute per IP (§5.11), and an
+    // address with no `@` in it was spending one of them to be told so by the
+    // server. The shape of the address is the one thing the page can answer on
+    // its own; everything else — whether the account exists, whether the
+    // password is right, how long it has to be — stays the server's to say.
+    const emailError = getEmailErrorMessage(values.email.trim(), true, { label: 'Email address' });
+    if (emailError) {
+      setFieldErrors({ email: emailError });
+      return;
+    }
+
     setSubmitting(true);
 
     try {

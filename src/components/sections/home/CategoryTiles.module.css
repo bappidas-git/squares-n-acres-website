@@ -1,7 +1,14 @@
-/* 3 × 2 on desktop, 2 × 3 on a phone (§6). */
+/* 3 × 2 on desktop, 2 × 3 on a phone (§6).
+   `minmax(0, 1fr)` rather than `1fr`: a bare `1fr` is `minmax(auto, 1fr)`, so a
+   column can never shrink below its content's min-content width. The tile is a
+   row of icon + label + count, and on a 390px phone that floor came to 230px a
+   column — two of them plus the gap overflowed the 358px grid by 59px, and the
+   right-hand column's listing counts were clipped off the screen by the
+   `overflow-x: clip` on `body`. A zero minimum lets the columns take the width
+   they are given; the mobile rules below reshape the tile to fit it. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
   margin: 0;
   padding: 0;
@@ -89,14 +96,19 @@
 
 @media (max-width: 899.98px) {
   .grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 599.98px) {
+  /* Two columns on a phone leave about 170px a tile — not enough for the icon,
+     the label and the count side by side. The tile stacks instead, so the count
+     stays on the tile it belongs to instead of being pushed past the edge. */
   .tile {
+    flex-direction: column;
+    align-items: flex-start;
     padding: var(--space-4);
-    gap: var(--space-3);
+    gap: var(--space-2);
     min-height: 84px;
   }
 
@@ -113,7 +125,12 @@
     display: none;
   }
 
+  /* Stacked, the count reads as one line — "6 listings" — rather than as a
+     right-aligned column that no longer has a right edge to align to. */
   .count {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--space-1);
     font-size: var(--font-size-md);
   }
 }

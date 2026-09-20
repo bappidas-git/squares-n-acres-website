@@ -48,6 +48,12 @@ export default function ContactInfoBlock({ data = {}, background = 'bg' }) {
   const hasMethods = Boolean(contact.phone || contact.email || contact.whatsappNumber);
   if (!hasMethods && !address && hours.length === 0 && social.length === 0) return null;
 
+  // The block's own title is the h2 the cards sit under. It is optional, and
+  // the seeded contact page leaves it out — which left the three cards at h3
+  // directly below the page's h1, a level with nothing in it. Without a title
+  // the cards *are* the top level of the band, so they take the h2 themselves.
+  const CardHeading = data.title ? 'h3' : 'h2';
+
   return (
     <Section background={background} spacing="lg">
       <Container>
@@ -58,20 +64,20 @@ export default function ContactInfoBlock({ data = {}, background = 'bg' }) {
         <div className={styles.contactGrid}>
           {address ? (
             <div className={styles.contactCard}>
-              <h3 className={styles.contactCardTitle}>
+              <CardHeading className={styles.contactCardTitle}>
                 <Icon icon="mdi:map-marker-outline" width="20" height="20" aria-hidden="true" />
                 Office
-              </h3>
+              </CardHeading>
               <address className={styles.contactAddress}>{address}</address>
             </div>
           ) : null}
 
           {hours.length > 0 ? (
             <div className={styles.contactCard}>
-              <h3 className={styles.contactCardTitle}>
+              <CardHeading className={styles.contactCardTitle}>
                 <Icon icon="mdi:clock-outline" width="20" height="20" aria-hidden="true" />
                 Working hours
-              </h3>
+              </CardHeading>
               <dl className={styles.hours}>
                 {hours.map((row) => (
                   <div key={row.days} className={styles.hoursRow}>
@@ -85,10 +91,10 @@ export default function ContactInfoBlock({ data = {}, background = 'bg' }) {
 
           {social.length > 0 ? (
             <div className={styles.contactCard}>
-              <h3 className={styles.contactCardTitle}>
+              <CardHeading className={styles.contactCardTitle}>
                 <Icon icon="mdi:share-variant-outline" width="20" height="20" aria-hidden="true" />
                 Follow us
-              </h3>
+              </CardHeading>
               <ul className={styles.social}>
                 {social.map((item) => (
                   <li key={item.key}>

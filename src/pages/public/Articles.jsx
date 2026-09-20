@@ -296,9 +296,15 @@ export function ArticleIndex({
                 <ul className={styles.grid}>
                   {cards.map((article, index) => (
                     <li key={article.id}>
+                      {/* `2`, not `3`: the grid is the page's own content,
+                          under its `<h1>`. The index draws an `ArticleHero`
+                          above it whose title is an h2, so the cards are that
+                          heading's siblings — and on the category, tag and
+                          author archives, which have no hero, an h3 here left
+                          the page jumping h1 → h3 with nothing in between. */}
                       <ArticleCard
                         article={article}
-                        headingLevel={3}
+                        headingLevel={2}
                         loading={!hero && index < 3 ? 'eager' : 'lazy'}
                       />
                     </li>

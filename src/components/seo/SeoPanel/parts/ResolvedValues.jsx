@@ -45,7 +45,7 @@ export default function ResolvedValues() {
   return (
     <div className={styles.card}>
       <div className={styles.cardHead}>
-        <h3 className={styles.heading}>Resolved values</h3>
+        <h2 className={styles.heading}>Resolved values</h2>
         <span className={styles.note}>What the page sends, read-only</span>
       </div>
 

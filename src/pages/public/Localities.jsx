@@ -159,7 +159,7 @@ export default function Localities() {
 
               <div className={styles.grid}>
                 {items.map((locality) => (
-                  <LocalityCard key={locality.id} locality={locality} />
+                  <LocalityCard key={locality.id} locality={locality} headingLevel={2} />
                 ))}
               </div>
 

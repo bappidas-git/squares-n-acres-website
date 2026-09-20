@@ -21,9 +21,17 @@ import styles from './DeveloperCard.module.css';
  * @param {object} props
  * @param {object} props.developer a §6.5 record
  * @param {'default'|'compact'} [props.variant]
+ * @param {2|3} [props.headingLevel] `3` inside a section that already has an h2;
+ *   `2` on an index whose own h1 is the heading above these cards
  */
-const DeveloperCard = memo(function DeveloperCard({ developer, variant = 'default' }) {
+const DeveloperCard = memo(function DeveloperCard({
+  developer,
+  variant = 'default',
+  headingLevel = 3,
+}) {
   if (!developer) return null;
+
+  const Heading = `h${headingLevel}`;
 
   const { name, slug, logoUrl, shortDescription, propertyCount, isFeatured } = developer;
   const count = typeof propertyCount === 'number' ? propertyCount : null;
@@ -45,7 +53,7 @@ const DeveloperCard = memo(function DeveloperCard({ developer, variant = 'defaul
         ) : null}
       </div>
 
-      <h3 className={styles.name}>{name}</h3>
+      <Heading className={styles.name}>{name}</Heading>
 
       {countLabel ? (
         <span className={styles.count}>

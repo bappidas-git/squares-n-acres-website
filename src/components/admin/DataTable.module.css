@@ -4,9 +4,23 @@
   gap: var(--space-3);
 }
 
-/* The table scrolls, never the page (§6 of prompt 13). */
+/* The table scrolls, never the page (§6 of prompt 13).
+ *
+ * `contain: paint` is what makes the second half of that true. `overflow-x:
+ * auto` gives the table its own scrollbar and clips it correctly — but a wide
+ * table inside it still counted towards the *root's* scrollable overflow in
+ * Chromium, so the whole admin shell could be dragged sideways: 788px on
+ * `/admin/properties`, 328px on `/admin/articles`, 237px on `/admin/leads`,
+ * past the sidebar and into blank space. Every ancestor already reported
+ * `scrollWidth === clientWidth`; only `document.documentElement` did not, and
+ * neither `overflow-x: hidden` nor `overflow-x: clip` on `html`/`body` changed
+ * that (both were measured). Paint containment is the boundary that does: it
+ * takes this subtree out of its ancestors' scrollable overflow, while the
+ * table keeps scrolling inside it exactly as before.
+ */
 .scroller {
   overflow-x: auto;
+  contain: paint;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg);

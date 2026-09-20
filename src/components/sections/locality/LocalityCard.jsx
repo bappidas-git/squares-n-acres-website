@@ -23,9 +23,17 @@ import styles from './LocalityCard.module.css';
  * @param {object} props
  * @param {object} props.locality a §6.2 record
  * @param {'default'|'compact'} [props.variant]
+ * @param {2|3} [props.headingLevel] `3` inside a section that already has an h2;
+ *   `2` on an index whose own h1 is the heading above these cards
  */
-const LocalityCard = memo(function LocalityCard({ locality, variant = 'default' }) {
+const LocalityCard = memo(function LocalityCard({
+  locality,
+  variant = 'default',
+  headingLevel = 3,
+}) {
   if (!locality) return null;
+
+  const Heading = `h${headingLevel}`;
 
   const { name, slug, zone, heroImageUrl, avgPricePerSqft, propertyCount, isFeatured } = locality;
   const count = typeof propertyCount === 'number' ? propertyCount : null;
@@ -54,7 +62,7 @@ const LocalityCard = memo(function LocalityCard({ locality, variant = 'default' 
         ) : null}
         {compact ? (
           <div className={styles.overlay}>
-            <h3 className={styles.overlayName}>{name}</h3>
+            <Heading className={styles.overlayName}>{name}</Heading>
             {countLabel ? (
               <span className={styles.overlayMeta}>
                 <Icon icon="mdi:home-group" width="16" height="16" aria-hidden="true" />
@@ -67,7 +75,7 @@ const LocalityCard = memo(function LocalityCard({ locality, variant = 'default' 
 
       {compact ? null : (
         <div className={styles.body}>
-          <h3 className={styles.name}>{name}</h3>
+          <Heading className={styles.name}>{name}</Heading>
           {zone ? (
             <span className={styles.zone}>
               <Chip tone="primary" variant="soft">
