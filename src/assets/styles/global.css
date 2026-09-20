@@ -235,7 +235,7 @@ ol {
   list-style: none;
 }
 
-/* A placeholder left to the browser is #757575 in Chrome — 4.30:1 against a
+/* A placeholder left to the browser is Chrome's own grey — 4.30:1 against a
    white field, under the 4.5:1 WCAG asks for, and `npm run a11y:audit` found
    exactly that on the fields whose CSS module does not set a colour of its own
    (`ImageField`, the SEO panel's schema box). The muted token is 6.05:1 on
