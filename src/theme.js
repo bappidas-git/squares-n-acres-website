@@ -208,6 +208,22 @@ const theme = createTheme(base, {
     MuiFormHelperText: {
       styleOverrides: { root: { fontSize: 'var(--font-size-xs)' } },
     },
+    // MUI draws a placeholder as the text colour at `opacity: 0.42`, which on a
+    // white field composites to #a3a3a3 — 2.58:1, well under the 4.5:1 WCAG
+    // asks of it. `scripts/lib/inPageAudit.js` reads `color` and `opacity`
+    // separately, so it scores that pair 16.48:1 and never reported it. The
+    // muted token at full opacity is 6.05:1 on white and is the colour every
+    // CSS-module field already uses, so this only makes MUI agree with them.
+    MuiInputBase: {
+      styleOverrides: {
+        input: {
+          '&::placeholder': {
+            color: 'var(--color-text-muted)',
+            opacity: 1,
+          },
+        },
+      },
+    },
     MuiTextField: {
       defaultProps: { variant: 'outlined' },
       styleOverrides: {

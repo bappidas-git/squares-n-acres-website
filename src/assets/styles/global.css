@@ -235,6 +235,22 @@ ol {
   list-style: none;
 }
 
+/* A placeholder left to the browser is #757575 in Chrome — 4.30:1 against a
+   white field, under the 4.5:1 WCAG asks for, and `npm run a11y:audit` found
+   exactly that on the fields whose CSS module does not set a colour of its own
+   (`ImageField`, the SEO panel's schema box). The muted token is 6.05:1 on
+   white and is already what `FormField` uses, so this only makes the default
+   agree with the fields that were explicit. `opacity: 1` because Firefox dims
+   a placeholder unless it is told not to.
+   It lives here, not in the component's own module: two admin CSS modules
+   changing size was enough for `mini-css-extract-plugin` to report a
+   conflicting chunk order, which `build:ci` fails on. */
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
 ::selection {
   background-color: var(--color-primary-light);
   color: var(--color-text);
