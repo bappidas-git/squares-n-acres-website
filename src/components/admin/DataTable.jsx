@@ -277,10 +277,15 @@ export default function DataTable({
               const group = groupHeadOf(row, index);
               return (
                 <Fragment key={id}>
-                  {group ? <h3 className={styles.groupHeading}>{group.label}</h3> : null}
+                  {/* The card list is the screen's own content and the screen's
+                      `<h1>` is the heading above it, so a card titled h3 left a
+                      level empty. Ungrouped, a card title is the h2; grouped,
+                      the group label takes the h2 and the cards nest under it. */}
+                  {group ? <h2 className={styles.groupHeading}>{group.label}</h2> : null}
                   <MobileCard
                     row={row}
                     id={id}
+                    titleAs={groupBy ? 'h3' : 'h2'}
                     columns={columns}
                     selectable={selectable}
                     selected={selected.has(String(id))}
@@ -541,6 +546,7 @@ const MobileCard = memo(function MobileCard({
   to,
   onRowClick,
   render,
+  titleAs: CardHeading = 'h3',
 }) {
   const primary = columns.find((column) => column.primary) ?? columns[0];
   const others = columns.filter((column) => column !== primary && column.mobile !== false);
@@ -576,7 +582,7 @@ const MobileCard = memo(function MobileCard({
           render(row)
         ) : (
           <>
-            <h3 className={styles.cardTitle}>
+            <CardHeading className={styles.cardTitle}>
               {to ? (
                 <Link className={styles.cardTitleLink} to={to}>
                   {title}
@@ -592,7 +598,7 @@ const MobileCard = memo(function MobileCard({
               ) : (
                 title
               )}
-            </h3>
+            </CardHeading>
             <dl className={styles.cardMeta}>
               {rest.map((column) => (
                 <div key={column.key} className={styles.cardMetaItem}>

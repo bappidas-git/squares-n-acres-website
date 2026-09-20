@@ -30,13 +30,7 @@
 
 const { allEndpoints } = require('../src/services/endpoints');
 const schemas = require('../src/services/schemas');
-const {
-  TOKEN_FOR,
-  WRITABLE,
-  groupOf,
-  isCreate,
-  sampleBody,
-} = require('./lib/guidelines/fixtures');
+const { TOKEN_FOR, WRITABLE, groupOf, isCreate, sampleBody } = require('./lib/guidelines/fixtures');
 
 /* ------------------------------------------------------------------ *
  * Arguments
@@ -327,7 +321,6 @@ const PUBLIC_CREATED = {
     return response.json?.data ?? null;
   },
 };
-
 
 /**
  * The plan for the endpoints whose request cannot be derived from the registry
@@ -1155,7 +1148,8 @@ async function compareRun() {
 
     // A response with no envelope at all has no `meta` and no `data` to compare
     // either; saying so once is more use than sixty key names underneath it.
-    const noEnvelope = shapeA.envelope !== shapeB.envelope && (!shapeA.envelope || !shapeB.envelope);
+    const noEnvelope =
+      shapeA.envelope !== shapeB.envelope && (!shapeA.envelope || !shapeB.envelope);
 
     if (!noEnvelope && shapeA.meta !== shapeB.meta) {
       found.push(`meta ${shapeA.meta ?? 'none'} vs ${shapeB.meta ?? 'none'}`);

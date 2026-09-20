@@ -39,9 +39,13 @@
 }
 
 .remove {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* `flex-shrink: 0` because the chip is a flex row: without it the mark was
+     squeezed to 12px wide next to a long label. */
+  flex: 0 0 auto;
   width: 18px;
   height: 18px;
   padding: 0;
@@ -52,6 +56,19 @@
   font-size: var(--font-size-sm);
   line-height: 1;
   cursor: pointer;
+}
+
+/* The mark stays 18px so the chip keeps its height; the *target* around it is
+   the 24px WCAG 2.2 asks for (SC 2.5.8), carried by a pseudo-element so
+   nothing in the layout moves. */
+.remove::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
 }
 
 .remove:hover {

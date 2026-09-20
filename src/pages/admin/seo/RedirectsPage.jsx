@@ -240,7 +240,15 @@ export default function RedirectsPage() {
             checked={row.isActive !== false}
             disabled={!canEdit || busyId === row.id}
             onChange={(event) => toggleActive(row, event.target.checked)}
-            inputProps={{ 'aria-label': `Redirect ${row.fromPath} is active` }}
+            // `slotProps.input`, not `inputProps`: MUI 7 stopped forwarding the
+            // latter from `Switch`, so the label never reached the `<input>` and
+            // Chrome reported three switches with no accessible name at all.
+            // `DataTable`'s row checkboxes already use this form. `role` is
+            // repeated because these props replace the set `Switch` would
+            // otherwise pass, and without it the control drops to a checkbox.
+            slotProps={{
+              input: { role: 'switch', 'aria-label': `Redirect ${row.fromPath} is active` },
+            }}
           />
         ),
       },

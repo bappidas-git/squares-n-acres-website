@@ -7,7 +7,7 @@ import GlobalSearch from '../common/GlobalSearch';
 import MegaMenu from './MegaMenu';
 import PATHS from '../../routes/paths';
 import styles from './Header.module.css';
-import useBreakpoint from '../../hooks/useBreakpoint';
+import useFittedMenus from '../../hooks/useFittedMenus';
 import useNavPages from '../../hooks/useNavPages';
 import useScrollDirection from '../../hooks/useScrollDirection';
 import { Logo, Modal } from '../ui';
@@ -26,9 +26,11 @@ import { useSiteSettings } from '../../contexts/SiteSettingsContext';
  * `siteSettings.navigation`: an editor who switches the WhatsApp button off in
  * Admin → Settings switches it off here.
  *
- * Ten labels plus the logo and the buttons need about 1200 px of bar, so
- * between 900 px and 1199 px the tail of the menu folds into "More" rather
- * than overlapping the mark — every destination stays one hover away.
+ * More labels than the bar can hold fold into "More" rather than overlapping
+ * the mark — every destination stays one hover away. How many that is, is
+ * measured (`useFittedMenus`) rather than tied to a breakpoint: the bar is
+ * capped at `--container-max`, so it is no wider at 2560 px than at 1280 px,
+ * and the count is the client's to change by publishing another header page.
  *
  * D52: the bar is always visible and never hides; on the home page it is
  * transparent over the hero and turns solid after ten pixels of scroll. There
@@ -37,7 +39,6 @@ import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 export default function Header() {
   const location = useLocation();
   const { scrolled } = useScrollDirection();
-  const { width } = useBreakpoint();
   const { settings } = useSiteSettings();
   const { propertyTypes, localities } = useMasterData();
   const { header: pages } = useNavPages();
@@ -46,7 +47,13 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
 
   const { menus, actions } = buildHeaderNav({ propertyTypes, localities, pages, settings });
-  const visible = width === 'md' ? collapseMenus(menus) : menus;
+
+  // Measured rather than assumed: `width === 'md'` folded the tail into "More"
+  // below 1200px and trusted everything above it to fit, and nothing above it
+  // did — `.inner` is capped at `--container-max`, so the bar is the same size
+  // at 1280px as at 2560px and ten menus overflowed it at both.
+  const [navRef, menuLimit] = useFittedMenus(menus.length);
+  const visible = collapseMenus(menus, menuLimit);
 
   // Only the home page has a hero to be transparent over.
   const overHero = location.pathname === PATHS.home && !scrolled;
@@ -68,7 +75,7 @@ export default function Header() {
           </span>
         </Link>
 
-        <nav className={styles.nav} aria-label="Main">
+        <nav className={styles.nav} aria-label="Main" ref={navRef}>
           {visible.map((menu) => (
             <MegaMenu key={menu.key} menu={menu} transparent={overHero} />
           ))}

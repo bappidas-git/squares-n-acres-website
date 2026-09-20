@@ -28,6 +28,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  min-height: 24px;
   color: var(--color-primary-dark);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);

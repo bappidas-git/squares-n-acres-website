@@ -59,7 +59,11 @@ export default function GooglePreview() {
   return (
     <section className={styles.preview} aria-label="Search result preview">
       <div className={styles.previewHead}>
-        <h3 className={styles.heading}>Search preview</h3>
+        {/* h2: the SEO panel sits inside a `<fieldset>` whose `<legend>`
+            names the group but is not a heading, so on the page, locality and
+            developer forms this was the first heading under the `<h1>` and an
+            h3 left a level empty. `SeoSummaryCard` already uses h2. */}
+        <h2 className={styles.heading}>Search preview</h2>
         <div className={styles.deviceToggle} role="group" aria-label="Preview width">
           {Object.entries(FRAMES).map(([key, option]) => (
             <button

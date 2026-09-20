@@ -855,6 +855,8 @@
   align-items: center;
   gap: var(--space-1);
   align-self: flex-start;
+  /* 24px is the WCAG 2.2 target minimum (SC 2.5.8); the text alone drew 22. */
+  min-height: 24px;
   margin-top: auto;
   padding: 0;
   border: 0;

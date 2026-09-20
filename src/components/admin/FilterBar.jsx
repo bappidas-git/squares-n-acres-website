@@ -31,7 +31,8 @@ const isSet = (value) =>
  * @param {Array<{key: string, type: 'search'|'select'|'multiselect'|'daterange'|'toggle'|'number-range'|'custom',
  *   label: string, options?: Array<{value: string|number, label: string}>,
  *   placeholder?: string, width?: string,
- *   render?: (api: {values: object, onChange: (patch: object) => void}) => React.ReactNode}>} props.fields
+ *   render?: (api: {values: object, onChange: (patch: object) => void,
+ *     labelClassName: string, fieldClassName: string}) => React.ReactNode}>} props.fields
  * @param {object} props.values
  * @param {(patch: object) => void} props.onChange
  * @param {() => void} [props.onReset]
@@ -212,6 +213,7 @@ function FilterControl({ field, values, onChange }) {
       <div className={styles.control} style={style}>
         <MultiSelect
           label={field.label}
+          labelClassName={styles.fieldLabel}
           options={field.options ?? []}
           value={values[field.key] ?? []}
           placeholder={field.placeholder}
@@ -251,7 +253,12 @@ function FilterControl({ field, values, onChange }) {
   if (field.type === 'custom') {
     return (
       <div className={styles.control} style={style}>
-        {field.render?.({ values, onChange })}
+        {field.render?.({
+          values,
+          onChange,
+          labelClassName: styles.fieldLabel,
+          fieldClassName: styles.fieldBox,
+        })}
       </div>
     );
   }

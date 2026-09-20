@@ -94,10 +94,15 @@
   gap: var(--space-3);
 }
 
+/* 24px is the WCAG 2.2 minimum for a target (SC 2.5.8). The label below makes
+   the *combined* target comfortably larger, but the box is a target in its own
+   right and was drawn at 20px, so it is sized to the floor here rather than
+   relying on the sentence beside it. */
 .consentBox {
-  width: 20px;
-  height: 20px;
-  margin: 2px 0 0;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  margin: 0;
   accent-color: var(--color-primary);
   cursor: pointer;
 }

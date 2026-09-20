@@ -161,7 +161,7 @@ export default function Builders() {
 
               <div className={styles.grid}>
                 {items.map((developer) => (
-                  <DeveloperCard key={developer.id} developer={developer} />
+                  <DeveloperCard key={developer.id} developer={developer} headingLevel={2} />
                 ))}
               </div>
 

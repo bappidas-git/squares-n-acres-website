@@ -342,9 +342,11 @@ export default function JobApplicationsPage() {
         key: 'jobId',
         type: 'custom',
         label: 'Role',
-        render: ({ values, onChange }) => (
+        render: ({ values, onChange, labelClassName, fieldClassName }) => (
           <EntityPicker
             label="Role"
+            labelClassName={labelClassName}
+            fieldClassName={fieldClassName}
             placeholder="Search openings…"
             multiple={false}
             labelKey="title"

@@ -6,8 +6,15 @@ import Button from '../../../components/ui/Button';
 import Chip from '../../../components/ui/Chip';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import DataTable from '../../../components/admin/DataTable';
-import EntityPicker from '../../../components/admin/EntityPicker';
+// `FilterBar` before `EntityPicker`, against the alphabetical order the rest of
+// this block keeps: `FilterBar` pulls `MultiSelect`, and `MasterDataPage` — the
+// other admin chunk holding all three — registers `MultiSelect.module.css`
+// first, through its own `FilterBar`, before `MasterDataForm` reaches
+// `EntityPicker`. Two chunks disagreeing about that order is a
+// `mini-css-extract-plugin` conflict and `build:ci` treats it as an error
+// (`components/admin/index.js` says the same).
 import FilterBar from '../../../components/admin/FilterBar';
+import EntityPicker from '../../../components/admin/EntityPicker';
 import LostReasonDialog from './LostReasonDialog';
 import PATHS from '../../../routes/paths';
 import PageHeader from '../../../components/admin/PageHeader';
@@ -332,9 +339,11 @@ export default function LeadsListPage() {
       buildLeadFilterFields({
         users,
         canAssign,
-        renderProperty: ({ values, onChange }) => (
+        renderProperty: ({ values, onChange, labelClassName, fieldClassName }) => (
           <EntityPicker
             label="Property"
+            labelClassName={labelClassName}
+            fieldClassName={fieldClassName}
             placeholder="Search listings…"
             multiple={false}
             labelKey="title"

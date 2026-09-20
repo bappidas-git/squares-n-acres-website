@@ -72,7 +72,10 @@ export default function BankCard({ bank, onCheckEligibility, triggerProps }) {
             <Icon icon="mdi:bank-outline" aria-hidden="true" width="24" height="24" />
           )}
         </span>
-        <h4 className={styles.bankName}>{bank.name}</h4>
+        {/* h3, not h4: both places this card is drawn — the property page's
+            finance section and the `banks` CMS block — put an h2 above it, so
+            an h4 skipped a level. */}
+        <h3 className={styles.bankName}>{bank.name}</h3>
       </header>
 
       <dl className={styles.bankFacts}>
