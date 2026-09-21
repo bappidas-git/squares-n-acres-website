@@ -187,6 +187,17 @@ export default function usePropertyForm({
     pendingFocus.current = FIELD_ALIASES[path] ?? path;
   }, []);
   const setFields = useCallback((patch) => dispatch(actions.setMany(patch)), []);
+
+  /**
+   * Fields the form computes — the SEO panel's score and its test results.
+   *
+   * They arrive through the panel's `onChange` like an edit does, and the first
+   * analysis runs as soon as the SEO tab mounts, so treating them as an edit
+   * made an untouched form warn about unsaved changes. The reducer moves
+   * `initial` with them, which leaves `dirty` answering about the editor's own
+   * work and nothing else.
+   */
+  const setComputed = useCallback((patch) => dispatch(actions.setComputed(patch)), []);
   const addItem = useCallback(
     (path, item, index) => dispatch(actions.listAdd(path, item, index)),
     []
@@ -477,6 +488,7 @@ export default function usePropertyForm({
     setActiveTab,
     setField,
     setFields,
+    setComputed,
     addItem,
     removeItem,
     moveItem,

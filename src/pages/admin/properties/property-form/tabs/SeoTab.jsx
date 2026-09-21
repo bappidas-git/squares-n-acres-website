@@ -28,7 +28,7 @@ const checkPropertySlug = (slug, { excludeId, signal } = {}) =>
  *   one.
  */
 export default function SeoTab() {
-  const { values, errors, setField, setFields, focusField, disabled, propertyId } =
+  const { values, errors, setField, setFields, setComputed, focusField, disabled, propertyId } =
     usePropertyFormContext();
 
   return (
@@ -44,7 +44,11 @@ export default function SeoTab() {
       slugBase="/properties/"
       onFocusField={focusField}
       onSlugChange={(slug) => setField('slug', slug)}
-      onChange={(patch) => setFields(toSeoPaths(patch))}
+      onChange={(patch, meta) =>
+        // The analysis writing its own score back is not an edit, so it must
+        // not make an untouched form warn about unsaved changes.
+        (meta?.computed ? setComputed : setFields)(toSeoPaths(patch))
+      }
     />
   );
 }

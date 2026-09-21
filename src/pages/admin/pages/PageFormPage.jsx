@@ -638,7 +638,14 @@ export default function PageFormPage() {
               slugBase="/"
               onFocusField={focusField}
               onSlugChange={(slug) => setField('slug', slug)}
-              onChange={(patch) => {
+              onChange={(patch, meta) => {
+                // The analysis writing its own score back is not an edit, so it
+                // moves the baseline with the value and the form stays clean
+                // until somebody actually changes something (`setComputed`).
+                if (meta?.computed) {
+                  form.setComputed(toSeoPaths(patch));
+                  return;
+                }
                 // One dotted path at a time: `useForm.setField` composes on the
                 // current values, so an edit and the analysis landing behind it
                 // cannot overwrite each other.

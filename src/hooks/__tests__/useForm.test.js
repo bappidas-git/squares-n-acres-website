@@ -53,6 +53,43 @@ describe('useForm', () => {
     });
   });
 
+  describe('setComputed', () => {
+    const blank = { name: 'Ada', seo: { title: '', score: null, scoreBand: 'none' } };
+
+    it('writes the value without making an untouched form dirty', () => {
+      const { result } = setup({ initialValues: blank });
+
+      act(() => result.current.setComputed({ 'seo.score': 72, 'seo.scoreBand': 'good' }));
+
+      expect(result.current.values.seo.score).toBe(72);
+      expect(result.current.values.seo.scoreBand).toBe('good');
+      expect(result.current.dirty).toBe(false);
+    });
+
+    it('leaves the edit a person did make showing as a change', () => {
+      const { result } = setup({ initialValues: blank });
+
+      act(() => result.current.setField('seo.title', 'A title'));
+      act(() => result.current.setComputed({ 'seo.score': 72 }));
+
+      expect(result.current.dirty).toBe(true);
+
+      // …and undoing that edit still clears the form, score and all.
+      act(() => result.current.setField('seo.title', ''));
+      expect(result.current.dirty).toBe(false);
+    });
+
+    it('does nothing at all for an empty patch', () => {
+      const { result } = setup({ initialValues: blank });
+      const before = result.current.values;
+
+      act(() => result.current.setComputed({}));
+
+      expect(result.current.values).toBe(before);
+      expect(result.current.dirty).toBe(false);
+    });
+  });
+
   describe('setField', () => {
     it('writes a dotted path without losing its siblings', () => {
       const { result } = setup({

@@ -113,7 +113,13 @@ export default function MasterDataForm({
             checkSlug={checkSlug}
             slugBase={slugBase}
             onSlugChange={(slug) => form.setField('slug', slug)}
-            onChange={(patch) => {
+            onChange={(patch, meta) => {
+              // The analysis writing its own score back is not an edit, so the
+              // dialog does not offer to discard changes nobody made.
+              if (meta?.computed) {
+                form.setComputed(toSeoPaths(patch));
+                return;
+              }
               // One dotted path at a time: `useForm.setField` composes on the
               // current values, so an edit and the analysis landing behind it
               // cannot overwrite each other.

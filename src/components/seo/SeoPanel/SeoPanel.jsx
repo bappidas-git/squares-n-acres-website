@@ -85,13 +85,18 @@ const TABS = [
  *
  * — and in exchange the analysis writes `score`, `scoreBand`, `testsPassed`,
  * `testsTotal`, `analysis` and `lastAnalyzedAt` back through the same
- * `onChange`, so the record the form saves carries them (§9.6).
+ * `onChange`, so the record the form saves carries them (§9.6). Those writes
+ * carry `{ computed: true }` as a second argument: they are the panel's own
+ * arithmetic, not an edit, and a host that warns about unsaved changes has to
+ * be able to tell the two apart.
  *
  * @param {object} props
  * @param {string} props.entityType one of `SEO_ENTITY_TYPES`
  * @param {object} props.entity
  * @param {object} [props.seo] defaults to `entity.seo`
- * @param {(patch: object) => void} props.onChange a **shallow** patch of `seo`
+ * @param {(patch: object, meta?: {computed?: boolean}) => void} props.onChange a
+ *   **shallow** patch of `seo`; `meta.computed` marks the analysis writing its
+ *   own results back rather than a person changing something
  * @param {(path: string) => void} [props.onFocusField] a path the panel does not
  *   own — the host opens the tab that does and focuses the control
  * @param {'full'|'compact'} [props.variant] `compact` puts General inline and
@@ -164,7 +169,14 @@ export default function SeoPanel({
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  const storeAnalysis = useCallback((patch) => onChangeRef.current?.(patch), []);
+  // Flagged `computed`, because a host that guards against unsaved changes has
+  // to tell the analysis landing from the editor typing: the first analysis
+  // runs on mount, and counting it as an edit made a blank form claim to have
+  // changes before anyone had made one (`useForm.setComputed`).
+  const storeAnalysis = useCallback(
+    (patch) => onChangeRef.current?.(patch, { computed: true }),
+    []
+  );
 
   const { analysis, analysing, reanalyse } = useSeoAnalysis({
     entityType,

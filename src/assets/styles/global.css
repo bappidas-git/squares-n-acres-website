@@ -183,6 +183,32 @@
   box-sizing: border-box;
 }
 
+/* The same reset, one specificity step up, because the `*` rule above loses.
+
+   MUI's `CssBaseline` emits `*, *::before, *::after { box-sizing: inherit }`
+   from Emotion at runtime, into a `<style>` that lands after `main.css`, so at
+   equal specificity it wins and every element inherits its parent's value
+   instead of being told one. That works until a UA pseudo-element sits between
+   an element and its parent — Chrome's `::details-content`, and the box a
+   `<select>` keeps its `<option>`s in — because `inherit` then resolves against
+   that anonymous box, whose own value is the initial `content-box`, and the
+   whole subtree falls back with it.
+
+   On `/admin/master-data/localities/add` that was 549 of 1 038 elements: the
+   SEO panel is built from `<details>` groups, so every `.control` inside one
+   was `content-box`, and `width: 100%` plus 56 px of padding made a 314 px
+   column hold a 372 px `<select>` — clipped at the right edge of a 390 px
+   phone, and past the panel's edge at every other width.
+
+   `:root *` is (0, 1, 0) against the `*` rules' (0, 0, 0), so it wins wherever
+   Emotion chooses to inject, which `!important` would also have done at the
+   cost of taking the property away from every component that may need it. */
+:root *,
+:root *::after,
+:root *::before {
+  box-sizing: border-box;
+}
+
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
@@ -315,6 +341,39 @@ main:focus-visible {
   .section-padding {
     padding: var(--space-12) 0;
   }
+}
+
+/* ── Two admin target sizes, set from here on purpose ───────────────────── */
+/*
+ * The column-sort control in every admin table and the entity picker's search
+ * box are both under the 24 px SC 2.5.8 asks for — 19 px and 17 px — and the
+ * stylesheets that own them cannot take another rule. Growing
+ * `DataTable.module.css` or `EntityPicker.module.css` re-shuffles the admin
+ * chunks enough for `mini-css-extract-plugin` to report a conflicting order,
+ * and `build:ci` treats that as an error; prompt 49 §5 records the same trap
+ * and measured 252 pairs of admin stylesheets already registered in
+ * conflicting orders. This file is always `main.css`, so it takes no part in
+ * that ordering at all.
+ *
+ * Both selectors are structural, so neither needs a hashed class name, and
+ * neither property is declared by the module rule they land beside — the
+ * cascade order between the two files never comes into it.
+ */
+
+/* The sort button was as tall as its 12 px uppercase label inside a 44 px
+   header cell; the cell's own padding absorbs the difference. */
+thead th > button {
+  min-height: 24px;
+}
+
+/* `EntityPicker` draws a 40 px frame around its search box, but the frame is a
+   `<div>` rather than a `<label>`, so a click on its padding reached nothing
+   and the real target was the 17 px line of text. Stretching the input fills
+   the frame — the text stays centred — and the whole box becomes clickable.
+   `type="search"` with `role="combobox"` is that one control; `GlobalSearch`,
+   the site's other combobox, is `type="text"`. */
+input[type='search'][role='combobox'] {
+  align-self: stretch;
 }
 
 /* ── Skip to main content ───────────────────────────────────────────────── */

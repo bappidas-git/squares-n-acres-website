@@ -718,6 +718,10 @@ export default function useArticleForm({ articleId = null, record = null, readOn
     values,
     errors,
     setField,
+    // The SEO panel's analysis writes its own score back; `setComputed` keeps
+    // that out of `dirty`, so opening the SEO tab does not make an untouched
+    // article claim to have unsaved changes.
+    setComputed: form.setComputed,
     setValues,
     handleBlur,
     dirty: form.dirty,

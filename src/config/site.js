@@ -23,6 +23,11 @@ const BRAND = {
     'https://res.cloudinary.com/dn9gyaiik/image/upload/w_1200,h_630,c_pad,b_white/v1789465788/sna-logo_o09ugt.png',
   localLogo: '/brand/logo.png',
   localIcon: '/brand/icon.png',
+  // The 192-pixel monogram `npm run generate:brand-assets` writes beside the
+  // others. It is what a placeholder should draw: `localIcon` is the 850 KB
+  // original, and the Cloudinary copy is a network request — which is exactly
+  // what has already failed whenever a placeholder is on screen.
+  localIconSmall: '/brand/icon-192.png',
   localOgImage: '/brand/og-default.png',
 };
 

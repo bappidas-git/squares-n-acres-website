@@ -1,12 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { BRAND } from '../../config/site';
-import { SRCSET_WIDTHS, blurThumb, cloudinaryUrl, responsiveImage } from '../../utils/cloudinary';
+import { SRCSET_WIDTHS, blurThumb, responsiveImage } from '../../utils/cloudinary';
 
 import styles from './LazyImage.module.css';
 
-/** The monogram a failed image leaves behind, at the size it is drawn at. */
-const FALLBACK_MARK = cloudinaryUrl(BRAND.iconUrl, { w: 144, merge: true });
+/**
+ * The monogram a failed image leaves behind.
+ *
+ * It is the copy served from this origin, never the Cloudinary one: the mark is
+ * drawn precisely when a picture has failed to load, and asking the network
+ * again — often the same CDN, often for the same reason — turned the "image
+ * unavailable" placeholder into a second broken image. `public/brand/` is
+ * committed, so this resolves on a fresh clone with no build step.
+ */
+const FALLBACK_MARK = BRAND.localIconSmall;
 
 /**
  * What a picture is worth downloading at, when its caller says nothing.

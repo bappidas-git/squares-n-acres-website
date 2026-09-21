@@ -14,6 +14,10 @@ import { createContext, useContext } from 'react';
  * @property {object} values
  * @property {Record<string, string>} errors dotted path → message
  * @property {(path: string, value: unknown) => void} setField
+ * @property {(patch: Record<string, unknown>) => void} setFields
+ * @property {(patch: Record<string, unknown>) => void} setComputed the same
+ *   write, but one `dirty` never sees — for fields the form works out itself,
+ *   such as the SEO panel's score
  * @property {(path: string, item: object, index?: number) => void} addItem
  * @property {(path: string, id: number|string) => void} removeItem
  * @property {(path: string, from: number, to: number) => void} moveItem

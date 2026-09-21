@@ -100,9 +100,14 @@
   background: var(--color-error-dark);
 }
 
+/* `min-height: 0` is what makes a link-shaped button sit on a text baseline
+   rather than in a 36 px box. SC 2.5.8 still asks for 24 px, at every width and
+   not only where the media query below grows it for a finger, so the floor is
+   24 rather than 0 — two or three pixels taller than the words, and invisible
+   beside them. */
 .link {
   background: transparent;
-  min-height: 0;
+  min-height: 24px;
   padding: 0;
   color: var(--color-primary-dark);
   text-decoration: underline;

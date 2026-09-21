@@ -20,6 +20,7 @@ export const ACTIONS = {
   LOAD: 'LOAD',
   SET: 'SET',
   SET_MANY: 'SET_MANY',
+  SET_COMPUTED: 'SET_COMPUTED',
   LIST_ADD: 'LIST_ADD',
   LIST_REMOVE: 'LIST_REMOVE',
   LIST_MOVE: 'LIST_MOVE',
@@ -37,6 +38,7 @@ export const actions = {
   load: (record) => ({ type: ACTIONS.LOAD, record }),
   set: (path, value) => ({ type: ACTIONS.SET, path, value }),
   setMany: (patch) => ({ type: ACTIONS.SET_MANY, patch }),
+  setComputed: (patch) => ({ type: ACTIONS.SET_COMPUTED, patch }),
   listAdd: (path, item, index) => ({ type: ACTIONS.LIST_ADD, path, item, index }),
   listRemove: (path, id) => ({ type: ACTIONS.LIST_REMOVE, path, id }),
   listMove: (path, from, to) => ({ type: ACTIONS.LIST_MOVE, path, from, to }),
@@ -136,6 +138,30 @@ export default function reducer(state, action) {
         touched[path] = true;
       }
       return { ...state, values, errors, touched };
+    }
+
+    /**
+     * Fields the form works out for itself, rather than ones a person typed.
+     *
+     * The SEO panel writes its score, its band, its test counts, its test
+     * results and the moment it ran back into the record it analysed, through
+     * the same channel an editor's typing uses — and the first analysis runs as
+     * soon as the tab mounts. Counting that as an edit made an untouched form
+     * ask "Discard unsaved changes?" on the way out. `initial` moves with the
+     * value, so `dirty` sees no difference here and every other path still
+     * differs exactly as much as the editor made it differ.
+     */
+    case ACTIONS.SET_COMPUTED: {
+      const entries = Object.entries(action.patch ?? {});
+      if (entries.length === 0) return state;
+
+      let values = state.values;
+      let initial = state.initial;
+      for (const [path, value] of entries) {
+        values = setIn(values, path, value);
+        initial = setIn(initial, path, value);
+      }
+      return { ...state, values, initial };
     }
 
     case ACTIONS.LIST_ADD: {
