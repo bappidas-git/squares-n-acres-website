@@ -53,6 +53,26 @@ describe('PropertyCard', () => {
     expect(screen.getByText('For sale')).toBeInTheDocument();
   });
 
+  it('prints "Verified" once when master data also carries that badge', () => {
+    renderWith(
+      <PropertyCard
+        property={{
+          ...property,
+          badges: [
+            { id: 1, name: 'Ready to Move', slug: 'ready-to-move' },
+            { id: 2, name: 'Verified', slug: 'verified' },
+            { id: 3, name: 'RERA Approved', slug: 'rera-approved' },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.getAllByText('Verified')).toHaveLength(1);
+    // And the freed slot goes to the badge that says something new.
+    expect(screen.getByText('Ready to Move')).toBeInTheDocument();
+    expect(screen.getByText('RERA Approved')).toBeInTheDocument();
+  });
+
   it('links to the details page by slug', () => {
     renderWith(<PropertyCard property={property} />);
 

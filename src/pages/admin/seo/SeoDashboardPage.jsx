@@ -201,16 +201,21 @@ export default function SeoDashboardPage() {
   const filterFields = useMemo(
     () => [
       { key: 'q', type: 'search', label: 'Search', placeholder: 'Title, slug or keyword' },
+      // Both carry a placeholder, as every other multiselect filter in the
+      // panel does: without one the control is an empty box, and the only
+      // thing saying it can be opened is the label above it.
       {
         key: 'type',
         type: 'multiselect',
         label: 'Type',
+        placeholder: 'Any type',
         options: SEO_ENTITY_TYPES.options,
       },
       {
         key: 'scoreBand',
         type: 'multiselect',
         label: 'Score',
+        placeholder: 'Any score',
         options: SEO_SCORE_BANDS.options,
       },
       {

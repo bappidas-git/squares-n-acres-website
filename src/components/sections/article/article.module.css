@@ -19,10 +19,25 @@
   gap: var(--space-2);
 }
 
+/* The author's name is a destination in a row of facts rather than a word in a
+   sentence, so the inline exception of SC 2.5.8 does not cover it. The row is
+   sized by its text, so the target is grown on a pseudo-element and the meta
+   line keeps its height. */
 .metaLink {
+  position: relative;
   color: var(--color-text);
   font-weight: var(--font-weight-medium);
   text-decoration: none;
+}
+
+.metaLink::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 24px;
+  transform: translateY(-50%);
 }
 
 .metaLink:hover {

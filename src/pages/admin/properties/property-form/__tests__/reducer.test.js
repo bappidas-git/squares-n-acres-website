@@ -83,6 +83,34 @@ describe('SET_MANY', () => {
   });
 });
 
+describe('SET_COMPUTED', () => {
+  // The SEO panel writes its own score back as soon as the tab mounts. That is
+  // the form's arithmetic, not an edit, so `initial` moves with it and `dirty`
+  // — which the hook computes as `values !== initial` — never sees it.
+  it('moves the baseline with the value, so the form stays clean', () => {
+    const state = createFormState();
+    const next = reducer(state, actions.setComputed({ 'seo.score': 72, 'seo.scoreBand': 'good' }));
+
+    expect(next.values.seo.score).toBe(72);
+    expect(next.values.seo.scoreBand).toBe('good');
+    expect(JSON.stringify(next.values)).toBe(JSON.stringify(next.initial));
+  });
+
+  it('leaves an edit somebody did make showing as a change', () => {
+    const edited = reducer(createFormState(), actions.set('title', 'Lakeview Heights'));
+    const next = reducer(edited, actions.setComputed({ 'seo.score': 72 }));
+
+    expect(JSON.stringify(next.values)).not.toBe(JSON.stringify(next.initial));
+    expect(next.initial.title).toBe('');
+    expect(next.initial.seo.score).toBe(72);
+  });
+
+  it('returns the same state for an empty patch', () => {
+    const state = createFormState();
+    expect(reducer(state, actions.setComputed({}))).toBe(state);
+  });
+});
+
 describe('list actions', () => {
   it('appends by default and inserts at an index when given one', () => {
     const state = stateWithImages(2);

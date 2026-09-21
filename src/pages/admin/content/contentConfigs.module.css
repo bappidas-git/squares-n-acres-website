@@ -90,7 +90,14 @@
 
 /* The Applications cell of `/admin/jobs`: the count is the way into the list. */
 
+/* A job with one application drew a link six pixels wide. The number stays the
+   number; the box around it is what a pointer has to be able to hit. */
 .countLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
   color: var(--color-primary-dark);
   font-weight: var(--font-weight-semibold);
   text-decoration: none;

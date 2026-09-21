@@ -40,6 +40,7 @@ export default function PropertyFormShell({ form }) {
     dispatch,
     setField,
     setFields,
+    setComputed,
     addItem,
     removeItem,
     moveItem,
@@ -77,6 +78,10 @@ export default function PropertyFormShell({ form }) {
     errors,
     setField,
     setFields,
+    // The SEO panel's analysis writes its own score back through the same
+    // channel an editor types through; `setComputed` is the one that does not
+    // make an untouched form warn about unsaved changes.
+    setComputed,
     addItem,
     removeItem,
     moveItem,

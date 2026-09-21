@@ -8,7 +8,7 @@ import {
   YAxis,
 } from 'recharts';
 
-import ChartFrame from './ChartFrame';
+import ChartFrame, { useAxisTick } from './ChartFrame';
 import useCssVar from '../../../../hooks/useCssVar';
 import { formatDate } from '../../../../utils/format';
 
@@ -27,7 +27,7 @@ export const CHART_HEIGHT = 280;
 export default function LeadsByDayChart({ data = [] }) {
   const line = useCssVar('--color-primary', 'currentColor');
   const grid = useCssVar('--color-border', 'currentColor');
-  const axis = useCssVar('--color-text-muted', 'currentColor');
+  const tick = useAxisTick();
 
   const points = data.map((point) => ({ ...point, label: formatDate(point.date) }));
 
@@ -43,20 +43,14 @@ export default function LeadsByDayChart({ data = [] }) {
           <CartesianGrid stroke={grid} strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="date"
-            tick={{ fill: axis, fontSize: 11 }}
+            tick={tick}
             tickLine={false}
             axisLine={{ stroke: grid }}
             tickFormatter={(value) => String(value).slice(8)}
             interval="preserveStartEnd"
             minTickGap={16}
           />
-          <YAxis
-            allowDecimals={false}
-            tick={{ fill: axis, fontSize: 11 }}
-            tickLine={false}
-            axisLine={false}
-            width={40}
-          />
+          <YAxis allowDecimals={false} tick={tick} tickLine={false} axisLine={false} width={40} />
           <Tooltip
             labelFormatter={(value) => formatDate(value)}
             formatter={(value) => [value, 'Leads']}

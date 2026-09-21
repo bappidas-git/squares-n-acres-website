@@ -34,6 +34,10 @@
 }
 
 .name {
+  display: inline-flex;
+  align-items: center;
+  /* 22 px at 16 px semibold; SC 2.5.8 wants 24 at every width. */
+  min-height: 24px;
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
   text-decoration: none;

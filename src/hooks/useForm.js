@@ -176,6 +176,34 @@ export default function useForm({
     }
   }, [validateAll, setServerErrors, toPayload]);
 
+  /**
+   * Writes fields the form **computes** rather than the person edits.
+   *
+   * The SEO panel's score, its band, its test counts, its test results and the
+   * moment it last ran are all written back into the record it just analysed,
+   * and they travel through the same `onChange` an editor's typing does. The
+   * first analysis runs on mount, so on a screen that renders the panel
+   * unconditionally — Add page, Add locality, Add developer — a blank form
+   * reported unsaved changes before anyone had touched it, and clicking any
+   * link asked "Discard unsaved changes?". Opening the SEO tab did the same to
+   * the article and property forms.
+   *
+   * Moving the baseline along with the value is what makes the write invisible
+   * to `dirty` without hiding anything else: every other path still differs
+   * exactly as much as the person made it differ, so a real edit made before
+   * or after an analysis still counts, and undoing it still clears the form.
+   *
+   * @param {Record<string, unknown>} patch dotted path → value
+   */
+  const setComputed = useCallback((patch) => {
+    const entries = Object.entries(patch ?? {});
+    if (entries.length === 0) return;
+    const apply = (current) =>
+      entries.reduce((acc, [path, value]) => setIn(acc, path, value), current);
+    setValuesState(apply);
+    setBaseline(apply);
+  }, []);
+
   /** The message of a field, by dotted path — `undefined` when it is fine. */
   const getError = useCallback((path) => errors[path], [errors]);
 
@@ -187,6 +215,7 @@ export default function useForm({
     submitting,
     isValid: Object.keys(errors).length === 0,
     setField,
+    setComputed,
     setValues,
     setErrors,
     setServerErrors,

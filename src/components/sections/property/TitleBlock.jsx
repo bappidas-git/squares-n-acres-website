@@ -5,6 +5,7 @@ import { EMPTY, formatDate } from '../../../utils/format';
 import { LISTING_TYPES } from '../../../config/enums';
 import ShareButton from '../../common/ShareButton';
 import ShortlistButton from '../../common/ShortlistButton';
+import { visibleBadges } from '../../../utils/propertyBadges';
 
 import styles from './TitleBlock.module.css';
 
@@ -26,12 +27,12 @@ export default function TitleBlock({ property }) {
   const location = property.location ?? {};
   const exact = location.showExactLocation === true;
   const place = [location.locality?.name, location.city?.name].filter(Boolean).join(', ');
-  const badges = Array.isArray(property.badges) ? property.badges : [];
-  const listingLabel = LISTING_TYPES.labelOf(property.listingType);
-
   // The seed carries a "Verified" badge in master data as well as the record's
-  // own `isVerified` flag; printing both puts the word on screen twice.
-  const badged = badges.some((badge) => badge.slug === 'verified' || badge.name === 'Verified');
+  // own `isVerified` flag; printing both puts the word on screen twice. The
+  // built-in chip wins here exactly as it does on the card, so the two surfaces
+  // show the same green shield rather than one of each (`utils/propertyBadges`).
+  const badges = visibleBadges(property);
+  const listingLabel = LISTING_TYPES.labelOf(property.listingType);
 
   return (
     <header className={styles.block}>
@@ -55,7 +56,7 @@ export default function TitleBlock({ property }) {
             {listingLabel === 'Buy' ? 'For sale' : `For ${listingLabel.toLowerCase()}`}
           </Badge>
         ) : null}
-        {property.isVerified && !badged ? (
+        {property.isVerified ? (
           <Badge tone="success" icon={<Icon icon="mdi:shield-check-outline" aria-hidden="true" />}>
             Verified
           </Badge>

@@ -35,8 +35,18 @@
   margin-bottom: var(--space-4);
 }
 
+/* The title owns its own line.
+
+   It used to be `flex: 1 1 280px` beside the search box and the controls, and
+   the three of them fitted on one row at every desktop width — which left the
+   `<h1>` about 300 px wide inside a 920 px results column. "Properties in
+   Bengaluru" broke over two lines and its intro over four, next to an empty
+   band where the controls were bottom-aligned. A 100% basis puts the heading on
+   the first row on its own and wraps the search and the controls onto the
+   second, which is how the articles, localities and builders pages already
+   read. */
 .headingBlock {
-  flex: 1 1 280px;
+  flex: 1 1 100%;
   min-width: 0;
 }
 
@@ -65,17 +75,27 @@
   min-height: 1.25rem;
 }
 
+/* A 260 px basis left room for the search box and the controls on one line at
+   every width, and then the box shrank to fit whatever the controls took: at
+   768 px it came out 236 px against a placeholder that needs 238, so "Search by
+   locality, project or builder" was cut mid-word, and at 1024 px it had 35 px
+   of slack. A 320 px basis is what the box is worth: where the controls no
+   longer fit beside it they take a line of their own, and where they do — 1280
+   px and up — nothing moves. */
 .headerSearch {
-  flex: 1 1 260px;
+  flex: 1 1 320px;
   min-width: 0;
   max-width: 420px;
 }
 
+/* Pushed to the far end of the row the search box starts, so sort and view sit
+   over the right edge of the grid they act on. */
 .controls {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .filtersButton {

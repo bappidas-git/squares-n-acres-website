@@ -8,6 +8,7 @@ import styles from './PropertyCard.module.css';
 import { Area, Chip, LazyImage, Price } from '../ui';
 import { CONSTRUCTION_STATUS } from '../../config/enums';
 import { EMPTY, formatBhk } from '../../utils/format';
+import { visibleBadges } from '../../utils/propertyBadges';
 
 /**
  * One property, as the listing, the featured row and the similar row show it.
@@ -64,7 +65,9 @@ const PropertyCard = memo(({ property, variant = 'grid' }) => {
   const isRental = property.listingType === 'rent' || property.listingType === 'lease';
   const area = headlineArea(property);
   const bedrooms = property.configuration?.bedrooms;
-  const badges = Array.isArray(property.badges) ? property.badges.slice(0, 2) : [];
+  // The card draws its own "Verified" chip from `isVerified`, so the badge of
+  // that name is dropped rather than printed beside it (`utils/propertyBadges`).
+  const badges = visibleBadges(property, { limit: 2 });
 
   const place = [property.location?.locality?.name, property.location?.city?.name]
     .filter(Boolean)

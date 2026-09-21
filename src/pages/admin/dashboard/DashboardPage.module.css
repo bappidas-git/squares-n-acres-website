@@ -133,7 +133,12 @@
   min-width: 0;
 }
 
+/* The phone rule below already grew these to 44 px for a finger; SC 2.5.8 asks
+   for 24 px at every width, and at 14 px they were 17. */
 .rowLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   font-weight: var(--font-weight-medium);
   color: var(--color-text);
   text-decoration: none;
