@@ -343,6 +343,17 @@ main:focus-visible {
   }
 }
 
+/* The reset above zeroes a `<fieldset>`'s padding but not its border, so every
+   grouped control drew the browser's own grey `groove` rectangle — with the
+   label touching it, because the padding that normally holds it off was gone.
+   Eight of them on the admin forms: "Listing type" and "Segment" on the
+   property form, the status radios on the article and page forms, and the
+   overwrite toggle on the SEO dashboard. A fieldset that wants a border asks
+   for one; `FormSection` already does. */
+fieldset {
+  border: 0;
+}
+
 /* ── Two admin target sizes, set from here on purpose ───────────────────── */
 /*
  * The column-sort control in every admin table and the entity picker's search

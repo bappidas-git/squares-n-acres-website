@@ -7,10 +7,11 @@ measured again. The site was built, served and driven in Chromium at 390, 768,
 screens was clicked one at a time, and the write paths — login, filters, forms,
 CRUD, the guards — were driven the way a person drives them.
 
-**Nine defects found and fixed**, two of them systemic: more than half the
-elements on an admin form were using the wrong box model, and every form that
+**Eleven defects found and fixed**, three of them systemic: more than half the
+elements on an admin form were using the wrong box model, every form that
 carries the SEO panel claimed to have unsaved changes before anybody had typed
-anything.
+anything, and every grouped control in the panel was drawing the browser's own
+1990s `<fieldset>` rectangle around itself.
 
 | Environment  | Value                                      |
 | ------------ | ------------------------------------------ |
@@ -212,6 +213,32 @@ fill and the size in one place and follows the breakpoint. Recharts drops ticks
 rather than overlapping them, so the wider labels cost density, not legibility:
 measured on the running dashboard at 390 px, the day axis still reads
 23 · 27 · 31 · 04 · 08 · 12 · 15 · 18 · 21 with no collision.
+
+### 2.10 Eight grouped controls drew the browser's default fieldset border — new
+
+`CheckboxGroup` and `RadioGroup` render a `<fieldset>`, and the reset in
+`global.css` zeroes a fieldset's margin and padding but not its border — so
+each of them drew Chrome's own grey `groove` rectangle, with the label touching
+it, because the padding that normally holds a legend off the line was gone.
+Eight of them: "Listing type" and "Segment" on the property form, the status
+radios on the article form and the page form, and the overwrite toggle on the
+SEO dashboard, at both widths.
+
+`fieldset { border: 0 }` belongs with the reset: a fieldset that wants a border
+asks for one, and `FormSection` — the card every admin form is built from —
+already does. Counted across all 41 admin screens afterwards: **0 with the UA
+border, 74 still carrying the one their stylesheet gives them.**
+
+### 2.11 Two filters on the SEO dashboard were empty boxes — new
+
+Every `multiselect` filter in the panel carries a placeholder — "Any status",
+"Any source" — except Type and Score on `/admin/seo`, which declared none. The
+control rendered as an empty rounded box with a chevron, and the only thing
+saying what it was, or that it could be opened at all, was the label above it.
+They read "Any type" and "Any score" now, beside "All index", which is what the
+select next to them already said. A sweep for the same shape — a visible
+control whose face is blank — across all 41 admin routes and 36 public ones
+finds none left.
 
 ---
 
