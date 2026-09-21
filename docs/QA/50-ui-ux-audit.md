@@ -132,6 +132,17 @@ the baseline along with the value. Every other path still differs exactly as
 much as the editor made it differ, so a real edit still raises the guard and
 undoing it still clears the form — both verified on the running page.
 
+The first version of this was wrong in a way worth recording. `PropertyFormShell`
+builds its context object field by field rather than spreading the hook, so
+`setComputed` reached `SeoTab` as `undefined`, the analysis write threw, and the
+score never arrived. **Nothing in the route walk saw it** — the SEO tab is the
+sixteenth of sixteen and nothing opens it — and the form looked _more_ correct
+for it, because a write that throws also leaves the form clean. `npm run e2e`
+caught it on the assertion that the rail says "N of M passed" before a save. The
+check that now stands in for it, run against every one of the eight screens that
+carry the panel: the analysis has landed (a score is on screen) **and** the form
+is still clean **and** the console is empty.
+
 ### 2.5 The "image unavailable" mark was itself a network image — new
 
 `LazyImage` draws a monogram when a picture fails, and the monogram was a
