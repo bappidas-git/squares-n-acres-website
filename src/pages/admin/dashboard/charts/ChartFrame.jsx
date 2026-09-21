@@ -1,3 +1,6 @@
+import useBreakpoint from '../../../../hooks/useBreakpoint';
+import { useCssVar } from '../../../../hooks/useCssVar';
+
 /**
  * What every chart on the dashboard is wrapped in.
  *
@@ -23,6 +26,22 @@ const SR_ONLY = {
   whiteSpace: 'nowrap',
   border: 0,
 };
+
+/**
+ * The fill and size every axis label on the dashboard is drawn at.
+ *
+ * 11 px reads well enough on a desktop and is under §8.1's 13 px floor for a
+ * phone — the same floor `ui/Avatar` honours for its initials, and the one
+ * `npm run a11y:audit` reported 44 times on `/admin/dashboard` at 390 px.
+ * Recharts drops ticks rather than overlapping them (`minTickGap`,
+ * `interval="preserveStartEnd"`), so the wider labels cost density, not
+ * legibility.
+ */
+export function useAxisTick() {
+  const fill = useCssVar('--color-text-muted', 'currentColor');
+  const { isMobile } = useBreakpoint();
+  return { fill, fontSize: isMobile ? 13 : 11 };
+}
 
 /** The design-system token each tone of `ui/tones.js` paints with. */
 export const TONE_TOKENS = {

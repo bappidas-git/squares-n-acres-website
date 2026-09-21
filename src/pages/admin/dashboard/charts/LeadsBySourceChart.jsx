@@ -1,6 +1,6 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-import ChartFrame from './ChartFrame';
+import ChartFrame, { useAxisTick } from './ChartFrame';
 import useCssVar from '../../../../hooks/useCssVar';
 import { CHART_HEIGHT } from './LeadsByDayChart';
 import { LEAD_SOURCES } from '../../../../config/enums';
@@ -21,7 +21,7 @@ const MAX_BARS = 8;
 export default function LeadsBySourceChart({ data = [] }) {
   const fill = useCssVar('--color-primary', 'currentColor');
   const grid = useCssVar('--color-border', 'currentColor');
-  const axis = useCssVar('--color-text-muted', 'currentColor');
+  const tick = useAxisTick();
 
   const bars = data
     .slice(0, MAX_BARS)
@@ -40,7 +40,7 @@ export default function LeadsBySourceChart({ data = [] }) {
           <XAxis
             type="number"
             allowDecimals={false}
-            tick={{ fill: axis, fontSize: 11 }}
+            tick={tick}
             tickLine={false}
             axisLine={{ stroke: grid }}
           />
@@ -48,7 +48,7 @@ export default function LeadsBySourceChart({ data = [] }) {
             type="category"
             dataKey="label"
             width={140}
-            tick={{ fill: axis, fontSize: 11 }}
+            tick={tick}
             tickLine={false}
             axisLine={false}
           />

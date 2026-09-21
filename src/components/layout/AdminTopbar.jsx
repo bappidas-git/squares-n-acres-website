@@ -89,9 +89,17 @@ export default function AdminTopbar({
           onClick={() => setAnchor(triggerRef.current)}
           aria-haspopup="menu"
           aria-expanded={Boolean(anchor)}
-          aria-label="Account menu"
+          // SC 2.5.3: the accessible name has to contain the words on the
+          // button, or somebody driving the panel by voice says "Admin User"
+          // and nothing happens. "Account menu" alone did not — and on a phone
+          // the name is all there is, because the label is hidden there.
+          aria-label={`${user?.name || 'Admin'} — account menu`}
         >
-          <Avatar src={user?.avatarUrl} name={user?.name || 'Admin'} size={32} />
+          {/* Decorative: the name is beside it on a desktop and in the
+              button's own label everywhere, so announcing the initials as well
+              only puts "AU" in front of it — and put the button outside
+              SC 2.5.3, whose rule is that the name contains the visible text. */}
+          <Avatar src={user?.avatarUrl} name={user?.name || 'Admin'} size={32} aria-hidden="true" />
           {!isMobile ? <span className={styles.profileName}>{user?.name || 'Admin'}</span> : null}
           <Icon icon="mdi:chevron-down" width={16} height={16} aria-hidden="true" />
         </button>

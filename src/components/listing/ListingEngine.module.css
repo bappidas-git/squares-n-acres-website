@@ -75,8 +75,15 @@
   min-height: 1.25rem;
 }
 
+/* A 260 px basis left room for the search box and the controls on one line at
+   every width, and then the box shrank to fit whatever the controls took: at
+   768 px it came out 236 px against a placeholder that needs 238, so "Search by
+   locality, project or builder" was cut mid-word, and at 1024 px it had 35 px
+   of slack. A 320 px basis is what the box is worth: where the controls no
+   longer fit beside it they take a line of their own, and where they do — 1280
+   px and up — nothing moves. */
 .headerSearch {
-  flex: 1 1 260px;
+  flex: 1 1 320px;
   min-width: 0;
   max-width: 420px;
 }

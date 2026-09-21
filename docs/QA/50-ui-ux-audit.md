@@ -7,34 +7,34 @@ measured again. The site was built, served and driven in Chromium at 390, 768,
 screens was clicked one at a time, and the write paths — login, filters, forms,
 CRUD, the guards — were driven the way a person drives them.
 
-**Six defects found and fixed**, four of them in code prompt 49 did not reach
-and two of them systemic: more than half the elements on an admin form were
-using the wrong box model, and every form that carries the SEO panel claimed to
-have unsaved changes before anybody had typed anything.
+**Nine defects found and fixed**, two of them systemic: more than half the
+elements on an admin form were using the wrong box model, and every form that
+carries the SEO panel claimed to have unsaved changes before anybody had typed
+anything.
 
-| Environment  | Value                                                           |
-| ------------ | --------------------------------------------------------------- |
-| Date         | 2026-09-21                                                      |
-| Node · npm   | v22.22.2 · 10.9.7                                               |
-| Chromium     | 141.0.7390.37, driven through Playwright                        |
-| Mock API     | `http://localhost:4000/api`                                     |
-| Dev server   | `http://localhost:3000`                                         |
-| Served build | `http://localhost:5000` (`serve -s build`)                      |
+| Environment  | Value                                      |
+| ------------ | ------------------------------------------ |
+| Date         | 2026-09-21                                 |
+| Node · npm   | v22.22.2 · 10.9.7                          |
+| Chromium     | 141.0.7390.37, driven through Playwright   |
+| Mock API     | `http://localhost:4000/api`                |
+| Dev server   | `http://localhost:3000`                    |
+| Served build | `http://localhost:5000` (`serve -s build`) |
 
 ---
 
 ## 1. What was run
 
-| Sweep                  | Coverage                                                                     |
-| ---------------------- | ---------------------------------------------------------------------------- |
-| Public route walk      | 95 routes × 4 viewports = **380 runs** against the served build               |
-| Admin route walk       | 41 routes × 4 viewports = **164 runs**, signed in as `admin`                  |
-| Control probe          | 12 admin screens, every visible button / tab / switch clicked one at a time, the page reloaded between clicks — **≈500 clicks** |
-| Public flows           | header search, listing filters, sort, view toggle, pagination, shortlist, gallery and lightbox, accordions, lead form validation and submission, newsletter, FAQ search, mobile drawer, bottom navigation |
+| Sweep                  | Coverage                                                                                                                                                                                                                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public route walk      | 95 routes × 4 viewports = **380 runs** against the served build                                                                                                                                                                                                                       |
+| Admin route walk       | 41 routes × 4 viewports = **164 runs**, signed in as `admin`                                                                                                                                                                                                                          |
+| Control probe          | 12 admin screens, every visible button / tab / switch clicked one at a time, the page reloaded between clicks — **≈500 clicks**                                                                                                                                                       |
+| Public flows           | header search, listing filters, sort, view toggle, pagination, shortlist, gallery and lightbox, accordions, lead form validation and submission, newsletter, FAQ search, mobile drawer, bottom navigation                                                                             |
 | Admin flows            | the login guard, a wrong password, the redirect back, dashboard, table search / sort / bulk selection, all 16 property-form tabs, all 10 SEO-settings tabs, all 7 site-settings tabs, the lead detail, the media library, the rich-text editor, all 32 sidebar destinations, sign-out |
-| Admin CRUD             | create / validate / delete through the interface on 13 modules, plus site settings and redirects |
-| Dev-mode console sweep | the same routes against `npm start`, where React and MUI print their warnings |
-| Project checks         | `check:all`, `smoke`, `check:links`, `check:sitemap`, `check:jsonld`, `a11y:audit`, `e2e`, `build:prerender` |
+| Admin CRUD             | create / validate / delete through the interface on 13 modules, plus site settings and redirects                                                                                                                                                                                      |
+| Dev-mode console sweep | the same routes against `npm start`, where React and MUI print their warnings                                                                                                                                                                                                         |
+| Project checks         | `check:all`, `smoke`, `check:links`, `check:sitemap`, `check:jsonld`, `a11y:audit`, `e2e`, `build:prerender`                                                                                                                                                                          |
 
 Each run recorded console errors and warnings, uncaught exceptions, failed
 requests, document-level horizontal scroll, elements outside the viewport,
@@ -147,19 +147,19 @@ commits, so it resolves from this origin on a fresh clone with no build step.
 SC 2.5.8 asks for 24 × 24 px at every width, not only where a media query
 already grows a control to 44 px for a finger. Measured on the running page:
 
-| Control                                    | Was     | Where                          |
-| ------------------------------------------ | ------- | ------------------------------ |
-| Footer phone and e-mail rows               | 329×22  | every public page              |
-| The three footer legal links               | 86×16   | every public page              |
-| "View all" beside the similar strip        | 75×22   | every property page            |
-| "Read the guide" on the article hero       | 127×22  | `/insights/articles`           |
-| The author link in an article meta row     | 100×22  | article cards and headlines    |
-| The column-sort button in every admin table | 84×19  | every admin list               |
-| A lead's name in the list                  | 123×22  | `/admin/leads`                 |
-| The entity picker's search box             | 272×17  | article and property forms     |
-| The dashboard's recent-lead links          | 80×17   | `/admin/dashboard`             |
-| The `Button` component's `link` variant    | 60×19   | dashboard and detail pages     |
-| The applications count on the jobs list    | 6×17    | `/admin/jobs`                  |
+| Control                                     | Was    | Where                       |
+| ------------------------------------------- | ------ | --------------------------- |
+| Footer phone and e-mail rows                | 329×22 | every public page           |
+| The three footer legal links                | 86×16  | every public page           |
+| "View all" beside the similar strip         | 75×22  | every property page         |
+| "Read the guide" on the article hero        | 127×22 | `/insights/articles`        |
+| The author link in an article meta row      | 100×22 | article cards and headlines |
+| The column-sort button in every admin table | 84×19  | every admin list            |
+| A lead's name in the list                   | 123×22 | `/admin/leads`              |
+| The entity picker's search box              | 272×17 | article and property forms  |
+| The dashboard's recent-lead links           | 80×17  | `/admin/dashboard`          |
+| The `Button` component's `link` variant     | 60×19  | dashboard and detail pages  |
+| The applications count on the jobs list     | 6×17   | `/admin/jobs`               |
 
 Each grew a floor rather than a new size: a `min-height` the surrounding
 padding absorbs, or — where the row is sized by its own text — a 24 px hit area
@@ -169,24 +169,72 @@ but is a `<div>` rather than a `<label>`, so a click on its padding reached
 nothing; stretching the input to fill the frame makes the whole box clickable
 and leaves the text where it was.
 
+### 2.7 The listing's search box was cut mid-word at 768 px — new
+
+`.headerSearch` had `flex: 1 1 260px`, which left room for it and the controls
+on one line at every width — and then let it shrink to whatever the controls
+did not take. At 768 px that was **236 px against a placeholder needing 238**,
+so "Search by locality, project or builder" was cut mid-word; at 1024 px it had
+35 px of slack. A 320 px basis is what the box is worth: where the controls no
+longer fit beside it they take a line of their own, and at 1280 px and above
+nothing moves. Measured at 360, 390, 414, 600, 768, 900, 1024, 1280, 1440 and
+1920 px: the placeholder fits at every one, with 35 to 128 px to spare, and the
+`<h1>` stays on one line throughout.
+
+### 2.8 The admin account button could not be reached by voice — new
+
+`npm run a11y:audit` reported it 85 times: the button reads "AU Admin User" and
+its accessible name was "Account menu", so it contained none of the words on
+it. Somebody driving the panel by voice saying "Admin User" activated nothing
+(WCAG 2.5.3). The name is now `"<name> — account menu"`, and the avatar beside
+it — which was contributing the initials "AU" to the visible text — is
+`aria-hidden`, because the name it stands for is written next to it and is in
+the button's own label. 85 warnings to 0.
+
+### 2.9 The dashboard's chart labels were 11 px on a phone — new
+
+Hardcoded `fontSize: 11` on every axis of the three Recharts charts, against
+§8.1's 13 px floor for a phone — the floor `ui/Avatar` already honours for its
+own initials, and the one `a11y:audit` reported 44 times on
+`/admin/dashboard` at 390 px. `useAxisTick()` in `ChartFrame.jsx` now holds the
+fill and the size in one place and follows the breakpoint. Recharts drops ticks
+rather than overlapping them, so the wider labels cost density, not legibility:
+measured on the running dashboard at 390 px, the day axis still reads
+23 · 27 · 31 · 04 · 08 · 12 · 15 · 18 · 21 with no collision.
+
 ---
 
 ## 3. Results
 
-| Check                     | Result                                                     |
-| ------------------------- | ---------------------------------------------------------- |
-| Public walk, 4 viewports  | 380 runs — **0 findings**, 0 console errors                 |
-| Admin walk, 4 viewports   | 164 runs — **0 findings**, 0 console errors                 |
-| Control probe             | ≈500 clicks — **0 crashes**, 0 blank screens, 0 side-scroll |
-| Dev-mode console sweep    | public and admin, dialogs opened — **0 React or MUI warnings** |
-| `npm run check:all`       | exit 0 — 150 suites, **3 368 tests**                        |
-| `npm run smoke`           | 282/282                                                     |
-| `npm run check:links`     | 144 pages, 143 internal links, **0 broken**                 |
+| Check                    | Result                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| Public walk, 4 viewports | 380 runs — **0 findings**, 0 console errors                                    |
+| Admin walk, 4 viewports  | 164 runs — **0 findings**, 0 console errors                                    |
+| Control probe            | ≈500 clicks — **0 crashes**, 0 blank screens, 0 side-scroll                    |
+| Dev-mode console sweep   | public and admin, dialogs opened — **0 React or MUI warnings**                 |
+| `npm run check:all`      | exit 0 — 150 suites, **3 368 tests**                                           |
+| `npm run smoke`          | 282/282                                                                        |
+| `npm run check:links`    | 144 pages, 143 internal links, **0 broken**                                    |
+| `npm run check:sitemap`  | 145 pages crawled to depth 4 — **0 missing, 0 extra**                          |
+| `npm run check:jsonld`   | 144 pages — **0 errors** (36 "title over 60 characters" advisories, unchanged) |
+| `npm run a11y:audit`     | 378 pages at 390 and 1280 px — **0 errors**                                    |
 
 Across all 544 page loads and every scripted flow: no console errors, no
 uncaught exceptions, no unexpected failed requests, no element outside its
 viewport, no unnamed control, no duplicate id, no skipped heading level and no
 target under 24 px.
+
+`a11y:audit`'s remaining warnings are the project's own stricter tiers rather
+than failures, and every one of them was read:
+
+| Warning                            | Count | What it is                                                                                                                                                            |
+| ---------------------------------- | ----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Text contrast below 4.5:1          |   512 | all one element: the breadcrumb separator, `aria-hidden` decoration prompt 49 §4 already recorded as deliberate                                                       |
+| Tap targets under **44** px        |   302 | the phone tier, not SC 2.5.8's 24 px, which every one of them now meets                                                                                               |
+| Accessible name omits visible text |    76 | the gallery stage, whose name begins with its own visible counter; the rest of the text belongs to the buttons nested inside it, each named in its own right (NEW-45) |
+| Missing landmark                   |    86 | `<footer>` on admin screens, which have no footer content to mark up, and `<header>` on the login card, which has no topbar                                           |
+| Text under the mobile minimum      |    12 | the SEO panel's SERP preview, which is a picture of Google's result and is only honest at Google's size                                                               |
+| Console                            |     2 | the API answering 404 for an unknown CMS slug on `/this-page-does-not-exist`, which is how the 404 page knows to render                                               |
 
 ---
 
