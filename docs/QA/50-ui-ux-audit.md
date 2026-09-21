@@ -244,18 +244,22 @@ finds none left.
 
 ## 3. Results
 
-| Check                    | Result                                                                         |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| Public walk, 4 viewports | 380 runs — **0 findings**, 0 console errors                                    |
-| Admin walk, 4 viewports  | 164 runs — **0 findings**, 0 console errors                                    |
-| Control probe            | ≈500 clicks — **0 crashes**, 0 blank screens, 0 side-scroll                    |
-| Dev-mode console sweep   | public and admin, dialogs opened — **0 React or MUI warnings**                 |
-| `npm run check:all`      | exit 0 — 150 suites, **3 368 tests**                                           |
-| `npm run smoke`          | 282/282                                                                        |
-| `npm run check:links`    | 144 pages, 143 internal links, **0 broken**                                    |
-| `npm run check:sitemap`  | 145 pages crawled to depth 4 — **0 missing, 0 extra**                          |
-| `npm run check:jsonld`   | 144 pages — **0 errors** (36 "title over 60 characters" advisories, unchanged) |
-| `npm run a11y:audit`     | 378 pages at 390 and 1280 px — **0 errors**                                    |
+| Check                     | Result                                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Public walk, 4 viewports  | 380 runs — **0 findings**, 0 console errors                                                                  |
+| Admin walk, 4 viewports   | 164 runs — **0 findings**, 0 console errors                                                                  |
+| Control probe             | ≈500 clicks, and 150 more on the screens these changes touch — **0 crashes**, 0 blank screens, 0 side-scroll |
+| Public flow suite         | 17 scripted checks — **0 issues**                                                                            |
+| Admin flow suite          | 18 scripted checks — **0 issues**                                                                            |
+| Dev-mode console sweep    | public and admin, dialogs opened — **0 React or MUI warnings**                                               |
+| `npm run check:all`       | exit 0 — 150 suites, **3 368 tests**                                                                         |
+| `npm run smoke`           | 282/282                                                                                                      |
+| `npm run check:links`     | 144 pages, 143 internal links, **0 broken**                                                                  |
+| `npm run check:sitemap`   | 145 pages crawled to depth 4 — **0 missing, 0 extra**                                                        |
+| `npm run check:jsonld`    | 144 pages — **0 errors** (36 "title over 60 characters" advisories, unchanged)                               |
+| `npm run a11y:audit`      | 378 pages at 390 and 1280 px — **0 errors**; warnings 1 121 → **991**                                        |
+| `npm run e2e`             | **53 passed** — and one of them caught a mistake in 2.4, above                                               |
+| `npm run build:prerender` | 144 of 144 pages saved                                                                                       |
 
 Across all 544 page loads and every scripted flow: no console errors, no
 uncaught exceptions, no unexpected failed requests, no element outside its
