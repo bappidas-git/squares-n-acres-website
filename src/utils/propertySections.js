@@ -139,7 +139,13 @@ export const SECTION_DEFINITIONS = [
     label: 'Documents',
     description: 'The brochure and everything else a buyer downloads.',
     anchor: 'documents',
-    hasData: (property) => list(property.documents).length > 0 || filled(property.brochureUrl),
+    // A public read leaves a gated brochure without its address and says
+    // `hasBrochure` instead (docs/backend-notes → "Gated files"); a gated paper
+    // keeps its row, so the list still counts it.
+    hasData: (property) =>
+      list(property.documents).length > 0 ||
+      filled(property.brochureUrl) ||
+      property.hasBrochure === true,
   },
   {
     key: 'construction',
@@ -259,8 +265,17 @@ const SOURCE = {
   enquiry: '',
 };
 
-/** The one section the listing itself can never satisfy, and why. */
+/**
+ * The sections the listing's own fields cannot satisfy right now, and why.
+ *
+ * Construction progress is one: on a finished building it stays hidden
+ * however many milestones are listed, and "No data yet — add milestones"
+ * sent an editor to fill in something the page would never print.
+ */
 const withheld = (key, property, context) => {
+  if (key === 'construction' && !BUILDING.includes(property.constructionStatus)) {
+    return 'Hidden automatically — only while the project is being built';
+  }
   if (key !== 'finance') return null;
   if (context.banksAvailable === false) return 'Hidden automatically — no active banks';
   if (property.listingType !== 'sale') return 'Hidden automatically — sale listings only';
@@ -271,10 +286,15 @@ const withheld = (key, property, context) => {
  * One row per section for the admin's Section-visibility tab: is it on, does it
  * hold anything, and the sentence the chip prints.
  *
- * @param {object} values the property form's values
+ * Give it the record the form is about to save (`toPayload(values)`) rather
+ * than the raw values: the form keeps half-filled rows — a floor plan with no
+ * drawing, a question with no answer — that the save drops, and a chip that
+ * counted them promised a section the page then left out.
+ *
+ * @param {object} values the record, or the property form's values
  * @param {{banksAvailable?: boolean, similarAvailable?: boolean}} [context]
  * @returns {Array<{key: string, label: string, description: string, enabled: boolean,
- *   hasData: boolean, visible: boolean, hint: string}>}
+ *   hasData: boolean, automatic: boolean, visible: boolean, hint: string}>}
  */
 export function getSectionHints(values, context = {}) {
   const property = values && typeof values === 'object' ? values : {};
@@ -283,6 +303,12 @@ export function getSectionHints(values, context = {}) {
     const enabled = isSectionEnabled(property, section.key);
     const hasData = section.hasData(property, context);
     const reason = withheld(section.key, property, context);
+    // With no picks, "Similar properties" is not empty but automatic: the
+    // endpoint fills it from the same locality and type, and only a request
+    // could say whether anything matches — which the admin tab does not make.
+    // "No data yet — choose listings" contradicted the tab that says so.
+    const automatic =
+      section.key === 'similar' && !hasData && context.similarAvailable === undefined;
 
     return {
       key: section.key,
@@ -291,12 +317,15 @@ export function getSectionHints(values, context = {}) {
       anchor: section.anchor,
       enabled,
       hasData,
+      automatic,
       visible: enabled && hasData,
       hint: !enabled
         ? 'Hidden'
         : hasData
           ? ''
-          : (reason ?? `No data yet — ${SOURCE[section.key] || 'add the fields it needs'}`),
+          : automatic
+            ? 'Automatic — listings from the same locality and type'
+            : (reason ?? `No data yet — ${SOURCE[section.key] || 'add the fields it needs'}`),
     };
   });
 }

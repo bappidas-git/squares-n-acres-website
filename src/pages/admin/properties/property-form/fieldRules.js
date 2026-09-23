@@ -41,14 +41,55 @@ export const isRentOrLease = (values) =>
 /** Bedrooms, bathrooms, balconies, kitchen — a home, not a plot or an office. */
 export const showsBhk = (values) => isResidential(values);
 
-/** Length × width and the dimension unit: plots only. */
-export const showsPlotDimensions = (values) => isPlot(values);
+/**
+ * Covered and open parking: a home **or** an office. Hidden for commercial
+ * listings before, although every seeded office, shop and warehouse carries
+ * parking and the details page prints it — so an editor could neither see nor
+ * change what the public page said, and moving a listing into Commercial wiped it.
+ */
+export const showsParking = (values) => !isPlot(values);
+
+/**
+ * The residential types that stand on a plot of their own, so the plot's size
+ * is part of what is being sold. Slugs, because they are what master data
+ * keeps stable across environments (§6.3).
+ */
+export const PLOT_TYPE_SLUGS = new Set(['villas', 'independent-houses', 'row-houses']);
+
+const PLOT_AREA_KEYS = ['plotArea', 'plotLength', 'plotWidth'];
+
+const hasPlotValues = (values) =>
+  PLOT_AREA_KEYS.some((key) => {
+    const value = values?.area?.[key];
+    return value !== null && value !== undefined && value !== '';
+  });
+
+/**
+ * Plot area, length × width and the dimension unit.
+ *
+ * Plots always; a villa or a house too, because its plot is half of what it
+ * is; and any listing that already holds a plot measurement, so a figure the
+ * details page prints is never out of the editor's reach. It used to be plots
+ * only — eight seeded villas and houses printed a plot area nobody could edit.
+ *
+ * @param {object} values
+ * @param {string} [propertyTypeSlug] the listing's property type, when known
+ */
+export const showsPlotDimensions = (values, propertyTypeSlug) =>
+  isPlot(values) || PLOT_TYPE_SLUGS.has(propertyTypeSlug) || hasPlotValues(values);
 
 /** The built areas a home or an office is measured by. */
 export const showsBuiltAreas = (values) => !isPlot(values);
 
-/** Furnishing, facing and ownership: everything except bare land. */
+/** Furnishing: a building's, so everything except bare land. */
 export const showsFurnishing = (values) => !isPlot(values);
+
+/**
+ * Facing and ownership: every listing. A plot has a facing and a title as
+ * surely as a flat does — all five seeded plots carry both and the details
+ * page prints them — and hiding them for land hid them from the editor alone.
+ */
+export const showsFacingAndOwnership = () => true;
 
 /** A floor number only means something inside a building. */
 export const showsFloors = (values) => !isPlot(values);
@@ -58,15 +99,24 @@ export const showsPossessionDate = (values) =>
   values?.constructionStatus === 'pre-launch' ||
   values?.constructionStatus === 'under-construction';
 
-/** The statuses where the building already exists and has an age. */
+/**
+ * A finished building's age. Not a plot's: land has no age, and the seeded
+ * plots' `0` printed "Newly built" on every one of them.
+ */
 export const showsAge = (values) =>
-  values?.constructionStatus === 'ready-to-move' || values?.constructionStatus === 'resale';
+  !isPlot(values) &&
+  (values?.constructionStatus === 'ready-to-move' || values?.constructionStatus === 'resale');
 
 /* ------------------------------------------------------------------ *
  * Pricing
  * ------------------------------------------------------------------ */
 
-/** A sale is quoted once; the range and the per-sq-ft rate belong to it. */
+/**
+ * A sale is quoted once; the range and the per-sq-ft rate belong to it. The
+ * building's maintenance charge is shown for a sale as well — leaving it off
+ * this list made moving a rental to Sale ask to clear a field the Sale view
+ * then displayed.
+ */
 const SALE_PRICE_FIELDS = [
   'price',
   'priceOnRequest',
@@ -74,6 +124,7 @@ const SALE_PRICE_FIELDS = [
   'priceRangeMax',
   'pricePerSqft',
   'priceNegotiable',
+  'maintenanceChargesMonthly',
   'bookingAmount',
   'otherCharges',
 ];
@@ -126,23 +177,24 @@ export function pricingFieldsClearedBy(from, to) {
  * Segment changes
  * ------------------------------------------------------------------ */
 
-/** Everything under `configuration` — a home's rooms. */
-const CONFIGURATION_FIELDS = [
+/** A home's rooms — the part of `configuration` only a home has. */
+const ROOM_FIELDS = [
   'bedrooms',
   'bathrooms',
   'balconies',
-  'parkingCovered',
-  'parkingOpen',
   'servantRoom',
   'studyRoom',
   'poojaRoom',
   'kitchenType',
 ];
 
+/** Parking, which a home and an office both have and a plot does not. */
+const PARKING_FIELDS = ['parkingCovered', 'parkingOpen'];
+
 /** The three built areas, which a plot does not have. */
 const BUILT_AREA_FIELDS = ['superBuiltUpArea', 'builtUpArea', 'carpetArea'];
 
-/** The plot-only measurements. */
+/** The plot measurements. */
 const PLOT_AREA_FIELDS = ['plotArea', 'plotLength', 'plotWidth', 'plotDimensionUnit'];
 
 /** What `configuration`/`area` value a cleared field returns to. */
@@ -171,15 +223,18 @@ export function clearedBySegment(segment) {
       patch[`${prefix}.${field}`] = BLANK[field] ?? null;
     });
 
-  if (segment !== 'residential') clear('configuration', CONFIGURATION_FIELDS);
+  // Rooms are a home's; parking goes only with the building.
+  if (segment !== 'residential') clear('configuration', ROOM_FIELDS);
+  if (segment === 'land') clear('configuration', PARKING_FIELDS);
   if (segment === 'land') clear('area', BUILT_AREA_FIELDS);
-  if (segment !== 'land') clear('area', PLOT_AREA_FIELDS);
+  // A villa or a house keeps its plot, so only an office loses one.
+  if (segment === 'commercial') clear('area', PLOT_AREA_FIELDS);
   if (segment === 'land') {
+    // Facing and ownership stay: land has both.
     patch.furnishing = '';
-    patch.facing = '';
-    patch.ownership = '';
     patch.floorNumber = null;
     patch.totalFloors = null;
+    patch.ageOfPropertyYears = null;
   }
 
   return patch;
@@ -277,3 +332,48 @@ export function derivedPricePerSqft(values = {}) {
 
   return Math.round(price / sqft);
 }
+
+/**
+ * The rate as the form holds it: `null` — "follow the price" — unless somebody
+ * typed a rate of their own.
+ *
+ * The API stores the rate the form derived on save (D33), so a record comes
+ * back holding the division itself, and a stored value used to read as "typed
+ * by hand": after the first save the rate froze, and doubling the price left
+ * the old figure on the site. A stored rate that *is* the division is still
+ * following the price. A rental has no rate at all — seed #27 carried "44" (its
+ * rent over its area), which reappeared as "₹44 per sq ft" the moment it was
+ * moved to Sale.
+ *
+ * @param {object} values the form values, with the stored rate in `pricing`
+ * @returns {number|null}
+ */
+export function heldPricePerSqft(values = {}) {
+  const stored = measured(values.pricing?.pricePerSqft);
+  if (stored === null || isRentOrLease(values)) return null;
+  const derived = derivedPricePerSqft({
+    ...values,
+    pricing: { ...values.pricing, pricePerSqft: null },
+  });
+  return derived !== null && Math.round(stored) === derived ? null : stored;
+}
+
+/**
+ * One area figure moved from one unit to another, to two decimals.
+ *
+ * @param {number|string|null} value
+ * @param {string} from an `AREA_UNITS` value
+ * @param {string} to
+ * @returns {number|null}
+ */
+export function convertArea(value, from, to) {
+  const number = measured(value);
+  if (number === null) return value === '' || value === undefined ? null : value;
+  const inSqft = AREA_UNITS.toSqft(number, from || 'sqft');
+  const factor = AREA_UNITS.meta[to || 'sqft']?.sqftFactor;
+  if (inSqft === null || !factor) return number;
+  return Math.round((inSqft / factor) * 100) / 100;
+}
+
+/** The `area` figures a unit change converts. */
+export const AREA_FIGURES = ['superBuiltUpArea', 'builtUpArea', 'carpetArea', 'plotArea'];

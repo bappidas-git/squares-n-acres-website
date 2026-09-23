@@ -14,6 +14,7 @@ const assert = require('node:assert/strict');
 const { after, describe, it } = require('node:test');
 
 const { ADMIN, SALES, cleanupTempFiles, silenceRequestLog, withServer } = require('./helpers');
+const { ACCESS_TTL_MS, issueAccess } = require('../lib/fileAccess');
 const { resetViews } = require('../lib/viewCounter');
 
 silenceRequestLog();
@@ -134,8 +135,11 @@ describe('GET /properties — filters', () => {
 describe('GET /properties — sorting and facets', () => {
   it('orders by price, area, views and relevance', async () => {
     await withServer(async ({ request }) => {
+      // Sales first, then the rent (4, ₹58,000/month) and the lease (5): a
+      // monthly figure is never ranked against a sale price, which used to put
+      // both rentals ahead of the ₹62.4 L flat on "low to high".
       const cheapest = await request('GET', '/properties?sort=price-asc&perPage=all');
-      assert.deepEqual(ids(cheapest), [4, 5, 6, 2, 1, 3]);
+      assert.deepEqual(ids(cheapest), [6, 2, 1, 3, 4, 5]);
 
       const dearest = await request('GET', '/properties?sort=price-desc&perPage=all');
       assert.deepEqual(ids(dearest), [3, 1, 2, 6, 5, 4]);
@@ -146,6 +150,24 @@ describe('GET /properties — sorting and facets', () => {
       // `relevance` is featured first, then priority, then the latest edit.
       const relevant = await request('GET', '/properties?perPage=all');
       assert.deepEqual(ids(relevant).slice(0, 3).sort(), [1, 2, 3]);
+    });
+  });
+
+  it('groups sales before rentals on the admin price column too', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const ascending = await request('GET', '/admin/properties?sort=price&order=asc&perPage=all', {
+        token,
+      });
+      assert.deepEqual(ids(ascending), [6, 2, 1, 3, 4, 5]);
+
+      const descending = await request(
+        'GET',
+        '/admin/properties?sort=price&order=desc&perPage=all',
+        { token }
+      );
+      assert.deepEqual(ids(descending), [3, 1, 2, 6, 5, 4]);
     });
   });
 
@@ -252,6 +274,433 @@ describe('the remaining public property routes', () => {
       assert.equal(second.body.data.viewCount, before + 1, 'the reload does not count');
 
       assert.equal((await request('POST', '/properties/999/view')).status, 404);
+    });
+  });
+});
+
+/** Listing 1 of the starter fixture, which ships with no files at all. */
+const LAKEVIEW = 'lakeview-heights-3-bhk-whitefield';
+
+const FILE = {
+  brochure: 'https://files.example.com/lakeview/brochure.pdf',
+  rera: 'https://files.example.com/lakeview/rera-certificate.pdf',
+  prices: 'https://files.example.com/lakeview/price-list.pdf',
+};
+
+/**
+ * A gated brochure, an open paper, a gated paper, and the brochure attached a
+ * second time as a paper — the four cases the public read has to get right.
+ */
+const FILES = {
+  brochureUrl: FILE.brochure,
+  brochureLeadGated: true,
+  documents: [
+    { id: 1, title: 'RERA certificate', url: FILE.rera, type: 'approval', leadGated: false },
+    { id: 2, title: 'Price list', url: FILE.prices, type: 'price-list', leadGated: true },
+    { id: 3, title: 'Brochure', url: FILE.brochure, type: 'brochure', leadGated: false },
+  ],
+};
+
+const PLAN = {
+  twoBhk: 'https://files.example.com/lakeview/plan-2bhk.png',
+  twoBhkPdf: 'https://files.example.com/lakeview/plan-2bhk.pdf',
+  threeBhk: 'https://files.example.com/lakeview/plan-3bhk.png',
+  unit: 'https://files.example.com/lakeview/unit-2bhk.png',
+  unitPdf: 'https://files.example.com/lakeview/unit-2bhk.pdf',
+  retired: 'https://files.example.com/lakeview/unit-studio.png',
+};
+
+/**
+ * Two floor plans (one with a PDF) and three unit configurations: one with a
+ * drawing and a PDF, one with neither, and a retired one with a drawing.
+ */
+const PLANS = {
+  floorPlans: [
+    {
+      id: 1,
+      title: '2 BHK — 1,180 sq ft',
+      imageUrl: PLAN.twoBhk,
+      pdfUrl: PLAN.twoBhkPdf,
+      order: 1,
+    },
+    { id: 2, title: '3 BHK — 1,650 sq ft', imageUrl: PLAN.threeBhk, pdfUrl: null, order: 2 },
+  ],
+  unitConfigurations: [
+    {
+      id: 1,
+      name: '2 BHK',
+      bedrooms: 2,
+      floorPlanImageUrl: PLAN.unit,
+      floorPlanPdfUrl: PLAN.unitPdf,
+      isActive: true,
+    },
+    { id: 2, name: '3 BHK', bedrooms: 3, isActive: true },
+    { id: 3, name: 'Studio', bedrooms: 1, floorPlanImageUrl: PLAN.retired, isActive: false },
+  ],
+};
+
+/** What the gated "Open" of a paper posts (`document-request`, P28). */
+const DOCUMENT_REQUEST = {
+  name: 'Test Visitor',
+  phone: '9876543210',
+  email: 'visitor@example.com',
+  source: 'document-request',
+  propertyId: 1,
+  message: 'Requested: Price list',
+};
+
+describe('gated files (QA-51 OPEN-1)', () => {
+  it('keeps the address of every gated file out of every public read', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const saved = await request('PATCH', '/admin/properties/1', { token, body: FILES });
+      assert.equal(saved.status, 200, saved.text);
+
+      const { data } = (await request('GET', `/properties/slug/${LAKEVIEW}`)).body;
+      assert.equal(data.brochureUrl, null);
+      assert.equal(data.hasBrochure, true, 'the page still knows there is a brochure to ask for');
+      assert.equal(data.brochureLeadGated, true);
+      assert.deepEqual(
+        data.documents.map((document) => [document.id, document.url, document.leadGated]),
+        [
+          [1, FILE.rera, false],
+          [2, null, true],
+        ],
+        'the brochure attached as a paper is the brochure, offered once (P25)'
+      );
+      assert.deepEqual(
+        data.documents.map((document) => document.hasFile),
+        [true, true]
+      );
+
+      // Not in the JSON anywhere — the detail read, the list, the featured row,
+      // a lookup by id.
+      for (const path of [
+        `/properties/slug/${LAKEVIEW}`,
+        '/properties?perPage=all',
+        '/properties/featured',
+        '/properties?ids=1',
+      ]) {
+        const response = await request('GET', path);
+        assert.equal(response.status, 200, path);
+        assert.ok(response.text.includes('"id":1'), `${path} has listing 1`);
+        for (const url of [FILE.brochure, FILE.prices]) {
+          assert.ok(!response.text.includes(url), `${path} gives away ${url}`);
+        }
+      }
+    });
+  });
+
+  it('leaves the admin reads exactly as stored', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      await request('PATCH', '/admin/properties/1', { token, body: FILES });
+
+      for (const path of ['/admin/properties/1', `/admin/properties/slug/${LAKEVIEW}`]) {
+        const { data } = (await request('GET', path, { token })).body;
+        assert.equal(data.brochureUrl, FILE.brochure, path);
+        assert.equal(data.brochureLeadGated, true, path);
+        assert.equal(data.hasBrochure, undefined, `${path} is the record, not the public view`);
+        assert.deepEqual(
+          data.documents.map((document) => [document.id, document.url, document.leadGated]),
+          FILES.documents.map((document) => [document.id, document.url, document.leadGated]),
+          path
+        );
+        assert.ok(
+          data.documents.every((document) => document.hasFile === undefined),
+          path
+        );
+      }
+
+      const list = await request('GET', '/admin/properties?perPage=100', { token });
+      const row = list.body.data.find((property) => property.id === 1);
+      assert.equal(row.brochureUrl, FILE.brochure);
+    });
+  });
+
+  it('gates an open file that shares its address with a gated one', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const deed = 'https://files.example.com/lakeview/sale-deed.pdf';
+      await request('PATCH', '/admin/properties/1', {
+        token,
+        body: {
+          // The brochure is left open, but the same file is gated as a paper.
+          brochureUrl: FILE.brochure,
+          brochureLeadGated: false,
+          documents: [
+            { id: 1, title: 'Brochure', url: FILE.brochure, type: 'brochure', leadGated: true },
+            { id: 2, title: 'Sale deed (draft)', url: deed, type: 'legal', leadGated: false },
+            { id: 3, title: 'Sale deed', url: deed, type: 'legal', leadGated: true },
+          ],
+        },
+      });
+
+      const read = await request('GET', `/properties/slug/${LAKEVIEW}`);
+      const { data } = read.body;
+      assert.equal(data.brochureUrl, null);
+      assert.equal(data.brochureLeadGated, true, 'the page shows the lock it will meet');
+      assert.deepEqual(
+        data.documents.map((document) => [document.id, document.url, document.leadGated]),
+        [
+          [2, null, true],
+          [3, null, true],
+        ]
+      );
+      assert.ok(!read.text.includes(FILE.brochure) && !read.text.includes(deed));
+
+      // A brochure that is open and nobody's gated file is simply a link.
+      await request('PATCH', '/admin/properties/1', {
+        token,
+        body: { brochureUrl: FILE.rera, brochureLeadGated: false, documents: [] },
+      });
+      const open = (await request('GET', `/properties/slug/${LAKEVIEW}`)).body.data;
+      assert.equal(open.brochureUrl, FILE.rera);
+      assert.equal(open.brochureLeadGated, false);
+      assert.equal(open.hasBrochure, true);
+
+      // No brochure at all is not a brochure to ask for.
+      await request('PATCH', '/admin/properties/1', { token, body: { brochureUrl: null } });
+      const none = (await request('GET', `/properties/slug/${LAKEVIEW}`)).body.data;
+      assert.equal(none.brochureUrl, null);
+      assert.equal(none.hasBrochure, false);
+    });
+  });
+
+  it('answers a lead about the listing with a token that opens its files', async () => {
+    await withServer(async ({ request, login, db }) => {
+      const token = await login(ADMIN);
+      await request('PATCH', '/admin/properties/1', { token, body: FILES });
+
+      // Any form about the listing earns it: a paper, an enquiry, a floor plan
+      // (P24, P28 — the visitor is not asked again for the next file).
+      for (const source of ['document-request', 'property-enquiry', 'floor-plan-request']) {
+        const created = await request('POST', '/leads', { body: { ...DOCUMENT_REQUEST, source } });
+        assert.equal(created.status, 201, created.text);
+
+        const { access } = created.body.data;
+        assert.equal(typeof access?.token, 'string', source);
+        assert.ok(access.token.length >= 32, 'long enough not to be guessed');
+        const lifetime = Date.parse(access.expiresAt) - Date.now();
+        assert.ok(lifetime > ACCESS_TTL_MS - 60_000 && lifetime <= ACCESS_TTL_MS, 'a day');
+
+        const files = await request('POST', '/properties/1/documents/access', {
+          body: { token: access.token },
+        });
+        assert.equal(files.status, 200, files.text);
+        assert.deepEqual(files.body.data, {
+          brochureUrl: FILE.brochure,
+          // Every paper with an address, the open one too, so the page can
+          // render one list; the brochure's second copy is still left out.
+          documents: [
+            { id: 1, url: FILE.rera },
+            { id: 2, url: FILE.prices },
+          ],
+          // The starter listing's drawings, which have no PDF; its units
+          // carry no drawing at all.
+          floorPlans: [
+            {
+              id: 1,
+              imageUrl: 'https://picsum.photos/seed/sna-lakeview-heights-plan-2bhk/1000/700',
+              pdfUrl: null,
+            },
+            {
+              id: 2,
+              imageUrl: 'https://picsum.photos/seed/sna-lakeview-heights-plan-3bhk/1000/700',
+              pdfUrl: null,
+            },
+          ],
+          unitConfigurations: [],
+        });
+
+        // The token is this answer's alone: the CRM never stores it.
+        const stored = db.getCollection('leads').find((lead) => lead.id === created.body.data.id);
+        assert.ok(stored, 'the lead was filed');
+        assert.ok(!JSON.stringify(stored).includes(access.token));
+        const crm = await request('GET', `/admin/leads/${stored.id}`, { token });
+        assert.equal(crm.body.data.access, undefined);
+      }
+    });
+  });
+
+  it('keeps every floor-plan drawing and PDF out of the public reads', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const saved = await request('PATCH', '/admin/properties/1', { token, body: PLANS });
+      assert.equal(saved.status, 200, saved.text);
+
+      const { data } = (await request('GET', `/properties/slug/${LAKEVIEW}`)).body;
+      assert.deepEqual(
+        data.floorPlans.map((plan) => [
+          plan.id,
+          plan.imageUrl,
+          plan.pdfUrl,
+          plan.hasImage,
+          plan.hasPdf,
+        ]),
+        [
+          [1, null, null, true, true],
+          [2, null, null, true, false],
+        ]
+      );
+      assert.equal(data.floorPlans[0].title, '2 BHK — 1,180 sq ft', 'the rest of the plan stays');
+      assert.deepEqual(
+        data.unitConfigurations.map((unit) => [
+          unit.id,
+          unit.floorPlanImageUrl,
+          unit.floorPlanPdfUrl,
+          unit.hasFloorPlanImage,
+          unit.hasFloorPlanPdf,
+        ]),
+        [
+          [1, null, null, true, true],
+          [2, null, null, false, false],
+          [3, null, null, true, false],
+        ]
+      );
+
+      for (const path of [
+        `/properties/slug/${LAKEVIEW}`,
+        '/properties?perPage=all',
+        '/properties/featured',
+        '/properties?ids=1',
+      ]) {
+        const response = await request('GET', path);
+        assert.ok(response.text.includes('"id":1'), `${path} has listing 1`);
+        for (const url of Object.values(PLAN)) {
+          assert.ok(!response.text.includes(url), `${path} gives away ${url}`);
+        }
+      }
+
+      // The admin reads the record as stored.
+      const admin = (await request('GET', '/admin/properties/1', { token })).body.data;
+      assert.equal(admin.floorPlans[0].imageUrl, PLAN.twoBhk);
+      assert.equal(admin.floorPlans[0].pdfUrl, PLAN.twoBhkPdf);
+      assert.equal(admin.floorPlans[0].hasImage, undefined);
+      assert.equal(admin.unitConfigurations[0].floorPlanImageUrl, PLAN.unit);
+      assert.equal(admin.unitConfigurations[0].floorPlanPdfUrl, PLAN.unitPdf);
+      assert.equal(admin.unitConfigurations[0].hasFloorPlanImage, undefined);
+    });
+  });
+
+  it('hands the floor-plan files over with the rest, for the units the page shows', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      await request('PATCH', '/admin/properties/1', { token, body: PLANS });
+
+      const lead = (
+        await request('POST', '/leads', {
+          body: { ...DOCUMENT_REQUEST, source: 'floor-plan-request', message: 'Floor plans' },
+        })
+      ).body.data;
+      const files = await request('POST', '/properties/1/documents/access', {
+        body: { token: lead.access.token },
+      });
+
+      assert.equal(files.status, 200, files.text);
+      assert.deepEqual(files.body.data.floorPlans, [
+        { id: 1, imageUrl: PLAN.twoBhk, pdfUrl: PLAN.twoBhkPdf },
+        { id: 2, imageUrl: PLAN.threeBhk, pdfUrl: null },
+      ]);
+      assert.deepEqual(
+        files.body.data.unitConfigurations,
+        [{ id: 1, floorPlanImageUrl: PLAN.unit, floorPlanPdfUrl: PLAN.unitPdf }],
+        'a retired unit is not on the page, and its drawing is not handed out'
+      );
+    });
+  });
+
+  it('gates an open paper or brochure that is also a floor plan’s file', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      await request('PATCH', '/admin/properties/1', {
+        token,
+        body: {
+          ...PLANS,
+          brochureUrl: PLAN.twoBhkPdf,
+          brochureLeadGated: false,
+          documents: [
+            { id: 1, title: 'Unit plan', url: PLAN.unitPdf, type: 'floor-plan', leadGated: false },
+          ],
+        },
+      });
+
+      const read = await request('GET', `/properties/slug/${LAKEVIEW}`);
+      const { data } = read.body;
+      assert.equal(data.brochureUrl, null);
+      assert.equal(data.brochureLeadGated, true);
+      assert.deepEqual(
+        data.documents.map((document) => [document.id, document.url, document.leadGated]),
+        [[1, null, true]]
+      );
+      assert.ok(!read.text.includes(PLAN.twoBhkPdf) && !read.text.includes(PLAN.unitPdf));
+    });
+  });
+
+  it('answers a lead that names no open listing without a token', async () => {
+    await withServer(async ({ request, login }) => {
+      const general = await request('POST', '/leads', {
+        body: { name: 'Test Visitor', phone: '9876543210', source: 'contact-page' },
+      });
+      assert.equal(general.status, 201, general.text);
+      assert.equal(general.body.data.access, null);
+
+      const token = await login(ADMIN);
+      await request('PATCH', '/admin/properties/2', { token, body: { isActive: false } });
+      const unpublished = await request('POST', '/leads', {
+        body: { ...DOCUMENT_REQUEST, propertyId: 2 },
+      });
+      assert.equal(unpublished.status, 201, unpublished.text);
+      assert.equal(unpublished.body.data.access, null);
+
+      // The honeypot still answers as if accepted, and hands out nothing.
+      const robot = await request('POST', '/leads', {
+        body: { ...DOCUMENT_REQUEST, website: 'https://spam.example.com' },
+      });
+      assert.deepEqual(robot.body, { data: null, message: 'ok' });
+    });
+  });
+
+  it('refuses the files without a live token for that listing and its lead', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      await request('PATCH', '/admin/properties/1', { token, body: FILES });
+
+      const lead = (await request('POST', '/leads', { body: DOCUMENT_REQUEST })).body.data;
+      const elsewhere = (
+        await request('POST', '/leads', { body: { ...DOCUMENT_REQUEST, propertyId: 2 } })
+      ).body.data;
+      const ask = (id, body) => request('POST', `/properties/${id}/documents/access`, { body });
+
+      const missing = await ask(1, {});
+      assert.equal(missing.status, 422);
+      assert.ok(missing.body.errors.token, 'the token is required');
+
+      const unknown = await ask(1, { token: 'not-a-token' });
+      assert.equal(unknown.status, 403);
+      assert.equal(unknown.body.message, 'Share your details to open the files of this listing.');
+      assert.ok(!unknown.text.includes(FILE.prices));
+
+      assert.equal(
+        (await ask(1, { token: elsewhere.access.token })).status,
+        403,
+        'another listing'
+      );
+      assert.equal((await ask(2, { token: elsewhere.access.token })).status, 200);
+
+      const expired = issueAccess(1, lead.id, Date.now() - ACCESS_TTL_MS - 1000);
+      assert.equal((await ask(1, { token: expired.token })).status, 403, 'expired');
+
+      // A lead deleted from the CRM — spam, a test entry — takes its token with it.
+      assert.equal((await request('DELETE', `/admin/leads/${lead.id}`, { token })).status, 200);
+      assert.equal((await ask(1, { token: lead.access.token })).status, 403, 'deleted lead');
+
+      // An unpublished listing has no files to hand out, whatever the token.
+      const fresh = (await request('POST', '/leads', { body: DOCUMENT_REQUEST })).body.data;
+      assert.equal((await ask(1, { token: fresh.access.token })).status, 200);
+      await request('PATCH', '/admin/properties/1', { token, body: { isActive: false } });
+      assert.equal((await ask(1, { token: fresh.access.token })).status, 404);
+      assert.equal((await ask(999, { token: fresh.access.token })).status, 404);
     });
   });
 });

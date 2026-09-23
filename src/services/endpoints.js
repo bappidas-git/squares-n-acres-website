@@ -269,6 +269,19 @@ const properties = {
     response: 'ViewCount',
     example: 1,
   },
+  documentAccess: {
+    key: 'properties.documentAccess',
+    method: 'POST',
+    path: '/properties/:id/documents/access',
+    auth: 'public',
+    module: 'properties',
+    description:
+      'The addresses of a listing’s files, for the token POST /leads answered a lead about it with',
+    query: {},
+    body: 'property.documentAccess',
+    response: 'DocumentAccess',
+    example: 1,
+  },
   suggestions: {
     key: 'properties.suggestions',
     method: 'GET',
@@ -696,7 +709,7 @@ const leads = {
     description: 'Capture a lead from any form on the site; honeypot and rate limited',
     query: {},
     body: 'lead.create',
-    response: 'Lead',
+    response: 'LeadCreated',
     example: 1,
   },
 };

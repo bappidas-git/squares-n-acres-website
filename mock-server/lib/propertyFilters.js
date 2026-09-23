@@ -9,6 +9,8 @@
  *           lease, falling back to `priceRangeMin` for a project quoted as a
  *           range. A listing on request has no number, so it drops out as soon
  *           as a price filter is set and sorts last on `price-asc`/`price-desc`.
+ *           A price sort puts sales before rentals: a total and a monthly
+ *           figure are not one scale.
  *   area    `superBuiltUpArea ?? carpetArea ?? plotArea`, converted to square
  *           feet, and the filter's own bounds converted from `areaUnit`, so
  *           `minArea=100&areaUnit=sqm` compares like with like.
@@ -224,6 +226,26 @@ function compareNullable(left, right, direction) {
   return direction === 'desc' ? right - left : left - right;
 }
 
+/** 0 for a sale, 1 for a rent or a lease — the two scales a price comes in. */
+const priceScaleOf = (property) =>
+  property?.listingType === 'rent' || property?.listingType === 'lease' ? 1 : 0;
+
+/**
+ * Orders by price without comparing a total with a monthly figure.
+ *
+ * `priceOf` answers the rent for a rental and the price for a sale, so a plain
+ * numeric sort put every ₹21,000/month flat ahead of the cheapest ₹34.5 L sale
+ * on "low to high", and after it on "high to low". Sales come first and
+ * rentals after, each ordered the way the caller asked; a listing on request
+ * still sorts last.
+ */
+function comparePrice(a, b, direction) {
+  const left = priceOf(a);
+  const right = priceOf(b);
+  if (left === null || right === null) return compareNullable(left, right, direction);
+  return priceScaleOf(a) - priceScaleOf(b) || compareNullable(left, right, direction);
+}
+
 const time = (value) => {
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) ? parsed : null;
@@ -236,8 +258,8 @@ const COMPARATORS = {
     (b.priorityOrder ?? 0) - (a.priorityOrder ?? 0) ||
     compareNullable(time(a.updatedAt), time(b.updatedAt), 'desc'),
   newest: (a, b) => compareNullable(time(a.publishedAt), time(b.publishedAt), 'desc'),
-  'price-asc': (a, b) => compareNullable(priceOf(a), priceOf(b), 'asc'),
-  'price-desc': (a, b) => compareNullable(priceOf(a), priceOf(b), 'desc'),
+  'price-asc': (a, b) => comparePrice(a, b, 'asc'),
+  'price-desc': (a, b) => comparePrice(a, b, 'desc'),
   'area-desc': (a, b) => compareNullable(areaInSqft(a), areaInSqft(b), 'desc'),
   popular: (a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0),
 };
@@ -267,6 +289,8 @@ function applyPropertySort(items, sort, order) {
   const sorted = items.slice();
 
   if (COMPARATORS[key]) return sorted.sort(COMPARATORS[key]);
+
+  if (key === 'price') return sorted.sort((a, b) => comparePrice(a, b, direction));
 
   const value = ADMIN_VALUES[key];
   if (!value) return sorted.sort(COMPARATORS.relevance);

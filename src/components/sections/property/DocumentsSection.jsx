@@ -9,6 +9,7 @@ import { leadFormProps } from '../../../utils/leadSources';
 import { track } from '../../../utils/analytics';
 import { useToast } from '../../common/ToastProvider';
 import useGatedContent from '../../../hooks/useGatedContent';
+import useGatedFiles from '../../../hooks/useGatedFiles';
 
 import styles from './DocumentsSection.module.css';
 
@@ -25,11 +26,17 @@ const TYPE_ICON = {
 const filled = (value) => value !== null && value !== undefined && String(value).trim() !== '';
 
 /**
- * The documents in `order`, with anything that has no address dropped.
+ * The documents in `order`, with anything that has no file dropped.
+ *
+ * A public read leaves a gated paper without its address and marks it
+ * `hasFile` instead, so that row stays: its address is fetched once the
+ * visitor has shared their details (docs/backend-notes → "Gated files").
  *
  * A document whose address is the brochure's own is dropped too: §6.1 keeps
  * `brochureUrl` beside `documents[]`, and an editor who attaches the brochure
- * in both places means one file, not two rows of the same download.
+ * in both places means one file, not two rows of the same download. (A public
+ * read has already dropped it — this is for the admin preview, which reads the
+ * record as stored.)
  *
  * @param {Array<object>} documents
  * @param {string|null} [brochureUrl] the file the brochure card already offers
@@ -37,7 +44,10 @@ const filled = (value) => value !== null && value !== undefined && String(value)
  */
 export function orderedDocuments(documents, brochureUrl = null) {
   return (Array.isArray(documents) ? documents : [])
-    .filter((document) => document && filled(document.url) && filled(document.title))
+    .filter(
+      (document) =>
+        document && filled(document.title) && (filled(document.url) || document.hasFile === true)
+    )
     .filter((document) => !filled(brochureUrl) || document.url !== brochureUrl)
     .map((document, index) => ({ document, index }))
     .sort((a, b) => {
@@ -46,6 +56,16 @@ export function orderedDocuments(documents, brochureUrl = null) {
       return order(a) - order(b) || a.index - b.index;
     })
     .map((entry) => entry.document);
+}
+
+/**
+ * A row's address: its own, or the one the API handed over for it
+ * (`useGatedFiles`).
+ */
+function addressOf(row, files) {
+  if (row.url) return row.url;
+  if (!files) return null;
+  return (row.documentId ? files.documents[row.documentId] : files.brochureUrl) ?? null;
 }
 
 /**
@@ -59,6 +79,11 @@ export function orderedDocuments(documents, brochureUrl = null) {
  * visit (`sna_lead`) and *then* opens the file — from inside the success
  * handler, so the browser still treats it as the visitor's own click.
  *
+ * A gated file's address is not in the record the page reads (QA-51 OPEN-1):
+ * the lead is answered with a token, and the addresses are fetched with it —
+ * straight after the form, or as soon as the section finds the gate already
+ * open, so the next click opens its file at once.
+ *
  * @param {object} props
  * @param {object} props.property a record of §6.1
  * @param {'bg'|'surface'} [props.background]
@@ -70,10 +95,18 @@ export default function DocumentsSection({ property, background = 'bg' }) {
   const [asking, setAsking] = useState(null);
 
   const brochureUrl = filled(property?.brochureUrl) ? property.brochureUrl : null;
+  const hasBrochure = Boolean(brochureUrl) || property?.hasBrochure === true;
   const documents = useMemo(
     () => orderedDocuments(property?.documents, brochureUrl),
     [property, brochureUrl]
   );
+
+  // An open gate with an address the record lacks — the form was filled in
+  // elsewhere on the page, or earlier in this visit — fetches the listing's
+  // addresses now, so the row's click opens its file directly.
+  const needsFiles =
+    (hasBrochure && !brochureUrl) || documents.some((document) => !filled(document.url));
+  const { files, fetchFiles } = useGatedFiles(propertyId, { enabled: unlocked && needsFiles });
 
   const deliver = useCallback(
     (url, title) => {
@@ -92,14 +125,21 @@ export default function DocumentsSection({ property, background = 'bg' }) {
     [toast]
   );
 
-  const brochureGated = brochureUrl ? property.brochureLeadGated !== false : false;
+  // A brochure the public read carries no address for is a gated one, whatever
+  // the flag beside it says.
+  const brochureGated = hasBrochure ? !brochureUrl || property.brochureLeadGated !== false : false;
 
-  if (documents.length === 0 && !brochureUrl) return null;
+  if (documents.length === 0 && !hasBrochure) return null;
 
-  /** Either open the file now, or ask who is asking and open it afterwards. */
+  /**
+   * Open the file now when its address is known and the visitor may have it;
+   * otherwise ask who is asking — or, for a visitor we already know, fetch the
+   * address — and open it afterwards.
+   */
   const request = (item) => {
-    if (!item.gated || unlocked) {
-      deliver(item.url, item.title);
+    const url = addressOf(item, files);
+    if (url && (!item.gated || unlocked)) {
+      deliver(url, item.title);
       if (item.event) track(item.event, { propertyId, document: item.title });
       return;
     }
@@ -107,7 +147,7 @@ export default function DocumentsSection({ property, background = 'bg' }) {
   };
 
   const rows = [
-    ...(brochureUrl
+    ...(hasBrochure
       ? [
           {
             id: 'brochure',
@@ -130,11 +170,12 @@ export default function DocumentsSection({ property, background = 'bg' }) {
       : []),
     ...documents.map((document) => ({
       id: `document-${document.id}`,
+      documentId: String(document.id),
       title: document.title,
       typeLabel: DOCUMENT_TYPES.labelOf(document.type) || DOCUMENT_TYPES.labelOf('other'),
       icon: TYPE_ICON[document.type] ?? TYPE_ICON.other,
-      url: document.url,
-      gated: document.leadGated !== false,
+      url: filled(document.url) ? document.url : null,
+      gated: !filled(document.url) || document.leadGated !== false,
       entry: 'document-request',
       event: 'document_download',
       action: 'Open',
@@ -215,8 +256,11 @@ export default function DocumentsSection({ property, background = 'bg' }) {
           deliver={{
             kind: 'file',
             unlockKind: 'documents',
-            fileUrl: asking.url,
+            fileUrl: addressOf(asking, files) ?? undefined,
             fileLabel: asking.title,
+            // Asked once the lead is filed, or straight away for a visitor
+            // the dialog does not ask again (P28).
+            resolveUrl: () => fetchFiles().then((found) => addressOf(asking, found)),
           }}
           agent={property?.agent?.showOnListing ? property.agent : null}
           onSuccess={() => {

@@ -1,18 +1,31 @@
+import { useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import FormSection, { FormColumn } from '../../../../../components/admin/FormSection';
-import { Alert, NumberField, SelectField, SwitchField } from '../../../../../components/ui';
+import {
+  Alert,
+  Button,
+  Modal,
+  NumberField,
+  SelectField,
+  SwitchField,
+} from '../../../../../components/ui';
 import { AREA_UNITS, KITCHEN_TYPES } from '../../../../../config/enums';
 import { formatArea } from '../../../../../utils/format';
+import { usePropertyTypes } from '../../../../../hooks/useMasterData';
 import {
+  AREA_FIGURES,
   PLOT_DIMENSION_UNITS,
+  convertArea,
   isCommercial,
   isPlot,
   plotAreaFrom,
   showsBhk,
   showsBuiltAreas,
+  showsParking,
   showsPlotDimensions,
 } from '../fieldRules';
+import { LIMITS } from '../validators/property';
 import NumberWithUnit from '../components/NumberWithUnit';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
@@ -66,23 +79,43 @@ export function areaOrderWarning(area = {}) {
  */
 export default function AreaConfigurationTab() {
   const { values, errors, setField, setFields, disabled } = usePropertyFormContext();
+  const propertyTypes = usePropertyTypes({ activeOnly: false });
+  const [unitChange, setUnitChange] = useState(null);
 
   const area = values.area ?? {};
   const configuration = values.configuration ?? {};
   const unitLabel = AREA_UNITS.labelOf(area.areaUnit || 'sqft');
   const warning = areaOrderWarning(area);
 
+  const typeSlug = useMemo(
+    () =>
+      propertyTypes.find((type) => String(type.id) === String(values.propertyTypeId))?.slug ?? null,
+    [propertyTypes, values.propertyTypeId]
+  );
+
   const setArea = (key) => (value) => setField(`area.${key}`, value);
 
   /**
-   * Writes one plot dimension and, while the plot area is still empty, fills it
-   * in from length × width. A typed area is never overwritten: a survey number
-   * and an arithmetic product disagree more often than not.
+   * Writes one plot dimension and keeps the plot area in step with length ×
+   * width for as long as the area is the form's own arithmetic. A typed area
+   * is never overwritten: a survey number and an arithmetic product disagree
+   * more often than not.
+   *
+   * "The form's own" is "empty, or exactly what the dimensions before this
+   * keystroke made". Checking for empty alone froze the area after the first
+   * digit of the second dimension — 30 × 4 wrote 120, and 30 × 40 kept it.
    */
   const setDimension = (field, value) => {
     const patch = { [`area.${field}`]: value };
     const next = { ...area, [field]: value };
-    if (has(next.plotArea)) {
+    const before = plotAreaFrom(
+      area.plotLength,
+      area.plotWidth,
+      area.plotDimensionUnit,
+      area.areaUnit
+    );
+    const derived = !has(area.plotArea) || (before !== null && Number(area.plotArea) === before);
+    if (!derived) {
       setFields(patch);
       return;
     }
@@ -92,14 +125,46 @@ export default function AreaConfigurationTab() {
       next.plotDimensionUnit,
       next.areaUnit
     );
-    setFields(computed === null ? patch : { ...patch, 'area.plotArea': computed });
+    setFields({ ...patch, 'area.plotArea': computed });
   };
+
+  const figures = AREA_FIGURES.filter((key) => has(area[key]));
+
+  /**
+   * A new area unit. With nothing measured yet it is only a label; with
+   * figures on the form it asks, because 1,650 sq ft relabelled as 1,650 sq m
+   * is a flat ten times the size.
+   */
+  const chooseUnit = (next) => {
+    const current = area.areaUnit || 'sqft';
+    if (next === current) return;
+    if (figures.length === 0) {
+      setField('area.areaUnit', next);
+      return;
+    }
+    setUnitChange({ from: current, to: next });
+  };
+
+  const applyUnit = (convert) => {
+    if (!unitChange) return;
+    const { from, to } = unitChange;
+    const patch = { 'area.areaUnit': to };
+    if (convert) {
+      figures.forEach((key) => {
+        patch[`area.${key}`] = convertArea(area[key], from, to);
+      });
+    }
+    setFields(patch);
+    setUnitChange(null);
+  };
+
+  const example = figures[0];
 
   const count = (key, label, hint) => (
     <NumberField
       label={label}
       min={0}
-      max={99}
+      max={LIMITS.rooms}
       step={1}
       value={configuration[key] ?? ''}
       error={errors[`configuration.${key}`]}
@@ -128,7 +193,7 @@ export default function AreaConfigurationTab() {
             error={errors['area.areaUnit']}
             disabled={disabled}
             hint="Sq ft is the Bengaluru default; plots are often quoted in sq yd, cent or guntha."
-            onChange={(event) => setField('area.areaUnit', event.target.value)}
+            onChange={(event) => chooseUnit(event.target.value)}
           />
         </FormColumn>
 
@@ -158,6 +223,8 @@ export default function AreaConfigurationTab() {
                 value={area.builtUpArea ?? ''}
                 error={errors['area.builtUpArea']}
                 disabled={disabled}
+                hint="Carpet area plus the walls and the balconies."
+                readout={has(area.builtUpArea) ? formatArea(area.builtUpArea, unitLabel) : null}
                 onChange={setArea('builtUpArea')}
               />
             </FormColumn>
@@ -186,7 +253,7 @@ export default function AreaConfigurationTab() {
           </>
         ) : null}
 
-        {showsPlotDimensions(values) ? (
+        {showsPlotDimensions(values, typeSlug) ? (
           <>
             <FormColumn half>
               <NumberWithUnit
@@ -196,7 +263,7 @@ export default function AreaConfigurationTab() {
                 value={area.plotArea ?? ''}
                 error={errors['area.plotArea']}
                 disabled={disabled}
-                hint="Filled in from the length and the width while it is empty."
+                hint="Worked out from the length and the width until you type an area of your own."
                 readout={has(area.plotArea) ? formatArea(area.plotArea, unitLabel) : null}
                 onChange={setArea('plotArea')}
               />
@@ -241,55 +308,75 @@ export default function AreaConfigurationTab() {
         ) : null}
       </FormSection>
 
-      {showsBhk(values) ? (
+      {showsBhk(values) || showsParking(values) ? (
         <FormSection
-          title="Configuration"
-          description="What the home is made of. These are the numbers the search filters and the card headline read."
+          title={showsBhk(values) ? 'Configuration' : 'Parking'}
+          description={
+            showsBhk(values)
+              ? 'What the home is made of. These are the numbers the search filters and the card headline read.'
+              : 'The parking that comes with the space — the details page prints it beside the area.'
+          }
         >
           <FormColumn>
             <div className={styles.counts}>
-              {count('bedrooms', 'Bedrooms', 'Whole numbers. Five or more is shown as “5+ BHK”.')}
-              {count('bathrooms', 'Bathrooms')}
-              {count('balconies', 'Balconies')}
-              {count('parkingCovered', 'Covered parking')}
-              {count('parkingOpen', 'Open parking')}
+              {showsBhk(values) ? (
+                <>
+                  {count(
+                    'bedrooms',
+                    'Bedrooms',
+                    'Whole numbers. Five or more is shown as “5+ BHK”.'
+                  )}
+                  {count('bathrooms', 'Bathrooms')}
+                  {count('balconies', 'Balconies')}
+                </>
+              ) : null}
+              {showsParking(values) ? (
+                <>
+                  {count('parkingCovered', 'Covered parking')}
+                  {count('parkingOpen', 'Open parking')}
+                </>
+              ) : null}
             </div>
           </FormColumn>
 
-          <FormColumn half>
-            <SelectField
-              label="Kitchen"
-              placeholder="Not specified"
-              options={KITCHEN_TYPES.options}
-              value={configuration.kitchenType ?? ''}
-              error={errors['configuration.kitchenType']}
-              disabled={disabled}
-              onChange={(event) => setField('configuration.kitchenType', event.target.value)}
-            />
-          </FormColumn>
+          {showsBhk(values) ? (
+            <>
+              <FormColumn half>
+                <SelectField
+                  label="Kitchen"
+                  placeholder="Not specified"
+                  options={KITCHEN_TYPES.options}
+                  value={configuration.kitchenType ?? ''}
+                  error={errors['configuration.kitchenType']}
+                  disabled={disabled}
+                  onChange={(event) => setField('configuration.kitchenType', event.target.value)}
+                />
+              </FormColumn>
 
-          <FormColumn>
-            <div className={styles.switches}>
-              <SwitchField
-                label="Servant room"
-                checked={configuration.servantRoom === true}
-                disabled={disabled}
-                onChange={(checked) => setField('configuration.servantRoom', checked)}
-              />
-              <SwitchField
-                label="Study room"
-                checked={configuration.studyRoom === true}
-                disabled={disabled}
-                onChange={(checked) => setField('configuration.studyRoom', checked)}
-              />
-              <SwitchField
-                label="Pooja room"
-                checked={configuration.poojaRoom === true}
-                disabled={disabled}
-                onChange={(checked) => setField('configuration.poojaRoom', checked)}
-              />
-            </div>
-          </FormColumn>
+              <FormColumn>
+                <div className={styles.switches}>
+                  <SwitchField
+                    label="Servant room"
+                    checked={configuration.servantRoom === true}
+                    disabled={disabled}
+                    onChange={(checked) => setField('configuration.servantRoom', checked)}
+                  />
+                  <SwitchField
+                    label="Study room"
+                    checked={configuration.studyRoom === true}
+                    disabled={disabled}
+                    onChange={(checked) => setField('configuration.studyRoom', checked)}
+                  />
+                  <SwitchField
+                    label="Pooja room"
+                    checked={configuration.poojaRoom === true}
+                    disabled={disabled}
+                    onChange={(checked) => setField('configuration.poojaRoom', checked)}
+                  />
+                </div>
+              </FormColumn>
+            </>
+          ) : null}
         </FormSection>
       ) : null}
 
@@ -316,6 +403,37 @@ export default function AreaConfigurationTab() {
           specifications.
         </Alert>
       ) : null}
+
+      <Modal
+        open={Boolean(unitChange)}
+        onClose={() => setUnitChange(null)}
+        title={`Measure this listing in ${AREA_UNITS.labelOf(unitChange?.to ?? 'sqft')}?`}
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setUnitChange(null)}>
+              Cancel
+            </Button>
+            <Button variant="outline" onClick={() => applyUnit(false)}>
+              Keep the numbers
+            </Button>
+            <Button onClick={() => applyUnit(true)}>Convert the figures</Button>
+          </>
+        }
+      >
+        {unitChange && example ? (
+          <p>
+            <strong>Convert</strong> keeps the size the same —{' '}
+            {formatArea(area[example], AREA_UNITS.labelOf(unitChange.from))} becomes{' '}
+            {formatArea(
+              convertArea(area[example], unitChange.from, unitChange.to),
+              AREA_UNITS.labelOf(unitChange.to)
+            )}
+            . <strong>Keep the numbers</strong> only changes the unit, for figures that were typed
+            in the wrong one.
+          </p>
+        ) : null}
+      </Modal>
     </>
   );
 }

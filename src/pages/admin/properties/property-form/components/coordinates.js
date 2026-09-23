@@ -14,8 +14,15 @@
 /** Bengaluru city centre — where the pin starts when a listing has none (§14). */
 export const DEFAULT_CENTRE = { latitude: 12.9716, longitude: 77.5946 };
 
-/** Six decimals is about 11 cm; beyond that it is noise nobody typed on purpose. */
+/**
+ * Six decimals is about 11 cm; beyond that it is noise nobody typed on purpose.
+ *
+ * An empty field stays empty. `Number(null)` and `Number('')` are both 0, so
+ * tabbing through a blank latitude used to write 0 — a listing "in the Gulf of
+ * Guinea" that counted as located and could never be cleared again.
+ */
 export const roundCoordinate = (value) => {
+  if (value === null || value === undefined || String(value).trim() === '') return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return null;
   return Math.round(parsed * 1e6) / 1e6;

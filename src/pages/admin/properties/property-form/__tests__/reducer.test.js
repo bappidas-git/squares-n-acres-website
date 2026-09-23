@@ -1,4 +1,4 @@
-import createInitialState, { makeImage, resetTmpIds } from '../initialState';
+import createInitialState, { makeImage, reserveTmpIds, resetTmpIds } from '../initialState';
 import reducer, { actions, createFormState } from '../reducer';
 
 const stateWithImages = (count = 3) => {
@@ -264,4 +264,64 @@ describe('drafts', () => {
 it('ignores an action it does not know', () => {
   const state = createFormState();
   expect(reducer(state, { type: 'NOT_AN_ACTION' })).toBe(state);
+});
+
+describe('a save that answers while the editor is still typing', () => {
+  const typedTitle = (state, title) => reducer(state, actions.set('title', title));
+
+  it('keeps what was typed after Save, and keeps it unsaved', () => {
+    const start = createFormState({ propertyId: 7, record: RECORD });
+    const sent = typedTitle(start, 'Lakeview Heights 3 BHK — as sent').values;
+    const later = typedTitle(
+      reducer(start, actions.set('title', 'Lakeview Heights 3 BHK — as sent')),
+      'Lakeview Heights 3 BHK — typed after'
+    );
+
+    const saved = reducer(
+      later,
+      actions.markSaved({ ...RECORD, title: 'Lakeview Heights 3 BHK — as sent' }, sent)
+    );
+
+    // The server's copy of the older values used to replace the newer ones.
+    expect(saved.values.title).toBe('Lakeview Heights 3 BHK — typed after');
+    expect(saved.initial.title).toBe('Lakeview Heights 3 BHK — as sent');
+    expect(saved.saving).toBe(false);
+  });
+
+  it('takes the server’s copy when nothing was typed since', () => {
+    const start = createFormState({ propertyId: 7, record: RECORD });
+    const typed = typedTitle(start, 'Lakeview Heights 3 BHK — as sent');
+
+    const saved = reducer(
+      typed,
+      actions.markSaved({ ...RECORD, title: 'Lakeview Heights 3 BHK — as sent' }, typed.values)
+    );
+    expect(JSON.stringify(saved.values)).toBe(JSON.stringify(saved.initial));
+  });
+});
+
+describe('the cover', () => {
+  it('stays single when a second row arrives already marked as the cover', () => {
+    // Two uploads finishing together each thought the gallery was empty.
+    const first = reducer(
+      createFormState(),
+      actions.listAdd('images', makeImage({ url: 'https://example.com/a.jpg', isCover: true }))
+    );
+    const second = reducer(
+      first,
+      actions.listAdd('images', makeImage({ url: 'https://example.com/b.jpg', isCover: true }))
+    );
+
+    expect(second.values.images.filter((image) => image.isCover)).toHaveLength(1);
+    expect(second.values.images[0].isCover).toBe(true);
+  });
+});
+
+describe('reserveTmpIds', () => {
+  it('moves the row counter past the ids a restored draft carries', () => {
+    // The draft's rows were numbered by another session; without this the next
+    // row added here shared an id with a restored one.
+    reserveTmpIds({ images: [{ id: 'tmp-7' }], faqs: [{ id: 'tmp-12' }, { id: 3 }] });
+    expect(makeImage().id).toBe('tmp-13');
+  });
 });

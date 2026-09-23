@@ -49,6 +49,11 @@
   padding-bottom: var(--safe-bottom);
 }
 
+/* A table screen (`WIDE_PATHS` in AdminLayout.jsx). */
+.contentWide {
+  max-width: 1760px;
+}
+
 @media (max-width: 899.98px) {
   .main {
     padding: var(--space-4) var(--container-padding);

@@ -28,10 +28,11 @@ export const DEFAULT_SUCCESS_MESSAGE = LEADS.successMessage;
  * @param {string} [props.propertyTitle] quoted in the WhatsApp message
  * @param {{name?: string, phone?: string, whatsapp?: string}|null} [props.agent]
  *   the listing's own advisor, when the editor published one
- * @param {{label: string, icon?: string, href?: string, onClick?: () => void}|null}
- *   [props.primaryAction] offered above the follow-ups — how a gated download
- *   hands the file over again when a pop-up blocker swallowed the tab it opened
- *   (BUG-08). A `href` makes it a real link, which no blocker intercepts.
+ * @param {{label: string, icon?: string, href?: string, onClick?: () => void,
+ *   loading?: boolean}|null} [props.primaryAction] offered above the follow-ups —
+ *   how a gated download hands the file over again when a pop-up blocker
+ *   swallowed the tab it opened (BUG-08). A `href` makes it a real link, which
+ *   no blocker intercepts; `loading` holds it while the address is fetched.
  * @param {(() => void)|null} [props.onClose]
  */
 export default function LeadSuccess({
@@ -60,6 +61,7 @@ export default function LeadSuccess({
             target={primaryAction.href ? '_blank' : undefined}
             rel={primaryAction.href ? 'noopener noreferrer' : undefined}
             onClick={primaryAction.onClick}
+            loading={Boolean(primaryAction.loading)}
             icon={
               primaryAction.icon ? <Icon icon={primaryAction.icon} aria-hidden="true" /> : undefined
             }

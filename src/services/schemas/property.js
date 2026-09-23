@@ -368,8 +368,17 @@ const create = {
   priorityOrder: { type: 'int', min: 0, default: 0 },
 };
 
+/**
+ * `POST /properties/:id/documents/access` — the token `POST /leads` answered
+ * with, for a lead about that listing (docs/API_CONTRACT.md §5.10).
+ */
+const documentAccess = {
+  token: { type: 'string', required: true, maxLength: 200 },
+};
+
 module.exports = {
   create,
   update: create,
   patch: allOptional(create),
+  documentAccess,
 };

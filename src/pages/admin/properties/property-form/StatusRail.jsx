@@ -21,11 +21,13 @@ import { FORMS } from '../../../../config/adminCopy';
  * The right-hand rail of the property form: everything about the listing that
  * is not a field of it.
  *
- * Status, priority, how finished the page is, where it lives on the site, when
- * it was last written, and the four writes (save, save & view, duplicate,
- * delete). It is sticky on a desktop and an accordion on a phone, because an
- * editor works through sixteen tabs and should never have to scroll back to
- * publish.
+ * The four writes (save, save & view, duplicate, delete) and when the listing
+ * was last written come first; then status, priority, how finished the page is
+ * and where it lives on the site. It is sticky on a desktop — scrolling inside
+ * itself when it is taller than the window — and an accordion on a phone,
+ * because an editor works through sixteen tabs and should never have to scroll
+ * back to publish. (The Save button used to sit at the bottom of a sticky rail
+ * taller than a laptop screen, out of reach until the end of the page.)
  *
  * @param {object} props
  * @param {ReturnType<import('./usePropertyForm').default>} props.form
@@ -33,6 +35,7 @@ import { FORMS } from '../../../../config/adminCopy';
  */
 export default function StatusRail({ form, collapsible = false }) {
   const {
+    state,
     values,
     errors,
     dirty,
@@ -55,12 +58,49 @@ export default function StatusRail({ form, collapsible = false }) {
   } = form;
 
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDuplicate, setConfirmDuplicate] = useState(false);
+  const [confirmInactive, setConfirmInactive] = useState(false);
   const working = saving || busy;
+  // Live on the site as last saved — what "Save as inactive" would take down.
+  const live = state?.initial?.isActive === true;
+
+  /** The copy is made from the saved record, so unsaved edits are saved first — or kept. */
+  const startDuplicate = () => {
+    if (dirty) {
+      setConfirmDuplicate(true);
+      return;
+    }
+    duplicate();
+  };
+
+  /** Taking a live page down is one mis-tap away in the menu, so it asks first. */
+  const saveInactive = () => {
+    if (live) {
+      setConfirmInactive(true);
+      return;
+    }
+    save('inactive');
+  };
   const tone = completenessTone(completeness.percent);
   const published = values.isActive === true;
   // An unpublished listing has no public page, so the link is the admin
   // preview of it instead — and it exists only once the record has been saved.
   const openUrl = isNew ? null : viewUrl;
+
+  // When the listing was last written, under the button that writes it.
+  const savedNotes = (
+    <div className={styles.savedNotes}>
+      <p className={styles.note} aria-live="polite">
+        {lastSavedAt ? `Last saved ${formatRelative(lastSavedAt)}` : 'Not saved yet'}
+        {dirty ? ' — with unsaved changes' : ''}
+      </p>
+      {draftSavedAt ? (
+        <p className={styles.note} aria-live="polite">
+          Draft saved {formatTime(draftSavedAt)} in this browser
+        </p>
+      ) : null}
+    </div>
+  );
 
   const body = (
     <>
@@ -69,6 +109,56 @@ export default function StatusRail({ form, collapsible = false }) {
           Read-only access. Your role can open a listing but not change it.
         </Alert>
       ) : null}
+
+      {readOnly ? null : (
+        <section className={styles.block} aria-labelledby="rail-actions">
+          <h2 className={styles.srOnly} id="rail-actions">
+            Actions
+          </h2>
+
+          <SaveMenu
+            save={save}
+            onSaveInactive={saveInactive}
+            working={working}
+            isNew={isNew}
+            published={published}
+          />
+
+          {savedNotes}
+
+          <p className={styles.shortcut}>
+            <kbd className={styles.kbd}>Ctrl</kbd>
+            <span aria-hidden="true">/</span>
+            <kbd className={styles.kbd}>⌘</kbd>
+            <span>+</span>
+            <kbd className={styles.kbd}>S</kbd>
+            <span>saves without leaving the tab.</span>
+          </p>
+
+          {isNew ? null : (
+            <div className={styles.secondary}>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={working}
+                icon={<Icon icon="mdi:content-copy" width="16" height="16" />}
+                onClick={startDuplicate}
+              >
+                Duplicate
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={working}
+                icon={<Icon icon="mdi:trash-can-outline" width="16" height="16" />}
+                onClick={() => setConfirmDelete(true)}
+              >
+                Delete
+              </Button>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className={styles.block} aria-labelledby="rail-status">
         <h2 className={styles.heading} id="rail-status">
@@ -219,62 +309,42 @@ export default function StatusRail({ form, collapsible = false }) {
         )}
       </section>
 
-      <section className={styles.block} aria-labelledby="rail-saved">
-        <h2 className={styles.heading} id="rail-saved">
-          Saved
-        </h2>
-        <p className={styles.note} aria-live="polite">
-          {lastSavedAt ? `Last saved ${formatRelative(lastSavedAt)}` : 'Not saved yet'}
-          {dirty ? ' — with unsaved changes' : ''}
-        </p>
-        {draftSavedAt ? (
-          <p className={styles.note} aria-live="polite">
-            Draft saved {formatTime(draftSavedAt)} in this browser
-          </p>
-        ) : null}
-      </section>
-
-      {readOnly ? null : (
-        <section className={styles.block} aria-labelledby="rail-actions">
-          <h2 className={styles.srOnly} id="rail-actions">
-            Actions
+      {readOnly ? (
+        <section className={styles.block} aria-labelledby="rail-saved">
+          <h2 className={styles.heading} id="rail-saved">
+            Saved
           </h2>
-
-          <SaveMenu save={save} working={working} isNew={isNew} published={published} />
-
-          <p className={styles.shortcut}>
-            <kbd className={styles.kbd}>Ctrl</kbd>
-            <span aria-hidden="true">/</span>
-            <kbd className={styles.kbd}>⌘</kbd>
-            <span>+</span>
-            <kbd className={styles.kbd}>S</kbd>
-            <span>saves without leaving the tab.</span>
-          </p>
-
-          {isNew ? null : (
-            <div className={styles.secondary}>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={working}
-                icon={<Icon icon="mdi:content-copy" width="16" height="16" />}
-                onClick={duplicate}
-              >
-                Duplicate
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={working}
-                icon={<Icon icon="mdi:trash-can-outline" width="16" height="16" />}
-                onClick={() => setConfirmDelete(true)}
-              >
-                Delete
-              </Button>
-            </div>
-          )}
+          {savedNotes}
         </section>
-      )}
+      ) : null}
+
+      <ConfirmDialog
+        open={confirmDuplicate}
+        loading={working}
+        title="Save your changes first?"
+        message="The copy is made from the saved listing, and opening it leaves this one — so the changes you have not saved would be in neither. Save them, then duplicate."
+        confirmLabel="Save, then duplicate"
+        onClose={() => setConfirmDuplicate(false)}
+        onConfirm={async () => {
+          const saved = await save('save');
+          setConfirmDuplicate(false);
+          if (saved) await duplicate();
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmInactive}
+        danger
+        loading={working}
+        title="Take this listing off the site?"
+        message="It is published now. Saving it as inactive unpublishes it: the page answers 404 and it leaves every search and listing row until it is published again."
+        confirmLabel="Save as inactive"
+        onClose={() => setConfirmInactive(false)}
+        onConfirm={async () => {
+          await save('inactive');
+          setConfirmInactive(false);
+        }}
+      />
 
       <ConfirmDialog
         open={confirmDelete}
@@ -320,7 +390,7 @@ export default function StatusRail({ form, collapsible = false }) {
  * genuinely different ones — publish-then-look, and store-without-publishing —
  * behind a menu (decision logged in `docs/DECISIONS.md`).
  */
-function SaveMenu({ save, working, isNew, published }) {
+function SaveMenu({ save, onSaveInactive, working, isNew, published }) {
   const [open, setOpen] = useState(false);
   const wrapper = useRef(null);
 
@@ -343,7 +413,8 @@ function SaveMenu({ save, working, isNew, published }) {
 
   const run = (mode) => {
     setOpen(false);
-    save(mode);
+    if (mode === 'inactive' && onSaveInactive) onSaveInactive();
+    else save(mode);
   };
 
   return (

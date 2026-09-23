@@ -33,6 +33,20 @@ export const view = (id, opts) =>
 export const suggestions = (q, opts) =>
   http.request(endpoints.properties.suggestions, { params: { q }, ...opts });
 
+/**
+ * The addresses of a listing's files, gated ones included, for the token
+ * `POST /leads` answered a lead about it with (`leadStorage.getAccess`). A
+ * public read carries no address for a gated file; this is how the page gets
+ * one once the visitor has shared their details. 403 when the token is no
+ * longer good.
+ */
+export const documentAccess = (id, token, opts) =>
+  http.request(endpoints.properties.documentAccess, {
+    pathParams: { id },
+    body: { token },
+    ...opts,
+  });
+
 /* Admin */
 
 export const adminList = (params, opts) =>
@@ -78,6 +92,7 @@ const propertyService = {
   similar,
   view,
   suggestions,
+  documentAccess,
   adminList,
   adminGet,
   adminGetBySlug,

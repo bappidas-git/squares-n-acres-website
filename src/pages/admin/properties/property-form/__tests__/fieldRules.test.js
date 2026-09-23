@@ -2,7 +2,9 @@ import createInitialState from '../initialState';
 import {
   anyFilled,
   clearedBySegment,
+  convertArea,
   derivedPricePerSqft,
+  heldPricePerSqft,
   isCommercial,
   isPlot,
   isResidential,
@@ -37,9 +39,22 @@ describe('segment rules', () => {
     expect(showsBhk(values({ segment: 'land' }))).toBe(false);
   });
 
-  it('shows the plot dimensions only for land', () => {
+  it('shows the plot dimensions for land, and for a home that stands on its own plot', () => {
     expect(showsPlotDimensions(values({ segment: 'land' }))).toBe(true);
     expect(showsPlotDimensions(values({ segment: 'residential' }))).toBe(false);
+    expect(showsPlotDimensions(values({ segment: 'residential' }), 'apartments')).toBe(false);
+    // A villa's plot is half of what it is.
+    expect(showsPlotDimensions(values({ segment: 'residential' }), 'villas')).toBe(true);
+    expect(showsPlotDimensions(values({ segment: 'residential' }), 'independent-houses')).toBe(
+      true
+    );
+  });
+
+  it('keeps showing a plot measurement the listing already holds', () => {
+    const held = values({ segment: 'residential' });
+    held.area = { ...held.area, plotArea: 2400 };
+    // Hidden, the figure was still saved and printed — with no control to fix it.
+    expect(showsPlotDimensions(held, 'apartments')).toBe(true);
   });
 
   it('hides the built areas, furnishing and floors for land', () => {
@@ -122,19 +137,29 @@ describe('clearedBySegment', () => {
     expect(patch.floorNumber).toBeNull();
   });
 
-  it('clears the plot measurements when land becomes a home', () => {
+  it('keeps the plot when land becomes a home — a villa stands on one', () => {
     const patch = clearedBySegment('residential');
-    expect(patch['area.plotLength']).toBeNull();
-    expect(patch['area.plotDimensionUnit']).toBeNull();
+    expect(patch).not.toHaveProperty('area.plotLength');
+    expect(patch).not.toHaveProperty('area.plotArea');
     expect(patch).not.toHaveProperty('configuration.bedrooms');
     expect(patch).not.toHaveProperty('area.superBuiltUpArea');
   });
 
-  it('clears the rooms but keeps the built areas for a commercial unit', () => {
+  it('keeps the facing and the ownership when a home becomes land', () => {
+    const patch = clearedBySegment('land');
+    expect(patch).not.toHaveProperty('facing');
+    expect(patch).not.toHaveProperty('ownership');
+    expect(patch.ageOfPropertyYears).toBeNull();
+  });
+
+  it('clears the rooms and the plot but keeps the built areas for a commercial unit', () => {
     const patch = clearedBySegment('commercial');
     expect(patch['configuration.bathrooms']).toBeNull();
+    expect(patch['area.plotLength']).toBeNull();
     expect(patch).not.toHaveProperty('area.carpetArea');
     expect(patch).not.toHaveProperty('furnishing');
+    // An office has a car park; only land loses the parking.
+    expect(patch).not.toHaveProperty('configuration.parkingCovered');
   });
 });
 
@@ -214,5 +239,48 @@ describe('the per-sq-ft rate (D33)', () => {
     expect(derivedPricePerSqft(priced({ superBuiltUpArea: 1500 }, { price: null }))).toBeNull();
     expect(derivedPricePerSqft(priced({}))).toBeNull();
     expect(derivedPricePerSqft(priced({ superBuiltUpArea: 0 }))).toBeNull();
+  });
+});
+
+describe('heldPricePerSqft', () => {
+  const sale = (pricePerSqft) =>
+    values({
+      listingType: 'sale',
+      pricing: { ...createInitialState().pricing, price: 15000000, pricePerSqft },
+      area: { ...createInitialState().area, superBuiltUpArea: 1500 },
+    });
+
+  it('reads a stored rate that is the division as still following the price', () => {
+    // The first save stores the derived rate (D33); read back as "typed", it
+    // froze, and doubling the price left the old figure on the site.
+    expect(heldPricePerSqft(sale(10000))).toBeNull();
+  });
+
+  it('keeps a rate somebody negotiated', () => {
+    expect(heldPricePerSqft(sale(9500))).toBe(9500);
+  });
+
+  it('holds no rate at all for a rental', () => {
+    const rental = { ...sale(44), listingType: 'rent' };
+    expect(heldPricePerSqft(rental)).toBeNull();
+  });
+});
+
+describe('convertArea', () => {
+  it('moves a figure from one unit to another, to two decimals', () => {
+    expect(convertArea(1076.39, 'sqft', 'sqm')).toBe(100);
+    expect(convertArea(1, 'acre', 'sqft')).toBe(43560);
+  });
+
+  it('leaves an empty figure empty', () => {
+    expect(convertArea('', 'sqft', 'sqm')).toBeNull();
+    expect(convertArea(null, 'sqft', 'sqm')).toBeNull();
+  });
+});
+
+describe('showsAge', () => {
+  it('asks a finished building its age, and a plot never', () => {
+    expect(showsAge(values({ segment: 'residential', constructionStatus: 'resale' }))).toBe(true);
+    expect(showsAge(values({ segment: 'land', constructionStatus: 'ready-to-move' }))).toBe(false);
   });
 });

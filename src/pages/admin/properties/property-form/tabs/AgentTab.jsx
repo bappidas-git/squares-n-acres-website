@@ -54,7 +54,12 @@ export default function AgentTab() {
   const { values, errors, setField, setFields, disabled } = usePropertyFormContext();
   const agent = values.agent ?? {};
 
-  const mode = agent.teamMemberId ? 'team' : 'manual';
+  // "Team member" is a choice before it is a value: with two or more people
+  // on the team nothing is linked until one is picked, and a mode read only
+  // from `teamMemberId` sprang back to "Manual" on the click — the list of
+  // members never appeared.
+  const [wantsTeam, setWantsTeam] = useState(false);
+  const mode = agent.teamMemberId || wantsTeam ? 'team' : 'manual';
   const { members, loading, error } = useTeamMembers();
   const [pending, setPending] = useState(null);
 
@@ -89,9 +94,11 @@ export default function AgentTab() {
     if (next === 'manual') {
       // The details stay; only the link to the team record goes, so switching
       // to "Manual" is how an editor starts from what the member lent them.
+      setWantsTeam(false);
       setField('agent.teamMemberId', null);
       return;
     }
+    setWantsTeam(true);
     if (members.length === 1) chooseMember(members[0].id);
   };
 
@@ -236,7 +243,7 @@ export default function AgentTab() {
             value={agent.whatsapp ?? ''}
             error={errors['agent.whatsapp']}
             disabled={disabled}
-            hint="Leave empty to use the phone number."
+            hint="Empty: the card has no WhatsApp button of its own, and “WhatsApp us” on the page reaches the office number."
             onChange={(event) => setField('agent.whatsapp', event.target.value)}
           />
         </FormColumn>

@@ -86,6 +86,7 @@ export default function SocialTab() {
           />
 
           <ImageField
+            id={fieldId('seo.og.imageUrl')}
             label="Share image"
             hint="og"
             value={og.imageUrl ?? ''}
@@ -145,6 +146,7 @@ export default function SocialTab() {
           />
 
           <ImageField
+            id={fieldId('seo.twitter.imageUrl')}
             label="X image"
             hint="og"
             value={twitter.imageUrl ?? ''}

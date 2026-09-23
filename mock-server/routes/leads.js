@@ -2,7 +2,9 @@
  * Leads — the public form and the CRM (00_MASTER_CONTEXT.md §5.11, §5.14,
  * §6.7, §10).
  *
- *   POST   /api/leads                        the site's forms, throttled
+ *   POST   /api/leads                        the site's forms, throttled; a lead
+ *                                            about a listing also opens its gated
+ *                                            files (`access`, lib/fileAccess.js)
  *   GET    /api/admin/leads                  filters, sales scope, pagination
  *   GET    /api/admin/leads/export           the same list as CSV
  *   GET    /api/admin/leads/:id
@@ -46,6 +48,7 @@ const { canSeeLead, omit, scopeLeads } = require('../lib/scope');
 const { clientIp, rateLimit } = require('../middleware/rateLimit');
 const { conflict, forbidden, notFound, validation } = require('../middleware/errors');
 const { embedLead } = require('../lib/embed');
+const { issueAccess } = require('../lib/fileAccess');
 const { nextId } = require('../lib/ids');
 const { paginate, toPositiveInt, DEFAULT_PER_PAGE_ADMIN } = require('../lib/paginate');
 const { validateBody } = require('../middleware/validate');
@@ -305,7 +308,12 @@ module.exports = ({ db, getModel }) => {
 
       db.write();
 
-      res.created(present(record, { admin: false }));
+      // A lead about a listing opens that listing's gated files: the token is
+      // what `POST /properties/:id/documents/access` asks for. It is part of
+      // this response only — a credential, never stored on the lead.
+      const access = property ? issueAccess(property.id, record.id) : null;
+
+      res.created({ ...present(record, { admin: false }), access });
     } catch (error) {
       next(error);
     }

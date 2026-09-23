@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import FormSection, { FormColumn } from '../../../../../components/admin/FormSection';
 import PATHS from '../../../../../routes/paths';
 import { useAmenitiesGrouped } from '../../../../../hooks/useMasterData';
+import { propertyFieldId } from '../fieldFocus';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './AmenitiesTab.module.css';
@@ -83,13 +84,35 @@ function TriStateCheckbox({ checked, indeterminate, label, disabled, onChange })
  */
 export default function AmenitiesTab() {
   const { values, setField, disabled } = usePropertyFormContext();
-  const groups = useAmenitiesGrouped();
+  const allGroups = useAmenitiesGrouped({ activeOnly: false });
   const [query, setQuery] = useState('');
 
   const chosen = useMemo(
     () => new Set((values.amenityIds ?? []).map((id) => String(id))),
     [values.amenityIds]
   );
+
+  // The active amenities, and any switched-off one this listing still claims:
+  // hidden, it was counted in "N selected" and saved on every write, with no
+  // box on the tab to untick it.
+  const groups = useMemo(
+    () =>
+      allGroups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter(
+            (item) => item.isActive !== false || chosen.has(String(item.id))
+          ),
+        }))
+        .filter((group) => group.items.length > 0),
+    [allGroups, chosen]
+  );
+
+  // Ids master data no longer holds at all — deleted after they were chosen.
+  const orphans = useMemo(() => {
+    const known = new Set(allGroups.flatMap((group) => group.items.map((item) => String(item.id))));
+    return [...chosen].filter((id) => !known.has(id));
+  }, [allGroups, chosen]);
 
   const orderedIds = useMemo(
     () =>
@@ -152,6 +175,8 @@ export default function AmenitiesTab() {
                 aria-hidden="true"
               />
               <input
+                // "Fewer than eight amenities" from the SEO tab lands here.
+                id={propertyFieldId('amenityIds')}
                 type="search"
                 className={styles.search}
                 value={query}
@@ -165,6 +190,27 @@ export default function AmenitiesTab() {
             </p>
           </div>
         </FormColumn>
+
+        {orphans.length > 0 ? (
+          <FormColumn>
+            <p className={styles.orphans}>
+              <span>
+                {orphans.length === 1
+                  ? 'One amenity this listing had has since been deleted from master data.'
+                  : `${orphans.length} amenities this listing had have since been deleted from master data.`}{' '}
+                The site no longer shows {orphans.length === 1 ? 'it' : 'them'}.
+              </span>
+              <button
+                type="button"
+                className={styles.link}
+                disabled={disabled}
+                onClick={() => write([...chosen].filter((id) => !orphans.includes(id)))}
+              >
+                Remove {orphans.length === 1 ? 'it' : 'them'} from this listing
+              </button>
+            </p>
+          </FormColumn>
+        ) : null}
       </FormSection>
 
       {groups.length === 0 ? (
@@ -231,7 +277,12 @@ export default function AmenitiesTab() {
                         aria-hidden="true"
                         className={styles.chipIcon}
                       />
-                      <span className={styles.chipName}>{item.name}</span>
+                      <span className={styles.chipName}>
+                        {item.name}
+                        {item.isActive === false ? (
+                          <span className={styles.chipInactive}> (switched off)</span>
+                        ) : null}
+                      </span>
                     </label>
                   );
                 })}

@@ -12,9 +12,11 @@
   list-style: none;
 }
 
+/* Top-aligned: centred, the handle and the arrows of a tall row — a floor
+   plan, a unit card — floated half a screen below the row's own heading. */
 .item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--color-border);
@@ -39,9 +41,20 @@
 }
 
 .handle {
+  display: inline-flex;
   flex-shrink: 0;
+  padding: var(--space-2) 0;
   color: var(--color-text-muted);
   cursor: grab;
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
+.handleOff {
+  cursor: default;
+  opacity: 0.5;
 }
 
 .body {
@@ -55,6 +68,7 @@
   display: flex;
   flex-shrink: 0;
   gap: var(--space-1);
+  padding-top: var(--space-1);
   opacity: 0;
   transition: opacity var(--transition-fast);
 }
@@ -68,6 +82,33 @@
 @media (hover: none) {
   .moves {
     opacity: 1;
+  }
+}
+
+/* On a phone the handle and the arrows take a line of their own, above the
+   row: beside it they left a form row of four fields some 150 px to live in. */
+@media (max-width: 599.98px) {
+  .item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'handle . moves'
+      'body body body';
+    gap: var(--space-2);
+  }
+
+  .handle {
+    grid-area: handle;
+    padding: 0;
+  }
+
+  .body {
+    grid-area: body;
+  }
+
+  .moves {
+    grid-area: moves;
+    padding-top: 0;
   }
 }
 

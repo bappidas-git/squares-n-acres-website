@@ -9,7 +9,7 @@ import createInitialState, {
   resetTmpIds,
 } from '../initialState';
 import fromRecord from '../fromRecord';
-import toPayload from '../toPayload';
+import toPayload, { formPathOf, keptRowIndexes } from '../toPayload';
 
 const base = (patch = {}) => ({ ...createInitialState(), ...patch });
 
@@ -292,5 +292,52 @@ describe('round trip', () => {
     const twice = toPayload(fromRecord(once));
 
     expect(twice).toEqual(once);
+  });
+});
+
+describe('fields the form hides for this listing', () => {
+  it('does not send a possession date the status does not ask for', () => {
+    const payload = toPayload({
+      ...filled(),
+      constructionStatus: 'ready-to-move',
+      possessionDate: '2027-03',
+    });
+    expect(payload.possessionDate).toBeNull();
+  });
+
+  it('does not send an age for a plot', () => {
+    const payload = toPayload({
+      ...filled(),
+      segment: 'land',
+      constructionStatus: 'ready-to-move',
+      ageOfPropertyYears: 4,
+    });
+    expect(payload.ageOfPropertyYears).toBeNull();
+  });
+
+  it('sends no per-sq-ft rate for a rental', () => {
+    const payload = toPayload({
+      ...filled(),
+      listingType: 'rent',
+      pricing: { ...createInitialState().pricing, rentPerMonth: 45000, pricePerSqft: 44 },
+    });
+    expect(payload.pricing.pricePerSqft).toBeNull();
+  });
+});
+
+describe('a 422 on a row the save left out', () => {
+  it('lands on the form’s row, not the payload’s', () => {
+    const values = {
+      ...filled(),
+      unitConfigurations: [
+        makeUnitConfiguration({ name: '' }),
+        makeUnitConfiguration({ name: '3 BHK' }),
+      ],
+    };
+
+    // The blank first row is not sent, so the API's row 0 is the form's row 1.
+    const kept = keptRowIndexes(values);
+    expect(formPathOf('unitConfigurations.0.name', kept)).toBe('unitConfigurations.1.name');
+    expect(formPathOf('title', kept)).toBe('title');
   });
 });

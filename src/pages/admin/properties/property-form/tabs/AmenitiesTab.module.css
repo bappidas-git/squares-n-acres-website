@@ -154,3 +154,35 @@
 .link:hover {
   color: var(--color-primary);
 }
+
+button.link {
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+button.link:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* A switched-off amenity the listing still claims — tick it off to drop it. */
+.chipInactive {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.orphans {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-warning-dark);
+  background: var(--color-warning-bg);
+  border-radius: var(--radius-md);
+}

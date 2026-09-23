@@ -22,18 +22,21 @@
  * The records come from `db.json` through `fs`, so the suite tracks the seed
  * rather than a copy of it.
  *
- * Two values are allowed to differ between the passes, both by design:
+ * Two values are allowed to differ between the passes, by design:
  *
  *   - a `tmp-<n>` row id, a React key this browser invented for a row the API
  *     has never seen. `toPayload` strips them and `fromRecord` mints fresh
  *     ones, so comparing them would assert the counter rather than the data.
- *     Every id that *is* data — an integer the API assigned — is compared as it
- *     stands.
- *   - `pricing.pricePerSqft` on a record that stored none: D33 has the form
- *     derive the rate when the editor left the field empty, so the first save
- *     fills it in. The expected value below is that derivation rather than a
- *     blanket exemption, which keeps the assertion exact: a save may add the
- *     documented rate and nothing else.
+ *     Every id that *is* data — an integer the API assigned — is compared as
+ *     it stands.
+ *   - a field the form hides for this listing, which the save leaves out —
+ *     the age of a plot. The expected value below names it exactly.
+ *
+ * `pricing.pricePerSqft` used to be the second exemption: the first save
+ * stored the derived rate (D33), and the next open read the stored figure as
+ * one typed by hand — so the rate stopped following the price after one save.
+ * `fromRecord` now reads a stored rate that *is* the division as "following",
+ * which makes the pair exact with no allowance at all.
  */
 
 import fs from 'fs';
@@ -41,7 +44,7 @@ import path from 'path';
 
 import fromRecord from '../fromRecord';
 import toPayload from '../toPayload';
-import { derivedPricePerSqft } from '../fieldRules';
+import { derivedPricePerSqft, showsAge } from '../fieldRules';
 import { isTmpId } from '../initialState';
 
 const seed = JSON.parse(
@@ -114,12 +117,12 @@ describe('the property form round-trips every seed record', () => {
       const first = fromRecord(record);
       const second = fromRecord({ ...toPayload(first), id: record.id });
 
+      // The one thing a save may change: a field the form does not show for
+      // this listing is not sent — a plot has no building age, so the seed's
+      // `0` on the five plots comes back empty.
       const expected = {
         ...first,
-        pricing: {
-          ...first.pricing,
-          pricePerSqft: first.pricing.pricePerSqft ?? derivedPricePerSqft(first),
-        },
+        ageOfPropertyYears: showsAge(first) ? first.ageOfPropertyYears : null,
       };
 
       expect(withoutTmpIds(second)).toEqual(withoutTmpIds(expected));
@@ -175,6 +178,23 @@ describe('the property form round-trips every seed record', () => {
       );
     }
   );
+
+  it('stores the derived rate, and reads it back as still following the price', () => {
+    const record = properties.find(
+      (row) =>
+        row.listingType === 'sale' &&
+        row.pricing?.price &&
+        row.pricing?.pricePerSqft == null &&
+        derivedPricePerSqft(fromRecord(row)) !== null
+    );
+    expect(record).toBeDefined();
+
+    const payload = toPayload(fromRecord(record));
+    // D33: the API keeps the rate the form worked out…
+    expect(payload.pricing.pricePerSqft).toBe(derivedPricePerSqft(fromRecord(record)));
+    // …and the form does not mistake it for one somebody typed.
+    expect(fromRecord({ ...payload, id: record.id }).pricing.pricePerSqft).toBeNull();
+  });
 
   it('is stable from the second save on, whatever the first one derived', () => {
     const record = properties.find((row) => row.pricing?.pricePerSqft == null) ?? properties[0];

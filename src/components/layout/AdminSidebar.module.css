@@ -102,6 +102,17 @@
   font-weight: var(--font-weight-semibold);
 }
 
+/* The group the current page lives in: named in white, so a folded group — or
+   the icon rail, which shows no children at all — still says where you are. */
+.navItemParentActive {
+  color: var(--color-text-inverse);
+  font-weight: var(--font-weight-semibold);
+}
+
+.collapsed .navItemParentActive {
+  background: var(--color-on-dark-subtle);
+}
+
 .icon {
   display: flex;
   flex-shrink: 0;

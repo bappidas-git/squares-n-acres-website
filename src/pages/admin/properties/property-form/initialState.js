@@ -30,6 +30,30 @@ export const resetTmpIds = () => {
   sequence = 0;
 };
 
+/**
+ * Moves the counter past every `tmp-<n>` id a value already holds.
+ *
+ * A draft restored from another session carries ids that session invented; the
+ * counter of this one starts again at 1, so the next row added would share an
+ * id with a restored one — one key for two rows, and an update or a removal
+ * addressed to one of them reaching both.
+ *
+ * @param {unknown} value anything the form holds (the draft's values)
+ */
+export function reserveTmpIds(value) {
+  const visit = (node) => {
+    if (Array.isArray(node)) {
+      node.forEach(visit);
+      return;
+    }
+    if (!node || typeof node !== 'object') return;
+    const match = /^tmp-(\d+)$/.exec(typeof node.id === 'string' ? node.id : '');
+    if (match) sequence = Math.max(sequence, Number(match[1]));
+    Object.values(node).forEach(visit);
+  };
+  visit(value);
+}
+
 /* ------------------------------------------------------------------ *
  * Row factories — one per repeating list of §6.1
  * ------------------------------------------------------------------ */

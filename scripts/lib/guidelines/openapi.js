@@ -85,6 +85,69 @@ const EXTRA_SCHEMAS = {
     properties: { viewCount: { type: 'integer' } },
     required: ['viewCount'],
   },
+  DocumentAccess: {
+    type: 'object',
+    description:
+      'Every file of the listing with its address — the ones a public read leaves without one, and the open ones: the brochure, the documents, and the drawings and PDFs of the floor plans and of the active unit configurations.',
+    properties: {
+      brochureUrl: { type: ['string', 'null'], format: 'uri' },
+      documents: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: { id: { type: 'integer' }, url: { type: 'string', format: 'uri' } },
+          required: ['id', 'url'],
+        },
+      },
+      floorPlans: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            imageUrl: { type: ['string', 'null'], format: 'uri' },
+            pdfUrl: { type: ['string', 'null'], format: 'uri' },
+          },
+          required: ['id', 'imageUrl', 'pdfUrl'],
+        },
+      },
+      unitConfigurations: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            floorPlanImageUrl: { type: ['string', 'null'], format: 'uri' },
+            floorPlanPdfUrl: { type: ['string', 'null'], format: 'uri' },
+          },
+          required: ['id', 'floorPlanImageUrl', 'floorPlanPdfUrl'],
+        },
+      },
+    },
+    required: ['brochureUrl', 'documents', 'floorPlans', 'unitConfigurations'],
+  },
+  LeadCreated: {
+    description: 'The stored lead, plus the token that opens the listing’s gated files.',
+    allOf: [
+      { $ref: '#/components/schemas/Lead' },
+      {
+        type: 'object',
+        properties: {
+          access: {
+            type: ['object', 'null'],
+            description:
+              'Present when the lead names an active listing; send `token` to `POST /properties/:id/documents/access`. Valid for 24 hours.',
+            properties: {
+              token: { type: 'string' },
+              expiresAt: { type: 'string', format: 'date-time' },
+            },
+            required: ['token', 'expiresAt'],
+          },
+        },
+        required: ['access'],
+      },
+    ],
+  },
   AuthSession: {
     type: 'object',
     properties: {

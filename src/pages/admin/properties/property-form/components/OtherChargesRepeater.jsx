@@ -7,17 +7,19 @@ import NumberWithUnit from './NumberWithUnit';
 import styles from './Repeaters.module.css';
 
 /**
- * The charges beside the headline price — maintenance, stamp duty, a lock-in,
- * an escalation clause (`pricing.otherCharges`, §6.1).
+ * The charges beside the headline price — car parking, a club membership, a
+ * corpus fund, brokerage (`pricing.otherCharges`, §6.1).
  *
- * The presets exist because a lease is quoted in clauses that every listing
- * repeats word for word, and typing "Lock-in period" into thirty listings is
- * how thirty spellings of it end up on the site.
+ * Every row is money: its amount is printed as rupees and added into the
+ * total under the list. The presets exist because every listing repeats the
+ * same few charges word for word, and typing "Club membership" into thirty
+ * listings is how thirty spellings of it end up on the site.
  *
  * @param {object} props
  * @param {Array<{id: string|number, label: string, amount: number|null, note: string}>} props.charges
  * @param {Record<string, string>} props.errors keyed `pricing.otherCharges.<i>.<field>`
  * @param {Array<{label: string, note?: string}>} [props.presets] one button each
+ * @param {React.ReactNode} [props.note] a line under the buttons
  * @param {(patch?: object) => void} props.onAdd
  * @param {(id: string|number, patch: object) => void} props.onUpdate
  * @param {(id: string|number) => void} props.onRemove
@@ -26,6 +28,7 @@ export default function OtherChargesRepeater({
   charges = [],
   errors = {},
   presets = [],
+  note = null,
   disabled = false,
   onAdd,
   onUpdate,
@@ -120,6 +123,8 @@ export default function OtherChargesRepeater({
           </Button>
         ))}
       </div>
+
+      {note ? <p className={styles.empty}>{note}</p> : null}
     </div>
   );
 }

@@ -23,6 +23,7 @@ import LocalityQuickCreateDialog from '../components/LocalityQuickCreateDialog';
 import { roundCoordinate } from '../components/coordinates';
 import NearbyPlacesRepeater from '../components/NearbyPlacesRepeater';
 import NumberWithUnit from '../components/NumberWithUnit';
+import { propertyFieldId } from '../fieldFocus';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
@@ -61,8 +62,13 @@ export default function LocationTab() {
     disabled,
   } = usePropertyFormContext();
 
-  const localities = useLocalities();
-  const cities = useCities();
+  // Every locality and city, the retired ones included: a listing filed under
+  // a locality that was later switched off showed an empty picker — although
+  // the record still had one and the save kept it — and an editor had no way
+  // to see which one it was. The pickers offer the active ones, plus whatever
+  // this listing already uses.
+  const allLocalities = useLocalities({ activeOnly: false });
+  const allCities = useCities({ activeOnly: false });
   const { refresh } = useMasterData();
   const { settings } = useSiteSettings();
   const toast = useToast();
@@ -72,11 +78,27 @@ export default function LocationTab() {
   const location = values.location ?? {};
   const mapsKey = settings?.integrations?.googleMapsApiKey || ENV_MAPS_KEY;
 
+  const localities = useMemo(
+    () =>
+      allLocalities.filter(
+        (entry) => entry.isActive !== false || String(entry.id) === String(location.localityId)
+      ),
+    [allLocalities, location.localityId]
+  );
+
+  const cities = useMemo(
+    () =>
+      allCities.filter(
+        (entry) => entry.isActive !== false || String(entry.id) === String(location.cityId)
+      ),
+    [allCities, location.cityId]
+  );
+
   const localityOptions = useMemo(
     () =>
       localities.map((locality) => ({
         id: locality.id,
-        label: locality.name,
+        label: locality.isActive === false ? `${locality.name} (inactive)` : locality.name,
         cityId: locality.cityId,
         latitude: locality.latitude,
         longitude: locality.longitude,
@@ -121,15 +143,19 @@ export default function LocationTab() {
       >
         <FormColumn half>
           <Field
-            id="property-locality"
+            id={propertyFieldId('location.localityId')}
             label="Locality"
             required
             error={errors['location.localityId']}
-            hint="Type to search. The city is filled in from the locality."
+            hint={
+              selectedLocality && localityRecord?.isActive === false
+                ? 'This locality is switched off in master data: the site no longer lists it or links to it. Choose another, or switch it back on under Localities.'
+                : 'Type to search. The city is filled in from the locality.'
+            }
           >
             {({ hintId, errorId }) => (
               <Autocomplete
-                id="property-locality"
+                id={propertyFieldId('location.localityId')}
                 disabled={disabled}
                 options={localityOptions}
                 value={selectedLocality}
@@ -169,7 +195,10 @@ export default function LocationTab() {
             label="City"
             required
             placeholder="Select a city"
-            options={cities.map((city) => ({ value: city.id, label: city.name }))}
+            options={cities.map((city) => ({
+              value: city.id,
+              label: city.isActive === false ? `${city.name} (inactive)` : city.name,
+            }))}
             value={location.cityId ?? ''}
             error={errors['location.cityId']}
             disabled={disabled}
@@ -280,7 +309,7 @@ export default function LocationTab() {
             value={location.mapEmbedUrl ?? ''}
             error={errors['location.mapEmbedUrl']}
             disabled={disabled}
-            hint="Optional. A custom embed — a shared Google My Maps, say — shown instead of the generated map."
+            hint="Optional. Google Maps → Share → Embed a map, or a shared Google My Map. It replaces the generated map while “Show the exact location” is on."
             onChange={(event) => setField('location.mapEmbedUrl', event.target.value)}
           />
         </FormColumn>

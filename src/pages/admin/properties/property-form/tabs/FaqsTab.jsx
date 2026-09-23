@@ -8,7 +8,8 @@ import { Alert, Button, IconButton, Modal, TextField } from '../../../../../comp
 import { makeFaq } from '../initialState';
 import { FAQ_QUESTION_MAX, FAQ_QUESTION_MIN, plainText } from '../validators';
 import { useMasterData } from '../../../../../contexts/MasterDataContext';
-import suggestFaqs from '../suggestFaqs';
+import suggestFaqs, { SUGGESTION_LIMIT } from '../suggestFaqs';
+import { propertyFieldId } from '../fieldFocus';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
@@ -77,8 +78,9 @@ export default function FaqsTab() {
         <FormColumn>
           {faqs.length === 0 ? (
             <p className={styles.counter}>
-              Nothing answered yet. “Generate suggested FAQs” writes the six a listing can answer
-              from what it already holds — read them, keep what is right, edit the rest.
+              Nothing answered yet. “Generate suggested FAQs” writes up to {SUGGESTION_LIMIT}{' '}
+              questions this listing can already answer from what it holds — read them, keep what is
+              right, edit the rest.
             </p>
           ) : (
             <SortableList
@@ -93,6 +95,7 @@ export default function FaqsTab() {
                   <div className={styles.faqRow}>
                     <div className={styles.faqHead}>
                       <TextField
+                        id={propertyFieldId(`${path}.question`)}
                         label={`Question ${index + 1}`}
                         value={faq.question ?? ''}
                         error={errors[`${path}.question`]}
@@ -114,16 +117,18 @@ export default function FaqsTab() {
                         </IconButton>
                       </span>
                     </div>
-                    <RichTextField
-                      label="Answer"
-                      variant="compact"
-                      minHeight={140}
-                      value={faq.answer ?? ''}
-                      error={errors[`${path}.answer`]}
-                      disabled={disabled}
-                      helper="A paragraph or a short list — answer the question and stop."
-                      onChange={(html) => updateItem('faqs', faq.id, { answer: html })}
-                    />
+                    <div id={propertyFieldId(`${path}.answer`)}>
+                      <RichTextField
+                        label="Answer"
+                        variant="compact"
+                        minHeight={140}
+                        value={faq.answer ?? ''}
+                        error={errors[`${path}.answer`]}
+                        disabled={disabled}
+                        helper="A paragraph or a short list — answer the question and stop."
+                        onChange={(html) => updateItem('faqs', faq.id, { answer: html })}
+                      />
+                    </div>
                   </div>
                 );
               }}
@@ -142,6 +147,8 @@ export default function FaqsTab() {
           </p>
           <div className={[styles.actions, styles.actionsEnd].join(' ')}>
             <Button
+              // "No FAQs answered" from the SEO tab lands here.
+              id={propertyFieldId('faqs')}
               variant="ghost"
               disabled={disabled}
               onClick={openSuggestions}

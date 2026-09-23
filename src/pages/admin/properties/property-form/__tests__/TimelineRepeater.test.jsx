@@ -7,6 +7,7 @@ import TimelineRepeater, {
   STANDARD_MILESTONES,
   autoProgressFrom,
   missingStandardMilestones,
+  standardInsertIndex,
 } from '../components/TimelineRepeater';
 import { makeTimelineItem, resetTmpIds } from '../initialState';
 
@@ -252,5 +253,25 @@ describe('the rows', () => {
     renderWith(<Host />);
 
     expect(screen.getByText(/No milestones yet/)).toBeInTheDocument();
+  });
+});
+
+describe('standardInsertIndex', () => {
+  const rows = (...names) => names.map((milestone) => ({ milestone }));
+
+  it('puts a standard phase before the first standard phase that comes after it', () => {
+    // Appended, Foundation used to land after an existing Handover.
+    expect(standardInsertIndex(rows('Handover'), 'Foundation')).toBe(0);
+    expect(standardInsertIndex(rows('Foundation', 'Handover'), 'Masonry')).toBe(1);
+  });
+
+  it('leaves the editor’s own milestones where they are', () => {
+    expect(standardInsertIndex(rows('Bhoomi puja', 'Handover'), 'Structure')).toBe(1);
+    expect(standardInsertIndex(rows('Bhoomi puja'), 'Structure')).toBe(1);
+  });
+
+  it('appends when nothing later is listed', () => {
+    expect(standardInsertIndex(rows('Foundation'), 'Handover')).toBe(1);
+    expect(standardInsertIndex([], 'Foundation')).toBe(0);
   });
 });

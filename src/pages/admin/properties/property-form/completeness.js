@@ -68,8 +68,10 @@ const ITEMS = [
       const configuration = values.configuration ?? {};
       const measured =
         filled(area.superBuiltUpArea) || filled(area.carpetArea) || filled(area.plotArea);
+      // Rooms are a home's: an office or a plot has no bedroom field to fill,
+      // and asking for one kept every commercial listing below 100 %.
       const configured =
-        values.segment === 'land' ||
+        values.segment !== 'residential' ||
         filled(configuration.bedrooms) ||
         filled(configuration.bathrooms);
       return measured && configured;
@@ -93,7 +95,12 @@ const ITEMS = [
     weight: 8,
     done: (values) => {
       const location = values.location ?? {};
-      return filled(location.localityId) && filled(location.latitude) && filled(location.longitude);
+      return (
+        filled(location.localityId) &&
+        filled(location.address) &&
+        filled(location.latitude) &&
+        filled(location.longitude)
+      );
     },
   },
   {

@@ -336,6 +336,25 @@ const SPECIAL = {
 
   'articles.list': () => ({ path: '/articles?perPage=2' }),
 
+  // The files of a listing open to the token a lead about it was answered
+  // with, so the run files one first and cleans it up afterwards.
+  'properties.documentAccess': async () => {
+    const lead = await api('POST', '/leads', {
+      body: {
+        name: 'Smoke Access Lead',
+        phone: '9876543210',
+        source: 'document-request',
+        propertyId: 1,
+        message: 'Created by the API smoke test.',
+      },
+    });
+    const id = lead.json?.data?.id;
+    if (id) created.unshift({ path: `/admin/leads/${id}` });
+    const token = lead.json?.data?.access?.token;
+    if (!token) return { skip: 'the lead was answered without an access token' };
+    return { path: '/properties/1/documents/access', body: { token }, expect: 200 };
+  },
+
   'leads.create': () => ({
     body: {
       name: 'Smoke Test Lead',

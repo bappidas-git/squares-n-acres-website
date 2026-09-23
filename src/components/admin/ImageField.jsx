@@ -74,6 +74,7 @@ export function ImageHint({ hint }) {
  * avatar, the page block's picture, the floor plan's drawing.
  *
  * @param {object} props
+ * @param {string} [props.id] the URL input's id, for a host that has to focus it
  * @param {string} props.label
  * @param {string} props.value
  * @param {(value: string) => void} props.onChange
@@ -91,6 +92,7 @@ export function ImageHint({ hint }) {
  * @param {string} [props.alt] the preview's alt text
  */
 export default function ImageField({
+  id: idProp,
   label,
   value = '',
   onChange,
@@ -108,7 +110,8 @@ export default function ImageField({
   placeholder = 'https://…',
   alt = '',
 }) {
-  const id = useId();
+  const generatedId = useId();
+  const id = idProp || generatedId;
   const media = useMediaField({
     accept,
     folder,

@@ -3,13 +3,18 @@ import { Icon } from '@iconify/react';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
-import ApplicationDrawer from './ApplicationDrawer';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import DataTable, { DEFAULT_PER_PAGE } from '../../../components/admin/DataTable';
 import EntityPicker from '../../../components/admin/EntityPicker';
 import FilterBar from '../../../components/admin/FilterBar';
 import PageHeader from '../../../components/admin/PageHeader';
 import StatusChip from '../../../components/admin/StatusChip';
+// After the admin kit, out of alphabetical order: the drawer brings this
+// page's stylesheet with it, and `NewsletterSubscribersPage` — which shares a
+// chunk with this page — reaches that stylesheet after the kit's. Two orders
+// for one chunk is a mini-css-extract "Conflicting order", which `build:ci`
+// refuses.
+import ApplicationDrawer from './ApplicationDrawer';
 import careerService from '../../../services/careerService';
 import useApiList from '../../../hooks/useApiList';
 import { JOB_APPLICATION_STATUS } from '../../../config/enums';

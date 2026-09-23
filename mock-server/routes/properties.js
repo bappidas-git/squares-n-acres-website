@@ -8,10 +8,13 @@
  *   GET  /api/properties/slug/:slug      the detail page (404 when inactive)
  *   GET  /api/properties/:id/similar     admin picks first, then the fill rule
  *   POST /api/properties/:id/view        one counted view per IP per hour
+ *   POST /api/properties/:id/documents/access
+ *                                        the gated files, for a lead's token
  *   …and the admin CRUD, `duplicate`, `bulk` and `check-slug` of §5.14.
  *
- * Public reads see active listings only and lose the audit columns and an
- * agent's direct line (`lib/scope.js`); admin reads see the record as stored.
+ * Public reads see active listings only and lose the audit columns, an agent's
+ * direct line and the address of every file kept behind the lead form
+ * (`lib/scope.js`); admin reads see the record as stored.
  * Both embed the display objects of §5.5 on the page they return rather than
  * on the whole collection.
  *
@@ -26,7 +29,7 @@ const schemas = require('../../src/services/schemas');
 const { applyPropertyFilters, applyPropertySort, priceOf } = require('../lib/propertyFilters');
 const { checkSlug, ensureUniqueSlug, slugify } = require('../lib/slug');
 const { computeFacets } = require('../lib/facets');
-const { conflict, notFound, validation } = require('../middleware/errors');
+const { conflict, forbidden, notFound, validation } = require('../middleware/errors');
 const { countView } = require('../lib/viewCounter');
 const { clientIp } = require('../middleware/rateLimit');
 const { embedProperty } = require('../lib/embed');
@@ -38,7 +41,8 @@ const {
   DEFAULT_PER_PAGE_ADMIN,
   DEFAULT_PER_PAGE_PUBLIC,
 } = require('../lib/paginate');
-const { publicProperty } = require('../lib/scope');
+const { propertyFiles, publicProperty } = require('../lib/scope');
+const { verifyAccess } = require('../lib/fileAccess');
 const { validateBody } = require('../middleware/validate');
 const {
   buildDefaults,
@@ -416,6 +420,37 @@ module.exports = ({ db, getModel }) => {
     db.write();
 
     res.ok({ viewCount: property.viewCount });
+  });
+
+  /**
+   * The addresses of a listing's files, for the visitor who shared their
+   * details about it.
+   *
+   * The token is the one `POST /leads` issued with a lead about this listing
+   * (`lib/fileAccess.js`); it must still be valid, name this listing, and the
+   * lead it was issued for must still exist. The answer holds every file with
+   * an address — the brochure, the documents (the open ones too, so the page
+   * can render one list), and the drawings and PDFs of the floor plans and the
+   * active unit configurations.
+   */
+  router.post('/properties/:id/documents/access', (req, res, next) => {
+    try {
+      const property = find(req.params.id);
+      if (!property || !property.isActive) throw notFound();
+
+      const body = { ...(req.body ?? {}) };
+      validateBody(schemas.getSchema('property.documentAccess'), body);
+
+      const grant = verifyAccess(body.token, property.id);
+      const lead = grant && db.getCollection('leads').find((row) => sameId(row.id, grant.leadId));
+      if (!grant || !lead) {
+        throw forbidden('Share your details to open the files of this listing.');
+      }
+
+      res.ok(propertyFiles(property));
+    } catch (error) {
+      next(error);
+    }
   });
 
   /* ---------------------------------------------------------------- *

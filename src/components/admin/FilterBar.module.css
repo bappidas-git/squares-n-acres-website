@@ -27,6 +27,21 @@
   flex: 0 1 300px;
 }
 
+/* On a phone the search box is the one filter always on screen, so it takes
+   the row rather than stopping 60 px short of the edge. */
+@media (max-width: 899.98px) {
+  .search {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
+
+/* The field draws its own clear button; Chrome's native one beside it made two. */
+.input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .label {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
@@ -145,4 +160,65 @@
   padding: var(--space-4);
   min-width: 260px;
   max-width: 320px;
+}
+
+.popoverActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* A fixed width, so ticking a second status does not move the bar. */
+.multi {
+  width: 200px;
+}
+
+@media (max-width: 899.98px) {
+  .multi {
+    width: auto;
+  }
+}
+
+/* The several-values filter: a button drawn as the select beside it. */
+.selectFace {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-right: var(--space-2);
+  text-align: left;
+  cursor: pointer;
+}
+
+.selectFace:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.faceText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.faceEmpty .faceText {
+  color: var(--color-text);
+}
+
+.menuItem {
+  gap: var(--space-1);
+  padding-left: var(--space-2);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.menuClear {
+  justify-content: center;
+  border-top: 1px solid var(--color-border);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary-dark);
 }

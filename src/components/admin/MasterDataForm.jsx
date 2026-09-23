@@ -3,12 +3,18 @@ import { Icon } from '@iconify/react';
 
 import Alert from '../ui/Alert';
 import Button from '../ui/Button';
+// First of the kit, out of alphabetical order: every other form (the property
+// form, the developer, locality and page forms) reaches `MultiSelect`'s
+// stylesheet before `EntityPicker`'s, `FormSection`'s and `ImageField`'s, and
+// the admin chunks they share must hold them in one order or `build:ci`
+// refuses the build (mini-css-extract "Conflicting order"). The filter bar
+// used to import it ahead of this form; it no longer does.
+import MultiSelect from './MultiSelect';
 import EntityPicker from './EntityPicker';
 import FormSection, { FormColumn } from './FormSection';
 import IconPicker from './IconPicker';
 import ImageField from './ImageField';
 import IconButton from '../ui/IconButton';
-import MultiSelect from './MultiSelect';
 import RichTextField from '../editor/RichTextField';
 import SeoPanel from '../seo/SeoPanel';
 import SlugField from './SlugField';

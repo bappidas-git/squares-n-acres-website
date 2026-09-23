@@ -37,6 +37,12 @@ Rules for the unversioned surface, so that day comes as late as possible:
   `/api/v2` is one environment variable and a rebuild — the same single switch
   the handover promises.
 
+One such change was made **before** the first release, while this frontend was
+the only reader: public property reads stopped carrying the address of a file
+kept behind the lead form, and `POST /leads` began answering with the token that
+opens them (`05_BUSINESS_RULES.md` → "Gated files", QA-51 OPEN-1). Build the API
+to the contract as this package states it; there is no older shape to keep.
+
 ## Caching headers
 
 The API is read-heavy and the site is mostly anonymous, so the caching policy is

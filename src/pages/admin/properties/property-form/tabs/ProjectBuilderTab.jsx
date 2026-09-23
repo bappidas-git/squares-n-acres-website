@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import EntityPicker from '../../../../../components/admin/EntityPicker';
@@ -11,7 +11,7 @@ import { makeTimelineItem } from '../initialState';
 import { useDeveloperSearch } from '../../../../../hooks/useMasterData';
 import { useMasterData } from '../../../../../contexts/MasterDataContext';
 import DeveloperQuickCreateDialog from '../components/DeveloperQuickCreateDialog';
-import TimelineRepeater from '../components/TimelineRepeater';
+import TimelineRepeater, { standardInsertIndex } from '../components/TimelineRepeater';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
@@ -36,6 +36,17 @@ export default function ProjectBuilderTab() {
   const { developers, search, byId } = useDeveloperSearch({ activeOnly: false });
 
   const [creating, setCreating] = useState(false);
+  // What the editor last searched for: "Add new developer" after a search
+  // that found nothing starts from that name rather than an empty box.
+  const lastSearch = useRef('');
+  const [newName, setNewName] = useState('');
+  const searchDevelopers = useCallback(
+    (params, options) => {
+      lastSearch.current = String(params?.q ?? '').trim();
+      return search(params, options);
+    },
+    [search]
+  );
 
   const project = values.project ?? {};
   const timeline = values.constructionTimeline ?? [];
@@ -65,7 +76,7 @@ export default function ProjectBuilderTab() {
         <FormColumn>
           <EntityPicker
             label="Developer"
-            fetcher={search}
+            fetcher={searchDevelopers}
             multiple={false}
             value={project.developerId ?? null}
             selectedRecords={developers}
@@ -95,7 +106,10 @@ export default function ProjectBuilderTab() {
               variant="outline"
               size="sm"
               disabled={disabled}
-              onClick={() => setCreating(true)}
+              onClick={() => {
+                setNewName(lastSearch.current);
+                setCreating(true);
+              }}
               icon={<Icon icon="mdi:plus" width="16" height="16" />}
             >
               Add new developer
@@ -201,6 +215,7 @@ export default function ProjectBuilderTab() {
             value={project.approvals ?? []}
             error={errors['project.approvals']}
             disabled={disabled}
+            placeholder="None yet — choose BBMP, BDA, BMRDA…"
             hint="The authorities that have approved the plan."
             onChange={(next) => patchProject('approvals', next)}
           />
@@ -237,10 +252,11 @@ export default function ProjectBuilderTab() {
       >
         {completed ? (
           <FormColumn>
-            <Alert tone="info" title="Optional for completed properties">
+            <Alert tone="info" title="Not shown for a finished building">
               This listing is marked “{CONSTRUCTION_STATUS.labelOf(values.constructionStatus)}”, so
-              the construction section is usually left empty. It is kept here rather than hidden: a
-              finished project with a handover date still has a story worth telling.
+              the construction-progress section stays off its page — it appears only while a project
+              is pre-launch or under construction. The milestones are kept here in case the status
+              changes back.
             </Alert>
           </FormColumn>
         ) : null}
@@ -256,17 +272,24 @@ export default function ProjectBuilderTab() {
             onUpdate={(id, patch) => updateItem('constructionTimeline', id, patch)}
             onRemove={(id) => removeItem('constructionTimeline', id)}
             onMove={(from, to) => moveItem('constructionTimeline', from, to)}
-            onAddPresets={(milestones) =>
-              milestones.forEach((milestone) =>
-                addItem('constructionTimeline', makeTimelineItem({ milestone }))
-              )
-            }
+            onAddPresets={(milestones) => {
+              // Each phase at its place among the ones already listed, so the
+              // timeline still reads Foundation → Handover.
+              let rows = [...timeline];
+              milestones.forEach((milestone) => {
+                const at = standardInsertIndex(rows, milestone);
+                const item = makeTimelineItem({ milestone });
+                addItem('constructionTimeline', item, at);
+                rows = [...rows.slice(0, at), item, ...rows.slice(at)];
+              });
+            }}
           />
         </FormColumn>
       </FormSection>
 
       <DeveloperQuickCreateDialog
         open={creating}
+        defaultName={newName}
         existing={developers}
         onClose={() => setCreating(false)}
         onCreated={async (record) => {

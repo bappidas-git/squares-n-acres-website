@@ -46,7 +46,7 @@ export const actions = {
   setErrors: (errors) => ({ type: ACTIONS.SET_ERRORS, errors }),
   clearError: (path) => ({ type: ACTIONS.CLEAR_ERROR, path }),
   setSaving: (saving) => ({ type: ACTIONS.SET_SAVING, saving }),
-  markSaved: (record) => ({ type: ACTIONS.MARK_SAVED, record }),
+  markSaved: (record, sent) => ({ type: ACTIONS.MARK_SAVED, record, sent }),
   restoreDraft: (draft) => ({ type: ACTIONS.RESTORE_DRAFT, draft }),
   reset: () => ({ type: ACTIONS.RESET }),
 };
@@ -93,6 +93,37 @@ const listAt = (values, path) => {
 const sameId = (left, right) => String(left) === String(right);
 
 /**
+ * A new image is the cover only when no image is one yet.
+ *
+ * The tab decides "the first image is the cover" from the gallery it rendered
+ * with; two uploads started together both saw an empty gallery, so both
+ * arrived marked as the cover — two radios checked, and the one saved was not
+ * necessarily the one shown.
+ */
+const withSingleCover = (images, added) =>
+  added?.isCover === true && images.some((image) => image?.isCover === true)
+    ? { ...added, isCover: false }
+    : added;
+
+/** The computed half of `seo`, which the panel rewrites on its own. */
+const COMPUTED_SEO = [
+  'score',
+  'scoreBand',
+  'testsPassed',
+  'testsTotal',
+  'analysis',
+  'lastAnalyzedAt',
+];
+
+/** Values as an editor made them — without the analysis the SEO panel writes back. */
+const edited = (values) => {
+  if (!values?.seo) return values;
+  const seo = { ...values.seo };
+  COMPUTED_SEO.forEach((key) => delete seo[key]);
+  return { ...values, seo };
+};
+
+/**
  * @param {object} state
  * @param {object} action
  * @returns {object} the next state
@@ -119,8 +150,11 @@ export default function reducer(state, action) {
       return {
         ...state,
         values: setIn(state.values, action.path, action.value),
-        // The field somebody has just corrected stops shouting before they leave it.
-        errors: omit(state.errors, action.path),
+        // The field somebody has just corrected stops shouting before they
+        // leave it — and so does everything under it: a tab that writes a
+        // whole list (the highlights) used to leave `highlights.3` shouting
+        // after the fourth line had been shortened.
+        errors: dropErrorsUnder(state.errors, action.path),
         touched: { ...state.touched, [action.path]: true },
       };
     }
@@ -134,7 +168,7 @@ export default function reducer(state, action) {
       const touched = { ...state.touched };
       for (const [path, value] of entries) {
         values = setIn(values, path, value);
-        errors = omit(errors, path);
+        errors = dropErrorsUnder(errors, path);
         touched[path] = true;
       }
       return { ...state, values, errors, touched };
@@ -168,7 +202,8 @@ export default function reducer(state, action) {
       const current = listAt(state.values, action.path);
       const at =
         action.index === undefined || action.index === null ? current.length : action.index;
-      const next = [...current.slice(0, at), action.item, ...current.slice(at)];
+      const item = action.path === 'images' ? withSingleCover(current, action.item) : action.item;
+      const next = [...current.slice(0, at), item, ...current.slice(at)];
       return {
         ...state,
         values: setIn(state.values, action.path, next),
@@ -241,11 +276,18 @@ export default function reducer(state, action) {
       return { ...state, saving: Boolean(action.saving) };
 
     case ACTIONS.MARK_SAVED: {
-      const values = fromRecord(action.record);
+      const saved = fromRecord(action.record);
+      // The inputs stay live while a save is in flight. When the editor typed
+      // on after pressing Save, what they typed stays on screen — and stays
+      // unsaved, since `initial` is the record the server returned — rather
+      // than being replaced by the server's copy of the values sent.
+      const typedSince =
+        action.sent !== undefined &&
+        JSON.stringify(edited(state.values)) !== JSON.stringify(edited(action.sent));
       return {
         ...state,
-        values,
-        initial: values,
+        values: typedSince ? state.values : saved,
+        initial: saved,
         errors: {},
         saving: false,
         lastSavedAt: action.record?.updatedAt ?? new Date().toISOString(),

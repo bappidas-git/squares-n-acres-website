@@ -287,6 +287,11 @@ function errorList(endpoint) {
   if (endpoint.path === '/leads' || endpoint.path === '/newsletter/subscribe') {
     items.push('`429` — more than ten a minute from one IP (§5.11)');
   }
+  if (endpoint.key === 'properties.documentAccess') {
+    items.push(
+      '`403` — the token is unknown, expired, issued for another listing, or its lead was deleted'
+    );
+  }
   items.push('`500` — the §5.3 envelope, never a stack trace');
   return list(items);
 }
@@ -303,6 +308,10 @@ const SIDE_EFFECTS = {
     'Increments the named property’s `enquiryCount`.',
     'Auto-assigns round-robin when `siteSettings.leads.autoAssign` says so.',
     'Stores `utm`, `pageUrl`, `ipAddress` and `userAgent`.',
+    'Answers a lead about an active listing with `access.token`, which opens that listing’s gated files for 24 hours (`POST /properties/:id/documents/access`). The token is never stored on the lead.',
+  ],
+  'properties.documentAccess': [
+    'None — it reads. The files are the listing’s own; the token only decides whether their addresses are handed over.',
   ],
   'adminLeads.patch': ['Appends one activity per field that actually changed.'],
   'adminLeads.claim': ['Sets `assignedTo` to the caller, and appends an `assigned` activity.'],

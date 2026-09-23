@@ -6,6 +6,7 @@ import { NEARBY_CATEGORIES } from '../../../config/enums';
 import PATHS from '../../../routes/paths';
 import SectionShell from './SectionShell';
 import { formatNumber } from '../../../utils/format';
+import { isMapEmbedUrl } from '../../../utils/mapEmbed';
 import { useLocalities } from '../../../hooks/useMasterData';
 
 import styles from './LocationSection.module.css';
@@ -139,8 +140,13 @@ export default function LocationSection({ property, background = 'bg' }) {
     localities.find((record) => String(record.id) === String(location.localityId ?? '')) ??
     localityRef;
 
+  // The editor's own map — a Google embed or a shared My Map — replaces the
+  // generated one, but only where the exact location may be shown: it is
+  // usually a pin on the building. The form has always promised this; the
+  // page used to ignore the field.
+  const embed = exact && isMapEmbedUrl(location.mapEmbedUrl) ? location.mapEmbedUrl.trim() : '';
   const own = exact && hasCoordinates(location.latitude, location.longitude);
-  const area = !own && hasCoordinates(locality?.latitude, locality?.longitude);
+  const area = !embed && !own && hasCoordinates(locality?.latitude, locality?.longitude);
 
   const place = [localityRef?.name ?? locality?.name, location.city?.name]
     .filter(Boolean)
@@ -149,7 +155,7 @@ export default function LocationSection({ property, background = 'bg' }) {
     ? [location.address, location.landmark, place, location.pincode].filter(Boolean).join(', ')
     : place;
 
-  if (!own && !area && !address) return null;
+  if (!embed && !own && !area && !address) return null;
 
   return (
     <SectionShell id="location" title="Location" background={background}>
@@ -160,7 +166,15 @@ export default function LocationSection({ property, background = 'bg' }) {
         </p>
       ) : null}
 
-      {own || area ? (
+      {embed ? (
+        <iframe
+          title={`Map of ${place || property?.title || 'the property'}`}
+          className={styles.map}
+          src={embed}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      ) : own || area ? (
         <>
           <MapEmbed
             latitude={own ? location.latitude : locality.latitude}

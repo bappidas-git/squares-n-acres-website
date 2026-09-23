@@ -102,6 +102,8 @@ Public list endpoints return only `isActive: true` records (and `status: 'publis
 
 **Properties have no preview token.** `GET /properties/slug/:slug` answers 404 for an unpublished listing to everybody, signed in or not. An editor previews one at `/properties/<slug>?preview=admin`, which the public route serves only while an admin session exists: it reads the record through **`GET /admin/properties/slug/:slug`** — an ordinary admin endpoint behind the usual Bearer token — and marks the page `noindex, nofollow`. Nothing about the query string grants access; the token does. (Articles and pages keep their 24-hour signed tokens, D28: a draft article is shown to somebody who is not an editor.)
 
+**A gated file has no address in a public read** (QA-51 OPEN-1). While `brochureLeadGated` is on, every public property shape answers `brochureUrl: null` with `hasBrochure: true`; a document with `leadGated` on keeps its row with `url: null` and `hasFile: true`, and every document carries `hasFile`. The floor plans are always gated: every `floorPlans[]` row answers `imageUrl: null` and `pdfUrl: null` with `hasImage` / `hasPdf`, and every `unitConfigurations[]` row `floorPlanImageUrl: null` and `floorPlanPdfUrl: null` with `hasFloorPlanImage` / `hasFloorPlanPdf`. An open document or brochure whose address is also a gated file's — a floor plan's included — is gated with it, and a document whose address is the brochure's own is left out of `documents[]`. The photo gallery is not gated. The addresses are handed over by **`POST /properties/:id/documents/access`** to the token `POST /leads` answers a lead about that listing with (`access.token`, 24 hours, any lead about the listing — P24, P28). Admin reads are unchanged. The whole rule, with the Laravel sketch, is `docs/backend-notes/05_business_rules.md` → "Gated files".
+
 ### 5.11 Rate limiting & spam
 
 `POST /leads`, `POST /newsletter/subscribe`, `POST /jobs/:id/apply` accept an optional honeypot field `website` (non-empty → 200 `{data:null, message:'ok'}` and nothing stored) and are rate limited per IP (mock: 10/min → 429 `{message:'Too many requests. Please try again in a minute.'}`). Documented for Laravel (`throttle:10,1`).
@@ -116,7 +118,7 @@ The API allows the site origin(s) from configuration; the mock allows `http://lo
 
 ### 5.14 Endpoint catalogue
 
-235 endpoints, generated from `src/services/endpoints.js` — the registry is the source of
+243 endpoints, generated from `src/services/endpoints.js` — the registry is the source of
 truth and `src/services/endpoints.test.js` fails when one goes missing. Every entry is
 smoke-tested by `scripts/smoke-api.js` and exported to the backend handover package by
 `scripts/generate-backend-guidelines.js`.
@@ -140,6 +142,7 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 | GET    | `/properties/slug/:slug`  | public    | Property details by slug; 404 when inactive                              | —                                                                                                                                                                                                                                                                                                                                                             | —           | `Property`         | —                                                                                |
 | GET    | `/properties/:id/similar` | public    | Admin-selected similar properties, topped up to six by locality and type | `perPage`                                                                                                                                                                                                                                                                                                                                                     | —           | `PropertyList`     | —                                                                                |
 | POST   | `/properties/:id/view`    | public    | Count one property view; debounced per IP per hour                       | —                                                                                                                                                                                                                                                                                                                                                             | —           | `ViewCount`        | Increments `viewCount`; appends a `propertyViews` row; debounced per IP per hour |
+| POST   | `/properties/:id/documents/access` | public | The addresses of a listing’s files, for the token `POST /leads` answered a lead about it with | — | `property.documentAccess` | `DocumentAccess` | None — a read. 403 unless the token is live, names this listing and its lead still exists; 404 for an inactive listing |
 | GET    | `/properties/suggestions` | public    | Type-ahead suggestions for the hero and header search                    | `q`                                                                                                                                                                                                                                                                                                                                                           | —           | `Suggestions`      | —                                                                                |
 | GET    | `/localities`             | public    | Localities with their active property count                              | `page`, `perPage`, `sort`, `order`, `q`, `zone`, `cityId`, `isFeatured`, `ids`                                                                                                                                                                                                                                                                                | —           | `LocalityList`     | —                                                                                |
 | GET    | `/localities/slug/:slug`  | public    | Locality guide page by slug                                              | —                                                                                                                                                                                                                                                                                                                                                             | —           | `Locality`         | —                                                                                |
@@ -177,7 +180,7 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 | GET    | `/jobs`                 | public    | Open job postings                                                        | `page`, `perPage`, `sort`, `order`, `q`, `department`                                      | —                       | `JobList`         | —                                                                                                                                                                                                           |
 | GET    | `/jobs/slug/:slug`      | public    | Job posting by slug                                                      | —                                                                                          | —                       | `Job`             | —                                                                                                                                                                                                           |
 | POST   | `/jobs/:id/apply`       | public    | Apply for a job posting; honeypot and rate limited                       | —                                                                                          | `jobApplication.create` | `JobApplication`  | Creates a `jobApplications` record; honeypot; rate limited 10/min per IP                                                                                                                                    |
-| POST   | `/leads`                | public    | Capture a lead from any form on the site; honeypot and rate limited      | —                                                                                          | `lead.create`           | `Lead`            | Creates the lead with `status:new`, the default priority and a `created` activity; increments the property `enquiryCount`; maps legacy sources; round-robin assignment when enabled; honeypot; rate limited |
+| POST   | `/leads`                | public    | Capture a lead from any form on the site; honeypot and rate limited      | —                                                                                          | `lead.create`           | `LeadCreated`     | Creates the lead with `status:new`, the default priority and a `created` activity; increments the property `enquiryCount`; maps legacy sources; round-robin assignment when enabled; honeypot; rate limited; answers `access`, the token that opens the named listing’s gated files |
 | POST   | `/newsletter/subscribe` | public    | Subscribe an e-mail address; a duplicate answers 200 instead of 409      | —                                                                                          | `newsletter.subscribe`  | `Null`            | Creates a subscriber or returns 200 for a duplicate; honeypot; rate limited                                                                                                                                 |
 | GET    | `/settings`             | public    | The public subset of the site settings                                   | —                                                                                          | —                       | `Settings`        | —                                                                                                                                                                                                           |
 | GET    | `/seo/settings`         | public    | The public subset of the SEO settings used by <Seo> and the sitemap      | —                                                                                          | —                       | `SeoSettings`     | —                                                                                                                                                                                                           |
@@ -760,6 +763,15 @@ Every writable field of `docs/DATA_MODEL.md` §6.1 plus the read-only embeds and
 `updatedBy`. Public reads drop `agent.phone`, `agent.whatsapp` and `agent.email` unless
 `agent.showOnListing` is true.
 
+Public reads also carry no address for a file behind the lead form (§5.10): they add
+`hasBrochure` (a brochure is attached, gated or not) and `documents[].hasFile`, answer
+`brochureUrl: null` while the brochure is gated, and a gated document keeps its row with
+`url: null` and `leadGated: true`. A document that is the brochure's own file is left out.
+Every floor plan answers `imageUrl: null`, `pdfUrl: null`, `hasImage`, `hasPdf`, and every
+unit configuration `floorPlanImageUrl: null`, `floorPlanPdfUrl: null`,
+`hasFloorPlanImage`, `hasFloorPlanPdf`. `DocumentAccess` below is how the page gets the
+addresses.
+
 ### `PropertySummary`
 
 The card payload returned inside `PropertyList`:
@@ -825,6 +837,50 @@ cannot see the other enquiry is the one who most needs telling that it exists
 (D15 governs the records, not this flag). The public `POST /leads` response
 does not carry it. A number the Indian mobile rule does not recognise is
 compared on its digits rather than dropped.
+
+### `LeadCreated`
+
+What `POST /leads` answers: the public `Lead`, plus `access` — the token that opens the
+gated files of the listing the lead names, or `null` when it names no active listing. The
+token is never stored on the lead and never appears in a CRM read.
+
+```jsonc
+{
+  "data": {
+    "id": 46,
+    "source": "brochure-download",
+    "propertyId": 1,
+    // …the rest of the Lead…
+    "access": { "token": "tnc8yAeyAxhBDcMoky52ogcNlQcwX_Cm", "expiresAt": "2026-09-24T20:53:36Z" },
+  },
+}
+```
+
+### `DocumentAccess`
+
+What `POST /properties/:id/documents/access` answers for a live token: every file of the
+listing that has an address — the gated papers and the open ones, without a document that
+is the brochure's own file — and the drawings and PDFs of the floor plans and of the
+active unit configurations.
+
+```jsonc
+{
+  "data": {
+    "brochureUrl": "https://files.example.com/lakeview/brochure.pdf",
+    "documents": [{ "id": 2, "url": "https://files.example.com/lakeview/price-list.pdf" }],
+    "floorPlans": [
+      {
+        "id": 1,
+        "imageUrl": "https://files.example.com/lakeview/plan-2bhk.png",
+        "pdfUrl": "https://files.example.com/lakeview/plan-2bhk.pdf",
+      },
+    ],
+    "unitConfigurations": [
+      { "id": 1, "floorPlanImageUrl": "https://files.example.com/lakeview/unit-2bhk.png", "floorPlanPdfUrl": null },
+    ],
+  },
+}
+```
 
 ### `Article` / `ArticleSummary`
 

@@ -255,8 +255,11 @@ export function SelectField({
             .join(' ')}
           {...rest}
         >
+          {/* Disabled only on a required field. On an optional one it is the
+              way back to "not set": once a facing or an ownership had been
+              picked, nothing could clear it again. */}
           {placeholder ? (
-            <option value="" disabled>
+            <option value="" disabled={Boolean(required)}>
               {placeholder}
             </option>
           ) : null}

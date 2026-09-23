@@ -6,6 +6,10 @@
   gap: var(--space-4);
 }
 
+.nowrap {
+  white-space: nowrap;
+}
+
 /* The 48 × 36 box every row opens with; the monogram fills it when the
    listing has no image yet. */
 .cover {
@@ -21,7 +25,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 220px;
+  min-width: 200px;
   max-width: 34ch;
 }
 
@@ -47,8 +51,18 @@
   white-space: nowrap;
 }
 
+/* The price over what it buys, right-aligned as one block. */
+.priceCell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
 /* "3 BHK · 1,650 sq ft" is one fact, so it is one line. */
 .config {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 
@@ -63,7 +77,73 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  min-width: 264px;
+}
+
+/* The table's three flags: one line, always. */
+.flagToggles {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.flagToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  cursor: default;
+}
+
+button.flagToggle {
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+button.flagToggle:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+button.flagToggle:disabled {
+  cursor: progress;
+}
+
+.flagOff {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+button.flagOff:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.flagOn_success {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+  color: var(--color-success-dark);
+}
+
+.flagOn_warning {
+  border-color: var(--color-warning);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-dark);
+}
+
+.flagOn_info {
+  border-color: var(--color-info);
+  background: var(--color-info-bg);
+  color: var(--color-info-dark);
 }
 
 /* A flag being written: the chip keeps its place and its icon spins. */

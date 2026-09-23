@@ -32,6 +32,12 @@ export const PROPERTY_LIST_DEFAULTS = {
  * The query parameters that live in the URL, and how each is serialised
  * (§5.6). `constructionStatus` is the one multi-value filter, so it is the one
  * read back as a list.
+ *
+ * The two flags are booleans, not strings: typed as strings, `?isActive=1` in
+ * a shared link reached the API (which reads `1` as true and answered with the
+ * 38 active listings) while the select showed "Any" and the chip said
+ * "Inactive". Read as booleans, anything but `true`/`false` is simply no
+ * filter, on the screen and in the request alike.
  */
 export const PROPERTY_LIST_PARAM_KEYS = {
   q: 'string',
@@ -41,8 +47,8 @@ export const PROPERTY_LIST_PARAM_KEYS = {
   localityId: 'string',
   constructionStatus: 'csv',
   availability: 'string',
-  isActive: 'string',
-  isFeatured: 'string',
+  isActive: 'bool',
+  isFeatured: 'bool',
   developerId: 'string',
   seoScoreBand: 'string',
   sort: 'string',
@@ -161,7 +167,7 @@ export function buildPropertyFilterFields({
       key: 'isActive',
       type: 'toggle',
       label: 'Published',
-      placeholder: 'All',
+      placeholder: 'Any',
       trueLabel: 'Active',
       falseLabel: 'Inactive',
     },

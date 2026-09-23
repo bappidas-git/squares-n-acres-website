@@ -2,9 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import AdminTabs, { AdminTabPanel } from '../../admin/AdminTabs';
 import AdvancedTab from './tabs/AdvancedTab';
+// Social before General, out of alphabetical order: Social brings
+// `ImageField`'s stylesheet and General `MultiSelect`'s, and the SEO settings
+// page — which shares a chunk with this panel — reaches them in that order. Two
+// orders for one chunk is a mini-css-extract "Conflicting order", which
+// `build:ci` refuses.
+import SocialTab from './tabs/SocialTab';
 import GeneralTab from './tabs/GeneralTab';
 import SchemaTab from './tabs/SchemaTab';
-import SocialTab from './tabs/SocialTab';
 import useSeoAnalysis from './useSeoAnalysis';
 import { SeoPanelProvider } from './SeoPanelContext';
 import { resolveSeoOutput } from '../../../seo';
@@ -40,6 +45,30 @@ export const TAB_OF_FIELD = [
 ];
 
 const owns = (prefix, path) => path === prefix || path.startsWith(`${prefix}.`);
+
+/** Paths whose control carries another path's id — the permalink is the record's slug (D34). */
+const FIELD_ALIASES = { 'seo.slug': 'slug' };
+
+/** How long a focus request keeps looking for a control the tab switch has not drawn yet. */
+const FOCUS_ATTEMPTS = 10;
+const FOCUS_RETRY_MS = 50;
+
+/**
+ * The panel's control for a path: its own id, else the nearest ancestor's
+ * (`seo.og.imageUrl` → `seo.og`).
+ *
+ * @param {string} path
+ * @returns {HTMLElement|null}
+ */
+export function findSeoControl(path) {
+  const parts = String(FIELD_ALIASES[path] ?? path).split('.');
+  while (parts.length > 0) {
+    const element = document.getElementById(fieldId(parts.join('.')));
+    if (element) return element;
+    parts.pop();
+  }
+  return null;
+}
 
 /**
  * The panel's own tab for a path, or `null` when the field lives in the host
@@ -114,6 +143,9 @@ const TABS = [
  * @param {string} [props.initialField] a dotted path to open on and focus — what
  *   the SEO dashboard's "Fix" hands the panel when a failed test is clicked
  *   (prompt 37); ignored for a path the panel does not own
+ * @param {{path: string, nonce: number}|null} [props.focusRequest] a field the
+ *   host wants the cursor in after the panel mounted — a save that failed on
+ *   `seo.title`. A new `nonce` asks again, so the same path can be asked for twice.
  */
 export default function SeoPanel({
   entityType,
@@ -132,6 +164,7 @@ export default function SeoPanel({
   excludeId,
   slugBase,
   initialField,
+  focusRequest = null,
 }) {
   const [activeTab, setActiveTab] = useState(
     () => (initialField ? tabOfSeoField(initialField) : null) ?? 'general'
@@ -178,12 +211,15 @@ export default function SeoPanel({
     []
   );
 
+  // A read-only panel still reads the page — the score, the checks, the
+  // preview are what a sales user opens it for — it just does not write the
+  // result back. Switching the analysis off left the score card on its
+  // skeleton for good.
   const { analysis, analysing, reanalyse } = useSeoAnalysis({
     entityType,
     entity: record,
     context,
-    onResult: storeAnalysis,
-    enabled: !disabled,
+    onResult: disabled ? undefined : storeAnalysis,
   });
 
   const resolved = useMemo(
@@ -209,10 +245,18 @@ export default function SeoPanel({
   const setSeo = useCallback((patch) => onChangeRef.current?.(patch), []);
 
   // Focusing a control that has just been revealed has to wait for the render
-  // that reveals it, which is what the pending ref and the effect below are.
-  // It starts holding `initialField`, so the effect's first run — which happens
-  // on mount — focuses the field the host asked the panel to open on.
-  const pendingFocus = useRef(initialField && tabOfSeoField(initialField) ? initialField : null);
+  // that reveals it. The target carries a counter: keyed on the tab alone, a
+  // hint for a field on the tab already open changed nothing, ran nothing, and
+  // left the cursor where it was. It starts holding `initialField`, so the
+  // effect's first run — on mount — focuses the field the host opened it on.
+  const [focusTarget, setFocusTarget] = useState(() =>
+    initialField && tabOfSeoField(initialField) ? { path: initialField, nonce: 0 } : null
+  );
+
+  const target = useCallback((path, tab) => {
+    setActiveTab(tab);
+    setFocusTarget((previous) => ({ path, nonce: (previous?.nonce ?? 0) + 1 }));
+  }, []);
 
   const focusField = useCallback(
     (path) => {
@@ -221,24 +265,41 @@ export default function SeoPanel({
         onFocusField?.(path);
         return;
       }
-      setActiveTab(tab);
-      pendingFocus.current = path;
+      target(path, tab);
     },
-    [onFocusField]
+    [onFocusField, target]
   );
 
+  // The host's own request never goes back to the host: a path the panel does
+  // not know lands on General rather than bouncing between the two forever.
   useEffect(() => {
-    const path = pendingFocus.current;
-    if (!path) return undefined;
-    pendingFocus.current = null;
+    if (!focusRequest?.path) return;
+    target(focusRequest.path, tabOfSeoField(focusRequest.path) ?? 'general');
+  }, [focusRequest, target]);
 
-    const timer = setTimeout(() => {
-      const element = document.getElementById(fieldId(path));
-      element?.focus();
-      element?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
-    }, 0);
+  useEffect(() => {
+    if (!focusTarget) return undefined;
+    let attempts = 0;
+    let timer = null;
+
+    const attempt = () => {
+      attempts += 1;
+      const element = findSeoControl(focusTarget.path);
+      if (!element) {
+        if (attempts < FOCUS_ATTEMPTS) timer = setTimeout(attempt, FOCUS_RETRY_MS);
+        return;
+      }
+      // The compact panel folds its other sections into disclosures, and a
+      // control inside a closed one cannot take the cursor.
+      const folded = element.closest('details');
+      if (folded && !folded.open) folded.open = true;
+      element.focus?.({ preventScroll: true });
+      element.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    };
+
+    timer = setTimeout(attempt, 0);
     return () => clearTimeout(timer);
-  }, [activeTab]);
+  }, [focusTarget]);
 
   const api = {
     entityType,

@@ -13,6 +13,7 @@ import {
   TextareaField,
 } from '../../../../../components/ui';
 import { URL_PATTERN } from '../../../../../utils/validation';
+import { LIMITS } from '../validators/property';
 
 import styles from './ImageGalleryEditor.module.css';
 
@@ -24,12 +25,18 @@ const MediaPickerDialog = lazy(() => import('../../../../../components/admin/Med
 /** The Cloudinary folder a listing's photographs are filed under. */
 const GALLERY_FOLDER = 'properties';
 
-/** One URL per line, blanks and duplicates dropped, order kept. */
+/**
+ * One URL per line (or per space), blanks and duplicates dropped, order kept.
+ *
+ * Not per comma: a Cloudinary address carries its transformation as
+ * `…/upload/w_1600,h_900,c_fill/…`, and splitting on the commas turned one
+ * photograph into three broken rows.
+ */
 export function parseUrlList(text, existing = []) {
   const known = new Set(existing);
   const found = [];
   String(text ?? '')
-    .split(/[\n,]/)
+    .split(/\s+/)
     .map((line) => line.trim())
     .filter(Boolean)
     .forEach((url) => {
@@ -70,7 +77,10 @@ export function coverAfterRemoval(images = [], id) {
  *
  * @param {object} props
  * @param {Array<object>} props.images `{ id, url, alt, caption, isCover }`
- * @param {Record<string, string>} props.errors keyed `images.<i>.<field>`
+ * @param {Record<string, string>} props.errors keyed `images.<i>.<field>`, and
+ *   `images` for the gallery as a whole — no cover, nothing described
+ * @param {(path: string) => string} [props.idFor] the DOM id of the control for a
+ *   dotted path, so a failed save can put the cursor in it
  * @param {string} [props.altHint] the focus keyword, when the SEO tab has one
  * @param {(images: Array<{url: string, alt?: string, caption?: string}>) => void} props.onAdd
  *   one or many; a photograph chosen from the library brings its alt text with it
@@ -82,6 +92,7 @@ export function coverAfterRemoval(images = [], id) {
 export default function ImageGalleryEditor({
   images = [],
   errors = {},
+  idFor = () => undefined,
   disabled = false,
   altHint,
   onAdd,
@@ -101,6 +112,10 @@ export default function ImageGalleryEditor({
   const [announcement, setAnnouncement] = useState('');
 
   const urls = images.map((image) => image.url).filter(Boolean);
+  // "Choose the cover", "a published listing needs a described photograph":
+  // about the gallery rather than a row, and until now printed nowhere — the
+  // Media badge counted it and the tab showed nothing to fix.
+  const galleryError = errors.images;
 
   /**
    * Appends files the library gave us, skipping the ones already in the
@@ -165,6 +180,13 @@ export default function ImageGalleryEditor({
         ) : null}
       </p>
 
+      {galleryError ? (
+        <p className={styles.galleryError} id={idFor('images')} tabIndex={-1} role="alert">
+          <Icon icon="mdi:alert-circle-outline" width="18" height="18" aria-hidden="true" />
+          {galleryError}
+        </p>
+      ) : null}
+
       {images.length === 0 ? (
         <p className={styles.empty}>
           No photographs yet. The first one becomes the cover — the picture on the card, in search
@@ -216,6 +238,7 @@ export default function ImageGalleryEditor({
 
                 <div className={styles.body}>
                   <TextField
+                    id={idFor(`images.${index}.url`)}
                     label={`Image ${index + 1} URL`}
                     type="url"
                     value={image.url ?? ''}
@@ -226,12 +249,13 @@ export default function ImageGalleryEditor({
                   />
 
                   <TextField
+                    id={idFor(`images.${index}.alt`)}
                     label="Alt text"
                     required
                     value={image.alt ?? ''}
                     error={altError}
                     disabled={disabled}
-                    maxLength={160}
+                    maxLength={LIMITS.imageAlt}
                     hint={
                       altHint
                         ? `Describe what is shown. Use: ${altHint}`
@@ -241,10 +265,12 @@ export default function ImageGalleryEditor({
                   />
 
                   <TextField
+                    id={idFor(`images.${index}.caption`)}
                     label="Caption"
                     value={image.caption ?? ''}
+                    error={errors[`images.${index}.caption`]}
                     disabled={disabled}
-                    maxLength={160}
+                    maxLength={LIMITS.imageCaption}
                     hint="Optional. Printed under the photograph in the lightbox."
                     onChange={(event) => onUpdate?.(image.id, { caption: event.target.value })}
                   />
@@ -253,6 +279,7 @@ export default function ImageGalleryEditor({
                     <label className={styles.cover}>
                       <input
                         type="radio"
+                        id={idFor(`images.${index}.isCover`)}
                         name={coverName}
                         checked={image.isCover === true}
                         disabled={disabled}
@@ -297,6 +324,9 @@ export default function ImageGalleryEditor({
 
       <div className={styles.add}>
         <TextField
+          // The gallery's own address while it has no message: "add more
+          // photographs" from the SEO tab lands here.
+          id={galleryError ? undefined : idFor('images')}
           label="Add an image"
           type="url"
           value={single}
@@ -362,7 +392,7 @@ export default function ImageGalleryEditor({
             rows={5}
             value={bulk}
             disabled={disabled}
-            hint="Paste a list from the photographer. Anything already in the gallery is skipped."
+            hint="Paste a list from the photographer, one address per line. Anything already in the gallery is skipped."
             onChange={(event) => setBulk(event.target.value)}
           />
           <Button

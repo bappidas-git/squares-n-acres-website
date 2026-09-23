@@ -118,6 +118,7 @@ export default function SnippetEditor() {
       </div>
 
       <SlugField
+        id={fieldId('slug')}
         label="Permalink"
         base={base}
         path={entityType === 'page'}
