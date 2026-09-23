@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import IconButton from '../ui/IconButton';
@@ -15,6 +15,12 @@ const defaultId = (item, index) => item?.id ?? index;
  * with a keyboard, with a screen reader — every move is announced through an
  * `aria-live` region — and on a touch device, where HTML5 drag events do not
  * fire at all. `Alt+↑` / `Alt+↓` move the focused row without reaching for them.
+ *
+ * A row is dragged by its handle only. Draggable end to end, a row turned
+ * every attempt to select text in one of its fields into a drag of the whole
+ * row; and `Alt+↑` pressed inside a field — the paragraph jump on a Mac —
+ * moved the row out from under the cursor. The shortcut now belongs to the
+ * row itself, focused, and nothing inside it.
  *
  * @param {object} props
  * @param {Array<object>} props.items
@@ -37,8 +43,18 @@ export default function SortableList({
 }) {
   const [draggingIndex, setDraggingIndex] = useState(null);
   const [overIndex, setOverIndex] = useState(null);
+  // The row whose handle is held: only that row is draggable, for as long as it is.
+  const [armedIndex, setArmedIndex] = useState(null);
   const [announcement, setAnnouncement] = useState('');
   const listRef = useRef(null);
+
+  // A handle pressed and released somewhere else disarms its row as well.
+  useEffect(() => {
+    if (armedIndex === null) return undefined;
+    const disarm = () => setArmedIndex(null);
+    window.addEventListener('pointerup', disarm);
+    return () => window.removeEventListener('pointerup', disarm);
+  }, [armedIndex]);
 
   const nameOf = (item, index) => getLabel?.(item, index) ?? `Item ${index + 1}`;
 
@@ -68,7 +84,7 @@ export default function SortableList({
               key={id}
               data-sortable-row
               tabIndex={disabled ? undefined : 0}
-              draggable={!disabled}
+              draggable={!disabled && armedIndex === index}
               aria-label={`${nameOf(item, index)}, position ${index + 1} of ${items.length}`}
               className={[
                 styles.item,
@@ -98,9 +114,13 @@ export default function SortableList({
               onDragEnd={() => {
                 setDraggingIndex(null);
                 setOverIndex(null);
+                setArmedIndex(null);
               }}
               onKeyDown={(event) => {
                 if (!event.altKey) return;
+                // The row's own shortcut: pressed in a field inside it, the keys
+                // belong to the field.
+                if (event.target !== event.currentTarget) return;
                 if (event.key === 'ArrowUp') {
                   event.preventDefault();
                   move(index, index - 1, { focus: true });
@@ -111,7 +131,15 @@ export default function SortableList({
                 }
               }}
             >
-              <span className={styles.handle} aria-hidden="true">
+              <span
+                className={[styles.handle, disabled ? styles.handleOff : '']
+                  .filter(Boolean)
+                  .join(' ')}
+                aria-hidden="true"
+                onPointerDown={() => {
+                  if (!disabled) setArmedIndex(index);
+                }}
+              >
                 <Icon icon="mdi:drag-vertical" width="20" height="20" />
               </span>
 

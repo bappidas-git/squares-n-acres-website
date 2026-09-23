@@ -133,6 +133,52 @@ describe('SeoPanel', () => {
     expect(onFocusField).not.toHaveBeenCalled();
   });
 
+  it('puts the cursor in a field on the sub-tab that is already open', async () => {
+    const { rerender } = renderWith(<Host focusRequest={null} />);
+    await settle();
+
+    // General is open, and the field is on it: an effect keyed on the tab
+    // alone ran nothing and left the cursor where it was.
+    rerender(<Host focusRequest={{ path: 'seo.description', nonce: 1 }} />);
+    await waitFor(() => expect(screen.getByLabelText('Meta description')).toHaveFocus());
+
+    // Asked again for the same field — after the cursor moved on — it moves back.
+    screen.getByLabelText('Focus keyword').focus();
+    rerender(<Host focusRequest={{ path: 'seo.description', nonce: 2 }} />);
+    await waitFor(() => expect(screen.getByLabelText('Meta description')).toHaveFocus());
+  });
+
+  it('opens the sub-tab a host request names and focuses the control', async () => {
+    const { rerender } = renderWith(<Host focusRequest={null} />);
+    await settle();
+
+    rerender(<Host focusRequest={{ path: 'seo.og.imageUrl', nonce: 1 }} />);
+
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: /Social/ })).toHaveAttribute('aria-selected', 'true')
+    );
+    await waitFor(() => expect(screen.getByLabelText('Share image')).toHaveFocus());
+  });
+
+  it('still analyses the page for a read-only user, without writing the result back', async () => {
+    const onChange = jest.fn();
+    renderWith(
+      <SeoPanel
+        entityType="property"
+        entity={PROPERTY}
+        seo={PROPERTY.seo}
+        seoSettings={SETTINGS}
+        onChange={onChange}
+        disabled
+      />
+    );
+
+    // The score card used to sit on its skeleton for good.
+    await settle();
+    expect(screen.getByText(/tests passed$/)).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('inserts a template variable at the caret and resolves it in the preview', async () => {
     renderWith(<Host />);
     await settle();

@@ -25,12 +25,14 @@
   }
 }
 
-/* Two controls that read as one field: a number and its unit. */
+/* Two numbers that read as one field: floor and floors, length and width.
+   Top-aligned and the same width: bottom-aligned, the field without a hint sat
+   20 px below its neighbour, level with the neighbour's hint. */
 .pair {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
-  align-items: end;
+  align-items: start;
 }
 
 /* Three or four small numbers side by side (bedrooms, baths, balconies). */
@@ -40,11 +42,21 @@
   gap: var(--space-4);
 }
 
-/* A block of on/off rooms. */
+/* A block of on/off rooms. Each label and its switch share a box: laid out
+   bare across a wide row, every switch sat at the right of its cell — right
+   beside the *next* room's name — so "Study room ○ Pooja room" read as if the
+   switch before "Pooja room" were Pooja room's. */
 .switches {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-3) var(--space-5);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.switches > * {
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
 }
 
 /* The live length counter under a description. */
@@ -59,6 +71,23 @@
 .counterWarn {
   font-weight: var(--font-weight-semibold);
   color: var(--color-warning-dark);
+}
+
+/* A message about a whole list rather than one of its rows. */
+.blockError {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-error-dark);
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-md);
+}
+
+.blockError:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .counterOk {
@@ -182,7 +211,6 @@
 
 /* One text row with a remove button on its baseline. */
 .highlightRow,
-.documentRow,
 .faqHead {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -191,10 +219,56 @@
   min-width: 0;
 }
 
-@media (min-width: 900px) {
+/* A document: the title and its type on one line, the file picker — which
+   brings its own two buttons — on the full width under them, and the gate
+   switch last. Five controls in one row squeezed the picker into a column
+   too narrow for its address, and on a phone into the remove button's. */
+.documentRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'title remove'
+    'type type'
+    'file file'
+    'gate gate';
+  gap: var(--space-3);
+  align-items: start;
+  min-width: 0;
+}
+
+@media (min-width: 700px) {
   .documentRow {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 0.8fr) auto;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      'title type remove'
+      'file file file'
+      'gate gate gate';
   }
+}
+
+.docTitle {
+  grid-area: title;
+  min-width: 0;
+}
+
+.docType {
+  grid-area: type;
+  min-width: 0;
+}
+
+.docRemove {
+  grid-area: remove;
+  align-self: end;
+}
+
+.docFile {
+  grid-area: file;
+  min-width: 0;
+}
+
+.docGate {
+  grid-area: gate;
+  min-width: 0;
 }
 
 .rowAction {
@@ -301,10 +375,9 @@
   color: var(--color-text-muted);
 }
 
-.similarThumb img {
+.similarThumb > * {
   width: 100%;
   height: 100%;
-  object-fit: cover;
 }
 
 .similarBody {

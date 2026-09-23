@@ -36,8 +36,11 @@ export const CHECK_DEBOUNCE_MS = 500;
  *   segment, so `/` survives and each segment is slugified on its own — the CMS
  *   pages, whose `buyer-assistance/home-loan` is one slug (§6.10)
  * @param {string} [props.error]
+ * @param {string} [props.id] the input's id, for a host that has to focus it
+ *   from elsewhere (an SEO hint, a failed save)
  */
 export default function SlugField({
+  id: idProp,
   label = 'Slug',
   value = '',
   onChange,
@@ -53,10 +56,20 @@ export default function SlugField({
   // How this field turns text into a slug: one segment, or a whole path.
   const toSlug = path ? slugifyPath : slugify;
   const toInput = path ? toPathSlugInput : toSlugInput;
-  const id = useId();
+  const generatedId = useId();
+  const id = idProp || generatedId;
   // Locked = "follow the title". A slug that already exists arrives unlocked,
-  // because it is a live URL rather than a draft.
-  const [locked, setLocked] = useState(() => !value);
+  // because it is a live URL rather than a draft. A record not saved yet is the
+  // exception: its slug is still a draft if it is exactly what the title makes.
+  // A long form unmounts the field on every tab switch, and without this a new
+  // listing's URL stopped following its title the first time the editor looked
+  // at another tab.
+  const [locked, setLocked] = useState(
+    () =>
+      !value ||
+      ((excludeId === undefined || excludeId === null || excludeId === '') &&
+        value === toSlug(source))
+  );
   const [status, setStatus] = useState({ state: 'idle' });
 
   // Read by the "follow the title" effect without making it depend on them:

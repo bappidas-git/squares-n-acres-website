@@ -19,6 +19,7 @@ import { formatPrice, formatPriceRange } from '../../../../../utils/format';
 import { makeUnitConfiguration } from '../initialState';
 import NumberWithUnit from '../components/NumberWithUnit';
 import { showsBhk } from '../fieldRules';
+import { LIMITS } from '../validators/property';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
@@ -136,7 +137,7 @@ export default function UnitConfigurationsTab() {
                         value={unit.name ?? ''}
                         error={errors[`${path}.name`]}
                         disabled={disabled}
-                        maxLength={120}
+                        maxLength={LIMITS.unitName}
                         placeholder="e.g. 3 BHK + Study"
                         onChange={(event) =>
                           updateItem('unitConfigurations', unit.id, { name: event.target.value })
@@ -160,7 +161,7 @@ export default function UnitConfigurationsTab() {
                           <NumberField
                             label="Bedrooms"
                             min={0}
-                            max={20}
+                            max={LIMITS.rooms}
                             value={unit.bedrooms ?? ''}
                             error={errors[`${path}.bedrooms`]}
                             disabled={disabled}
@@ -176,7 +177,7 @@ export default function UnitConfigurationsTab() {
                           <NumberField
                             label="Bathrooms"
                             min={0}
-                            max={20}
+                            max={LIMITS.rooms}
                             value={unit.bathrooms ?? ''}
                             error={errors[`${path}.bathrooms`]}
                             disabled={disabled}

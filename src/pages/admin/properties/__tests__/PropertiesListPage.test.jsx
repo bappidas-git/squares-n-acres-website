@@ -226,21 +226,28 @@ describe('PropertiesListPage', () => {
     expect(table.getByText('3 BHK · 1,650 sq ft')).toBeInTheDocument();
   });
 
-  describe('the flag chips', () => {
-    it('patch the record they belong to', async () => {
+  describe('the flag toggles', () => {
+    it('patch the record they belong to, and ask for the page again', async () => {
       renderAs('admin');
       await screen.findByText('Lakeview Heights');
 
-      await userEvent.click(
-        await screen.findByRole('button', { name: 'Not featured — Lakeview Heights' })
-      );
+      const featured = await screen.findByRole('button', { name: 'Featured — Lakeview Heights' });
+      expect(featured).toHaveAttribute('aria-pressed', 'false');
+      const listCalls = propertyService.adminList.mock.calls.length;
+
+      await userEvent.click(featured);
 
       await waitFor(() =>
         expect(propertyService.patch).toHaveBeenCalledWith(1, { isFeatured: true })
       );
       expect(
-        await screen.findByRole('button', { name: 'Featured — Lakeview Heights' })
+        await screen.findByRole('button', { name: 'Featured — Lakeview Heights', pressed: true })
       ).toBeInTheDocument();
+      // A row that stops matching a Featured filter, or that has just become the
+      // most recently updated, moves: the list is asked again after a write.
+      await waitFor(() =>
+        expect(propertyService.adminList.mock.calls.length).toBeGreaterThan(listCalls)
+      );
     });
 
     it('put the old value back when the API refuses', async () => {
@@ -255,12 +262,45 @@ describe('PropertiesListPage', () => {
       await screen.findByText('Lakeview Heights');
 
       await userEvent.click(
-        await screen.findByRole('button', { name: 'Active — Lakeview Heights' })
+        await screen.findByRole('button', { name: 'Active — Lakeview Heights', pressed: true })
       );
 
       expect(await screen.findByText('Publish the description first.')).toBeInTheDocument();
       expect(
-        await screen.findByRole('button', { name: 'Active — Lakeview Heights' })
+        await screen.findByRole('button', { name: 'Active — Lakeview Heights', pressed: true })
+      ).toBeInTheDocument();
+    });
+
+    it('take back only the refused change, not an earlier one the API accepted', async () => {
+      // The refetch after the accepted write stays in flight, so it is the
+      // rollback — not a fresh answer — that decides what the chips show.
+      propertyService.patch.mockImplementation((_id, body) =>
+        'isActive' in body
+          ? Promise.reject(new ApiError({ status: 500, message: 'Server error' }))
+          : Promise.resolve({ data: { ...ROWS[0], ...body } })
+      );
+      propertyService.adminList
+        .mockResolvedValueOnce(envelope())
+        .mockImplementation(() => new Promise(() => {}));
+
+      renderAs('admin');
+      await screen.findByText('Lakeview Heights');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Featured — Lakeview Heights' }));
+      await screen.findByRole('button', { name: 'Featured — Lakeview Heights', pressed: true });
+
+      // A row's toggles wait for its write in flight before taking another.
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Active — Lakeview Heights' })).toBeEnabled()
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Active — Lakeview Heights' }));
+      expect(await screen.findByText('Server error')).toBeInTheDocument();
+
+      expect(
+        screen.getByRole('button', { name: 'Active — Lakeview Heights', pressed: true })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Featured — Lakeview Heights', pressed: true })
       ).toBeInTheDocument();
     });
   });
@@ -270,7 +310,7 @@ describe('PropertiesListPage', () => {
       renderAs('admin');
       await screen.findByText('Lakeview Heights');
 
-      await userEvent.click(screen.getByRole('checkbox', { name: 'Select row 2' }));
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Select Nandi Ridge Plot' }));
       await userEvent.click(screen.getByRole('button', { name: 'Deactivate' }));
 
       await waitFor(() =>
@@ -279,11 +319,28 @@ describe('PropertiesListPage', () => {
       expect(await screen.findByText('1 property updated.')).toBeInTheDocument();
     });
 
+    it('forgets a selection whose rows are no longer on screen', async () => {
+      renderAs('admin');
+      await screen.findByText('Lakeview Heights');
+
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Select Nandi Ridge Plot' }));
+      expect(screen.getByText('1 selected')).toBeInTheDocument();
+
+      // Narrowing the list takes the ticked row off screen …
+      propertyService.adminList.mockResolvedValue(envelope([ROWS[0]]));
+      await userEvent.selectOptions(screen.getByLabelText('Listing'), 'sale');
+      await waitFor(() => expect(screen.queryByText('Nandi Ridge Plot')).not.toBeInTheDocument());
+
+      // … and the selection with it: no bulk action can reach a row nobody sees.
+      await waitFor(() => expect(screen.queryByText('1 selected')).not.toBeInTheDocument());
+      expect(screen.queryByRole('button', { name: 'Deactivate' })).not.toBeInTheDocument();
+    });
+
     it('confirms before deleting, naming what it is about to remove', async () => {
       renderAs('admin');
       await screen.findByText('Lakeview Heights');
 
-      await userEvent.click(screen.getByRole('checkbox', { name: 'Select row 1' }));
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Select Lakeview Heights' }));
       await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
       const dialog = await screen.findByRole('dialog');
@@ -333,6 +390,49 @@ describe('PropertiesListPage', () => {
         expect.stringContaining('/properties/nandi-ridge-plot-devanahalli?preview=admin')
       );
     });
+  });
+
+  it('reads a flag in the URL as a boolean, so the screen and the request agree', async () => {
+    renderAs('admin', { url: '/admin/properties?isActive=false&isFeatured=1' });
+    await screen.findByText('Lakeview Heights');
+
+    const request = propertyService.adminList.mock.calls.at(-1)[0];
+    expect(request.isActive).toBe(false);
+    // `1` is not a boolean this screen writes: it is no filter at all, on the
+    // screen and in the request — not "Any" beside a request for active rows.
+    expect(request).not.toHaveProperty('isFeatured', expect.anything());
+    expect(screen.getByLabelText('Published')).toHaveValue('false');
+    expect(screen.getByLabelText('Featured')).toHaveValue('');
+    expect(screen.getByText('Published: Inactive')).toBeInTheDocument();
+  });
+
+  it('shows a page size the URL asks for even when it is not one of the four offered', async () => {
+    propertyService.adminList.mockResolvedValue(envelope(ROWS, { perPage: 37 }));
+    renderAs('admin', { url: '/admin/properties?perPage=37' });
+    await screen.findByText('Lakeview Heights');
+
+    expect(screen.getByLabelText('Rows per page')).toHaveValue('37');
+  });
+
+  it('keeps the sort and the page size when the filters are reset', async () => {
+    propertyService.adminList.mockResolvedValue(envelope(ROWS, { perPage: 50 }));
+    renderAs('admin', {
+      url: '/admin/properties?listingType=rent&sort=price&order=asc&perPage=50',
+    });
+    await screen.findByText('Lakeview Heights');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reset' }));
+
+    await waitFor(() =>
+      expect(propertyService.adminList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: 'price', order: 'asc', perPage: 50, page: 1 }),
+        expect.anything()
+      )
+    );
+    expect(propertyService.adminList.mock.calls.at(-1)[0]).not.toHaveProperty(
+      'listingType',
+      'rent'
+    );
   });
 
   it('exports every match of the current filter, not the page on screen (D44)', async () => {
@@ -385,7 +485,9 @@ describe('PropertiesListPage', () => {
 
       expect(await screen.findByText(/Read-only/)).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Add property' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('checkbox', { name: 'Select row 1' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('checkbox', { name: 'Select Lakeview Heights' })
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('button', { name: 'Active — Lakeview Heights' })
       ).not.toBeInTheDocument();

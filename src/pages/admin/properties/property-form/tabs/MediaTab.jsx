@@ -5,6 +5,7 @@ import ImageField from '../../../../../components/admin/ImageField';
 import { LazyImage, SwitchField, UrlField } from '../../../../../components/ui';
 import { makeImage } from '../initialState';
 import ImageGalleryEditor, { coverAfterRemoval } from '../components/ImageGalleryEditor';
+import { propertyFieldId } from '../fieldFocus';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
@@ -89,6 +90,7 @@ export default function MediaTab() {
           <ImageGalleryEditor
             images={images}
             errors={errors}
+            idFor={propertyFieldId}
             disabled={disabled}
             altHint={focusKeyword || null}
             onAdd={addImages}

@@ -5,16 +5,35 @@ import { formatPrice } from '../../../../../utils/format';
 import { makeOtherCharge } from '../initialState';
 import NumberWithUnit from '../components/NumberWithUnit';
 import OtherChargesRepeater from '../components/OtherChargesRepeater';
-import PricePreview from '../components/PricePreview';
+import PricePreview, { previewLines } from '../components/PricePreview';
 import { derivedPricePerSqft, isRentOrLease } from '../fieldRules';
+import { propertyFieldId } from '../fieldFocus';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
 
-/** The clauses a commercial lease repeats on every listing (§3 of prompt 19). */
-const LEASE_PRESETS = [
-  { label: 'Lock-in period', note: 'In months' },
-  { label: 'Annual escalation', note: 'Per cent a year' },
+/** The headline the preview (and so the site) prints for these values. */
+const headlineOf = (values) => previewLines(values)[0]?.text ?? '';
+
+/**
+ * The charges a listing repeats word for word, so thirty listings do not end
+ * up with thirty spellings of "Club membership" (§3 of prompt 19).
+ *
+ * Every one is money: the amount is a rupee figure, printed as one and added
+ * into "Other charges, added up". The lease presets used to be "Lock-in
+ * period — in months" and "Annual escalation — per cent a year", so a 36-month
+ * lock-in printed as "₹36" and was summed with the deposit. Those are terms of
+ * the lease; the note under the list sends them to the specifications.
+ */
+const SALE_PRESETS = [
+  { label: 'Car parking', note: 'Per slot' },
+  { label: 'Club membership', note: 'One-time' },
+  { label: 'Corpus fund', note: 'One-time, refundable to the association' },
+];
+
+const RENTAL_PRESETS = [
+  { label: 'Maintenance deposit', note: 'One-time, refundable' },
+  { label: 'Brokerage', note: 'One-time' },
 ];
 
 /** The sale fields `priceOnRequest` disables, and the value each returns to. */
@@ -91,7 +110,11 @@ export default function PricingTab() {
             label="Price on request"
             checked={onRequest}
             disabled={disabled}
-            hint="The listing prints “Price on Request” and every amount below is cleared."
+            hint={
+              rental
+                ? 'The listing prints “Price on Request” instead of the rent, which is cleared. The deposit and the charges stay.'
+                : 'The listing prints “Price on Request” instead of a figure. The price, the range and the rate are cleared; the booking amount and the charges stay.'
+            }
             onChange={toggleOnRequest}
           />
         </FormColumn>
@@ -110,6 +133,7 @@ export default function PricingTab() {
           <>
             <FormColumn half>
               <NumberWithUnit
+                id={propertyFieldId('pricing.rentPerMonth')}
                 label="Rent per month"
                 suffix="/ month"
                 disabled={disabled || onRequest}
@@ -149,9 +173,14 @@ export default function PricingTab() {
           <>
             <FormColumn half>
               <NumberWithUnit
+                id={propertyFieldId('pricing.price')}
                 label="Price"
                 disabled={disabled || onRequest}
-                hint="The starting price — the listing prints it as “₹1.42 Cr onwards”."
+                hint={
+                  has(pricing.price)
+                    ? `The headline figure — the listing prints “${headlineOf(values)}”.`
+                    : 'The headline figure on the card and the details page.'
+                }
                 {...money('price')}
               />
             </FormColumn>
@@ -227,7 +256,12 @@ export default function PricingTab() {
             charges={pricing.otherCharges ?? []}
             errors={errors}
             disabled={disabled}
-            presets={rental ? LEASE_PRESETS : []}
+            presets={rental ? RENTAL_PRESETS : SALE_PRESETS}
+            note={
+              values.listingType === 'lease'
+                ? 'A lock-in period or an annual escalation is a term of the lease, not a charge: add it as a specification on the Highlights & specifications tab.'
+                : null
+            }
             onAdd={(patch) => addItem('pricing.otherCharges', makeOtherCharge(patch))}
             onUpdate={(id, patch) => updateItem('pricing.otherCharges', id, patch)}
             onRemove={(id) => removeItem('pricing.otherCharges', id)}

@@ -3,10 +3,20 @@
 }
 
 .list {
+  position: relative;
   display: flex;
   gap: var(--space-1);
   overflow-x: auto;
   scrollbar-width: thin;
+}
+
+/* A long strip breaks onto more rows where there is room for it, rather than
+   hiding half its tabs — and their error badges — off to the side. */
+@media (min-width: 900px) {
+  .wrap {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
 }
 
 .list::-webkit-scrollbar {

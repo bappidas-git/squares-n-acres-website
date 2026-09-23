@@ -12,6 +12,7 @@
  *     `order` and given row ids.
  */
 
+import { heldPricePerSqft } from './fieldRules';
 import createInitialState, {
   createSeo,
   createSectionVisibility,
@@ -108,7 +109,7 @@ export default function fromRecord(record) {
     }),
   });
 
-  return {
+  const values = {
     ...blank,
     title: text(record.title),
     slug: text(record.slug),
@@ -308,4 +309,9 @@ export default function fromRecord(record) {
     isVerified: bool(record.isVerified),
     priorityOrder: num(record.priorityOrder) ?? 0,
   };
+
+  // A stored rate that is only the division the form makes itself keeps
+  // following the price (D33); see `heldPricePerSqft`.
+  values.pricing = { ...values.pricing, pricePerSqft: heldPricePerSqft(values) };
+  return values;
 }

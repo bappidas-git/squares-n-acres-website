@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Icon } from '@iconify/react';
 
 import styles from './AdminTabs.module.css';
@@ -13,14 +13,47 @@ import styles from './AdminTabs.module.css';
  *
  * Keyboard: a roving tabindex with ←/→/Home/End, as §8.3 requires of tabs.
  *
+ * `wrap` lets a long strip break onto a second row on a wide screen instead of
+ * scrolling: sixteen tabs in a scrolling strip hid half of them — and their
+ * red badges — behind a four-pixel scrollbar. On a phone the strip still
+ * scrolls, and whichever tab becomes active is scrolled into view, so a failed
+ * save that opens tab 12 does not leave its tab off-screen.
+ *
  * @param {object} props
  * @param {Array<{key: string, label: string, icon?: string, errorCount?: number}>} props.tabs
  * @param {string} props.value the active tab key
  * @param {(key: string) => void} props.onChange
  * @param {string} [props.label] the accessible name of the tab list
+ * @param {boolean} [props.wrap] wrap onto more rows from 900 px up
  */
-export default function AdminTabs({ tabs = [], value, onChange, label = 'Sections' }) {
+export default function AdminTabs({
+  tabs = [],
+  value,
+  onChange,
+  label = 'Sections',
+  wrap = false,
+}) {
   const listRef = useRef(null);
+
+  // Sideways only: `scrollIntoView` would also scroll the page up to the strip,
+  // and fight the field a failed save is scrolling down to.
+  useEffect(() => {
+    const list = listRef.current;
+    const tab = list?.querySelector('[aria-selected="true"]');
+    if (!list || !tab || list.scrollWidth <= list.clientWidth) return;
+
+    const margin = 24;
+    const start = tab.offsetLeft;
+    const end = start + tab.offsetWidth;
+    let left = null;
+    if (start - margin < list.scrollLeft) left = Math.max(0, start - margin);
+    else if (end + margin > list.scrollLeft + list.clientWidth) {
+      left = end + margin - list.clientWidth;
+    }
+    if (left === null) return;
+    if (typeof list.scrollTo === 'function') list.scrollTo({ left, behavior: 'smooth' });
+    else list.scrollLeft = left;
+  }, [value]);
 
   const move = (event) => {
     const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
@@ -44,7 +77,13 @@ export default function AdminTabs({ tabs = [], value, onChange, label = 'Section
 
   return (
     <div className={styles.wrapper}>
-      <div className={styles.list} role="tablist" aria-label={label} ref={listRef} onKeyDown={move}>
+      <div
+        className={[styles.list, wrap ? styles.wrap : ''].filter(Boolean).join(' ')}
+        role="tablist"
+        aria-label={label}
+        ref={listRef}
+        onKeyDown={move}
+      >
         {tabs.map((tab) => {
           const active = tab.key === value;
           const errors = tab.errorCount ?? 0;

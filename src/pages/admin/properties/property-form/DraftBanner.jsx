@@ -15,10 +15,12 @@ import styles from '../PropertyFormPage.module.css';
  *
  * @param {object} props
  * @param {{savedAt: string}|null} props.draft
+ * @param {boolean} [props.isNew] the draft is of a listing never created — there
+ *   is no "last time it reached the server" to compare it with
  * @param {() => void} props.onRestore
  * @param {() => void} props.onDiscard
  */
-export default function DraftBanner({ draft, onRestore, onDiscard }) {
+export default function DraftBanner({ draft, isNew = false, onRestore, onDiscard }) {
   if (!draft) return null;
 
   return (
@@ -27,10 +29,18 @@ export default function DraftBanner({ draft, onRestore, onDiscard }) {
       title="Unsaved changes were found in this browser"
       icon={<Icon icon="mdi:history" width="20" height="20" />}
     >
-      <p>
-        A draft of this property was saved {formatRelative(draft.savedAt)}, after the last time it
-        reached the server. Restore it, or discard it and keep what is saved.
-      </p>
+      {isNew ? (
+        <p>
+          A new listing was started in this browser {formatRelative(draft.savedAt)} and never
+          created. Restore it to carry on where it stopped, or discard it and start from a blank
+          form.
+        </p>
+      ) : (
+        <p>
+          A draft of this property was saved {formatRelative(draft.savedAt)}, after the last time it
+          reached the server. Restore it, or discard it and keep what is saved.
+        </p>
+      )}
       <div className={styles.draftActions}>
         <Button size="sm" onClick={onRestore}>
           Restore the draft

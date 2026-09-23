@@ -18,6 +18,8 @@ import { formatPrice } from '../../../../../utils/format';
 import { makeFloorPlan } from '../initialState';
 import NumberWithUnit from '../components/NumberWithUnit';
 import { showsBhk } from '../fieldRules';
+import { propertyFieldId } from '../fieldFocus';
+import { LIMITS } from '../validators/property';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
@@ -132,6 +134,7 @@ export default function FloorPlansTab() {
 
                     <div className={styles.unitGrid}>
                       <TextField
+                        id={propertyFieldId(`${path}.title`)}
                         label="Title"
                         required
                         value={plan.title ?? ''}
@@ -168,7 +171,7 @@ export default function FloorPlansTab() {
                         <NumberField
                           label="Bedrooms"
                           min={0}
-                          max={20}
+                          max={LIMITS.rooms}
                           value={plan.bedrooms ?? ''}
                           error={errors[`${path}.bedrooms`]}
                           disabled={disabled}
@@ -196,6 +199,7 @@ export default function FloorPlansTab() {
 
                       <div className={styles.unitWide}>
                         <ImageField
+                          id={propertyFieldId(`${path}.imageUrl`)}
                           label="Floor plan image"
                           hint="floorPlan"
                           folder="floor-plans"
@@ -244,6 +248,8 @@ export default function FloorPlansTab() {
               </Button>
             ) : null}
             <Button
+              // "No floor plan" from the SEO tab lands here.
+              id={propertyFieldId('floorPlans')}
               variant="outline"
               disabled={disabled}
               onClick={() => addItem('floorPlans', makeFloorPlan())}

@@ -57,6 +57,34 @@ export function missingStandardMilestones(rows = []) {
   return STANDARD_MILESTONES.filter((milestone) => !present.has(milestone.toLowerCase()));
 }
 
+/** A milestone's place among `STANDARD_MILESTONES`, or -1 for one of the editor's own. */
+const standardRank = (name) =>
+  STANDARD_MILESTONES.findIndex(
+    (milestone) =>
+      milestone.toLowerCase() ===
+      String(name ?? '')
+        .trim()
+        .toLowerCase()
+  );
+
+/**
+ * Where a standard milestone goes in a timeline: before the first standard
+ * phase that comes after it, else at the end.
+ *
+ * Appended, "Add standard milestones" on a timeline that already had a
+ * Handover put Foundation, Structure and the rest after it — and the page
+ * prints the list in its order.
+ *
+ * @param {Array<{milestone?: string}>} rows
+ * @param {string} milestone one of `STANDARD_MILESTONES`
+ * @returns {number}
+ */
+export function standardInsertIndex(rows = [], milestone) {
+  const own = standardRank(milestone);
+  const later = rows.findIndex((row) => standardRank(row?.milestone) > own);
+  return later === -1 ? rows.length : later;
+}
+
 /**
  * The tab section itself: the rows, the presets and the percentage.
  *

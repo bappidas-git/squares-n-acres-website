@@ -1,6 +1,7 @@
 import { Icon } from '@iconify/react';
 
 import { formatPrice, formatPriceRange } from '../../../../../utils/format';
+import { hasPriceRange, showsOnwards } from '../../../../../utils/priceDisplay';
 import { derivedPricePerSqft } from '../fieldRules';
 
 import styles from './PricePreview.module.css';
@@ -25,23 +26,25 @@ export function previewLines(values = {}) {
       missing: rent === null || rent === undefined || rent === '',
     });
   } else {
-    const hasRange =
-      pricing.priceRangeMin !== null &&
-      pricing.priceRangeMin !== undefined &&
-      pricing.priceRangeMin !== '' &&
-      pricing.priceRangeMax !== null &&
-      pricing.priceRangeMax !== undefined &&
-      pricing.priceRangeMax !== '';
+    // The card's own rules (`utils/priceDisplay`): a range when it has two
+    // different ends, "onwards" only when the figure is the bottom of a range
+    // or of several unit types — not under every single price.
+    const hasRange = hasPriceRange(values);
     const hasPrice = pricing.price !== null && pricing.price !== undefined && pricing.price !== '';
+    const onwards = showsOnwards(values) ? ' onwards' : '';
 
     if (hasRange) {
       lines.push({
         id: 'headline',
         headline: true,
-        text: formatPriceRange(pricing.priceRangeMin, pricing.priceRangeMax),
+        text: `${formatPriceRange(pricing.priceRangeMin, pricing.priceRangeMax)}${onwards}`,
       });
     } else if (hasPrice) {
-      lines.push({ id: 'headline', headline: true, text: `${formatPrice(pricing.price)} onwards` });
+      lines.push({
+        id: 'headline',
+        headline: true,
+        text: `${formatPrice(pricing.price)}${onwards}`,
+      });
     } else {
       lines.push({ id: 'headline', headline: true, text: 'No price yet', missing: true });
     }
@@ -73,8 +76,9 @@ export function previewLines(values = {}) {
   }
 
   const booking = pricing.bookingAmount;
-  if (!rental && booking !== null && booking !== undefined && booking !== '') {
-    lines.push({ id: 'booking', text: `${formatPrice(booking)} booking amount` });
+  if (booking !== null && booking !== undefined && booking !== '') {
+    const label = values.listingType === 'lease' ? 'advance' : 'booking amount';
+    lines.push({ id: 'booking', text: `${formatPrice(booking)} ${label}` });
   }
 
   if (pricing.priceNegotiable === true) lines.push({ id: 'negotiable', text: 'Negotiable' });

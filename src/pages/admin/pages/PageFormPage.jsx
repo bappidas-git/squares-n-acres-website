@@ -3,6 +3,12 @@ import { Icon } from '@iconify/react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import ApiError from '../../../services/apiError';
+// The master-data form before the block editor, out of alphabetical order: the
+// two reach the same admin kit, and the kit's stylesheets have to arrive in the
+// order every master-data screen gives them — this page shares a chunk with
+// them, and two orders for one chunk is a mini-css-extract "Conflicting
+// order", which `build:ci` refuses.
+import { FormFieldControl } from '../../../components/admin/MasterDataForm';
 import BlockEditor from '../../../components/cms/BlockEditor/BlockEditor';
 import PATHS, { RESERVED_PATH_PREFIXES, isReservedPath } from '../../../routes/paths';
 import pageService from '../../../services/pageService';
@@ -13,7 +19,6 @@ import { useNavigationGuard } from '../../../contexts/NavigationGuardContext';
 // The kit is imported file by file, in the order `MasterDataPage` reaches for
 // the same components: the barrel's own order disagrees with it, and webpack
 // then cannot give the extracted CSS one order across the admin chunks.
-import { FormFieldControl } from '../../../components/admin/MasterDataForm';
 import FormSection, { FormColumn } from '../../../components/admin/FormSection';
 import SeoPanel from '../../../components/seo/SeoPanel';
 import PageHeader from '../../../components/admin/PageHeader';

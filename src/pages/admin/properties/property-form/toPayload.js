@@ -22,7 +22,7 @@
  * never discards what the SEO panel (prompt 36) wrote.
  */
 
-import { derivedPricePerSqft } from './fieldRules';
+import { derivedPricePerSqft, isRentOrLease, showsAge, showsPossessionDate } from './fieldRules';
 import { isTmpId } from './initialState';
 
 /** A trimmed string, `''` when there is nothing. */
@@ -96,6 +96,62 @@ const KEEP_ROW = {
 /** One list of `source`, without the rows nobody filled in. */
 const rowsOf = (source, key) => list(source?.[key]).filter((row) => KEEP_ROW[key](row));
 
+/** Where each list lives in the form values. */
+const LIST_SOURCES = {
+  images: (values) => values,
+  unitConfigurations: (values) => values,
+  floorPlans: (values) => values,
+  documents: (values) => values,
+  nearbyPlaces: (values) => values,
+  specifications: (values) => values,
+  constructionSpecs: (values) => values,
+  constructionTimeline: (values) => values,
+  faqs: (values) => values,
+  'pricing.otherCharges': (values) => values.pricing,
+};
+
+/**
+ * For each list, the form index of every row the payload keeps, in order.
+ *
+ * A 422 counts rows in the **payload**, which has dropped the rows nobody
+ * filled in: `unitConfigurations.0.name` is the first row sent, which may be
+ * the form's second. This is what maps it back onto the row it is about.
+ *
+ * @param {object} values
+ * @returns {Record<string, number[]>}
+ */
+export function keptRowIndexes(values = {}) {
+  const map = {};
+  for (const [path, sourceOf] of Object.entries(LIST_SOURCES)) {
+    const key = path.split('.').pop();
+    map[path] = list(sourceOf(values)?.[key])
+      .map((row, index) => (KEEP_ROW[key](row) ? index : null))
+      .filter((index) => index !== null);
+  }
+  map.highlights = list(values.highlights)
+    .map((entry, index) => (str(entry) ? index : null))
+    .filter((index) => index !== null);
+  return map;
+}
+
+/**
+ * A 422 key rewritten from payload rows to form rows — `unitConfigurations.0.name`
+ * → `unitConfigurations.1.name` when the form's first row was blank.
+ *
+ * @param {string} path
+ * @param {Record<string, number[]>} kept `keptRowIndexes(values)`
+ * @returns {string}
+ */
+export function formPathOf(path, kept) {
+  for (const listPath of Object.keys(kept)) {
+    const match = new RegExp(`^${listPath.replace('.', '\\.')}\\.(\\d+)(\\..*)?$`).exec(path);
+    if (!match) continue;
+    const formIndex = kept[listPath][Number(match[1])];
+    return formIndex === undefined ? path : `${listPath}.${formIndex}${match[2] ?? ''}`;
+  }
+  return path;
+}
+
 /**
  * @param {object} values the form's values
  * @returns {object} the request body
@@ -107,7 +163,11 @@ export default function toPayload(values = {}) {
 
   // Editable, so it is only ever derived when the editor left it empty (D33);
   // `fieldRules` owns the arithmetic, so the Pricing tab shows the same figure.
-  const pricePerSqft = num(pricing.pricePerSqft) ?? derivedPricePerSqft(values);
+  // A rental has no rate: a monthly rent over the area is not a figure anybody
+  // quotes, and one left over from a sale must not travel with it.
+  const pricePerSqft = isRentOrLease(values)
+    ? null
+    : (num(pricing.pricePerSqft) ?? derivedPricePerSqft(values));
 
   const images = ordered(
     withCover(
@@ -132,8 +192,11 @@ export default function toPayload(values = {}) {
     propertyTypeId: int(values.propertyTypeId),
     constructionStatus: values.constructionStatus,
     availability: values.availability,
-    possessionDate: strOrNull(values.possessionDate),
-    ageOfPropertyYears: int(values.ageOfPropertyYears),
+    // Only the one the status shows: a listing moved from "under construction"
+    // to "resale" kept its hidden possession date, and the details page printed
+    // "Possession Jun 2027" over the age the editor had just typed.
+    possessionDate: showsPossessionDate(values) ? strOrNull(values.possessionDate) : null,
+    ageOfPropertyYears: showsAge(values) ? int(values.ageOfPropertyYears) : null,
     furnishing: strOrNull(values.furnishing),
     facing: strOrNull(values.facing),
     floorNumber: int(values.floorNumber),

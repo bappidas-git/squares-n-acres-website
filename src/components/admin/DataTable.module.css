@@ -128,10 +128,101 @@
   text-align: right;
 }
 
+/* The row's controls stay on screen however wide the table is. A dozen
+   columns do not fit a laptop, and the kebab used to be the last cell of a
+   1,728 px row inside a 1,400 px scroller — Edit, Duplicate and Delete were
+   off the right edge of every row, behind a scrollbar that sat under the
+   twentieth row. Pinned to the scroller's right edge, the column carries the
+   row's own background so the cells scrolling beneath it do not show through. */
+td.actionsCell,
+th.actionsCell {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--color-bg);
+}
+
+th.actionsCell {
+  background: var(--color-surface);
+}
+
+.row:hover td.actionsCell {
+  background: var(--color-surface);
+}
+
+.rowSelected td.actionsCell,
+.rowSelected:hover td.actionsCell {
+  background: var(--color-primary-light);
+}
+
+.rowHighlight td.actionsCell {
+  background: var(--color-info-bg);
+}
+
+/* Only while columns are hidden under it: the edge that says "scroll". */
+.overflowing td.actionsCell,
+.overflowing th.actionsCell {
+  box-shadow: -10px 0 10px -10px rgba(31, 31, 31, 0.35);
+}
+
+/* A header that may break onto two lines — "Views / Enquiries" over a cell
+   that holds "2,076 / 5". */
+.headWrap {
+  white-space: normal;
+  line-height: 1.25;
+}
+
+/* A dozen columns want tighter gutters than four do — tighter still on a
+   laptop, where the last 40 px decide whether the row fits. */
+.compact .headCell,
+.compact .cell {
+  padding: 0 var(--space-3);
+}
+
+@media (max-width: 1535.98px) {
+  .compact .headCell,
+  .compact .cell {
+    padding: 0 calc(var(--space-2) + var(--space-1) / 2);
+  }
+}
+
+.compact .checkboxCell {
+  padding-left: var(--space-2);
+  padding-right: 0;
+}
+
+/* New rows are on their way; the old ones stay readable but say so. */
+.refreshing {
+  position: relative;
+}
+
+.refreshing table,
+.refreshing > * {
+  opacity: 0.55;
+  transition: opacity var(--transition-fast);
+}
+
+.selectAllMobile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
 .hideBelowSm,
 .hideBelowMd,
-.hideBelowLg {
+.hideBelowLg,
+.hideBelowXl {
   display: table-cell;
+}
+
+@media (max-width: 1535.98px) {
+  .hideBelowXl {
+    display: none;
+  }
 }
 
 @media (max-width: 599.98px) {

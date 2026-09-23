@@ -94,6 +94,12 @@ describe('parseUrlList', () => {
     expect(parseUrlList('   \n  ')).toEqual([]);
     expect(parseUrlList(null)).toEqual([]);
   });
+
+  it('keeps the commas of a Cloudinary transformation inside one address', () => {
+    const url =
+      'https://res.cloudinary.com/demo/image/upload/w_1600,h_900,c_fill/v1/properties/lobby.jpg';
+    expect(parseUrlList(`${url}\nhttps://b.jpg`)).toEqual([url, 'https://b.jpg']);
+  });
 });
 
 describe('the counters', () => {
@@ -204,6 +210,39 @@ describe('alt text', () => {
 
     await userEvent.type(screen.getAllByLabelText(/^Alt text/)[2], 'Balcony view');
     expect(stored()[2].alt).toBe('Balcony view');
+  });
+
+  it('prints a caption that is too long against the caption', () => {
+    renderWith(
+      <Harness
+        initial={gallery()}
+        errors={{ 'images.1.caption': 'Keep the caption to 300 characters.' }}
+      />
+    );
+
+    expect(screen.getAllByLabelText('Caption')[1]).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('alert')).toHaveTextContent('Keep the caption to 300 characters.');
+  });
+});
+
+describe('a message about the gallery as a whole', () => {
+  it('is printed above the photographs, where a failed save can focus it', () => {
+    renderWith(
+      <Harness
+        initial={gallery().map((image) => ({ ...image, isCover: false }))}
+        errors={{ images: 'Choose which photograph is the cover.' }}
+      />
+    );
+
+    const message = screen.getByRole('alert');
+    expect(message).toHaveTextContent('Choose which photograph is the cover.');
+    // Keyed `images`, it used to be counted on the Media badge and shown nowhere.
+    expect(message).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('is absent while there is nothing to say', () => {
+    renderWith(<Harness initial={gallery()} />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
 

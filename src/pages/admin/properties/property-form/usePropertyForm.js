@@ -12,12 +12,13 @@ import { useNavigationGuard } from '../../../../contexts/NavigationGuardContext'
 import { useToast } from '../../../../components/common/ToastProvider';
 import { PREVIEW_QUERY, publicUrlOf, viewPathOf, viewUrlOf } from '../publicUrl';
 import { DEFAULT_TAB, firstTabWithErrors, groupErrorsByTab, tabByKey, tabOfPath } from './tabs';
-import { FIELD_ALIASES, focusFieldElement } from './fieldFocus';
+import { focusFieldElement, resolveFieldPath } from './fieldFocus';
 import { applySeoSideEffects } from '../../../../components/seo/seoSideEffects';
 import { computeCompleteness } from './completeness';
 import { validateAll as runAllValidators, validateForActivation } from './validators';
 import reducer, { actions, createFormState } from './reducer';
-import toPayload from './toPayload';
+import toPayload, { formPathOf, keptRowIndexes } from './toPayload';
+import { reserveTmpIds } from './initialState';
 
 /** How often a dirty form writes its draft to this browser (§4.2 of prompt 18). */
 export const AUTOSAVE_INTERVAL_MS = 10000;
@@ -38,6 +39,29 @@ export const draftKey = (propertyId) => `sna_property_draft:${propertyId ?? 'new
 export { PREVIEW_QUERY, publicUrlOf, viewPathOf, viewUrlOf };
 
 const errorCount = (errors) => Object.keys(errors).length;
+
+/** How long a focus request keeps looking for a control a lazy tab has not drawn yet. */
+const FOCUS_ATTEMPTS = 12;
+const FOCUS_RETRY_MS = 60;
+
+/**
+ * The first message of the first tab that holds one — what a failed save
+ * scrolls to. The error map is built in tab order, field by field.
+ */
+function firstErrorPath(errors) {
+  const tab = firstTabWithErrors(errors);
+  return Object.keys(errors).find((path) => tabOfPath(path) === tab) ?? null;
+}
+
+/** The publish blockers that belong to one tab's fields. */
+function activationErrorsFor(tab, values) {
+  if (values?.isActive !== true) return {};
+  const owned = (path) =>
+    tab.fields.some((prefix) => path === prefix || path.startsWith(`${prefix}.`));
+  return Object.fromEntries(
+    Object.entries(validateForActivation(values).errors).filter(([path]) => owned(path))
+  );
+}
 
 /**
  * The property form: one reducer, the validators, the draft and the writes
@@ -71,8 +95,17 @@ export default function usePropertyForm({
   const [busy, setBusy] = useState(false);
 
   // Focusing a control on another tab has to wait for the render that mounts
-  // it, which is what this ref and the effect below its writer are for.
-  const pendingFocus = useRef(null);
+  // it. A request carries a counter so that asking for a field on the tab
+  // already open — where `setActiveTab` changes nothing and no effect keyed on
+  // the tab would run — still moves the cursor.
+  const [focusRequest, setFocusRequest] = useState(null);
+  // The SEO panel owns its own controls and sub-tabs; a request for `seo.*` is
+  // handed to it rather than looked for here.
+  const [seoFocusRequest, setSeoFocusRequest] = useState(null);
+
+  // A save in flight: read synchronously, so a second Ctrl+S — or a key held
+  // down — cannot start another request before the first one answers.
+  const savingRef = useRef(false);
 
   const { values, errors, initial } = state;
 
@@ -154,7 +187,14 @@ export default function usePropertyForm({
 
   const restoreDraft = useCallback(() => {
     setDraftOffer((offer) => {
-      if (offer) dispatch(actions.restoreDraft(offer));
+      if (offer) {
+        // The draft's new rows carry the `tmp-n` ids of the session that wrote
+        // it, and this session's counter started again at 1: without moving it
+        // past them, the next row added shared an id with a restored one, and
+        // typing into it renamed both.
+        reserveTmpIds(offer.values);
+        dispatch(actions.restoreDraft(offer));
+      }
       return null;
     });
   }, []);
@@ -183,8 +223,18 @@ export default function usePropertyForm({
    */
   const focusField = useCallback((path) => {
     if (!path) return;
-    setActiveTab(tabOfPath(FIELD_ALIASES[path] ?? path));
-    pendingFocus.current = FIELD_ALIASES[path] ?? path;
+    const target = resolveFieldPath(path, latest.current.values);
+
+    // The panel's own fields — the snippet, the social cards, the robots —
+    // are reached through the panel, which knows its sub-tabs and its ids.
+    if (target.startsWith('seo.')) {
+      setActiveTab('seo');
+      setSeoFocusRequest((previous) => ({ path: target, nonce: (previous?.nonce ?? 0) + 1 }));
+      return;
+    }
+
+    setActiveTab(tabOfPath(target));
+    setFocusRequest((previous) => ({ path: target, nonce: (previous?.nonce ?? 0) + 1 }));
   }, []);
   const setFields = useCallback((patch) => dispatch(actions.setMany(patch)), []);
 
@@ -228,7 +278,14 @@ export default function usePropertyForm({
   const validateTab = useCallback((key) => {
     const tab = tabByKey(key);
     const current = latest.current;
-    const found = tab.validator(current.values, { propertyId: current.propertyId }) ?? {};
+    // The tab's own rules and, while the listing is published, the publish
+    // rules for its fields: leaving Basics used to wipe "a published listing
+    // needs a one-line summary" along with the badge, although nothing had
+    // been fixed and the next save refused it again.
+    const found = {
+      ...(tab.validator(current.values, { propertyId: current.propertyId }) ?? {}),
+      ...activationErrorsFor(tab, current.values),
+    };
 
     // Replace this tab's share of the map and leave every other tab's alone.
     const others = Object.fromEntries(
@@ -248,10 +305,10 @@ export default function usePropertyForm({
   const validateAll = useCallback(() => {
     const found = collectErrors(latest.current.values);
     dispatch(actions.setErrors(found));
-    const tab = firstTabWithErrors(found);
-    if (tab) setActiveTab(tab);
+    const first = firstErrorPath(found);
+    if (first) focusField(first);
     return errorCount(found) === 0;
-  }, [collectErrors]);
+  }, [collectErrors, focusField]);
 
   /**
    * Turns "Published on site" on, or explains why it cannot go on (PROP-04).
@@ -272,8 +329,11 @@ export default function usePropertyForm({
 
       if (errorCount(blockers) > 0) {
         dispatch(actions.setErrors({ ...current.errors, ...blockers }));
-        const tab = firstTabWithErrors(blockers);
-        if (tab) setActiveTab(tab);
+        // The tab opens on the first thing to fix, not wherever the page was
+        // scrolled to: the badge said "2" and the two fields were a screen
+        // below the fold.
+        const first = firstErrorPath(blockers);
+        if (first) focusField(first);
         toast.error(
           'This listing is not ready to publish. Fix what is highlighted, or save it as inactive.'
         );
@@ -283,28 +343,36 @@ export default function usePropertyForm({
       dispatch(actions.set('isActive', true));
       return true;
     },
-    [toast]
+    [focusField, toast]
   );
 
   /* ---------------------------------------------------------------- *
    * Saving
    * ---------------------------------------------------------------- */
 
-  /** Paints a 422 onto the fields it names and opens the first tab holding one (§5.3). */
-  const applyServerErrors = useCallback((thrown) => {
-    const fields = thrown?.errors ?? {};
-    const mapped = Object.fromEntries(
-      Object.entries(fields).map(([path, messages]) => [
-        path,
-        Array.isArray(messages) ? String(messages[0]) : String(messages),
-      ])
-    );
-    if (errorCount(mapped) === 0) return;
+  /**
+   * Paints a 422 onto the fields it names and opens the first tab holding one
+   * (§5.3). A row index is the payload's, which left out the rows nobody filled
+   * in, so it is moved back onto the form's row before it is painted.
+   */
+  const applyServerErrors = useCallback(
+    (thrown, sentValues) => {
+      const fields = thrown?.errors ?? {};
+      const kept = keptRowIndexes(sentValues ?? latest.current.values);
+      const mapped = Object.fromEntries(
+        Object.entries(fields).map(([path, messages]) => [
+          formPathOf(path, kept),
+          Array.isArray(messages) ? String(messages[0]) : String(messages),
+        ])
+      );
+      if (errorCount(mapped) === 0) return;
 
-    dispatch(actions.setErrors({ ...latest.current.errors, ...mapped }));
-    const tab = firstTabWithErrors(mapped);
-    if (tab) setActiveTab(tab);
-  }, []);
+      dispatch(actions.setErrors({ ...latest.current.errors, ...mapped }));
+      const first = firstErrorPath(mapped);
+      if (first) focusField(first);
+    },
+    [focusField]
+  );
 
   /**
    * Saves the listing.
@@ -320,6 +388,10 @@ export default function usePropertyForm({
     async (mode = 'save') => {
       const current = latest.current;
       if (current.readOnly) return false;
+      // One write at a time: a second Ctrl+S on a new listing used to POST it
+      // twice, and the second answer — "that URL is taken" — landed on the
+      // listing the first one had just created.
+      if (savingRef.current) return false;
 
       const candidate =
         mode === 'inactive' ? setIn(current.values, 'isActive', false) : current.values;
@@ -327,8 +399,8 @@ export default function usePropertyForm({
       const found = collectErrors(candidate);
       if (errorCount(found) > 0) {
         dispatch(actions.setErrors(found));
-        const tab = firstTabWithErrors(found);
-        if (tab) setActiveTab(tab);
+        const first = firstErrorPath(found);
+        if (first) focusField(first);
         const count = errorCount(found);
         toast.error(`Please fix ${count} field${count === 1 ? '' : 's'}.`);
         return false;
@@ -336,6 +408,7 @@ export default function usePropertyForm({
 
       const payload = toPayload(candidate);
       const wasPublished = current.state.initial?.isActive === true;
+      savingRef.current = true;
       dispatch(actions.setSaving(true));
 
       try {
@@ -344,7 +417,10 @@ export default function usePropertyForm({
           : await propertyService.create(payload);
         const saved = envelope?.data ?? null;
 
-        dispatch(actions.markSaved(saved));
+        // `sent` is what this save was made of: anything typed since it left
+        // is kept on screen, and still unsaved, rather than replaced by the
+        // server's copy of the older values.
+        dispatch(actions.markSaved(saved, current.values));
         storage.removeItem(draftKey(current.propertyId));
         setDraftOffer(null);
         setDraftSavedAt(null);
@@ -364,22 +440,34 @@ export default function usePropertyForm({
 
         if (mode === 'view' && saved?.slug) {
           const path = viewPathOf(saved.slug, saved.isActive === true);
-          const opened = window.open(`${SITE.url}${path}`, '_blank', 'noopener,noreferrer');
-          // A blocked pop-up must not swallow the action: the tab it could not
-          // open becomes a navigation in this one.
-          if (!opened) setRedirect({ to: path, replace: false });
+          // Opened without the `noopener` feature, because with it the call
+          // returns `null` by specification — so the "blocked pop-up" branch
+          // below ran on every save and dragged the editor's own tab to the
+          // page as well. The opener is cut by hand instead.
+          const opened = window.open(`${SITE.url}${path}`, '_blank');
+          if (opened) {
+            opened.opener = null;
+          } else if (current.propertyId) {
+            // Genuinely blocked: the page opens here instead. A new listing
+            // keeps its move to its own edit URL, and says where the page is.
+            setRedirect({ to: path, replace: false });
+          } else {
+            toast.info(`Your browser blocked the new tab. The page is at ${path}.`);
+          }
         }
 
         return saved;
       } catch (thrown) {
         dispatch(actions.setSaving(false));
         const enriched = await withSlugSuggestion(thrown, payload.slug, current.propertyId);
-        applyServerErrors(enriched);
+        applyServerErrors(enriched, candidate);
         toast.error(enriched?.message ?? 'The property could not be saved.');
         return false;
+      } finally {
+        savingRef.current = false;
       }
     },
-    [applyServerErrors, collectErrors, toast]
+    [applyServerErrors, collectErrors, focusField, toast]
   );
 
   // Ctrl/Cmd+S saves rather than offering to save the HTML of the page. The
@@ -391,10 +479,15 @@ export default function usePropertyForm({
     if (readOnly) return undefined;
 
     const onKeyDown = (event) => {
-      if (event.key !== 's' && event.key !== 'S') return;
+      // The physical key, so the shortcut works on a Hindi or Kannada layout
+      // too, where `event.key` is not "s".
+      const isS = event.code === 'KeyS' || event.key === 's' || event.key === 'S';
+      if (!isS) return;
       if (!event.ctrlKey && !event.metaKey) return;
       if (event.altKey || event.shiftKey) return;
       event.preventDefault();
+      // A key held down repeats; one press is one save.
+      if (event.repeat) return;
       saveRef.current('save');
     };
 
@@ -451,18 +544,43 @@ export default function usePropertyForm({
   // still holding the previous, dirty answer.
   useEffect(() => {
     if (!redirect || isBlocking) return undefined;
-    const timer = setTimeout(() => navigate(redirect.to, { replace: redirect.replace }), 0);
+    const timer = setTimeout(() => {
+      navigate(redirect.to, { replace: redirect.replace });
+      // Spent: left in place, it navigated again every time the guard let go
+      // — each save after a Duplicate pushed another copy of the same URL.
+      setRedirect(null);
+    }, 0);
     return () => clearTimeout(timer);
   }, [redirect, isBlocking, navigate]);
 
+  // A request for the SEO panel is spent once the editor leaves its tab:
+  // left in place, it put the cursor back in that field every time the tab
+  // was opened again.
   useEffect(() => {
-    const path = pendingFocus.current;
-    if (!path) return undefined;
-    pendingFocus.current = null;
-
-    const timer = setTimeout(() => focusFieldElement(path), 0);
-    return () => clearTimeout(timer);
+    if (activeTab !== 'seo') setSeoFocusRequest(null);
   }, [activeTab]);
+
+  // A tab drawn lazily (the map, the rich-text editor) may not have its
+  // controls on the first tick, so the request looks a few times before it
+  // gives up.
+  useEffect(() => {
+    if (!focusRequest) return undefined;
+    let attempts = 0;
+    let timer = null;
+
+    const attempt = () => {
+      attempts += 1;
+      const last = attempts >= FOCUS_ATTEMPTS;
+      // The message the form holds for the path, so a control without an id
+      // of its own is still found by what it says is wrong.
+      const message = latest.current.errors[focusRequest.path];
+      if (focusFieldElement(focusRequest.path, { fallback: last, message }) || last) return;
+      timer = setTimeout(attempt, FOCUS_RETRY_MS);
+    };
+
+    timer = setTimeout(attempt, 0);
+    return () => clearTimeout(timer);
+  }, [focusRequest]);
 
   /* ---------------------------------------------------------------- *
    * Derived
@@ -495,6 +613,7 @@ export default function usePropertyForm({
     updateItem,
     setActive,
     focusField,
+    seoFocusRequest,
     validateTab,
     validateAll,
     save,

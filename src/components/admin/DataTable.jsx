@@ -1,4 +1,4 @@
-import { Fragment, memo, useCallback, useMemo } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import Checkbox from '@mui/material/Checkbox';
 import Table from '@mui/material/Table';
@@ -26,9 +26,52 @@ const HIDE_CLASS = {
   sm: styles.hideBelowSm,
   md: styles.hideBelowMd,
   lg: styles.hideBelowLg,
+  xl: styles.hideBelowXl,
 };
 
 const defaultRowId = (row) => row?.id;
+
+/**
+ * The page sizes the footer offers, with the current one always among them:
+ * `?perPage=37` is a real address, and a select that cannot show the value it
+ * holds displays its first option instead — "10" beside thirty-seven rows.
+ */
+export const perPageOptionsFor = (perPage) =>
+  PER_PAGE_OPTIONS.includes(perPage) || !Number.isFinite(perPage) || perPage < 1
+    ? PER_PAGE_OPTIONS
+    : [...PER_PAGE_OPTIONS, perPage].sort((left, right) => left - right);
+
+/**
+ * Whether the scroller hides columns to the right of what is on screen.
+ *
+ * The actions column is sticky, so a wide table never hides a row's controls;
+ * what it can hide is the columns *under* that column, and the shadow this
+ * drives is the cue that there is more to scroll to.
+ */
+function useOverflowEnd(ref, contentKey) {
+  const [overflowing, setOverflowing] = useState(false);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return undefined;
+
+    const measure = () => {
+      const hidden = element.scrollWidth - element.clientWidth - element.scrollLeft;
+      setOverflowing(hidden > 1);
+    };
+
+    measure();
+    element.addEventListener('scroll', measure, { passive: true });
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    observer?.observe(element);
+    return () => {
+      element.removeEventListener('scroll', measure);
+      observer?.disconnect();
+    };
+  }, [ref, contentKey]);
+
+  return overflowing;
+}
 
 /**
  * The admin table (§8.4): server-side, selectable, sortable and paginated.
@@ -43,7 +86,8 @@ const defaultRowId = (row) => row?.id;
  * @param {object} props
  * @param {Array<{key: string, label: string, sortable?: boolean, width?: string,
  *   align?: 'left'|'right'|'center', render?: (row: object) => React.ReactNode,
- *   hideBelow?: 'sm'|'md'|'lg', primary?: boolean, mobile?: boolean}>} props.columns
+ *   hideBelow?: 'sm'|'md'|'lg'|'xl', primary?: boolean, mobile?: boolean,
+ *   wrapHeader?: boolean}>} props.columns
  * @param {Array<object>} props.rows
  * @param {{page: number, perPage: number, total: number, totalPages: number}} [props.meta]
  * @param {boolean} [props.loading]
@@ -78,6 +122,12 @@ const defaultRowId = (row) => row?.id;
  * @param {(row: object) => boolean} [props.rowHighlight] tints the row and its
  *   phone card — what a lead nobody has answered yet looks like in a list of
  *   forty (prompt 29)
+ * @param {(row: object) => string} [props.rowLabel] what the row's checkbox
+ *   names — the record's title rather than "Select row 20"
+ * @param {boolean} [props.refreshing] a request for new rows is in flight while
+ *   the old ones are still on screen: the table dims and says it is busy
+ * @param {'comfortable'|'compact'} [props.density] `compact` tightens the cell
+ *   padding, for a table with a dozen columns
  */
 export default function DataTable({
   columns = [],
@@ -109,10 +159,15 @@ export default function DataTable({
   mobileCard,
   groupBy,
   rowHighlight,
+  rowLabel,
+  refreshing = false,
+  density = 'comfortable',
   caption,
 }) {
   const { isMobile } = useBreakpoint();
   const navigate = useNavigate();
+  const wrapperRef = useRef(null);
+  const scrollerRef = useRef(null);
 
   const page = meta?.page ?? 1;
   const perPage = meta?.perPage ?? DEFAULT_PER_PAGE;
@@ -121,6 +176,20 @@ export default function DataTable({
 
   const pageIds = useMemo(() => rows.map((row) => getRowId(row)), [rows, getRowId]);
   const selected = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
+
+  // A selection never outlives the rows it was made on. Ticking twenty rows,
+  // then paging on or narrowing the filter used to leave all twenty selected —
+  // "20 selected" above seven rows, none of them ticked — and a bulk Delete
+  // then removed listings nobody could see. Whatever leaves the screen leaves
+  // the selection with it.
+  useEffect(() => {
+    if (!onSelectionChange || selectedIds.length === 0) return;
+    const onPage = new Set(pageIds.map(String));
+    const kept = selectedIds.filter((id) => onPage.has(String(id)));
+    if (kept.length !== selectedIds.length) onSelectionChange(kept);
+  }, [pageIds, selectedIds, onSelectionChange]);
+
+  const overflowing = useOverflowEnd(scrollerRef, `${isMobile}:${columns.length}:${rows.length}`);
 
   // Select-all covers the page that is on screen. There is no "select all N
   // results" link: a bulk action must never reach rows nobody has seen.
@@ -219,13 +288,24 @@ export default function DataTable({
       ? `Showing ${(page - 1) * perPage + 1}–${Math.min(page * perPage, total)} of ${total}`
       : `Page ${page} of ${totalPages} — no rows on this page`;
 
+  // The pager sits under the last row, so the next page used to arrive with
+  // the reader still looking at its bottom. The table's top comes back into
+  // view — only when it has scrolled out of it, so a short list does not jump.
+  const changePage = (next) => {
+    onPageChange?.(next);
+    const element = wrapperRef.current;
+    if (element && element.getBoundingClientRect().top < 0) {
+      element.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    }
+  };
+
   const footer =
     total > 0 ? (
       <div className={styles.footer}>
         <p className={styles.summary} aria-live="polite">
           {summary}
         </p>
-        <Pagination page={page} totalPages={totalPages} onChange={onPageChange} />
+        <Pagination page={page} totalPages={totalPages} onChange={changePage} />
         <label className={styles.perPage}>
           Rows per page
           <select
@@ -233,7 +313,7 @@ export default function DataTable({
             value={perPage}
             onChange={(event) => onPerPageChange?.(Number(event.target.value))}
           >
-            {PER_PAGE_OPTIONS.map((option) => (
+            {perPageOptionsFor(perPage).map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
@@ -262,16 +342,33 @@ export default function DataTable({
 
   /* ---------------- mobile: cards ---------------- */
 
+  const busy = refreshing && !loading && rows.length > 0;
+
   if (isMobile) {
     return (
-      <div className={styles.wrapper}>
+      <div className={styles.wrapper} ref={wrapperRef}>
         {bulkBar}
+        {selectable && !loading && !stateBlock && rows.length > 0 ? (
+          <label className={styles.selectAllMobile}>
+            <Checkbox
+              size="small"
+              disableRipple
+              checked={allSelected}
+              indeterminate={someSelected}
+              onChange={toggleAll}
+            />
+            Select all on this page
+          </label>
+        ) : null}
         {loading ? (
           <TableSkeleton rows={4} columns={2} />
         ) : stateBlock ? (
           <div className={styles.scroller}>{stateBlock}</div>
         ) : (
-          <div className={styles.cards}>
+          <div
+            className={[styles.cards, busy ? styles.refreshing : ''].filter(Boolean).join(' ')}
+            aria-busy={busy || undefined}
+          >
             {rows.map((row, index) => {
               const id = getRowId(row);
               const group = groupHeadOf(row, index);
@@ -285,6 +382,7 @@ export default function DataTable({
                   <MobileCard
                     row={row}
                     id={id}
+                    label={rowLabel?.(row)}
                     titleAs={groupBy ? 'h3' : 'h2'}
                     columns={columns}
                     selectable={selectable}
@@ -310,9 +408,22 @@ export default function DataTable({
   /* ---------------- desktop: table ---------------- */
 
   return (
-    <div className={styles.wrapper}>
+    <div
+      className={[
+        styles.wrapper,
+        density === 'compact' ? styles.compact : '',
+        overflowing ? styles.overflowing : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      ref={wrapperRef}
+    >
       {bulkBar}
-      <div className={styles.scroller}>
+      <div
+        className={[styles.scroller, busy ? styles.refreshing : ''].filter(Boolean).join(' ')}
+        ref={scrollerRef}
+        aria-busy={busy || undefined}
+      >
         <Table className={styles.table} stickyHeader={stickyHeader} size="small">
           {caption ? <caption className={styles.srOnly}>{caption}</caption> : null}
           <TableHead>
@@ -336,7 +447,11 @@ export default function DataTable({
                   scope="col"
                   aria-sort={ariaSort(column)}
                   style={{ width: column.width, textAlign: column.align || 'left' }}
-                  className={[styles.headCell, HIDE_CLASS[column.hideBelow]]
+                  className={[
+                    styles.headCell,
+                    HIDE_CLASS[column.hideBelow],
+                    column.wrapHeader ? styles.headWrap : '',
+                  ]
                     .filter(Boolean)
                     .join(' ')}
                 >
@@ -414,6 +529,7 @@ export default function DataTable({
                     <DataRow
                       row={row}
                       id={id}
+                      label={rowLabel?.(row)}
                       columns={columns}
                       selectable={selectable}
                       selected={isSelected}
@@ -453,6 +569,7 @@ export default function DataTable({
 const DataRow = memo(function DataRow({
   row,
   id,
+  label,
   columns,
   selectable,
   selected,
@@ -495,7 +612,7 @@ const DataRow = memo(function DataRow({
             checked={selected}
             onClick={(event) => event.stopPropagation()}
             onChange={() => onToggle(id)}
-            slotProps={{ input: { 'aria-label': `Select row ${id}` } }}
+            slotProps={{ input: { 'aria-label': label ? `Select ${label}` : `Select row ${id}` } }}
           />
         </td>
       ) : null}
@@ -536,6 +653,7 @@ const DataRow = memo(function DataRow({
 const MobileCard = memo(function MobileCard({
   row,
   id,
+  label,
   columns,
   selectable,
   selected,
@@ -573,7 +691,7 @@ const MobileCard = memo(function MobileCard({
           disableRipple
           checked={selected}
           onChange={() => onToggle(id)}
-          slotProps={{ input: { 'aria-label': `Select row ${id}` } }}
+          slotProps={{ input: { 'aria-label': label ? `Select ${label}` : `Select row ${id}` } }}
         />
       ) : null}
 

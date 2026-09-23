@@ -1,7 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import DataTable from '../DataTable';
+import DataTable, { PER_PAGE_OPTIONS, perPageOptionsFor } from '../DataTable';
 import renderWith from '../../../test-utils';
 
 const ROWS = [
@@ -173,6 +173,74 @@ describe('DataTable', () => {
 
       fireEvent.click(screen.getByRole('checkbox', { name: 'Select row 2' }));
       expect(onSelectionChange).toHaveBeenCalledWith([1, 2]);
+    });
+  });
+
+  describe('a selection', () => {
+    it('never outlives the rows it was made on', () => {
+      // Ticked on the page before, or before a filter narrowed the list: row 9
+      // is not on screen any more, so a bulk action must not reach it.
+      const onSelectionChange = jest.fn();
+      renderWith(
+        <DataTable
+          columns={COLUMNS}
+          rows={ROWS}
+          meta={META}
+          selectable
+          selectedIds={[1, 9]}
+          onSelectionChange={onSelectionChange}
+        />
+      );
+
+      expect(onSelectionChange).toHaveBeenCalledWith([1]);
+    });
+
+    it('is left alone while every ticked row is still on screen', () => {
+      const onSelectionChange = jest.fn();
+      renderWith(
+        <DataTable
+          columns={COLUMNS}
+          rows={ROWS}
+          meta={META}
+          selectable
+          selectedIds={[1, 3]}
+          onSelectionChange={onSelectionChange}
+        />
+      );
+
+      expect(onSelectionChange).not.toHaveBeenCalled();
+    });
+
+    it('names each checkbox after its row when the caller says how', () => {
+      renderWith(
+        <DataTable
+          columns={COLUMNS}
+          rows={ROWS}
+          meta={META}
+          selectable
+          selectedIds={[]}
+          onSelectionChange={jest.fn()}
+          rowLabel={(row) => row.name}
+        />
+      );
+
+      expect(screen.getByRole('checkbox', { name: 'Select Indiranagar' })).toBeInTheDocument();
+    });
+  });
+
+  describe('the page size', () => {
+    it('offers the four sizes, and the current one when it is none of them', () => {
+      expect(perPageOptionsFor(20)).toEqual(PER_PAGE_OPTIONS);
+      expect(perPageOptionsFor(37)).toEqual([10, 20, 37, 50, 100]);
+      expect(perPageOptionsFor(Number.NaN)).toEqual(PER_PAGE_OPTIONS);
+    });
+
+    it('shows the size the list is actually paged by', () => {
+      renderWith(
+        <DataTable columns={COLUMNS} rows={ROWS} meta={{ ...META, perPage: 37, total: 3 }} />
+      );
+
+      expect(screen.getByLabelText('Rows per page')).toHaveValue('37');
     });
   });
 

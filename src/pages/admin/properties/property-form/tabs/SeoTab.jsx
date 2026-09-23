@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import SeoPanel from '../../../../../components/seo/SeoPanel';
 import { toSeoPaths } from '../../../../../components/seo/seoValues';
 import propertyService from '../../../../../services/propertyService';
@@ -25,16 +27,31 @@ const checkPropertySlug = (slug, { excludeId, signal } = {}) =>
  * - **A hint opens the tab that owns the field.** `keyword-in-content` points
  *   at `content`, which is the description on Basics; `image-count` points at
  *   `images`, which is Media. `focusField` is the form's, so the jump is a real
- *   one.
+ *   one — and a save refused over `seo.title` comes back the other way, as
+ *   `seoFocusRequest`, for the panel to open its own sub-tab on.
+ * - **The record is this listing.** The form's values carry no `id`, and the
+ *   "no other record uses this" checks exclude the record by it — so a saved
+ *   listing was reported as the duplicate of its own focus keyword.
  */
 export default function SeoTab() {
-  const { values, errors, setField, setFields, setComputed, focusField, disabled, propertyId } =
-    usePropertyFormContext();
+  const {
+    values,
+    errors,
+    setField,
+    setFields,
+    setComputed,
+    focusField,
+    seoFocusRequest,
+    disabled,
+    propertyId,
+  } = usePropertyFormContext();
+
+  const entity = useMemo(() => ({ ...values, id: propertyId ?? null }), [values, propertyId]);
 
   return (
     <SeoPanel
       entityType="property"
-      entity={values}
+      entity={entity}
       seo={values.seo}
       variant="full"
       errors={errors}
@@ -43,6 +60,7 @@ export default function SeoTab() {
       checkSlug={checkPropertySlug}
       slugBase="/properties/"
       onFocusField={focusField}
+      focusRequest={seoFocusRequest}
       onSlugChange={(slug) => setField('slug', slug)}
       onChange={(patch, meta) =>
         // The analysis writing its own score back is not an edit, so it must

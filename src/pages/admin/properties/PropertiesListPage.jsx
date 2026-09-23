@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 
@@ -91,6 +91,7 @@ export default function PropertiesListPage() {
     items,
     meta,
     loading,
+    refreshing,
     error,
     params,
     setPage,
@@ -115,8 +116,17 @@ export default function PropertiesListPage() {
   const [duplicatingId, setDuplicatingId] = useState(null);
   const [exporting, setExporting] = useState(false);
 
+  // Read by the effect below without making it re-run on every busy change.
+  const busyRef = useRef(new Set());
+  busyRef.current = new Set(busyIds);
+
+  // Fresh rows are the truth, except for a row whose own write is still in
+  // flight: clearing every override on any answer made a second chip, clicked
+  // while the first one's refetch was travelling, flicker back and forth.
   useEffect(() => {
-    setOverrides({});
+    setOverrides((current) =>
+      Object.fromEntries(Object.entries(current).filter(([id]) => busyRef.current.has(id)))
+    );
   }, [items]);
 
   const rows = useMemo(
@@ -138,17 +148,25 @@ export default function PropertiesListPage() {
       try {
         await propertyService.patch(row.id, { [field]: value });
         toast.success(TOASTS.flagged(`“${row.title}”`, field, value));
+        // The list is sorted and filtered by the server: a row that is no
+        // longer "featured" under a Featured filter, or that has just become
+        // the most recently updated, moves — so the page is asked again.
+        refetch();
       } catch (thrown) {
+        // Only the field that was refused goes back. Taking the whole row's
+        // override out used to undo an earlier chip on the same row that the
+        // API had accepted.
         setOverrides((current) => {
-          const { [id]: _reverted, ...rest } = current;
-          return rest;
+          const { [field]: _reverted, ...kept } = current[id] ?? {};
+          const { [id]: _row, ...others } = current;
+          return Object.keys(kept).length > 0 ? { ...others, [id]: kept } : others;
         });
         toast.error(firstFieldMessage(thrown, 'The change could not be saved.'));
       } finally {
         setBusyIds((current) => current.filter((entry) => entry !== id));
       }
     },
-    [toast]
+    [refetch, toast]
   );
 
   const duplicate = useCallback(
@@ -181,6 +199,9 @@ export default function PropertiesListPage() {
       toast.error(firstFieldMessage(thrown, 'The property could not be deleted.'));
       // A refusal will not become an acceptance on a second press.
       if (thrown?.status >= 400 && thrown?.status < 500) setDeleting(null);
+      // A 404 means somebody else deleted it first: the row goes, rather than
+      // staying on screen to fail again.
+      if (thrown?.status === 404) refetch();
     } finally {
       setDeletingBusy(false);
     }
@@ -241,6 +262,10 @@ export default function PropertiesListPage() {
       }),
     [canEdit, busyIds, setFlag]
   );
+
+  // Stable, so the memoised rows are not all re-rendered for a new arrow.
+  const rowActionsLabel = useCallback((row) => `Actions for ${row.title}`, []);
+  const rowLabel = useCallback((row) => row.title, []);
 
   /**
    * The row's actions.
@@ -430,7 +455,10 @@ export default function PropertiesListPage() {
           bulkBusy={bulkBusy}
           rowActions={rowActions}
           rowActionsMenu={canEdit}
-          rowActionsLabel={(row) => `Actions for ${row.title}`}
+          rowActionsLabel={rowActionsLabel}
+          rowLabel={rowLabel}
+          refreshing={refreshing}
+          density="compact"
           mobileCard={mobileCard}
           emptyState={emptyState}
         />

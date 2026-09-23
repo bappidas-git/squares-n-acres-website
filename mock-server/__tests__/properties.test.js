@@ -134,8 +134,11 @@ describe('GET /properties — filters', () => {
 describe('GET /properties — sorting and facets', () => {
   it('orders by price, area, views and relevance', async () => {
     await withServer(async ({ request }) => {
+      // Sales first, then the rent (4, ₹58,000/month) and the lease (5): a
+      // monthly figure is never ranked against a sale price, which used to put
+      // both rentals ahead of the ₹62.4 L flat on "low to high".
       const cheapest = await request('GET', '/properties?sort=price-asc&perPage=all');
-      assert.deepEqual(ids(cheapest), [4, 5, 6, 2, 1, 3]);
+      assert.deepEqual(ids(cheapest), [6, 2, 1, 3, 4, 5]);
 
       const dearest = await request('GET', '/properties?sort=price-desc&perPage=all');
       assert.deepEqual(ids(dearest), [3, 1, 2, 6, 5, 4]);
@@ -146,6 +149,24 @@ describe('GET /properties — sorting and facets', () => {
       // `relevance` is featured first, then priority, then the latest edit.
       const relevant = await request('GET', '/properties?perPage=all');
       assert.deepEqual(ids(relevant).slice(0, 3).sort(), [1, 2, 3]);
+    });
+  });
+
+  it('groups sales before rentals on the admin price column too', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const ascending = await request('GET', '/admin/properties?sort=price&order=asc&perPage=all', {
+        token,
+      });
+      assert.deepEqual(ids(ascending), [6, 2, 1, 3, 4, 5]);
+
+      const descending = await request(
+        'GET',
+        '/admin/properties?sort=price&order=desc&perPage=all',
+        { token }
+      );
+      assert.deepEqual(ids(descending), [3, 1, 2, 6, 5, 4]);
     });
   });
 

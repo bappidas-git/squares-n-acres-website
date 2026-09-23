@@ -26,6 +26,14 @@
   position: sticky;
   /* Clear of the admin topbar, whatever its height. */
   top: var(--space-6);
+  /* The canvas below the 64 px topbar, less the gap above and below: a rail
+     taller than the window scrolls inside itself rather than keeping its
+     lower half — and the Save button — out of reach. */
+  max-height: calc(100dvh - 64px - var(--space-6) * 2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  border-radius: var(--radius-lg);
 }
 
 .main {

@@ -27,7 +27,13 @@ const complete = () => ({
   configuration: { ...createInitialState().configuration, bedrooms: 3 },
   amenityIds: [1, 2, 3, 4, 5, 6, 7, 8],
   highlights: ['One', 'Two', 'Three'],
-  location: { ...createInitialState().location, localityId: 1, latitude: 12.97, longitude: 77.75 },
+  location: {
+    ...createInitialState().location,
+    localityId: 1,
+    address: '14 Lake Road, Whitefield',
+    latitude: 12.97,
+    longitude: 77.75,
+  },
   floorPlans: [],
   unitConfigurations: [{ id: 1, name: '3 BHK' }],
   brochureUrl: 'https://example.com/brochure.pdf',
@@ -107,4 +113,32 @@ it('bands the percentage for the meter', () => {
   expect(completenessTone(74)).toBe('warning');
   expect(completenessTone(75)).toBe('success');
   expect(completenessTone(100)).toBe('success');
+});
+
+it('asks for the address the checklist names', () => {
+  const listing = complete();
+  listing.location = { ...listing.location, address: '' };
+
+  // "Locality, address and map coordinates" was ticked without an address.
+  const item = computeCompleteness(listing).items.find((entry) => entry.key === 'location');
+  expect(item.done).toBe(false);
+});
+
+it('does not ask a plot or an office for bedrooms', () => {
+  const office = {
+    ...complete(),
+    segment: 'commercial',
+    configuration: { ...createInitialState().configuration, bedrooms: null, bathrooms: null },
+  };
+  const plot = {
+    ...complete(),
+    segment: 'land',
+    area: { ...createInitialState().area, plotArea: 2400 },
+    configuration: { ...createInitialState().configuration, bedrooms: null, bathrooms: null },
+  };
+
+  const areaOf = (values) =>
+    computeCompleteness(values).items.find((entry) => entry.key === 'area').done;
+  expect(areaOf(office)).toBe(true);
+  expect(areaOf(plot)).toBe(true);
 });

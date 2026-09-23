@@ -12,6 +12,8 @@ import {
 } from '../../../../../components/ui';
 import { DOCUMENT_TYPES } from '../../../../../config/enums';
 import { makeDocument } from '../initialState';
+import { propertyFieldId } from '../fieldFocus';
+import { LIMITS } from '../validators/property';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
@@ -106,50 +108,34 @@ export default function DocumentsTab() {
                   const path = `documents.${index}`;
                   return (
                     <div className={styles.documentRow}>
-                      <TextField
-                        label="Title"
-                        required
-                        value={row.title ?? ''}
-                        error={errors[`${path}.title`]}
-                        disabled={disabled}
-                        maxLength={150}
-                        placeholder="e.g. Price list — March 2027"
-                        onChange={(event) =>
-                          updateItem('documents', row.id, { title: event.target.value })
-                        }
-                      />
-                      <ImageField
-                        label="File"
-                        accept="document"
-                        folder="documents"
-                        preview={false}
-                        required
-                        value={row.url ?? ''}
-                        error={errors[`${path}.url`]}
-                        disabled={disabled}
-                        placeholder="https://… (PDF, DOC or DOCX)"
-                        onChange={(url) => updateItem('documents', row.id, { url })}
-                      />
-                      <SelectField
-                        label="Type"
-                        options={DOCUMENT_TYPES.options}
-                        value={row.type || 'other'}
-                        error={errors[`${path}.type`]}
-                        disabled={disabled}
-                        onChange={(event) =>
-                          updateItem('documents', row.id, { type: event.target.value })
-                        }
-                      />
-                      <SwitchField
-                        label="Ask for details first"
-                        checked={row.leadGated !== false}
-                        disabled={disabled}
-                        hint="Off means anyone can download it."
-                        onChange={(checked) =>
-                          updateItem('documents', row.id, { leadGated: checked })
-                        }
-                      />
-                      <span className={styles.rowAction}>
+                      <div className={styles.docTitle}>
+                        <TextField
+                          id={propertyFieldId(`${path}.title`)}
+                          label="Title"
+                          required
+                          value={row.title ?? ''}
+                          error={errors[`${path}.title`]}
+                          disabled={disabled}
+                          maxLength={LIMITS.documentTitle}
+                          placeholder="e.g. Price list — March 2027"
+                          onChange={(event) =>
+                            updateItem('documents', row.id, { title: event.target.value })
+                          }
+                        />
+                      </div>
+                      <div className={styles.docType}>
+                        <SelectField
+                          label="Type"
+                          options={DOCUMENT_TYPES.options}
+                          value={row.type || 'other'}
+                          error={errors[`${path}.type`]}
+                          disabled={disabled}
+                          onChange={(event) =>
+                            updateItem('documents', row.id, { type: event.target.value })
+                          }
+                        />
+                      </div>
+                      <span className={[styles.rowAction, styles.docRemove].join(' ')}>
                         <IconButton
                           label={`Remove ${row.title || `document ${index + 1}`}`}
                           size="sm"
@@ -159,6 +145,32 @@ export default function DocumentsTab() {
                           <Icon icon="mdi:close" width="18" height="18" />
                         </IconButton>
                       </span>
+                      <div className={styles.docFile}>
+                        <ImageField
+                          id={propertyFieldId(`${path}.url`)}
+                          label="File"
+                          accept="document"
+                          folder="documents"
+                          preview={false}
+                          required
+                          value={row.url ?? ''}
+                          error={errors[`${path}.url`]}
+                          disabled={disabled}
+                          placeholder="https://… (PDF, DOC or DOCX)"
+                          onChange={(url) => updateItem('documents', row.id, { url })}
+                        />
+                      </div>
+                      <div className={styles.docGate}>
+                        <SwitchField
+                          label="Ask for details first"
+                          checked={row.leadGated !== false}
+                          disabled={disabled}
+                          hint="Off means anyone can download it."
+                          onChange={(checked) =>
+                            updateItem('documents', row.id, { leadGated: checked })
+                          }
+                        />
+                      </div>
                     </div>
                   );
                 }}

@@ -7,6 +7,7 @@ import { Button, IconButton, TextField } from '../../../../../components/ui';
 import { HIGHLIGHTS_MAX, HIGHLIGHT_MAX_LENGTH } from '../validators';
 import { makeConstructionSpec, makeSpecification } from '../initialState';
 import SpecificationsRepeater from '../components/SpecificationsRepeater';
+import { propertyFieldId } from '../fieldFocus';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
@@ -201,6 +202,7 @@ export default function HighlightsSpecificationsTab() {
               renderItem={(row) => (
                 <div className={styles.highlightRow}>
                   <TextField
+                    id={propertyFieldId(`highlights.${row.index}`)}
                     label={`Highlight ${row.index + 1}`}
                     value={row.text ?? ''}
                     error={errors[`highlights.${row.index}`]}
@@ -226,6 +228,19 @@ export default function HighlightsSpecificationsTab() {
         </FormColumn>
 
         <FormColumn>
+          {/* About the list rather than a row — a record that arrived with more
+              than the contract allows — and counted on the badge, so it has to
+              be printed somewhere. */}
+          {errors.highlights ? (
+            <p
+              className={styles.blockError}
+              id={propertyFieldId('highlights')}
+              tabIndex={-1}
+              role="alert"
+            >
+              {errors.highlights}
+            </p>
+          ) : null}
           <p className={styles.counter}>
             <span className={full ? styles.counterWarn : undefined}>
               {highlights.length} of {HIGHLIGHTS_MAX} used

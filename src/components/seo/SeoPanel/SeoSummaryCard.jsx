@@ -33,8 +33,9 @@ export function firstFailure(analysis) {
  * @param {object} props
  * @param {{score?: number|null, scoreBand?: string, testsPassed?: number,
  *   testsTotal?: number, analysis?: object}} [props.seo] the §9.6 branch
- * @param {() => void} [props.onOpen] "Fix SEO" — the host opens its SEO tab and
- *   focuses the first failing field
+ * @param {(field: string|null) => void} [props.onOpen] "Fix SEO" — the host opens
+ *   its SEO tab and focuses the first failing field ("Open the SEO tab" while
+ *   nothing is failing)
  * @param {boolean} [props.compact] drops the heading (a card that has its own)
  */
 export default function SeoSummaryCard({ seo, onOpen, compact = false }) {
@@ -66,14 +67,19 @@ export default function SeoSummaryCard({ seo, onOpen, compact = false }) {
         <p className={styles.note}>Open the SEO tab and this page is analysed as you type.</p>
       )}
 
+      {/* "Fix SEO" only when there is something failing to fix: over "Nothing
+          is failing", or a page not analysed yet, it promised a repair and
+          opened a tab. */}
       {onOpen ? (
         <Button
           variant="outline"
           size="sm"
-          icon={<Icon icon="mdi:magnify-scan" width="16" height="16" />}
+          icon={
+            <Icon icon={failure ? 'mdi:magnify-scan' : 'mdi:arrow-right'} width="16" height="16" />
+          }
           onClick={() => onOpen(failure?.field ?? null)}
         >
-          Fix SEO
+          {failure ? 'Fix SEO' : 'Open the SEO tab'}
         </Button>
       ) : null}
     </div>

@@ -144,8 +144,15 @@
 .url {
   margin: 0;
   font-size: var(--font-size-sm);
-  word-break: break-all;
+  /* Breaks between the words of a slug where it can, mid-word only when a
+     single word is wider than the rail — `break-all` split "heights" in two. */
+  overflow-wrap: anywhere;
   color: var(--color-text);
+}
+
+.savedNotes {
+  display: grid;
+  gap: var(--space-1);
 }
 
 .urlBase {

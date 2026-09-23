@@ -48,7 +48,9 @@ const CATALOGUE = [
 function Harness({ patch = {}, disabled = false, isNew = false, propertyId = 1 }) {
   const [state, dispatch] = useReducer(reducer, { propertyId }, (init) => {
     const base = createFormState({ propertyId: init.propertyId });
-    const values = { ...base.values, ...patch };
+    // Published unless a test says otherwise: the public endpoint only answers
+    // for a listing that is live.
+    const values = { ...base.values, isActive: true, ...patch };
     return { ...base, values, initial: values };
   });
 
@@ -233,10 +235,76 @@ describe('suggesting', () => {
 
     expect(
       await screen.findByText(
-        'Nothing to suggest — the six this page would show are already chosen.'
+        'Nothing to suggest — everything this page would show is already chosen.'
       )
     ).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('asks the admin list for a listing that is not published', async () => {
+    // `/properties/:id/similar` answers 404 for a draft.
+    propertyService.similar.mockRejectedValue(
+      Object.assign(new Error('Not found'), { status: 404 })
+    );
+    propertyService.adminList.mockImplementation(({ localityId, propertyTypeId }) =>
+      Promise.resolve({
+        data: localityId
+          ? [
+              listing(3, 'Cauvery Green Villa'),
+              listing(2, 'Nandi Ridge Villa', { isFeatured: true }),
+            ]
+          : propertyTypeId
+            ? [
+                listing(2, 'Nandi Ridge Villa', { isFeatured: true }),
+                listing(4, 'Aurelia Park Villa'),
+              ]
+            : [],
+      })
+    );
+    renderWith(
+      <Harness
+        patch={{
+          isActive: false,
+          listingType: 'sale',
+          propertyTypeId: 5,
+          location: { ...createFormState({}).values.location, localityId: 7 },
+        }}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /Suggest similar/ }));
+    const dialog = await screen.findByRole('dialog');
+
+    expect(propertyService.similar).not.toHaveBeenCalled();
+    expect(propertyService.adminList).toHaveBeenCalledWith(
+      expect.objectContaining({ isActive: true, listingType: 'sale', localityId: 7 })
+    );
+    expect(propertyService.adminList).toHaveBeenCalledWith(
+      expect.objectContaining({ isActive: true, listingType: 'sale', propertyTypeId: 5 })
+    );
+    // Once each, the featured one first — the public endpoint's own order.
+    const offered = within(dialog).getAllByRole('checkbox');
+    expect(offered).toHaveLength(3);
+    expect(offered[0]).toHaveAccessibleName(/Nandi Ridge Villa/);
+    expect(within(dialog).getByText(/once this listing is published/)).toBeInTheDocument();
+  });
+
+  it('says when no published listing shares the locality or the type', async () => {
+    propertyService.adminList.mockResolvedValue({ data: [] });
+    renderWith(
+      <Harness
+        patch={{
+          isActive: false,
+          propertyTypeId: 5,
+          location: { ...createFormState({}).values.location, localityId: 7 },
+        }}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /Suggest similar/ }));
+    expect(
+      await screen.findByText(/no published listing shares this one’s locality or type/)
+    ).toBeInTheDocument();
   });
 
   it('is not offered before the listing has been saved', () => {

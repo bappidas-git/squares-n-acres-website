@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 
 import { BRAND } from '../../config/site';
 import { Logo } from '../ui';
@@ -33,15 +33,59 @@ import styles from './AdminSidebar.module.css';
 /** Persisted open/closed state of the collapsible groups (§4.2). */
 export const NAV_OPEN_STORAGE_KEY = 'sna_admin_nav_open';
 
+/** Whether `pathname` is `path` or a page beneath it — segment by segment. */
+const within = (pathname, path) => pathname === path || pathname.startsWith(`${path}/`);
+
+/**
+ * The child of a group the current page belongs to: the longest path that
+ * contains it. `/admin/properties/edit/20` belongs to "All properties" (it is
+ * one of them) and `/admin/properties/add` to "Add property", although both
+ * start with `/admin/properties`.
+ *
+ * @param {Array<{path: string}>} children
+ * @param {string} pathname
+ * @returns {string|null} the winning child's path
+ */
+export function activeChildPath(children = [], pathname = '') {
+  const path = String(pathname).replace(/\/+$/, '') || '/';
+  return (
+    children
+      .filter((child) => within(path, child.path))
+      .sort((left, right) => right.path.length - left.path.length)[0]?.path ?? null
+  );
+}
+
 export default function AdminSidebar({ collapsed = false, mobile = false, onNavigate, onExpand }) {
   const { role } = useAdminAuth();
   const { newLeadCount } = useLeadNotifications();
+  const { pathname } = useLocation();
 
   const navItems = useMemo(() => getNavItemsForRole(role), [role]);
   const [openGroups, setOpenGroups] = useState(() => getItem(NAV_OPEN_STORAGE_KEY, {}) || {});
 
   // The rail shows icons only; inside the drawer everything is always labelled.
   const compact = collapsed && !mobile;
+
+  // The group the page belongs to opens on the way in. Arriving on
+  // /admin/properties from a bookmark used to leave "Properties" folded, with
+  // nothing in the sidebar saying where the reader was; it can still be
+  // folded by hand afterwards.
+  const currentGroup = useMemo(
+    () =>
+      navItems.find((item) => item.children && activeChildPath(item.children, pathname))?.label ??
+      null,
+    [navItems, pathname]
+  );
+
+  useEffect(() => {
+    if (!currentGroup) return;
+    setOpenGroups((previous) => {
+      if (previous[currentGroup]) return previous;
+      const next = { ...previous, [currentGroup]: true };
+      setItem(NAV_OPEN_STORAGE_KEY, next);
+      return next;
+    });
+  }, [currentGroup]);
 
   const toggleGroup = useCallback(
     (label) => {
@@ -108,12 +152,15 @@ export default function AdminSidebar({ collapsed = false, mobile = false, onNavi
 
           const groupId = `admin-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`;
           const open = Boolean(openGroups[item.label]) && !compact;
+          const activePath = activeChildPath(item.children, pathname);
 
           return (
             <div key={item.label} className={styles.group}>
               <button
                 type="button"
-                className={styles.navItem}
+                className={[styles.navItem, activePath ? styles.navItemParentActive : '']
+                  .filter(Boolean)
+                  .join(' ')}
                 aria-expanded={open}
                 aria-controls={groupId}
                 onClick={() => toggleGroup(item.label)}
@@ -137,17 +184,24 @@ export default function AdminSidebar({ collapsed = false, mobile = false, onNavi
                 ) : null}
               </button>
               <div id={groupId} className={styles.subItems} hidden={!open}>
-                {item.children.map((child) => (
-                  <NavLink
-                    key={child.path}
-                    to={child.path}
-                    className={subItemClass}
-                    onClick={onNavigate}
-                    end
-                  >
-                    {child.label}
-                  </NavLink>
-                ))}
+                {/* The current child is worked out once for the group rather
+                    than by each `NavLink`: with `end` the edit screen of a
+                    property matched nothing, and without it every screen
+                    under /admin/properties matched both children. */}
+                {item.children.map((child) => {
+                  const active = child.path === activePath;
+                  return (
+                    <Link
+                      key={child.path}
+                      to={child.path}
+                      className={subItemClass({ isActive: active })}
+                      aria-current={active ? 'page' : undefined}
+                      onClick={onNavigate}
+                    >
+                      {child.label}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           );

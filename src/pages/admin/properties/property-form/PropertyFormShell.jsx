@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import AdminTabs, { AdminTabPanel } from '../../../../components/admin/AdminTabs';
-import { Button } from '../../../../components/ui';
+import { Button, ConfirmDialog } from '../../../../components/ui';
 import useBreakpoint from '../../../../hooks/useBreakpoint';
 import DraftBanner from './DraftBanner';
+import ErrorSummary from './ErrorSummary';
 import StatusRail from './StatusRail';
 import TABS from './tabs';
 import { PropertyFormProvider } from './PropertyFormContext';
@@ -28,6 +30,7 @@ import { FORMS } from '../../../../config/adminCopy';
 export default function PropertyFormShell({ form }) {
   const { width } = useBreakpoint();
   const beside = width === 'lg';
+  const [confirmInactive, setConfirmInactive] = useState(false);
 
   const {
     values,
@@ -52,6 +55,7 @@ export default function PropertyFormShell({ form }) {
     busy,
     save,
     focusField,
+    seoFocusRequest,
     draftOffer,
     restoreDraft,
     discardDraft,
@@ -93,6 +97,8 @@ export default function PropertyFormShell({ form }) {
     // The SEO panel's fix hints go further: they name a field, and the form
     // opens the tab that owns it and puts the cursor in it.
     focusField,
+    // …and the way back: a field of the panel's own, for it to open.
+    seoFocusRequest,
     disabled: readOnly,
     isNew,
     propertyId,
@@ -106,13 +112,27 @@ export default function PropertyFormShell({ form }) {
         {beside ? null : rail}
 
         <div className={styles.main}>
-          <DraftBanner draft={draftOffer} onRestore={restoreDraft} onDiscard={discardDraft} />
+          <DraftBanner
+            draft={draftOffer}
+            isNew={isNew}
+            onRestore={restoreDraft}
+            onDiscard={discardDraft}
+          />
 
           <AdminTabs
             tabs={strip}
             value={activeTab}
             onChange={changeTab}
             label="Property sections"
+            wrap
+          />
+
+          <ErrorSummary
+            errors={errors}
+            activeTab={activeTab}
+            errorsByTab={errorsByTab}
+            onFocusField={focusField}
+            onOpenTab={changeTab}
           />
 
           <form
@@ -142,7 +162,12 @@ export default function PropertyFormShell({ form }) {
           <Button
             variant="outline"
             disabled={saving || busy}
-            onClick={() => save('inactive')}
+            onClick={() => {
+              // A thumb's width from Save, and on a live listing it unpublishes
+              // the page — so it asks first.
+              if (state.initial?.isActive === true) setConfirmInactive(true);
+              else save('inactive');
+            }}
             icon={<Icon icon="mdi:eye-off-outline" width="18" height="18" />}
           >
             Save as inactive
@@ -156,6 +181,20 @@ export default function PropertyFormShell({ form }) {
           </Button>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmInactive}
+        danger
+        loading={saving || busy}
+        title="Take this listing off the site?"
+        message="It is published now. Saving it as inactive unpublishes it: the page answers 404 and it leaves every search and listing row until it is published again."
+        confirmLabel="Save as inactive"
+        onClose={() => setConfirmInactive(false)}
+        onConfirm={async () => {
+          await save('inactive');
+          setConfirmInactive(false);
+        }}
+      />
     </PropertyFormProvider>
   );
 }

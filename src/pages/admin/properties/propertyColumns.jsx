@@ -1,14 +1,17 @@
+import { Icon } from '@iconify/react';
 import { Link } from 'react-router-dom';
 
 import LazyImage from '../../../components/ui/LazyImage';
 import PATHS from '../../../routes/paths';
 import SeoScoreChip from '../../../components/seo/SeoScoreChip';
 import StatusChip from '../../../components/admin/StatusChip';
+import Tooltip from '../../../components/ui/Tooltip';
 import {
   AREA_UNITS,
   AVAILABILITY,
   CONSTRUCTION_STATUS,
   LISTING_TYPES,
+  SEGMENTS,
 } from '../../../config/enums';
 import {
   formatArea,
@@ -83,15 +86,34 @@ function configurationLabelOf(row) {
   );
 }
 
-/** The three flags of §6.1, in the order the chips appear. */
+/**
+ * The three flags of §6.1, in the order they appear.
+ *
+ * `onIcon`/`offIcon` are the table's compact toggles, where the glyph has to
+ * say the state on its own; the phone card keeps the labelled chips.
+ */
 const FLAGS = [
-  { field: 'isActive', on: 'Active', off: 'Inactive', tone: 'success', icon: 'mdi:eye-outline' },
+  {
+    field: 'isActive',
+    on: 'Active',
+    off: 'Inactive',
+    tone: 'success',
+    icon: 'mdi:eye-outline',
+    onIcon: 'mdi:eye',
+    offIcon: 'mdi:eye-off-outline',
+    turnOn: 'activate',
+    turnOff: 'deactivate',
+  },
   {
     field: 'isFeatured',
     on: 'Featured',
     off: 'Not featured',
     tone: 'warning',
     icon: 'mdi:star-outline',
+    onIcon: 'mdi:star',
+    offIcon: 'mdi:star-outline',
+    turnOn: 'feature',
+    turnOff: 'unfeature',
   },
   {
     field: 'isVerified',
@@ -99,8 +121,15 @@ const FLAGS = [
     off: 'Unverified',
     tone: 'info',
     icon: 'mdi:check-decagram-outline',
+    onIcon: 'mdi:check-decagram',
+    offIcon: 'mdi:decagram-outline',
+    turnOn: 'verify',
+    turnOff: 'unverify',
   },
 ];
+
+/** The columns that print a flag as text, where the table prints it as a glyph. */
+export const FLAG_FIELDS = FLAGS.map((flag) => flag.field);
 
 /**
  * One flag as a chip, and — for a role that may edit — as the control that
@@ -135,12 +164,86 @@ function FlagChip({ row, flag, canEdit, busy, onToggle }) {
   );
 }
 
-/** The Active / Featured / Verified group, shared by the table and the cards. */
+/** The Active / Featured / Verified chips of a phone card, where there is room for words. */
 function FlagChips({ row, canEdit, busy, onToggle }) {
   return (
     <span className={styles.flags}>
       {FLAGS.map((flag) => (
         <FlagChip
+          key={flag.field}
+          row={row}
+          flag={flag}
+          canEdit={canEdit}
+          busy={busy}
+          onToggle={onToggle}
+        />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * One flag as a 32 px toggle, for the table.
+ *
+ * Three labelled chips needed 266 px and wrapped in eleven rows of twenty, so
+ * rows were 67, 77 or 89 px tall depending on which flags happened to be off,
+ * and together with the rest of the columns they pushed the row actions off
+ * the screen. A filled glyph in the flag's colour is "on", a grey outline
+ * "off"; the tooltip and the accessible name spell out both the state and what
+ * a click does. Read-only, it is the same glyph without the button.
+ */
+function FlagToggle({ row, flag, canEdit, busy, onToggle }) {
+  const on = row?.[flag.field] === true;
+  const state = on ? flag.on : flag.off;
+  const interactive = canEdit && typeof onToggle === 'function';
+  const hint = interactive ? `${state} — click to ${on ? flag.turnOff : flag.turnOn}` : state;
+  const classes = [
+    styles.flagToggle,
+    on ? styles[`flagOn_${flag.tone}`] : styles.flagOff,
+    busy ? styles.flagBusy : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const glyph = (
+    <Icon icon={busy ? 'mdi:loading' : on ? flag.onIcon : flag.offIcon} width="18" height="18" />
+  );
+
+  if (!interactive) {
+    return (
+      <Tooltip title={hint}>
+        <span className={classes} role="img" aria-label={`${state} — ${row.title}`}>
+          {glyph}
+        </span>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <Tooltip title={busy ? `${state} — saving…` : hint}>
+      <button
+        type="button"
+        className={classes}
+        aria-pressed={on}
+        aria-label={`${flag.on} — ${row.title}`}
+        aria-busy={busy || undefined}
+        disabled={busy || undefined}
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggle(row, flag.field, !on);
+        }}
+      >
+        {glyph}
+      </button>
+    </Tooltip>
+  );
+}
+
+/** The table's flag cell: three toggles on one line. */
+function FlagToggles({ row, canEdit, busy, onToggle }) {
+  return (
+    <span className={styles.flagToggles}>
+      {FLAGS.map((flag) => (
+        <FlagToggle
           key={flag.field}
           row={row}
           flag={flag}
@@ -188,7 +291,9 @@ export function buildPropertyColumns({ canEdit = false, busyIds = [], onToggleFl
     {
       key: 'cover',
       label: 'Cover',
-      width: '72px',
+      // The first thing to go on a laptop: the title says which listing a row
+      // is, and the 72 px buy the numbers their room.
+      hideBelow: 'xl',
       mobile: false,
       render: (row) => <Cover row={row} />,
     },
@@ -197,7 +302,6 @@ export function buildPropertyColumns({ canEdit = false, busyIds = [], onToggleFl
       label: 'Property',
       sortable: true,
       primary: true,
-      width: '26%',
       render: (row) => (
         <span className={styles.titleCell}>
           <Link className={styles.title} to={PATHS.adminPropertyEdit(row.id)}>
@@ -212,7 +316,6 @@ export function buildPropertyColumns({ canEdit = false, busyIds = [], onToggleFl
     {
       key: 'listingType',
       label: 'Listing',
-      width: '96px',
       render: (row) => (
         <StatusChip tone="info" label={LISTING_TYPES.labelOf(row.listingType) || '—'} />
       ),
@@ -238,28 +341,31 @@ export function buildPropertyColumns({ canEdit = false, busyIds = [], onToggleFl
       label: 'Price',
       align: 'right',
       sortable: true,
-      render: (row) => <span className={styles.price}>{priceLabelOf(row)}</span>,
-    },
-    {
-      key: 'configuration',
-      label: 'Configuration',
-      hideBelow: 'lg',
-      render: (row) => <span className={styles.config}>{configurationLabelOf(row)}</span>,
+      // What the money buys sits under it — "₹3.6 Cr" over "3 BHK · 2,250 sq
+      // ft" — rather than in a column of its own that pushed the flags, the
+      // score and the counts off a laptop screen.
+      render: (row) => {
+        const configuration = configurationLabelOf(row);
+        return (
+          <span className={styles.priceCell}>
+            <span className={styles.price}>{priceLabelOf(row)}</span>
+            {configuration === '—' ? null : <span className={styles.config}>{configuration}</span>}
+          </span>
+        );
+      },
     },
     {
       key: 'flags',
       label: 'Flags',
-      width: '280px',
       mobile: false,
       render: (row) => (
-        <FlagChips row={row} canEdit={canEdit} busy={isBusy(row)} onToggle={onToggleFlag} />
+        <FlagToggles row={row} canEdit={canEdit} busy={isBusy(row)} onToggle={onToggleFlag} />
       ),
     },
     {
       key: 'seoScore',
       label: 'SEO',
       sortable: true,
-      width: '132px',
       mobile: false,
       render: (row) => <SeoScoreChip seo={row.seo} />,
     },
@@ -268,7 +374,9 @@ export function buildPropertyColumns({ canEdit = false, busyIds = [], onToggleFl
       label: 'Views / Enquiries',
       align: 'right',
       sortable: true,
-      width: '132px',
+      // Two words over a cell that holds "2,076 / 5": the header takes two
+      // lines rather than the column taking 155 px.
+      wrapHeader: true,
       mobile: false,
       render: (row) => (
         <span className={styles.counts}>
@@ -285,8 +393,7 @@ export function buildPropertyColumns({ canEdit = false, busyIds = [], onToggleFl
       label: 'Priority',
       align: 'right',
       sortable: true,
-      width: '96px',
-      hideBelow: 'lg',
+      hideBelow: 'xl',
       mobile: false,
       render: (row) => formatNumber(row.priorityOrder ?? 0),
     },
@@ -296,7 +403,9 @@ export function buildPropertyColumns({ canEdit = false, busyIds = [], onToggleFl
       sortable: true,
       hideBelow: 'lg',
       mobile: false,
-      render: (row) => formatDate(row.updatedAt),
+      // One line: "15 Sep 2026" broke after the month in a column the width of
+      // its header.
+      render: (row) => <span className={styles.nowrap}>{formatDate(row.updatedAt)}</span>,
     },
   ];
 }
@@ -347,7 +456,9 @@ export const PROPERTY_CSV_COLUMNS = [
   { label: 'Title', value: (row) => row.title },
   { label: 'Slug', value: (row) => row.slug },
   { label: 'Listing type', value: (row) => LISTING_TYPES.labelOf(row.listingType) },
-  { label: 'Segment', value: (row) => row.segment },
+  // The label, like every other enum column: the file said `land` where the
+  // filter it was exported from says "Plots & Land".
+  { label: 'Segment', value: (row) => SEGMENTS.labelOf(row.segment) || row.segment || '' },
   { label: 'Property type', value: (row) => row.propertyType?.name ?? '' },
   { label: 'Status', value: (row) => CONSTRUCTION_STATUS.labelOf(row.constructionStatus) },
   { label: 'Availability', value: (row) => AVAILABILITY.labelOf(row.availability) },
@@ -361,6 +472,9 @@ export const PROPERTY_CSV_COLUMNS = [
   { label: 'Bedrooms', value: (row) => row.configuration?.bedrooms ?? '' },
   { label: 'Super built-up area', value: (row) => row.area?.superBuiltUpArea ?? '' },
   { label: 'Carpet area', value: (row) => row.area?.carpetArea ?? '' },
+  // A plot is measured by nothing else, so without this column every plot in
+  // the file had an area unit and no area.
+  { label: 'Plot area', value: (row) => row.area?.plotArea ?? '' },
   { label: 'Area unit', value: areaUnitLabelOf },
   { label: 'Developer', value: developerNameOf },
   { label: 'Active', value: (row) => row.isActive === true },

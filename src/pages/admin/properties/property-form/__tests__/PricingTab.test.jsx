@@ -87,14 +87,24 @@ describe('the fields a listing type shows', () => {
     expect(screen.queryByLabelText('Booking amount')).not.toBeInTheDocument();
   });
 
-  it('offers the lease clause presets only on a tenancy', () => {
+  it('offers the charges a tenancy repeats, and sends lease terms to the specifications', () => {
     const { unmount } = renderWith(<Harness patch={{ listingType: 'lease' }} />);
-    expect(screen.getByRole('button', { name: 'Add lock-in period' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add annual escalation' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add maintenance deposit' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add brokerage' })).toBeInTheDocument();
+    // A lock-in is months and an escalation a percentage — neither is money,
+    // and a preset that stored "36" as a rupee amount printed "₹36".
+    expect(screen.queryByRole('button', { name: 'Add lock-in period' })).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/lock-in period or an annual escalation is a term/)
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add club membership' })).not.toBeInTheDocument();
     unmount();
 
     renderWith(<Harness patch={{ listingType: 'sale' }} />);
-    expect(screen.queryByRole('button', { name: 'Add lock-in period' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add car parking' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add club membership' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add brokerage' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/term of the lease/)).not.toBeInTheDocument();
   });
 });
 
@@ -103,7 +113,30 @@ describe('the price preview (D33)', () => {
     renderWith(<Harness patch={{ listingType: 'sale', ...pricing({ price: 15000000 }) }} />);
 
     const preview = screen.getByRole('complementary', { name: 'Price preview' });
-    expect(preview).toHaveTextContent('₹1.5 Cr onwards');
+    expect(preview).toHaveTextContent('₹1.5 Cr');
+    // One price is the price, not the bottom of anything: the card prints no
+    // "onwards" under it, so neither does the preview.
+    expect(preview).not.toHaveTextContent('onwards');
+    expect(screen.getByText(/the listing prints “₹1.5 Cr”/)).toBeInTheDocument();
+  });
+
+  it('adds "onwards" when the price is the cheapest of several unit types', () => {
+    renderWith(
+      <Harness
+        patch={{
+          listingType: 'sale',
+          ...pricing({ price: 15000000 }),
+          unitConfigurations: [
+            { id: 'u1', name: '2 BHK', isActive: true },
+            { id: 'u2', name: '3 BHK', isActive: true },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.getByRole('complementary', { name: 'Price preview' })).toHaveTextContent(
+      '₹1.5 Cr onwards'
+    );
   });
 
   it('prints a range when both ends are given', () => {
@@ -159,9 +192,7 @@ describe('the price preview (D33)', () => {
     renderWith(<Harness patch={{ listingType: 'sale' }} />);
 
     await userEvent.type(screen.getByLabelText('Price'), '9900000');
-    expect(screen.getByRole('complementary', { name: 'Price preview' })).toHaveTextContent(
-      '₹99 L onwards'
-    );
+    expect(screen.getByRole('complementary', { name: 'Price preview' })).toHaveTextContent('₹99 L');
   });
 });
 
@@ -262,14 +293,14 @@ describe('the per-sq-ft rate', () => {
 });
 
 describe('other charges', () => {
-  it('adds a labelled row from a lease preset and shows it in the preview', async () => {
+  it('adds a labelled row from a preset and shows it in the preview', async () => {
     renderWith(<Harness patch={{ listingType: 'lease' }} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add lock-in period' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add maintenance deposit' }));
 
-    expect(screen.getByDisplayValue('Lock-in period')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Maintenance deposit')).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Price preview' })).toHaveTextContent(
-      'Lock-in period'
+      'Maintenance deposit'
     );
   });
 

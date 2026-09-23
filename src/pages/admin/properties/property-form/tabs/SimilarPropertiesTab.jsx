@@ -4,7 +4,7 @@ import { Icon } from '@iconify/react';
 import FormSection, { FormColumn } from '../../../../../components/admin/FormSection';
 import EntityPicker from '../../../../../components/admin/EntityPicker';
 import propertyService from '../../../../../services/propertyService';
-import { Alert, Button, Modal } from '../../../../../components/ui';
+import { Alert, Button, LazyImage, Modal } from '../../../../../components/ui';
 import { CONSTRUCTION_STATUS } from '../../../../../config/enums';
 import { SIMILAR_MAX } from '../validators';
 import { formatPrice } from '../../../../../utils/format';
@@ -35,6 +35,45 @@ const priceOf = (record) => {
   });
 };
 
+/** The public endpoint's own order for the fill: featured, then priority, then newest. */
+const byRelevance = (a, b) =>
+  Number(Boolean(b.isFeatured)) - Number(Boolean(a.isFeatured)) ||
+  (Number(b.priorityOrder) || 0) - (Number(a.priorityOrder) || 0) ||
+  String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? ''));
+
+/**
+ * The fill rule of `GET /properties/:id/similar` — published listings of the
+ * same listing type, in the same locality or of the same property type —
+ * asked of the admin list.
+ *
+ * The public endpoint answers 404 for a listing that is not published, so
+ * "Suggest similar" on a draft used to end in "Property not found".
+ *
+ * @param {object} values the form's values
+ * @returns {Promise<Array<object>>}
+ */
+async function suggestByRule(values) {
+  const base = { isActive: true, listingType: values.listingType, perPage: 24 };
+  const localityId = values.location?.localityId;
+  const propertyTypeId = values.propertyTypeId;
+  const asks = [
+    localityId ? propertyService.adminList({ ...base, localityId }) : null,
+    propertyTypeId ? propertyService.adminList({ ...base, propertyTypeId }) : null,
+  ].filter(Boolean);
+
+  const answers = await Promise.all(asks);
+  const seen = new Set();
+  return answers
+    .flatMap((envelope) => (Array.isArray(envelope?.data) ? envelope.data : []))
+    .filter((record) => {
+      const key = String(record.id);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort(byRelevance);
+}
+
 /**
  * One listing, as both the search results and the chosen list print it.
  *
@@ -49,8 +88,18 @@ function PropertyOption({ record }) {
   return (
     <span className={styles.similarCard}>
       <span className={styles.similarThumb}>
+        {/* Through `LazyImage`, so a cover that no longer loads shows the house
+            rather than the browser's broken-image mark. */}
         {cover ? (
-          <img src={cover} alt="" loading="lazy" />
+          <LazyImage
+            src={cover}
+            alt=""
+            ratio="1"
+            sizes="56px"
+            onErrorFallback={
+              <Icon icon="mdi:home-outline" width="20" height="20" aria-hidden="true" />
+            }
+          />
         ) : (
           <Icon icon="mdi:home-outline" width="20" height="20" aria-hidden="true" />
         )}
@@ -78,16 +127,19 @@ function PropertyOption({ record }) {
  * "Suggest similar" asks the API what it would have shown
  * (`GET /properties/:id/similar`) and offers the answer; nothing is added until
  * it has been confirmed, because a suggestion is a guess and the order is an
- * editorial decision.
+ * editorial decision. A listing that is not published has no public answer, so
+ * the same rule is asked of the admin list instead.
  */
 export default function SimilarPropertiesTab() {
-  const { values, errors, setField, disabled, isNew, propertyId } = usePropertyFormContext();
+  const { state, values, errors, setField, disabled, isNew, propertyId } = usePropertyFormContext();
   const toast = useToast();
+  const live = state?.initial?.isActive === true;
 
   const ids = useMemo(() => values.similarPropertyIds ?? [], [values.similarPropertyIds]);
   const [known, setKnown] = useState([]);
   const [suggesting, setSuggesting] = useState(false);
   const [offer, setOffer] = useState(null);
+  const [offerByRule, setOfferByRule] = useState(false);
   const [picked, setPicked] = useState([]);
 
   /**
@@ -150,24 +202,46 @@ export default function SimilarPropertiesTab() {
 
   const full = ids.length >= SIMILAR_MAX;
 
-  /** `GET /properties/:id/similar` — what the public page would show today. */
+  /**
+   * `GET /properties/:id/similar` — what the public page would show today; the
+   * same rule through the admin list while the listing is not published.
+   */
   const suggest = async () => {
     if (!propertyId) return;
     setSuggesting(true);
     try {
-      const { data } = await propertyService.similar(propertyId);
-      const rows = (Array.isArray(data) ? data : [])
-        .filter((record) => String(record.id) !== String(propertyId))
+      let byRule = !live;
+      let found;
+      if (live) {
+        try {
+          found = (await propertyService.similar(propertyId))?.data;
+        } catch (thrown) {
+          // Unpublished since the page was opened: the rule still answers.
+          if (thrown?.status !== 404) throw thrown;
+          byRule = true;
+        }
+      }
+      if (byRule) found = await suggestByRule(values);
+
+      const others = (Array.isArray(found) ? found : []).filter(
+        (record) => String(record.id) !== String(propertyId)
+      );
+      const rows = others
         .filter((record) => !ids.some((id) => String(id) === String(record.id)))
         .slice(0, SIMILAR_MAX - ids.length);
 
       if (rows.length === 0) {
-        toast.info('Nothing to suggest — the six this page would show are already chosen.');
+        toast.info(
+          others.length === 0
+            ? 'Nothing to suggest — no published listing shares this one’s locality or type yet.'
+            : 'Nothing to suggest — everything this page would show is already chosen.'
+        );
         return;
       }
 
       remember(rows);
       setPicked(rows.map((_record, index) => index));
+      setOfferByRule(byRule);
       setOffer(rows);
     } catch (thrown) {
       toast.error(thrown?.message ?? 'The suggestions could not be loaded.');
@@ -249,7 +323,11 @@ export default function SimilarPropertiesTab() {
         open={Boolean(offer)}
         onClose={() => setOffer(null)}
         title="Suggested listings"
-        description="What this page would show on its own, in that order. Nothing is added until you say so."
+        description={
+          offerByRule
+            ? 'Published listings of the same kind, in the same locality or of the same type — what the page fills itself with once this listing is published. Nothing is added until you say so.'
+            : 'What this page would show on its own, in that order. Nothing is added until you say so.'
+        }
         size="lg"
         footer={
           <>

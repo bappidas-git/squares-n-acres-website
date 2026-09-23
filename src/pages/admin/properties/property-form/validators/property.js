@@ -19,6 +19,7 @@ import {
   URL_PATTERN,
 } from '../../../../../utils/validation';
 import { validateSeoBranch } from '../../../../../components/seo/seoSideEffects';
+import { isMapEmbedUrl } from '../../../../../utils/mapEmbed';
 
 /** Title length the contract asks for (§6.1). */
 export const TITLE_MIN = 10;
@@ -109,6 +110,57 @@ const checkUrl = (add, path, value, label) => {
   if (!isUrl(value)) add(path, `${label} must start with http:// or https://.`);
 };
 
+/**
+ * `value` must be a number inside the range the API accepts.
+ *
+ * The bounds are the contract's (`src/services/schemas/property.js`): with
+ * looser ones here the form let an editor save a 25-bedroom flat or a school
+ * 900 km away, and the refusal came back as the raw "The
+ * configuration.parkingCovered may not be greater than 20." after the round
+ * trip.
+ */
+const checkRange = (add, path, value, label, { min = 0, max } = {}) => {
+  if (isBlank(value)) return;
+  if (!isNumber(value)) {
+    add(path, `${label} must be a number.`);
+    return;
+  }
+  const number = Number(value);
+  if (number < min) {
+    add(path, min === 0 ? `${label} cannot be negative.` : `${label} is at least ${min}.`);
+  } else if (max !== undefined && number > max) {
+    add(path, `${label} is at most ${max}.`);
+  }
+};
+
+/** `value` must fit the API's length for the field. */
+const checkLength = (add, path, value, label, max) => {
+  if (String(value ?? '').trim().length > max) add(path, `Keep ${label} to ${max} characters.`);
+};
+
+/** The contract's caps, in one place (§6.1, `src/services/schemas/property.js`). */
+export const LIMITS = {
+  ageOfPropertyYears: 100,
+  floors: 200,
+  lowestFloor: -5,
+  rooms: 20,
+  distanceKm: 200,
+  travelTimeMin: 600,
+  unitName: 120,
+  floorPlanTitle: 120,
+  placeName: 150,
+  imageAlt: 200,
+  imageCaption: 300,
+  documentTitle: 150,
+  milestone: 150,
+  milestoneNote: 300,
+  specLabel: 120,
+  specValue: 300,
+  chargeLabel: 120,
+  chargeNote: 200,
+  agentName: 120,
+};
+
 /** The two statuses that promise a date (§6.1). */
 const NEEDS_POSSESSION_DATE = ['pre-launch', 'under-construction'];
 
@@ -153,16 +205,25 @@ export function validateBasics(values) {
   const possession = values.possessionDate;
   if (NEEDS_POSSESSION_DATE.includes(values.constructionStatus) && isBlank(possession)) {
     add('possessionDate', 'A possession date is required for this construction status.');
-  } else if (!isBlank(possession) && !isDate(possession)) {
-    add('possessionDate', 'Use a real date, as yyyy-mm-dd.');
+  } else if (
+    NEEDS_POSSESSION_DATE.includes(values.constructionStatus) &&
+    !isBlank(possession) &&
+    !isDate(possession)
+  ) {
+    // The control is a month picker, so the message names a month.
+    add('possessionDate', 'Choose the month and the year handover is promised for.');
   }
 
-  checkNonNegative(add, 'ageOfPropertyYears', values.ageOfPropertyYears, 'The age');
-  checkNonNegative(add, 'totalFloors', values.totalFloors, 'The number of floors');
-
-  if (!isBlank(values.floorNumber) && !isNumber(values.floorNumber)) {
-    add('floorNumber', 'The floor must be a number.');
-  }
+  checkRange(add, 'ageOfPropertyYears', values.ageOfPropertyYears, 'The age', {
+    max: LIMITS.ageOfPropertyYears,
+  });
+  checkRange(add, 'totalFloors', values.totalFloors, 'The number of floors', {
+    max: LIMITS.floors,
+  });
+  checkRange(add, 'floorNumber', values.floorNumber, 'The floor', {
+    min: LIMITS.lowestFloor,
+    max: LIMITS.floors,
+  });
 
   // A registration number is the whole point of the switch: "RERA registered"
   // with nothing beside it is a claim the listing cannot back up.
@@ -204,18 +265,24 @@ export function validateLocation(values) {
   }
 
   checkUrl(add, 'location.mapEmbedUrl', location.mapEmbedUrl, 'The map URL');
+  if (!isBlank(location.mapEmbedUrl) && !isMapEmbedUrl(location.mapEmbedUrl)) {
+    add(
+      'location.mapEmbedUrl',
+      'Paste the address from Google Maps → Share → Embed a map, or from a shared Google My Map.'
+    );
+  }
 
   (values.nearbyPlaces ?? []).forEach((place, index) => {
     // A row exists because somebody added it, and a row without a name is
     // dropped on save — so it is refused here rather than lost silently.
     if (isBlank(place.name)) add(`nearbyPlaces.${index}.name`, 'Name this place.');
-    checkNonNegative(add, `nearbyPlaces.${index}.distanceKm`, place.distanceKm, 'The distance');
-    checkNonNegative(
-      add,
-      `nearbyPlaces.${index}.travelTimeMin`,
-      place.travelTimeMin,
-      'The travel time'
-    );
+    checkLength(add, `nearbyPlaces.${index}.name`, place.name, 'the name', LIMITS.placeName);
+    checkRange(add, `nearbyPlaces.${index}.distanceKm`, place.distanceKm, 'The distance', {
+      max: LIMITS.distanceKm,
+    });
+    checkRange(add, `nearbyPlaces.${index}.travelTimeMin`, place.travelTimeMin, 'The drive', {
+      max: LIMITS.travelTimeMin,
+    });
   });
 
   return errors;
@@ -269,6 +336,20 @@ export function validatePricing(values) {
       add(`pricing.otherCharges.${index}.label`, 'Name this charge.');
     }
     checkNonNegative(add, `pricing.otherCharges.${index}.amount`, charge.amount, 'The amount');
+    checkLength(
+      add,
+      `pricing.otherCharges.${index}.label`,
+      charge.label,
+      'the name',
+      LIMITS.chargeLabel
+    );
+    checkLength(
+      add,
+      `pricing.otherCharges.${index}.note`,
+      charge.note,
+      'the note',
+      LIMITS.chargeNote
+    );
   });
 
   return errors;
@@ -295,7 +376,7 @@ export function validateArea(values) {
     ['parkingCovered', 'The covered parking'],
     ['parkingOpen', 'The open parking'],
   ].forEach(([key, label]) =>
-    checkNonNegative(add, `configuration.${key}`, configuration[key], label)
+    checkRange(add, `configuration.${key}`, configuration[key], label, { max: LIMITS.rooms })
   );
 
   return errors;
@@ -326,6 +407,7 @@ export function validateUnits(values) {
 
     if (!touched) return;
     if (!named) add(`${path}.name`, 'Name this configuration, e.g. “3 BHK — Type A”.');
+    checkLength(add, `${path}.name`, unit.name, 'the name', LIMITS.unitName);
     if (!measured && !priced) {
       add(`${path}.superBuiltUpArea`, 'Add an area or a price.');
     }
@@ -333,8 +415,8 @@ export function validateUnits(values) {
     checkNonNegative(add, `${path}.superBuiltUpArea`, unit.superBuiltUpArea, 'The area');
     checkNonNegative(add, `${path}.carpetArea`, unit.carpetArea, 'The carpet area');
     checkNonNegative(add, `${path}.price`, unit.price, 'The price');
-    checkNonNegative(add, `${path}.bedrooms`, unit.bedrooms, 'The bedrooms');
-    checkNonNegative(add, `${path}.bathrooms`, unit.bathrooms, 'The bathrooms');
+    checkRange(add, `${path}.bedrooms`, unit.bedrooms, 'The bedrooms', { max: LIMITS.rooms });
+    checkRange(add, `${path}.bathrooms`, unit.bathrooms, 'The bathrooms', { max: LIMITS.rooms });
     checkNonNegative(add, `${path}.availableUnits`, unit.availableUnits, 'The available units');
     checkUrl(add, `${path}.floorPlanImageUrl`, unit.floorPlanImageUrl, 'The floor-plan image');
     checkUrl(add, `${path}.floorPlanPdfUrl`, unit.floorPlanPdfUrl, 'The floor-plan PDF');
@@ -355,11 +437,16 @@ export function validateMedia(values) {
         'Describe this image — screen readers and search engines read it.'
       );
     }
+    checkLength(add, `images.${index}.alt`, image.alt, 'the description', LIMITS.imageAlt);
+    checkLength(add, `images.${index}.caption`, image.caption, 'the caption', LIMITS.imageCaption);
   });
 
+  // Keyed to the gallery as a whole, where the gallery prints it: the old key
+  // `images.0.isCover` belonged to no control, so the Media badge said 1 and
+  // the tab showed nothing to fix.
   const usable = (values.images ?? []).filter((image) => !isBlank(image.url));
   if (usable.length > 0 && !usable.some((image) => image.isCover === true)) {
-    add('images.0.isCover', 'Choose which photograph is the cover.');
+    add('images', 'Choose which photograph is the cover.');
   }
 
   checkUrl(add, 'videoUrl', values.videoUrl, 'The video URL');
@@ -398,6 +485,8 @@ export function validateHighlights(values) {
       if (isBlank(spec.label) && !isBlank(spec.value)) {
         add(`${field}.${index}.label`, 'Give this specification a label.');
       }
+      checkLength(add, `${field}.${index}.label`, spec.label, 'the label', LIMITS.specLabel);
+      checkLength(add, `${field}.${index}.value`, spec.value, 'the value', LIMITS.specValue);
     });
 
   named(values.specifications, 'specifications');
@@ -411,16 +500,26 @@ export function validateFloorPlans(values) {
 
   (values.floorPlans ?? []).forEach((plan, index) => {
     const path = `floorPlans.${index}`;
-    const touched = !isBlank(plan.title) || !isBlank(plan.imageUrl);
+    // Any field at all: a card with a PDF, an area and a price but no title
+    // passed as untouched here and was then dropped on save as empty, taking
+    // the PDF with it and saying nothing.
+    const touched =
+      !isBlank(plan.title) ||
+      !isBlank(plan.imageUrl) ||
+      !isBlank(plan.pdfUrl) ||
+      !isBlank(plan.area) ||
+      !isBlank(plan.price) ||
+      !isBlank(plan.bedrooms);
     if (!touched) return;
 
     if (isBlank(plan.title)) add(`${path}.title`, 'Name this floor plan.');
+    checkLength(add, `${path}.title`, plan.title, 'the title', LIMITS.floorPlanTitle);
     if (isBlank(plan.imageUrl)) add(`${path}.imageUrl`, 'A floor plan needs an image.');
     checkUrl(add, `${path}.imageUrl`, plan.imageUrl, 'The image address');
     checkUrl(add, `${path}.pdfUrl`, plan.pdfUrl, 'The PDF address');
     checkNonNegative(add, `${path}.area`, plan.area, 'The area');
     checkNonNegative(add, `${path}.price`, plan.price, 'The price');
-    checkNonNegative(add, `${path}.bedrooms`, plan.bedrooms, 'The bedrooms');
+    checkRange(add, `${path}.bedrooms`, plan.bedrooms, 'The bedrooms', { max: LIMITS.rooms });
   });
 
   return errors;
@@ -435,6 +534,7 @@ export function validateDocuments(values) {
     if (!touched) return;
 
     if (isBlank(document.title)) add(`${path}.title`, 'Name this document.');
+    checkLength(add, `${path}.title`, document.title, 'the title', LIMITS.documentTitle);
     if (isBlank(document.url)) add(`${path}.url`, 'A document needs a file address.');
     checkUrl(add, `${path}.url`, document.url, 'The file address');
   });
@@ -449,9 +549,11 @@ export function validateProject(values) {
   [
     ['totalUnits', 'The number of units'],
     ['totalTowers', 'The number of towers'],
-    ['totalFloors', 'The number of floors'],
     ['projectAreaAcres', 'The project area'],
   ].forEach(([key, label]) => checkNonNegative(add, `project.${key}`, project[key], label));
+  checkRange(add, 'project.totalFloors', project.totalFloors, 'The number of floors', {
+    max: LIMITS.floors,
+  });
 
   if (!isBlank(project.openAreaPercent)) {
     const percent = Number(project.openAreaPercent);
@@ -473,10 +575,18 @@ export function validateProject(values) {
 
   (values.constructionTimeline ?? []).forEach((entry, index) => {
     const path = `constructionTimeline.${index}`;
-    const touched = !isBlank(entry.milestone) || !isBlank(entry.date) || !isBlank(entry.note);
+    // A photograph from the site is work too: a row holding one used to count
+    // as untouched and was dropped on save with no word.
+    const touched =
+      !isBlank(entry.milestone) ||
+      !isBlank(entry.date) ||
+      !isBlank(entry.note) ||
+      !isBlank(entry.imageUrl);
     if (!touched) return;
 
     if (isBlank(entry.milestone)) add(`${path}.milestone`, 'Name this milestone.');
+    checkLength(add, `${path}.milestone`, entry.milestone, 'the milestone', LIMITS.milestone);
+    checkLength(add, `${path}.note`, entry.note, 'the note', LIMITS.milestoneNote);
     if (!isBlank(entry.date) && !isDate(entry.date)) {
       add(`${path}.date`, 'Use a real date, as yyyy-mm-dd.');
     }
@@ -569,6 +679,8 @@ export function validateAgent(values) {
     add('agent.email', 'Use a valid e-mail address.');
   }
 
+  checkLength(add, 'agent.name', agent.name, 'the name', LIMITS.agentName);
+
   checkUrl(add, 'agent.photoUrl', agent.photoUrl, 'The photo address');
 
   return errors;
@@ -630,8 +742,10 @@ export function validateForActivation(values) {
   const units = (values.unitConfigurations ?? []).filter((unit) => !isBlank(unit.name));
 
   if (values.isActive === true) {
+    // The gallery as a whole: with no image there is no `images.0` to hang the
+    // message on, and the Media badge used to count one while showing nothing.
     if (described.length === 0) {
-      add('images.0.url', 'A published listing needs at least one image with a description.');
+      add('images', 'A published listing needs at least one image with a description.');
     }
     if (description.length < DESCRIPTION_MIN) {
       add(
@@ -655,8 +769,15 @@ export function validateForActivation(values) {
 
   const warn = (id, message) => warnings.push({ id, message });
 
-  if (wordCount(values.description) < DESCRIPTION_WARN_WORDS) {
-    warn('description-words', `The description is under ${DESCRIPTION_WARN_WORDS} words.`);
+  // Advice, not the publishing rule — which is 300 *characters* and sits on the
+  // field. The two numbers side by side read as a contradiction, so this one
+  // says what it is and why.
+  const words = wordCount(values.description);
+  if (words < DESCRIPTION_WARN_WORDS) {
+    warn(
+      'description-words',
+      `The description has ${words} word${words === 1 ? '' : 's'}; ${DESCRIPTION_WARN_WORDS} or more reads better and ranks better.`
+    );
   }
   if (amenities.length < AMENITY_WARN_COUNT) {
     warn('amenities', `Fewer than ${AMENITY_WARN_COUNT} amenities are selected.`);

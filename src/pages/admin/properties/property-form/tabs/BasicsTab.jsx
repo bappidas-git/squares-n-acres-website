@@ -24,12 +24,13 @@ import {
 } from '../../../../../config/enums';
 import propertyService from '../../../../../services/propertyService';
 import { useBadgeMap, usePropertyTypes } from '../../../../../hooks/useMasterData';
-import { DESCRIPTION_MIN, plainText, wordCount } from '../validators/property';
+import { DESCRIPTION_MIN, LIMITS, plainText } from '../validators/property';
 import {
   anyFilled,
   clearedBySegment,
   pricingFieldsClearedBy,
   showsAge,
+  showsFacingAndOwnership,
   showsFloors,
   showsFurnishing,
   showsPossessionDate,
@@ -68,11 +69,26 @@ export default function BasicsTab() {
   const { values, errors, setField, setFields, disabled, propertyId } = usePropertyFormContext();
   const [pending, setPending] = useState(null);
 
-  const propertyTypes = usePropertyTypes({ segment: values.segment });
+  const allTypes = usePropertyTypes({ segment: values.segment, activeOnly: false });
   const badgeMap = useBadgeMap();
 
+  // The active types of the segment — plus the listing's own type if it has
+  // since been retired, labelled so. Offering active types only left such a
+  // listing's control blank while the old id was quietly kept and saved.
+  const propertyTypes = useMemo(
+    () =>
+      allTypes.filter(
+        (type) => type.isActive !== false || String(type.id) === String(values.propertyTypeId)
+      ),
+    [allTypes, values.propertyTypeId]
+  );
+
   const typeOptions = useMemo(
-    () => propertyTypes.map((type) => ({ value: type.id, label: type.name })),
+    () =>
+      propertyTypes.map((type) => ({
+        value: type.id,
+        label: type.isActive === false ? `${type.name} (inactive)` : type.name,
+      })),
     [propertyTypes]
   );
   // `useBadgeMap` is keyed by id because most screens hold ids and nothing
@@ -121,14 +137,13 @@ export default function BasicsTab() {
 
     applyOrConfirm(patch, cleared, {
       title: `Move this listing to ${SEGMENTS.labelOf(next)}?`,
-      message: `${SEGMENTS.labelOf(next)} listings do not use some of the area and configuration fields this one has filled in. They will be cleared, and moving back does not bring them back.`,
+      message: `${SEGMENTS.labelOf(next)} listings do not use some of the fields this one has filled in — the rooms, the built-up areas, the floors or the furnishing. They will be cleared, and moving back does not bring them back.`,
       confirmLabel: 'Move and clear',
     });
   };
 
   const short = values.shortDescription ?? '';
   const descriptionText = plainText(values.description);
-  const descriptionWords = wordCount(values.description);
   const longEnough = descriptionText.length >= DESCRIPTION_MIN;
 
   return (
@@ -139,6 +154,7 @@ export default function BasicsTab() {
       >
         <FormColumn>
           <TextField
+            id={propertyFieldId('title')}
             label="Title"
             required
             value={values.title ?? ''}
@@ -164,6 +180,7 @@ export default function BasicsTab() {
 
         <FormColumn half>
           <SlugField
+            id={propertyFieldId('slug')}
             label="URL"
             required
             base="/properties/"
@@ -173,7 +190,10 @@ export default function BasicsTab() {
             disabled={disabled}
             checkSlug={checkSlug}
             excludeId={propertyId ?? undefined}
-            onChange={(slug) => setField('slug', slug)}
+            // D34: one URL. Writing only `slug` left `seo.slug` behind, so the
+            // SEO tab's permalink showed the old address and the analysis
+            // measured it.
+            onChange={(slug) => setFields({ slug, 'seo.slug': slug })}
           />
         </FormColumn>
       </FormSection>
@@ -287,7 +307,7 @@ export default function BasicsTab() {
             <NumberField
               label="Age of the property"
               min={0}
-              max={200}
+              max={LIMITS.ageOfPropertyYears}
               value={values.ageOfPropertyYears ?? ''}
               error={errors.ageOfPropertyYears}
               disabled={disabled}
@@ -302,7 +322,7 @@ export default function BasicsTab() {
           </FormColumn>
         ) : null}
 
-        <FormColumn half>
+        <FormColumn half id={propertyFieldId('reraRegistered')}>
           <SwitchField
             label="RERA registered"
             checked={values.reraRegistered === true}
@@ -319,7 +339,7 @@ export default function BasicsTab() {
         </FormColumn>
 
         {values.reraRegistered ? (
-          <FormColumn half className={styles.conditional}>
+          <FormColumn half className={styles.conditional} id={propertyFieldId('reraNumber')}>
             <TextField
               label="RERA number"
               required
@@ -334,25 +354,31 @@ export default function BasicsTab() {
         ) : null}
       </FormSection>
 
-      {showsFurnishing(values) || showsFloors(values) ? (
+      {showsFurnishing(values) || showsFloors(values) || showsFacingAndOwnership(values) ? (
         <FormSection
-          title="The unit"
-          description="How the unit is handed over and where it sits in the building."
+          title={showsFloors(values) ? 'The unit' : 'The plot'}
+          description={
+            showsFloors(values)
+              ? 'How the unit is handed over and where it sits in the building.'
+              : 'Which way the plot faces and what the buyer receives.'
+          }
         >
           {showsFurnishing(values) ? (
-            <>
-              <FormColumn half>
-                <SelectField
-                  label="Furnishing"
-                  placeholder="Not specified"
-                  options={FURNISHING.options}
-                  value={values.furnishing ?? ''}
-                  error={errors.furnishing}
-                  disabled={disabled}
-                  onChange={(event) => setField('furnishing', event.target.value)}
-                />
-              </FormColumn>
+            <FormColumn half>
+              <SelectField
+                label="Furnishing"
+                placeholder="Not specified"
+                options={FURNISHING.options}
+                value={values.furnishing ?? ''}
+                error={errors.furnishing}
+                disabled={disabled}
+                onChange={(event) => setField('furnishing', event.target.value)}
+              />
+            </FormColumn>
+          ) : null}
 
+          {showsFacingAndOwnership(values) ? (
+            <>
               <FormColumn half>
                 <SelectField
                   label="Facing"
@@ -385,8 +411,8 @@ export default function BasicsTab() {
               <div className={styles.pair}>
                 <NumberField
                   label="Floor number"
-                  min={-5}
-                  max={200}
+                  min={LIMITS.lowestFloor}
+                  max={LIMITS.floors}
                   value={values.floorNumber ?? ''}
                   error={errors.floorNumber}
                   disabled={disabled}
@@ -401,10 +427,11 @@ export default function BasicsTab() {
                 <NumberField
                   label="Total floors"
                   min={0}
-                  max={200}
+                  max={LIMITS.floors}
                   value={values.totalFloors ?? ''}
                   error={errors.totalFloors}
                   disabled={disabled}
+                  hint="In the building."
                   onChange={(event) =>
                     setField(
                       'totalFloors',
@@ -446,13 +473,17 @@ export default function BasicsTab() {
             disabled={disabled}
             onChange={(html) => setField('description', html)}
           />
+          {/* The editor counts the words and the characters under its own
+              text; a second count here disagreed with it by the number of
+              paragraphs (975 against 978), so this line only says whether the
+              publishing rule is met. */}
           <p className={styles.counter}>
             <span className={longEnough ? styles.counterOk : styles.counterWarn}>
-              {descriptionText.length} characters
-            </span>
-            <span>{descriptionWords} words</span>
-            <span>
-              Detailed description — at least {DESCRIPTION_MIN} characters to publish this listing.
+              {longEnough
+                ? `Long enough to publish — at least ${DESCRIPTION_MIN} characters.`
+                : `At least ${DESCRIPTION_MIN} characters to publish this listing — ${
+                    DESCRIPTION_MIN - descriptionText.length
+                  } to go.`}
             </span>
           </p>
         </FormColumn>

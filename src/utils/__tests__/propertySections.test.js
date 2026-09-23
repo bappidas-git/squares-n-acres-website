@@ -250,6 +250,26 @@ describe('getSectionHints', () => {
     expect(rows.map((row) => row.key)).toEqual(SECTION_KEYS);
   });
 
+  it('calls an empty "Similar properties" automatic rather than missing', () => {
+    const row = getSectionHints(blank()).find((entry) => entry.key === 'similar');
+    // The Similar tab says an empty list fills itself; the chip used to say
+    // "No data yet — choose listings".
+    expect(row).toMatchObject({ enabled: true, hasData: false, automatic: true });
+    expect(row.hint).toBe('Automatic — listings from the same locality and type');
+
+    const picked = getSectionHints(blank({ similarPropertyIds: [2] })).find(
+      (entry) => entry.key === 'similar'
+    );
+    expect(picked).toMatchObject({ hasData: true, automatic: false, hint: '' });
+  });
+
+  it('says why construction progress stays hidden on a finished building', () => {
+    const row = getSectionHints(
+      blank({ constructionStatus: 'ready-to-move', constructionProgressPercent: 100 })
+    ).find((entry) => entry.key === 'construction');
+    expect(row.hint).toBe('Hidden automatically — only while the project is being built');
+  });
+
   it('says what is missing and names the tab that holds it', () => {
     const row = getSectionHints(blank()).find((entry) => entry.key === 'gallery');
     expect(row).toMatchObject({ enabled: true, hasData: false, visible: false });

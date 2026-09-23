@@ -4,8 +4,20 @@ import { Icon } from '@iconify/react';
 import SortableList from '../../../../../components/admin/SortableList';
 import { Button, IconButton, NumberField, TextField } from '../../../../../components/ui';
 import { NEARBY_CATEGORIES } from '../../../../../config/enums';
+import { LIMITS } from '../validators/property';
 
 import styles from './Repeaters.module.css';
+
+/**
+ * A category's label inside a sentence — "Add to schools", "Add to IT parks &
+ * offices": lower case, except for the words that are written in capitals
+ * (a plain `toLowerCase` printed "Add to it parks & offices").
+ */
+export const inSentence = (label) =>
+  String(label ?? '')
+    .split(' ')
+    .map((word) => (/^[A-Z]{2,}$/.test(word) ? word : word.toLowerCase()))
+    .join(' ');
 
 /**
  * What is around the property, grouped the way the public page groups it.
@@ -78,7 +90,7 @@ export default function NearbyPlacesRepeater({
                 onClick={() => onAdd?.(group.value)}
                 icon={<Icon icon="mdi:plus" width="16" height="16" />}
               >
-                Add to {group.label.toLowerCase()}
+                Add to {inSentence(group.label)}
               </Button>
             </span>
           </div>
@@ -102,13 +114,14 @@ export default function NearbyPlacesRepeater({
                   value={place.name ?? ''}
                   error={errors[`nearbyPlaces.${index}.name`]}
                   disabled={disabled}
-                  maxLength={150}
+                  maxLength={LIMITS.placeName}
                   placeholder="e.g. Whitefield Metro Station"
                   onChange={(event) => onUpdate?.(place.id, { name: event.target.value })}
                 />
                 <NumberField
                   label="Distance (km)"
                   min={0}
+                  max={LIMITS.distanceKm}
                   step={0.1}
                   value={place.distanceKm ?? ''}
                   error={errors[`nearbyPlaces.${index}.distanceKm`]}
@@ -122,6 +135,7 @@ export default function NearbyPlacesRepeater({
                 <NumberField
                   label="Drive (min)"
                   min={0}
+                  max={LIMITS.travelTimeMin}
                   step={1}
                   value={place.travelTimeMin ?? ''}
                   error={errors[`nearbyPlaces.${index}.travelTimeMin`]}

@@ -75,8 +75,11 @@
   appearance: textfield;
 }
 
+/* The figure as the site prints it. Neutral text: in the brand colour every
+   "₹1.5 Cr" under a field read as a link to something. */
 .readout {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-primary-dark);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
 }

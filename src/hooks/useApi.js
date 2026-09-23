@@ -28,8 +28,11 @@ const keyOf = (deps) =>
  * @param {boolean} [options.keepPreviousData] keep the last answer on screen while reloading
  * @param {(data: unknown, envelope: object) => void} [options.onSuccess]
  * @param {(error: import('../services/apiError').default) => void} [options.onError]
- * @returns {{data: unknown, meta: object|null, loading: boolean, error: object|null,
- *            refetch: () => Promise<void>, setData: Function}}
+ * @returns {{data: unknown, meta: object|null, loading: boolean, fetching: boolean,
+ *            error: object|null, refetch: () => Promise<void>, setData: Function}}
+ *   `loading` is the first answer; `fetching` is any request in flight, which
+ *   with `keepPreviousData` is the only sign that the rows on screen are about
+ *   to be replaced.
  */
 export default function useApi(fetcher, deps = [], options = {}) {
   const {
@@ -43,6 +46,7 @@ export default function useApi(fetcher, deps = [], options = {}) {
   const [data, setData] = useState(initialData);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(Boolean(enabled));
+  const [fetching, setFetching] = useState(Boolean(enabled));
   const [error, setError] = useState(null);
 
   // Everything the call reads lives in a ref, so a new inline callback or a
@@ -74,6 +78,7 @@ export default function useApi(fetcher, deps = [], options = {}) {
     } else if (!loadedRef.current) {
       setLoading(true);
     }
+    setFetching(true);
     setError(null);
 
     try {
@@ -86,11 +91,13 @@ export default function useApi(fetcher, deps = [], options = {}) {
       setData(payload);
       setMeta(envelope?.meta ?? null);
       setLoading(false);
+      setFetching(false);
       config.onSuccess?.(payload, envelope);
     } catch (thrown) {
       if (isCanceled(thrown) || controller.signal.aborted || !mountedRef.current) return;
       setError(thrown);
       setLoading(false);
+      setFetching(false);
       config.onError?.(thrown);
     }
   }, []);
@@ -101,6 +108,7 @@ export default function useApi(fetcher, deps = [], options = {}) {
     if (!enabled) {
       controllerRef.current?.abort();
       setLoading(false);
+      setFetching(false);
       return undefined;
     }
 
@@ -108,5 +116,5 @@ export default function useApi(fetcher, deps = [], options = {}) {
     return () => controllerRef.current?.abort();
   }, [enabled, run, depsKey]);
 
-  return { data, meta, loading, error, refetch: run, setData };
+  return { data, meta, loading, fetching, error, refetch: run, setData };
 }

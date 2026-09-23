@@ -39,7 +39,7 @@ const masterData = {
   bySlug: () => null,
 };
 
-function Harness({ patch = {}, disabled = false }) {
+function Harness({ patch = {}, disabled = false, amenities = AMENITIES }) {
   const [state, dispatch] = useReducer(reducer, { propertyId: 1 }, ({ propertyId }) => {
     const base = createFormState({ propertyId });
     const values = { ...base.values, ...patch };
@@ -67,7 +67,7 @@ function Harness({ patch = {}, disabled = false }) {
   );
 
   return (
-    <MasterDataContext.Provider value={masterData}>
+    <MasterDataContext.Provider value={{ ...masterData, amenities }}>
       <PropertyFormProvider value={api}>
         <AmenitiesTab />
         <output data-testid="ids">{JSON.stringify(api.values.amenityIds)}</output>
@@ -232,6 +232,41 @@ describe('the segment', () => {
         (group) => group.category
       )
     ).toEqual(['basic', 'commercial']);
+  });
+});
+
+describe('amenities master data no longer offers', () => {
+  const withRetired = AMENITIES.map((amenity) =>
+    amenity.id === 22 ? { ...amenity, isActive: false } : amenity
+  );
+
+  it('shows a switched-off amenity the listing still claims, so it can be unticked', async () => {
+    renderWith(<Harness amenities={withRetired} patch={{ amenityIds: [11, 22] }} />);
+
+    const retired = screen.getByRole('checkbox', { name: 'Clubhouse (switched off)' });
+    expect(retired).toBeChecked();
+
+    await userEvent.click(retired);
+    expect(stored()).toEqual([11]);
+  });
+
+  it('does not offer a switched-off amenity to a listing without it', () => {
+    renderWith(<Harness amenities={withRetired} />);
+    expect(screen.queryByRole('checkbox', { name: /Clubhouse/ })).not.toBeInTheDocument();
+  });
+
+  it('says when a chosen amenity was deleted, and drops it on request', async () => {
+    renderWith(<Harness patch={{ amenityIds: [11, 99] }} />);
+
+    // "2 selected" with one box ticked was the only trace of it before.
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
+    expect(
+      screen.getByText(/One amenity this listing had has since been deleted/)
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove it from this listing' }));
+    expect(stored()).toEqual([11]);
+    expect(screen.queryByText(/has since been deleted/)).not.toBeInTheDocument();
   });
 });
 

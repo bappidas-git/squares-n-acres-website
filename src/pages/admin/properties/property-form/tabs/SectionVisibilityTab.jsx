@@ -5,6 +5,8 @@ import FormSection, { FormColumn } from '../../../../../components/admin/FormSec
 import { Alert, Button, Chip, SwitchField } from '../../../../../components/ui';
 import { SECTION_DEFINITIONS, getSectionHints } from '../../../../../utils/propertySections';
 import { useBanks } from '../../../../../hooks/useMasterData';
+import { propertyFieldId } from '../fieldFocus';
+import toPayload from '../toPayload';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
@@ -22,13 +24,17 @@ import styles from './PropertyTabs.module.css';
  * The switches write `true` and `false` explicitly. The boilerplate read
  * `!== false` and wrote `!value`, so the first press of a key the record did not
  * carry was a no-op on screen (NEW-09/ADD-22).
+ *
+ * The chips read the listing as it will be saved: a floor-plan row with no
+ * drawing, or a question with no answer, is dropped by the save, and counting
+ * it said "Showing" over a section the page would leave out.
  */
 export default function SectionVisibilityTab() {
-  const { values, setField, disabled } = usePropertyFormContext();
+  const { values, errors, setField, disabled } = usePropertyFormContext();
   const banks = useBanks();
 
   const context = useMemo(() => ({ banksAvailable: banks.length > 0 }), [banks.length]);
-  const rows = useMemo(() => getSectionHints(values, context), [values, context]);
+  const rows = useMemo(() => getSectionHints(toPayload(values), context), [values, context]);
 
   const shown = rows.filter((row) => row.visible).length;
   const off = rows.filter((row) => !row.enabled).length;
@@ -79,17 +85,27 @@ export default function SectionVisibilityTab() {
           {rows.map((row) => (
             <li key={row.key} className={styles.visibilityRow}>
               <SwitchField
+                id={propertyFieldId(`sectionVisibility.${row.key}`)}
                 className={styles.visibilitySwitch}
                 label={row.label}
                 checked={row.enabled}
                 disabled={disabled}
                 hint={row.description}
+                error={errors[`sectionVisibility.${row.key}`]}
                 onChange={(next) => setField(`sectionVisibility.${row.key}`, next === true)}
               />
               {/* The chip carries the section's name for a screen reader: "Hidden"
                   on its own, eighteen times over, says nothing. */}
               <Chip
-                tone={row.hint ? (row.enabled ? 'warning' : 'neutral') : 'success'}
+                tone={
+                  !row.hint
+                    ? 'success'
+                    : !row.enabled
+                      ? 'neutral'
+                      : row.automatic
+                        ? 'info'
+                        : 'warning'
+                }
                 className={styles.visibilityChip}
                 aria-label={`${row.label}: ${row.hint || 'Showing'}`}
               >

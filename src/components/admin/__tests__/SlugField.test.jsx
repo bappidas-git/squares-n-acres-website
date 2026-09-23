@@ -6,7 +6,14 @@ import SlugField, { CHECK_DEBOUNCE_MS } from '../SlugField';
 import renderWith from '../../../test-utils';
 
 /** A controlled host, because the field's whole job is to drive one value. */
-function Harness({ initialSlug = '', title = '', checkSlug, onChangeSpy, disabled = false }) {
+function Harness({
+  initialSlug = '',
+  title = '',
+  checkSlug,
+  onChangeSpy,
+  disabled = false,
+  excludeId,
+}) {
   const [slug, setSlug] = useState(initialSlug);
   return (
     <>
@@ -16,6 +23,7 @@ function Harness({ initialSlug = '', title = '', checkSlug, onChangeSpy, disable
         base="/localities/"
         checkSlug={checkSlug}
         disabled={disabled}
+        excludeId={excludeId}
         onChange={(next) => {
           setSlug(next);
           onChangeSpy?.(next);
@@ -47,12 +55,28 @@ describe('SlugField', () => {
   });
 
   it('starts unlocked for a record that already has a slug', () => {
-    renderWith(<Harness initialSlug="whitefield" title="Whitefield" />);
+    // A saved record is the one with an id to exclude from the check.
+    renderWith(<Harness initialSlug="whitefield" title="Whitefield" excludeId={4} />);
+    expect(screen.getByLabelText('Slug')).toBeEnabled();
+  });
+
+  it('keeps following the title on a new record whose slug is still the generated one', async () => {
+    // A long form unmounts the field on every tab switch; mounting it again
+    // over a slug that is exactly what the title makes must not freeze it.
+    const { rerender } = renderWith(<Harness initialSlug="whitefield" title="Whitefield" />);
+    expect(screen.getByLabelText('Slug')).toBeDisabled();
+
+    rerender(<Harness initialSlug="whitefield" title="Whitefield East" />);
+    await waitFor(() => expect(screen.getByTestId('value')).toHaveTextContent('whitefield-east'));
+  });
+
+  it('starts unlocked on a new record whose slug was changed by hand', () => {
+    renderWith(<Harness initialSlug="my-own-slug" title="Whitefield" />);
     expect(screen.getByLabelText('Slug')).toBeEnabled();
   });
 
   it('does not overwrite a slug that has been edited by hand', async () => {
-    renderWith(<Harness initialSlug="whitefield" title="Whitefield" />);
+    renderWith(<Harness initialSlug="whitefield" title="Whitefield" excludeId={4} />);
 
     const input = screen.getByLabelText('Slug');
     await userEvent.clear(input);

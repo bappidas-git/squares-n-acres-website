@@ -32,6 +32,35 @@
   gap: var(--space-2);
 }
 
+/* The editor's other charges: a label and an amount per line. */
+.charges {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-2) 0 0;
+  border-top: 1px dashed var(--color-border);
+  list-style: none;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.charges li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.chargeAmount {
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  text-align: right;
+}
+
+.chargeNote {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+}
+
 .emi {
   display: flex;
   align-items: center;

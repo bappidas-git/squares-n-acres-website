@@ -64,9 +64,20 @@ describe('validateBasics', () => {
     expect(validateBasics(ready).possessionDate).toBeUndefined();
   });
 
-  it('refuses a date that is not one', () => {
-    const errors = validateBasics(base({ possessionDate: '2026-13-45' }));
-    expect(errors.possessionDate).toMatch(/real date/);
+  it('refuses a date that is not one, in the words of the month picker', () => {
+    const errors = validateBasics(
+      base({ constructionStatus: 'under-construction', possessionDate: '2026-13-45' })
+    );
+    expect(errors.possessionDate).toMatch(/month and the year/);
+  });
+
+  it('leaves the possession date alone while the status hides it', () => {
+    // A finished building has no possession date field, and the save does not
+    // send one — a stale value could not be fixed from a control nobody sees.
+    const errors = validateBasics(
+      base({ constructionStatus: 'ready-to-move', possessionDate: '2026-13-45' })
+    );
+    expect(errors.possessionDate).toBeUndefined();
   });
 
   it('refuses a negative age', () => {
@@ -232,7 +243,9 @@ describe('validateForActivation (PROP-04)', () => {
     const values = publishable();
     values.images = [makeImage({ url: 'https://example.com/a.jpg' })];
 
-    expect(validateForActivation(values).errors['images.0.url']).toMatch(/at least one image/);
+    // Keyed to the gallery, which prints it: `images.0.url` belonged to no
+    // control, so the Media badge counted a message the tab never showed.
+    expect(validateForActivation(values).errors.images).toMatch(/at least one image/);
   });
 
   it('blocks a publication with a thin description', () => {

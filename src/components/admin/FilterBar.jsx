@@ -1,11 +1,13 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
+import Checkbox from '@mui/material/Checkbox';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import Popover from '@mui/material/Popover';
 
 import Button from '../ui/Button';
 import Chip from '../ui/Chip';
 import IconButton from '../ui/IconButton';
-import MultiSelect from './MultiSelect';
 import useBreakpoint from '../../hooks/useBreakpoint';
 
 import styles from './FilterBar.module.css';
@@ -92,6 +94,16 @@ export default function FilterBar({
               >
                 <div className={styles.popoverBody} role="dialog" aria-label="Filters">
                   {controls}
+                  <div className={styles.popoverActions}>
+                    {count > 0 && onReset ? (
+                      <Button variant="ghost" size="sm" onClick={onReset}>
+                        Reset
+                      </Button>
+                    ) : null}
+                    <Button size="sm" onClick={() => setPopover(null)}>
+                      Done
+                    </Button>
+                  </div>
                 </div>
               </Popover>
             </>
@@ -210,16 +222,12 @@ function FilterControl({ field, values, onChange }) {
 
   if (field.type === 'multiselect') {
     return (
-      <div className={styles.control} style={style}>
-        <MultiSelect
-          label={field.label}
-          labelClassName={styles.fieldLabel}
-          options={field.options ?? []}
-          value={values[field.key] ?? []}
-          placeholder={field.placeholder}
-          onChange={(next) => onChange?.({ [field.key]: next.length ? next : undefined })}
-        />
-      </div>
+      <FilterMultiSelect
+        field={field}
+        style={style}
+        value={values[field.key]}
+        onChange={onChange}
+      />
     );
   }
 
@@ -291,6 +299,106 @@ function FilterControl({ field, values, onChange }) {
   }
 
   return null;
+}
+
+/**
+ * A several-values filter, drawn like the selects beside it.
+ *
+ * It used to be the form's `MultiSelect` — an autocomplete that grew a chip
+ * per pick. In a row of 40 px native selects that meant a 16 px placeholder in
+ * a different grey, a control that widened with every status ticked until it
+ * pushed the whole bar onto another line, and each pick shown twice: as a chip
+ * inside it and as the removable chip under the bar. Here the face says what
+ * is chosen in one line ("Under Construction +1"), the chips under the bar stay
+ * the one place a pick is listed and removed, and the list opens as a menu of
+ * checkboxes that stays open while several are ticked.
+ */
+function FilterMultiSelect({ field, style, value, onChange }) {
+  const id = useId();
+  const labelId = `${id}-label`;
+  const [anchor, setAnchor] = useState(null);
+
+  const options = field.options ?? [];
+  const chosen = (Array.isArray(value) ? value : []).map(String);
+  const labels = chosen.map(
+    (entry) => options.find((option) => String(option.value) === entry)?.label ?? entry
+  );
+
+  const face =
+    labels.length === 0
+      ? (field.placeholder ?? `Any ${field.label.toLowerCase()}`)
+      : labels.length === 1
+        ? labels[0]
+        : `${labels[0]} +${labels.length - 1}`;
+
+  const write = (next) => onChange?.({ [field.key]: next.length ? next : undefined });
+
+  const toggle = (optionValue) => {
+    const key = String(optionValue);
+    const next = new Set(
+      chosen.includes(key) ? chosen.filter((entry) => entry !== key) : [...chosen, key]
+    );
+    // The options' own order, so the URL and the chips read the same way
+    // whichever box was ticked first.
+    write(options.filter((option) => next.has(String(option.value))).map((option) => option.value));
+  };
+
+  return (
+    <div className={[styles.control, styles.multi].join(' ')} style={style}>
+      <span className={styles.label} id={labelId}>
+        {field.label}
+      </span>
+      <button
+        type="button"
+        id={id}
+        className={[styles.input, styles.selectFace, labels.length ? '' : styles.faceEmpty]
+          .filter(Boolean)
+          .join(' ')}
+        aria-haspopup="menu"
+        aria-expanded={anchor ? true : undefined}
+        aria-labelledby={`${labelId} ${id}`}
+        onClick={(event) => setAnchor(event.currentTarget)}
+      >
+        <span className={styles.faceText}>{face}</span>
+        <Icon icon="mdi:chevron-down" width="18" height="18" aria-hidden="true" />
+      </button>
+      <Menu
+        anchorEl={anchor}
+        open={Boolean(anchor)}
+        onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        slotProps={{ list: { 'aria-labelledby': labelId, dense: true } }}
+      >
+        {options.map((option) => {
+          const checked = chosen.includes(String(option.value));
+          return (
+            <MenuItem
+              key={option.value}
+              role="menuitemcheckbox"
+              aria-checked={checked}
+              className={styles.menuItem}
+              onClick={() => toggle(option.value)}
+            >
+              <Checkbox
+                size="small"
+                disableRipple
+                checked={checked}
+                tabIndex={-1}
+                slotProps={{ input: { 'aria-hidden': true, tabIndex: -1 } }}
+              />
+              {option.label}
+            </MenuItem>
+          );
+        })}
+        {chosen.length > 0 ? (
+          <MenuItem className={styles.menuClear} onClick={() => write([])}>
+            Clear {field.label.toLowerCase()}
+          </MenuItem>
+        ) : null}
+      </Menu>
+    </div>
+  );
 }
 
 /** The chip list: one per active value, each knowing how to clear itself. */

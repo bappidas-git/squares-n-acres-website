@@ -2,6 +2,12 @@ import { useCallback, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
+// First, out of alphabetical order: the leads list reaches its stylesheet and
+// then the table's before the picker's and the page header's, and this page
+// shares a chunk with it — two orders for one chunk is a mini-css-extract
+// "Conflicting order", which `build:ci` refuses.
+import LostReasonDialog from './LostReasonDialog';
+import { useAssignableUsers } from './leadFilters';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
@@ -16,7 +22,6 @@ import LeadNotes from './LeadNotes';
 import LeadPipeline from './LeadPipeline';
 import LeadRequirementCard from './LeadRequirementCard';
 import LeadTimeline from './LeadTimeline';
-import LostReasonDialog from './LostReasonDialog';
 import PATHS from '../../../routes/paths';
 import PageHeader from '../../../components/admin/PageHeader';
 import StatusChip from '../../../components/admin/StatusChip';
@@ -29,7 +34,6 @@ import { SelectField } from '../../../components/ui';
 import { TableSkeleton } from '../../../components/common/SkeletonLoaders';
 import { firstFieldMessage } from '../../../services/apiError';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
-import { useAssignableUsers } from './leadFilters';
 import { useToast } from '../../../components/common/ToastProvider';
 import { viewUrlOf } from '../properties/publicUrl';
 

@@ -70,10 +70,19 @@ export default function useApiList(fetcher, options = {}) {
   const setSort = useCallback((sort, order) => setParams({ sort, order }), [setParams]);
   const setFilters = useCallback((patch) => setParams(patch), [setParams]);
 
+  // "Reset" clears what narrows the list, not how the reader chose to look at
+  // it: the sort and the page size survive, the page goes back to the first.
   const resetFilters = useCallback(() => {
-    if (syncToUrl) setSearchParams(writeParams(base, spec, defaultValues), { replace: false });
-    else localState.set(base);
-  }, [base, spec, defaultValues, syncToUrl, setSearchParams, localState]);
+    const kept = Object.fromEntries(
+      KEPT_ON_RESET.filter((key) => key in params && params[key] !== undefined).map((key) => [
+        key,
+        params[key],
+      ])
+    );
+    const next = { ...base, ...kept, page: base.page };
+    if (syncToUrl) setSearchParams(writeParams(next, spec, defaultValues), { replace: false });
+    else localState.set(next);
+  }, [base, params, spec, defaultValues, syncToUrl, setSearchParams, localState]);
 
   // The search box updates on every keystroke; the API hears the last one.
   const debouncedQ = useDebounce(params.q ?? '', debounceMs);
@@ -88,7 +97,7 @@ export default function useApiList(fetcher, options = {}) {
 
   const requestKey = useMemo(() => canonical(requestParams), [requestParams]);
 
-  const { data, meta, loading, error, refetch } = useApi(
+  const { data, meta, loading, fetching, error, refetch } = useApi(
     (signal) => fetcher(requestParams, { signal }),
     [requestKey],
     { initialData: [], keepPreviousData }
@@ -100,6 +109,8 @@ export default function useApiList(fetcher, options = {}) {
     items,
     meta,
     loading,
+    // The page on screen is the previous answer and the next one is on its way.
+    refreshing: fetching && !loading,
     error,
     params,
     setParams,
@@ -110,6 +121,9 @@ export default function useApiList(fetcher, options = {}) {
     refetch,
   };
 }
+
+/** The parameters that say how a list is viewed rather than what it holds. */
+const KEPT_ON_RESET = ['sort', 'order', 'perPage'];
 
 /* ------------------------------------------------------------------ *
  * Parameter serialisation (§5.6)

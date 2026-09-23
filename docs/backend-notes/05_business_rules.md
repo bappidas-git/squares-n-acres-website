@@ -45,6 +45,11 @@ priceOf(property) =
 and sort **last** on `price-asc` and `price-desc` — last in both directions,
 because "unknown" is not "cheapest".
 
+A sale's total and a rental's monthly figure are two scales, so a price sort
+never compares one with the other: **sales first, then rents and leases**, each
+group in the requested direction. A plain numeric sort put every ₹21,000/month
+flat ahead of the cheapest ₹34.5 L sale on "low to high".
+
 **Bedrooms.** `bedrooms=3` matches a property whose `configuration.bedrooms` is 3
 **or** that has an active unit configuration with 3 bedrooms. `bedrooms=5` means
 **five or more**, in the filter and in the facet. In SQL that is a join against
@@ -58,17 +63,18 @@ Storing a generated `area_sqft` column is the sane way to make it indexable.
 
 **Sorting.**
 
-| `sort`                     | Order                                                    |
-| -------------------------- | -------------------------------------------------------- |
-| `relevance` (default)      | `is_featured DESC, priority_order DESC, updated_at DESC` |
-| `newest`                   | `published_at DESC`, nulls last                          |
-| `price-asc` / `price-desc` | `priceOf` ascending / descending, nulls last in both     |
-| `area-desc`                | headline area in sq ft, descending, nulls last           |
-| `popular`                  | `view_count DESC`                                        |
+| `sort`                     | Order                                                               |
+| -------------------------- | ------------------------------------------------------------------- |
+| `relevance` (default)      | `is_featured DESC, priority_order DESC, updated_at DESC`            |
+| `newest`                   | `published_at DESC`, nulls last                                     |
+| `price-asc` / `price-desc` | sales before rentals, then `priceOf` asc / desc, nulls last in both |
+| `area-desc`                | headline area in sq ft, descending, nulls last                      |
+| `popular`                  | `view_count DESC`                                                   |
 
 The admin list adds the plain columns `updatedAt`, `createdAt`, `price`,
 `viewCount`, `priorityOrder`, `title` and `seoScore`, and those alone honour
-`order=asc|desc`. `title` compares case- and accent-insensitively.
+`order=asc|desc`. `title` compares case- and accent-insensitively; `price`
+groups sales before rentals exactly as `price-asc`/`price-desc` do.
 
 **Facets** (`meta.facets`, on both property lists) are counted on the result set
 **after every other filter and before pagination** — that is what makes

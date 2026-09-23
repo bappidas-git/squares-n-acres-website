@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import { Button, Chip, Price } from '../../ui';
 import { DEFAULT_LTV_PERCENT, DEFAULT_TENURE_YEARS, startingEmi } from '../../../utils/finance';
 import { formatPrice } from '../../../utils/format';
+import { hasPriceRange, showsOnwards } from '../../../utils/priceDisplay';
 import AgentCard from './AgentCard';
 import WhatsAppButton from '../../common/WhatsAppButton';
 
@@ -56,17 +57,17 @@ export default function PriceCard({ property, banks = [], onRequest, triggerProp
   const pricing = property.pricing ?? {};
   const onRequestPrice = pricing.priceOnRequest === true;
   const isRental = property.listingType === 'rent' || property.listingType === 'lease';
-  const hasRange =
-    !isRental &&
-    !onRequestPrice &&
-    Boolean(pricing.priceRangeMin) &&
-    Boolean(pricing.priceRangeMax) &&
-    pricing.priceRangeMin !== pricing.priceRangeMax;
+  // Shared with the admin's price preview (`utils/priceDisplay`), so the form
+  // shows exactly the headline this card prints.
+  const hasRange = hasPriceRange(property);
+  const onwards = showsOnwards(property);
 
-  const units = Array.isArray(property.unitConfigurations)
-    ? property.unitConfigurations.filter((unit) => unit?.isActive !== false)
-    : [];
-  const onwards = !isRental && !onRequestPrice && (hasRange || units.length > 1);
+  // Everything a buyer or a tenant pays beside the headline, as the editor
+  // listed it — the form has always said "each row is printed under the
+  // price", and until now none was.
+  const charges = (Array.isArray(pricing.otherCharges) ? pricing.otherCharges : []).filter(
+    (charge) => String(charge?.label ?? '').trim() !== ''
+  );
 
   // "EMI from" quotes the lowest instalment the card's own figure implies, so a
   // listing showing "₹88.5 L – ₹1.42 Cr" computes it from the ₹88.5 L end.
@@ -94,20 +95,45 @@ export default function PriceCard({ property, banks = [], onRequest, triggerProp
         <p className={styles.perSqft}>{formatPrice(pricing.pricePerSqft)} per sq ft</p>
       ) : null}
 
-      {isRental && pricing.securityDeposit ? (
+      {(isRental && pricing.securityDeposit) || pricing.maintenanceChargesMonthly ? (
         <p className={styles.perSqft}>
-          Security deposit {formatPrice(pricing.securityDeposit)}
-          {pricing.maintenanceChargesMonthly
-            ? ` · Maintenance ${formatPrice(pricing.maintenanceChargesMonthly, { perMonth: true })}`
-            : ''}
+          {[
+            isRental && pricing.securityDeposit
+              ? `Security deposit ${formatPrice(pricing.securityDeposit)}`
+              : null,
+            pricing.maintenanceChargesMonthly
+              ? `Maintenance ${formatPrice(pricing.maintenanceChargesMonthly, { perMonth: true })}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </p>
+      ) : null}
+
+      {charges.length > 0 ? (
+        <ul className={styles.charges} aria-label="Other charges">
+          {charges.map((charge, index) => (
+            <li key={charge.id ?? `${charge.label}-${index}`}>
+              <span>{charge.label}</span>
+              <span className={styles.chargeAmount}>
+                {Number.isFinite(Number(charge.amount)) && charge.amount !== null
+                  ? formatPrice(charge.amount)
+                  : '—'}
+                {charge.note ? <span className={styles.chargeNote}> · {charge.note}</span> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
       ) : null}
 
       {pricing.priceNegotiable || pricing.bookingAmount ? (
         <div className={styles.chips}>
           {pricing.priceNegotiable ? <Chip tone="success">Negotiable</Chip> : null}
           {pricing.bookingAmount ? (
-            <Chip tone="info">Booking amount {formatPrice(pricing.bookingAmount)}</Chip>
+            <Chip tone="info">
+              {property.listingType === 'lease' ? 'Advance' : 'Booking amount'}{' '}
+              {formatPrice(pricing.bookingAmount)}
+            </Chip>
           ) : null}
         </div>
       ) : null}
