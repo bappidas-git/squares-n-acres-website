@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Icon } from '@iconify/react';
 
 import FormSection, { FormColumn } from '../../../../../components/admin/FormSection';
 import MultiSelect from '../../../../../components/admin/MultiSelect';
 import SlugField from '../../../../../components/admin/SlugField';
 import {
+  Button,
   ConfirmDialog,
   NumberField,
   RadioGroup,
@@ -13,6 +15,7 @@ import {
   TextareaField,
 } from '../../../../../components/ui';
 import RichTextField from '../../../../../components/editor/RichTextField';
+import PATHS from '../../../../../routes/paths';
 import {
   AVAILABILITY,
   CONSTRUCTION_STATUS,
@@ -20,10 +23,16 @@ import {
   FURNISHING,
   LISTING_TYPES,
   OWNERSHIP,
-  SEGMENTS,
 } from '../../../../../config/enums';
+import { segmentKind, segmentName, segmentOptions } from '../../../../../config/segments';
 import propertyService from '../../../../../services/propertyService';
-import { useBadgeMap, usePropertyTypes } from '../../../../../hooks/useMasterData';
+import { useAdminAuth } from '../../../../../contexts/AdminAuthContext';
+import { useMasterData } from '../../../../../contexts/MasterDataContext';
+import { useToast } from '../../../../../components/common/ToastProvider';
+import { useBadgeMap, usePropertyTypes, useSegments } from '../../../../../hooks/useMasterData';
+import BadgeQuickCreateDialog from '../components/BadgeQuickCreateDialog';
+import PropertyTypeQuickCreateDialog from '../components/PropertyTypeQuickCreateDialog';
+import SegmentQuickCreateDialog from '../components/SegmentQuickCreateDialog';
 import { DESCRIPTION_MIN, LIMITS, plainText } from '../validators/property';
 import {
   anyFilled,
@@ -53,6 +62,47 @@ const toMonth = (value) => String(value ?? '').slice(0, 7);
 /** `yyyy-mm` → the first of that month, which is what the contract stores. */
 const fromMonth = (value) => (value ? `${value}-01` : '');
 
+/** The master-data collection each "Add a …" dialog writes to. */
+const COLLECTION_OF = { segment: 'segments', propertyType: 'propertyTypes', badge: 'badges' };
+
+/**
+ * "Add a …" and "Manage …" under a master-data control (QA-52).
+ *
+ * The add opens a dialog that creates the record and selects it, so nothing
+ * typed into this form is lost; the manage link opens the master-data screen
+ * in a new tab for everything the dialog does not ask.
+ */
+function MasterDataActions({ addLabel, onAdd, manageLabel, manageHref }) {
+  if (!onAdd && !manageHref) return null;
+
+  return (
+    <div className={styles.actions}>
+      {onAdd ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onAdd}
+          icon={<Icon icon="mdi:plus" width="16" height="16" />}
+        >
+          {addLabel}
+        </Button>
+      ) : null}
+      {manageHref ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          href={manageHref}
+          target="_blank"
+          rel="noreferrer"
+          icon={<Icon icon="mdi:open-in-new" width="16" height="16" />}
+        >
+          {manageLabel}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * Tab 1 — Basics.
  *
@@ -64,13 +114,42 @@ const fromMonth = (value) => (value ? `${value}-01` : '');
  * Two of these controls change what the rest of the form shows, so both ask
  * before they throw anything away (§7 of prompt 19): switching a priced sale to
  * a rental, and moving a listing between segments.
+ *
+ * The segment, the property type and the badges are master data, and each of
+ * them can be added from here without leaving the listing (QA-52) — the
+ * segments themselves included, since they became master data too.
  */
 export default function BasicsTab() {
   const { values, errors, setField, setFields, disabled, propertyId } = usePropertyFormContext();
+  const { can } = useAdminAuth();
+  const { refresh } = useMasterData();
+  const toast = useToast();
   const [pending, setPending] = useState(null);
+  // `'segment' | 'propertyType' | 'badge'` while its "Add a …" dialog is open.
+  const [creating, setCreating] = useState(null);
 
+  const segments = useSegments({ activeOnly: false });
+  const everyType = usePropertyTypes({ activeOnly: false });
   const allTypes = usePropertyTypes({ segment: values.segment, activeOnly: false });
   const badgeMap = useBadgeMap();
+
+  // Adding is a master-data write; a read-only form offers neither link.
+  const canAdd = !disabled && can('masterData', 'create');
+  const canManage = can('masterData', 'view');
+
+  // The dialogs refuse a name master data already holds, so the list they
+  // check against has to be the current one: the context caches for ten
+  // minutes (D93), and a record created in another tab would be invisible.
+  useEffect(() => {
+    if (creating) refresh(COLLECTION_OF[creating]);
+  }, [creating, refresh]);
+
+  // The active segments, plus this listing's own when it has been retired.
+  const segmentChoices = useMemo(
+    () => segmentOptions(segments, { current: values.segment }),
+    [segments, values.segment]
+  );
+  const currentSegmentName = segmentName(values.segment, segments);
 
   // The active types of the segment — plus the listing's own type if it has
   // since been retired, labelled so. Offering active types only left such a
@@ -136,10 +215,38 @@ export default function BasicsTab() {
     const patch = { segment: next, propertyTypeId: null };
 
     applyOrConfirm(patch, cleared, {
-      title: `Move this listing to ${SEGMENTS.labelOf(next)}?`,
-      message: `${SEGMENTS.labelOf(next)} listings do not use some of the fields this one has filled in — the rooms, the built-up areas, the floors or the furnishing. They will be cleared, and moving back does not bring them back.`,
+      title: `Move this listing to ${segmentName(next)}?`,
+      message: `${segmentName(next)} listings do not use some of the fields this one has filled in — the rooms, the built-up areas, the floors or the furnishing. They will be cleared, and moving back does not bring them back.`,
       confirmLabel: 'Move and clear',
     });
+  };
+
+  /* ---------------- "Add a …" ---------------- */
+
+  const segmentCreated = async (record) => {
+    setCreating(null);
+    if (!record?.slug) return;
+    // The refresh is what teaches the registry the new segment's kind, and
+    // choosing it asks that kind what the move would clear.
+    await refresh('segments');
+    toast.success(`${record.name} was added.`);
+    chooseSegment(record.slug);
+  };
+
+  const propertyTypeCreated = async (record) => {
+    setCreating(null);
+    if (!record?.id) return;
+    await refresh('propertyTypes');
+    setField('propertyTypeId', record.id);
+    toast.success(`${record.name} was added.`);
+  };
+
+  const badgeCreated = async (record) => {
+    setCreating(null);
+    if (!record?.id) return;
+    await refresh('badges');
+    setField('badgeIds', [...(values.badgeIds ?? []), record.id]);
+    toast.success(`${record.name} was added.`);
   };
 
   const short = values.shortDescription ?? '';
@@ -218,11 +325,17 @@ export default function BasicsTab() {
           <RadioGroup
             label="Segment"
             required
-            options={SEGMENTS.options}
+            options={segmentChoices}
             value={values.segment ?? ''}
             error={errors.segment}
             disabled={disabled}
             onChange={chooseSegment}
+          />
+          <MasterDataActions
+            addLabel="Add a segment"
+            onAdd={canAdd ? () => setCreating('segment') : undefined}
+            manageLabel="Manage segments"
+            manageHref={canManage ? PATHS.adminSegments : undefined}
           />
         </FormColumn>
 
@@ -235,13 +348,23 @@ export default function BasicsTab() {
             value={typeBelongs ? values.propertyTypeId : ''}
             error={errors.propertyTypeId}
             disabled={disabled}
-            hint="The list follows the segment above."
+            hint={
+              typeOptions.length === 0
+                ? `${currentSegmentName} has no property types yet — add the first one below.`
+                : 'The list follows the segment above.'
+            }
             onChange={(event) =>
               setField(
                 'propertyTypeId',
                 event.target.value === '' ? null : Number(event.target.value)
               )
             }
+          />
+          <MasterDataActions
+            addLabel="Add a property type"
+            onAdd={canAdd && values.segment ? () => setCreating('propertyType') : undefined}
+            manageLabel="Manage property types"
+            manageHref={canManage ? PATHS.adminPropertyTypes : undefined}
           />
         </FormColumn>
 
@@ -255,6 +378,12 @@ export default function BasicsTab() {
             placeholder="New Launch, RERA Approved…"
             hint="The ribbons shown on the card and above the title."
             onChange={(ids) => setField('badgeIds', ids)}
+          />
+          <MasterDataActions
+            addLabel="Add a badge"
+            onAdd={canAdd ? () => setCreating('badge') : undefined}
+            manageLabel="Manage badges"
+            manageHref={canManage ? PATHS.adminBadges : undefined}
           />
         </FormColumn>
       </FormSection>
@@ -500,6 +629,30 @@ export default function BasicsTab() {
           setFields({ ...pending.patch, ...pending.cleared });
           setPending(null);
         }}
+      />
+
+      <SegmentQuickCreateDialog
+        open={creating === 'segment'}
+        existing={segments}
+        defaultKind={segmentKind(values.segment) ?? 'residential'}
+        onClose={() => setCreating(null)}
+        onCreated={segmentCreated}
+      />
+
+      <PropertyTypeQuickCreateDialog
+        open={creating === 'propertyType'}
+        segment={values.segment}
+        segmentLabel={currentSegmentName}
+        existing={everyType}
+        onClose={() => setCreating(null)}
+        onCreated={propertyTypeCreated}
+      />
+
+      <BadgeQuickCreateDialog
+        open={creating === 'badge'}
+        existing={Array.from(badgeMap.values())}
+        onClose={() => setCreating(null)}
+        onCreated={badgeCreated}
       />
     </>
   );

@@ -235,6 +235,27 @@ describe('the other child sitemaps', () => {
     });
   });
 
+  it('lists a type under /commercial when its own segment is of the commercial kind', async () => {
+    const seed = seedWith({
+      segments: (segments) =>
+        void segments.push({
+          ...segments[1],
+          id: 4,
+          name: 'Industrial',
+          slug: 'industrial',
+          kind: 'commercial',
+        }),
+      propertyTypes: (types) =>
+        void (types.find((type) => type.slug === 'warehouses').segment = 'industrial'),
+    });
+
+    await withServer({ seed }, async ({ request }) => {
+      const found = locations((await request('GET', '/sitemap-pages.xml')).text);
+      assert.ok(found.includes(`${SITE}/commercial/warehouses`));
+      assert.ok(!found.includes(`${SITE}/buy/warehouses`));
+    });
+  });
+
   it('leaves an inactive property type out', async () => {
     const seed = seedWith({
       propertyTypes: (types) => void (types[0].isActive = false),

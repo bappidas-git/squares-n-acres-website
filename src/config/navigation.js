@@ -20,6 +20,7 @@
 import PATHS from '../routes/paths';
 import { NAV } from './copy';
 import { CONSTRUCTION_STATUS, PRICE_BUCKETS_SALE } from './enums';
+import { segmentKind } from './segments';
 import { formatPrice, formatPhoneForTel, whatsappLink } from '../utils/format';
 import { serializeFilters } from '../utils/listingFilters';
 
@@ -44,9 +45,13 @@ const active = (records) =>
         String(left.name ?? '').localeCompare(String(right.name ?? ''))
     );
 
-/** The property types of one segment, in order. */
-const typesOf = (propertyTypes, segment) =>
-  active(propertyTypes).filter((type) => type.segment === segment);
+/**
+ * The property types of one kind of segment, in order — a type in a segment
+ * an editor added of that kind among them (QA-52). Every link built from these
+ * is `/buy/:slug`, which lists a type whatever its segment.
+ */
+const typesOf = (propertyTypes, kind) =>
+  active(propertyTypes).filter((type) => segmentKind(type.segment) === kind);
 
 /** One property type by slug, or `null` — a menu never invents a type. */
 const typeBySlug = (propertyTypes, slug) =>

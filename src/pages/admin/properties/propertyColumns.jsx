@@ -11,8 +11,8 @@ import {
   AVAILABILITY,
   CONSTRUCTION_STATUS,
   LISTING_TYPES,
-  SEGMENTS,
 } from '../../../config/enums';
+import { segmentName } from '../../../config/segments';
 import {
   formatArea,
   formatBhk,
@@ -456,9 +456,10 @@ export const PROPERTY_CSV_COLUMNS = [
   { label: 'Title', value: (row) => row.title },
   { label: 'Slug', value: (row) => row.slug },
   { label: 'Listing type', value: (row) => LISTING_TYPES.labelOf(row.listingType) },
-  // The label, like every other enum column: the file said `land` where the
-  // filter it was exported from says "Plots & Land".
-  { label: 'Segment', value: (row) => SEGMENTS.labelOf(row.segment) || row.segment || '' },
+  // The name, like every other labelled column: the file said `land` where the
+  // filter it was exported from says "Plots & Land" — and a segment an editor
+  // added is named in master data (QA-52).
+  { label: 'Segment', value: (row) => (row.segment ? segmentName(row.segment) : '') },
   { label: 'Property type', value: (row) => row.propertyType?.name ?? '' },
   { label: 'Status', value: (row) => CONSTRUCTION_STATUS.labelOf(row.constructionStatus) },
   { label: 'Availability', value: (row) => AVAILABILITY.labelOf(row.availability) },

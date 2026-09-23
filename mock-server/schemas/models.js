@@ -155,6 +155,36 @@ const cities = {
   fields: { ...id, ...masterData.city.create, ...timestamps },
 };
 
+/**
+ * A segment is the vocabulary a listing is written in rather than a page of
+ * its own (QA-52): `GET /segments` answers every one, the inactive ones
+ * flagged, because a listing filed under a retired segment still needs the
+ * layout its `kind` gives it. There is no public read by slug.
+ */
+const segments = {
+  collection: 'segments',
+  slugField: 'slug',
+  searchable: ['name', 'description'],
+  sortable: ['order', 'name', 'propertyTypeCount', 'propertyCount'],
+  defaultSort: { field: 'order', order: 'asc' },
+  publicScope: null,
+  publicNote: 'none — every segment, the inactive ones flagged by `isActive`',
+  publicOmit: [],
+  fields: {
+    ...id,
+    ...masterData.segment.create,
+    builtIn: {
+      type: 'bool',
+      read: true,
+      default: false,
+      note: 'residential, commercial and land: slug and kind fixed, never deleted',
+    },
+    propertyTypeCount: computedCount('Property types in this segment'),
+    propertyCount: computedCount('Active properties in this segment'),
+    ...timestamps,
+  },
+};
+
 const propertyTypes = {
   collection: 'propertyTypes',
   slugField: 'slug',
@@ -638,6 +668,7 @@ const MODELS = {
   properties,
   localities,
   cities,
+  segments,
   propertyTypes,
   amenities,
   badges,

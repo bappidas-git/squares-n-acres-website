@@ -102,6 +102,12 @@ poor specification.
 
 ---
 
+## Segments
+
+{{segments}}
+
+---
+
 ## Settings
 
 {{settings}}

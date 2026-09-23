@@ -6,8 +6,9 @@
  * and what `useApiList` keeps in the query string, which is what makes a
  * filtered table a shareable URL.
  *
- * The master-data options (property types, localities, developers) are passed
- * in rather than fetched: `MasterDataContext` already holds all three (D93).
+ * The master-data options (segments, property types, localities, developers)
+ * are passed in rather than fetched: `MasterDataContext` already holds all four
+ * (D93).
  */
 
 import { DEFAULT_PER_PAGE } from '../../../components/admin/DataTable';
@@ -16,9 +17,9 @@ import {
   AVAILABILITY,
   CONSTRUCTION_STATUS,
   LISTING_TYPES,
-  SEGMENTS,
   SEO_SCORE_BANDS,
 } from '../../../config/enums';
+import { segmentOptions } from '../../../config/segments';
 
 /** What the table asks for before anybody touches a control (D23, D47). */
 export const PROPERTY_LIST_DEFAULTS = {
@@ -104,12 +105,14 @@ export function exportParamsOf(params = {}) {
  * The `FilterBar` fields, in the order they appear.
  *
  * @param {object} [sources]
+ * @param {Array<object>} [sources.segments] every segment, active or not
  * @param {Array<object>} [sources.propertyTypes] every type, active or not
  * @param {Array<object>} [sources.localities]
  * @param {Array<object>} [sources.developers]
  * @returns {Array<object>}
  */
 export function buildPropertyFilterFields({
+  segments = [],
   propertyTypes = [],
   localities = [],
   developers = [],
@@ -133,7 +136,9 @@ export function buildPropertyFilterFields({
       type: 'select',
       label: 'Segment',
       placeholder: 'All segments',
-      options: SEGMENTS.options,
+      // Master data (QA-52), the retired ones included: a listing already
+      // filed under one has to stay findable.
+      options: segmentOptions(segments, { activeOnly: false }),
     },
     {
       key: 'propertyTypeId',

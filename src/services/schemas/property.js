@@ -24,10 +24,10 @@ const {
   OWNERSHIP,
   PROJECT_APPROVALS,
   SECTION_VISIBILITY_KEYS,
-  SEGMENTS,
   SPEC_GROUPS,
   TIMELINE_STATUS,
 } = require('../../config/enums');
+const { segmentRef } = require('./refs');
 const { seo } = require('./seo');
 
 /** Every key optional, one level deep — the `PATCH` variant of a write shape. */
@@ -48,7 +48,8 @@ const create = {
   title: { type: 'string', required: true, min: 10, maxLength: 200 },
   projectName: { type: 'string', nullable: true, maxLength: 150, default: null },
   listingType: { type: 'enum', enum: LISTING_TYPES.values, required: true, default: 'sale' },
-  segment: { type: 'enum', enum: SEGMENTS.values, required: true, default: 'residential' },
+  // A `segments` slug, not a fixed enum: an editor can add a segment (QA-52).
+  segment: segmentRef,
   propertyTypeId: { type: 'int', required: true },
   constructionStatus: {
     type: 'enum',

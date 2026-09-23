@@ -112,6 +112,13 @@ That is what `seoScoreBand` on the admin list filters on.
   `article_tag_id`. The three that are not — `assigned_to`, `created_by`,
   `updated_by` — point at `admin_users` and are named for the relationship
   rather than the table, which is how they read in the API too.
+- One reference is by slug rather than by id: `properties.segment` and
+  `property_types.segment` hold a `segments.slug` (QA-52), because the contract
+  has always carried the segment as a word (`residential`, `commercial`, `land`)
+  and every URL, filter and cached record already uses it. Declare it a foreign
+  key onto the unique `segments.slug` column (`exists:segments,slug` on write);
+  the API never changes a segment's slug once it exists, so the reference never
+  needs a cascade.
 - The full column-by-column mapping is generated below; take it as the
   specification for the API Resources.
 

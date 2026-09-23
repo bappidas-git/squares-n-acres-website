@@ -21,6 +21,7 @@ const {
   ROLES,
   SEGMENTS,
 } = require('../../config/enums');
+const { segmentRef } = require('./refs');
 const { seo } = require('./seo');
 
 const socialLinks = {
@@ -77,10 +78,27 @@ const city = {
   isActive: { type: 'bool', default: true },
 };
 
+/**
+ * A segment (QA-52): the first choice on the property form. `kind` is the
+ * layout its listings get — one of the three built-in segments' — and the slug
+ * is what a listing and a property type store, so the API keeps it once the
+ * segment exists. The three built-ins also keep their `kind` and cannot be
+ * deleted (`src/config/segments.js`).
+ */
+const segment = {
+  name: { type: 'string', required: true, min: 2, maxLength: 60 },
+  slug: { type: 'slug', maxLength: 75, default: '' },
+  kind: { type: 'enum', enum: SEGMENTS.values, required: true, default: 'residential' },
+  description: { type: 'string', nullable: true, maxLength: 300, default: null },
+  icon: { type: 'string', nullable: true, maxLength: 80, default: null },
+  isActive: { type: 'bool', default: true },
+  order: { type: 'int', min: 0, default: 0 },
+};
+
 const propertyType = {
   name: { type: 'string', required: true, min: 2, maxLength: 120 },
   slug: { type: 'slug', maxLength: 75, default: '' },
-  segment: { type: 'enum', enum: SEGMENTS.values, required: true, default: 'residential' },
+  segment: segmentRef,
   icon: { type: 'string', required: true, maxLength: 80 },
   description: { type: 'string', nullable: true, maxLength: 500, default: null },
   isActive: { type: 'bool', default: true },
@@ -323,6 +341,7 @@ const entity = (shape, updateShape) => ({ create: shape, update: updateShape || 
 module.exports = {
   locality: entity(locality),
   city: entity(city),
+  segment: entity(segment),
   propertyType: entity(propertyType),
   amenity: entity(amenity),
   badge: entity(badge),

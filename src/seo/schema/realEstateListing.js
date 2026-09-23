@@ -14,6 +14,7 @@
  */
 
 const { AREA_UNITS } = require('../../config/enums');
+const { segmentKind } = require('../../config/segments');
 const { absolute, compact, isoDate, ref } = require('./graph');
 const { organizationId } = require('./organization');
 const { stripHtml } = require('../text');
@@ -48,11 +49,16 @@ const MAX_IMAGES = 10;
 /** A description a rich result can show: no markup, no essay (§9.3). */
 const MAX_DESCRIPTION = 300;
 
-/** The second `@type` of the listing: what kind of place it is. */
-function residenceTypeOf(property, propertyType) {
+/**
+ * The second `@type` of the listing: what kind of place it is. Land and
+ * commercial space are a `Place` by their segment's kind, so a segment an
+ * editor added of either kind is one too (QA-52).
+ */
+function residenceTypeOf(property, propertyType, segments) {
   const slug = propertyType?.slug ?? property?.propertyType?.slug ?? '';
   if (RESIDENCE_TYPES[slug]) return RESIDENCE_TYPES[slug];
-  if (property?.segment === 'land' || property?.segment === 'commercial') return 'Place';
+  const kind = segmentKind(property?.segment, segments);
+  if (kind === 'land' || kind === 'commercial') return 'Place';
   return 'Residence';
 }
 
@@ -101,7 +107,8 @@ function offerOf(property, canonical) {
 /**
  * @param {object} input the normalised record (`entityAdapters.toSeoInput`) of a property
  * @param {{seoSettings?: object, siteUrl?: string, propertyTypes?: Array<object>,
- *   amenities?: Array<object>}} [context]
+ *   amenities?: Array<object>, segments?: Array<object>}} [context] `segments`
+ *   decides a segment's kind; the browser's registry answers when it is absent
  * @returns {object|null}
  */
 function realEstateListingNode(input = {}, context = {}) {
@@ -135,7 +142,7 @@ function realEstateListingNode(input = {}, context = {}) {
   const areaUnit = area.areaUnit ?? 'sqft';
 
   return compact({
-    '@type': ['RealEstateListing', residenceTypeOf(property, propertyType)],
+    '@type': ['RealEstateListing', residenceTypeOf(property, propertyType, context.segments)],
     '@id': `${canonical}#listing`,
     url: canonical,
     name: input.title || input.effectiveTitle,

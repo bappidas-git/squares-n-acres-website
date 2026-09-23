@@ -41,6 +41,7 @@
 const { hasChrome, launchChrome } = require('./lib/chrome');
 const { renderHead, routeFor } = require('./lib/renderJsonLd');
 const PATHS = require('../src/routes/paths');
+const { segmentKind } = require('../src/config/segments');
 
 /* ------------------------------------------------------------------ *
  * Arguments
@@ -345,12 +346,15 @@ const RECORD_SOURCES = [
   // (D25), not a record with a page of its own name. It is in this list
   // because leaving it out is precisely the defect the Chrome path found:
   // seventeen indexable pages that no sitemap carried. A fallback that cannot
-  // catch the bug the main path caught is not a fallback.
+  // catch the bug the main path caught is not a fallback. The route follows the
+  // segment's kind (QA-52), read from `GET /segments` before the types.
   {
     label: 'property type',
     endpoint: 'property-types',
-    path: (r) =>
-      r.segment === 'commercial' ? PATHS.commercialType(r.slug) : PATHS.buyType(r.slug),
+    path: (r, context = {}) =>
+      segmentKind(r.segment, context.segments) === 'commercial'
+        ? PATHS.commercialType(r.slug)
+        : PATHS.buyType(r.slug),
   },
 ];
 
@@ -362,6 +366,9 @@ async function readApiRoutes() {
 
   for (const path of staticRoutes()) expected.set(path, 'route table');
 
+  const segments = await json(`${options.apiUrl}/segments?perPage=100`);
+  const context = { segments: Array.isArray(segments) ? segments : [] };
+
   for (const source of RECORD_SOURCES) {
     const records = await json(`${options.apiUrl}/${source.endpoint}?perPage=500`);
     if (!Array.isArray(records)) {
@@ -371,7 +378,7 @@ async function readApiRoutes() {
 
     for (const record of records) {
       if (!record?.slug || optedOut(record)) continue;
-      expected.set(normalise(source.path(record)), source.label);
+      expected.set(normalise(source.path(record, context)), source.label);
     }
   }
 

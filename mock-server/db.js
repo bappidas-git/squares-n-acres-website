@@ -50,9 +50,16 @@ function readJson(file) {
 /**
  * Makes sure `mock-server/.runtime/db.json` exists and is usable.
  *
+ * A runtime copy made before a collection joined the seed — `segments` did,
+ * after 1.0.0 (QA-52) — gains that collection as seeded, and keeps everything
+ * else it holds. Without it the collection reads as an empty list that no
+ * write can reach (`getCollection` answers a fresh `[]` for a missing key), so
+ * every listing would fail the check that its segment exists.
+ *
  * @param {{fresh?: boolean}} [options] `fresh` re-copies the seed over an
  *   existing runtime database (`MOCK_FRESH=1`)
- * @returns {{created: boolean, path: string}}
+ * @returns {{created: boolean, path: string, added: Array<string>}} `added`
+ *   names the collections a kept copy gained
  */
 function ensureRuntimeDb({ fresh = false } = {}) {
   const { seedPath, runtimePath } = config;
@@ -63,12 +70,19 @@ function ensureRuntimeDb({ fresh = false } = {}) {
   const exists = fs.existsSync(runtimePath);
   if (exists && !fresh) {
     // A corrupt runtime copy is a dead end for JSON Server, so say so here.
-    readJson(runtimePath);
-    return { created: false, path: runtimePath };
+    const runtime = readJson(runtimePath);
+    const added = Object.keys(seed).filter(
+      (key) => !Object.prototype.hasOwnProperty.call(runtime, key)
+    );
+    if (added.length > 0) {
+      for (const key of added) runtime[key] = seed[key];
+      fs.writeFileSync(runtimePath, `${JSON.stringify(runtime, null, 2)}\n`, 'utf8');
+    }
+    return { created: false, path: runtimePath, added };
   }
 
   fs.writeFileSync(runtimePath, `${JSON.stringify(seed, null, 2)}\n`, 'utf8');
-  return { created: true, path: runtimePath };
+  return { created: true, path: runtimePath, added: [] };
 }
 
 /**

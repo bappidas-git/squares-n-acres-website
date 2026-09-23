@@ -84,6 +84,16 @@ const FINDERS = {
     ...usagesIn(source, 'properties', 'property', (p) => sameId(p.location?.cityId, id)),
   ],
 
+  // Listings and types hold a segment's slug, not its id (QA-52).
+  segment: (id, source) => {
+    const segment = rows(source, 'segments').find((row) => sameId(row.id, id));
+    if (!segment) return [];
+    return [
+      ...usagesIn(source, 'propertyTypes', 'propertyType', (t) => t.segment === segment.slug),
+      ...usagesIn(source, 'properties', 'property', (p) => p.segment === segment.slug),
+    ];
+  },
+
   propertyType: (id, source) => [
     ...usagesIn(source, 'properties', 'property', (p) => sameId(p.propertyTypeId, id)),
     ...usagesIn(source, 'faqs', 'faq', (f) => sameId(f.propertyTypeId, id)),
@@ -147,6 +157,7 @@ function findUsages(type, id, source) {
 /** The plural noun a 409 message uses for a usage type. */
 const NOUNS = {
   property: ['property', 'properties'],
+  propertyType: ['property type', 'property types'],
   lead: ['lead', 'leads'],
   locality: ['locality', 'localities'],
   faq: ['FAQ', 'FAQs'],
@@ -227,6 +238,8 @@ function findMediaUsages(url, source) {
  */
 const USAGE_COLLECTIONS = [
   'properties',
+  'propertyTypes',
+  'segments',
   'leads',
   'localities',
   'faqs',

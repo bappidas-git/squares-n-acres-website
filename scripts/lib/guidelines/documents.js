@@ -461,7 +461,9 @@ function fieldTable(collection, model) {
     ['Slug field', model.slugField ? mono(model.slugField) : '—'],
     [
       'Public scope',
-      model.publicScope ? mono(JSON.stringify(model.publicScope)) : 'none — admin only',
+      model.publicScope
+        ? mono(JSON.stringify(model.publicScope))
+        : (model.publicNote ?? 'none — admin only'),
     ],
     ['Stripped from public reads', (model.publicOmit ?? []).map(mono).join(', ') || '—'],
     ['`q` searches', (model.searchable ?? []).map(mono).join(', ') || '—'],

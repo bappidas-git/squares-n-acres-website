@@ -465,7 +465,10 @@ module.exports = ({ db, getModel }) => {
   router.post('/admin/properties', (req, res, next) => {
     try {
       const body = assignNestedIds({ ...(req.body ?? {}) });
-      validateBody(schemas.getSchema('property.create'), body, { fillDefaults: true });
+      validateBody(schemas.getSchema('property.create'), body, {
+        fillDefaults: true,
+        lookup: db.getCollection,
+      });
 
       const slug = resolveSlug(body, {});
       const record = applySlug(buildRecord(body, { method: 'POST', user: req.user }), slug);
@@ -543,7 +546,7 @@ module.exports = ({ db, getModel }) => {
       if (!existing) throw notFound();
 
       const body = assignNestedIds({ ...(req.body ?? {}) });
-      validateBody(schemas.getSchema('property.update'), body);
+      validateBody(schemas.getSchema('property.update'), body, { lookup: db.getCollection });
 
       const slug = resolveSlug(body, { existing });
       const record = applySlug(
@@ -567,7 +570,10 @@ module.exports = ({ db, getModel }) => {
       if (!existing) throw notFound();
 
       const body = assignNestedIds({ ...(req.body ?? {}) });
-      validateBody(schemas.getSchema('property.patch'), body, { partial: true });
+      validateBody(schemas.getSchema('property.patch'), body, {
+        partial: true,
+        lookup: db.getCollection,
+      });
 
       // A `PATCH` re-slugs only when it says so: renaming a listing must not
       // silently move its public URL (§5.9).

@@ -18,6 +18,11 @@
  * pre-launch or under construction (§6.1). Like Laravel, the rule reads the
  * **body** rather than the stored record, so it fires on a `PATCH` exactly when
  * that `PATCH` is the write setting the state it depends on.
+ *
+ * And `exists: { collection, field }` — Laravel's `exists:<table>,<column>` —
+ * for a field that names another record by something other than its id: a
+ * property's `segment` is the slug of a `segments` record (QA-52). It is
+ * checked when the caller hands over `lookup`, the way to read that collection.
  */
 
 const { validation } = require('./errors');
@@ -169,6 +174,23 @@ function uniqueError(key, field, value, { collection, excludeId }) {
 }
 
 /**
+ * `exists: { collection, field }` — some row of another collection holds the
+ * value in `field`. A caller that cannot reach that collection passes no
+ * `lookup`, and the rule stands aside rather than refusing everything.
+ */
+function existsError(key, value, rule, { lookup }) {
+  if (typeof lookup !== 'function' || !rule?.collection) return null;
+  const rows = lookup(rule.collection);
+  if (!Array.isArray(rows)) return null;
+
+  const field = rule.field ?? 'id';
+  const found = rows.some(
+    (record) => record?.[field] !== undefined && String(record[field]) === String(value)
+  );
+  return found ? null : `The selected ${key} is invalid.`;
+}
+
+/**
  * Validates one value against one descriptor, writing every message it finds
  * into `errors` under `key` (the dotted path).
  */
@@ -194,6 +216,7 @@ function validateValue(key, field, value, descriptor, errors, options) {
   boundsErrors(key, value, descriptor).forEach(push);
 
   if (descriptor.unique) push(uniqueError(key, field, value, options));
+  if (descriptor.exists) push(existsError(key, value, descriptor.exists, options));
 
   if (descriptor.type === 'array' && descriptor.items) {
     value.forEach((entry, index) => {
@@ -258,10 +281,11 @@ function validateShape(shape, body, prefix, errors, options) {
  *
  * @param {Record<string, object>} schema `{ field: descriptor }`
  * @param {object} body
- * @param {{partial?: boolean, fillDefaults?: boolean, collection?: Array<object>, excludeId?: number|string|null}} [options]
+ * @param {{partial?: boolean, fillDefaults?: boolean, collection?: Array<object>, excludeId?: number|string|null, lookup?: (name: string) => Array<object>}} [options]
  *   `partial` skips the `required` checks (a `PATCH`); `fillDefaults` exempts
  *   required fields that carry a default (a `POST`); `collection` and
- *   `excludeId` back the `unique` rule.
+ *   `excludeId` back the `unique` rule; `lookup` reads another collection for
+ *   the `exists` rule.
  * @throws {import('./errors').ApiError} 422 when anything failed
  */
 function validateBody(schema, body, options = {}) {
@@ -271,6 +295,7 @@ function validateBody(schema, body, options = {}) {
     fillDefaults: Boolean(options.fillDefaults),
     collection: options.collection,
     excludeId: options.excludeId ?? null,
+    lookup: options.lookup,
   };
 
   validateShape(schema, body ?? {}, '', errors, resolved);
@@ -314,6 +339,7 @@ function validateWrite({ getModel, getCollection }) {
         fillDefaults: req.method === 'POST',
         collection: model.singleton ? undefined : getCollection(name),
         excludeId: id ?? null,
+        lookup: getCollection,
       });
       next();
     } catch (error) {

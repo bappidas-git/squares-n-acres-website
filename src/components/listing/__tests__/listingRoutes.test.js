@@ -27,6 +27,7 @@ import LISTING_ROUTES, {
 } from '../listingRoutes';
 import { CONSTRUCTION_STATUS } from '../../../config/enums';
 import { LISTING_PARAM_TYPES } from '../../../utils/listingFilters';
+import { setKnownSegments } from '../../../config/segments';
 
 /** The property types the seed publishes, as master data hands them over. */
 const propertyTypes = [
@@ -222,6 +223,45 @@ describe('resolveListingRoute', () => {
     });
 
     expect(config.fixed).toEqual({ segment: 'commercial', propertyTypeId: ['11'] });
+  });
+
+  describe('a type in a segment an editor added (QA-52)', () => {
+    const withWarehouses = {
+      propertyTypes: [
+        ...propertyTypes,
+        { id: 14, name: 'Warehouses', slug: 'warehouses', segment: 'industrial' },
+        { id: 26, name: 'Farm Land', slug: 'farm-land', segment: 'farmland' },
+      ],
+      loading: false,
+    };
+
+    beforeEach(() =>
+      setKnownSegments([
+        { slug: 'industrial', name: 'Industrial', kind: 'commercial' },
+        { slug: 'farmland', name: 'Farmland', kind: 'land' },
+      ])
+    );
+    afterEach(() => setKnownSegments([]));
+
+    it('lists its own segment under /commercial when that segment is of the commercial kind', () => {
+      const { config } = resolveListingRoute({
+        routeKey: 'commercial-type',
+        slug: 'warehouses',
+        masterData: withWarehouses,
+      });
+
+      expect(config.fixed).toEqual({ segment: 'industrial', propertyTypeId: ['14'] });
+    });
+
+    it('leaves the route’s segment alone for a type of another kind', () => {
+      const { config } = resolveListingRoute({
+        routeKey: 'commercial-type',
+        slug: 'farm-land',
+        masterData: withWarehouses,
+      });
+
+      expect(config.fixed.segment).toBe('commercial');
+    });
   });
 
   it('passes the pending and not-found states through with the parent’s config', () => {

@@ -74,6 +74,7 @@ function build() {
     slugify,
     media,
   });
+  const segments = data('segments')({ stamps: stampsFor('segments') });
   const propertyTypes = data('propertyTypes')({ stamps: stampsFor('propertyTypes') });
   const amenities = data('amenities')({ stamps: stampsFor('amenities'), slugify });
   const badges = data('badges')({ stamps: stampsFor('badges'), slugify });
@@ -147,6 +148,7 @@ function build() {
     properties,
     localities,
     cities,
+    segments,
     propertyTypes,
     amenities,
     badges,

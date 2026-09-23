@@ -564,6 +564,165 @@ describe('master data', () => {
  * Pages
  * ------------------------------------------------------------------ */
 
+describe('segments', () => {
+  /** A custom segment of the commercial kind, created through the API. */
+  const industrial = async (request, token) =>
+    (
+      await request('POST', '/admin/segments', {
+        token,
+        body: { name: 'Industrial', kind: 'commercial' },
+      })
+    ).body.data;
+
+  it('answers every segment publicly, the inactive ones flagged, with their counts', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const created = await industrial(request, token);
+      assert.equal(created.slug, 'industrial');
+      assert.equal(created.builtIn, false);
+
+      await request('PATCH', `/admin/segments/${created.id}`, {
+        token,
+        body: { isActive: false },
+      });
+
+      const list = await request('GET', '/segments?perPage=all');
+      const bySlug = Object.fromEntries(list.body.data.map((row) => [row.slug, row]));
+      // A listing filed under a retired segment still needs its layout.
+      assert.equal(bySlug.industrial.isActive, false);
+      assert.equal(bySlug.residential.builtIn, true);
+      assert.ok(bySlug.residential.propertyTypeCount > 0);
+      assert.equal(typeof bySlug.commercial.propertyCount, 'number');
+
+      const lands = await request('GET', '/segments?kind=land&perPage=all');
+      assert.deepEqual(ids(lands), [3]);
+    });
+  });
+
+  it("keeps a segment's slug, and a built-in segment's kind", async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const created = await industrial(request, token);
+
+      // A PUT that leaves the slug out keeps it rather than deriving a new one.
+      const renamed = await request('PUT', `/admin/segments/${created.id}`, {
+        token,
+        body: { name: 'Warehousing', kind: 'commercial', isActive: true, order: 4 },
+      });
+      assert.equal(renamed.status, 200);
+      assert.equal(renamed.body.data.slug, 'industrial');
+
+      const moved = await request('PATCH', `/admin/segments/${created.id}`, {
+        token,
+        body: { slug: 'warehousing' },
+      });
+      assert.equal(moved.status, 422);
+      assert.ok(moved.body.errors.slug);
+
+      // A custom segment may change its layout; a built-in one may not.
+      const relaid = await request('PATCH', `/admin/segments/${created.id}`, {
+        token,
+        body: { kind: 'land' },
+      });
+      assert.equal(relaid.body.data.kind, 'land');
+
+      const builtIn = await request('PATCH', '/admin/segments/2', {
+        token,
+        body: { kind: 'land' },
+      });
+      assert.equal(builtIn.status, 422);
+      assert.ok(builtIn.body.errors.kind);
+
+      const renamedBuiltIn = await request('PATCH', '/admin/segments/3', {
+        token,
+        body: { name: 'Land & Plots' },
+      });
+      assert.equal(renamedBuiltIn.body.data.slug, 'land');
+    });
+  });
+
+  it('never deletes a built-in segment, alone or in a bulk delete', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const created = await industrial(request, token);
+
+      const alone = await request('DELETE', '/admin/segments/1', { token });
+      assert.equal(alone.status, 409);
+      assert.deepEqual(alone.body.data.usedBy, []);
+
+      // All or nothing: the custom segment in the same request survives too.
+      const bulk = await request('POST', '/admin/segments/bulk', {
+        token,
+        body: { ids: [created.id, 1], action: 'delete' },
+      });
+      assert.equal(bulk.status, 409);
+      const after = await request('GET', `/admin/segments/${created.id}`, { token });
+      assert.equal(after.status, 200);
+    });
+  });
+
+  it('refuses a segment nothing names, on a property type and on a listing', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const type = await request('POST', '/admin/property-types', {
+        token,
+        body: { name: 'Hangars', segment: 'aviation', icon: 'mdi:home' },
+      });
+      assert.equal(type.status, 422);
+      assert.ok(type.body.errors.segment);
+
+      const listing = await request('PATCH', '/admin/properties/1', {
+        token,
+        body: { segment: 'aviation' },
+      });
+      assert.equal(listing.status, 422);
+      assert.ok(listing.body.errors.segment);
+
+      await industrial(request, token);
+      const filed = await request('PATCH', '/admin/properties/1', {
+        token,
+        body: { segment: 'industrial' },
+      });
+      assert.equal(filed.body.data.segment, 'industrial');
+    });
+  });
+
+  it('refuses to delete a segment in use, naming the types and the listings', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const created = await industrial(request, token);
+
+      const type = await request('POST', '/admin/property-types', {
+        token,
+        body: { name: 'Sheds', segment: 'industrial', icon: 'mdi:home' },
+      });
+      await request('PATCH', '/admin/properties/1', { token, body: { segment: 'industrial' } });
+
+      const refused = await request('DELETE', `/admin/segments/${created.id}`, { token });
+      assert.equal(refused.status, 409);
+      assert.equal(refused.body.errors.id[0], 'Used by 1 property type and 1 property');
+
+      await request('DELETE', `/admin/property-types/${type.body.data.id}`, { token });
+      await request('PATCH', '/admin/properties/1', { token, body: { segment: 'residential' } });
+      assert.equal(
+        (await request('DELETE', `/admin/segments/${created.id}`, { token })).status,
+        200
+      );
+    });
+  });
+
+  it('is master data: a manager writes it, a sales user may not read the admin list', async () => {
+    await withServer(async ({ request, login }) => {
+      const manager = await login(MANAGER);
+      assert.equal((await industrial(request, manager)).kind, 'commercial');
+
+      const sales = await login(SALES);
+      assert.equal((await request('GET', '/admin/segments', { token: sales })).status, 403);
+    });
+  });
+});
+
 describe('pages', () => {
   const PAGE = {
     slug: 'smoke-cms-page',

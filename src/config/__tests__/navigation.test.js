@@ -16,6 +16,7 @@ import {
   FOOTER_COLUMN_LIMIT,
 } from '../navigation';
 import { PRICE_BUCKETS_SALE } from '../enums';
+import { setKnownSegments } from '../segments';
 
 const propertyTypes = [
   { id: 1, name: 'Apartments', slug: 'apartments', segment: 'residential', order: 1 },
@@ -177,6 +178,28 @@ describe('buildHeaderMenus', () => {
   it('keeps an inactive property type out of every menu', () => {
     const buy = menuByKey(menus, 'buy');
     expect(hrefs(columnByKey(buy, 'type').links)).not.toContain('/buy/retired');
+  });
+
+  it('files a type by its segment’s kind, so an added segment’s types reach the menus (QA-52)', () => {
+    setKnownSegments([
+      { slug: 'luxury', name: 'Luxury Homes', kind: 'residential' },
+      { slug: 'industrial', name: 'Industrial', kind: 'commercial' },
+    ]);
+    try {
+      const withAdded = buildHeaderMenus({
+        propertyTypes: [
+          { id: 20, name: 'Mansions', slug: 'mansions', segment: 'luxury', order: 0 },
+          { id: 21, name: 'Sheds', slug: 'sheds', segment: 'industrial', order: 0 },
+        ],
+        localities,
+        pages,
+      });
+      const typeLinks = hrefs(columnByKey(menuByKey(withAdded, 'buy'), 'type').links);
+      expect(typeLinks).toContain('/buy/mansions');
+      expect(typeLinks).not.toContain('/buy/sheds');
+    } finally {
+      setKnownSegments([]);
+    }
   });
 
   it('offers only featured localities, in order', () => {

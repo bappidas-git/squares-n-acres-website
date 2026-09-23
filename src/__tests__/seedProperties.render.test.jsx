@@ -80,6 +80,7 @@ const MASTER_DATA_CACHE_KEY = 'sna_master_data_cache';
 const masterData = {
   localities: seed.localities,
   cities: seed.cities,
+  segments: seed.segments,
   propertyTypes: seed.propertyTypes,
   amenities: seed.amenities,
   badges: seed.badges,
@@ -136,7 +137,7 @@ describe('every active seed property renders its detail page', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // The seven master-data lists arrive from the seed through the context's own
+    // The eight master-data lists arrive from the seed through the context's own
     // session cache, so the provider serves them synchronously and the sections
     // that resolve a developer or an amenity see what the site would see.
     storage.setItem(

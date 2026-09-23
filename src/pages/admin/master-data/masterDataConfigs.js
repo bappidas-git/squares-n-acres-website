@@ -2,6 +2,7 @@ import { Icon } from '@iconify/react';
 
 import Chip from '../../../components/ui/Chip';
 import LazyImage from '../../../components/ui/LazyImage';
+import PATHS from '../../../routes/paths';
 import { AMENITY_CATEGORIES, BADGE_TONES, SEGMENTS } from '../../../config/enums';
 import { ICON_ID_PATTERN } from '../../../utils/validation';
 import {
@@ -10,17 +11,26 @@ import {
   badges,
   banks,
   propertyTypes,
+  segments as segmentRecords,
 } from '../../../services/masterDataService';
 import { formatNumber } from '../../../utils/format';
+import {
+  SEGMENT_KIND_OPTIONS,
+  isBuiltInSegment,
+  segmentKind,
+  segmentName,
+  segmentOptions,
+} from '../../../config/segments';
 import { schemas } from '../../../services/schemas';
 import { toneStyles } from '../../../components/ui/tones';
 
 import styles from './masterDataConfigs.module.css';
 
 /**
- * The four master-data collections of prompt 15 as `MasterDataPage`
+ * The master-data collections of prompt 15 as `MasterDataPage`
  * configurations: property types, amenities, badges and banks
- * (00_MASTER_CONTEXT.md §6.3, §6.4, §6.6).
+ * (00_MASTER_CONTEXT.md §6.3, §6.4, §6.6) — and the segments the property
+ * types belong to, which became master data after 1.0.0 (QA-52).
  *
  * They are functions rather than constants because each screen hands in its
  * own `onMutated` — `MasterDataContext.refresh`, so a badge created here shows
@@ -34,17 +44,19 @@ import styles from './masterDataConfigs.module.css';
  * of them itself is the configuration below it, read top to bottom.
  */
 
+const segmentService = adminCrud(segmentRecords);
 const propertyTypeService = adminCrud(propertyTypes);
 const amenityService = adminCrud(amenities);
 const badgeService = adminCrud(badges);
 const bankService = adminCrud(banks);
 
-/** Each segment gets its own tone so a long list reads at a glance. */
+/** Each kind of segment gets its own tone so a long list reads at a glance. */
 const SEGMENT_TONE = { residential: 'info', commercial: 'primary', land: 'success' };
 
 /** The plural of each usage type a pre-save warning can name. */
 const USAGE_NOUNS = {
   property: ['property', 'properties'],
+  propertyType: ['property type', 'property types'],
   faq: ['FAQ', 'FAQs'],
   lead: ['lead', 'leads'],
 };
@@ -162,8 +174,248 @@ const iconRule = (required) => (values) => {
 };
 
 /* ------------------------------------------------------------------ *
+ * Segments (§6.17, QA-52)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Admin → Master data → Segments.
+ *
+ * The first choice on the property form, and what its property types are
+ * grouped by. A segment's **kind** is the layout its listings get — the fields
+ * of a home, of an office or of a plot — so "Industrial" is added with the
+ * commercial kind and its listings are measured like offices.
+ *
+ * The three built-in segments are what the public site's own pages are built
+ * on (`/commercial`, `/plots`), so the API keeps their key and their kind and
+ * never deletes them; the screen says so rather than offering what it would
+ * refuse. Any segment keeps its key once created: listings and property types
+ * are filed under it.
+ *
+ * @param {{onMutated?: (collection: string) => void}} [options]
+ */
+export const segmentsConfig = ({ onMutated } = {}) => ({
+  key: 'segments',
+  title: 'Segments',
+  subtitle:
+    'The first choice on the property form. A segment’s layout decides which fields its listings have.',
+  singular: 'segment',
+  service: segmentService,
+  onMutated,
+  schema: schemas['segment.update'],
+  createSchema: schemas['segment.create'],
+  slugBase: '',
+  defaultSort: { field: 'order', order: 'asc' },
+  orderable: true,
+  activeToggle: true,
+  usageGuard: true,
+  canDelete: (row) => !isBuiltInSegment(row.slug),
+
+  columns: [
+    {
+      key: 'icon',
+      label: 'Icon',
+      width: '72px',
+      align: 'center',
+      mobile: false,
+      hideBelow: 'md',
+      render: (row) => <IconCell icon={row.icon} />,
+    },
+    {
+      key: 'name',
+      label: 'Name',
+      sortable: true,
+      primary: true,
+      render: (row) => (
+        <NameCell
+          name={row.name}
+          hint={isBuiltInSegment(row.slug) ? `${row.slug} · built in` : row.slug}
+        />
+      ),
+    },
+    {
+      key: 'kind',
+      label: 'Layout',
+      mobile: true,
+      render: (row) => (
+        <Chip tone={SEGMENT_TONE[row.kind] ?? 'neutral'}>{SEGMENTS.labelOf(row.kind)}</Chip>
+      ),
+    },
+    {
+      key: 'propertyTypeCount',
+      label: 'Types',
+      sortable: true,
+      align: 'right',
+      width: '90px',
+      render: (row) => formatNumber(row.propertyTypeCount ?? 0),
+    },
+    {
+      key: 'propertyCount',
+      label: 'Properties',
+      sortable: true,
+      align: 'right',
+      width: '110px',
+      render: (row) => formatNumber(row.propertyCount ?? 0),
+    },
+    {
+      key: 'order',
+      label: 'Order',
+      sortable: true,
+      align: 'right',
+      width: '90px',
+      mobile: false,
+      hideBelow: 'lg',
+      render: (row) => formatNumber(row.order ?? 0),
+    },
+  ],
+
+  filters: [
+    searchFilter,
+    {
+      key: 'kind',
+      type: 'select',
+      label: 'Layout',
+      placeholder: 'Every layout',
+      options: SEGMENTS.options,
+    },
+    statusFilter,
+  ],
+
+  // The generic sentence names only listings; a segment is also held by its
+  // property types, and a built-in one is never deleted at all.
+  bulkActions: bulkActions('segments').map((action) =>
+    action.key === 'delete'
+      ? {
+          ...action,
+          confirm: {
+            ...action.confirm,
+            message:
+              '{count} will be deleted. A built-in segment, or one a property type or a listing still uses, is refused. This cannot be undone.',
+          },
+        }
+      : action
+  ),
+
+  formFields: (record) => {
+    const builtIn = isBuiltInSegment(record?.slug);
+    return [
+      {
+        name: 'name',
+        type: 'text',
+        label: 'Name',
+        required: true,
+        half: true,
+        hint: 'As the property form offers it, e.g. "Industrial".',
+      },
+      record?.id
+        ? {
+            name: 'slug',
+            type: 'text',
+            label: 'Key',
+            half: true,
+            disabled: true,
+            hint: 'Listings and property types are filed under it, so it stays as created.',
+          }
+        : {
+            name: 'slug',
+            type: 'slug',
+            label: 'Key',
+            source: 'name',
+            half: true,
+            hint: 'Made from the name. It cannot change once the segment exists.',
+          },
+      {
+        name: 'kind',
+        type: 'select',
+        label: 'Form layout',
+        required: true,
+        disabled: builtIn,
+        options: SEGMENT_KIND_OPTIONS,
+        hint: builtIn
+          ? 'A built-in segment keeps its layout: the site’s own pages are built on it.'
+          : 'Which fields a listing in this segment has on the property form.',
+      },
+      { name: 'icon', type: 'icon', label: 'Icon', hint: 'Optional — an Iconify MDI id.' },
+      {
+        name: 'description',
+        type: 'textarea',
+        label: 'Description',
+        rows: 2,
+        hint: 'Up to 300 characters, for the editors choosing it.',
+      },
+      ...STATE_FIELDS,
+    ];
+  },
+
+  newValues: { kind: 'residential', icon: null, description: null, order: 0, isActive: true },
+
+  validate: iconRule(false),
+
+  // The icon and the description are optional, and an empty box means "none".
+  toPayload: (values) => ({
+    ...values,
+    icon: String(values.icon ?? '').trim() || null,
+    description: String(values.description ?? '').trim() || null,
+  }),
+
+  /**
+   * A new layout for a segment listings already use changes what their form
+   * shows: the fields of the old layout are kept, but no longer on screen.
+   * Worth a sentence before the save (D88).
+   */
+  confirmSave: async (values, record) => {
+    if (!record?.id || values.kind === record.kind) return null;
+
+    const { data } = await segmentService.get(record.id, { params: { withUsage: true } });
+    const usedBy = data?.usedBy ?? [];
+    if (usedBy.length === 0) return null;
+
+    return {
+      heading: 'Change the layout?',
+      title: record.name,
+      confirmLabel: 'Change layout',
+      message: `Listings in “${record.name}” will have the ${SEGMENTS.labelOf(
+        values.kind
+      )} fields instead of the ${SEGMENTS.labelOf(record.kind)} ones. ${usedBySentence(
+        usedBy
+      )} — what they already hold is kept, but a field the new layout leaves out is no longer shown on the form.`,
+      hint: '',
+      usedBy,
+    };
+  },
+
+  renderOrderItem: (row) => (
+    <span className={styles.orderRow}>
+      <IconCell icon={row.icon} />
+      <span className={styles.name}>{row.name}</span>
+      <span className={styles.hint}>
+        {SEGMENTS.labelOf(row.kind)} layout · {formatNumber(row.propertyTypeCount ?? 0)}{' '}
+        {row.propertyTypeCount === 1 ? 'type' : 'types'}
+      </span>
+    </span>
+  ),
+
+  emptyState: {
+    title: 'No segments yet',
+    text: 'Add the segments your listings are filed under — each one with the layout its listings need.',
+  },
+});
+
+/* ------------------------------------------------------------------ *
  * Property types (§6.3, D25)
  * ------------------------------------------------------------------ */
+
+/** A property type's landing page: `/commercial/…` by its segment's kind (D25, QA-52). */
+const typePath = (type, segments) =>
+  segmentKind(type.segment, segments) === 'commercial'
+    ? PATHS.commercialType(type.slug)
+    : PATHS.buyType(type.slug);
+
+/** A segment as a chip, in the tone of its kind. */
+const SegmentChip = ({ slug, segments }) => (
+  <Chip tone={SEGMENT_TONE[segmentKind(slug, segments)] ?? 'neutral'}>
+    {segmentName(slug, segments)}
+  </Chip>
+);
 
 /**
  * Admin → Master data → Property types.
@@ -171,9 +423,13 @@ const iconRule = (required) => (values) => {
  * The slug is the **plural URL form** (D25): it is the segment of `/buy/:slug`,
  * `/rent/:slug` and `/commercial/:slug`, so renaming one moves a public page.
  *
- * @param {{onMutated?: (collection: string) => void}} [options]
+ * The segments are master data too (QA-52), so the screen hands in the
+ * collection it holds — every segment, the retired ones included, because a
+ * type may still be filed under one.
+ *
+ * @param {{onMutated?: (collection: string) => void, segments?: Array<object>}} [options]
  */
-export const propertyTypesConfig = ({ onMutated } = {}) => ({
+export const propertyTypesConfig = ({ onMutated, segments = [] } = {}) => ({
   key: 'propertyTypes',
   title: 'Property types',
   subtitle: 'Shown in the search filters, on every card and in the property form.',
@@ -208,15 +464,13 @@ export const propertyTypesConfig = ({ onMutated } = {}) => ({
       label: 'Name',
       sortable: true,
       primary: true,
-      render: (row) => <NameCell name={row.name} hint={`/buy/${row.slug}`} />,
+      render: (row) => <NameCell name={row.name} hint={typePath(row, segments)} />,
     },
     {
       key: 'segment',
       label: 'Segment',
       mobile: true,
-      render: (row) => (
-        <Chip tone={SEGMENT_TONE[row.segment] ?? 'neutral'}>{SEGMENTS.labelOf(row.segment)}</Chip>
-      ),
+      render: (row) => <SegmentChip slug={row.segment} segments={segments} />,
     },
     {
       key: 'propertyCount',
@@ -245,14 +499,16 @@ export const propertyTypesConfig = ({ onMutated } = {}) => ({
       type: 'select',
       label: 'Segment',
       placeholder: 'All segments',
-      options: SEGMENTS.options,
+      options: segmentOptions(segments, { activeOnly: false }),
     },
     statusFilter,
   ],
 
   bulkActions: bulkActions('property types'),
 
-  formFields: [
+  // The active segments, plus the one this type is already filed under when it
+  // has since been retired — offered, and labelled so.
+  formFields: (record) => [
     { name: 'name', type: 'text', label: 'Name', required: true, hint: 'Plural, e.g. "Villas".' },
     { name: 'slug', type: 'slug', label: 'URL', source: 'name' },
     {
@@ -260,7 +516,8 @@ export const propertyTypesConfig = ({ onMutated } = {}) => ({
       type: 'select',
       label: 'Segment',
       required: true,
-      options: SEGMENTS.options,
+      options: segmentOptions(segments, { current: record?.segment }),
+      hint: 'Add or rename segments under Master data → Segments.',
     },
     { name: 'icon', type: 'icon', label: 'Icon', required: true },
     {
@@ -296,8 +553,9 @@ export const propertyTypesConfig = ({ onMutated } = {}) => ({
       heading: 'Change the segment?',
       title: record.name,
       confirmLabel: 'Change segment',
-      message: `“${record.name}” moves from ${SEGMENTS.labelOf(record.segment)} to ${SEGMENTS.labelOf(
-        values.segment
+      message: `“${record.name}” moves from ${segmentName(record.segment, segments)} to ${segmentName(
+        values.segment,
+        segments
       )}. ${usedBySentence(usedBy)} — each keeps its own segment, so any that should move have to be edited too.`,
       hint: '',
       usedBy,
@@ -309,7 +567,7 @@ export const propertyTypesConfig = ({ onMutated } = {}) => ({
       <IconCell icon={row.icon} />
       <span className={styles.name}>{row.name}</span>
       <span className={styles.hint}>
-        {SEGMENTS.labelOf(row.segment)} · {formatNumber(row.propertyCount ?? 0)}{' '}
+        {segmentName(row.segment, segments)} · {formatNumber(row.propertyCount ?? 0)}{' '}
         {row.propertyCount === 1 ? 'property' : 'properties'}
       </span>
     </span>

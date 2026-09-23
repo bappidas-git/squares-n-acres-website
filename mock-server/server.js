@@ -18,9 +18,11 @@ const relative = (file) =>
   path.relative(path.join(__dirname, '..'), file).split(path.sep).join('/');
 
 function start() {
-  const { created } = ensureRuntimeDb({ fresh: config.fresh });
+  const { created, added } = ensureRuntimeDb({ fresh: config.fresh });
   if (created) {
     console.info(`Runtime db seeded from ${relative(config.seedPath)}`);
+  } else if (added.length > 0) {
+    console.info(`Runtime db gained ${added.join(', ')} from ${relative(config.seedPath)}`);
   }
 
   const app = createApp({ router: createRouter(), config });

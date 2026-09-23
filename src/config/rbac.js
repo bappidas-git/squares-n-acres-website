@@ -187,6 +187,7 @@ const NAV_ITEMS = [
     children: [
       { label: 'Localities', path: '/admin/master-data/localities' },
       { label: 'Cities', path: '/admin/master-data/cities' },
+      { label: 'Segments', path: '/admin/master-data/segments' },
       { label: 'Property types', path: '/admin/master-data/property-types' },
       { label: 'Amenities', path: '/admin/master-data/amenities' },
       { label: 'Badges', path: '/admin/master-data/badges' },
