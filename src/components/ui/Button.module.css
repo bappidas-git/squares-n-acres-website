@@ -53,6 +53,13 @@
 }
 
 /* ── Variants ────────────────────────────────────────────────────────────── */
+
+/* Every hover rule restates its variant's text colour. With `to` or `href` the
+   button is an `<a>`, and the global `a:hover { color: primary-dark }` (0,1,1)
+   outranks a variant's own `color` (0,1,0) — so "Add property", "New article",
+   "New page" and the home page's "List your property" turned to red text on a
+   red fill under the pointer and read as an empty bar. The `:hover:not()`
+   selectors below are (0,3,0), which is what puts the variant back in charge. */
 .primary {
   background: var(--color-primary);
   color: var(--color-text-inverse);
@@ -60,6 +67,7 @@
 
 .primary:hover:not(:disabled) {
   background: var(--color-primary-dark);
+  color: var(--color-text-inverse);
 }
 
 .secondary {
@@ -69,6 +77,7 @@
 
 .secondary:hover:not(:disabled) {
   background: var(--color-text);
+  color: var(--color-text-inverse);
 }
 
 .outline {
@@ -80,6 +89,7 @@
 .outline:hover:not(:disabled) {
   background: var(--color-primary-light);
   border-color: var(--color-primary-dark);
+  color: var(--color-primary-dark);
 }
 
 .ghost {
@@ -89,6 +99,7 @@
 
 .ghost:hover:not(:disabled) {
   background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .danger {
@@ -98,6 +109,7 @@
 
 .danger:hover:not(:disabled) {
   background: var(--color-error-dark);
+  color: var(--color-text-inverse);
 }
 
 /* `min-height: 0` is what makes a link-shaped button sit on a text baseline
