@@ -9,6 +9,7 @@
  */
 
 import { plainText } from './validators';
+import { segmentKind } from '../../../../config/segments';
 
 const filled = (value) => value !== null && value !== undefined && String(value).trim() !== '';
 
@@ -71,7 +72,7 @@ const ITEMS = [
       // Rooms are a home's: an office or a plot has no bedroom field to fill,
       // and asking for one kept every commercial listing below 100 %.
       const configured =
-        values.segment !== 'residential' ||
+        segmentKind(values.segment) !== 'residential' ||
         filled(configuration.bedrooms) ||
         filled(configuration.bathrooms);
       return measured && configured;

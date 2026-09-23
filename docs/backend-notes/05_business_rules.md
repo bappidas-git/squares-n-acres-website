@@ -446,6 +446,36 @@ At the database level this is `ON DELETE RESTRICT`, which makes the guard a
 belt-and-braces check rather than the only thing standing between a listing and
 a missing locality.
 
+## Segments
+
+A segment became master data after 1.0.0 (QA-52): the property form's first
+choice is a `segments` row, and an editor can add one — "Industrial",
+"Agricultural" — from Master data → Segments or from the property form itself.
+
+- **`kind` decides the behaviour, the slug only names it.** A segment's `kind`
+  is one of `residential`, `commercial`, `land`: which fields a listing has (a
+  home's rooms, an office's built-up areas, a plot's measurements), whether a
+  title carries a BHK, the listing's schema.org `@type` (`Place` for the
+  commercial and land kinds), and whether a property type's landing page is
+  `/commercial/<slug>` or `/buy/<slug>`. Anything the Laravel API derives from a
+  segment reads its kind the same way.
+- **A segment keeps its slug.** Properties and property types store it. A `PUT`
+  or `PATCH` that sends a different slug is **422** under `errors.slug`; an empty
+  or missing one keeps the stored slug (a rename must not derive a new one).
+- **The three built-in segments** — slug `residential`, `commercial`, `land`,
+  each of its own kind — keep their `kind` too (**422** under `errors.kind`) and
+  are never deleted: `DELETE` is **409** with an empty `usedBy`, and a bulk
+  delete that names one is refused whole. `/commercial` and `/plots` are built
+  on them. They may be renamed, re-described, reordered and deactivated.
+- **Any other segment** is refused a delete (**409**, `data.usedBy`) while a
+  property type or a property names it — the property types first.
+- **`GET /segments` answers every segment**, the inactive ones included and
+  flagged by `isActive`: a listing filed under a retired segment still needs the
+  layout its kind gives it. There is no public read by slug.
+- **A property's and a property type's `segment` must exist** (`exists:segments,slug`):
+  a slug no segment holds is **422** under `errors.segment`. The existing rule
+  stands that a property keeps its own `segment` when its type moves (D88).
+
 ## Settings
 
 `PUT /admin/settings` and `PUT /admin/seo/settings` **deep-merge**:

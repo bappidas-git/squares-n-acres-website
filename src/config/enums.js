@@ -61,6 +61,12 @@ const LISTING_TYPES = makeEnum([
 /** "for Sale" / "for Rent" / "for Lease"; `''` for an unknown listing type. */
 LISTING_TYPES.verbOf = (value) => LISTING_TYPES.meta[value]?.verb ?? '';
 
+/**
+ * The three **kinds** a segment can be — the layout its listings get — which
+ * are also the slugs of the three built-in segments. Segments themselves are
+ * master data (the `segments` collection, QA-52): a listing holds a segment's
+ * slug, and `config/segments.js` answers what kind it is.
+ */
 const SEGMENTS = makeEnum([
   { value: 'residential', label: 'Residential' },
   { value: 'commercial', label: 'Commercial' },

@@ -112,6 +112,7 @@ const MAPPING = {
   },
   localities: { json: ['pincodes', 'highlights', 'connectivity', 'seo'] },
   cities: {},
+  segments: {},
   propertyTypes: { json: ['seo'] },
   amenities: {},
   badges: {},
@@ -243,6 +244,10 @@ function defaultLiteral(descriptor, column, type) {
 function makeColumn(name, descriptor, { collection, comment, column: forced } = {}) {
   const column = forced ?? snakeCase(name);
   const references = descriptor.type === 'int' ? referencedCollection(name) : null;
+  // A reference by something other than the id — a property's `segment` is a
+  // `segments` slug (QA-52) — keeps its own type and names the column it
+  // points at.
+  const byValue = descriptor.exists?.collection ? descriptor.exists : null;
   const type = columnType(descriptor, column, { references });
   const unique = Boolean(descriptor.unique) || descriptor.type === 'slug';
   const notes = [];
@@ -268,7 +273,8 @@ function makeColumn(name, descriptor, { collection, comment, column: forced } = 
     nullable,
     default: unique ? null : defaultLiteral(descriptor, column, type),
     comment: notes.join(' · '),
-    references,
+    references: references ?? byValue?.collection ?? null,
+    referencesColumn: byValue ? snakeCase(byValue.field ?? 'id') : 'id',
     onDelete: ON_DELETE[name] ?? RESTRICT,
     unique,
     collection,
@@ -333,7 +339,7 @@ function flattenObject(name, descriptor, rule, collection) {
       comment: `${name}.${key}`,
     });
     made.field = `${name}.${key}`;
-    if (made.references) made.type = 'BIGINT UNSIGNED';
+    if (made.references && made.referencesColumn === 'id') made.type = 'BIGINT UNSIGNED';
     columns.push(made);
   }
 
@@ -544,6 +550,7 @@ function buildSchema() {
   const order = [
     'cities',
     'localities',
+    'segments',
     'propertyTypes',
     'amenities',
     'badges',
@@ -638,7 +645,9 @@ function renderTable(table, byCollection) {
     definitions.push(
       `  CONSTRAINT ${quote(`${table.table}_${column.column}_foreign`)} FOREIGN KEY (${quote(
         column.column
-      )}) REFERENCES ${quote(target)} (\`id\`) ON DELETE ${column.onDelete ?? RESTRICT}`
+      )}) REFERENCES ${quote(target)} (${quote(column.referencesColumn ?? 'id')}) ON DELETE ${
+        column.onDelete ?? RESTRICT
+      }`
     );
   }
 

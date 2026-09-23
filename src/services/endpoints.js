@@ -68,7 +68,8 @@ const LIST_QUERY = {
 /** The public property filters of §5.7. */
 const PROPERTY_FILTERS = {
   listingType: enumOf(LISTING_TYPES),
-  segment: enumOf(SEGMENTS),
+  // A `segments` slug: an editor can add a segment, so it is not an enum (QA-52).
+  segment: 'string',
   propertyTypeId: 'csv:int',
   localityId: 'csv:int',
   cityId: 'int',
@@ -375,6 +376,22 @@ const developers = {
   },
 };
 
+const segments = {
+  list: {
+    key: 'segments.list',
+    method: 'GET',
+    path: '/segments',
+    auth: 'public',
+    module: 'masterData',
+    description:
+      'Every segment, the inactive ones flagged — the layout of a listing filed under one depends on its kind',
+    query: { ...LIST_QUERY, kind: enumOf(SEGMENTS) },
+    body: null,
+    response: 'SegmentList',
+    example: 1,
+  },
+};
+
 const propertyTypes = {
   list: {
     key: 'propertyTypes.list',
@@ -383,7 +400,7 @@ const propertyTypes = {
     auth: 'public',
     module: 'masterData',
     description: 'Property types, optionally filtered by segment',
-    query: { ...LIST_QUERY, segment: enumOf(SEGMENTS) },
+    query: { ...LIST_QUERY, segment: 'string' },
     body: null,
     response: 'PropertyTypeList',
     example: 1,
@@ -1185,6 +1202,17 @@ const adminCities = adminResource({
   response: 'City',
 });
 
+const adminSegments = adminResource({
+  group: 'adminSegments',
+  path: '/admin/segments',
+  module: 'masterData',
+  singular: 'segment',
+  plural: 'segments',
+  schema: 'segment',
+  response: 'Segment',
+  query: { kind: enumOf(SEGMENTS) },
+});
+
 const adminPropertyTypes = adminResource({
   group: 'adminPropertyTypes',
   path: '/admin/property-types',
@@ -1193,7 +1221,7 @@ const adminPropertyTypes = adminResource({
   plural: 'property types',
   schema: 'propertyType',
   response: 'PropertyType',
-  query: { segment: enumOf(SEGMENTS) },
+  query: { segment: 'string' },
 });
 
 const adminAmenities = adminResource({
@@ -1652,6 +1680,7 @@ const endpoints = {
   localities,
   cities,
   developers,
+  segments,
   propertyTypes,
   amenities,
   badges,
@@ -1678,6 +1707,7 @@ const endpoints = {
   adminLeads,
   adminLocalities,
   adminCities,
+  adminSegments,
   adminPropertyTypes,
   adminAmenities,
   adminBadges,

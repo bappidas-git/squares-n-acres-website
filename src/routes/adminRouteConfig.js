@@ -33,6 +33,7 @@ const AuthorsPage = lazy(() => import('../pages/admin/articles/AuthorsPage'));
 const LocalitiesPage = lazy(() => import('../pages/admin/master-data/LocalitiesPage'));
 const LocalityFormPage = lazy(() => import('../pages/admin/master-data/LocalityFormPage'));
 const CitiesPage = lazy(() => import('../pages/admin/master-data/CitiesPage'));
+const SegmentsPage = lazy(() => import('../pages/admin/master-data/SegmentsPage'));
 const PropertyTypesPage = lazy(() => import('../pages/admin/master-data/PropertyTypesPage'));
 const AmenitiesPage = lazy(() => import('../pages/admin/master-data/AmenitiesPage'));
 const BadgesPage = lazy(() => import('../pages/admin/master-data/BadgesPage'));
@@ -112,6 +113,7 @@ export const ADMIN_ROUTES = [
     <LocalityFormPage />
   ),
   page('master-data/cities', 'Cities', ['masterData', 'view'], <CitiesPage />),
+  page('master-data/segments', 'Segments', ['masterData', 'view'], <SegmentsPage />),
   page(
     'master-data/property-types',
     'Property types',

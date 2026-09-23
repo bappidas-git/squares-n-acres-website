@@ -17,6 +17,7 @@
 
 const { document, element, escape } = require('./xml');
 const { isLive, liveArticles } = require('./articleFilters');
+const { segmentKind } = require('../../src/config/segments');
 
 /** The sitemap namespaces (sitemaps.org 0.9 + Google's image extension). */
 const SITEMAP_NS = 'http://www.sitemaps.org/schemas/sitemap/0.9';
@@ -36,9 +37,11 @@ const LLMS_LIMIT = 10;
  *
  * `page` special-cases `home`, which is the site root rather than `/home`;
  * `propertyType` follows D25, where a type slug resolves under the listing
- * route of its segment.
+ * route of its segment — of its segment's **kind** (QA-52), so a type in an
+ * "Industrial" segment of the commercial kind lives under `/commercial` too.
+ * `context.segments` is the collection that kind is read from.
  *
- * @type {Record<string, (entity: object) => string>}
+ * @type {Record<string, (entity: object, context?: {segments?: Array<object>}) => string>}
  */
 const PUBLIC_PATHS = {
   property: (entity) => `/properties/${entity.slug}`,
@@ -49,8 +52,10 @@ const PUBLIC_PATHS = {
   articleTag: (entity) => `/insights/articles/tag/${entity.slug}`,
   author: (entity) => `/insights/authors/${entity.slug}`,
   page: (entity) => (entity.slug === 'home' ? '/' : `/${entity.slug}`),
-  propertyType: (entity) =>
-    entity.segment === 'commercial' ? `/commercial/${entity.slug}` : `/buy/${entity.slug}`,
+  propertyType: (entity, context = {}) =>
+    segmentKind(entity.segment, context.segments) === 'commercial'
+      ? `/commercial/${entity.slug}`
+      : `/buy/${entity.slug}`,
 };
 
 /** The routes that exist without a record behind them (§4.13). */
@@ -80,12 +85,14 @@ const CHILD_SITEMAPS = ['properties', 'localities', 'developers', 'articles', 'p
  *
  * @param {string} type a key of {@link PUBLIC_PATHS}
  * @param {object} entity
+ * @param {{segments?: Array<object>}} [context] what a path depends on beyond
+ *   the record itself — the segments a property type's URL is decided by
  * @returns {string|null} `null` for a type with no public page
  */
-function publicPathOf(type, entity) {
+function publicPathOf(type, entity, context = {}) {
   const builder = PUBLIC_PATHS[type];
   if (!builder || !entity) return null;
-  return builder(entity);
+  return builder(entity, context);
 }
 
 /** `<siteUrl><path>`, with exactly one slash between them and none at the end. */
@@ -115,14 +122,14 @@ function sitemapSettings(seoSettings) {
 /**
  * Builds one `<url>` entry, or `null` when the record opted out.
  *
- * @param {object} input
+ * @param {object} input `context` is handed to {@link publicPathOf}
  * @returns {{loc: string, lastmod: string|null, changefreq: string|null, priority: number|null, images: Array}|null}
  */
-function urlEntry({ type, entity, siteUrl, settings, images = [] }) {
+function urlEntry({ type, entity, siteUrl, settings, images = [], context = {} }) {
   const overrides = entity?.seo?.sitemap ?? {};
   if (overrides.include === false) return null;
 
-  const path = publicPathOf(type, entity);
+  const path = publicPathOf(type, entity, context);
   if (!path) return null;
 
   const loc = absoluteUrl(siteUrl, path);
@@ -244,9 +251,19 @@ function sitemapSets(data, now = Date.now()) {
     },
   };
 
+  // Under `/commercial` or `/buy` by the kind of the type's segment (QA-52).
+  const typeContext = { segments: rows('segments') };
   const propertyTypes = rows('propertyTypes')
     .filter((type) => type.isActive)
-    .map((entity) => urlEntry({ type: 'propertyType', entity, siteUrl, settings: typeSettings }))
+    .map((entity) =>
+      urlEntry({
+        type: 'propertyType',
+        entity,
+        siteUrl,
+        settings: typeSettings,
+        context: typeContext,
+      })
+    )
     .filter(Boolean);
 
   const pages = settings.includePages
@@ -461,7 +478,9 @@ function generateLlms(data, now = Date.now()) {
   const propertyTypes = rows('propertyTypes')
     .filter((type) => type.isActive)
     .sort(byOrder)
-    .map((type) => link(publicPathOf('propertyType', type), type.name));
+    .map((type) =>
+      link(publicPathOf('propertyType', type, { segments: rows('segments') }), type.name)
+    );
 
   const featured = rows('properties')
     .filter((property) => property.isActive && property.isFeatured)

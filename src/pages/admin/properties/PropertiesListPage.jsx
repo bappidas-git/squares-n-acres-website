@@ -23,7 +23,12 @@ import { downloadBlob } from '../../../utils/download';
 import { firstFieldMessage } from '../../../services/apiError';
 import { formatNumber } from '../../../utils/format';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
-import { useDevelopers, useLocalities, usePropertyTypes } from '../../../hooks/useMasterData';
+import {
+  useDevelopers,
+  useLocalities,
+  usePropertyTypes,
+  useSegments,
+} from '../../../hooks/useMasterData';
 import { useToast } from '../../../components/common/ToastProvider';
 import { viewUrlOf } from './publicUrl';
 
@@ -83,6 +88,7 @@ export default function PropertiesListPage() {
   // The admin filters offer inactive master data too: a listing already points
   // at the locality that was retired last week, and hiding it from the filter
   // would make that listing unfindable.
+  const segments = useSegments({ activeOnly: false });
   const propertyTypes = usePropertyTypes({ activeOnly: false });
   const localities = useLocalities({ activeOnly: false });
   const developers = useDevelopers({ activeOnly: false });
@@ -352,8 +358,8 @@ export default function PropertiesListPage() {
   );
 
   const filterFields = useMemo(
-    () => buildPropertyFilterFields({ propertyTypes, localities, developers }),
-    [propertyTypes, localities, developers]
+    () => buildPropertyFilterFields({ segments, propertyTypes, localities, developers }),
+    [segments, propertyTypes, localities, developers]
   );
 
   const filtered = hasActiveFilters(params);

@@ -8,7 +8,7 @@ info:
     `src/services/endpoints.js`, `src/services/schemas/` and
     `mock-server/schemas/models.js`. Do not edit by hand.
 
-    generatedFrom: 01f26ec
+    generatedFrom: e85e09d
 
     Read `01_API_CONTRACT.md` first: the envelopes of §5.2, the error body
     of §5.3 and the pagination of §5.6 apply to every operation below and
@@ -12290,10 +12290,6 @@ paths:
           required: false
           schema:
             type: string
-            enum:
-              - residential
-              - commercial
-              - land
         - name: seoScoreBand
           in: query
           required: false
@@ -13628,7 +13624,7 @@ paths:
                   enquiryCount: 0
                   publishedAt: 2026-01-15T09:30:00.000Z
                   createdBy: 1
-                  updatedBy: 1
+                  updatedBy: 2
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
                   propertyType:
@@ -15087,7 +15083,7 @@ paths:
                   enquiryCount: 0
                   publishedAt: 2026-01-15T09:30:00.000Z
                   createdBy: 1
-                  updatedBy: 1
+                  updatedBy: 2
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
                   propertyType:
@@ -15189,10 +15185,6 @@ paths:
           required: false
           schema:
             type: string
-            enum:
-              - residential
-              - commercial
-              - land
         - name: sort
           in: query
           required: false
@@ -16542,6 +16534,566 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /admin/segments:
+    get:
+      operationId: adminSegments.list
+      tags:
+        - masterData
+      summary: List segments for the admin table
+      description: 'Minimum role: `manager` (§7). Registry key `adminSegments.list`.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids
+          in: query
+          required: false
+          description: comma-separated int values (§5.6)
+          schema:
+            type: string
+        - name: isActive
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - 'true'
+              - 'false'
+        - name: kind
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - residential
+              - commercial
+              - land
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: perPage
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SegmentList (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  meta:
+                    $ref: '#/components/schemas/ListMeta'
+                required:
+                  - data
+                  - meta
+              example:
+                data:
+                  - id: 1
+                    name: Residential
+                    slug: residential
+                    kind: residential
+                    description: 'Homes to buy or rent: apartments, villas, houses and co-living.'
+                    icon: mdi:home-city-outline
+                    isActive: true
+                    order: 1
+                    createdAt: 2026-01-15T09:30:00.000Z
+                    updatedAt: 2026-01-15T09:30:00.000Z
+                    builtIn: true
+                    propertyTypeCount: 9
+                    propertyCount: 28
+                  - id: 2
+                    name: Commercial
+                    slug: commercial
+                    kind: commercial
+                    description: 'Space to work or trade from: offices, shops, co-working and warehouses.'
+                    icon: mdi:office-building-outline
+                    isActive: true
+                    order: 2
+                    createdAt: 2026-01-15T09:30:00.000Z
+                    updatedAt: 2026-01-15T09:30:00.000Z
+                    builtIn: true
+                    propertyTypeCount: 5
+                    propertyCount: 5
+                  - …1 more (trimmed for this example)
+                meta:
+                  page: 1
+                  perPage: 20
+                  total: 3
+                  totalPages: 1
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: adminSegments.create
+      tags:
+        - masterData
+      summary: Create a segment
+      description: 'Minimum role: `manager` (§7). Registry key `adminSegments.create`.'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SegmentCreate'
+            example:
+              name: Smoke name example-adminsegments-2
+              kind: residential
+      responses:
+        '201':
+          description: Segment (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                required:
+                  - data
+              example:
+                data:
+                  slug: smoke-name-example-adminsegments-2
+                  kind: residential
+                  description: null
+                  icon: null
+                  isActive: true
+                  order: 0
+                  name: Smoke name example-adminsegments-2
+                  id: 5
+                  createdAt: 2026-01-15T09:30:00.000Z
+                  updatedAt: 2026-01-15T09:30:00.000Z
+                  builtIn: false
+                  propertyTypeCount: 0
+                  propertyCount: 0
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: validation failed (§5.3)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/segments/{id}:
+    get:
+      operationId: adminSegments.get
+      tags:
+        - masterData
+      summary: Read one segment with every admin field
+      description: 'Minimum role: `manager` (§7). Registry key `adminSegments.get`.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the id of the record
+          schema:
+            type: integer
+          example: 1
+        - name: withUsage
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - 'true'
+              - 'false'
+      responses:
+        '200':
+          description: Segment (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                required:
+                  - data
+              example:
+                data:
+                  id: 1
+                  name: Residential
+                  slug: residential
+                  kind: residential
+                  description: 'Homes to buy or rent: apartments, villas, houses and co-living.'
+                  icon: mdi:home-city-outline
+                  isActive: true
+                  order: 1
+                  createdAt: 2026-01-15T09:30:00.000Z
+                  updatedAt: 2026-01-15T09:30:00.000Z
+                  builtIn: true
+                  propertyTypeCount: 9
+                  propertyCount: 28
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: no such record (§5.10)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      operationId: adminSegments.update
+      tags:
+        - masterData
+      summary: Replace a segment with the full record from the form
+      description: 'Minimum role: `manager` (§7). Registry key `adminSegments.update`.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the id of the record
+          schema:
+            type: integer
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SegmentUpdate'
+            example:
+              name: Smoke name example-adminsegments-3
+              kind: residential
+      responses:
+        '200':
+          description: Segment (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                required:
+                  - data
+              example:
+                data:
+                  slug: smoke-name-example-adminsegments-1
+                  kind: residential
+                  description: null
+                  icon: null
+                  isActive: true
+                  order: 0
+                  id: 4
+                  createdAt: 2026-01-15T09:30:00.000Z
+                  updatedAt: 2026-01-15T09:30:00.000Z
+                  name: Smoke name example-adminsegments-3
+                  builtIn: false
+                  propertyTypeCount: 0
+                  propertyCount: 0
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: no such record (§5.10)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: validation failed (§5.3)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      operationId: adminSegments.patch
+      tags:
+        - masterData
+      summary: Update the given fields of a segment (toggles, order, SEO panel)
+      description: 'Minimum role: `manager` (§7). Registry key `adminSegments.patch`.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the id of the record
+          schema:
+            type: integer
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SegmentPatch'
+            example:
+              isActive: true
+      responses:
+        '200':
+          description: Segment (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                required:
+                  - data
+              example:
+                data:
+                  slug: smoke-name-example-adminsegments-1
+                  kind: residential
+                  description: null
+                  icon: null
+                  isActive: true
+                  order: 0
+                  id: 4
+                  createdAt: 2026-01-15T09:30:00.000Z
+                  updatedAt: 2026-01-15T09:30:00.000Z
+                  name: Smoke name example-adminsegments-3
+                  builtIn: false
+                  propertyTypeCount: 0
+                  propertyCount: 0
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: no such record (§5.10)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: validation failed (§5.3)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: adminSegments.remove
+      tags:
+        - masterData
+      summary: Delete a segment; 409 when it is still in use
+      description: 'Minimum role: `manager` (§7). Registry key `adminSegments.remove`.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the id of the record
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Null (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: 'null'
+                  message:
+                    type: string
+                required:
+                  - data
+                  - message
+              example:
+                data: null
+                message: Deleted
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: no such record (§5.10)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/segments/bulk:
+    post:
+      operationId: adminSegments.bulk
+      tags:
+        - masterData
+      summary: Apply one action to several segments
+      description: 'Minimum role: `manager` (§7). Registry key `adminSegments.bulk`.'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Bulk'
+            example:
+              ids:
+                - 4
+              action: activate
+      responses:
+        '200':
+          description: BulkResult (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/BulkResult'
+                required:
+                  - data
+              example:
+                data:
+                  affected: 1
+                message: 1 segment updated.
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: validation failed (§5.3)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/segments/check-slug:
+    get:
+      operationId: adminSegments.checkSlug
+      tags:
+        - masterData
+      summary: Check whether a segment slug is free and suggest an alternative
+      description: 'Minimum role: `manager` (§7). Registry key `adminSegments.checkSlug`.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: excludeId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: slug
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SlugCheck (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SlugCheck'
+                required:
+                  - data
+              example:
+                data:
+                  available: true
+                  suggestion: lakeview-heights-3-bhk-whitefield
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /admin/seo/llms-preview:
     get:
       operationId: adminSeo.llmsPreview
@@ -16675,20 +17227,20 @@ paths:
                   - meta
               example:
                 data:
-                  - key: property:20
-                    id: 20
+                  - key: property:1
+                    id: 1
                     type: property
-                    title: Aurelia Court – 3 BHK Duplex in Koramangala
-                    slug: aurelia-court-duplex-koramangala
-                    url: https://www.squaresnacres.com/properties/aurelia-court-duplex-koramangala
+                    title: Lakeview Heights – 3 BHK Apartment in Whitefield
+                    slug: lakeview-heights-3-bhk-whitefield
+                    url: https://www.squaresnacres.com/properties/lakeview-heights-3-bhk-whitefield
                     seo:
-                      focusKeyword: 3 bhk duplex in koramangala
+                      focusKeyword: 3 bhk apartment in whitefield
                       secondaryKeywords:
-                        - aurelia court koramangala
-                        - duplexes in koramangala
-                      title: 3 BHK Duplex in Koramangala
-                      description: 3 BHK Duplex at Aurelia Court, Koramangala, Bengaluru — 2,250 sq ft at ₹3.6 Cr. A resale three-bedroom duplex across the fourth and fifth floors of a small
-                      slug: aurelia-court-duplex-koramangala
+                        - lakeview heights whitefield
+                        - apartments in whitefield
+                      title: 3 BHK Apartment in Whitefield
+                      description: 3 BHK Apartment at Lakeview Heights, Whitefield, Bengaluru — 1,650 sq ft at ₹1.24 Cr. Ready-to-move 2 and 3 BHK apartments in a gated development off Whitefield
+                      slug: lakeview-heights-3-bhk-whitefield
                       canonicalUrl: null
                       robots:
                         index: true
@@ -16738,20 +17290,20 @@ paths:
                       title: []
                       description: []
                       focusKeyword: []
-                  - key: property:37
-                    id: 37
+                  - key: property:20
+                    id: 20
                     type: property
-                    title: Greenfield High Street – Retail Shop for Lease in Indiranagar
-                    slug: greenfield-high-street-retail-lease-indiranagar
-                    url: https://www.squaresnacres.com/properties/greenfield-high-street-retail-lease-indiranagar
+                    title: Aurelia Court – 3 BHK Duplex in Koramangala
+                    slug: aurelia-court-duplex-koramangala
+                    url: https://www.squaresnacres.com/properties/aurelia-court-duplex-koramangala
                     seo:
-                      focusKeyword: retail shop for lease in indiranagar
+                      focusKeyword: 3 bhk duplex in koramangala
                       secondaryKeywords:
-                        - greenfield high street indiranagar
-                        - retail shops in indiranagar
-                      title: Retail Shop for Lease in Indiranagar
-                      description: Retail Shop at Greenfield High Street, Indiranagar, Bengaluru — 1,800 sq ft at ₹3.96 L a month. An 1,800 sq ft ground-floor retail unit for lease on an
-                      slug: greenfield-high-street-retail-lease-indiranagar
+                        - aurelia court koramangala
+                        - duplexes in koramangala
+                      title: 3 BHK Duplex in Koramangala
+                      description: 3 BHK Duplex at Aurelia Court, Koramangala, Bengaluru — 2,250 sq ft at ₹3.6 Cr. A resale three-bedroom duplex across the fourth and fifth floors of a small
+                      slug: aurelia-court-duplex-koramangala
                       canonicalUrl: null
                       robots:
                         index: true
@@ -22242,10 +22794,6 @@ paths:
           required: false
           schema:
             type: string
-            enum:
-              - residential
-              - commercial
-              - land
         - name: sort
           in: query
           required: false
@@ -23962,10 +24510,6 @@ paths:
           required: false
           schema:
             type: string
-            enum:
-              - residential
-              - commercial
-              - land
       responses:
         '200':
           description: PropertyList (§5.2)
@@ -25074,10 +25618,6 @@ paths:
           required: false
           schema:
             type: string
-            enum:
-              - residential
-              - commercial
-              - land
         - name: sort
           in: query
           required: false
@@ -25328,6 +25868,103 @@ paths:
             text/xml:
               schema:
                 type: string
+  /segments:
+    get:
+      operationId: segments.list
+      tags:
+        - masterData
+      summary: Every segment, the inactive ones flagged — the layout of a listing filed under one depends on its kind
+      description: 'Minimum role: `public` (§7). Registry key `segments.list`.'
+      security: []
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - residential
+              - commercial
+              - land
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: perPage
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SegmentList (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  meta:
+                    $ref: '#/components/schemas/ListMeta'
+                required:
+                  - data
+                  - meta
+              example:
+                data:
+                  - id: 1
+                    name: Residential
+                    slug: residential
+                    kind: residential
+                    description: 'Homes to buy or rent: apartments, villas, houses and co-living.'
+                    icon: mdi:home-city-outline
+                    isActive: true
+                    order: 1
+                    createdAt: 2026-01-15T09:30:00.000Z
+                    updatedAt: 2026-01-15T09:30:00.000Z
+                    builtIn: true
+                    propertyTypeCount: 9
+                    propertyCount: 28
+                  - id: 2
+                    name: Commercial
+                    slug: commercial
+                    kind: commercial
+                    description: 'Space to work or trade from: offices, shops, co-working and warehouses.'
+                    icon: mdi:office-building-outline
+                    isActive: true
+                    order: 2
+                    createdAt: 2026-01-15T09:30:00.000Z
+                    updatedAt: 2026-01-15T09:30:00.000Z
+                    builtIn: true
+                    propertyTypeCount: 5
+                    propertyCount: 5
+                  - …1 more (trimmed for this example)
+                meta:
+                  page: 1
+                  perPage: 12
+                  total: 3
+                  totalPages: 1
   /seo/settings:
     get:
       operationId: seo.settings
@@ -39742,10 +40379,7 @@ components:
           default: sale
         segment:
           type: string
-          enum:
-            - residential
-            - commercial
-            - land
+          maxLength: 75
           default: residential
         propertyTypeId:
           type: integer
@@ -41245,10 +41879,7 @@ components:
           default: sale
         segment:
           type: string
-          enum:
-            - residential
-            - commercial
-            - land
+          maxLength: 75
           default: residential
         propertyTypeId:
           type: integer
@@ -42611,10 +43242,7 @@ components:
           default: sale
         segment:
           type: string
-          enum:
-            - residential
-            - commercial
-            - land
+          maxLength: 75
           default: residential
         propertyTypeId:
           type: integer
@@ -43945,10 +44573,7 @@ components:
           default: ''
         segment:
           type: string
-          enum:
-            - residential
-            - commercial
-            - land
+          maxLength: 75
           default: residential
         icon:
           type: string
@@ -44347,10 +44972,7 @@ components:
           default: ''
         segment:
           type: string
-          enum:
-            - residential
-            - commercial
-            - land
+          maxLength: 75
           default: residential
         icon:
           type: string
@@ -44741,10 +45363,7 @@ components:
           default: ''
         segment:
           type: string
-          enum:
-            - residential
-            - commercial
-            - land
+          maxLength: 75
           default: residential
         icon:
           type: string
@@ -45131,10 +45750,7 @@ components:
           default: ''
         segment:
           type: string
-          enum:
-            - residential
-            - commercial
-            - land
+          maxLength: 75
           default: residential
         icon:
           type: string
@@ -45538,10 +46154,7 @@ components:
           default: sale
         segment:
           type: string
-          enum:
-            - residential
-            - commercial
-            - land
+          maxLength: 75
           default: residential
         propertyTypeId:
           type: integer
@@ -47033,6 +47646,129 @@ components:
         - fromPath
         - toPath
         - statusCode
+    SegmentCreate:
+      type: object
+      description: Request body `segment.create` (`src/services/schemas/`).
+      properties:
+        name:
+          type: string
+          maxLength: 60
+          minLength: 2
+        slug:
+          type: string
+          pattern: ^[a-z0-9-]+$
+          maxLength: 75
+          default: ''
+        kind:
+          type: string
+          enum:
+            - residential
+            - commercial
+            - land
+          default: residential
+        description:
+          type:
+            - string
+            - 'null'
+          maxLength: 300
+          default: null
+        icon:
+          type:
+            - string
+            - 'null'
+          maxLength: 80
+          default: null
+        isActive:
+          type: boolean
+          default: true
+        order:
+          type: integer
+          minimum: 0
+          default: 0
+      required:
+        - name
+        - kind
+    SegmentPatch:
+      type: object
+      description: Request body `segment.patch` (`src/services/schemas/`).
+      properties:
+        name:
+          type: string
+          maxLength: 60
+          minLength: 2
+        slug:
+          type: string
+          pattern: ^[a-z0-9-]+$
+          maxLength: 75
+          default: ''
+        kind:
+          type: string
+          enum:
+            - residential
+            - commercial
+            - land
+          default: residential
+        description:
+          type:
+            - string
+            - 'null'
+          maxLength: 300
+          default: null
+        icon:
+          type:
+            - string
+            - 'null'
+          maxLength: 80
+          default: null
+        isActive:
+          type: boolean
+          default: true
+        order:
+          type: integer
+          minimum: 0
+          default: 0
+    SegmentUpdate:
+      type: object
+      description: Request body `segment.update` (`src/services/schemas/`).
+      properties:
+        name:
+          type: string
+          maxLength: 60
+          minLength: 2
+        slug:
+          type: string
+          pattern: ^[a-z0-9-]+$
+          maxLength: 75
+          default: ''
+        kind:
+          type: string
+          enum:
+            - residential
+            - commercial
+            - land
+          default: residential
+        description:
+          type:
+            - string
+            - 'null'
+          maxLength: 300
+          default: null
+        icon:
+          type:
+            - string
+            - 'null'
+          maxLength: 80
+          default: null
+        isActive:
+          type: boolean
+          default: true
+        order:
+          type: integer
+          minimum: 0
+          default: 0
+      required:
+        - name
+        - kind
     SeoOverviewRow:
       type: object
       description: One lightweight row of the SEO desk (§5.14).

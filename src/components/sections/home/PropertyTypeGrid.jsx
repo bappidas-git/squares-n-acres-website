@@ -8,6 +8,7 @@ import useCategoryCounts from './useCategoryCounts';
 import { Container, Section, SectionHeader } from '../../ui';
 import { HOME } from '../../../config/copy';
 import { formatNumber } from '../../../utils/format';
+import { segmentKind } from '../../../config/segments';
 import { usePropertyTypes } from '../../../hooks/useMasterData';
 
 /**
@@ -21,9 +22,11 @@ import { usePropertyTypes } from '../../../hooks/useMasterData';
  * sections between them make one request per filter rather than two.
  */
 
-/** Where a type's listings live (D25). */
+/** Where a type's listings live (D25), by its segment's kind (QA-52). */
 export const typeHref = (type) =>
-  type.segment === 'commercial' ? PATHS.commercialType(type.slug) : PATHS.buyType(type.slug);
+  segmentKind(type.segment) === 'commercial'
+    ? PATHS.commercialType(type.slug)
+    : PATHS.buyType(type.slug);
 
 export default function PropertyTypeGrid() {
   const types = usePropertyTypes();

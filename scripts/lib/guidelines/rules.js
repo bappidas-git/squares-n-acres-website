@@ -141,6 +141,14 @@ function laravelRule(descriptor, context = {}) {
     parts.push(`exists:${tableOf(references)},id`);
   }
 
+  // A reference by something other than the id — a property's `segment` is a
+  // `segments` slug (QA-52) — names its column itself.
+  if (descriptor.exists?.collection) {
+    parts.push(
+      `exists:${tableOf(descriptor.exists.collection)},${snakeCase(descriptor.exists.field ?? 'id')}`
+    );
+  }
+
   if ((descriptor.unique || descriptor.type === 'slug') && collection) {
     parts.push(`unique:${tableOf(collection)},${snakeCase(field ?? 'id')}`);
   }

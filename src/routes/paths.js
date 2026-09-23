@@ -108,6 +108,7 @@ const adminPaths = {
   adminLocalityNew: '/admin/master-data/localities/add',
   adminLocalityEdit: (id) => `/admin/master-data/localities/edit/${seg(id)}`,
   adminCities: '/admin/master-data/cities',
+  adminSegments: '/admin/master-data/segments',
   adminPropertyTypes: '/admin/master-data/property-types',
   adminAmenities: '/admin/master-data/amenities',
   adminBadges: '/admin/master-data/badges',

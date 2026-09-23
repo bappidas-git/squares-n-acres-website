@@ -178,6 +178,8 @@ export function useMasterDataCrud(config) {
  * @param {Array<object>} [props.config.bulkActions]
  * @param {boolean} [props.config.usageGuard] render the 409 dialog (D88)
  * @param {boolean} [props.config.canEdit] false renders the screen read-only
+ * @param {(row: object) => boolean} [props.config.canDelete] false leaves a
+ *   row's delete action out — a built-in segment the API would refuse anyway
  * @param {(collection: string) => void} [props.config.onMutated] after every
  *   successful write, with `config.key` — `MasterDataContext.refresh` for the
  *   collections the public site caches
@@ -228,6 +230,7 @@ export default function MasterDataPage({ config }) {
     bulkActions = [],
     usageGuard = true,
     canEdit = true,
+    canDelete,
     emptyState,
     newValues = {},
     extraRowActions,
@@ -589,7 +592,7 @@ export default function MasterDataPage({ config }) {
           ]
         : []),
       ...(extraRowActions?.(row) ?? []),
-      ...(canEdit
+      ...(canEdit && (canDelete ? canDelete(row) : true)
         ? [
             {
               key: 'delete',
@@ -601,7 +604,7 @@ export default function MasterDataPage({ config }) {
           ]
         : []),
     ],
-    [canEdit, columns, extraRowActions, startEdit]
+    [canEdit, canDelete, columns, extraRowActions, startEdit]
   );
 
   // Reordering replaces the table only while the list is in the order it is

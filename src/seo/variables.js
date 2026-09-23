@@ -15,6 +15,7 @@
  */
 
 const { AREA_UNITS, CONSTRUCTION_STATUS, LISTING_TYPES } = require('../config/enums');
+const { segmentKind } = require('../config/segments');
 const { SITE } = require('../config/site');
 const { formatArea, formatBhk, formatDate, formatPrice } = require('../utils/format');
 
@@ -115,11 +116,14 @@ const findById = (records, id) =>
 /** A formatter's answer, or an empty string — a title never shows an em dash. */
 const orEmpty = (value) => (value && value !== '—' ? value : '');
 
-/** Whether this property is the kind that has bedrooms at all (§9.5). */
-const hasBedrooms = (property) =>
-  property?.segment !== 'commercial' &&
-  property?.segment !== 'land' &&
-  Number(property?.configuration?.bedrooms) > 0;
+/**
+ * Whether this property is the kind that has bedrooms at all (§9.5) — by its
+ * segment's kind, so an added segment of the commercial kind has none (QA-52).
+ */
+const hasBedrooms = (property, segments) => {
+  const kind = segmentKind(property?.segment, segments);
+  return kind !== 'commercial' && kind !== 'land' && Number(property?.configuration?.bedrooms) > 0;
+};
 
 /** The locality of a record, from the embedded read field or from master data. */
 const localityOf = (entity, context) =>
@@ -159,7 +163,7 @@ function priceOf(property) {
  * @param {string} entityType one of `SEO_ENTITY_TYPES`
  * @param {object} entity the record
  * @param {object} [context] `{ seoSettings, siteSettings, localities, cities,
- *   propertyTypes, developers, categories, authors, count, page, now }`
+ *   propertyTypes, segments, developers, categories, authors, count, page, now }`
  * @returns {Record<string, string>}
  */
 function buildVariables(entityType, entity = {}, context = {}) {
@@ -193,7 +197,10 @@ function buildVariables(entityType, entity = {}, context = {}) {
     page: page > 1 ? `Page ${page}` : '',
     propertytype: entityType === 'propertyType' ? (record.name ?? '') : (propertyType?.name ?? ''),
     listingtype: isProperty ? LISTING_TYPES.verbOf(record.listingType) : '',
-    bhk: isProperty && hasBedrooms(record) ? formatBhk(record.configuration.bedrooms) : '',
+    bhk:
+      isProperty && hasBedrooms(record, context.segments)
+        ? formatBhk(record.configuration.bedrooms)
+        : '',
     locality: locality?.name ?? '',
     city: cityNameOf(record, context),
     price: isProperty ? priceOf(record) : '',

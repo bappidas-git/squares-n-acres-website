@@ -3114,6 +3114,44 @@
       "updatedAt": "2026-09-10T09:00:00.000Z"
     }
   ],
+  "segments": [
+    {
+      "id": 1,
+      "name": "Residential",
+      "slug": "residential",
+      "kind": "residential",
+      "description": "Homes to buy or rent: apartments, villas, houses and co-living.",
+      "icon": "mdi:home-city-outline",
+      "isActive": true,
+      "order": 1,
+      "createdAt": "2026-03-20T12:00:00.000Z",
+      "updatedAt": "2026-04-07T11:55:00.000Z"
+    },
+    {
+      "id": 2,
+      "name": "Commercial",
+      "slug": "commercial",
+      "kind": "commercial",
+      "description": "Space to work or trade from: offices, shops, co-working and warehouses.",
+      "icon": "mdi:office-building-outline",
+      "isActive": true,
+      "order": 2,
+      "createdAt": "2026-03-20T12:00:00.000Z",
+      "updatedAt": "2026-08-24T07:55:00.000Z"
+    },
+    {
+      "id": 3,
+      "name": "Plots & Land",
+      "slug": "land",
+      "kind": "land",
+      "description": "Residential, farm and commercial plots, measured by the plot rather than a building.",
+      "icon": "mdi:land-plots",
+      "isActive": true,
+      "order": 3,
+      "createdAt": "2026-03-20T15:40:00.000Z",
+      "updatedAt": "2026-07-16T14:00:00.000Z"
+    }
+  ],
   "propertyTypes": [
     {
       "id": 1,

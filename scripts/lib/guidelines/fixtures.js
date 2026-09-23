@@ -29,6 +29,10 @@ function sampleValue(descriptor, field, seed, options = {}) {
     return descriptor.maxLength ? result.slice(0, descriptor.maxLength) : result;
   };
 
+  // A reference by slug has to name a record that exists, and its default is
+  // one the seed holds — a property's `segment` is `residential` (QA-52).
+  if (descriptor.exists && descriptor.default !== undefined) return descriptor.default;
+
   switch (descriptor.type) {
     case 'string':
       // A patterned string cannot be a sentence. The only two in the contract
@@ -109,6 +113,7 @@ const WRITABLE = {
     patch: { order: 9 },
   },
   adminCities: { path: '/admin/cities', schema: 'city.create', patch: { isActive: true } },
+  adminSegments: { path: '/admin/segments', schema: 'segment.create', patch: { order: 9 } },
   adminPropertyTypes: {
     path: '/admin/property-types',
     schema: 'propertyType.create',

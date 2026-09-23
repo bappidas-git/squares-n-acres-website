@@ -161,6 +161,9 @@ function matchesFilter(record, descriptor, raw, context) {
  * @param {Function} [options.beforeDelete] `(record, ctx) => void`, where `ctx`
  *   is `{ user, db, query, collections }` — throw to refuse the delete
  * @param {string|false} [options.deleteGuard] a `lib/usage.js` type
+ * @param {(record: object) => string|null} [options.protect] why this record
+ *   can never be deleted, or `null` — a built-in segment (QA-52). Checked
+ *   before the usage guard, for a single delete and a bulk one alike
  * @param {object} [options.bulkActions] extra actions, `{ name: changes|null }`
  * @param {{one: string, many: string}} [options.noun] for the bulk message
  * @param {boolean} [options.pathSlug] the slug is a URL path rather than one
@@ -195,6 +198,7 @@ function makeCrudRouter(options) {
     afterSave,
     beforeDelete,
     deleteGuard = false,
+    protect,
     bulkActions = {},
     noun = { one: 'record', many: 'records' },
     pathSlug = false,
@@ -453,8 +457,14 @@ function makeCrudRouter(options) {
     return { usedBy: findUsages(deleteGuard, record.id, usageSource()) };
   }
 
-  /** The 409 of a delete that is still referenced (D88). */
+  /**
+   * The 409 of a delete that is still referenced (D88), or of a record the
+   * resource never lets go of — which says why, and has nothing to unlink.
+   */
   function guardDelete(record) {
+    const reason = protect ? protect(record) : null;
+    if (reason) throw conflict(reason, { id: [reason] }, { usedBy: [] });
+
     if (!deleteGuard) return;
     const usedBy = findUsages(deleteGuard, record.id, usageSource());
     if (usedBy.length === 0) return;
@@ -549,6 +559,7 @@ function makeCrudRouter(options) {
         validateBody(schemas.getSchema(`${schema}.create`), body, {
           fillDefaults: true,
           collection: rows(),
+          lookup: db.getCollection,
         });
 
         const record = buildRecord(body, { method: 'POST', user: req.user });
@@ -588,6 +599,7 @@ function makeCrudRouter(options) {
         validateBody(schemas.getSchema(`${schema}.update`), body, {
           collection: rows(),
           excludeId: existing.id,
+          lookup: db.getCollection,
         });
 
         const record = buildRecord(body, { existing, method: 'PUT', user: req.user });
@@ -614,6 +626,7 @@ function makeCrudRouter(options) {
           partial: true,
           collection: rows(),
           excludeId: existing.id,
+          lookup: db.getCollection,
         });
 
         const record = buildRecord(body, { existing, method: 'PATCH', user: req.user });

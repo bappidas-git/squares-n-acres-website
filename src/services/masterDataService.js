@@ -1,6 +1,6 @@
 /**
- * Master data — localities, cities, property types, amenities, badges,
- * developers, banks — and the small content collections that behave the same
+ * Master data — localities, cities, segments, property types, amenities,
+ * badges, developers, banks — and the small content collections that behave the same
  * way: article categories, article tags, authors, FAQs, testimonials, team
  * members and partners (00_MASTER_CONTEXT.md §6.2–§6.9, §5.14).
  *
@@ -65,6 +65,7 @@ export const adminCrud = (resource) => ({
 
 export const localities = collection(endpoints.localities, endpoints.adminLocalities);
 export const cities = collection(endpoints.cities, endpoints.adminCities);
+export const segments = collection(endpoints.segments, endpoints.adminSegments);
 export const propertyTypes = collection(endpoints.propertyTypes, endpoints.adminPropertyTypes);
 export const amenities = collection(endpoints.amenities, endpoints.adminAmenities);
 export const badges = collection(endpoints.badges, endpoints.adminBadges);
@@ -88,6 +89,7 @@ export const partners = collection(endpoints.partners, endpoints.adminPartners);
 const masterDataService = {
   localities,
   cities,
+  segments,
   propertyTypes,
   amenities,
   badges,

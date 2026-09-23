@@ -50,6 +50,7 @@ const SOURCES = [
   'authors',
   'pages',
   'propertyTypes',
+  'segments',
 ];
 
 /**

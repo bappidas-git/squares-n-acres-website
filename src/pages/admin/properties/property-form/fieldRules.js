@@ -14,17 +14,22 @@
  */
 
 import { AREA_UNITS } from '../../../../config/enums';
+import { segmentKind } from '../../../../config/segments';
 
 /* ------------------------------------------------------------------ *
  * Segment
  * ------------------------------------------------------------------ */
 
-export const isResidential = (values) => values?.segment === 'residential';
+// A listing's segment is master data (QA-52), so these ask for its **kind**:
+// "Industrial", added with the commercial layout, answers `isCommercial` just
+// as the built-in Commercial segment does.
 
-export const isCommercial = (values) => values?.segment === 'commercial';
+export const isResidential = (values) => segmentKind(values?.segment) === 'residential';
+
+export const isCommercial = (values) => segmentKind(values?.segment) === 'commercial';
 
 /** `land` in the contract, "Plots & Land" on screen (§6.17). */
-export const isPlot = (values) => values?.segment === 'land';
+export const isPlot = (values) => segmentKind(values?.segment) === 'land';
 
 /* ------------------------------------------------------------------ *
  * Listing type
@@ -211,12 +216,16 @@ const BLANK = {
  * after the editor confirms (§7 of prompt 19).
  *
  * Moving back does not restore anything: the fields come back blank, which is
- * the honest state for a listing that has just been reclassified.
+ * the honest state for a listing that has just been reclassified. What goes is
+ * decided by the kind of the segment being moved to, so a move between two
+ * segments of one kind — Commercial to Industrial — clears nothing a layout
+ * would not have cleared anyway.
  *
- * @param {'residential'|'commercial'|'land'} segment the segment being moved to
+ * @param {string} segment the slug of the segment being moved to
  * @returns {Record<string, unknown>} dotted path → blank value
  */
 export function clearedBySegment(segment) {
+  const kind = segmentKind(segment);
   const patch = {};
   const clear = (prefix, fields) =>
     fields.forEach((field) => {
@@ -224,12 +233,12 @@ export function clearedBySegment(segment) {
     });
 
   // Rooms are a home's; parking goes only with the building.
-  if (segment !== 'residential') clear('configuration', ROOM_FIELDS);
-  if (segment === 'land') clear('configuration', PARKING_FIELDS);
-  if (segment === 'land') clear('area', BUILT_AREA_FIELDS);
+  if (kind !== 'residential') clear('configuration', ROOM_FIELDS);
+  if (kind === 'land') clear('configuration', PARKING_FIELDS);
+  if (kind === 'land') clear('area', BUILT_AREA_FIELDS);
   // A villa or a house keeps its plot, so only an office loses one.
-  if (segment === 'commercial') clear('area', PLOT_AREA_FIELDS);
-  if (segment === 'land') {
+  if (kind === 'commercial') clear('area', PLOT_AREA_FIELDS);
+  if (kind === 'land') {
     // Facing and ownership stay: land has both.
     patch.furnishing = '';
     patch.floorNumber = null;

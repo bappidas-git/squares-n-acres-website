@@ -34,6 +34,7 @@ const path = require('path');
 const { TRACE_PATTERNS, ALLOW_LIST } = require('./check-traces');
 const { wordCount } = require('../mock-server/lib/html');
 const { MODELS } = require('../mock-server/schemas/models');
+const { BUILT_IN_SEGMENT_SLUGS, segmentKind } = require('../src/config/segments');
 const { SECTION_VISIBILITY_KEYS } = require('../src/config/enums');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -497,6 +498,7 @@ const MINIMUM_COUNTS = {
   properties: 36,
   localities: 20,
   cities: 1,
+  segments: 3,
   propertyTypes: 17,
   amenities: 40,
   badges: 8,
@@ -544,8 +546,8 @@ function checkQuality(db, add, warn) {
   for (const property of db.properties ?? []) {
     const label = `properties[${property.id}]`;
     const type = propertyTypes.get(property.propertyTypeId);
-    const isLand = type?.segment === 'land';
-    const isCommercial = type?.segment === 'commercial';
+    const isLand = segmentKind(type?.segment, db.segments) === 'land';
+    const isCommercial = segmentKind(type?.segment, db.segments) === 'commercial';
     const forSale = property.listingType === 'sale';
 
     if (property.isActive) {
@@ -816,6 +818,39 @@ function validate(db) {
           }
         }
       }
+    }
+  }
+
+  // References by something other than an id — a field whose descriptor
+  // carries `exists`, which is how a property and a property type name their
+  // segment (QA-52).
+  for (const [name, model] of Object.entries(MODELS)) {
+    const records = Array.isArray(db[name]) ? db[name] : [];
+    for (const [field, descriptor] of Object.entries(model.fields)) {
+      const rule = descriptor?.exists;
+      if (!rule?.collection) continue;
+      const column = rule.field ?? 'id';
+      const known = new Set((db[rule.collection] ?? []).map((record) => record?.[column]));
+      for (const record of records) {
+        const value = record?.[field];
+        if (value === undefined || value === null || value === '' || known.has(value)) continue;
+        add(
+          name,
+          `${name}[${record.id}].${field}: "${value}" is not a ${rule.collection} ${column}`
+        );
+      }
+    }
+  }
+
+  // The three segments the public site is built on, each its own kind.
+  for (const slug of BUILT_IN_SEGMENT_SLUGS) {
+    const record = (db.segments ?? []).find((row) => row?.slug === slug);
+    if (!record) add('segments', `segments: the built-in "${slug}" segment is missing`);
+    else if (record.kind !== slug) {
+      add(
+        'segments',
+        `segments[${record.id}]: the built-in "${slug}" segment must be of kind "${slug}"`
+      );
     }
   }
 

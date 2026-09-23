@@ -24,7 +24,7 @@ Column legend: **Type** · **Null** (Y/N) · **Default** · **Enum/notes**. Ever
 | `title` | string | N | — | ≥ 10 chars |
 | `projectName` | string | Y | null | |
 | `listingType` | enum | N | `sale` | `sale                                                                                                                                                                                                                                          | rent               | lease` |
-| `segment` | enum | N | `residential` | `residential                                                                                                                                                                                                                                   | commercial         | land` |
+| `segment` | string | N | `residential` | the slug of a `segments` record (§6.3a) — `residential`, `commercial`, `land` or one an editor added; the API answers 422 for a slug no segment holds |
 | `propertyTypeId` | int | N | — | FK propertyTypes |
 | `propertyType` | object (read) | | | `{id,name,slug,segment}` |
 | `constructionStatus` | enum | N | `ready-to-move` | `pre-launch                                                                                                                                                                                                                                    | under-construction | ready-to-move                         | resale` |
@@ -82,9 +82,15 @@ Column legend: **Type** · **Null** (Y/N) · **Default** · **Enum/notes**. Ever
 `localities`: `name` (string, unique per city), `slug` (unique), `cityId` (int), `city` (read), `zone` (`north|south|east|west|central`), `description` (HTML), `shortDescription` (≤ 300), `heroImageUrl?`, `latitude?`, `longitude?`, `pincodes` (string[]), `highlights` (string[]), `connectivity` (`{label, value}[]`), `avgPricePerSqft?` (int), `priceTrendNote?`, `isFeatured` (false), `isActive` (true), `order` (0), `seo`, `propertyCount` (read: active properties).
 `cities`: `name`, `slug`, `state`, `isActive` (seed: `{id:1, name:'Bengaluru', slug:'bengaluru', state:'Karnataka', isActive:true}`).
 
+### 6.3a `segments` (added after 1.0.0 — `docs/DECISIONS.md`, QA-52)
+
+`name` (2–60), `slug` (the **key** a property and a property type store in `segment`; unique; fixed once the segment exists — a different one is a 422, an empty or missing one keeps the stored one), `kind` (`residential|commercial|land` — the layout its listings get: rooms and a BHK, built-up areas without rooms, or a plot's measurements), `description?` (≤ 300), `icon?` (Iconify id), `isActive`, `order`, plus `builtIn`, `propertyTypeCount` and `propertyCount` (read). Seed: the three built-in segments `residential`, `commercial` and `land`, each of its own kind. A built-in segment keeps its slug **and** its kind and is never deleted (409): `/commercial` lists `segment=commercial`, `/plots` lists `segment=land`, and the menus, the hero search and the sitemap name them. Any other segment is refused a delete (409) while a property type or a property names it. `GET /segments` answers every segment, the inactive ones flagged, because a listing filed under a retired segment still needs its layout; there is no public read by slug.
+
+Every rule that used to compare a segment with `'commercial'` or `'land'` — the property form's fields, a title's BHK, the listing's schema.org `@type`, whether a property type's landing page is `/commercial/<slug>` or `/buy/<slug>` — asks for the segment's **kind** (`src/config/segments.js`), which gives the old answer for the three built-ins.
+
 ### 6.3 `propertyTypes`
 
-`name`, `slug` (**plural URL form**, D25: `apartments, villas, independent-houses, row-houses, penthouses, duplexes, studios, builder-floors, residential-plots, farm-land, office-spaces, co-working-spaces, retail-shops, warehouses, industrial-sheds, commercial-plots, pg-co-living`), `segment` (residential for the first 8; `residential-plots` and `farm-land` → `land`; `office-spaces`…`industrial-sheds` → `commercial`; `commercial-plots` → `land`; `pg-co-living` → `residential`), `icon` (Iconify id), `description?`, `isActive`, `order`, `seo`, `propertyCount` (read: active listings of this type).
+`name`, `slug` (**plural URL form**, D25: `apartments, villas, independent-houses, row-houses, penthouses, duplexes, studios, builder-floors, residential-plots, farm-land, office-spaces, co-working-spaces, retail-shops, warehouses, industrial-sheds, commercial-plots, pg-co-living`), `segment` (the slug of a `segments` record, §6.3a; seeded as residential for the first 8; `residential-plots` and `farm-land` → `land`; `office-spaces`…`industrial-sheds` → `commercial`; `commercial-plots` → `land`; `pg-co-living` → `residential`), `icon` (Iconify id), `description?`, `isActive`, `order`, `seo`, `propertyCount` (read: active listings of this type).
 
 ### 6.4 `amenities` and `badges`
 
@@ -268,6 +274,7 @@ prompt adds.
 | `properties`            | 1–60         | 36+                                   |
 | `localities`            | 1–30         | 20                                    |
 | `cities`                | 1–5          | 1 (Bengaluru)                         |
+| `segments`              | 1–10         | 3 (the built-in segments)             |
 | `propertyTypes`         | 1–20         | 17                                    |
 | `amenities`             | 1–60         | 40+                                   |
 | `badges`                | 1–10         | 8                                     |

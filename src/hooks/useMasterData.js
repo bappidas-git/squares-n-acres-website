@@ -6,7 +6,7 @@ import { AMENITY_CATEGORIES } from '../config/enums';
 import { useMasterData } from '../contexts/MasterDataContext';
 
 /**
- * The seven master-data lists, in the shape each screen actually wants
+ * The eight master-data lists, in the shape each screen actually wants
  * (00_MASTER_CONTEXT.md §6.2–§6.6, D93).
  *
  * `MasterDataContext` holds the raw collections; these hooks are the reading
@@ -37,10 +37,31 @@ const arrange = (records, activeOnly, extra) =>
     .sort(byOrder);
 
 /**
+ * Segments in `order` (QA-52).
+ *
+ * The collection holds the inactive ones too — `GET /segments` answers every
+ * segment — so `activeOnly: false` is what a screen that labels an existing
+ * listing's segment asks for, and the default is what a picker offers.
+ *
+ * @param {object} [options]
+ * @param {'residential'|'commercial'|'land'} [options.kind] every kind when absent
+ * @param {boolean} [options.activeOnly]
+ * @returns {Array<object>}
+ */
+export function useSegments({ kind, activeOnly = true } = {}) {
+  const { segments } = useMasterData();
+
+  return useMemo(
+    () => arrange(segments ?? [], activeOnly, kind ? (row) => row.kind === kind : null),
+    [segments, kind, activeOnly]
+  );
+}
+
+/**
  * Property types for a segment, in `order`.
  *
  * @param {object} [options]
- * @param {'residential'|'commercial'|'land'} [options.segment] all three when absent
+ * @param {string} [options.segment] a segment's slug; every segment when absent
  * @param {boolean} [options.activeOnly]
  * @returns {Array<object>}
  */

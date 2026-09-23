@@ -19,6 +19,7 @@
  */
 
 const PATHS = require('../routes/paths');
+const { segmentKind } = require('../config/segments');
 
 /** Indexed, in this order (§9.4). */
 const INDEX_WORTHY_PARAMS = [
@@ -66,9 +67,11 @@ function normalisePath(path) {
  *   `propertyType`
  * @param {object} entity the record; only its slug and — for a property type —
  *   its segment are read
+ * @param {Array<object>} [segments] the collection a property type's segment
+ *   is looked up in; the browser's registry when absent (QA-52)
  * @returns {string|null} `null` when the record has no slug yet
  */
-function publicPathFor(entityType, entity = {}) {
+function publicPathFor(entityType, entity = {}, segments) {
   const slug = entity?.seo?.slug || entity?.slug || '';
   if (!slug) return null;
 
@@ -90,7 +93,11 @@ function publicPathFor(entityType, entity = {}) {
     case 'job':
       return PATHS.job(slug);
     case 'propertyType':
-      return entity.segment === 'commercial' ? PATHS.commercialType(slug) : PATHS.buyType(slug);
+      // Under `/commercial` by its segment's kind, so a type in a segment an
+      // editor added of that kind keeps the commercial landing page.
+      return segmentKind(entity.segment, segments) === 'commercial'
+        ? PATHS.commercialType(slug)
+        : PATHS.buyType(slug);
     case 'page':
       return PATHS.page(slug);
     default:

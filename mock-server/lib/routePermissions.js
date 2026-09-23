@@ -81,6 +81,7 @@ const RESOURCE_AREAS = {
 
   localities: 'masterData',
   cities: 'masterData',
+  segments: 'masterData',
   'property-types': 'masterData',
   propertyTypes: 'masterData',
   amenities: 'masterData',

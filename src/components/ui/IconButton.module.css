@@ -45,8 +45,13 @@
 }
 
 /* ── Variants ────────────────────────────────────────────────────────────── */
+
+/* As in `Button.module.css`: with `to` or `href` this is an `<a>`, and the
+   global `a:hover` colour would otherwise win over the variant's own — white on
+   the solid fill turned red on red. Each hover rule restates it. */
 .ghost:hover:not(:disabled) {
   background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .outline {
@@ -66,6 +71,7 @@
 
 .solid:hover:not(:disabled) {
   background: var(--color-primary-dark);
+  color: var(--color-text-inverse);
 }
 
 .onDark {
@@ -74,6 +80,7 @@
 
 .onDark:hover:not(:disabled) {
   background: var(--color-on-dark-subtle);
+  color: var(--color-text-inverse);
 }
 
 /* The blue ring is invisible on the surfaces this variant exists for. */

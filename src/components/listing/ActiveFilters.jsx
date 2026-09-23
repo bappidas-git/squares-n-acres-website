@@ -13,8 +13,8 @@ import {
   FACING,
   FURNISHING,
   LISTING_TYPES,
-  SEGMENTS,
 } from '../../config/enums';
+import { segmentName } from '../../config/segments';
 
 /**
  * What the search is currently narrowed to, as chips.
@@ -69,7 +69,8 @@ function buildChips(params, fixed, master) {
   };
 
   single('listingType', (value) => LISTING_TYPES.labelOf(value));
-  single('segment', (value) => SEGMENTS.labelOf(value));
+  // A segment an editor added has a name in master data and none in the enum.
+  single('segment', (value) => segmentName(value, master.segments));
   each('propertyTypeId', (value) => nameOf(master.propertyTypes, value));
   each('localityId', (value) => nameOf(master.localities, value));
 

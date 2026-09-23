@@ -20,6 +20,8 @@ const PUBLIC_PATHS = [
   'GET /localities',
   'GET /localities/slug/:slug',
   'GET /cities',
+  // Not in §5.14: segments became master data after 1.0.0 (QA-52).
+  'GET /segments',
   'GET /developers',
   'GET /developers/slug/:slug',
   'GET /property-types',
@@ -109,6 +111,7 @@ const ADMIN_CRUD_RESOURCES = [
   ['/admin/properties', true],
   ['/admin/localities', true],
   ['/admin/cities', true],
+  ['/admin/segments', true],
   ['/admin/property-types', true],
   ['/admin/amenities', true],
   ['/admin/badges', true],

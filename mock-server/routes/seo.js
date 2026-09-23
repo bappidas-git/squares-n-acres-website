@@ -133,7 +133,7 @@ module.exports = ({ db, getModel }) => {
    * can open it in a tab without knowing the routing rules.
    */
   function overviewRow(type, record, siteUrl) {
-    const path = publicPathOf(type, record);
+    const path = publicPathOf(type, record, { segments: db.getCollection('segments') });
 
     return {
       // An id is only unique inside its collection, so the row that eight

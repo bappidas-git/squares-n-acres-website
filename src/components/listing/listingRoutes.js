@@ -1,5 +1,6 @@
 import { CONSTRUCTION_STATUS } from '../../config/enums';
 import PATHS from '../../routes/paths';
+import { segmentKind } from '../../config/segments';
 
 /**
  * Every listing URL the site answers, and what each one means.
@@ -219,12 +220,28 @@ export function resolveListingRoute({ routeKey, slug, masterData }) {
   const resolved = resolveDynamicSlug(kind, slug, masterData);
   if (resolved.state !== 'ok') return { state: resolved.state, config: route };
 
+  const fixed = { ...route.fixed, ...resolved.fixed };
+
+  // A type an editor moved into a segment of its own of the same kind —
+  // Warehouses into "Industrial", of the commercial kind — keeps its page at
+  // `/commercial/warehouses` (where `urls.publicPathFor` sends it), and that
+  // page lists the type's segment rather than an empty Commercial (QA-52).
+  const ownSegment = resolved.record?.segment;
+  if (
+    fixed.segment &&
+    ownSegment &&
+    ownSegment !== fixed.segment &&
+    segmentKind(ownSegment) === segmentKind(fixed.segment)
+  ) {
+    fixed.segment = ownSegment;
+  }
+
   return {
     state: 'ok',
     config: {
       ...route,
       path: `/${kind}/${slug}`,
-      fixed: { ...route.fixed, ...resolved.fixed },
+      fixed,
       noun: resolved.noun ?? route.noun,
       verb: resolved.verb ?? route.verb,
       intro: resolved.intro ?? route.intro,

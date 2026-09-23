@@ -11,6 +11,7 @@
 
 import { LISTING_TYPES } from '../config/enums';
 import { formatBhk } from '../utils/format';
+import { segmentKind } from '../config/segments';
 import { normalize } from './keywords';
 import { withoutStopWords } from './data/stopWords';
 
@@ -62,10 +63,11 @@ const propertySuggestions = (property, context) => {
 
   const place = locality?.name ?? '';
   const type = singular(propertyType?.name ?? 'property');
+  // The segment's kind, not its slug: an added segment of the commercial kind
+  // has no BHK to put in a keyword either (QA-52).
+  const kind = segmentKind(property.segment, context.segments);
   const bhk =
-    property.segment !== 'commercial' &&
-    property.segment !== 'land' &&
-    Number(property.configuration?.bedrooms) > 0
+    kind !== 'commercial' && kind !== 'land' && Number(property.configuration?.bedrooms) > 0
       ? formatBhk(property.configuration.bedrooms)
       : '';
   const verb = LISTING_TYPES.verbOf(property.listingType) || 'for sale';
@@ -105,7 +107,8 @@ const developerSuggestions = (developer, context) => {
  *
  * @param {string} entityType one of `SEO_ENTITY_TYPES`
  * @param {object} entity
- * @param {object} [context] `{ localities, cities, propertyTypes, developers, categories }`
+ * @param {object} [context] `{ localities, cities, propertyTypes, segments, developers,
+ *   categories }`
  * @returns {string[]} lowercased, de-duplicated, at most {@link MAX_SUGGESTIONS}
  */
 export function suggestKeywords(entityType, entity = {}, context = {}) {

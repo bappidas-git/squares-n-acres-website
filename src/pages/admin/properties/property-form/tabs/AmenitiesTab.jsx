@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 
 import FormSection, { FormColumn } from '../../../../../components/admin/FormSection';
 import PATHS from '../../../../../routes/paths';
+import { segmentKind } from '../../../../../config/segments';
 import { useAmenitiesGrouped } from '../../../../../hooks/useMasterData';
 import { propertyFieldId } from '../fieldFocus';
 import { usePropertyFormContext } from '../PropertyFormContext';
@@ -38,10 +39,11 @@ export function sortAmenityIds(ids = [], orderedIds = []) {
  *
  * A warehouse's editor wants Conference Room and Loading Dock before Kids Pool;
  * the categories are otherwise left in `AMENITY_CATEGORIES` order, because that
- * order is what the public page prints.
+ * order is what the public page prints. "Commercial" is the segment's kind, so
+ * a segment an editor added with that layout reads the same way (QA-52).
  */
 export function orderGroupsForSegment(groups = [], segment) {
-  if (segment !== 'commercial') return groups;
+  if (segmentKind(segment) !== 'commercial') return groups;
   return [
     ...groups.filter((group) => group.category === 'commercial'),
     ...groups.filter((group) => group.category !== 'commercial'),

@@ -59,6 +59,23 @@ describe('publicPathFor', () => {
     );
   });
 
+  it('follows the kind of a segment an editor added (QA-52)', () => {
+    const segments = [
+      { slug: 'industrial', kind: 'commercial' },
+      { slug: 'farmland', kind: 'land' },
+    ];
+    expect(
+      publicPathFor('propertyType', { slug: 'warehouses', segment: 'industrial' }, segments)
+    ).toBe('/commercial/warehouses');
+    expect(
+      publicPathFor('propertyType', { slug: 'farm-land', segment: 'farmland' }, segments)
+    ).toBe('/buy/farm-land');
+    // A segment nobody knows is not commercial.
+    expect(publicPathFor('propertyType', { slug: 'hangars', segment: 'aviation' })).toBe(
+      '/buy/hangars'
+    );
+  });
+
   it('keeps a page slug that is a path', () => {
     expect(publicPathFor('page', { slug: 'buyer-assistance/home-loan' })).toBe(
       '/buyer-assistance/home-loan'

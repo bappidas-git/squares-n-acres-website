@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 
 import { AMENITY_CATEGORIES } from '../../../config/enums';
 import { Button } from '../../ui';
+import { segmentKind } from '../../../config/segments';
 import SectionShell from './SectionShell';
 
 import styles from './AmenitiesSection.module.css';
@@ -17,12 +18,13 @@ const FALLBACK_ICON = 'mdi:check-circle-outline';
  * The listing's amenities grouped by category, in `AMENITY_CATEGORIES` order.
  *
  * A commercial listing reads its own category first: a conference room matters
- * more to somebody leasing an office than the swimming pool does.
+ * more to somebody leasing an office than the swimming pool does — whether its
+ * segment is Commercial itself or one added with that kind (QA-52).
  *
  * Exported for the unit test.
  *
  * @param {Array<{id: number, name: string, icon?: string, category?: string}>} amenities
- * @param {string} [segment] a `SEGMENTS` value
+ * @param {string} [segment] a segment's slug
  * @returns {Array<{value: string, label: string, icon: string, items: Array<object>}>}
  */
 export function groupAmenities(amenities, segment) {
@@ -37,7 +39,7 @@ export function groupAmenities(amenities, segment) {
     }))
     .filter((group) => group.items.length > 0);
 
-  if (segment !== 'commercial') return groups;
+  if (segmentKind(segment) !== 'commercial') return groups;
 
   return [
     ...groups.filter((group) => group.value === 'commercial'),

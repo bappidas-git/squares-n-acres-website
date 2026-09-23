@@ -1,4 +1,5 @@
 import createInitialState from '../initialState';
+import { setKnownSegments } from '../../../../../config/segments';
 import {
   anyFilled,
   clearedBySegment,
@@ -160,6 +161,43 @@ describe('clearedBySegment', () => {
     expect(patch).not.toHaveProperty('furnishing');
     // An office has a car park; only land loses the parking.
     expect(patch).not.toHaveProperty('configuration.parkingCovered');
+  });
+});
+
+describe('a segment an editor added (QA-52)', () => {
+  beforeEach(() =>
+    setKnownSegments([
+      { slug: 'industrial', name: 'Industrial', kind: 'commercial' },
+      { slug: 'farmland', name: 'Farmland', kind: 'land' },
+      { slug: 'luxury', name: 'Luxury Homes', kind: 'residential' },
+    ])
+  );
+  afterEach(() => setKnownSegments([]));
+
+  it('takes the layout of its kind', () => {
+    expect(isCommercial(values({ segment: 'industrial' }))).toBe(true);
+    expect(showsBhk(values({ segment: 'industrial' }))).toBe(false);
+    expect(showsBuiltAreas(values({ segment: 'industrial' }))).toBe(true);
+
+    expect(isPlot(values({ segment: 'farmland' }))).toBe(true);
+    expect(showsBuiltAreas(values({ segment: 'farmland' }))).toBe(false);
+
+    expect(isResidential(values({ segment: 'luxury' }))).toBe(true);
+    expect(showsBhk(values({ segment: 'luxury' }))).toBe(true);
+  });
+
+  it('clears on a move what its kind would clear', () => {
+    expect(clearedBySegment('industrial')).toEqual(clearedBySegment('commercial'));
+    expect(clearedBySegment('farmland')).toEqual(clearedBySegment('land'));
+    // A move between two segments of one kind has nothing to throw away.
+    expect(clearedBySegment('luxury')).toEqual(clearedBySegment('residential'));
+  });
+
+  it('shows neither rooms nor a plot for a segment it does not know yet', () => {
+    const unknown = values({ segment: 'hangars' });
+    expect(isResidential(unknown) || isCommercial(unknown) || isPlot(unknown)).toBe(false);
+    expect(showsBhk(unknown)).toBe(false);
+    expect(showsBuiltAreas(unknown)).toBe(true);
   });
 });
 
