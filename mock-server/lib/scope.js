@@ -24,16 +24,79 @@ function omit(record, keys = []) {
   return copy;
 }
 
+const filled = (value) => typeof value === 'string' && value.trim() !== '';
+
 /**
- * A property as the public site may see it: no audit columns, and the agent's
- * contact details only when the agent is meant to be listed.
+ * A listing's files as a visitor who has not shared their details may see
+ * them: every file the editor put behind the lead form keeps its row and loses
+ * its address.
+ *
+ * - The brochure, while `brochureLeadGated` is on, reads `brochureUrl: null`
+ *   and `hasBrochure: true`.
+ * - A gated document reads `url: null` and `hasFile: true`; every document
+ *   carries `hasFile`, so a page can tell "nothing attached" from "attached,
+ *   ask first".
+ * - One file, one gate: an open document — or an open brochure — whose address
+ *   is a gated file's is gated with it, and reads `leadGated: true` /
+ *   `brochureLeadGated: true` so the page shows the lock it will meet. A
+ *   document that is the brochure's own file is left out, as the page always
+ *   did (P25): it is the brochure, offered once.
+ *
+ * The addresses are handed over by `POST /properties/:id/documents/access`
+ * once the visitor has filed a lead about the listing (`lib/fileAccess.js`).
+ * Before this, they rode along in every public read and the gate was the page's
+ * word only (QA-51 OPEN-1).
+ *
+ * @param {object} property
+ * @returns {object}
+ */
+function withoutGatedFiles(property) {
+  const brochure = filled(property.brochureUrl) ? property.brochureUrl.trim() : null;
+  const documents = Array.isArray(property.documents) ? property.documents : [];
+
+  const gatedUrls = new Set(
+    documents
+      .filter((document) => document?.leadGated !== false && filled(document?.url))
+      .map((document) => document.url.trim())
+  );
+  const brochureGated =
+    Boolean(brochure) && (property.brochureLeadGated !== false || gatedUrls.has(brochure));
+  if (brochureGated) gatedUrls.add(brochure);
+
+  const scoped = {
+    ...property,
+    brochureUrl: brochureGated ? null : (property.brochureUrl ?? null),
+    ...(brochureGated ? { brochureLeadGated: true } : {}),
+    hasBrochure: Boolean(brochure),
+  };
+
+  if (!Array.isArray(property.documents)) return scoped;
+
+  scoped.documents = documents
+    .filter((document) => !(brochure && filled(document?.url) && document.url.trim() === brochure))
+    .map((document) => {
+      if (!document || typeof document !== 'object') return document;
+      const url = filled(document.url) ? document.url.trim() : null;
+      if (url && gatedUrls.has(url)) {
+        return { ...document, url: null, leadGated: true, hasFile: true };
+      }
+      return { ...document, hasFile: Boolean(url) };
+    });
+
+  return scoped;
+}
+
+/**
+ * A property as the public site may see it: no audit columns, the agent's
+ * contact details only when the agent is meant to be listed, and no address
+ * for a file kept behind the lead form.
  *
  * @param {object} property
  * @returns {object}
  */
 function publicProperty(property) {
   if (!property) return property;
-  const scoped = omit(property, ['createdBy', 'updatedBy']);
+  const scoped = withoutGatedFiles(omit(property, ['createdBy', 'updatedBy']));
   const agent = property.agent ?? null;
   if (!agent) return scoped;
 
@@ -41,6 +104,25 @@ function publicProperty(property) {
     ...scoped,
     agent: agent.showOnListing ? { ...agent } : omit(agent, ['phone', 'whatsapp', 'email']),
   };
+}
+
+/**
+ * Every file of a listing with its address — what
+ * `POST /properties/:id/documents/access` answers once the token checks out.
+ * A document that is the brochure's own file is left out, as it is from the
+ * public read.
+ *
+ * @param {object} property the stored record
+ * @returns {{brochureUrl: string|null, documents: Array<{id: number, url: string}>}}
+ */
+function propertyFiles(property) {
+  const brochure = filled(property?.brochureUrl) ? property.brochureUrl.trim() : null;
+  const documents = (Array.isArray(property?.documents) ? property.documents : [])
+    .filter((document) => document && filled(document.url))
+    .filter((document) => !brochure || document.url.trim() !== brochure)
+    .map((document) => ({ id: document.id, url: document.url.trim() }));
+
+  return { brochureUrl: brochure, documents };
 }
 
 /** An author without the private e-mail address. */
@@ -98,6 +180,7 @@ const scopeLeads = (leads, user) =>
 module.exports = {
   omit,
   publicProperty,
+  propertyFiles,
   publicAuthor,
   publicSettings,
   publicSeoSettings,

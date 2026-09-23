@@ -313,7 +313,9 @@ export default function LeadForm({
       const lead = response?.data ?? response ?? null;
 
       leadStorage.saveVisitor({ name: body.name, phone: body.phone, email: body.email });
-      leadStorage.markCaptured(propertyId, source);
+      // A lead about a listing comes back with the token that opens its gated
+      // files (`lead.access`); the page asks for their addresses with it.
+      leadStorage.markCaptured(propertyId, source, lead?.access);
       track(EVENTS.leadSubmit, { source, propertyId });
 
       setDone({ lead, message: response?.message });

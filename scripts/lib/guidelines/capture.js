@@ -445,6 +445,13 @@ async function captureExamples({ baseUrl, accounts, log = () => {} }) {
     'properties.featured': () => ({ path: '/properties/featured?perPage=2' }),
     'properties.similar': () => ({ path: '/properties/1/similar?perPage=2' }),
     'properties.view': () => ({ body: {} }),
+    // The token is the one the run's own enquiry about listing 1 was answered
+    // with (`makeFixtures`); the example shows it normalised, like every token.
+    'properties.documentAccess': () => ({
+      path: '/properties/1/documents/access',
+      body: { token: fixtures.adminLeads?.access?.token },
+      skip: fixtures.adminLeads?.access?.token ? false : 'the run’s lead carried no access token',
+    }),
     'properties.suggestions': () => ({ path: '/properties/suggestions?q=whitefield' }),
     'localities.list': () => ({ path: '/localities?perPage=2' }),
     'developers.list': () => ({ path: '/developers?perPage=2' }),

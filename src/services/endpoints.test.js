@@ -15,6 +15,7 @@ const PUBLIC_PATHS = [
   'GET /properties/slug/:slug',
   'GET /properties/:id/similar',
   'POST /properties/:id/view',
+  'POST /properties/:id/documents/access',
   'GET /properties/suggestions',
   'GET /localities',
   'GET /localities/slug/:slug',

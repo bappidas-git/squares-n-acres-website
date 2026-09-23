@@ -99,11 +99,12 @@ export default function AssessmentForm({
 
     try {
       setSubmitting(true);
-      await leadService.create(body);
+      const response = await leadService.create(body);
       // Answering the questionnaire identifies the visitor for the whole
-      // listing, so every gated kind on it opens (prompt 25 §4.2).
+      // listing, so every gated kind on it opens (prompt 25 §4.2) — and the
+      // token it is answered with is what hands over the files' addresses.
       leadStorage.saveVisitor({ name: values.name, phone: values.phone, email: values.email });
-      leadStorage.markCaptured(propertyId, source);
+      leadStorage.markCaptured(propertyId, source, response?.data?.access);
       track('lead_submit', { propertyId, source, score: score.score });
       onComplete?.({ values, score });
     } catch (error) {

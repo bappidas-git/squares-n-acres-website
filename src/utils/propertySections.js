@@ -139,7 +139,13 @@ export const SECTION_DEFINITIONS = [
     label: 'Documents',
     description: 'The brochure and everything else a buyer downloads.',
     anchor: 'documents',
-    hasData: (property) => list(property.documents).length > 0 || filled(property.brochureUrl),
+    // A public read leaves a gated brochure without its address and says
+    // `hasBrochure` instead (docs/backend-notes → "Gated files"); a gated paper
+    // keeps its row, so the list still counts it.
+    hasData: (property) =>
+      list(property.documents).length > 0 ||
+      filled(property.brochureUrl) ||
+      property.hasBrochure === true,
   },
   {
     key: 'construction',

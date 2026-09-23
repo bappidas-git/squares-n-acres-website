@@ -60,6 +60,12 @@ poor specification.
 
 ---
 
+## Gated files
+
+{{gatedFiles}}
+
+---
+
 ## Dashboard
 
 {{dashboard}}

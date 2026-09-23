@@ -16,6 +16,11 @@
  * Nothing here is a permission system: it decides what a page shows this
  * visitor, and the lead it records is the thing of value. Clearing the session
  * simply asks again.
+ *
+ * The one thing the server does check is `access[propertyId]`: the token
+ * `POST /leads` answers a lead about a listing with. A public read carries no
+ * address for a gated file, and `POST /properties/:id/documents/access` hands
+ * the addresses over to that token only (docs/backend-notes → "Gated files").
  */
 
 import { getItem, removeItem, setItem } from './storage';
@@ -57,7 +62,17 @@ const key = (propertyId) =>
 
 const text = (value) => (typeof value === 'string' ? value.trim() : '');
 
-const EMPTY = { version: VERSION, name: '', email: '', phone: '', captured: [], unlocks: {} };
+const EMPTY = {
+  version: VERSION,
+  name: '',
+  email: '',
+  phone: '',
+  captured: [],
+  unlocks: {},
+  access: {},
+};
+
+const isRecord = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
 /**
  * The stored record in today's shape.
@@ -91,6 +106,9 @@ function read() {
     phone: text(raw.phone),
     captured: captured.filter(Boolean),
     unlocks: raw.unlocks && typeof raw.unlocks === 'object' ? raw.unlocks : {},
+    // Added without a version bump: a record written before it simply has no
+    // token yet, which is what asking again for the files needs.
+    access: isRecord(raw.access) ? raw.access : {},
   };
 }
 
@@ -197,11 +215,15 @@ export const leadStorage = {
    * before each file would be theatre, so those sources open every gated kind
    * on that listing at once.
    *
+   * The token the API answered the lead with, when it names a listing, is kept
+   * with it: it is what opens that listing's gated files (see {@link getAccess}).
+   *
    * @param {number|string|null} propertyId
    * @param {string} [source] a `LEAD_SOURCES` value
+   * @param {{token: string, expiresAt?: string}|null} [access] `lead.access`
    * @returns {object} the stored record
    */
-  markCaptured(propertyId, source) {
+  markCaptured(propertyId, source, access = null) {
     const existing = read() ?? EMPTY;
     const id = key(propertyId);
     const captured = [...existing.captured, { propertyId: id, source: source ?? null }];
@@ -211,7 +233,47 @@ export const leadStorage = {
         ? { ...existing.unlocks, [id]: [...UNLOCK_KINDS] }
         : existing.unlocks;
 
-    return write({ ...existing, captured, unlocks });
+    const grants =
+      id && typeof access?.token === 'string' && access.token !== ''
+        ? { ...existing.access, [id]: { token: access.token, expiresAt: access.expiresAt ?? null } }
+        : existing.access;
+
+    return write({ ...existing, captured, unlocks, access: grants });
+  },
+
+  /**
+   * The token that opens one listing's gated files, or `null` when this visit
+   * has none that is still valid.
+   *
+   * @param {number|string|null} propertyId
+   * @returns {string|null}
+   */
+  getAccess(propertyId) {
+    const id = key(propertyId);
+    if (!id) return null;
+
+    const grant = read()?.access?.[id];
+    if (!isRecord(grant) || typeof grant.token !== 'string' || grant.token === '') return null;
+
+    const expires = Date.parse(grant.expiresAt);
+    return Number.isFinite(expires) && expires <= Date.now() ? null : grant.token;
+  },
+
+  /**
+   * Drop a listing's token the API has refused — a restarted server, a lead
+   * the sales desk deleted — so the next file asks for the visitor's details
+   * again instead of failing the same way.
+   *
+   * @param {number|string|null} propertyId
+   */
+  forgetAccess(propertyId) {
+    const id = key(propertyId);
+    const data = read();
+    if (!id || !data?.access?.[id]) return;
+
+    const access = { ...data.access };
+    delete access[id];
+    write({ ...data, access });
   },
 
   /** Whether a form has already been filled in about this listing. */

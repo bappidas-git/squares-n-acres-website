@@ -1,14 +1,20 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import DocumentsSection, { orderedDocuments } from '../DocumentsSection';
 import { leadStorage } from '../../../../utils/leadStorage';
 import leadService from '../../../../services/leadService';
+import propertyService from '../../../../services/propertyService';
 import renderWith from '../../../../test-utils';
 
 jest.mock('../../../../services/leadService', () => ({
   __esModule: true,
   default: { create: jest.fn() },
+}));
+
+jest.mock('../../../../services/propertyService', () => ({
+  __esModule: true,
+  default: { documentAccess: jest.fn() },
 }));
 
 const property = {
@@ -77,6 +83,15 @@ describe('orderedDocuments', () => {
 
   it('is empty for a listing that carries nothing', () => {
     expect(orderedDocuments(null)).toEqual([]);
+  });
+
+  it('keeps a gated paper a public read gives no address for', () => {
+    const rows = orderedDocuments([
+      { id: 1, title: 'Approved plan sanction', url: null, hasFile: true, order: 1 },
+      { id: 2, title: 'Nothing attached', url: null, hasFile: false, order: 2 },
+    ]);
+
+    expect(rows.map((row) => row.title)).toEqual(['Approved plan sanction']);
   });
 });
 
@@ -191,5 +206,130 @@ describe('<DocumentsSection>', () => {
       '_blank',
       'noopener,noreferrer'
     );
+  });
+});
+
+/**
+ * The listing as `GET /properties/slug/:slug` serves it now: a gated file keeps
+ * its row and loses its address (QA-51 OPEN-1), which the page fetches with
+ * the token of the visitor's lead.
+ */
+describe('<DocumentsSection> over a public read', () => {
+  const SANCTION = 'https://example.test/sanction.pdf';
+  const BROCHURE = 'https://example.test/brochure.pdf';
+  const later = () => new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+  const publicRead = {
+    id: 7,
+    title: 'Lakeview Heights 3 BHK',
+    brochureUrl: null,
+    hasBrochure: true,
+    brochureLeadGated: true,
+    documents: [
+      {
+        id: 2,
+        title: 'Approved plan sanction',
+        url: null,
+        type: 'approval',
+        leadGated: true,
+        hasFile: true,
+        order: 2,
+      },
+      {
+        id: 1,
+        title: 'Current price list',
+        url: 'https://example.test/prices.pdf',
+        type: 'price-list',
+        leadGated: false,
+        hasFile: true,
+        order: 1,
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    leadService.create.mockResolvedValue({
+      data: { id: 51, access: { token: 'tok', expiresAt: later() } },
+    });
+    propertyService.documentAccess.mockResolvedValue({
+      data: {
+        brochureUrl: BROCHURE,
+        documents: [
+          { id: 1, url: 'https://example.test/prices.pdf' },
+          { id: 2, url: SANCTION },
+        ],
+      },
+    });
+  });
+
+  it('offers every file the listing has, the gated ones locked', () => {
+    renderWith(<DocumentsSection property={publicRead} />);
+
+    expect(screen.getByRole('button', { name: /download brochure/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Approved plan sanction' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Current price list' })).toBeInTheDocument();
+    expect(screen.getAllByText(/shared on request/i)).toHaveLength(2);
+    expect(propertyService.documentAccess).not.toHaveBeenCalled();
+  });
+
+  it('fetches the brochure with the token its lead was answered with, then opens it', async () => {
+    renderWith(<DocumentsSection property={publicRead} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /download brochure/i }));
+    await shareDetails();
+
+    expect(propertyService.documentAccess).toHaveBeenCalledWith(7, 'tok');
+    expect(window.open).toHaveBeenCalledWith(BROCHURE, '_blank', 'noopener,noreferrer');
+    expect(screen.getByRole('link', { name: /^open project brochure/i })).toHaveAttribute(
+      'href',
+      BROCHURE
+    );
+    expect(window.dataLayer.at(-1)).toMatchObject({ event: 'brochure_download', propertyId: 7 });
+  });
+
+  it('opens the next gated paper at once, with no second lead and no second fetch', async () => {
+    renderWith(<DocumentsSection property={publicRead} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /download brochure/i }));
+    await shareDetails();
+    await userEvent.click(screen.getAllByRole('button', { name: /^close$/i })[0]);
+    window.open.mockClear();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Open Approved plan sanction' }));
+
+    expect(window.open).toHaveBeenCalledWith(SANCTION, '_blank', 'noopener,noreferrer');
+    expect(screen.queryByLabelText(/your name/i)).not.toBeInTheDocument();
+    expect(leadService.create).toHaveBeenCalledTimes(1);
+    expect(propertyService.documentAccess).toHaveBeenCalledTimes(1);
+  });
+
+  it('fetches the addresses as soon as it finds the gate already open', async () => {
+    leadStorage.saveVisitor({ name: 'Asha Rao', phone: '+919876543210' });
+    leadStorage.markCaptured(7, 'property-enquiry', { token: 'tok', expiresAt: later() });
+    renderWith(<DocumentsSection property={publicRead} />);
+
+    await waitFor(() => expect(propertyService.documentAccess).toHaveBeenCalledWith(7, 'tok'));
+    expect(screen.queryByText(/shared on request/i)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Open Approved plan sanction' }));
+
+    await waitFor(() =>
+      expect(window.open).toHaveBeenCalledWith(SANCTION, '_blank', 'noopener,noreferrer')
+    );
+    expect(leadService.create).not.toHaveBeenCalled();
+    expect(propertyService.documentAccess).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks for the visitor’s details again when the API refuses their token', async () => {
+    leadStorage.saveVisitor({ name: 'Asha Rao', phone: '+919876543210' });
+    leadStorage.markCaptured(7, 'property-enquiry', { token: 'stale', expiresAt: later() });
+    propertyService.documentAccess.mockRejectedValue({ status: 403, message: 'Forbidden' });
+    renderWith(<DocumentsSection property={publicRead} />);
+
+    await waitFor(() => expect(leadStorage.getAccess(7)).toBeNull());
+    await userEvent.click(screen.getByRole('button', { name: /download brochure/i }));
+
+    expect(await screen.findByLabelText(/your name/i)).toBeInTheDocument();
+    expect(window.open).not.toHaveBeenCalled();
   });
 });

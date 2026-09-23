@@ -134,6 +134,14 @@ describe('what a section needs', () => {
     expect(has('documents', { brochureUrl: 'https://x/b.pdf' })).toBe(true);
   });
 
+  it('documents counts a gated brochure a public read gives no address for', () => {
+    expect(has('documents', { brochureUrl: null, hasBrochure: true, documents: [] })).toBe(true);
+    expect(has('documents', { brochureUrl: null, hasBrochure: false, documents: [] })).toBe(false);
+    expect(
+      has('documents', { documents: [{ title: 'Price list', url: null, hasFile: true }] })
+    ).toBe(true);
+  });
+
   it('construction is for a project still being built', () => {
     const timeline = { constructionTimeline: [{ milestone: 'Foundation' }] };
     expect(has('construction', { ...timeline })).toBe(false);

@@ -95,6 +95,62 @@ describe('unlocks', () => {
   });
 });
 
+describe('the token that opens a listing’s files', () => {
+  const later = () => new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+  it('is kept with the capture it came with, for that listing only', () => {
+    leadStorage.markCaptured(7, 'brochure-download', { token: 'abc', expiresAt: later() });
+
+    expect(leadStorage.getAccess(7)).toBe('abc');
+    expect(leadStorage.getAccess('7')).toBe('abc');
+    expect(leadStorage.getAccess(8)).toBeNull();
+    expect(leadStorage.getAccess(null)).toBeNull();
+  });
+
+  it('survives a later capture that came without one', () => {
+    leadStorage.markCaptured(7, 'brochure-download', { token: 'abc', expiresAt: later() });
+    leadStorage.markCaptured(7, 'property-enquiry', null);
+
+    expect(leadStorage.getAccess(7)).toBe('abc');
+  });
+
+  it('is replaced by the next lead’s token', () => {
+    leadStorage.markCaptured(7, 'brochure-download', { token: 'abc', expiresAt: later() });
+    leadStorage.markCaptured(7, 'property-enquiry', { token: 'def', expiresAt: later() });
+
+    expect(leadStorage.getAccess(7)).toBe('def');
+  });
+
+  it('is nothing once it has expired', () => {
+    const past = new Date(Date.now() - 1000).toISOString();
+    leadStorage.markCaptured(7, 'brochure-download', { token: 'abc', expiresAt: past });
+
+    expect(leadStorage.getAccess(7)).toBeNull();
+    expect(leadStorage.isCapturedFor(7)).toBe(true);
+  });
+
+  it('is not stored when the answer carried none, or for no listing', () => {
+    leadStorage.markCaptured(7, 'brochure-download', { token: '' });
+    leadStorage.markCaptured(null, 'contact-page', { token: 'abc', expiresAt: later() });
+
+    expect(leadStorage.getAccess(7)).toBeNull();
+    expect(leadStorage.get().access).toEqual({});
+  });
+
+  it('is forgotten on request, and with the rest of the visit', () => {
+    leadStorage.markCaptured(7, 'brochure-download', { token: 'abc', expiresAt: later() });
+    leadStorage.markCaptured(8, 'brochure-download', { token: 'def', expiresAt: later() });
+
+    leadStorage.forgetAccess(7);
+    expect(leadStorage.getAccess(7)).toBeNull();
+    expect(leadStorage.getAccess(8)).toBe('def');
+    expect(leadStorage.isCapturedFor(7)).toBe(true);
+
+    leadStorage.clear();
+    expect(leadStorage.getAccess(8)).toBeNull();
+  });
+});
+
 describe('a record written by an older bundle', () => {
   it('is read rather than thrown away', () => {
     sessionStorage.setItem(
@@ -112,6 +168,8 @@ describe('a record written by an older bundle', () => {
     expect(leadStorage.getVisitor().name).toBe('Asha Rao');
     expect(leadStorage.isCapturedFor(7)).toBe(true);
     expect(leadStorage.isUnlocked(7, 'documents')).toBe(true);
+    // It has no token yet: the files ask for the visitor's details again.
+    expect(leadStorage.getAccess(7)).toBeNull();
   });
 });
 

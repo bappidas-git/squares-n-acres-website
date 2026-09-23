@@ -11,8 +11,10 @@ The two screens under **Properties** in the admin sidebar — the list at
 the CSV export on the list; every tab, validation path, save mode, draft,
 duplicate, delete and the SEO panel on the form. 71 defects were found
 (19 on the list, 33 in the form's logic, 19 in its layout and copy). All 71 are
-fixed in this change; one related issue outside the two screens is left open
-and described in §4.
+fixed in this change. One related issue outside the two screens — the public API
+handing out the addresses of lead-gated files — was kept out of that commit
+because it changes the public contract (§4), and is fixed by a follow-up commit
+on the same branch (§5).
 
 ---
 
@@ -138,8 +140,71 @@ and `LeadDetailPage` (leads stylesheet and table first).
 
 ---
 
-## 4. Left open
+## 4. Left open by the audit commit
 
-| Id     | Issue                                                                                                                                                                                                          | Why not here                                                                                                                                               |
-| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| OPEN-1 | `GET /properties/slug/:slug` returns the URLs of lead-gated documents and of a gated brochure. The gate is enforced only by the page, so the files can be taken from the API response without leaving details. | A contract change for the public API (omit gated URLs, add a download endpoint that records the lead) and the details page; outside the two admin screens. |
+| Id     | Issue                                                                                                                                                                                                          | Why not in the audit commit                                                                                                                                | Status                                 |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| OPEN-1 | `GET /properties/slug/:slug` returns the URLs of lead-gated documents and of a gated brochure. The gate is enforced only by the page, so the files can be taken from the API response without leaving details. | A contract change for the public API (omit gated URLs, add a download endpoint that records the lead) and the details page; outside the two admin screens. | **Fixed** in the follow-up commit — §5 |
+
+---
+
+## 5. OPEN-1 — the gated files
+
+**The API.** No public property read carries the address of a gated file any
+more (`mock-server/lib/scope.js`):
+
+- a gated brochure reads `brochureUrl: null` with `hasBrochure: true`;
+- a gated document keeps its row with `url: null`, `leadGated: true` and
+  `hasFile: true` — every document carries `hasFile`;
+- one file, one gate: an open document or brochure that shares a gated file's
+  address is gated with it, and a document that is the brochure's own file is
+  left out (the P25 rule, which the page could no longer apply without the
+  addresses);
+- admin reads are unchanged.
+
+`POST /leads` answers a lead about an active listing with
+`access: { token, expiresAt }` — opaque, 24 hours, bound to the listing and the
+lead, never stored (`mock-server/lib/fileAccess.js`). The new
+`POST /properties/:id/documents/access` exchanges it for the addresses of every
+file of that listing; `403` for a token that is unknown, expired, for another
+listing or whose lead was deleted, `404` for an inactive listing, `422` without
+one. It is one exchange per listing, not one per file, because the unlock
+answers a question about the listing: the brochure and the papers are one kind
+(P24), and a visitor with any lead about the listing is not asked again (P28).
+
+**The page.** `LeadForm` and the eligibility form keep the token in
+`sna_lead.access[propertyId]`. `DocumentsSection` renders a row for `hasFile` /
+`hasBrochure`, fetches the addresses right after the lead — the tab opens from
+the same click and the success panel's "Open <file>" links to the fetched
+address — and fetches them ahead as soon as it finds the `documents` gate open,
+so a later row opens synchronously. `LeadCaptureModal` takes a
+`deliver.resolveUrl`; a visitor it would skip (P28) needs the token too, and one
+whose token is missing or refused is shown the form instead. If the address does
+not arrive after a submitted form, the lead stands and the panel offers a retry.
+
+**The contract.** `docs/backend-notes/05_business_rules.md` → "Gated files"
+(with the Laravel sketch), the note under "Versioning policy" in
+`01_api_contract.md`, `docs/API_CONTRACT.md` §5.10, the catalogue (243 rows) and
+the `Property`, `LeadCreated` and `DocumentAccess` shapes, the registry entry
+`properties.documentAccess`, the schema `property.documentAccess`, the smoke and
+capture steps, and the regenerated `backend_developer_guidelines/`.
+
+**Not covered, on purpose.** Floor plans remain a soft gate: the blurred drawing
+is the invitation (P24), so `floorPlans[].imageUrl` / `pdfUrl` and
+`unitConfigurations[].floorPlanPdfUrl` stay in the public read. The seed uses one
+placeholder PDF for every brochure, paper and floor plan, so on the seeded
+listings that one file is still reachable through the floor-plan fields; the e2e
+check of "no gated address anywhere in the JSON" therefore uses a listing of its
+own with distinct files. See the QA-51 OPEN-1 entries in `docs/DECISIONS.md`.
+
+**Verified.**
+
+| Pass                                                                                               | Result                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test:mock`                                                                                        | **166 / 166 ✓** — six new cases: the public reads carry no gated address, admin reads unchanged, one file one gate, the token from `POST /leads`, no token without an active listing, every refusal |
+| Jest                                                                                               | **157 suites, 3 467 tests ✓** — new cases in `DocumentsSection`, `LeadCaptureModal`, `leadStorage` and `propertySections`                                                                           |
+| Playwright e2e                                                                                     | **54 / 54 ✓** — the brochure test now checks the public read and the opened tab; a new test keeps a gated paper's address out of the JSON and the page until the form is sent                       |
+| `smoke`                                                                                            | **283 / 283 ✓**, including `POST /properties/1/documents/access` → 200                                                                                                                              |
+| `check:guidelines`                                                                                 | **12 / 12 ✓** — the package regenerates byte-identical                                                                                                                                              |
+| `lint`, `format:check`, `build:ci`, `check:traces`, `validate:seed`, `check:contrast`, `check:env` | all ✓                                                                                                                                                                                               |
+| Browser                                                                                            | the flow driven by hand: no gated address in the page before the lead, the tab opens after it, a stale token asks again, the next row opens without a second request                                |

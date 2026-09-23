@@ -141,7 +141,10 @@ increments the property it names. Use `increment()`, never read-modify-write.
    active sales users ordered by id; find the one who got the **most recent**
    round-robin lead; assign to the next in the ring, wrapping; assign to the
    first when none has one yet. With no active sales user, leave it unassigned.
-7. Answers **201** with the stored lead.
+7. Answers **201** with the stored lead, plus `access`: the token that opens the
+   gated files of the listing the lead names, or `null` when it names no active
+   listing (see [Gated files](#gated-files)). The token is never stored on the
+   lead.
 
 **Activities are appended, never edited.** A `PATCH` that changes `status`,
 `assignedTo`, `priority` or `followUpAt` appends one entry per field that
@@ -196,6 +199,113 @@ renders a draft without knowing it.
 
 Store them in the cache keyed by token with the record id as the value, and add
 `Disallow: /*?preview=` to `robots.txt` — which the default already does.
+
+## Gated files
+
+An editor can keep a listing's brochure (`brochure_lead_gated`, default on) and
+any of its documents (`documents[].lead_gated`, default on, D64) behind the lead
+form. **The gate is the API's, not the page's**: a public read never carries the
+address of a gated file, so reading the JSON or the page source does not get
+round it. (Until QA-51 it did — the gate was the page's word only.)
+
+**Public reads** — every public property shape: `GET /properties`,
+`/properties/featured`, `/properties/slug/:slug`, `/properties/:id/similar`:
+
+- `brochureUrl` is `null` while the brochure is gated. `hasBrochure` says whether
+  a brochure is attached at all, gated or not.
+- A gated document keeps its row (`id`, `title`, `type`, `order`) with
+  `url: null`, `leadGated: true` and `hasFile: true`. Every document carries
+  `hasFile`, so the page can tell "nothing attached" from "attached, ask first".
+- **One file, one gate.** An open document — or an open brochure — whose address
+  is also a gated file's is gated with it, and says so (`leadGated: true`,
+  `brochureLeadGated: true`): otherwise the open copy would hand the gated file
+  out.
+- A document whose address is the brochure's own is left out of `documents[]`:
+  it is the brochure, offered once. The page always did this; with the address
+  gone it has to be the API that does it.
+- **Admin reads are unchanged** — `/admin/properties…` answers the record as
+  stored, addresses and all.
+
+**The token.** `POST /leads` answers a lead whose `propertyId` names an active
+listing with `access: { token, expiresAt }`, and every other lead with
+`access: null`. The honeypot's `{ data: null, message: 'ok' }` hands out
+nothing. The token:
+
+- is opaque and unguessable (the mock uses 24 random bytes, base64url);
+- opens **every** gated file of that one listing, and nothing on any other;
+- lives **24 hours**, and dies with its lead — a lead deleted as spam takes its
+  token with it;
+- is a credential for that answer only: never stored on the lead, never shown in
+  the CRM.
+
+Any lead about the listing earns it, whatever form it came from. That is the
+rule the page already applied when deciding not to ask a visitor twice (P24,
+P28): somebody who has enquired, or asked for any one paper, is not asked
+again for the next. The page's per-kind unlock (`floorPlans`, `documents`) is
+how it presents that fact; the brochure and the documents are one kind.
+
+**The exchange.** `POST /properties/:id/documents/access` with `{ "token": "…" }`
+answers every file of the listing that has an address — the open ones too, so the
+page renders one list — without a document that is the brochure's own file:
+
+```json
+{
+  "data": {
+    "brochureUrl": "https://files.example.com/lakeview/brochure.pdf",
+    "documents": [{ "id": 2, "url": "https://files.example.com/lakeview/price-list.pdf" }]
+  }
+}
+```
+
+- `404` — the listing is missing or inactive, whatever the token;
+- `422` — no `token`;
+- `403` `{ "message": "Share your details to open the files of this listing." }` —
+  the token is unknown, expired, issued for another listing, or its lead is gone.
+
+It is a read and writes nothing: the lead that earned the token already records
+what was asked for (`message: "Requested: <file>"`), and the page counts the
+download in analytics (`brochure_download`, `document_download`). It needs no
+rate limit of its own — the tokens cannot be guessed, and `POST /leads`, which
+issues them, is throttled.
+
+In Laravel keep the grant in the cache, like a preview token:
+
+```php
+// POST /leads — after the lead is stored
+$access = null;
+if ($property?->is_active) {
+    $token = Str::random(40);
+    Cache::put("file-access:{$token}",
+        ['property_id' => $property->id, 'lead_id' => $lead->id], now()->addDay());
+    $access = ['token' => $token, 'expiresAt' => now()->addDay()->toIso8601String()];
+}
+return (new LeadResource($lead))->additional(['data' => ['access' => $access]])
+    ->response()->setStatusCode(201);
+
+// POST /properties/{property}/documents/access
+abort_unless($property->is_active, 404);
+$grant = Cache::get('file-access:' . $request->validate(['token' => 'required|string|max:200'])['token']);
+abort_unless($grant
+    && $grant['property_id'] === $property->id
+    && Lead::whereKey($grant['lead_id'])->exists(),
+    403, 'Share your details to open the files of this listing.');
+return ['data' => PropertyFiles::for($property)];
+```
+
+**What the page does with it** (`DocumentsSection`, `LeadCaptureModal`): it
+keeps the token in `sna_lead.access[propertyId]` (sessionStorage) and fetches the
+addresses right after the form — the file opens in a new tab from the same click
+— or as soon as it finds the gate already open, so the next row opens at once. A
+visitor the page does not ask again (P28) needs the token too; when it is missing
+or refused (a restarted API, a day-old tab), the page asks for their details
+again, which files a new lead and earns a new token.
+
+**Floor plans are not part of it.** Their gate is a teaser (P24): the blurred
+drawing is the invitation, so `floorPlans[].imageUrl`, `floorPlans[].pdfUrl`
+and `unitConfigurations[].floorPlanPdfUrl` stay in the public read. A file
+published both as a floor-plan PDF and as a gated paper is only as closed as its
+most open copy — which is the case on the seeded listings, where one placeholder
+PDF stands in for every brochure, paper and plan.
 
 ## Dashboard
 
