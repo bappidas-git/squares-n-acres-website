@@ -261,6 +261,75 @@ test.describe('a property page', () => {
     }
   });
 
+  test('keeps the floor plans’ drawings and PDFs out of the page until the visitor has asked', async ({
+    page,
+    request,
+  }) => {
+    // Every plan and unit keeps its row in the public read, without an address.
+    const { data: listing } = await (
+      await request.get(`${API_URL}/properties/slug/${SLUG}`)
+    ).json();
+    expect(listing.floorPlans.length).toBeGreaterThan(0);
+    expect(listing.floorPlans.filter((plan) => plan.imageUrl || plan.pdfUrl)).toEqual([]);
+    expect(listing.floorPlans.every((plan) => plan.hasImage)).toBe(true);
+    expect(
+      listing.unitConfigurations.filter((unit) => unit.floorPlanImageUrl || unit.floorPlanPdfUrl)
+    ).toEqual([]);
+
+    // The seed's drawings are picsum placeholders; the run never leaves the
+    // machine for them.
+    await page.context().route('https://picsum.photos/**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'image/svg+xml',
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3"/>',
+      })
+    );
+
+    await page.goto(`/properties/${SLUG}`);
+    const plans = page.locator('#section-floorPlans');
+    await plans.scrollIntoViewIfNeeded();
+    const ask = plans.getByRole('button', { name: /view floor plans/i });
+    await expect(ask).toBeVisible();
+
+    // Not in the page either — the lock blurs a stand-in sketch.
+    const before = await page.content();
+    expect(before).not.toContain('-plan-');
+    expect(before).not.toContain('dummy.pdf');
+
+    await ask.click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Your name').fill('Playwright Planner');
+    await dialog.getByLabel('Phone', { exact: false }).fill('9876500079');
+    await dialog.getByRole('button', { name: /send/i }).first().click();
+    await expect(dialog.getByRole('status')).toBeVisible({ timeout: 20_000 });
+    await dialog.getByRole('button', { name: 'Close' }).first().click();
+
+    // The drawings arrive with the token of the lead, and the first opens
+    // full size once the dialog is out of the way.
+    const lightbox = page.locator('.yarl__root');
+    await expect(lightbox).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(lightbox).toBeHidden();
+
+    await expect(plans.getByRole('img', { name: /floor plan$/ }).first()).toHaveAttribute(
+      'src',
+      /-plan-1/
+    );
+    await expect(plans.getByRole('link', { name: /download pdf/i })).toHaveAttribute(
+      'href',
+      /\/dummy\.pdf$/
+    );
+
+    // The same answer fills in the unit configurations' thumbnails.
+    await expect(
+      page
+        .locator('#section-unitConfigurations')
+        .getByRole('button', { name: /floor plan full screen$/ })
+        .first()
+    ).toBeVisible();
+  });
+
   test('recomputes the EMI when the loan terms move', async ({ page }) => {
     await page.goto(`/properties/${SLUG}`);
     const finance = page.locator('#section-finance');

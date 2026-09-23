@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import DocumentsSection, { orderedDocuments } from '../DocumentsSection';
 import { leadStorage } from '../../../../utils/leadStorage';
+import { resetGatedFiles } from '../../../../hooks/useGatedFiles';
 import leadService from '../../../../services/leadService';
 import propertyService from '../../../../services/propertyService';
 import renderWith from '../../../../test-utils';
@@ -53,6 +54,7 @@ async function shareDetails() {
 beforeEach(() => {
   jest.clearAllMocks();
   leadStorage.clear();
+  resetGatedFiles();
   leadService.create.mockResolvedValue({ id: 51 });
   window.open = jest.fn(() => ({ focus: jest.fn() }));
 });

@@ -1,15 +1,17 @@
-import { Suspense, lazy, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import { AREA_UNITS } from '../../../config/enums';
 import { Button, LazyImage, Price, Tabs } from '../../ui';
 import { formatArea, formatBhk } from '../../../utils/format';
+import FloorPlanSketch from './FloorPlanSketch';
 import GatedOverlay from './GatedOverlay';
 import LeadCaptureModal from '../../common/LeadCaptureModal';
 import SectionShell from './SectionShell';
 import { leadFormProps } from '../../../utils/leadSources';
 import { track } from '../../../utils/analytics';
 import useGatedContent from '../../../hooks/useGatedContent';
+import useGatedFiles from '../../../hooks/useGatedFiles';
 
 import styles from './FloorPlansSection.module.css';
 
@@ -23,6 +25,10 @@ const areaLabel = (unit) => AREA_UNITS.labelOf(unit) || 'sq ft';
 /**
  * The drawings, in `order`, with anything that has no image dropped.
  *
+ * A public read carries no address for a drawing and says `hasImage` instead
+ * (docs/backend-notes → "Gated files"), so that plan stays: its drawing is
+ * fetched once the visitor has shared their details.
+ *
  * Exported for the unit test.
  *
  * @param {Array<object>} plans
@@ -30,7 +36,7 @@ const areaLabel = (unit) => AREA_UNITS.labelOf(unit) || 'sq ft';
  */
 export function orderedPlans(plans) {
   return (Array.isArray(plans) ? plans : [])
-    .filter((plan) => plan && has(plan.imageUrl))
+    .filter((plan) => plan && (has(plan.imageUrl) || plan.hasImage === true))
     .map((plan, index) => ({ plan, index }))
     .sort((a, b) => {
       const order = (entry) => (has(entry.plan.order) ? Number(entry.plan.order) : null);
@@ -53,6 +59,12 @@ export function orderedPlans(plans) {
  * boilerplate promised but never delivered: a full-size view and the PDF
  * itself (BUG-08).
  *
+ * The API keeps the drawings and their PDFs behind the same gate (QA-51
+ * OPEN-1): a public read carries no address for either, so the lock blurs a
+ * stand-in sketch, and the real drawing and PDF are fetched with the token of
+ * the visitor's lead (`useGatedFiles`) — shared with the unit configurations
+ * and the documents, one request per token.
+ *
  * @param {object} props
  * @param {object} props.property a record of §6.1
  * @param {'bg'|'surface'} [props.background]
@@ -60,14 +72,35 @@ export function orderedPlans(plans) {
 export default function FloorPlansSection({ property, background = 'bg' }) {
   const propertyId = property?.id ?? null;
   const { unlocked, unlock } = useGatedContent(propertyId, 'floorPlans');
-  const [askingForAccess, setAskingForAccess] = useState(false);
+  const [asking, setAsking] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  // Set when the gate has just opened: the drawing is shown full size as soon
-  // as the dialog is out of the way, never stacked underneath it.
-  const [showOnDismiss, setShowOnDismiss] = useState(false);
+  // Set when a lead has just opened the gate: the drawing is shown full size
+  // once the dialog is out of the way and the drawings have arrived — never
+  // stacked underneath it, never empty.
+  const [justUnlocked, setJustUnlocked] = useState(false);
+  const [showWhenReady, setShowWhenReady] = useState(false);
 
   const plans = useMemo(() => orderedPlans(property?.floorPlans), [property]);
   const [active, setActive] = useState(() => String(plans[0]?.id ?? '0'));
+
+  const needsFiles = plans.some(
+    (plan) =>
+      (!has(plan.imageUrl) && plan.hasImage === true) || (!has(plan.pdfUrl) && plan.hasPdf === true)
+  );
+  const { files, status, fetchFiles } = useGatedFiles(propertyId, {
+    enabled: unlocked && needsFiles,
+  });
+
+  const handed = (plan) => files?.floorPlans?.[String(plan.id)] ?? null;
+  const imageOf = (plan) => (has(plan.imageUrl) ? plan.imageUrl : (handed(plan)?.imageUrl ?? null));
+  const pdfOf = (plan) => (has(plan.pdfUrl) ? plan.pdfUrl : (handed(plan)?.pdfUrl ?? null));
+  const allDrawn = plans.every((plan) => Boolean(imageOf(plan)));
+
+  useEffect(() => {
+    if (!showWhenReady || asking || !unlocked || !allDrawn) return;
+    setShowWhenReady(false);
+    setLightboxOpen(true);
+  }, [showWhenReady, asking, unlocked, allDrawn]);
 
   if (plans.length === 0) return null;
 
@@ -76,9 +109,18 @@ export default function FloorPlansSection({ property, background = 'bg' }) {
     plans.findIndex((plan) => plan === current),
     0
   );
+  const image = imageOf(current);
+  const pdf = pdfOf(current);
+
+  // The gate is open and the drawing is here.
+  const open = unlocked && Boolean(image);
+  // Open, and the drawings are on their way.
+  const arriving = unlocked && !image && (status === 'idle' || status === 'loading');
+  // Open, but the request failed; the visit's token may still work.
+  const failed = unlocked && !image && status === 'failed';
 
   const slides = plans.map((plan) => ({
-    src: plan.imageUrl,
+    src: imageOf(plan),
     alt: `${plan.title} floor plan`,
     description: plan.title,
   }));
@@ -88,38 +130,72 @@ export default function FloorPlansSection({ property, background = 'bg' }) {
     has(current.area) ? formatArea(current.area, areaLabel(current.areaUnit)) : null,
   ].filter(Boolean);
 
-  const drawing = (
+  const drawing = image ? (
     <LazyImage
-      src={current.imageUrl}
+      src={image}
       alt={`${current.title} floor plan`}
       ratio="4/3"
       fit="contain"
       sizes="(min-width: 900px) 640px, 100vw"
       className={styles.drawing}
     />
+  ) : (
+    <FloorPlanSketch className={styles.sketch} />
   );
+
+  let figure;
+  if (open) {
+    figure = (
+      <button
+        type="button"
+        className={styles.openButton}
+        onClick={() => setLightboxOpen(true)}
+        aria-label={`Open the ${current.title} floor plan full size`}
+      >
+        {drawing}
+      </button>
+    );
+  } else if (arriving) {
+    figure = (
+      <div className={styles.arriving} role="status">
+        {drawing}
+        <span className={styles.arrivingText}>
+          <Icon icon="mdi:loading" className={styles.spinner} aria-hidden="true" />
+          Loading the drawings…
+        </span>
+      </div>
+    );
+  } else if (unlocked && status === 'ready') {
+    // Handed over, but without this drawing — it was taken down since the page
+    // loaded. The sketch holds its place; there is nothing to ask for.
+    figure = <div className={styles.frame}>{drawing}</div>;
+  } else if (failed) {
+    figure = (
+      <GatedOverlay
+        title="The drawings did not load"
+        text="Check your connection and try again."
+        actionLabel="Try again"
+        onAction={() => fetchFiles()}
+      >
+        {drawing}
+      </GatedOverlay>
+    );
+  } else {
+    figure = (
+      <GatedOverlay
+        title="Share your details to view floor plans"
+        text="An advisor sends the drawings and the current price list for this project."
+        actionLabel="View floor plans"
+        onAction={() => setAsking(true)}
+      >
+        {drawing}
+      </GatedOverlay>
+    );
+  }
 
   const panel = (
     <div className={styles.panel}>
-      {unlocked ? (
-        <button
-          type="button"
-          className={styles.openButton}
-          onClick={() => setLightboxOpen(true)}
-          aria-label={`Open the ${current.title} floor plan full size`}
-        >
-          {drawing}
-        </button>
-      ) : (
-        <GatedOverlay
-          title="Share your details to view floor plans"
-          text="An advisor sends the drawings and the current price list for this project."
-          actionLabel="View floor plans"
-          onAction={() => setAskingForAccess(true)}
-        >
-          {drawing}
-        </GatedOverlay>
-      )}
+      {figure}
 
       <div className={styles.details}>
         <h3 className={styles.planTitle}>{current.title}</h3>
@@ -136,22 +212,23 @@ export default function FloorPlansSection({ property, background = 'bg' }) {
           />
         ) : null}
 
-        {unlocked ? (
+        {open ? (
           <div className={styles.actions}>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setLightboxOpen(true)}
+              disabled={!allDrawn}
               icon={<Icon icon="mdi:arrow-expand-all" aria-hidden="true" />}
             >
               Open full size
             </Button>
 
-            {has(current.pdfUrl) ? (
+            {pdf ? (
               <Button
                 variant="secondary"
                 size="sm"
-                href={current.pdfUrl}
+                href={pdf}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => track('floor_plan_download', { propertyId, plan: current.title })}
@@ -187,7 +264,7 @@ export default function FloorPlansSection({ property, background = 'bg' }) {
         panel
       )}
 
-      {lightboxOpen ? (
+      {lightboxOpen && allDrawn ? (
         <Suspense fallback={null}>
           <PropertyLightbox
             open
@@ -199,29 +276,40 @@ export default function FloorPlansSection({ property, background = 'bg' }) {
         </Suspense>
       ) : null}
 
-      <LeadCaptureModal
-        {...leadFormProps('floor-plan-request')}
-        open={askingForAccess}
-        onClose={() => {
-          setAskingForAccess(false);
-          if (showOnDismiss) {
-            setShowOnDismiss(false);
-            setLightboxOpen(true);
-          }
-        }}
-        propertyId={propertyId}
-        propertyTitle={property?.title ?? ''}
-        // Name and number only, so the project travels as a hidden field.
-        hiddenFields={{
-          message: `Floor plans for ${property?.projectName || property?.title || 'this project'}`,
-        }}
-        deliver={{ kind: 'unlock', unlockKind: 'floorPlans' }}
-        agent={property?.agent?.showOnListing ? property.agent : null}
-        onSuccess={() => {
-          unlock();
-          setShowOnDismiss(true);
-        }}
-      />
+      {/* Mounted per request, like the documents' dialog: the dialog decides
+          when it opens whether this visitor is asked at all (P28), which a
+          dialog mounted closed would decide once, too early, for good. */}
+      {asking ? (
+        <LeadCaptureModal
+          {...leadFormProps('floor-plan-request')}
+          open
+          onClose={() => {
+            setAsking(false);
+            if (justUnlocked) {
+              setJustUnlocked(false);
+              setShowWhenReady(true);
+            }
+          }}
+          propertyId={propertyId}
+          propertyTitle={property?.title ?? ''}
+          // Name and number only, so the project travels as a hidden field.
+          hiddenFields={{
+            message: `Floor plans for ${property?.projectName || property?.title || 'this project'}`,
+          }}
+          deliver={{
+            kind: 'unlock',
+            unlockKind: 'floorPlans',
+            // A visitor the dialog does not ask again still needs a token
+            // that opens the drawings.
+            resolveAccess: () => fetchFiles(),
+          }}
+          agent={property?.agent?.showOnListing ? property.agent : null}
+          onSuccess={() => {
+            unlock();
+            setJustUnlocked(true);
+          }}
+        />
+      ) : null}
     </SectionShell>
   );
 }

@@ -80,10 +80,13 @@ export function canSkipForm({ propertyId = null, unlockKind = null, needsAccess 
  * @param {boolean} [props.requirement]
  * @param {string|null} [props.unlockKind] the `leadStorage` gate this opens
  * @param {{kind: 'unlock'|'file', unlockKind?: string, fileUrl?: string,
- *   fileLabel?: string, resolveUrl?: () => Promise<string|null>}|null} [props.deliver]
+ *   fileLabel?: string, resolveUrl?: () => Promise<string|null>,
+ *   resolveAccess?: () => Promise<unknown>}|null} [props.deliver]
  *   what the visitor gets afterwards. A gated file has no `fileUrl` in a public
  *   read, so its `resolveUrl` asks the API for it once the visitor may have it
- *   (`POST /properties/:id/documents/access`, with the token of their lead).
+ *   (`POST /properties/:id/documents/access`, with the token of their lead). An
+ *   unlock whose content the API hands over the same way — the floor plans —
+ *   passes `resolveAccess`, which answers truthy once that content has arrived.
  * @param {(lead: object, values: object) => void} [props.onSuccess]
  * @param {string} [props.propertyTitle]
  * @param {object|null} [props.agent]
@@ -107,7 +110,9 @@ export default function LeadCaptureModal({
   const gate = deliver?.unlockKind ?? unlockKind ?? null;
   const fileLabel = deliver?.fileLabel || 'the file';
   const wantsFile = deliver?.kind === 'file';
-  const needsAccess = wantsFile && !deliver.fileUrl && typeof deliver.resolveUrl === 'function';
+  const resolvesAccess = deliver?.kind === 'unlock' && typeof deliver.resolveAccess === 'function';
+  const needsAccess =
+    (wantsFile && !deliver.fileUrl && typeof deliver.resolveUrl === 'function') || resolvesAccess;
 
   // Decided once, when the dialog opens: a visitor who is skipped must not see
   // the form flash into view as `leadStorage` changes underneath them. It is
@@ -152,6 +157,23 @@ export default function LeadCaptureModal({
   const runDelivery = useCallback(
     async ({ skipping = false } = {}) => {
       if (!wantsFile) {
+        // A skipped visitor's token has to open the content before the gate
+        // is said to be open; after a submitted form the section fetches it.
+        if (skipping && resolvesAccess) {
+          setFetching(true);
+          let ready = false;
+          try {
+            ready = Boolean(await deliver.resolveAccess());
+          } catch {
+            ready = false;
+          }
+          if (!mounted.current) return;
+          setFetching(false);
+          if (!ready) {
+            setSkipped(false);
+            return;
+          }
+        }
         if (gate) leadStorage.unlock(propertyId, gate);
         setDelivered(true);
         return;
@@ -175,7 +197,7 @@ export default function LeadCaptureModal({
       if (url) openFile(url);
       setDelivered(true);
     },
-    [wantsFile, gate, propertyId, resolveFile]
+    [wantsFile, resolvesAccess, deliver, gate, propertyId, resolveFile]
   );
 
   // The skipped visitor gets the file straight away. The Open button below
@@ -235,7 +257,13 @@ export default function LeadCaptureModal({
         <div className={styles.skip} role="status">
           <Icon icon="mdi:check-circle-outline" className={styles.skipIcon} aria-hidden="true" />
           <p className={styles.skipText}>
-            We have your details — {wantsFile ? `opening ${fileLabel}` : 'everything is unlocked'}.
+            We have your details —{' '}
+            {wantsFile
+              ? `opening ${fileLabel}`
+              : resolvesAccess && !delivered
+                ? 'one moment'
+                : 'everything is unlocked'}
+            .
           </p>
           <div className={styles.skipActions}>
             {wantsFile ? (

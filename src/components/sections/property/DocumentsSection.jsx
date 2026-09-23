@@ -1,16 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import { Button, Chip } from '../../ui';
 import { DOCUMENT_TYPES } from '../../../config/enums';
 import LeadCaptureModal, { openFile } from '../../common/LeadCaptureModal';
 import SectionShell from './SectionShell';
-import propertyService from '../../../services/propertyService';
 import { leadFormProps } from '../../../utils/leadSources';
-import { leadStorage } from '../../../utils/leadStorage';
 import { track } from '../../../utils/analytics';
 import { useToast } from '../../common/ToastProvider';
 import useGatedContent from '../../../hooks/useGatedContent';
+import useGatedFiles from '../../../hooks/useGatedFiles';
 
 import styles from './DocumentsSection.module.css';
 
@@ -60,25 +59,9 @@ export function orderedDocuments(documents, brochureUrl = null) {
 }
 
 /**
- * The addresses `POST /properties/:id/documents/access` handed over, keyed the
- * way the rows look them up.
- *
- * @param {number|string} propertyId
- * @param {{brochureUrl?: string|null, documents?: Array<{id: number, url: string}>}} data
+ * A row's address: its own, or the one the API handed over for it
+ * (`useGatedFiles`).
  */
-function handedOver(propertyId, data) {
-  return {
-    propertyId,
-    brochureUrl: filled(data?.brochureUrl) ? data.brochureUrl : null,
-    documents: Object.fromEntries(
-      (Array.isArray(data?.documents) ? data.documents : [])
-        .filter((document) => document && filled(document.url))
-        .map((document) => [String(document.id), document.url])
-    ),
-  };
-}
-
-/** A row's address: its own, or the one the API handed over for it. */
 function addressOf(row, files) {
   if (row.url) return row.url;
   if (!files) return null;
@@ -110,7 +93,6 @@ export default function DocumentsSection({ property, background = 'bg' }) {
   const { unlocked, unlock } = useGatedContent(propertyId, 'documents');
   const toast = useToast();
   const [asking, setAsking] = useState(null);
-  const [fetched, setFetched] = useState(null);
 
   const brochureUrl = filled(property?.brochureUrl) ? property.brochureUrl : null;
   const hasBrochure = Boolean(brochureUrl) || property?.hasBrochure === true;
@@ -119,53 +101,12 @@ export default function DocumentsSection({ property, background = 'bg' }) {
     [property, brochureUrl]
   );
 
-  // Only ever this listing's: a visit that moves to the next one starts over.
-  const files = fetched?.propertyId === propertyId ? fetched : null;
-  const pending = useRef(null);
-
-  /**
-   * This listing's addresses, asked of the API with the token of the visit's
-   * lead about it. One request per token: in flight or answered, the same
-   * promise answers the next caller too. A failed request is not kept, and a
-   * token the API refuses is forgotten, so the next file asks for the
-   * visitor's details again.
-   *
-   * @returns {Promise<object|null>}
-   */
-  const fetchFiles = useCallback(() => {
-    const token = leadStorage.getAccess(propertyId);
-    if (!token) return Promise.resolve(null);
-    if (pending.current?.propertyId === propertyId && pending.current.token === token) {
-      return pending.current.promise;
-    }
-
-    const promise = propertyService
-      .documentAccess(propertyId, token)
-      .then((response) => {
-        const next = handedOver(propertyId, response?.data);
-        setFetched(next);
-        return next;
-      })
-      .catch((error) => {
-        if (pending.current?.promise === promise) pending.current = null;
-        if (error?.status === 403) leadStorage.forgetAccess(propertyId);
-        return null;
-      });
-
-    pending.current = { propertyId, token, promise };
-    return promise;
-  }, [propertyId]);
-
-  // An open gate with an address still missing — the form was filled in
-  // elsewhere on the page, or on an earlier visit to this listing in this
-  // session — fetches them now, so the row's click opens its file directly.
-  const missing =
-    (hasBrochure && !brochureUrl && !files?.brochureUrl) ||
-    documents.some((document) => !filled(document.url) && !files?.documents[String(document.id)]);
-
-  useEffect(() => {
-    if (unlocked && missing) fetchFiles();
-  }, [unlocked, missing, fetchFiles]);
+  // An open gate with an address the record lacks — the form was filled in
+  // elsewhere on the page, or earlier in this visit — fetches the listing's
+  // addresses now, so the row's click opens its file directly.
+  const needsFiles =
+    (hasBrochure && !brochureUrl) || documents.some((document) => !filled(document.url));
+  const { files, fetchFiles } = useGatedFiles(propertyId, { enabled: unlocked && needsFiles });
 
   const deliver = useCallback(
     (url, title) => {

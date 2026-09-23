@@ -8,7 +8,7 @@ info:
     `src/services/endpoints.js`, `src/services/schemas/` and
     `mock-server/schemas/models.js`. Do not edit by hand.
 
-    generatedFrom: 68db22c
+    generatedFrom: 01f26ec
 
     Read `01_API_CONTRACT.md` first: the envelopes of §5.2, the error body
     of §5.3 and the pagination of §5.6 apply to every operation below and
@@ -22337,10 +22337,12 @@ paths:
                         areaUnit: sqft
                         price: 17300000
                         priceOnRequest: false
-                        floorPlanImageUrl: https://picsum.photos/seed/sna-property-skyline-crest-4-bhk-bellandur-plan-1/900/600
-                        floorPlanPdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                        floorPlanImageUrl: null
+                        floorPlanPdfUrl: null
                         availableUnits: 16
                         isActive: true
+                        hasFloorPlanImage: true
+                        hasFloorPlanPdf: true
                       - id: 2
                         name: 4 BHK
                         bedrooms: 4
@@ -22350,30 +22352,36 @@ paths:
                         areaUnit: sqft
                         price: 22600000
                         priceOnRequest: false
-                        floorPlanImageUrl: https://picsum.photos/seed/sna-property-skyline-crest-4-bhk-bellandur-plan-2/900/600
-                        floorPlanPdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                        floorPlanImageUrl: null
+                        floorPlanPdfUrl: null
                         availableUnits: 10
                         isActive: true
+                        hasFloorPlanImage: true
+                        hasFloorPlanPdf: true
                       - …1 more (trimmed for this example)
                     floorPlans:
                       - id: 1
                         title: 3 BHK — 1,820 sq ft
-                        imageUrl: https://picsum.photos/seed/sna-property-skyline-crest-4-bhk-bellandur-plan-1/900/600
-                        pdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                        imageUrl: null
+                        pdfUrl: null
                         area: 1820
                         areaUnit: sqft
                         bedrooms: 3
                         price: 17300000
                         order: 1
+                        hasImage: true
+                        hasPdf: true
                       - id: 2
                         title: 4 BHK — 2,380 sq ft
-                        imageUrl: https://picsum.photos/seed/sna-property-skyline-crest-4-bhk-bellandur-plan-2/900/600
-                        pdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                        imageUrl: null
+                        pdfUrl: null
                         area: 2380
                         areaUnit: sqft
                         bedrooms: 4
                         price: 22600000
                         order: 2
+                        hasImage: true
+                        hasPdf: true
                       - …1 more (trimmed for this example)
                     images:
                       - id: 1
@@ -22971,6 +22979,22 @@ paths:
                 data:
                   brochureUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
                   documents: []
+                  floorPlans:
+                    - id: 1
+                      imageUrl: https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-1/900/600
+                      pdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                    - id: 2
+                      imageUrl: https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-2/900/600
+                      pdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                    - …1 more (trimmed for this example)
+                  unitConfigurations:
+                    - id: 1
+                      floorPlanImageUrl: https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-1/900/600
+                      floorPlanPdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                    - id: 2
+                      floorPlanImageUrl: https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-2/900/600
+                      floorPlanPdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                    - …1 more (trimmed for this example)
         '404':
           description: no such record (§5.10)
           content:
@@ -23083,10 +23107,12 @@ paths:
                         areaUnit: sqft
                         price: 9800000
                         priceOnRequest: false
-                        floorPlanImageUrl: https://picsum.photos/seed/sna-property-aurelia-park-residences-2-bhk-sarjapur-road-plan-1/900/600
+                        floorPlanImageUrl: null
                         floorPlanPdfUrl: null
                         availableUnits: 22
                         isActive: true
+                        hasFloorPlanImage: true
+                        hasFloorPlanPdf: false
                       - id: 2
                         name: 3 BHK
                         bedrooms: 3
@@ -23096,30 +23122,36 @@ paths:
                         areaUnit: sqft
                         price: 12900000
                         priceOnRequest: false
-                        floorPlanImageUrl: https://picsum.photos/seed/sna-property-aurelia-park-residences-2-bhk-sarjapur-road-plan-2/900/600
+                        floorPlanImageUrl: null
                         floorPlanPdfUrl: null
                         availableUnits: 14
                         isActive: true
+                        hasFloorPlanImage: true
+                        hasFloorPlanPdf: false
                       - …1 more (trimmed for this example)
                     floorPlans:
                       - id: 1
                         title: 2 BHK — 1,180 sq ft
-                        imageUrl: https://picsum.photos/seed/sna-property-aurelia-park-residences-2-bhk-sarjapur-road-plan-1/900/600
+                        imageUrl: null
                         pdfUrl: null
                         area: 1180
                         areaUnit: sqft
                         bedrooms: 2
                         price: 9800000
                         order: 1
+                        hasImage: true
+                        hasPdf: false
                       - id: 2
                         title: 3 BHK — 1,560 sq ft
-                        imageUrl: https://picsum.photos/seed/sna-property-aurelia-park-residences-2-bhk-sarjapur-road-plan-2/900/600
+                        imageUrl: null
                         pdfUrl: null
                         area: 1560
                         areaUnit: sqft
                         bedrooms: 3
                         price: 12900000
                         order: 2
+                        hasImage: true
+                        hasPdf: false
                       - …1 more (trimmed for this example)
                     images:
                       - id: 1
@@ -23425,10 +23457,12 @@ paths:
                         areaUnit: sqft
                         price: 17500000
                         priceOnRequest: false
-                        floorPlanImageUrl: https://picsum.photos/seed/sna-property-nandi-skyline-towers-3-bhk-hebbal-plan-1/900/600
-                        floorPlanPdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                        floorPlanImageUrl: null
+                        floorPlanPdfUrl: null
                         availableUnits: 40
                         isActive: true
+                        hasFloorPlanImage: true
+                        hasFloorPlanPdf: true
                       - id: 2
                         name: 3 BHK Large
                         bedrooms: 3
@@ -23438,30 +23472,36 @@ paths:
                         areaUnit: sqft
                         price: 19400000
                         priceOnRequest: false
-                        floorPlanImageUrl: https://picsum.photos/seed/sna-property-nandi-skyline-towers-3-bhk-hebbal-plan-2/900/600
-                        floorPlanPdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                        floorPlanImageUrl: null
+                        floorPlanPdfUrl: null
                         availableUnits: 24
                         isActive: true
+                        hasFloorPlanImage: true
+                        hasFloorPlanPdf: true
                       - …1 more (trimmed for this example)
                     floorPlans:
                       - id: 1
                         title: 3 BHK — 1,780 sq ft
-                        imageUrl: https://picsum.photos/seed/sna-property-nandi-skyline-towers-3-bhk-hebbal-plan-1/900/600
-                        pdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                        imageUrl: null
+                        pdfUrl: null
                         area: 1780
                         areaUnit: sqft
                         bedrooms: 3
                         price: 17500000
                         order: 1
+                        hasImage: true
+                        hasPdf: true
                       - id: 2
                         title: 3 BHK Large — 1,980 sq ft
-                        imageUrl: https://picsum.photos/seed/sna-property-nandi-skyline-towers-3-bhk-hebbal-plan-2/900/600
-                        pdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                        imageUrl: null
+                        pdfUrl: null
                         area: 1980
                         areaUnit: sqft
                         bedrooms: 3
                         price: 19400000
                         order: 2
+                        hasImage: true
+                        hasPdf: true
                       - …1 more (trimmed for this example)
                     images:
                       - id: 1
@@ -24281,10 +24321,12 @@ paths:
                         areaUnit: sqft
                         price: 17300000
                         priceOnRequest: false
-                        floorPlanImageUrl: https://picsum.photos/seed/sna-property-skyline-crest-4-bhk-bellandur-plan-1/900/600
-                        floorPlanPdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                        floorPlanImageUrl: null
+                        floorPlanPdfUrl: null
                         availableUnits: 16
                         isActive: true
+                        hasFloorPlanImage: true
+                        hasFloorPlanPdf: true
                       - id: 2
                         name: 4 BHK
                         bedrooms: 4
@@ -24294,30 +24336,36 @@ paths:
                         areaUnit: sqft
                         price: 22600000
                         priceOnRequest: false
-                        floorPlanImageUrl: https://picsum.photos/seed/sna-property-skyline-crest-4-bhk-bellandur-plan-2/900/600
-                        floorPlanPdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                        floorPlanImageUrl: null
+                        floorPlanPdfUrl: null
                         availableUnits: 10
                         isActive: true
+                        hasFloorPlanImage: true
+                        hasFloorPlanPdf: true
                       - …1 more (trimmed for this example)
                     floorPlans:
                       - id: 1
                         title: 3 BHK — 1,820 sq ft
-                        imageUrl: https://picsum.photos/seed/sna-property-skyline-crest-4-bhk-bellandur-plan-1/900/600
-                        pdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                        imageUrl: null
+                        pdfUrl: null
                         area: 1820
                         areaUnit: sqft
                         bedrooms: 3
                         price: 17300000
                         order: 1
+                        hasImage: true
+                        hasPdf: true
                       - id: 2
                         title: 4 BHK — 2,380 sq ft
-                        imageUrl: https://picsum.photos/seed/sna-property-skyline-crest-4-bhk-bellandur-plan-2/900/600
-                        pdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                        imageUrl: null
+                        pdfUrl: null
                         area: 2380
                         areaUnit: sqft
                         bedrooms: 4
                         price: 22600000
                         order: 2
+                        hasImage: true
+                        hasPdf: true
                       - …1 more (trimmed for this example)
                     images:
                       - id: 1
@@ -24658,10 +24706,12 @@ paths:
                       areaUnit: sqft
                       price: 8850000
                       priceOnRequest: false
-                      floorPlanImageUrl: https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-1/900/600
-                      floorPlanPdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                      floorPlanImageUrl: null
+                      floorPlanPdfUrl: null
                       availableUnits: 4
                       isActive: true
+                      hasFloorPlanImage: true
+                      hasFloorPlanPdf: true
                     - id: 2
                       name: 3 BHK
                       bedrooms: 3
@@ -24671,30 +24721,36 @@ paths:
                       areaUnit: sqft
                       price: 12400000
                       priceOnRequest: false
-                      floorPlanImageUrl: https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-2/900/600
-                      floorPlanPdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                      floorPlanImageUrl: null
+                      floorPlanPdfUrl: null
                       availableUnits: 6
                       isActive: true
+                      hasFloorPlanImage: true
+                      hasFloorPlanPdf: true
                     - …1 more (trimmed for this example)
                   floorPlans:
                     - id: 1
                       title: 2 BHK — 1,180 sq ft
-                      imageUrl: https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-1/900/600
-                      pdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                      imageUrl: null
+                      pdfUrl: null
                       area: 1180
                       areaUnit: sqft
                       bedrooms: 2
                       price: 8850000
                       order: 1
+                      hasImage: true
+                      hasPdf: true
                     - id: 2
                       title: 3 BHK — 1,650 sq ft
-                      imageUrl: https://picsum.photos/seed/sna-property-lakeview-heights-3-bhk-whitefield-plan-2/900/600
-                      pdfUrl: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+                      imageUrl: null
+                      pdfUrl: null
                       area: 1650
                       areaUnit: sqft
                       bedrooms: 3
                       price: 12400000
                       order: 2
+                      hasImage: true
+                      hasPdf: true
                     - …1 more (trimmed for this example)
                   images:
                     - id: 1
@@ -33771,7 +33827,7 @@ components:
         - name
     DocumentAccess:
       type: object
-      description: Every file of the listing with its address — the ones a public read leaves without one, and the open ones.
+      description: 'Every file of the listing with its address — the ones a public read leaves without one, and the open ones: the brochure, the documents, and the drawings and PDFs of the floor plans and of the active unit configurations.'
       properties:
         brochureUrl:
           type:
@@ -33791,9 +33847,53 @@ components:
             required:
               - id
               - url
+        floorPlans:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              imageUrl:
+                type:
+                  - string
+                  - 'null'
+                format: uri
+              pdfUrl:
+                type:
+                  - string
+                  - 'null'
+                format: uri
+            required:
+              - id
+              - imageUrl
+              - pdfUrl
+        unitConfigurations:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              floorPlanImageUrl:
+                type:
+                  - string
+                  - 'null'
+                format: uri
+              floorPlanPdfUrl:
+                type:
+                  - string
+                  - 'null'
+                format: uri
+            required:
+              - id
+              - floorPlanImageUrl
+              - floorPlanPdfUrl
       required:
         - brochureUrl
         - documents
+        - floorPlans
+        - unitConfigurations
     Error:
       type: object
       description: The error envelope of §5.3.

@@ -2,12 +2,12 @@
  * Access tokens for a listing's gated files (docs/API_CONTRACT.md §5.10,
  * `docs/backend-notes/05_business_rules.md` → "Gated files").
  *
- * A document the editor marked `leadGated` — and the brochure, behind
- * `brochureLeadGated` — is offered to a visitor only after they have told the
- * sales desk who they are. A public read therefore carries no address for such
- * a file (`lib/scope.js`), and the address is handed over by
- * `POST /properties/:id/documents/access` to whoever presents one of these
- * tokens.
+ * A document the editor marked `leadGated`, the brochure behind
+ * `brochureLeadGated`, and every floor plan's drawing and PDF are offered to a
+ * visitor only after they have told the sales desk who they are. A public read
+ * therefore carries no address for such a file (`lib/scope.js`), and the
+ * addresses are handed over by `POST /properties/:id/documents/access` to
+ * whoever presents one of these tokens.
  *
  * `POST /leads` issues one with every lead about an active listing. A lead about
  * a listing opens all of that listing's gated files, whatever form it came

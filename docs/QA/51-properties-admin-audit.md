@@ -189,22 +189,38 @@ the `Property`, `LeadCreated` and `DocumentAccess` shapes, the registry entry
 `properties.documentAccess`, the schema `property.documentAccess`, the smoke and
 capture steps, and the regenerated `backend_developer_guidelines/`.
 
-**Not covered, on purpose.** Floor plans remain a soft gate: the blurred drawing
-is the invitation (P24), so `floorPlans[].imageUrl` / `pdfUrl` and
-`unitConfigurations[].floorPlanPdfUrl` stay in the public read. The seed uses one
-placeholder PDF for every brochure, paper and floor plan, so on the seeded
-listings that one file is still reachable through the floor-plan fields; the e2e
-check of "no gated address anywhere in the JSON" therefore uses a listing of its
-own with distinct files. See the QA-51 OPEN-1 entries in `docs/DECISIONS.md`.
+**Floor plans, gated in a third commit.** The first version of this fix kept the
+floor plans a soft gate (P24's blurred drawing), which left their PDFs in the
+public JSON — and, on the seeded listings, the brochure's own placeholder PDF with
+them. Asked, the product owner chose to gate the drawings as well as the PDFs:
+
+- every `floorPlans[]` row reads `imageUrl: null`, `pdfUrl: null`, `hasImage`,
+  `hasPdf`, and every `unitConfigurations[]` row `floorPlanImageUrl: null`,
+  `floorPlanPdfUrl: null`, `hasFloorPlanImage`, `hasFloorPlanPdf`; the same
+  exchange hands them over (a retired unit's files excepted), and they count as
+  gated files for the one-file rule. A seeded listing's JSON now carries no gated
+  address at all;
+- the floor-plan lock blurs a stand-in sketch (`FloorPlanSketch`), and the unit
+  configurations' thumbnails — which had shown every drawing openly — lock
+  behind the same gate and open the plan asked for once it arrives;
+- `useGatedFiles` shares one request per token between the documents, the floor
+  plans and the unit configurations, and `LeadCaptureModal` checks a skipped
+  visitor's token before it says "everything is unlocked";
+- in passing: the floor plans' dialog was mounted closed, so it never skipped the
+  form for a visitor who had already left a lead about the listing (P28). It is
+  mounted per request now.
+
+The photo gallery stays public by design. See the QA-51 OPEN-1 entries in
+`docs/DECISIONS.md`.
 
 **Verified.**
 
-| Pass                                                                                               | Result                                                                                                                                                                                              |
-| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `test:mock`                                                                                        | **166 / 166 ✓** — six new cases: the public reads carry no gated address, admin reads unchanged, one file one gate, the token from `POST /leads`, no token without an active listing, every refusal |
-| Jest                                                                                               | **157 suites, 3 467 tests ✓** — new cases in `DocumentsSection`, `LeadCaptureModal`, `leadStorage` and `propertySections`                                                                           |
-| Playwright e2e                                                                                     | **54 / 54 ✓** — the brochure test now checks the public read and the opened tab; a new test keeps a gated paper's address out of the JSON and the page until the form is sent                       |
-| `smoke`                                                                                            | **283 / 283 ✓**, including `POST /properties/1/documents/access` → 200                                                                                                                              |
-| `check:guidelines`                                                                                 | **12 / 12 ✓** — the package regenerates byte-identical                                                                                                                                              |
-| `lint`, `format:check`, `build:ci`, `check:traces`, `validate:seed`, `check:contrast`, `check:env` | all ✓                                                                                                                                                                                               |
-| Browser                                                                                            | the flow driven by hand: no gated address in the page before the lead, the tab opens after it, a stale token asks again, the next row opens without a second request                                |
+| Pass                                                                                               | Result                                                                                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test:mock`                                                                                        | **169 / 169 ✓** — nine gated-file cases: the public reads carry no gated address (papers, brochure, floor plans, unit drawings), admin reads unchanged, one file one gate (floor plans included), the token from `POST /leads`, the floor-plan files handed over, no token without an active listing, every refusal |
+| Jest                                                                                               | **158 suites, 3 493 tests ✓** — new: `useGatedFiles`; new cases in `DocumentsSection`, `FloorPlansSection`, `UnitConfigurationsSection`, `LeadCaptureModal`, `leadStorage` and `propertySections`                                                                                                                   |
+| Playwright e2e                                                                                     | **55 / 55 ✓** — the brochure test checks the public read and the opened tab; new tests keep a gated paper's address, and the floor plans' drawings and PDFs, out of the JSON and the page until the form is sent                                                                                                    |
+| `smoke`                                                                                            | **283 / 283 ✓**, including `POST /properties/1/documents/access` → 200                                                                                                                                                                                                                                              |
+| `check:guidelines`                                                                                 | **12 / 12 ✓** — the package regenerates byte-identical                                                                                                                                                                                                                                                              |
+| `lint`, `format:check`, `build:ci`, `check:traces`, `validate:seed`, `check:contrast`, `check:env` | all ✓                                                                                                                                                                                                                                                                                                               |
+| Browser                                                                                            | driven by hand at 1280 and 390 px: no gated address in the page before the lead; the tab opens after it; a stale token asks again; the floor plans and the unit thumbnails fill in from one request after the floor-plan form                                                                                       |

@@ -102,7 +102,7 @@ Public list endpoints return only `isActive: true` records (and `status: 'publis
 
 **Properties have no preview token.** `GET /properties/slug/:slug` answers 404 for an unpublished listing to everybody, signed in or not. An editor previews one at `/properties/<slug>?preview=admin`, which the public route serves only while an admin session exists: it reads the record through **`GET /admin/properties/slug/:slug`** — an ordinary admin endpoint behind the usual Bearer token — and marks the page `noindex, nofollow`. Nothing about the query string grants access; the token does. (Articles and pages keep their 24-hour signed tokens, D28: a draft article is shown to somebody who is not an editor.)
 
-**A gated file has no address in a public read** (QA-51 OPEN-1). While `brochureLeadGated` is on, every public property shape answers `brochureUrl: null` with `hasBrochure: true`; a document with `leadGated` on keeps its row with `url: null` and `hasFile: true`, and every document carries `hasFile`. An open document or brochure whose address is also a gated file's is gated with it, and a document whose address is the brochure's own is left out of `documents[]`. The addresses are handed over by **`POST /properties/:id/documents/access`** to the token `POST /leads` answers a lead about that listing with (`access.token`, 24 hours, any lead about the listing — P24, P28). Admin reads are unchanged. The whole rule, with the Laravel sketch, is `docs/backend-notes/05_business_rules.md` → "Gated files".
+**A gated file has no address in a public read** (QA-51 OPEN-1). While `brochureLeadGated` is on, every public property shape answers `brochureUrl: null` with `hasBrochure: true`; a document with `leadGated` on keeps its row with `url: null` and `hasFile: true`, and every document carries `hasFile`. The floor plans are always gated: every `floorPlans[]` row answers `imageUrl: null` and `pdfUrl: null` with `hasImage` / `hasPdf`, and every `unitConfigurations[]` row `floorPlanImageUrl: null` and `floorPlanPdfUrl: null` with `hasFloorPlanImage` / `hasFloorPlanPdf`. An open document or brochure whose address is also a gated file's — a floor plan's included — is gated with it, and a document whose address is the brochure's own is left out of `documents[]`. The photo gallery is not gated. The addresses are handed over by **`POST /properties/:id/documents/access`** to the token `POST /leads` answers a lead about that listing with (`access.token`, 24 hours, any lead about the listing — P24, P28). Admin reads are unchanged. The whole rule, with the Laravel sketch, is `docs/backend-notes/05_business_rules.md` → "Gated files".
 
 ### 5.11 Rate limiting & spam
 
@@ -767,7 +767,10 @@ Public reads also carry no address for a file behind the lead form (§5.10): the
 `hasBrochure` (a brochure is attached, gated or not) and `documents[].hasFile`, answer
 `brochureUrl: null` while the brochure is gated, and a gated document keeps its row with
 `url: null` and `leadGated: true`. A document that is the brochure's own file is left out.
-`DocumentAccess` below is how the page gets the addresses.
+Every floor plan answers `imageUrl: null`, `pdfUrl: null`, `hasImage`, `hasPdf`, and every
+unit configuration `floorPlanImageUrl: null`, `floorPlanPdfUrl: null`,
+`hasFloorPlanImage`, `hasFloorPlanPdf`. `DocumentAccess` below is how the page gets the
+addresses.
 
 ### `PropertySummary`
 
@@ -856,14 +859,25 @@ token is never stored on the lead and never appears in a CRM read.
 ### `DocumentAccess`
 
 What `POST /properties/:id/documents/access` answers for a live token: every file of the
-listing that has an address — the gated ones and the open ones — without a document that
-is the brochure's own file.
+listing that has an address — the gated papers and the open ones, without a document that
+is the brochure's own file — and the drawings and PDFs of the floor plans and of the
+active unit configurations.
 
 ```jsonc
 {
   "data": {
     "brochureUrl": "https://files.example.com/lakeview/brochure.pdf",
     "documents": [{ "id": 2, "url": "https://files.example.com/lakeview/price-list.pdf" }],
+    "floorPlans": [
+      {
+        "id": 1,
+        "imageUrl": "https://files.example.com/lakeview/plan-2bhk.png",
+        "pdfUrl": "https://files.example.com/lakeview/plan-2bhk.pdf",
+      },
+    ],
+    "unitConfigurations": [
+      { "id": 1, "floorPlanImageUrl": "https://files.example.com/lakeview/unit-2bhk.png", "floorPlanPdfUrl": null },
+    ],
   },
 }
 ```

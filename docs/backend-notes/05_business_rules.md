@@ -204,7 +204,9 @@ Store them in the cache keyed by token with the record id as the value, and add
 
 An editor can keep a listing's brochure (`brochure_lead_gated`, default on) and
 any of its documents (`documents[].lead_gated`, default on, D64) behind the lead
-form. **The gate is the API's, not the page's**: a public read never carries the
+form, and the floor plans are always behind it — every drawing and every PDF,
+on the plans and on the unit configurations; there is no switch for those.
+**The gate is the API's, not the page's**: a public read never carries the
 address of a gated file, so reading the JSON or the page source does not get
 round it. (Until QA-51 it did — the gate was the page's word only.)
 
@@ -223,6 +225,14 @@ round it. (Until QA-51 it did — the gate was the page's word only.)
 - A document whose address is the brochure's own is left out of `documents[]`:
   it is the brochure, offered once. The page always did this; with the address
   gone it has to be the API that does it.
+- Every floor plan keeps its row with `imageUrl: null`, `pdfUrl: null`,
+  `hasImage` and `hasPdf`; every unit configuration keeps its row with
+  `floorPlanImageUrl: null`, `floorPlanPdfUrl: null`, `hasFloorPlanImage` and
+  `hasFloorPlanPdf`. The drawings count as gated files for the one-file rule
+  above: an open paper that is a floor plan's PDF is gated with it.
+- The photo gallery (`images[]`) is not a gated file. A drawing the editor also
+  puts among the photographs is public through the gallery — and in the
+  sitemap's `<image:image>` entries, which read the gallery only.
 - **Admin reads are unchanged** — `/admin/properties…` answers the record as
   stored, addresses and all.
 
@@ -245,14 +255,30 @@ again for the next. The page's per-kind unlock (`floorPlans`, `documents`) is
 how it presents that fact; the brochure and the documents are one kind.
 
 **The exchange.** `POST /properties/:id/documents/access` with `{ "token": "…" }`
-answers every file of the listing that has an address — the open ones too, so the
-page renders one list — without a document that is the brochure's own file:
+answers every file of the listing that has an address — the open papers too, so
+the page renders one list, but not a document that is the brochure's own file —
+and the drawings and PDFs of the floor plans and of the **active** unit
+configurations (a retired unit is never on the page):
 
 ```json
 {
   "data": {
     "brochureUrl": "https://files.example.com/lakeview/brochure.pdf",
-    "documents": [{ "id": 2, "url": "https://files.example.com/lakeview/price-list.pdf" }]
+    "documents": [{ "id": 2, "url": "https://files.example.com/lakeview/price-list.pdf" }],
+    "floorPlans": [
+      {
+        "id": 1,
+        "imageUrl": "https://files.example.com/lakeview/plan-2bhk.png",
+        "pdfUrl": "https://files.example.com/lakeview/plan-2bhk.pdf"
+      }
+    ],
+    "unitConfigurations": [
+      {
+        "id": 1,
+        "floorPlanImageUrl": "https://files.example.com/lakeview/unit-2bhk.png",
+        "floorPlanPdfUrl": null
+      }
+    ]
   }
 }
 ```
@@ -292,20 +318,16 @@ abort_unless($grant
 return ['data' => PropertyFiles::for($property)];
 ```
 
-**What the page does with it** (`DocumentsSection`, `LeadCaptureModal`): it
-keeps the token in `sna_lead.access[propertyId]` (sessionStorage) and fetches the
-addresses right after the form — the file opens in a new tab from the same click
-— or as soon as it finds the gate already open, so the next row opens at once. A
-visitor the page does not ask again (P28) needs the token too; when it is missing
-or refused (a restarted API, a day-old tab), the page asks for their details
-again, which files a new lead and earns a new token.
-
-**Floor plans are not part of it.** Their gate is a teaser (P24): the blurred
-drawing is the invitation, so `floorPlans[].imageUrl`, `floorPlans[].pdfUrl`
-and `unitConfigurations[].floorPlanPdfUrl` stay in the public read. A file
-published both as a floor-plan PDF and as a gated paper is only as closed as its
-most open copy — which is the case on the seeded listings, where one placeholder
-PDF stands in for every brochure, paper and plan.
+**What the page does with it** (`useGatedFiles`, `DocumentsSection`,
+`FloorPlansSection`, `UnitConfigurationsSection`, `LeadCaptureModal`): it keeps
+the token in `sna_lead.access[propertyId]` (sessionStorage) and fetches the
+addresses right after the form — a file opens in a new tab from the same click —
+or as soon as it finds a gate already open, so the next row, drawing or
+thumbnail opens at once. The three sections share one request per token. The
+floor-plan lock blurs a stand-in sketch rather than the drawing, which it no
+longer has. A visitor the page does not ask again (P28) needs the token too;
+when it is missing or refused (a restarted API, a day-old tab), the page asks
+for their details again, which files a new lead and earns a new token.
 
 ## Dashboard
 

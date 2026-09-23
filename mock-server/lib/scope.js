@@ -26,21 +26,52 @@ function omit(record, keys = []) {
 
 const filled = (value) => typeof value === 'string' && value.trim() !== '';
 
+/** A trimmed address, or `null` for anything that is not one. */
+const address = (value) => (filled(value) ? value.trim() : null);
+
+/**
+ * The floor-plan files of a listing — every drawing and every PDF, on the
+ * plans and on the unit configurations. There is no switch for these: the
+ * floor plans are always behind the lead form (P24), and since QA-51 the API
+ * keeps them there rather than leaving it to the page's blur.
+ *
+ * @param {object} property
+ * @returns {string[]}
+ */
+function floorPlanUrls(property) {
+  const plans = Array.isArray(property?.floorPlans) ? property.floorPlans : [];
+  const units = Array.isArray(property?.unitConfigurations) ? property.unitConfigurations : [];
+  return [
+    ...plans.flatMap((plan) => [plan?.imageUrl, plan?.pdfUrl]),
+    ...units.flatMap((unit) => [unit?.floorPlanImageUrl, unit?.floorPlanPdfUrl]),
+  ]
+    .map(address)
+    .filter(Boolean);
+}
+
 /**
  * A listing's files as a visitor who has not shared their details may see
- * them: every file the editor put behind the lead form keeps its row and loses
- * its address.
+ * them: every file behind the lead form keeps its row and loses its address.
  *
  * - The brochure, while `brochureLeadGated` is on, reads `brochureUrl: null`
  *   and `hasBrochure: true`.
  * - A gated document reads `url: null` and `hasFile: true`; every document
  *   carries `hasFile`, so a page can tell "nothing attached" from "attached,
  *   ask first".
+ * - Every floor plan reads `imageUrl: null` and `pdfUrl: null` with `hasImage`
+ *   and `hasPdf`, and every unit configuration `floorPlanImageUrl: null` and
+ *   `floorPlanPdfUrl: null` with `hasFloorPlanImage` and `hasFloorPlanPdf`:
+ *   the drawings and their PDFs are always gated (the product owner's call —
+ *   `docs/DECISIONS.md`, QA-51 OPEN-1). The page blurs a stand-in drawing
+ *   until the visitor has shared their details.
  * - One file, one gate: an open document — or an open brochure — whose address
- *   is a gated file's is gated with it, and reads `leadGated: true` /
- *   `brochureLeadGated: true` so the page shows the lock it will meet. A
- *   document that is the brochure's own file is left out, as the page always
- *   did (P25): it is the brochure, offered once.
+ *   is a gated file's, a floor plan's included, is gated with it, and reads
+ *   `leadGated: true` / `brochureLeadGated: true` so the page shows the lock it
+ *   will meet. A document that is the brochure's own file is left out, as the
+ *   page always did (P25): it is the brochure, offered once.
+ *
+ * The photo gallery is not a gated file: a drawing the editor also puts among
+ * the photographs is public through the gallery.
  *
  * The addresses are handed over by `POST /properties/:id/documents/access`
  * once the visitor has filed a lead about the listing (`lib/fileAccess.js`).
@@ -54,11 +85,12 @@ function withoutGatedFiles(property) {
   const brochure = filled(property.brochureUrl) ? property.brochureUrl.trim() : null;
   const documents = Array.isArray(property.documents) ? property.documents : [];
 
-  const gatedUrls = new Set(
-    documents
+  const gatedUrls = new Set([
+    ...documents
       .filter((document) => document?.leadGated !== false && filled(document?.url))
-      .map((document) => document.url.trim())
-  );
+      .map((document) => document.url.trim()),
+    ...floorPlanUrls(property),
+  ]);
   const brochureGated =
     Boolean(brochure) && (property.brochureLeadGated !== false || gatedUrls.has(brochure));
   if (brochureGated) gatedUrls.add(brochure);
@@ -70,18 +102,50 @@ function withoutGatedFiles(property) {
     hasBrochure: Boolean(brochure),
   };
 
-  if (!Array.isArray(property.documents)) return scoped;
+  if (Array.isArray(property.documents)) {
+    scoped.documents = documents
+      .filter(
+        (document) => !(brochure && filled(document?.url) && document.url.trim() === brochure)
+      )
+      .map((document) => {
+        if (!document || typeof document !== 'object') return document;
+        const url = address(document.url);
+        if (url && gatedUrls.has(url)) {
+          return { ...document, url: null, leadGated: true, hasFile: true };
+        }
+        return { ...document, hasFile: Boolean(url) };
+      });
+  }
 
-  scoped.documents = documents
-    .filter((document) => !(brochure && filled(document?.url) && document.url.trim() === brochure))
-    .map((document) => {
-      if (!document || typeof document !== 'object') return document;
-      const url = filled(document.url) ? document.url.trim() : null;
-      if (url && gatedUrls.has(url)) {
-        return { ...document, url: null, leadGated: true, hasFile: true };
-      }
-      return { ...document, hasFile: Boolean(url) };
-    });
+  const isRecord = (value) => Boolean(value) && typeof value === 'object';
+
+  if (Array.isArray(property.floorPlans)) {
+    scoped.floorPlans = property.floorPlans.map((plan) =>
+      isRecord(plan)
+        ? {
+            ...plan,
+            imageUrl: null,
+            pdfUrl: null,
+            hasImage: filled(plan.imageUrl),
+            hasPdf: filled(plan.pdfUrl),
+          }
+        : plan
+    );
+  }
+
+  if (Array.isArray(property.unitConfigurations)) {
+    scoped.unitConfigurations = property.unitConfigurations.map((unit) =>
+      isRecord(unit)
+        ? {
+            ...unit,
+            floorPlanImageUrl: null,
+            floorPlanPdfUrl: null,
+            hasFloorPlanImage: filled(unit.floorPlanImageUrl),
+            hasFloorPlanPdf: filled(unit.floorPlanPdfUrl),
+          }
+        : unit
+    );
+  }
 
   return scoped;
 }
@@ -110,19 +174,42 @@ function publicProperty(property) {
  * Every file of a listing with its address — what
  * `POST /properties/:id/documents/access` answers once the token checks out.
  * A document that is the brochure's own file is left out, as it is from the
- * public read.
+ * public read, and so is an inactive unit configuration, which the page never
+ * shows.
  *
  * @param {object} property the stored record
- * @returns {{brochureUrl: string|null, documents: Array<{id: number, url: string}>}}
+ * @returns {{brochureUrl: string|null, documents: Array<{id: number, url: string}>,
+ *   floorPlans: Array<{id: number, imageUrl: string|null, pdfUrl: string|null}>,
+ *   unitConfigurations: Array<{id: number, floorPlanImageUrl: string|null,
+ *   floorPlanPdfUrl: string|null}>}}
  */
 function propertyFiles(property) {
-  const brochure = filled(property?.brochureUrl) ? property.brochureUrl.trim() : null;
+  const brochure = address(property?.brochureUrl);
   const documents = (Array.isArray(property?.documents) ? property.documents : [])
     .filter((document) => document && filled(document.url))
     .filter((document) => !brochure || document.url.trim() !== brochure)
     .map((document) => ({ id: document.id, url: document.url.trim() }));
 
-  return { brochureUrl: brochure, documents };
+  const floorPlans = (Array.isArray(property?.floorPlans) ? property.floorPlans : [])
+    .filter((plan) => plan && (filled(plan.imageUrl) || filled(plan.pdfUrl)))
+    .map((plan) => ({
+      id: plan.id,
+      imageUrl: address(plan.imageUrl),
+      pdfUrl: address(plan.pdfUrl),
+    }));
+
+  const unitConfigurations = (
+    Array.isArray(property?.unitConfigurations) ? property.unitConfigurations : []
+  )
+    .filter((unit) => unit && unit.isActive !== false)
+    .filter((unit) => filled(unit.floorPlanImageUrl) || filled(unit.floorPlanPdfUrl))
+    .map((unit) => ({
+      id: unit.id,
+      floorPlanImageUrl: address(unit.floorPlanImageUrl),
+      floorPlanPdfUrl: address(unit.floorPlanPdfUrl),
+    }));
+
+  return { brochureUrl: brochure, documents, floorPlans, unitConfigurations };
 }
 
 /** An author without the private e-mail address. */

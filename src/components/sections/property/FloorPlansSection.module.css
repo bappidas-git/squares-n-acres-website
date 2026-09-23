@@ -64,3 +64,53 @@
   gap: var(--space-2);
   margin-top: var(--space-5);
 }
+
+/* The stand-in drawing of a plan the visitor has not opened yet (QA-51
+   OPEN-1): the drawing's own 4:3 box, so nothing moves when it arrives. */
+.sketch {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-border-strong);
+}
+
+.frame,
+.arriving {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.arrivingText {
+  position: absolute;
+  inset: auto 0 var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.spinner {
+  animation: planSpin 900ms linear infinite;
+}
+
+@keyframes planSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

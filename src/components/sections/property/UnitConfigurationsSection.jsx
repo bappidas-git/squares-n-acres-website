@@ -1,10 +1,16 @@
-import { Suspense, lazy, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Icon } from '@iconify/react';
 
 import { AREA_UNITS } from '../../../config/enums';
 import { Button, Chip, LazyImage, Price } from '../../ui';
 import { formatArea, formatBhk, formatNumber } from '../../../utils/format';
+import FloorPlanSketch from './FloorPlanSketch';
+import LeadCaptureModal from '../../common/LeadCaptureModal';
 import SectionShell from './SectionShell';
+import { leadFormProps } from '../../../utils/leadSources';
 import useBreakpoint from '../../../hooks/useBreakpoint';
+import useGatedContent from '../../../hooks/useGatedContent';
+import useGatedFiles from '../../../hooks/useGatedFiles';
 import { useLeadCapture } from '../../../contexts/LeadCaptureContext';
 
 import styles from './UnitConfigurationsSection.module.css';
@@ -62,6 +68,12 @@ function configurationLine(unit) {
  * A unit priced on request shows "On request" and asks for the enquiry; a unit
  * with a drawing opens it full screen. Neither ever prints an em dash.
  *
+ * The drawings sit behind the floor plans' gate (QA-51 OPEN-1): a public read
+ * carries no address for them, so a visitor who has not shared their details
+ * sees a locked stand-in, and one who has sees the drawing, fetched with the
+ * token of their lead (`useGatedFiles`, shared with the floor plans section).
+ * Asking from a thumbnail opens that unit's plan once it arrives.
+ *
  * @param {object} props
  * @param {object} props.property a record of §6.1
  * @param {'bg'|'surface'} [props.background]
@@ -70,22 +82,71 @@ export default function UnitConfigurationsSection({ property, background = 'bg' 
   const { isMobile } = useBreakpoint();
   const [lightbox, setLightbox] = useState(null);
   const { openLeadModal, leadTriggerProps } = useLeadCapture();
+  const propertyId = property?.id ?? null;
+  const { unlocked, unlock } = useGatedContent(propertyId, 'floorPlans');
+  // The unit whose drawing the dialog is asking for, and the one to open full
+  // size as soon as its drawing is here.
+  const [asking, setAsking] = useState(null);
+  const [wanted, setWanted] = useState(null);
 
   const units = useMemo(() => activeUnits(property?.unitConfigurations), [property]);
+
+  const needsFiles = units.some(
+    (unit) => !has(unit.floorPlanImageUrl) && unit.hasFloorPlanImage === true
+  );
+  const { files, status, fetchFiles } = useGatedFiles(propertyId, {
+    enabled: unlocked && needsFiles,
+  });
+
+  // The drawings this visitor may look at now, in the table's order.
+  const plans = useMemo(() => {
+    if (!unlocked) return [];
+    return units
+      .map((unit) => ({
+        unit,
+        src: has(unit.floorPlanImageUrl)
+          ? unit.floorPlanImageUrl
+          : (files?.unitConfigurations?.[String(unit.id)]?.floorPlanImageUrl ?? null),
+      }))
+      .filter((plan) => Boolean(plan.src));
+  }, [unlocked, units, files]);
+
+  useEffect(() => {
+    if (wanted === null || asking) return;
+    const at = plans.findIndex((plan) => String(plan.unit.id) === String(wanted));
+    if (at < 0) return;
+    setWanted(null);
+    setLightbox(at);
+  }, [wanted, asking, plans]);
 
   if (units.length === 0) return null;
 
   const listingType = property?.listingType;
-  const plans = units.filter((unit) => has(unit.floorPlanImageUrl));
-  const slides = plans.map((unit) => ({
-    src: unit.floorPlanImageUrl,
-    alt: `${unit.name} floor plan`,
-    description: unit.name,
+  const slides = plans.map((plan) => ({
+    src: plan.src,
+    alt: `${plan.unit.name} floor plan`,
+    description: plan.unit.name,
   }));
 
   const openPlan = (unit) => {
-    const at = plans.findIndex((plan) => plan === unit);
+    const at = plans.findIndex((plan) => plan.unit === unit);
     if (at >= 0) setLightbox(at);
+  };
+
+  const arriving = unlocked && (status === 'idle' || status === 'loading');
+
+  /**
+   * A locked drawing asked for: the dialog, unless the gate is already open —
+   * then a failed request is made again, and one on its way is waited for.
+   */
+  const requestPlan = (unit) => {
+    setWanted(unit.id);
+    if (unlocked && status === 'failed') {
+      fetchFiles();
+      return;
+    }
+    if (arriving) return;
+    setAsking(unit);
   };
 
   // "Get price" on one unit: the shared dialog, with the unit already named in
@@ -118,24 +179,61 @@ export default function UnitConfigurationsSection({ property, background = 'bg' 
       </span>
     ) : null;
 
-  const thumbnail = (unit) =>
-    has(unit.floorPlanImageUrl) ? (
+  const thumbnail = (unit) => {
+    if (!has(unit.floorPlanImageUrl) && unit.hasFloorPlanImage !== true) return null;
+
+    const plan = plans.find((entry) => entry.unit === unit);
+    if (plan) {
+      return (
+        <button
+          type="button"
+          className={styles.thumbButton}
+          onClick={() => openPlan(unit)}
+          aria-label={`View the ${unit.name} floor plan full screen`}
+        >
+          <LazyImage
+            src={plan.src}
+            alt={`${unit.name} floor plan`}
+            ratio="4/3"
+            fit="contain"
+            sizes="120px"
+            className={styles.thumb}
+          />
+        </button>
+      );
+    }
+
+    // Handed over without this drawing — taken down since the page loaded.
+    if (unlocked && status === 'ready') return null;
+
+    const label = arriving
+      ? `Loading the ${unit.name} floor plan`
+      : unlocked && status === 'failed'
+        ? `Load the ${unit.name} floor plan again`
+        : `Unlock the ${unit.name} floor plan`;
+
+    return (
       <button
         type="button"
-        className={styles.thumbButton}
-        onClick={() => openPlan(unit)}
-        aria-label={`View the ${unit.name} floor plan full screen`}
+        className={[styles.thumbButton, styles.thumbLocked].join(' ')}
+        onClick={() => requestPlan(unit)}
+        disabled={arriving}
+        aria-label={label}
       >
-        <LazyImage
-          src={unit.floorPlanImageUrl}
-          alt={`${unit.name} floor plan`}
-          ratio="4/3"
-          fit="contain"
-          sizes="120px"
-          className={styles.thumb}
-        />
+        <FloorPlanSketch className={styles.thumbSketch} />
+        <span className={styles.thumbLock} aria-hidden="true">
+          <span className={styles.thumbLockIcon}>
+            <Icon
+              icon={arriving ? 'mdi:loading' : 'mdi:lock-outline'}
+              width="16"
+              height="16"
+              className={arriving ? styles.thumbSpinner : undefined}
+            />
+          </span>
+        </span>
       </button>
-    ) : null;
+    );
+  };
 
   const availability = (unit) =>
     has(unit.availableUnits) && Number(unit.availableUnits) > 0 ? (
@@ -239,16 +337,42 @@ export default function UnitConfigurationsSection({ property, background = 'bg' 
         </div>
       )}
 
-      {lightbox !== null ? (
+      {lightbox !== null && slides.length > 0 ? (
         <Suspense fallback={null}>
           <PropertyLightbox
             open
-            index={lightbox}
+            index={Math.min(lightbox, slides.length - 1)}
             slides={slides}
             onClose={() => setLightbox(null)}
             onIndexChange={setLightbox}
           />
         </Suspense>
+      ) : null}
+
+      {asking ? (
+        <LeadCaptureModal
+          key={asking.id}
+          {...leadFormProps('floor-plan-request')}
+          open
+          onClose={() => {
+            setAsking(null);
+            // Nothing was opened, so nothing opens later on its own.
+            if (!unlocked) setWanted(null);
+          }}
+          propertyId={propertyId}
+          propertyTitle={property?.title ?? ''}
+          // Name and number only, so the unit travels as a hidden field.
+          hiddenFields={{ message: `Floor plan for ${asking.name}` }}
+          deliver={{
+            kind: 'unlock',
+            unlockKind: 'floorPlans',
+            // A visitor the dialog does not ask again still needs a token
+            // that opens the drawings.
+            resolveAccess: () => fetchFiles(),
+          }}
+          agent={property?.agent?.showOnListing ? property.agent : null}
+          onSuccess={() => unlock()}
+        />
       ) : null}
     </SectionShell>
   );

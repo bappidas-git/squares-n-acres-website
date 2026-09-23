@@ -429,7 +429,9 @@ module.exports = ({ db, getModel }) => {
    * The token is the one `POST /leads` issued with a lead about this listing
    * (`lib/fileAccess.js`); it must still be valid, name this listing, and the
    * lead it was issued for must still exist. The answer holds every file with
-   * an address — the open ones too, so the page can render one list.
+   * an address — the brochure, the documents (the open ones too, so the page
+   * can render one list), and the drawings and PDFs of the floor plans and the
+   * active unit configurations.
    */
   router.post('/properties/:id/documents/access', (req, res, next) => {
     try {

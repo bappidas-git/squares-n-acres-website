@@ -270,6 +270,63 @@ describe('a gated file the page has no address for', () => {
   });
 });
 
+/**
+ * The floor plans: an unlock whose content — the drawings — the API hands over
+ * only for the token of the visitor's lead (QA-51 OPEN-1).
+ */
+describe('an unlock whose content the API hands over', () => {
+  const floorPlans = (resolveAccess) => ({
+    ...leadFormProps('floor-plan-request'),
+    deliver: { kind: 'unlock', unlockKind: 'floorPlans', resolveAccess },
+  });
+
+  it('skips a visitor whose token opens the content, then opens the gate', async () => {
+    leadStorage.saveVisitor({ name: 'Asha Rao', phone: '+919876543210' });
+    leadStorage.markCaptured(7, 'document-request', { token: 'tok', expiresAt: later() });
+    const resolveAccess = jest.fn(async () => ({ floorPlans: {} }));
+
+    renderModal(floorPlans(resolveAccess));
+
+    expect(screen.getByText(/one moment/i)).toBeInTheDocument();
+    expect(await screen.findByText(/everything is unlocked/i)).toBeInTheDocument();
+    expect(resolveAccess).toHaveBeenCalledTimes(1);
+    expect(leadStorage.isUnlocked(7, 'floorPlans')).toBe(true);
+    expect(leadService.create).not.toHaveBeenCalled();
+  });
+
+  it('asks a visitor whose token does not open it, and opens nothing', async () => {
+    leadStorage.saveVisitor({ name: 'Asha Rao', phone: '+919876543210' });
+    leadStorage.markCaptured(7, 'document-request', { token: 'stale', expiresAt: later() });
+    const resolveAccess = jest.fn(async () => null);
+
+    renderModal(floorPlans(resolveAccess));
+
+    expect(await screen.findByLabelText(/your name/i)).toBeInTheDocument();
+    expect(leadStorage.isUnlocked(7, 'floorPlans')).toBe(false);
+  });
+
+  it('asks a visitor who holds no token without trying it', () => {
+    leadStorage.saveVisitor({ name: 'Asha Rao', phone: '+919876543210' });
+    leadStorage.markCaptured(7, 'document-request');
+    const resolveAccess = jest.fn();
+
+    renderModal(floorPlans(resolveAccess));
+
+    expect(screen.getByLabelText(/your name/i)).toBeInTheDocument();
+    expect(resolveAccess).not.toHaveBeenCalled();
+  });
+
+  it('opens the gate straight after a filed lead and leaves the fetch to the page', async () => {
+    const resolveAccess = jest.fn();
+    renderModal(floorPlans(resolveAccess));
+
+    await shareDetails();
+
+    await waitFor(() => expect(leadStorage.isUnlocked(7, 'floorPlans')).toBe(true));
+    expect(resolveAccess).not.toHaveBeenCalled();
+  });
+});
+
 describe('an unlock rather than a file', () => {
   it('opens the gate and shows the confirmation, with nothing to download', async () => {
     leadStorage.saveVisitor({ name: 'Asha Rao', phone: '+919876543210' });
