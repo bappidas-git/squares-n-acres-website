@@ -33,8 +33,16 @@
   height: 100dvh;
 }
 
-/* The page canvas scrolls on its own; the shell never does. */
+/* The page canvas scrolls on its own; the shell never does.
+
+   `position: relative` makes the canvas the containing block of whatever is
+   absolutely positioned inside it — the screen-reader-only labels above all.
+   Without one they hung off the page itself, at their place far down a long
+   form, and made the window scrollable behind the 100vh shell: scrolling on
+   past the end of the SEO panel slid the whole admin up and out of the
+   window, leaving it blank (QA-56). */
 .main {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;

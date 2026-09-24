@@ -53,6 +53,7 @@ export default function SnippetEditor() {
     checkSlug,
     excludeId,
     slugBase,
+    fixedPath,
   } = useSeoPanel();
 
   const titleId = fieldId('seo.title');
@@ -117,23 +118,37 @@ export default function SnippetEditor() {
         </p>
       </div>
 
-      <SlugField
-        id={fieldId('slug')}
-        label="Permalink"
-        base={base}
-        path={entityType === 'page'}
-        value={seo.slug || entity?.slug || ''}
-        source={entity?.title ?? entity?.name ?? ''}
-        error={errors['seo.slug'] ?? errors.slug}
-        disabled={disabled || !setSlug}
-        excludeId={excludeId}
-        checkSlug={checkSlug}
-        onChange={(next) => {
-          // D34: `seo.slug` mirrors the entity slug, so both move together.
-          setSlug?.(next);
-          setSeo({ slug: next });
-        }}
-      />
+      {fixedPath ? (
+        // An address that never changes — the home page's `/` — is shown as
+        // it is: as a slug field it read "/ home", an address that is not
+        // the page's (QA-56).
+        <TextField
+          id={fieldId('slug')}
+          label="Permalink"
+          value={fixedPath}
+          readOnly
+          disabled
+          hint="This page’s address is fixed."
+        />
+      ) : (
+        <SlugField
+          id={fieldId('slug')}
+          label="Permalink"
+          base={base}
+          path={entityType === 'page'}
+          value={seo.slug || entity?.slug || ''}
+          source={entity?.title ?? entity?.name ?? ''}
+          error={errors['seo.slug'] ?? errors.slug}
+          disabled={disabled || !setSlug}
+          excludeId={excludeId}
+          checkSlug={checkSlug}
+          onChange={(next) => {
+            // D34: `seo.slug` mirrors the entity slug, so both move together.
+            setSlug?.(next);
+            setSeo({ slug: next });
+          }}
+        />
+      )}
 
       <div className={styles.stack}>
         <div className={styles.fieldHead}>

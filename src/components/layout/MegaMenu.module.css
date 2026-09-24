@@ -54,7 +54,9 @@
 
 /* The panel. One column is an ordinary dropdown; more than one is the mega
    panel, which is centred under the trigger rather than hanging off its left
-   edge so it cannot run past the right of the viewport. */
+   edge. Either way `MegaMenu` measures where it lands and moves it inside the
+   window by `--panel-shift` — centred under "Buy", the first menu, it started
+   up to 198 px off the left of the page (QA-56). */
 .panel {
   position: absolute;
   top: calc(100% + var(--space-2));
@@ -66,11 +68,12 @@
   border-radius: var(--radius-lg);
   background-color: var(--color-bg);
   box-shadow: var(--shadow-lg);
+  transform: translateX(var(--panel-shift, 0px));
 }
 
 .wide {
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(calc(-50% + var(--panel-shift, 0px)));
   display: grid;
   grid-template-columns: repeat(4, minmax(170px, 1fr));
   gap: var(--space-6);

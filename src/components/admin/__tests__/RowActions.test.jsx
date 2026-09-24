@@ -48,4 +48,43 @@ describe('RowActions', () => {
     expect(await screen.findByRole('menuitem', { name: 'Call' })).not.toHaveAttribute('target');
     expect(screen.getByRole('menuitem', { name: 'WhatsApp' })).toHaveAttribute('target', '_blank');
   });
+
+  // QA-56: "View on the site" is a path on this site, and it took the admin's
+  // own tab to the public page because only `https:` counted as a web address.
+  it('opens a path on this site in a new tab too, and keeps mailto: in this one', async () => {
+    const actions = [
+      { key: 'view', label: 'View on the site', icon: 'mdi:open-in-new', href: '/about' },
+      { key: 'mail', label: 'E-mail', icon: 'mdi:email', href: 'mailto:info@example.com' },
+    ];
+    renderWith(<RowActions actions={actions} compact menuLabel="Actions for About Us" />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for About Us' }));
+
+    const view = await screen.findByRole('menuitem', { name: 'View on the site' });
+    expect(view).toHaveAttribute('target', '_blank');
+    expect(view).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(screen.getByRole('menuitem', { name: 'E-mail' })).not.toHaveAttribute('target');
+  });
+
+  // QA-56: the menu is portalled in the DOM but not in React, so a click on
+  // its backdrop bubbled to the table row, which opened the record.
+  it('does not let a click that closes the menu reach the row around it', async () => {
+    const onRowClick = jest.fn();
+    renderWith(
+      // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+      <div onClick={onRowClick}>
+        <RowActions actions={ACTIONS} compact menuLabel="Actions for Ananya Rao" />
+      </div>
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for Ananya Rao' }));
+    await screen.findByRole('menu');
+
+    // eslint-disable-next-line testing-library/no-node-access -- the backdrop has no role
+    const backdrop = document.querySelector('.MuiBackdrop-root');
+    expect(backdrop).not.toBeNull();
+    await userEvent.click(backdrop);
+
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
 });

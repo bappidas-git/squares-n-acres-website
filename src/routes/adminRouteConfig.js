@@ -42,6 +42,7 @@ const DeveloperFormPage = lazy(() => import('../pages/admin/master-data/Develope
 const BanksPage = lazy(() => import('../pages/admin/master-data/BanksPage'));
 const PagesListPage = lazy(() => import('../pages/admin/pages/PagesListPage'));
 const PageFormPage = lazy(() => import('../pages/admin/pages/PageFormPage'));
+const HeaderMenusPage = lazy(() => import('../pages/admin/pages/HeaderMenusPage'));
 const FaqsPage = lazy(() => import('../pages/admin/content/FaqsPage'));
 const TestimonialsPage = lazy(() => import('../pages/admin/content/TestimonialsPage'));
 const TeamPage = lazy(() => import('../pages/admin/content/TeamPage'));
@@ -97,6 +98,7 @@ export const ADMIN_ROUTES = [
   page('pages', 'Pages', ['content', 'view'], <PagesListPage />),
   page('pages/add', 'Add page', ['content', 'create'], <PageFormPage />),
   page('pages/edit/:id', 'Edit page', ['content', 'edit'], <PageFormPage />),
+  page('pages/menus', 'Header menu', ['content', 'view'], <HeaderMenusPage />),
   page('faqs', 'FAQs', ['content', 'view'], <FaqsPage />),
 
   page('master-data/localities', 'Localities', ['masterData', 'view'], <LocalitiesPage />),

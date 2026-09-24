@@ -7,19 +7,22 @@
  * property type an editor added was reachable from neither, and a menu fixed in
  * one file stayed wrong in the other (BUG-20, defect 6).
  *
- * Nothing here is hardcoded content: the property types and localities are
- * master data, the service, company and insight entries are the published CMS
- * pages that carry `showInHeader` / `showInFooter`, and the call, WhatsApp and
- * CTA buttons are `siteSettings.navigation`. A menu with nothing behind it is
- * not rendered — an empty "Buyer Assistance" dropdown is worse than none (§7).
+ * Nothing here is hardcoded content: the header's menus are the `headerMenus`
+ * collection (QA-56) — their names, their order, their submenus and the links
+ * typed into them — the property types and localities are master data, the
+ * pages in each menu and footer column are the published CMS pages that carry
+ * `showInHeader` / `showInFooter`, and the call, WhatsApp and CTA buttons are
+ * `siteSettings.navigation`. A menu with nothing behind it is not rendered — an
+ * empty "Buyer Assistance" dropdown is worse than none (§7).
  *
  * The builders are pure functions of their inputs so the whole navigation can
  * be unit-tested without rendering a header.
  */
 
 import PATHS from '../routes/paths';
+import { DEFAULT_HEADER_MENUS } from './headerMenus';
 import { NAV } from './copy';
-import { CONSTRUCTION_STATUS, PRICE_BUCKETS_SALE } from './enums';
+import { CONSTRUCTION_STATUS, FOOTER_COLUMNS, PRICE_BUCKETS_SALE } from './enums';
 import { segmentKind } from './segments';
 import { formatPrice, formatPhoneForTel, whatsappLink } from '../utils/format';
 import { serializeFilters } from '../utils/listingFilters';
@@ -57,13 +60,6 @@ const typesOf = (propertyTypes, kind) =>
 const typeBySlug = (propertyTypes, slug) =>
   active(propertyTypes).find((type) => type.slug === slug) ?? null;
 
-/** Published pages an editor assigned to one header menu, in `order`. */
-const pagesForMenu = (pages, menu) =>
-  (Array.isArray(pages) ? pages : [])
-    .filter((page) => page?.headerMenu === menu)
-    .slice()
-    .sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
-
 /** Published pages an editor assigned to one footer column, in `order`. */
 const pagesForColumn = (pages, column) =>
   (Array.isArray(pages) ? pages : [])
@@ -78,9 +74,11 @@ const pageLink = (page) => ({
   to: PATHS.page(page.slug),
 });
 
-/** Drops a repeat of a destination already in the list. */
-function dedupe(links) {
-  const seen = new Set();
+/**
+ * Drops a repeat of a destination already in the list — or already in `seen`,
+ * which a caller shares across the columns of one menu.
+ */
+function dedupe(links, seen = new Set()) {
   return links.filter((link) => {
     if (!link?.to || seen.has(link.to)) return false;
     seen.add(link.to);
@@ -146,89 +144,72 @@ const RENT_TYPE_SLUGS = ['apartments', 'villas', 'independent-houses', 'pg-co-li
 /** The Commercial menu's picks. */
 const COMMERCIAL_TYPE_SLUGS = ['office-spaces', 'retail-shops', 'warehouses', 'co-working-spaces'];
 
-/** The three insight destinations the site owns whatever the CMS holds. */
-const INSIGHT_LINKS = [
-  { key: 'articles', label: NAV.articles, to: PATHS.articles },
-  { key: 'faqs', label: NAV.faqs, to: PATHS.faqs },
-  { key: 'awareness', label: NAV.awareness, to: PATHS.awareness },
-];
-
-/** The Buy mega-menu: status, type, budget and the localities people ask for. */
-function buyMenu(propertyTypes, localities) {
+/** The Buy mega-menu's columns: status, type, budget and the localities people ask for. */
+function buyColumns({ propertyTypes, localities }) {
   const residential = typesOf(propertyTypes, 'residential');
   const land = typesOf(propertyTypes, 'land');
   const featured = active(localities).filter((locality) => locality.isFeatured);
 
-  return {
-    key: 'buy',
-    label: NAV.buy,
-    to: PATHS.buy,
-    columns: keepFilled([
-      {
-        key: 'status',
-        title: NAV.byStatus,
-        links: CONSTRUCTION_STATUS.entries.map((entry) => ({
-          key: `status-${entry.value}`,
-          label: entry.label,
-          to: PATHS.buyStatus(entry.value),
-        })),
-      },
-      {
-        key: 'type',
-        title: NAV.byType,
-        links: [...residential, ...land].slice(0, 8).map((type) => ({
-          key: `type-${type.slug}`,
-          label: type.name,
-          to: PATHS.buyType(type.slug),
-        })),
-      },
-      {
-        key: 'budget',
-        title: NAV.byBudget,
-        links: budgetBands().map((band) => ({
-          key: `budget-${band.min}`,
-          label: band.label,
-          to: filterHref(PATHS.buy, {
-            minPrice: band.min || undefined,
-            maxPrice: band.max ?? undefined,
-          }),
-        })),
-      },
-      {
-        key: 'localities',
-        title: NAV.popularLocalities,
-        links: featured.slice(0, 8).map((locality) => ({
-          key: `locality-${locality.slug}`,
-          label: locality.name,
-          to: PATHS.locality(locality.slug),
-        })),
-      },
-    ]),
-  };
+  return [
+    {
+      key: 'status',
+      title: NAV.byStatus,
+      links: CONSTRUCTION_STATUS.entries.map((entry) => ({
+        key: `status-${entry.value}`,
+        label: entry.label,
+        to: PATHS.buyStatus(entry.value),
+      })),
+    },
+    {
+      key: 'type',
+      title: NAV.byType,
+      links: [...residential, ...land].slice(0, 8).map((type) => ({
+        key: `type-${type.slug}`,
+        label: type.name,
+        to: PATHS.buyType(type.slug),
+      })),
+    },
+    {
+      key: 'budget',
+      title: NAV.byBudget,
+      links: budgetBands().map((band) => ({
+        key: `budget-${band.min}`,
+        label: band.label,
+        to: filterHref(PATHS.buy, {
+          minPrice: band.min || undefined,
+          maxPrice: band.max ?? undefined,
+        }),
+      })),
+    },
+    {
+      key: 'localities',
+      title: NAV.popularLocalities,
+      links: featured.slice(0, 8).map((locality) => ({
+        key: `locality-${locality.slug}`,
+        label: locality.name,
+        to: PATHS.locality(locality.slug),
+      })),
+    },
+  ];
 }
 
 /** Rent: four residential types plus the commercial lease route. */
-function rentMenu(propertyTypes) {
+function rentColumns({ propertyTypes }) {
   const links = RENT_TYPE_SLUGS.map((slug) => typeBySlug(propertyTypes, slug))
     .filter(Boolean)
     .map((type) => ({ key: `rent-${type.slug}`, label: type.name, to: PATHS.rentType(type.slug) }));
 
-  return {
-    key: 'rent',
-    label: NAV.rent,
-    to: PATHS.rent,
-    columns: keepFilled([
-      {
-        key: 'rent',
-        title: NAV.rent,
-        links: [...links, { key: 'rent-commercial', label: NAV.commercial, to: PATHS.lease }],
-      },
-    ]),
-  };
+  return [
+    {
+      key: 'rent',
+      title: NAV.rent,
+      links: [...links, { key: 'rent-commercial', label: NAV.commercial, to: PATHS.lease }],
+    },
+  ];
 }
 
 /** Commercial: four commercial types plus lease. */
-function commercialMenu(propertyTypes) {
+function commercialColumns({ propertyTypes }) {
   const links = COMMERCIAL_TYPE_SLUGS.map((slug) => typeBySlug(propertyTypes, slug))
     .filter(Boolean)
     .map((type) => ({
@@ -237,55 +218,135 @@ function commercialMenu(propertyTypes) {
       to: PATHS.commercialType(type.slug),
     }));
 
-  return {
-    key: 'commercial',
-    label: NAV.commercial,
-    to: PATHS.commercial,
-    columns: keepFilled([
-      {
-        key: 'commercial',
-        title: NAV.commercial,
-        links: [...links, { key: 'commercial-lease', label: NAV.lease, to: PATHS.lease }],
-      },
-    ]),
-  };
+  return [
+    {
+      key: 'commercial',
+      title: NAV.commercial,
+      links: [...links, { key: 'commercial-lease', label: NAV.lease, to: PATHS.lease }],
+    },
+  ];
 }
 
-/** A menu that is nothing but the CMS pages of one `headerMenu` key. */
-function pageMenu({ key, label, pages, extraLinks = [] }) {
-  const links = dedupe([...extraLinks, ...pagesForMenu(pages, key).map(pageLink)]);
-  if (links.length === 0) return null;
+/**
+ * The menus the site generates, by `source` (`config/headerMenus.js`): the
+ * columns master data gives each one, and where its label goes when the
+ * editor has not said.
+ */
+const GENERATED_MENUS = {
+  buy: { columns: buyColumns, to: PATHS.buy },
+  rent: { columns: rentColumns, to: PATHS.rent },
+  commercial: { columns: commercialColumns, to: PATHS.commercial },
+};
 
-  return {
-    key,
-    label,
-    to: links[0].to,
-    columns: [{ key, title: label, links }],
-  };
+/** Records in their `order`, ties by name. */
+const byOrder = (left, right) =>
+  (left?.order ?? 0) - (right?.order ?? 0) ||
+  String(left?.name ?? left?.title ?? '').localeCompare(String(right?.name ?? right?.title ?? ''));
+
+/** A link an editor typed into a menu, as a nav link. */
+const typedLink = (menu, link, index) => ({
+  key: `${menu.slug}-link-${index}`,
+  label: link.label,
+  to: link.href,
+  newTab: Boolean(link.newTab),
+});
+
+/**
+ * The links of one group of a menu — its own list (`submenu === null`) or one
+ * submenu: the pages placed there, in their order, then the links typed there,
+ * in theirs. A page or a link naming a submenu the menu no longer has is shown
+ * in the menu's own list rather than lost.
+ */
+function groupLinks(menu, pages, submenu, known) {
+  const groupOf = (value) => (value && known.has(value) ? value : null);
+
+  const placed = (Array.isArray(pages) ? pages : [])
+    .filter((page) => page?.headerMenu === menu.slug && groupOf(page.headerSubmenu) === submenu)
+    .slice()
+    .sort(byOrder)
+    .map(pageLink);
+
+  const typed = (Array.isArray(menu.links) ? menu.links : [])
+    .map((link, index) => ({ link, index }))
+    .filter(({ link }) => link?.label && link?.href && groupOf(link.submenu) === submenu)
+    .sort(
+      (left, right) => (left.link.order ?? 0) - (right.link.order ?? 0) || left.index - right.index
+    )
+    .map(({ link, index }) => typedLink(menu, link, index));
+
+  return [...placed, ...typed];
+}
+
+/**
+ * One menu of the bar, from its record.
+ *
+ * A generated menu keeps its own columns and takes the pages and links an
+ * editor put in it on top — its own list under "More", each submenu under its
+ * name. A menu of pages and links is its own list under its name, then its
+ * submenus. With nothing in its panel a menu is a plain link when it has
+ * somewhere to go, and is left out when it has not (§7).
+ *
+ * @param {object} menu a `headerMenus` record
+ * @param {{propertyTypes: Array<object>, localities: Array<object>, pages: Array<object>}} input
+ * @returns {{key: string, label: string, to: string, columns?: Array<object>}|null}
+ */
+function buildMenu(menu, input) {
+  const generated = GENERATED_MENUS[menu.source] ?? null;
+  const submenus = (Array.isArray(menu.submenus) ? menu.submenus : []).filter(
+    (entry) => entry?.slug && entry?.name
+  );
+  const known = new Set(submenus.map((entry) => entry.slug));
+  const seen = new Set();
+
+  const columns = keepFilled(
+    [
+      ...(generated ? generated.columns(input) : []),
+      {
+        key: `${menu.slug}-own`,
+        title: generated ? NAV.more : menu.name,
+        links: groupLinks(menu, input.pages, null, known),
+      },
+      ...submenus.map((entry) => ({
+        key: `${menu.slug}-${entry.slug}`,
+        title: entry.name,
+        links: groupLinks(menu, input.pages, entry.slug, known),
+      })),
+    ].map((column) => ({ ...column, links: dedupe(column.links, seen) }))
+  );
+
+  const to = menu.href || generated?.to || columns[0]?.links[0]?.to || null;
+  if (!to) return null;
+
+  const base = { key: menu.slug, label: menu.name, to };
+  return columns.length > 0 ? { ...base, columns } : base;
 }
 
 /**
  * The header menus, left to right.
  *
  * @param {object} input
+ * @param {Array<object>|null} [input.menus] `GET /header-menus`; the shipped
+ *   menus (`config/headerMenus.js`) when the list is not there to read
  * @param {Array<object>} [input.propertyTypes] master data (§6.3)
  * @param {Array<object>} [input.localities] master data (§6.2)
  * @param {Array<object>} [input.pages] `GET /pages?showInHeader=true`
  * @returns {Array<{key: string, label: string, to: string, columns?: Array<object>}>}
  */
-export function buildHeaderMenus({ propertyTypes = [], localities = [], pages = [] } = {}) {
-  return [
-    buyMenu(propertyTypes, localities),
-    rentMenu(propertyTypes),
-    commercialMenu(propertyTypes),
-    { key: 'plots', label: NAV.plots, to: PATHS.plots },
-    { key: 'localities', label: NAV.localities, to: PATHS.localities },
-    { key: 'builders', label: NAV.builders, to: PATHS.builders },
-    pageMenu({ key: 'buyer-assistance', label: NAV.buyerAssistance, pages }),
-    pageMenu({ key: 'insights', label: NAV.insights, pages, extraLinks: INSIGHT_LINKS }),
-    pageMenu({ key: 'company', label: NAV.company, pages }),
-    { key: 'contact', label: NAV.contact, to: PATHS.contact },
-  ].filter(Boolean);
+export function buildHeaderMenus({
+  menus = null,
+  propertyTypes = [],
+  localities = [],
+  pages = [],
+} = {}) {
+  const records = Array.isArray(menus) ? menus : DEFAULT_HEADER_MENUS;
+  const input = { propertyTypes, localities, pages };
+
+  return records
+    .filter((menu) => menu?.slug && menu?.name && menu.isActive !== false)
+    .slice()
+    .sort(byOrder)
+    .map((menu) => buildMenu(menu, input))
+    .filter(Boolean);
 }
 
 /**
@@ -385,13 +446,13 @@ export function buildHeaderActions({ settings } = {}) {
 /**
  * The whole header: its menus and its right-hand buttons.
  *
- * @param {{propertyTypes?: Array<object>, localities?: Array<object>,
- *   pages?: Array<object>, settings?: object|null}} input
+ * @param {{menus?: Array<object>|null, propertyTypes?: Array<object>,
+ *   localities?: Array<object>, pages?: Array<object>, settings?: object|null}} input
  * @returns {{menus: Array<object>, actions: Array<object>}}
  */
-export function buildHeaderNav({ propertyTypes, localities, pages, settings } = {}) {
+export function buildHeaderNav({ menus, propertyTypes, localities, pages, settings } = {}) {
   return {
-    menus: buildHeaderMenus({ propertyTypes, localities, pages }),
+    menus: buildHeaderMenus({ menus, propertyTypes, localities, pages }),
     actions: buildHeaderActions({ settings }),
   };
 }
@@ -400,12 +461,17 @@ export function buildHeaderNav({ propertyTypes, localities, pages, settings } = 
  * Footer
  * ------------------------------------------------------------------ */
 
+/** The slugs of the legal line under the copyright, in the order it shows them. */
+export const LEGAL_SLUGS = ['privacy-policy', 'terms-of-use', 'disclaimer'];
+
 /**
- * How many link columns the footer draws.
+ * How many link columns the footer draws before it stops adding the generated
+ * ones.
  *
- * §6 of prompt 27 asks for four or five; an editor's own columns come first
- * and the generated ones top the row up, so a settings file that already fills
- * the footer is never overruled by them.
+ * §6 of prompt 27 asks for four or five. An editor's own columns and the
+ * columns pages were placed in always show — they are decisions somebody made,
+ * and the Pages screen says the page is in the footer — and the generated
+ * ones (Buy by type, Popular localities) fill whatever room is left.
  */
 export const FOOTER_COLUMN_LIMIT = 5;
 
@@ -423,9 +489,25 @@ const settingsColumn = (column, index) => ({
     })),
 });
 
+/** Titles compare without case or surrounding space: "Services" is "services ". */
+const sameTitle = (left, right) =>
+  String(left ?? '')
+    .trim()
+    .toLowerCase() ===
+  String(right ?? '')
+    .trim()
+    .toLowerCase();
+
 /**
- * The footer's link columns: what settings says, topped up with what the data
- * already knows.
+ * The footer's link columns: what settings says, the pages placed in the
+ * footer, then what the data already knows.
+ *
+ * Every page placed in a footer column is shown in it (QA-56). The pages of
+ * the "Company" column used to fall off the end of a full row, and "Services"
+ * and "Insights" were never drawn at all, so the Pages screen listed pages "in
+ * the footer" that no visitor could find. A column an editor wrote in settings
+ * under the same title takes the pages in rather than being repeated; the
+ * legal texts have the line under the copyright and are not listed twice.
  *
  * @param {object} input
  * @param {Array<object>} [input.propertyTypes]
@@ -443,6 +525,23 @@ export function buildFooterColumns({
   const fromSettings = (Array.isArray(settings?.footer?.columns) ? settings.footer.columns : [])
     .filter((column) => column?.title)
     .map(settingsColumn);
+
+  const listed = (Array.isArray(pages) ? pages : []).filter(
+    (page) => !LEGAL_SLUGS.includes(page?.slug)
+  );
+
+  const ownColumns = [];
+  for (const { value, label } of FOOTER_COLUMNS.entries) {
+    const links = pagesForColumn(listed, value).map((page) => ({
+      ...pageLink(page),
+      key: `footer-page-${page.slug}`,
+    }));
+    if (links.length === 0) continue;
+
+    const host = fromSettings.find((column) => sameTitle(column.title, label));
+    if (host) host.links = dedupe([...host.links, ...links]);
+    else ownColumns.push({ key: `pages-${value}`, title: label, links });
+  }
 
   const generated = [
     {
@@ -468,23 +567,12 @@ export function buildFooterColumns({
           to: PATHS.locality(locality.slug),
         })),
     },
-    {
-      key: 'insights',
-      title: NAV.insights,
-      links: INSIGHT_LINKS.map((link) => ({ ...link, key: `footer-${link.key}` })),
-    },
-    {
-      key: 'company',
-      title: NAV.company,
-      links: pagesForColumn(pages, 'company').map(pageLink),
-    },
   ];
 
-  return keepFilled([...fromSettings, ...generated]).slice(0, FOOTER_COLUMN_LIMIT);
+  const chosen = keepFilled([...fromSettings, ...ownColumns]);
+  const room = Math.max(0, FOOTER_COLUMN_LIMIT - chosen.length);
+  return [...chosen, ...keepFilled(generated).slice(0, room)];
 }
-
-/** The slugs of the legal line under the copyright, in the order it shows them. */
-export const LEGAL_SLUGS = ['privacy-policy', 'terms-of-use', 'disclaimer'];
 
 /**
  * The "Privacy · Terms · Disclaimer" line, from the pages that actually exist.

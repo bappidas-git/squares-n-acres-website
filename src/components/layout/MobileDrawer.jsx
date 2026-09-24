@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import { Link, useLocation } from 'react-router-dom';
 
 import CallButton from '../common/CallButton';
+import MenuLink from './MenuLink';
 import PATHS from '../../routes/paths';
 import WhatsAppButton from '../common/WhatsAppButton';
 import styles from './MobileDrawer.module.css';
@@ -36,13 +37,19 @@ export default function MobileDrawer({ open, onClose }) {
   const location = useLocation();
   const { settings } = useSiteSettings();
   const { propertyTypes, localities } = useMasterData();
-  const { header: pages } = useNavPages();
+  const { header: pages, menus: menuRecords } = useNavPages();
   const { count } = useShortlist();
   const { openLeadModal, leadTriggerProps } = useLeadCapture();
 
   const [expanded, setExpanded] = useState(null);
 
-  const { menus, actions } = buildHeaderNav({ propertyTypes, localities, pages, settings });
+  const { menus, actions } = buildHeaderNav({
+    menus: menuRecords,
+    propertyTypes,
+    localities,
+    pages,
+    settings,
+  });
 
   // A tap that navigates has done its job; the drawer gets out of the way.
   // `onClose` is read through a ref so an inline arrow in the host does not
@@ -112,9 +119,9 @@ export default function MobileDrawer({ open, onClose }) {
 
             if (columns.length === 0) {
               return (
-                <Link key={menu.key} to={menu.to} className={styles.item} onClick={onClose}>
+                <MenuLink key={menu.key} link={menu} className={styles.item} onClick={onClose}>
                   {menu.label}
-                </Link>
+                </MenuLink>
               );
             }
 
@@ -142,23 +149,23 @@ export default function MobileDrawer({ open, onClose }) {
 
                 {isOpen ? (
                   <div id={panelId} className={styles.panel}>
-                    <Link to={menu.to} className={styles.panelAll} onClick={onClose}>
+                    <MenuLink link={menu} className={styles.panelAll} onClick={onClose}>
                       All {menu.label.toLowerCase()}
-                    </Link>
+                    </MenuLink>
                     {columns.map((column) => (
                       <div key={column.key} className={styles.panelGroup}>
                         {columns.length > 1 ? (
                           <span className={styles.panelTitle}>{column.title}</span>
                         ) : null}
                         {column.links.map((link) => (
-                          <Link
+                          <MenuLink
                             key={link.key}
-                            to={link.to}
+                            link={link}
                             className={styles.panelLink}
                             onClick={onClose}
                           >
                             {link.label}
-                          </Link>
+                          </MenuLink>
                         ))}
                       </div>
                     ))}

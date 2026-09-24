@@ -171,8 +171,13 @@ const NAV_ITEMS = [
   {
     label: 'Pages',
     icon: 'mdi:file-document-outline',
-    path: '/admin/pages',
     roles: ADMIN_MANAGER,
+    // The header's menus are made of pages, and managed beside them (QA-56).
+    children: [
+      { label: 'All pages', path: '/admin/pages' },
+      { label: 'Add page', path: '/admin/pages/add' },
+      { label: 'Header menu', path: '/admin/pages/menus' },
+    ],
   },
   {
     label: 'FAQs',

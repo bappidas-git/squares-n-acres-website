@@ -1,8 +1,39 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Link, useLocation } from 'react-router-dom';
 
+import MenuLink, { isExternalHref } from './MenuLink';
 import styles from './MegaMenu.module.css';
+
+/** The room a panel keeps from either edge of the window, in px. */
+export const PANEL_GUTTER = 16;
+
+/**
+ * How far a panel has to move sideways to sit inside the window.
+ *
+ * The mega panel is centred under its trigger, and the first menu's trigger is
+ * a few hundred pixels from the left edge: on a 1 536 px screen the Buy panel
+ * started 70 px off the page, and 198 px off at 1 280 (QA-56). A panel at its
+ * natural position is measured and moved in by exactly what spills, never
+ * more; one wider than the window keeps its left edge on the gutter and its
+ * own `max-width` does the rest.
+ *
+ * Exported for the unit test: it is the whole of the rule.
+ *
+ * @param {{left: number, right: number, width: number}} rect the panel as drawn
+ *   with no shift
+ * @param {number} viewport the window's width
+ * @param {number} [gutter]
+ * @returns {number} px to add to the panel's `left` (negative moves it left)
+ */
+export function panelShift(rect, viewport, gutter = PANEL_GUTTER) {
+  if (!rect || !Number.isFinite(viewport) || viewport <= 0) return 0;
+  if (rect.width + gutter * 2 >= viewport || rect.left < gutter) {
+    return Math.round(gutter - rect.left);
+  }
+  if (rect.right > viewport - gutter) return Math.round(viewport - gutter - rect.right);
+  return 0;
+}
 
 /**
  * One header menu: a link that is also a trigger, and the panel under it.
@@ -48,6 +79,34 @@ export default function MegaMenu({ menu, transparent = false }) {
   }, [location.pathname, location.search]);
 
   useEffect(() => () => clearTimeout(hoverTimer.current), []);
+
+  // Keep the open panel inside the window (QA-56). Measured before paint with
+  // the shift taken off, then written as a custom property the stylesheet adds
+  // to the panel's own transform, so a panel is never drawn where it does not
+  // fit. The panel grows when the webfont arrives and the window can be
+  // resized under it, so both measure again.
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!open || !panel) return undefined;
+
+    const place = () => {
+      panel.style.setProperty('--panel-shift', '0px');
+      const shift = panelShift(
+        panel.getBoundingClientRect(),
+        document.documentElement.clientWidth || window.innerWidth
+      );
+      panel.style.setProperty('--panel-shift', `${shift}px`);
+    };
+
+    place();
+    window.addEventListener('resize', place);
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(place) : null;
+    observer?.observe(panel);
+    return () => {
+      window.removeEventListener('resize', place);
+      observer?.disconnect();
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -125,6 +184,11 @@ export default function MegaMenu({ menu, transparent = false }) {
     if (!wrapperRef.current?.contains(event.relatedTarget)) setOpen(false);
   };
 
+  // A menu's own address may be another site (QA-56), which a router `Link`
+  // cannot reach; the trigger keeps its ref and its keyboard either way.
+  const Trigger = isExternalHref(menu.to) ? 'a' : Link;
+  const target = isExternalHref(menu.to) ? { href: menu.to } : { to: menu.to };
+
   return (
     <div
       className={styles.menu}
@@ -142,9 +206,9 @@ export default function MegaMenu({ menu, transparent = false }) {
       }}
       onBlurCapture={onBlurCapture}
     >
-      <Link
+      <Trigger
         ref={triggerRef}
-        to={menu.to}
+        {...target}
         className={[styles.trigger, transparent ? styles.onDark : '', open ? styles.triggerOn : '']
           .filter(Boolean)
           .join(' ')}
@@ -162,7 +226,7 @@ export default function MegaMenu({ menu, transparent = false }) {
             aria-hidden="true"
           />
         ) : null}
-      </Link>
+      </Trigger>
 
       {hasPanel && open ? (
         <div
@@ -177,9 +241,9 @@ export default function MegaMenu({ menu, transparent = false }) {
               <ul className={styles.list}>
                 {column.links.map((link) => (
                   <li key={link.key}>
-                    <Link to={link.to} className={styles.link}>
+                    <MenuLink link={link} className={styles.link}>
                       {link.label}
-                    </Link>
+                    </MenuLink>
                   </li>
                 ))}
               </ul>

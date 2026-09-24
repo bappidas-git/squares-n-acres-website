@@ -12,14 +12,30 @@ import { TABLES } from '../../config/adminCopy';
 /** What an `href` action adds: a new tab, without handing it this one. */
 const EXTERNAL = { target: '_blank', rel: 'noopener noreferrer' };
 
+/** The schemes the device answers itself — the dialler, the mail app, SMS. */
+const DEVICE_SCHEMES = /^(tel|mailto|sms):/i;
+
 /**
  * The attributes an `href` action's link carries.
  *
- * A web address opens in a new tab. A `tel:` or `mailto:` one is handed to the
- * dialler or the mail app from this tab: given a new tab of its own, it left an
- * empty one behind on a desktop browser every time "Call" was chosen (QA-53).
+ * A web address opens in a new tab — a full one, and a path on this site such
+ * as "View on the site"'s `/about`, which is a web address all the same: when
+ * only `https:` counted, every "View on the site" took the admin's own tab to
+ * the public page (QA-56). A `tel:` or `mailto:` one is handed to the dialler
+ * or the mail app from this tab: given a new tab of its own, it left an empty
+ * one behind on a desktop browser every time "Call" was chosen (QA-53).
  */
-const linkProps = (href) => (href && /^https?:/i.test(href) ? EXTERNAL : null);
+const linkProps = (href) => (href && !DEVICE_SCHEMES.test(href) ? EXTERNAL : null);
+
+/**
+ * Keeps a click inside the menu from reaching the row it belongs to.
+ *
+ * The menu is portalled out of the table in the DOM but not in React, and
+ * React bubbles a synthetic event through the component tree: a click on the
+ * backdrop — how a menu opened by mistake is closed — reached `DataTable`'s
+ * row, and the row opened its record (QA-56).
+ */
+const stopAtMenu = (event) => event.stopPropagation();
 
 /**
  * The per-row controls of `DataTable`.
@@ -94,6 +110,7 @@ export default function RowActions({
         anchorEl={anchor}
         open={Boolean(anchor)}
         onClose={close}
+        onClick={stopAtMenu}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
