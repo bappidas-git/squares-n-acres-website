@@ -138,6 +138,7 @@ export default function SnippetEditor() {
           path={entityType === 'page'}
           value={seo.slug || entity?.slug || ''}
           source={entity?.title ?? entity?.name ?? ''}
+          sourceLabel={entity?.title === undefined && entity?.name !== undefined ? 'name' : 'title'}
           error={errors['seo.slug'] ?? errors.slug}
           disabled={disabled || !setSlug}
           excludeId={excludeId}

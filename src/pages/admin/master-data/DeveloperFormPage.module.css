@@ -26,9 +26,20 @@
   gap: var(--space-2);
 }
 
-/* The sticky twin of the header actions, for phones. */
+/* The sticky twin of the header actions. The form runs to seven screens, and
+   on a desktop its Save sat at the top alone: an editor at the connectivity
+   rows scrolled all the way back up to reach it (QA-60). The Pages form's bar. */
 .actionBar {
-  display: none;
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
 }
 
 .repeater {

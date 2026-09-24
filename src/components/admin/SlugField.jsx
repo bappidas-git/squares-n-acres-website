@@ -38,6 +38,8 @@ export const CHECK_DEBOUNCE_MS = 500;
  * @param {string} [props.error]
  * @param {string} [props.id] the input's id, for a host that has to focus it
  *   from elsewhere (an SEO hint, a failed save)
+ * @param {string} [props.sourceLabel] what the hint calls `source` — "title"
+ *   by default, "name" on the master-data forms, which have no title (QA-60)
  */
 export default function SlugField({
   id: idProp,
@@ -45,6 +47,7 @@ export default function SlugField({
   value = '',
   onChange,
   source = '',
+  sourceLabel = 'title',
   checkSlug,
   excludeId,
   base = '/',
@@ -190,6 +193,11 @@ export default function SlugField({
 
   const errorId = error ? `${id}-error` : undefined;
   const statusId = `${id}-status`;
+  // "!!" or "北京 नगर" makes no slug at all: the box stays empty while the
+  // name is typed, and "Generated from the name" said nothing about why. The
+  // API gives such a record one of its own (QA-60).
+  const sourceText = String(source ?? '').trim();
+  const nothingToFollow = locked && !value && sourceText !== '' && toSlug(sourceText) === '';
 
   return (
     <div className={styles.field}>
@@ -203,7 +211,9 @@ export default function SlugField({
       </label>
 
       <div className={styles.row}>
-        <span className={styles.base}>{base}</span>
+        {/* A slug with no address of its own (an amenity's) has no base: an
+            empty span still took a gap and pushed the box off the column. */}
+        {base ? <span className={styles.base}>{base}</span> : null}
         <input
           id={id}
           type="text"
@@ -275,8 +285,13 @@ export default function SlugField({
               </Button>
             ) : null}
           </span>
+        ) : nothingToFollow ? (
+          <span className={styles.idle}>
+            The {sourceLabel} has no Latin letters or numbers to make a URL from, so one will be
+            made when it is saved — unlock to type your own.
+          </span>
         ) : locked ? (
-          <span className={styles.idle}>Generated from the title — unlock to edit.</span>
+          <span className={styles.idle}>Generated from the {sourceLabel} — unlock to edit.</span>
         ) : null}
       </p>
 

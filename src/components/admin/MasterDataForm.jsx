@@ -20,6 +20,7 @@ import SeoPanel from '../seo/SeoPanel';
 import SlugField from './SlugField';
 import SortableList from './SortableList';
 import ToneSelect from './ToneSelect';
+import useRowKeys from './useRowKeys';
 import { ICON_ID_PATTERN } from '../../utils/validation';
 import { getIn } from '../../hooks/useForm';
 import { toSeoPaths } from '../seo/seoValues';
@@ -309,6 +310,7 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
           disabled={disabled}
           value={value ?? ''}
           source={field.source ? (getIn(form.values, field.source) ?? '') : ''}
+          sourceLabel={field.source === 'title' || !field.source ? 'title' : 'name'}
           checkSlug={checkSlug}
           excludeId={excludeId}
           base={field.base ?? slugBase}
@@ -476,7 +478,9 @@ function StringListField({
   onChange,
   disabled,
 }) {
-  const rows = value.map((text, index) => ({ id: index, text }));
+  // Keyed so a moved row keeps the focus, not its neighbour (QA-60).
+  const rowKeys = useRowKeys(value.length);
+  const rows = value.map((text, index) => ({ id: rowKeys.keys[index], text }));
   const singular =
     field.singular ??
     String(label ?? 'item')
@@ -484,7 +488,10 @@ function StringListField({
       .toLowerCase();
 
   const update = (index, text) => onChange(value.map((row, at) => (at === index ? text : row)));
-  const remove = (index) => onChange(value.filter((_row, at) => at !== index));
+  const remove = (index) => {
+    rowKeys.remove(index);
+    onChange(value.filter((_row, at) => at !== index));
+  };
 
   return (
     <fieldset className={styles.repeater}>
@@ -505,7 +512,10 @@ function StringListField({
           label={`${label}, in order`}
           getId={(item) => item.id}
           getLabel={(item, index) => item.text || `${singular} ${index + 1}`}
-          onReorder={(next) => onChange(next.map((item) => item.text))}
+          onReorder={(next, move) => {
+            if (move) rowKeys.move(move.from, move.to);
+            onChange(next.map((item) => item.text));
+          }}
           renderItem={(item, index) => (
             <div className={styles.repeaterRow}>
               <TextField

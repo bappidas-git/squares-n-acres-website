@@ -9,7 +9,7 @@ import {
 import userEvent from '@testing-library/user-event';
 
 import ApiError from '../../../services/apiError';
-import MasterDataPage, { labelsOf, sanitiseParams } from '../MasterDataPage';
+import MasterDataPage, { labelsOf, rangeErrors, sanitiseParams, trimText } from '../MasterDataPage';
 import ToastProvider from '../../common/ToastProvider';
 import renderWith from '../../../test-utils';
 
@@ -120,6 +120,22 @@ describe('MasterDataPage', () => {
       expect(
         await within(dialog).findByText('The LinkedIn address must be a valid URL.')
       ).toBeInTheDocument();
+    });
+
+    it('takes the name a field gives itself for a sentence (QA-60)', () => {
+      expect(
+        labelsOf([
+          {
+            name: 'interestRateMin',
+            label: 'Interest rate from (% p.a.)',
+            messageLabel: 'lowest interest rate',
+          },
+          { name: 'maxTenureYears', label: 'Maximum tenure (years)' },
+        ])
+      ).toEqual({
+        interestRateMin: 'lowest interest rate',
+        maxTenureYears: 'maximum tenure (years)',
+      });
     });
 
     it('labels only the keys that are not words already', () => {
@@ -764,6 +780,295 @@ describe('MasterDataPage', () => {
 
       await userEvent.click(screen.getByRole('button', { name: 'Table view' }));
       expect(await screen.findByRole('table')).toBeInTheDocument();
+    });
+  });
+});
+
+describe('MasterDataPage — QA-60', () => {
+  // The dialog hands its form the new record's values from an effect, which
+  // jsdom runs a little after the dialog appears; a person does not type into
+  // it within that tick, and neither do these tests.
+  const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+
+  const withOrder = (service, extra = {}) => ({
+    ...baseConfig(service),
+    formFields: [
+      { name: 'name', type: 'text', label: 'Name', required: true },
+      { name: 'order', type: 'number', label: 'Order', min: 0 },
+    ],
+    newValues: { order: 0 },
+    appendNew: true,
+    ...extra,
+  });
+
+  it('proposes the end of the list for a new record, not the top', async () => {
+    const service = fakeService();
+    render(withOrder(service));
+    await screen.findByText('Whitefield');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add locality' }));
+    const dialog = await screen.findByRole('dialog');
+    // Two records on an unfiltered list: the new one is third. The box read
+    // 0, which the API reads as "first".
+    await waitFor(() => expect(within(dialog).getByLabelText('Order')).toHaveValue(3));
+
+    await userEvent.type(within(dialog).getByLabelText(/Name/), 'Hebbal');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create locality' }));
+    await waitFor(() =>
+      expect(service.create).toHaveBeenCalledWith(expect.objectContaining({ order: 3 }))
+    );
+  });
+
+  it('keeps the form’s default on a screen that does not append (FAQs, QA-59)', async () => {
+    const service = fakeService();
+    render(withOrder(service, { appendNew: false }));
+    await screen.findByText('Whitefield');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add locality' }));
+    const dialog = await screen.findByRole('dialog');
+    await settle();
+    expect(within(dialog).getByLabelText('Order')).toHaveValue(0);
+  });
+
+  it('asks for the size of the collection when the list on screen is filtered', async () => {
+    const list = jest.fn((params) =>
+      Promise.resolve(
+        params?.perPage === 1
+          ? { data: [ROWS[0]], meta: { page: 1, perPage: 1, total: 7, totalPages: 7 } }
+          : envelope(ROWS.slice(0, 1))
+      )
+    );
+    const service = fakeService({ list });
+    render(
+      withOrder(service, {
+        filters: [{ key: 'q', type: 'search', label: 'Search', placeholder: 'Name' }],
+      }),
+      { initialEntries: ['/?q=white'] }
+    );
+    await screen.findByText('Whitefield');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add locality' }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByLabelText('Order')).toHaveValue(8));
+    expect(list).toHaveBeenCalledWith({ perPage: 1 });
+  });
+
+  it('brings the first field in error into view when a save is refused', async () => {
+    const service = fakeService();
+    render({
+      ...baseConfig(service),
+      formFields: [
+        { name: 'name', type: 'text', label: 'Name' },
+        { name: 'zone', type: 'text', label: 'Zone', required: true },
+      ],
+      schema: { zone: { type: 'string', required: true } },
+    });
+    await screen.findByText('Whitefield');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add locality' }));
+    const dialog = await screen.findByRole('dialog');
+    await settle();
+    await userEvent.type(within(dialog).getByLabelText('Name'), 'Hebbal');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create locality' }));
+
+    expect(await within(dialog).findByText('The zone field is required.')).toBeInTheDocument();
+    await waitFor(() => expect(within(dialog).getByLabelText(/Zone/)).toHaveFocus());
+    expect(service.create).not.toHaveBeenCalled();
+  });
+
+  it('hands what runs after a save the record, not the envelope it came in', async () => {
+    const afterSave = jest.fn();
+    const service = fakeService({
+      update: jest.fn().mockResolvedValue({ data: { id: 1, name: 'Whitefield East', slug: 'x' } }),
+    });
+    render({ ...baseConfig(service), afterSave });
+    await screen.findByText('Whitefield');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Whitefield' }));
+    const dialog = await screen.findByRole('dialog');
+    await settle();
+    await userEvent.clear(within(dialog).getByLabelText(/Name/));
+    await userEvent.type(within(dialog).getByLabelText(/Name/), 'Whitefield East');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    // Handed the envelope, the SEO side effect found no slug on it and never
+    // wrote the redirect a property type's panel asked for.
+    await waitFor(() =>
+      expect(afterSave).toHaveBeenCalledWith(
+        { id: 1, name: 'Whitefield East', slug: 'x' },
+        expect.objectContaining({ id: 1, name: 'Whitefield' }),
+        expect.objectContaining({ toast: expect.any(Object) })
+      )
+    );
+  });
+
+  it('holds a number box to the bounds it declares', async () => {
+    const service = fakeService();
+    render({
+      ...baseConfig(service),
+      formFields: [
+        { name: 'name', type: 'text', label: 'Name', required: true },
+        { name: 'rate', type: 'number', label: 'Rate', min: 5, max: 20, step: 0.05 },
+      ],
+    });
+    await screen.findByText('Whitefield');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add locality' }));
+    const dialog = await screen.findByRole('dialog');
+    await settle();
+    await userEvent.type(within(dialog).getByLabelText(/Name/), 'Garden City Bank');
+    await userEvent.type(within(dialog).getByLabelText('Rate'), '25');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create locality' }));
+
+    expect(await within(dialog).findByText('Use a value between 5 and 20.')).toBeInTheDocument();
+    expect(service.create).not.toHaveBeenCalled();
+  });
+
+  it('suggests a free slug when the one sent is taken', async () => {
+    const service = fakeService({
+      create: jest.fn().mockRejectedValue(
+        new ApiError({
+          status: 409,
+          message: 'The slug has already been taken.',
+          errors: { slug: ['The slug has already been taken.'] },
+        })
+      ),
+      checkSlug: jest
+        .fn()
+        .mockResolvedValue({ data: { available: false, suggestion: 'hebbal-2' } }),
+    });
+    render({
+      ...baseConfig(service),
+      formFields: [
+        { name: 'name', type: 'text', label: 'Name', required: true },
+        { name: 'slug', type: 'slug', label: 'Slug', source: 'name' },
+      ],
+      schema: undefined,
+    });
+    await screen.findByText('Whitefield');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add locality' }));
+    const dialog = await screen.findByRole('dialog');
+    await settle();
+    await userEvent.type(within(dialog).getByLabelText(/Name/), 'Hebbal');
+    // The URL follows the name from an effect of its own.
+    await waitFor(() => expect(within(dialog).getByDisplayValue('hebbal')).toBeInTheDocument());
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create locality' }));
+
+    expect(
+      await within(dialog).findByText('The slug has already been taken. Try “hebbal-2”.')
+    ).toBeInTheDocument();
+    // The dialog's slug hint says "name", which is what it follows.
+    expect(service.checkSlug).toHaveBeenCalledWith('hebbal', { excludeId: null });
+  });
+
+  it('goes back to the screen’s own table from the drag list', async () => {
+    const list = jest.fn().mockResolvedValue(
+      envelope([
+        { id: 1, name: 'First', zone: 'east', order: 1, isActive: true },
+        { id: 2, name: 'Second', zone: 'west', order: 2, isActive: true },
+      ])
+    );
+    const service = fakeService({ list });
+    render(
+      {
+        ...baseConfig(service),
+        orderable: true,
+        defaultSort: { field: 'name', order: 'asc' },
+        columns: [
+          { key: 'order', label: 'Order', sortable: true },
+          { key: 'zone', label: 'Zone', sortable: true },
+          { key: 'name', label: 'Name', sortable: true, primary: true },
+        ],
+      },
+      { initialEntries: ['/?sort=order'] }
+    );
+    await screen.findByRole('listitem', { name: /^First,/ });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Table view' }));
+    await screen.findByRole('table');
+    // The amenities' own table is grouped by category, its default; the
+    // first sortable column after Order ("Zone" here) was a different one.
+    expect(list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sort: 'name', order: 'asc' }),
+      expect.anything()
+    );
+  });
+
+  it('moves a row of a list field twice from the keyboard, the focus following it', async () => {
+    const service = fakeService();
+    render({
+      ...baseConfig(service),
+      formFields: [
+        { name: 'name', type: 'text', label: 'Name', required: true },
+        { name: 'items', type: 'list', label: 'Items', defaultValue: [] },
+      ],
+    });
+    await screen.findByText('Whitefield');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add locality' }));
+    const dialog = await screen.findByRole('dialog');
+    await settle();
+    for (const text of ['Alpha', 'Beta', 'Gamma']) {
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Add item' }));
+      const boxes = within(dialog).getAllByLabelText(/^Items \d$/);
+      fireEvent.change(boxes[boxes.length - 1], { target: { value: text } });
+    }
+    const values = () =>
+      within(dialog)
+        .getAllByLabelText(/^Items \d$/)
+        .map((box) => box.value);
+    expect(values()).toEqual(['Alpha', 'Beta', 'Gamma']);
+
+    // Keyed by index, the moved row's key went to its neighbour: the focus
+    // followed the neighbour, and the second Alt+↓ moved it back.
+    fireEvent.keyDown(within(dialog).getByRole('listitem', { name: /^Alpha,/ }), {
+      key: 'ArrowDown',
+      altKey: true,
+    });
+    await waitFor(() =>
+      expect(within(dialog).getByRole('listitem', { name: /^Alpha,/ })).toHaveFocus()
+    );
+    fireEvent.keyDown(within(dialog).getByRole('listitem', { name: /^Alpha,/ }), {
+      key: 'ArrowDown',
+      altKey: true,
+    });
+    await waitFor(() => expect(values()).toEqual(['Beta', 'Gamma', 'Alpha']));
+  });
+
+  describe('helpers', () => {
+    it('trims the text boxes and leaves everything else as it is', () => {
+      const fields = [
+        { name: 'name', type: 'text' },
+        { name: 'note', type: 'textarea' },
+        { name: 'code' },
+        { name: 'url', type: 'url' },
+      ];
+      const values = { name: '  Mysuru ', note: ' x ', code: ' y ', url: ' https://a.b ', n: 1 };
+      expect(trimText(values, fields)).toEqual({
+        name: 'Mysuru',
+        note: 'x',
+        code: 'y',
+        url: ' https://a.b ',
+        n: 1,
+      });
+      const clean = { name: 'Mysuru' };
+      expect(trimText(clean, fields)).toBe(clean);
+    });
+
+    it('words a number box’s bounds', () => {
+      const fields = [
+        { name: 'rate', type: 'number', min: 5, max: 20 },
+        { name: 'order', type: 'number', min: 0 },
+        { name: 'cap', type: 'number', max: 0.5 },
+        { name: 'free', type: 'number' },
+      ];
+      expect(rangeErrors({ rate: 25, order: -1, cap: 1, free: 99 }, fields)).toEqual({
+        rate: 'Use a value between 5 and 20.',
+        order: 'Use a value of 0 or more.',
+        cap: 'Use a value of 0.5 or less.',
+      });
+      expect(rangeErrors({ rate: 8.4, order: null, cap: '' }, fields)).toEqual({});
     });
   });
 });

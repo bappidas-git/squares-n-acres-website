@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Icon } from '@iconify/react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
-import ApiError from '../../../services/apiError';
 import PATHS from '../../../routes/paths';
 import useApi from '../../../hooks/useApi';
 import useForm from '../../../hooks/useForm';
+import MovedNotice from './MovedNotice';
+import useRecordPage from './useRecordPage';
+import useRowKeys from '../../../components/admin/useRowKeys';
 import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
-import { useNavigationGuard } from '../../../contexts/NavigationGuardContext';
+import withSlugSuggestion from '../../../components/admin/slugSuggestion';
 // The kit is imported file by file, in the order `MasterDataPage` reaches for
 // the same components: the barrel's own order disagrees with it, and webpack
 // then cannot give the extracted CSS one order across the admin chunks.
@@ -29,7 +31,7 @@ import {
   TextareaField,
 } from '../../../components/ui';
 import { adminCrud, developers } from '../../../services/masterDataService';
-import { applySeoSideEffects, validateSeoBranch } from '../../../components/seo/seoSideEffects';
+import { validateSeoBranch } from '../../../components/seo/seoSideEffects';
 import {
   createSeo,
   toSeoPaths,
@@ -42,7 +44,7 @@ import { useMasterData } from '../../../contexts/MasterDataContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './DeveloperFormPage.module.css';
-import { FORMS, TOASTS } from '../../../config/adminCopy';
+import { FORMS } from '../../../config/adminCopy';
 
 const developerService = adminCrud(developers);
 
@@ -118,11 +120,34 @@ const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');
 const checkDeveloperSlug = (slug, { excludeId, signal } = {}) =>
   developerService.checkSlug(slug, { excludeId, signal });
 
-/** What the SEO analysers call a field, and where it is on this screen. */
+/**
+ * What the SEO analysers call a field, and where it is on this screen. Every
+ * id names a block below: none of them used to exist, so a hint that pointed
+ * at the profile, the images or the highlights did nothing when pressed (QA-60).
+ */
 const FIELD_TARGET = {
   content: 'developer-description',
+  tableOfContents: 'developer-description',
+  images: 'developer-images',
   highlights: 'developer-highlights',
   slug: 'developer-slug',
+};
+
+/**
+ * What a message calls a field whose key is not a word (QA-60): "The
+ * totalProjects must be at least 0." reads "The total projects must be at
+ * least 0.", as in every dialog of the panel since QA-55.
+ */
+const LABELS = {
+  shortDescription: 'short description',
+  logoUrl: 'logo',
+  coverImageUrl: 'cover image',
+  establishedYear: 'year established',
+  totalProjects: 'total projects',
+  ongoingProjects: 'ongoing projects',
+  completedProjects: 'completed projects',
+  reraIds: 'RERA registrations',
+  'seo.slug': 'URL',
 };
 
 /** Brings the block a hint names into view, and focuses the first control in it. */
@@ -155,18 +180,17 @@ function focusField(path) {
 export default function DeveloperFormPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
-  const navigate = useNavigate();
   const toast = useToast();
   const { refresh: refreshMasterData } = useMasterData();
+  const formRef = useRef(null);
 
   const {
     data: record,
     loading,
     error,
     refetch,
+    setData: setRecord,
   } = useApi((signal) => developerService.get(id, { signal }), [id], { enabled: isEdit });
-
-  const [redirect, setRedirect] = useState(null);
 
   const toPayload = useCallback(
     (values) => ({
@@ -197,6 +221,7 @@ export default function DeveloperFormPage() {
     initialValues: BLANK,
     schema: isEdit ? schemas['developer.update'] : schemas['developer.create'],
     normalize: toPayload,
+    labels: LABELS,
     validate: extraRules,
     onSubmit: async (payload) => {
       try {
@@ -205,66 +230,73 @@ export default function DeveloperFormPage() {
           : await developerService.create(payload);
         return envelope?.data ?? null;
       } catch (thrown) {
-        throw await withSlugSuggestion(thrown, payload.slug, id);
+        throw await withSlugSuggestion(thrown, payload.slug, {
+          checkSlug: developerService.checkSlug,
+          excludeId: id ?? null,
+        });
       }
     },
   });
 
-  const { reset, values, setField } = form;
+  const { reset, values, setField, setComputed } = form;
 
   // A loaded record becomes the form and its baseline, so an untouched form is
-  // never reported as dirty.
+  // never reported as dirty. A saved one does the same, from the API's answer.
   useEffect(() => {
     if (!record) return;
     reset(toFormValues(record));
   }, [record, reset]);
 
+  // A new developer goes after the last one unless the editor says otherwise
+  // (QA-60): the box read 0, which the API reads as "first". Written as
+  // computed, so the form does not claim to have been changed.
+  const orderRef = useRef(values.order);
+  orderRef.current = values.order;
+  useEffect(() => {
+    if (isEdit) return undefined;
+    const controller = new AbortController();
+    developerService
+      .list({ perPage: 1 }, { signal: controller.signal })
+      .then((envelope) => {
+        const total = envelope?.meta?.total;
+        if (!Number.isFinite(total) || orderRef.current !== BLANK.order) return;
+        setComputed({ order: total + 1 });
+      })
+      .catch(() => {
+        // The default stands.
+      });
+    return () => controller.abort();
+  }, [isEdit, setComputed]);
+
   useUnsavedChanges(form.dirty);
 
-  // Leaving after a save waits for the guard to let go, twice over. A saved
-  // form is clean, but the provider only learns that one render later, and
-  // `useBlocker` re-registers the question in an effect of its own — which runs
-  // after this component's, because a child's effects run before its parent's.
-  const { isBlocking } = useNavigationGuard();
-  useEffect(() => {
-    if (!redirect || isBlocking) return undefined;
-    const timer = setTimeout(() => navigate(redirect), 0);
-    return () => clearTimeout(timer);
-  }, [redirect, isBlocking, navigate]);
+  const { save, slugMoved, liveSlug, canRedirect, redirectOld, setRedirectOld } = useRecordPage({
+    entityType: 'developer',
+    noun: 'Developer',
+    isEdit,
+    record,
+    setRecord,
+    form,
+    publicPath: PATHS.builder,
+    editPath: PATHS.adminDeveloperEdit,
+    // The property form's developer select reads the cached list (D93).
+    onSaved: () => refreshMasterData('developers'),
+    formRef,
+  });
 
   // Advisory, never a refusal: the three counts are what the builder publishes
-  // about itself and the API stores whatever it is told (§6.5).
+  // about itself and the API stores whatever it is told (§6.5). A negative
+  // count is the field's own error to report, not a sum to compare (QA-60).
   const countWarning = useMemo(() => {
     const total = numberOrNull(values.totalProjects);
     const parts = [numberOrNull(values.ongoingProjects), numberOrNull(values.completedProjects)];
     if (total === null || parts.every((part) => part === null)) return null;
+    if (total < 0 || parts.some((part) => part !== null && part < 0)) return null;
     const sum = parts.reduce((carry, part) => carry + (part ?? 0), 0);
     return sum > total
       ? `Ongoing and completed add up to ${sum}, which is more than the ${total} total projects. That saves, but check the figures before it reaches the site.`
       : null;
   }, [values.totalProjects, values.ongoingProjects, values.completedProjects]);
-
-  const save = async (after = 'stay') => {
-    const saved = await form.submit();
-    if (!saved) return;
-
-    // The redirect this record's `seo` asks for, against the slug the API
-    // answered with — a new record has none until now (§9.6).
-    await applySeoSideEffects('developer', saved);
-    toast.success(isEdit ? TOASTS.saved('Developer') : TOASTS.created('Developer'));
-    // The property form's developer select reads the cached list (D93).
-    refreshMasterData('developers');
-
-    if (after === 'view' && saved.slug) {
-      setRedirect(PATHS.builder(saved.slug));
-      return;
-    }
-    if (!isEdit && saved.id) {
-      setRedirect(PATHS.adminDeveloperEdit(saved.id));
-      return;
-    }
-    refetch();
-  };
 
   const title = isEdit ? (record?.name ?? 'Edit developer') : 'New developer';
 
@@ -336,6 +368,7 @@ export default function DeveloperFormPage() {
       />
 
       <form
+        ref={formRef}
         className={styles.form}
         noValidate
         onSubmit={(event) => {
@@ -354,7 +387,7 @@ export default function DeveloperFormPage() {
               disabled={form.submitting}
             />
           </FormColumn>
-          <FormColumn half>
+          <FormColumn half id="developer-slug">
             <FormFieldControl
               field={{
                 name: 'slug',
@@ -368,6 +401,15 @@ export default function DeveloperFormPage() {
               checkSlug={developerService.checkSlug}
               excludeId={id}
             />
+            {slugMoved ? (
+              <MovedNotice
+                from={PATHS.builder(liveSlug)}
+                canRedirect={canRedirect}
+                checked={redirectOld}
+                disabled={form.submitting}
+                onChange={setRedirectOld}
+              />
+            ) : null}
           </FormColumn>
 
           <FormColumn>
@@ -384,7 +426,7 @@ export default function DeveloperFormPage() {
             />
           </FormColumn>
 
-          <FormColumn>
+          <FormColumn id="developer-description">
             <RichTextField
               label="Description"
               variant="full"
@@ -397,7 +439,7 @@ export default function DeveloperFormPage() {
             />
           </FormColumn>
 
-          <FormColumn half>
+          <FormColumn half id="developer-images">
             <FormFieldControl
               field={{ name: 'logoUrl', type: 'image', label: 'Logo', hint: 'logo' }}
               form={form}
@@ -496,7 +538,8 @@ export default function DeveloperFormPage() {
           </FormColumn>
 
           {countWarning ? (
-            <FormColumn>
+            // Advisory: a refused save does not stop on it.
+            <FormColumn data-advisory="">
               <Alert tone="warning">{countWarning}</Alert>
             </FormColumn>
           ) : null}
@@ -525,7 +568,7 @@ export default function DeveloperFormPage() {
         </FormSection>
 
         <FormSection title="Highlights">
-          <FormColumn>
+          <FormColumn id="developer-highlights">
             <HighlightsField
               values={values.highlights ?? []}
               errors={form.errors}
@@ -644,39 +687,17 @@ function extraRules(values) {
   return errors;
 }
 
-/**
- * The 409 of a duplicate slug, with the free variant to take.
- *
- * The API answers `{ message, errors: { slug } }` but no suggestion, and the
- * suggestion is the useful half — so it is fetched from `check-slug` and put in
- * front of the field that caused it (§5.9).
- */
-async function withSlugSuggestion(thrown, slug, excludeId) {
-  if (thrown?.status !== 409 || !slug) return thrown;
-
-  try {
-    const { data } = await developerService.checkSlug(slug, { excludeId });
-    if (!data?.suggestion || data.suggestion === slug) return thrown;
-
-    return new ApiError({
-      status: thrown.status,
-      message: thrown.message,
-      data: thrown.data,
-      original: thrown,
-      errors: { ...thrown.errors, slug: [`${thrown.message} Try “${data.suggestion}”.`] },
-    });
-  } catch {
-    // The suggestion is a nicety; the refusal is the answer.
-    return thrown;
-  }
-}
-
 /** What the builder is known for, in the order they are shown. */
 function HighlightsField({ values, errors, disabled, onChange }) {
-  const rows = values.map((text, index) => ({ id: index, text }));
+  // Keyed so a moved row keeps the focus, not its neighbour (QA-60).
+  const rowKeys = useRowKeys(values.length);
+  const rows = values.map((text, index) => ({ id: rowKeys.keys[index], text }));
 
   const update = (index, text) => onChange(values.map((row, at) => (at === index ? text : row)));
-  const remove = (index) => onChange(values.filter((_row, at) => at !== index));
+  const remove = (index) => {
+    rowKeys.remove(index);
+    onChange(values.filter((_row, at) => at !== index));
+  };
 
   return (
     <fieldset className={styles.repeater}>
@@ -692,7 +713,10 @@ function HighlightsField({ values, errors, disabled, onChange }) {
           label="Highlights, in order"
           getId={(item) => item.id}
           getLabel={(item, index) => item.text || `Highlight ${index + 1}`}
-          onReorder={(next) => onChange(next.map((item) => item.text))}
+          onReorder={(next, move) => {
+            if (move) rowKeys.move(move.from, move.to);
+            onChange(next.map((item) => item.text));
+          }}
           renderItem={(item, index) => (
             <div className={styles.repeaterRow}>
               <TextField

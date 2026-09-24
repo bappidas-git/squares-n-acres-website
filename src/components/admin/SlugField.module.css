@@ -1,7 +1,9 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  /* The kit's own spacing (FormField), so the box starts level with a Name box
+     beside it (QA-60). */
+  gap: var(--space-2);
 }
 
 .label {
@@ -32,14 +34,17 @@
 .input {
   flex: 1 1 auto;
   min-width: 0;
-  height: 40px;
-  padding: 0 var(--space-3);
+  /* The box of every other control of the kit (FormField's `.control`: the
+     same minimum, padding and type size), so a URL box beside a Name box is
+     the same height as it (QA-60). */
+  min-height: 44px;
+  padding: var(--space-3);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-body);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
 }
 
 .input:disabled {

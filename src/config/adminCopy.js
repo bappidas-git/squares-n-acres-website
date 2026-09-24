@@ -90,6 +90,14 @@ const FORMS = {
    * the record is third, and the box reads 3 afterwards.
    */
   orderHint: 'Its place in the list: 1 is first, and the others move down to make room.',
+  /**
+   * "Save & view" on a record that is switched off: its page answers 404, so
+   * the editor is told why it is not opening instead of being sent there (QA-60).
+   *
+   * @param {string} noun "Locality"
+   */
+  notLive: (noun) =>
+    `This ${String(noun).toLowerCase()} is switched off, so its page is not on the site — switch Active on to publish it.`,
 };
 
 /* ------------------------------------------------------------------ *

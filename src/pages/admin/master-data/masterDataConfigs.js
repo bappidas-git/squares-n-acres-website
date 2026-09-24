@@ -6,6 +6,8 @@ import PATHS from '../../../routes/paths';
 import { AMENITY_CATEGORIES, BADGE_TONES, SEGMENTS } from '../../../config/enums';
 import { FORMS } from '../../../config/adminCopy';
 import { ICON_ID_PATTERN } from '../../../utils/validation';
+import { slugify } from '../../../utils/slug';
+import redirectMoves, { describeMoves } from '../../../components/admin/redirectMoves';
 import {
   adminCrud,
   amenities,
@@ -157,8 +159,10 @@ const bulkActions = (plural, guarded = true) => [
     danger: true,
     confirm: {
       title: `Delete the selected ${plural}?`,
+      // The API refuses a batch whole when any of it is in use (QA-59), so
+      // "one … is refused" promised the rest would go (QA-60).
       message: guarded
-        ? `{count} will be deleted. One a property still points at is refused. This cannot be undone.`
+        ? `{count} will be deleted. If a property still points at any of them, none is deleted and you are told which. This cannot be undone.`
         : `{count} will be deleted. This cannot be undone.`,
     },
   },
@@ -210,6 +214,8 @@ export const segmentsConfig = ({ onMutated } = {}) => ({
   slugBase: '',
   defaultSort: { field: 'order', order: 'asc' },
   orderable: true,
+  // A new one goes after the last, not first on the site (QA-60).
+  appendNew: true,
   activeToggle: true,
   usageGuard: true,
   canDelete: (row) => !isBuiltInSegment(row.slug),
@@ -293,7 +299,7 @@ export const segmentsConfig = ({ onMutated } = {}) => ({
           confirm: {
             ...action.confirm,
             message:
-              '{count} will be deleted. A built-in segment, or one a property type or a listing still uses, is refused. This cannot be undone.',
+              '{count} will be deleted. If one is built in, or a property type or a listing still uses one, none is deleted and you are told which. This cannot be undone.',
           },
         }
       : action
@@ -414,6 +420,34 @@ const typePath = (type, segments) =>
     ? PATHS.commercialType(type.slug)
     : PATHS.buyType(type.slug);
 
+/**
+ * Every address the site links a property type from: `/commercial/…` for a
+ * commercial kind, `/buy/…` and `/rent/…` for the others (the menus, the home
+ * grid, the search).
+ */
+const typePaths = (type, segments) =>
+  segmentKind(type.segment, segments) === 'commercial'
+    ? [PATHS.commercialType(type.slug)]
+    : [PATHS.buyType(type.slug), PATHS.rentType(type.slug)];
+
+/**
+ * The addresses a live type leaves when its URL changes, each paired with the
+ * one that replaces it (QA-60). A type that is switched off has no page to
+ * leave.
+ *
+ * @param {object} before the stored type
+ * @param {object} after the type as saved, or as the form will save it
+ * @param {Array<object>} segments
+ * @returns {Array<[string, string]>}
+ */
+export function typeMoves(before, after, segments) {
+  if (!before?.id || before.isActive === false) return [];
+  if (!before.slug || !after?.slug || before.slug === after.slug) return [];
+  const from = typePaths(before, segments);
+  const to = typePaths(after, segments);
+  return from.map((path, index) => [path, to[index] ?? to[0]]);
+}
+
 /** A segment as a chip, in the tone of its kind. */
 const SegmentChip = ({ slug, segments }) => (
   <Chip tone={SEGMENT_TONE[segmentKind(slug, segments)] ?? 'neutral'}>
@@ -445,6 +479,8 @@ export const propertyTypesConfig = ({ onMutated, segments = [] } = {}) => ({
   slugBase: '/buy/',
   defaultSort: { field: 'order', order: 'asc' },
   orderable: true,
+  // A new one goes after the last, not first on the site (QA-60).
+  appendNew: true,
   activeToggle: true,
   usageGuard: true,
   // D87: the type's own landing pages are `/buy/:slug` and `/rent/:slug`, so it
@@ -545,25 +581,75 @@ export const propertyTypesConfig = ({ onMutated, segments = [] } = {}) => ({
    * Moving a type to another segment is allowed, but the listings that already
    * carry it keep their own `segment` (§6.1) — so the ones on screen now would
    * stop matching their type. That is worth a sentence before the save (D88).
+   *
+   * So is a new URL (QA-60): the type's landing pages move with it, and the
+   * old addresses — in menus, bookmarks and search results — answered 404.
+   * The save redirects them (`afterSave`), and the question says so first.
    */
   confirmSave: async (values, record) => {
-    if (!record?.id || values.segment === record.segment) return null;
+    if (!record?.id) return null;
 
-    const { data } = await propertyTypeService.get(record.id, { params: { withUsage: true } });
-    const usedBy = data?.usedBy ?? [];
-    if (usedBy.length === 0) return null;
+    // An emptied box asks the API for the name's slug, and a name with none
+    // keeps the one the type has.
+    const slug = values.slug || slugify(values.name ?? '') || record.slug;
+    const moves = typeMoves(record, { ...values, slug }, segments);
+
+    let usedBy = [];
+    if (values.segment !== record.segment) {
+      const { data } = await propertyTypeService.get(record.id, { params: { withUsage: true } });
+      usedBy = data?.usedBy ?? [];
+    }
+
+    const segmentSentence =
+      usedBy.length > 0
+        ? `“${record.name}” moves from ${segmentName(record.segment, segments)} to ${segmentName(
+            values.segment,
+            segments
+          )}. ${usedBySentence(usedBy)} — each keeps its own segment, so any that should move have to be edited too.`
+        : null;
+    const urlSentence =
+      moves.length > 0
+        ? `Its ${moves.length === 1 ? 'page moves' : 'pages move'} from ${moves
+            .map(([from]) => from)
+            .join(' and ')} to ${moves
+            .map(([, to]) => to)
+            .join(' and ')}. Visitors and search engines that ask for the old ${
+            moves.length === 1 ? 'address are' : 'addresses are'
+          } sent to the new ${moves.length === 1 ? 'one' : 'ones'} (301).`
+        : null;
+    if (!segmentSentence && !urlSentence) return null;
 
     return {
-      heading: 'Change the segment?',
+      heading:
+        segmentSentence && urlSentence
+          ? 'Change the segment and the URL?'
+          : urlSentence
+            ? 'Change the URL?'
+            : 'Change the segment?',
       title: record.name,
-      confirmLabel: 'Change segment',
-      message: `“${record.name}” moves from ${segmentName(record.segment, segments)} to ${segmentName(
-        values.segment,
-        segments
-      )}. ${usedBySentence(usedBy)} — each keeps its own segment, so any that should move have to be edited too.`,
+      confirmLabel:
+        segmentSentence && urlSentence
+          ? 'Change both'
+          : urlSentence
+            ? 'Change URL'
+            : 'Change segment',
+      message: [segmentSentence, urlSentence].filter(Boolean).join(' '),
       hint: '',
       usedBy,
     };
+  },
+
+  /** Sends the addresses a renamed type left to its new ones (QA-60). */
+  afterSave: async (saved, record, { toast } = {}) => {
+    const moves = typeMoves(record, saved, segments);
+    if (moves.length === 0) return;
+    const result = await redirectMoves(
+      moves,
+      `“${saved.name}” moved (Admin → Master data → Property types).`
+    );
+    const { info, error } = describeMoves(result);
+    if (info) toast?.info(info);
+    if (error) toast?.error(error);
   },
 
   renderOrderItem: (row) => (
@@ -609,6 +695,8 @@ export const amenitiesConfig = ({ onMutated } = {}) => ({
   slugBase: '',
   defaultSort: { field: 'category', order: 'asc' },
   orderable: true,
+  // A new one goes after the last, not first on the site (QA-60).
+  appendNew: true,
   activeToggle: true,
   usageGuard: true,
 
@@ -743,6 +831,8 @@ export const badgesConfig = ({ onMutated } = {}) => ({
   slugBase: '',
   defaultSort: { field: 'order', order: 'asc' },
   orderable: true,
+  // A new one goes after the last, not first on the site (QA-60).
+  appendNew: true,
   activeToggle: true,
   usageGuard: true,
 
@@ -877,6 +967,8 @@ export const banksConfig = ({ onMutated } = {}) => ({
   slugBase: '',
   defaultSort: { field: 'order', order: 'asc' },
   orderable: true,
+  // A new one goes after the last, not first on the site (QA-60).
+  appendNew: true,
   activeToggle: true,
   // A bank is referenced by nothing, so a delete can never strand a record.
   usageGuard: false,
@@ -956,6 +1048,7 @@ export const banksConfig = ({ onMutated } = {}) => ({
       name: 'interestRateMin',
       type: 'number',
       label: 'Interest rate from (% p.a.)',
+      messageLabel: 'lowest interest rate',
       required: true,
       min: 5,
       max: 20,
@@ -966,6 +1059,7 @@ export const banksConfig = ({ onMutated } = {}) => ({
       name: 'interestRateMax',
       type: 'number',
       label: 'Interest rate up to (% p.a.)',
+      messageLabel: 'highest interest rate',
       required: true,
       min: 5,
       max: 20,
@@ -982,6 +1076,7 @@ export const banksConfig = ({ onMutated } = {}) => ({
       name: 'maxTenureYears',
       type: 'number',
       label: 'Maximum tenure (years)',
+      messageLabel: 'maximum tenure',
       required: true,
       min: 5,
       max: 40,
@@ -991,13 +1086,28 @@ export const banksConfig = ({ onMutated } = {}) => ({
       name: 'maxLtvPercent',
       type: 'number',
       label: 'Maximum funding (% of value)',
+      messageLabel: 'maximum funding',
       required: true,
       min: 50,
       max: 95,
       half: true,
     },
-    { name: 'minLoanAmount', type: 'number', label: 'Minimum loan (₹)', min: 0, half: true },
-    { name: 'maxLoanAmount', type: 'number', label: 'Maximum loan (₹)', min: 0, half: true },
+    {
+      name: 'minLoanAmount',
+      type: 'number',
+      label: 'Minimum loan (₹)',
+      messageLabel: 'minimum loan',
+      min: 0,
+      half: true,
+    },
+    {
+      name: 'maxLoanAmount',
+      type: 'number',
+      label: 'Maximum loan (₹)',
+      messageLabel: 'maximum loan',
+      min: 0,
+      half: true,
+    },
     {
       name: 'features',
       type: 'tags',

@@ -236,3 +236,26 @@ describe('SlugField', () => {
     });
   });
 });
+
+describe('SlugField — what it says it follows (QA-60)', () => {
+  it('names the field it follows', () => {
+    renderWith(<SlugField value="" source="" sourceLabel="name" base="" onChange={() => {}} />);
+    expect(screen.getByText('Generated from the name — unlock to edit.')).toBeInTheDocument();
+  });
+
+  it('says why a name with no Latin letter or digit makes no URL', async () => {
+    renderWith(<Harness title="北京 नगर" />);
+    expect(
+      await screen.findByText(/has no Latin letters or numbers to make a URL from/)
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('value')).toHaveTextContent('');
+  });
+
+  it('draws no address in front of a slug that has none', () => {
+    renderWith(<SlugField value="lift" source="Lift" base="" onChange={() => {}} />);
+    const box = screen.getByRole('textbox');
+    // The empty base still took the row's gap and pushed the box off its column.
+    // eslint-disable-next-line testing-library/no-node-access -- the layout is the point
+    expect(box.previousElementSibling).toBeNull();
+  });
+});
