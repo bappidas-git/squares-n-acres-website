@@ -157,6 +157,11 @@ const WRITABLE = {
   adminTeam: { path: '/admin/team', schema: 'teamMember.create', patch: { order: 9 } },
   adminPartners: { path: '/admin/partners', schema: 'partner.create', patch: { order: 9 } },
   adminPages: { path: '/admin/pages', schema: 'page.create', patch: { order: 9 } },
+  adminHeaderMenus: {
+    path: '/admin/header-menus',
+    schema: 'headerMenu.create',
+    patch: { isActive: true },
+  },
   adminJobs: { path: '/admin/jobs', schema: 'job.create', patch: { isActive: true } },
   adminMedia: {
     path: '/admin/media',

@@ -16,6 +16,7 @@ export { default as articleService } from './articleService';
 export { default as authService } from './authService';
 export { default as careerService } from './careerService';
 export { default as dashboardService } from './dashboardService';
+export { default as headerMenuService } from './headerMenuService';
 export { default as leadService } from './leadService';
 export { default as masterDataService } from './masterDataService';
 export { default as mediaService } from './mediaService';

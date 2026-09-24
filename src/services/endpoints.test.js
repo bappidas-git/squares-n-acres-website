@@ -44,6 +44,9 @@ const PUBLIC_PATHS = [
   'GET /partners',
   'GET /pages',
   'GET /pages/slug/:slug',
+  // Not in §5.14: the header's menus became records (QA-56; see
+  // docs/API_CONTRACT.md).
+  'GET /header-menus',
   'GET /jobs',
   'GET /jobs/slug/:slug',
   'POST /jobs/:id/apply',
@@ -126,6 +129,8 @@ const ADMIN_CRUD_RESOURCES = [
   ['/admin/team', true],
   ['/admin/partners', false],
   ['/admin/pages', true],
+  // QA-56 — Admin → Pages → Header menu.
+  ['/admin/header-menus', true],
   ['/admin/jobs', true],
   ['/admin/redirects', false],
   ['/admin/media', false],

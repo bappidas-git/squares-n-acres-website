@@ -1,11 +1,11 @@
 # End-to-end suite (Playwright)
 
-Ten specs that drive the real application in a real browser, against the real
-mock API: **login**, **create a property**, **view a property**, **submit a
-lead**, **filter the listing** and **shortlist** (prompt 44), plus **publish an
-article**, **the SEO panel**, **publish a CMS page** and **site settings**
-(prompt 45). They are the only tests in the repository that exercise the
-browser; everything else is Jest in jsdom.
+Eleven specs that drive the real application in a real browser, against the
+real mock API: **login**, **create a property**, **view a property**, **submit
+a lead**, **filter the listing** and **shortlist** (prompt 44), plus **publish
+an article**, **the SEO panel**, **publish a CMS page** and **site settings**
+(prompt 45), and **the header menus** (QA-56). They are the only tests in the
+repository that exercise the browser; everything else is Jest in jsdom.
 
 ```
 npm run e2e                       # the whole suite, headless

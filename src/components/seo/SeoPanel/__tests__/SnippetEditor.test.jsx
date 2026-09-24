@@ -118,4 +118,20 @@ describe('SnippetEditor', () => {
     expect(screen.getByText(/the site template gives/i)).toBeInTheDocument();
     expect(screen.getByText('Lakeview Heights | Squares N Acres')).toBeInTheDocument();
   });
+
+  it('shows an address that never changes as it is (QA-56)', () => {
+    render(
+      {},
+      {
+        entity: { title: 'Home', slug: 'home' },
+        api: { entityType: 'page', fixedPath: '/', setSlug: jest.fn() },
+      }
+    );
+
+    const permalink = screen.getByRole('textbox', { name: 'Permalink' });
+    expect(permalink).toHaveValue('/');
+    expect(permalink).toHaveAttribute('readonly');
+    expect(screen.queryByDisplayValue('home')).toBeNull();
+    expect(screen.getByText('This page’s address is fixed.')).toBeInTheDocument();
+  });
 });

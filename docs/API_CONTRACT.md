@@ -64,8 +64,8 @@ Query params `page` (1-based, default 1), `perPage` (default 12 public / 20 admi
 #### Reordering — `PATCH /admin/<resource>/:id { order }` (prompt 17, D98)
 
 Collections with an `order` field (FAQs, testimonials, team members, partners, localities,
-property types, amenities, badges, banks, pages, article categories) are reordered with **one
-write per move**: a `PATCH` on the record that moved, carrying the position it landed on.
+property types, amenities, badges, banks, pages, header menus, article categories) are
+reordered with **one write per move**: a `PATCH` on the record that moved, carrying the position it landed on.
 
 The client reads that position off the row the moved record was dropped on, in the list as it
 is on screen — which may be filtered, sorted and paginated:
@@ -94,7 +94,7 @@ the transaction that writes the moved row.
 
 ### 5.9 Slugs
 
-Every public entity has a unique `slug` (lowercase, `[a-z0-9-]`, ≤ 75 chars). **CMS pages are the one exception:** a page's slug is a URL **path** — one or more slug segments joined by `/`, ≤ 120 chars (`buyer-assistance/home-loan`, §6.10) — because the public route serves the page at exactly that path. Each segment is slugified on its own, and `seo.slug` follows the same rule. Lookup: `GET /<resource>/slug/:slug`. Check: `GET /admin/<resource>/check-slug?slug=&excludeId=` → `{ data: { available: true|false, suggestion } }`. The API auto-generates a slug from the title when the client sends an empty slug and de-duplicates with `-2`, `-3`… A duplicate explicit slug → 409 with `errors.slug`. The entity `slug` and `seo.slug` are always kept identical by the API. **A page is derived from its title like everything else** — an empty `slug` on `POST /admin/pages` is a request to derive one, not a 422 (prompt 45, MB-03). **A page's slug may not begin with a segment a static route owns** — `properties`, `buy`, `rent`, `lease`, `commercial`, `plots`, `localities`, `builders`, `insights`, `careers`, `shortlist`, `admin` (`RESERVED_PATH_PREFIXES` in `src/routes/paths.js`): the router answers those paths first, so a page stored under one exists and can never be opened (D11). A create, or an update that *changes* the slug into a reserved prefix, answers **422** with `errors.slug`; a page already living under one keeps its slug, which is how the seeded `insights/real-estate-awareness` page stays where it is (prompt 45, MB-04).
+Every public entity has a unique `slug` (lowercase, `[a-z0-9-]`, ≤ 75 chars). **CMS pages are the one exception:** a page's slug is a URL **path** — one or more slug segments joined by `/`, ≤ 120 chars (`buyer-assistance/home-loan`, §6.10) — because the public route serves the page at exactly that path. Each segment is slugified on its own, and `seo.slug` follows the same rule. Lookup: `GET /<resource>/slug/:slug`. Check: `GET /admin/<resource>/check-slug?slug=&excludeId=` → `{ data: { available: true|false, suggestion } }`. The API auto-generates a slug from the title when the client sends an empty slug and de-duplicates with `-2`, `-3`… A duplicate explicit slug → 409 with `errors.slug`. The entity `slug` and `seo.slug` are always kept identical by the API. **A page is derived from its title like everything else** — an empty `slug` on `POST /admin/pages` is a request to derive one, not a 422 (prompt 45, MB-03). **A page's slug may not begin with a segment a static route owns** — `properties`, `buy`, `rent`, `lease`, `commercial`, `plots`, `localities`, `builders`, `insights`, `careers`, `shortlist`, `admin` (`RESERVED_PATH_PREFIXES` in `src/routes/paths.js`): the router answers those paths first, so a page stored under one exists and can never be opened (D11). A create, or an update that *changes* the slug into a reserved prefix, answers **422** with `errors.slug`; a page already living under one keeps its slug, which is how the seeded `insights/real-estate-awareness` page stays where it is (prompt 45, MB-04). **A protected page keeps its slug** (QA-56): the built-in pages and the written pages the site's own templates link to by address (`src/config/pages.js`) answer **422** on `slug` to a write that changes it, and an empty slug on their `PUT` keeps the stored one rather than deriving a new one. The `home` record's public address is the site root, `/`, not `/home`.
 
 ### 5.10 Public vs admin reads
 
@@ -176,8 +176,9 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 | GET    | `/testimonials`         | public    | Active testimonials                                                      | `page`, `perPage`, `sort`, `order`, `q`, `isFeatured`, `ids`                               | —                       | `TestimonialList` | —                                                                                                                                                                                                           |
 | GET    | `/team`                 | public    | Team members shown on the About page                                     | `page`, `perPage`, `sort`, `order`, `q`, `showOnAbout`, `ids`                              | —                       | `TeamMemberList`  | —                                                                                                                                                                                                           |
 | GET    | `/partners`             | public    | Partner logos, optionally filtered by category                           | `page`, `perPage`, `sort`, `order`, `q`, `category`                                        | —                       | `PartnerList`     | —                                                                                                                                                                                                           |
-| GET    | `/pages`                | public    | Published pages that belong in the header or footer navigation           | `showInHeader`, `showInFooter`, `page`, `perPage`                                          | —                       | `PageNavList`     | Unpaginated unless `page`/`perPage` are given; returns `{slug,title,headerMenu,footerColumn,order}` only                                                                                                    |
+| GET    | `/pages`                | public    | Published pages that belong in the header or footer navigation           | `showInHeader`, `showInFooter`, `page`, `perPage`                                          | —                       | `PageNavList`     | Unpaginated unless `page`/`perPage` are given; returns `{slug,title,headerMenu,headerSubmenu,footerColumn,order}` only                                                                                                    |
 | GET    | `/pages/slug/:slug`     | public    | Published CMS page by slug; a matching preview token also returns drafts | `preview`                                                                                  | —                       | `Page`            | —                                                                                                                                                                                                           |
+| GET    | `/header-menus` | public | The header's menus, left to right: the active ones, with their submenus and links (QA-56) | `page`, `perPage` | — | `HeaderMenuList` | Unpaginated unless `page`/`perPage` are given; hidden menus are left out; `builtIn` marks the generated Buy, Rent and Commercial |
 | GET    | `/jobs`                 | public    | Open job postings                                                        | `page`, `perPage`, `sort`, `order`, `q`, `department`                                      | —                       | `JobList`         | —                                                                                                                                                                                                           |
 | GET    | `/jobs/slug/:slug`      | public    | Job posting by slug                                                      | —                                                                                          | —                       | `Job`             | —                                                                                                                                                                                                           |
 | POST   | `/jobs/:id/apply`       | public    | Apply for a job posting; honeypot and rate limited                       | —                                                                                          | `jobApplication.create` | `JobApplication`  | Creates a `jobApplications` record; honeypot; rate limited 10/min per IP                                                                                                                                    |
@@ -636,12 +637,20 @@ none; `ipAddress` and `userAgent` are stored but returned to admins only.
 | GET    | `/admin/pages`                         | admin · manager | List pages for the admin table                                       | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `status`, `template`                       | —                      | `PageList`                 | —                                                                |
 | POST   | `/admin/pages`                         | admin · manager | Create a page                                                        | —                                                                                                      | `page.create`          | `Page`                     | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
 | GET    | `/admin/pages/:id`                     | admin · manager | Read one page with every admin field                                 | `withUsage`                                                                                            | —                      | `Page`                     | —                                                                |
-| PUT    | `/admin/pages/:id`                     | admin · manager | Replace a page with the full record from the form                    | —                                                                                                      | `page.update`          | `Page`                     | Replaces the record; regenerates the slug when it changed        |
+| PUT    | `/admin/pages/:id` | admin · manager | Replace a page with the full record from the form | — | `page.update` | `Page` | Replaces the record; regenerates the slug when it changed — never for a protected page (QA-56) |
 | PATCH  | `/admin/pages/:id`                     | admin · manager | Update the given fields of a page (toggles, order, SEO panel)        | —                                                                                                      | `page.patch`           | `Page`                     | —                                                                |
-| DELETE | `/admin/pages/:id`                     | admin · manager | Delete a page; 409 when it is still in use                           | —                                                                                                      | —                      | `Null`                     | 409 with `data.usedBy` when the record is still referenced       |
-| POST   | `/admin/pages/bulk`                    | admin · manager | Apply one action to several pages                                    | —                                                                                                      | `bulk`                 | `BulkResult`               | activate · deactivate · delete (plus the resource’s own actions) |
+| DELETE | `/admin/pages/:id` | admin · manager | Delete a page; 409 for a protected page (QA-56) | — | — | `Null` | 409 with the reason in `message` for the home page, a built-in page or a page the site links to by address |
+| POST   | `/admin/pages/bulk` | admin · manager | Apply one action to several pages | — | `bulk` | `BulkResult` | publish · unpublish · delete; refused whole — 409 for a delete, 422 for an unpublish — with `data.refused[] { id, title, reason }` when a selected page cannot take the action (QA-56) |
 | GET    | `/admin/pages/check-slug`              | admin · manager | Check whether a page slug is free and suggest an alternative         | `slug`, `excludeId`                                                                                    | —                      | `SlugCheck`                | —                                                                |
 | GET    | `/admin/pages/:id/preview-token`       | admin · manager | A 24-hour preview token and URL for an unpublished page              | —                                                                                                      | —                      | `PreviewToken`             | Issues a token valid for 24 hours                                |
+| GET    | `/admin/header-menus` | admin · manager | List the header's menus, hidden ones included (QA-56) | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids` | — | `HeaderMenuList` | — |
+| POST   | `/admin/header-menus` | admin · manager | Add a menu of pages and links | — | `headerMenu.create` | `HeaderMenu` | Derives the slug from the name and each submenu's slug from its name; `source` is always `custom` |
+| GET    | `/admin/header-menus/:id` | admin · manager | Read one menu | — | — | `HeaderMenu` | — |
+| PUT    | `/admin/header-menus/:id` | admin · manager | Replace a menu with the full record from the dialog | — | `headerMenu.update` | `HeaderMenu` | Keeps the slug and the `source`; a removed submenu moves its pages into the menu's own list |
+| PATCH  | `/admin/header-menus/:id` | admin · manager | Update the given fields of a menu (shown/hidden, order) | — | `headerMenu.patch` | `HeaderMenu` | An `order` PATCH renumbers the menus `1..n` (§5.8) |
+| DELETE | `/admin/header-menus/:id` | admin · manager | Delete a menu of pages and links; 409 for a generated one | — | — | `Null` | Takes the menu's pages out of the header (`showInHeader:false`, `headerMenu:null`); they stay published |
+| POST   | `/admin/header-menus/bulk` | admin · manager | Apply one action to several menus | — | `bulk` | `BulkResult` | activate · deactivate · delete |
+| GET    | `/admin/header-menus/check-slug` | admin · manager | Check whether a menu slug is free and suggest an alternative | `slug`, `excludeId` | — | `SlugCheck` | — |
 | GET    | `/admin/jobs`                          | admin · manager | List job postings for the admin table                                | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `department`                               | —                      | `JobList`                  | —                                                                |
 | POST   | `/admin/jobs`                          | admin · manager | Create a job posting                                                 | —                                                                                                      | `job.create`           | `Job`                      | Generates and de-duplicates the slug; mirrors it into `seo.slug` |
 | GET    | `/admin/jobs/:id`                      | admin · manager | Read one job posting with every admin field                          | `withUsage`                                                                                            | —                      | `Job`                      | —                                                                |
@@ -953,11 +962,25 @@ The fields of §6.9, unchanged.
 ### `Page`
 
 The fields of §6.10: `blocks[] { id, type, order, data }` with the `data` shape of the
-block type, plus `seo` and the header/footer placement flags.
+block type, plus `seo` and the header/footer placement: `showInHeader`, `headerMenu` (a
+`headerMenus` slug), `headerSubmenu` (one of that menu's `submenus[].slug`, or `null` for
+the menu's own list), `showInFooter`, `footerColumn`, `order`.
+
+**Built-in and protected pages (QA-56).** Template `system` marks a **built-in** page — one
+the site generates from its own data (`/buy`, `/localities`, `/insights/articles`…, the
+eleven of `SYSTEM_PAGES` in `src/config/pages.js`). Its name, its placement and its order
+are edited like any page's; it carries no blocks, it is always `published` (422 on
+`status`), it is never created by a client (422 on `template`) and it is never deleted. A
+**protected** page — a built-in one, or a written page the site's templates reach by
+address (`home`, `contact`, `careers`, `sell-let`, the three legal texts,
+`insights/real-estate-awareness`) — keeps its slug (§5.9) and is never deleted (409, single
+or bulk). The home record may not be redirected (422 on `seo.redirect.enabled`): its
+address is `/`. Its preview URL is `/?preview=…`. The rules and a Laravel sketch are in
+`docs/backend-notes/05_business_rules.md` → "Pages".
 
 ### `PageNavList`
 
-What the header and the footer are built from (prompt 27). Five fields per published
+What the header and the footer are built from (prompt 27). Six fields per published
 page, and never the blocks:
 
 ```jsonc
@@ -966,7 +989,8 @@ page, and never the blocks:
     {
       "slug": "buyer-assistance/home-loan",
       "title": "Home Loan Assistance",
-      "headerMenu": "buyer-assistance", // HEADER_MENUS, or null
+      "headerMenu": "buyer-assistance", // a headerMenus slug (QA-56), or null
+      "headerSubmenu": null, // one of that menu's submenus[].slug, or null
       "footerColumn": "services", // FOOTER_COLUMNS, or null
       "order": 7,
     },
@@ -978,6 +1002,43 @@ page, and never the blocks:
 `showInHeader=true` and `showInFooter=true` narrow the list; without either it is every
 published page's placement. Drafts never appear. A menu arrives whole, so the list is
 unpaginated unless `page`/`perPage` ask otherwise.
+
+### `HeaderMenu` / `HeaderMenuList`
+
+One menu of the header (QA-56). The header is built from these, left to right by `order`,
+and from the pages placed in each (`PageNavList`):
+
+```jsonc
+{
+  "id": 9,
+  "slug": "company", // kept once it exists: pages are filed under it
+  "name": "Company", // the label the bar shows; unique in the header, any case
+  "href": null, // where the label itself goes: "/path" or "https://…"; null opens the first entry
+  "source": "custom", // custom | buy | rent | commercial — the last three are generated
+  "submenus": [{ "slug": "who-we-are", "name": "Who we are" }], // the panel's groups
+  "links": [
+    {
+      "label": "Under ₹50 lakh",
+      "href": "/buy?maxPrice=5000000",
+      "submenu": null, // one of submenus[].slug, or null for the menu's own list
+      "order": 1,
+      "newTab": false,
+    },
+  ],
+  "isActive": true, // a hidden menu keeps its pages and links
+  "order": 9,
+  "builtIn": false, // read-only: true for a generated menu
+  "createdAt": "2026-09-24T06:00:00.000Z",
+  "updatedAt": "2026-09-24T06:00:00.000Z",
+}
+```
+
+A generated menu (`source` `buy`, `rent`, `commercial`) draws the columns master data gives
+it and takes pages and links after them; it is never created by a client and never deleted
+(409), only hidden. A menu keeps its `slug` and its `source` (422). A submenu's slug is
+derived from its name when sent empty and is unique within its menu, as is its name; a
+link's `submenu` names one of them or none (422 per index). Deleting a menu takes its pages
+out of the header; removing a submenu moves its pages into the menu's own list.
 
 ### `Job`, `JobApplication`
 

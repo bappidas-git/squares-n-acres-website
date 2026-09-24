@@ -41,12 +41,18 @@ export default function Header() {
   const { scrolled } = useScrollDirection();
   const { settings } = useSiteSettings();
   const { propertyTypes, localities } = useMasterData();
-  const { header: pages } = useNavPages();
+  const { header: pages, menus: menuRecords } = useNavPages();
   const { openLeadModal, leadTriggerProps } = useLeadCapture();
 
   const [searchOpen, setSearchOpen] = useState(false);
 
-  const { menus, actions } = buildHeaderNav({ propertyTypes, localities, pages, settings });
+  const { menus, actions } = buildHeaderNav({
+    menus: menuRecords,
+    propertyTypes,
+    localities,
+    pages,
+    settings,
+  });
 
   // Measured rather than assumed: `width === 'md'` folded the tail into "More"
   // below 1200px and trusted everything above it to fit, and nothing above it

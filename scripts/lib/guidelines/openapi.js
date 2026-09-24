@@ -35,6 +35,7 @@ const SHAPE_COLLECTIONS = {
   TeamMember: 'teamMembers',
   Partner: 'partners',
   Page: 'pages',
+  HeaderMenu: 'headerMenus',
   Job: 'jobOpenings',
   JobApplication: 'jobApplications',
   Media: 'media',

@@ -65,6 +65,22 @@ const pages = [
     footerColumn: 'services',
     order: 7,
   },
+  // Two built-in pages (QA-56): the Insights menu's first two entries are
+  // pages placed in it now, not links spelled out in code.
+  {
+    slug: 'insights/articles',
+    title: 'Articles',
+    headerMenu: 'insights',
+    footerColumn: 'insights',
+    order: 10,
+  },
+  {
+    slug: 'insights/faqs',
+    title: 'FAQs',
+    headerMenu: 'insights',
+    footerColumn: 'insights',
+    order: 11,
+  },
   {
     slug: 'insights/real-estate-awareness',
     title: 'Real Estate Awareness',
@@ -239,17 +255,16 @@ describe('buildHeaderMenus', () => {
     expect(hrefs(menuByKey(menus, 'company').columns[0].links)).toEqual(['/about']);
   });
 
-  it('keeps the three insight destinations and does not repeat a CMS page', () => {
+  it('builds Insights from the pages placed in it, the built-in ones among them (QA-56)', () => {
     const insights = menuByKey(menus, 'insights');
-    const links = hrefs(insights.columns[0].links);
 
-    expect(links.slice(0, 3)).toEqual([
+    expect(hrefs(insights.columns[0].links)).toEqual([
       '/insights/articles',
       '/insights/faqs',
       '/insights/real-estate-awareness',
     ]);
-    // The awareness CMS page points at the same URL as the static entry.
-    expect(links).toHaveLength(3);
+    // The label goes to the articles, as it always has.
+    expect(insights.to).toBe('/insights/articles');
   });
 
   it('drops a menu no page belongs to (§7)', () => {
@@ -305,6 +320,173 @@ describe('collapseMenus', () => {
   });
 });
 
+describe('buildHeaderMenus from the headerMenus collection (QA-56)', () => {
+  const record = (slug, name, extra = {}) => ({
+    slug,
+    name,
+    href: null,
+    source: 'custom',
+    submenus: [],
+    links: [],
+    isActive: true,
+    order: 1,
+    ...extra,
+  });
+
+  it('draws the shipped header when the collection is not there to read', () => {
+    expect(
+      buildHeaderMenus({ menus: null, propertyTypes, localities, pages }).map((menu) => menu.key)
+    ).toEqual([
+      'buy',
+      'rent',
+      'commercial',
+      'plots',
+      'localities',
+      'builders',
+      'buyer-assistance',
+      'insights',
+      'company',
+      'contact',
+    ]);
+  });
+
+  it('draws the menus an editor keeps, by their order, under their names, and skips a hidden one', () => {
+    const menus = buildHeaderMenus({
+      menus: [
+        record('contact', 'Talk to us', { href: '/contact', order: 1 }),
+        record('buy', 'Buy a home', { source: 'buy', href: '/buy', order: 2 }),
+        record('plots', 'Plots', { href: '/plots', order: 3, isActive: false }),
+      ],
+      propertyTypes,
+      localities,
+      pages,
+    });
+
+    expect(menus.map((menu) => [menu.key, menu.label])).toEqual([
+      ['contact', 'Talk to us'],
+      ['buy', 'Buy a home'],
+    ]);
+    // A menu with nothing in its panel is a plain link.
+    expect(menus[0]).toEqual({ key: 'contact', label: 'Talk to us', to: '/contact' });
+    // A generated menu keeps its own columns.
+    expect(menus[1].columns.map((column) => column.key)).toEqual([
+      'status',
+      'type',
+      'budget',
+      'localities',
+    ]);
+  });
+
+  it('builds a new menu from the pages and links placed in it, submenu by submenu', () => {
+    const menu = record('resources', 'Resources', {
+      submenus: [
+        { slug: 'guides', name: 'Guides' },
+        { slug: 'tools', name: 'Tools' },
+      ],
+      links: [
+        {
+          label: 'EMI calculator',
+          href: '/buyer-assistance/home-loan#emi',
+          submenu: 'tools',
+          order: 1,
+        },
+        {
+          label: 'RERA portal',
+          href: 'https://rera.karnataka.gov.in',
+          submenu: 'tools',
+          order: 2,
+          newTab: true,
+        },
+        { label: 'Budget homes', href: '/buy?maxPrice=5000000', submenu: null, order: 1 },
+      ],
+    });
+    const placed = [
+      { slug: 'why-us', title: 'Why us', headerMenu: 'resources', headerSubmenu: null, order: 3 },
+      {
+        slug: 'first-home',
+        title: 'First home',
+        headerMenu: 'resources',
+        headerSubmenu: 'guides',
+        order: 2,
+      },
+      {
+        slug: 'nri-guide',
+        title: 'NRI guide',
+        headerMenu: 'resources',
+        headerSubmenu: 'guides',
+        order: 1,
+      },
+    ];
+
+    const [resources] = buildHeaderMenus({ menus: [menu], pages: placed });
+
+    expect(resources.columns.map((column) => [column.title, hrefs(column.links)])).toEqual([
+      ['Resources', ['/why-us', '/buy?maxPrice=5000000']],
+      ['Guides', ['/nri-guide', '/first-home']],
+      ['Tools', ['/buyer-assistance/home-loan#emi', 'https://rera.karnataka.gov.in']],
+    ]);
+    expect(resources.columns[2].links[1]).toMatchObject({ label: 'RERA portal', newTab: true });
+    // With no address of its own, the label opens the first entry.
+    expect(resources.to).toBe('/why-us');
+  });
+
+  it('adds the pages placed in a generated menu after its own columns', () => {
+    const buy = record('buy', 'Buy', {
+      source: 'buy',
+      href: '/buy',
+      submenus: [{ slug: 'guides', name: 'Buying guides' }],
+    });
+    const placed = [
+      {
+        slug: 'nri-guide',
+        title: 'NRI guide',
+        headerMenu: 'buy',
+        headerSubmenu: 'guides',
+        order: 1,
+      },
+      { slug: 'why-us', title: 'Why us', headerMenu: 'buy', headerSubmenu: null, order: 1 },
+    ];
+
+    const [menu] = buildHeaderMenus({ menus: [buy], propertyTypes, localities, pages: placed });
+
+    expect(menu.columns.map((column) => column.title)).toEqual([
+      'By status',
+      'By type',
+      'By budget',
+      'Popular localities',
+      'More',
+      'Buying guides',
+    ]);
+  });
+
+  it('keeps a page whose submenu is gone in the menu’s own list, and lists a destination once', () => {
+    const company = record('company', 'Company', { submenus: [{ slug: 'team', name: 'Team' }] });
+    const placed = [
+      {
+        slug: 'about',
+        title: 'About Us',
+        headerMenu: 'company',
+        headerSubmenu: 'removed',
+        order: 1,
+      },
+      { slug: 'careers', title: 'Careers', headerMenu: 'company', headerSubmenu: 'team', order: 2 },
+    ];
+    const [menu] = buildHeaderMenus({
+      menus: [{ ...company, links: [{ label: 'About', href: '/about', submenu: 'team' }] }],
+      pages: placed,
+    });
+
+    expect(menu.columns.map((column) => [column.title, hrefs(column.links)])).toEqual([
+      ['Company', ['/about']],
+      ['Team', ['/careers']],
+    ]);
+  });
+
+  it('leaves out a menu with nothing in it and nowhere to go (§7)', () => {
+    expect(buildHeaderMenus({ menus: [record('empty', 'Empty')], pages })).toEqual([]);
+  });
+});
+
 describe('buildHeaderActions', () => {
   it('offers call, WhatsApp and the CTA from settings', () => {
     const actions = buildHeaderActions({ settings });
@@ -337,17 +519,60 @@ describe('buildHeaderActions', () => {
 });
 
 describe('buildFooterColumns', () => {
-  it("puts the editor's columns first and tops the row up", () => {
+  it("puts the editor's columns first, then every column pages were placed in, then tops the row up", () => {
     const columns = buildFooterColumns({ propertyTypes, localities, pages, settings });
 
     expect(columns.map((column) => column.title)).toEqual([
       'Buy',
       'Services',
-      'Buy by type',
-      'Popular localities',
+      'Company',
       'Insights',
+      'Buy by type',
     ]);
     expect(columns).toHaveLength(FOOTER_COLUMN_LIMIT);
+  });
+
+  // QA-56: "Company" fell off the end of a full row and "Services" and
+  // "Insights" were never drawn, so a page the Pages screen listed as "in the
+  // footer" was nowhere in it.
+  it('shows every page placed in the footer, in a settings column of the same title if there is one', () => {
+    const columns = buildFooterColumns({ propertyTypes, localities, pages, settings });
+    const byTitle = (title) => columns.find((column) => column.title === title);
+
+    expect(hrefs(byTitle('Services').links)).toEqual([
+      'https://example.com/x.pdf',
+      '/buyer-assistance/home-loan',
+    ]);
+    // The legal texts have the line under the copyright; they are not listed twice.
+    expect(hrefs(byTitle('Company').links)).toEqual(['/about']);
+    expect(hrefs(byTitle('Insights').links)).toEqual([
+      '/insights/articles',
+      '/insights/faqs',
+      '/insights/real-estate-awareness',
+    ]);
+  });
+
+  it('shows the placed columns even past the limit, and adds generated ones only into room left', () => {
+    const crowded = {
+      footer: {
+        columns: ['One', 'Two', 'Three', 'Four', 'Five'].map((title) => ({
+          title,
+          links: [{ label: title, href: `/${title.toLowerCase()}` }],
+        })),
+      },
+    };
+    const columns = buildFooterColumns({ propertyTypes, localities, pages, settings: crowded });
+
+    expect(columns.map((column) => column.title)).toEqual([
+      'One',
+      'Two',
+      'Three',
+      'Four',
+      'Five',
+      'Company',
+      'Services',
+      'Insights',
+    ]);
   });
 
   it('marks an http link external and leaves an internal path alone', () => {
@@ -356,21 +581,20 @@ describe('buildFooterColumns', () => {
     expect(columns[1].links[0]).toMatchObject({ external: true });
   });
 
-  it('generates the whole footer when settings carry no columns', () => {
+  it('builds the whole footer from the data when settings carry no columns', () => {
     const columns = buildFooterColumns({ propertyTypes, localities, pages });
 
     expect(columns.map((column) => column.key)).toEqual([
+      'pages-company',
+      'pages-services',
+      'pages-insights',
       'buy-by-type',
       'popular-localities',
-      'insights',
-      'company',
     ]);
-    expect(hrefs(columns[3].links)).toEqual(['/about', '/privacy-policy', '/disclaimer']);
   });
 
   it('leaves out a column with nothing in it', () => {
-    const columns = buildFooterColumns({ pages: [] });
-    expect(columns.map((column) => column.key)).toEqual(['insights']);
+    expect(buildFooterColumns({ pages: [] })).toEqual([]);
   });
 });
 

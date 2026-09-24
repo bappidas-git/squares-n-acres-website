@@ -17,6 +17,7 @@ const propertySchema = require('../../src/services/schemas/property');
 const leadSchema = require('../../src/services/schemas/lead');
 const articleSchema = require('../../src/services/schemas/article');
 const pageSchema = require('../../src/services/schemas/page');
+const headerMenuSchema = require('../../src/services/schemas/headerMenu');
 const masterData = require('../../src/services/schemas/masterData');
 const settingsSchema = require('../../src/services/schemas/settings');
 const jobApplicationSchema = require('../../src/services/schemas/jobApplication');
@@ -467,6 +468,31 @@ const pages = {
   fields: { ...id, ...pageSchema.create, ...timestamps },
 };
 
+/**
+ * The header's menus, left to right (QA-56). A page names one by its slug in
+ * `headerMenu`, and one of its submenus by `headerSubmenu`.
+ */
+const headerMenus = {
+  collection: 'headerMenus',
+  slugField: 'slug',
+  searchable: ['name', 'slug'],
+  sortable: ['order', 'name'],
+  defaultSort: { field: 'order', order: 'asc' },
+  publicScope: { isActive: true },
+  publicOmit: [],
+  fields: {
+    ...id,
+    ...headerMenuSchema.create,
+    builtIn: {
+      type: 'bool',
+      read: true,
+      default: false,
+      note: 'buy, rent and commercial: generated from master data, never deleted',
+    },
+    ...timestamps,
+  },
+};
+
 /* ------------------------------------------------------------------ *
  * Careers
  * ------------------------------------------------------------------ */
@@ -684,6 +710,7 @@ const MODELS = {
   teamMembers,
   partners,
   pages,
+  headerMenus,
   jobOpenings,
   jobApplications,
   media,

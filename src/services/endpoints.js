@@ -677,6 +677,26 @@ const pages = {
   },
 };
 
+/**
+ * The header's menus (QA-56): the bar is built from these and from the pages
+ * placed in them (`pages.list?showInHeader=true`), so it is a collection an
+ * editor manages rather than a list in `config/navigation.js`.
+ */
+const headerMenus = {
+  list: {
+    key: 'headerMenus.list',
+    method: 'GET',
+    path: '/header-menus',
+    auth: 'public',
+    module: 'content',
+    description: 'The active header menus, left to right, with their submenus and links',
+    query: { page: 'int', perPage: 'int' },
+    body: null,
+    response: 'HeaderMenuList',
+    example: 1,
+  },
+};
+
 const jobs = {
   list: {
     key: 'jobs.list',
@@ -1405,6 +1425,19 @@ const adminPages = {
   },
 };
 
+const adminHeaderMenus = adminResource({
+  group: 'adminHeaderMenus',
+  path: '/admin/header-menus',
+  module: 'content',
+  singular: 'header menu',
+  plural: 'header menus',
+  schema: 'headerMenu',
+  response: 'HeaderMenu',
+  // A deleted menu takes its pages out of the header rather than refusing
+  // (QA-56), so there is no usage to report.
+  withUsage: false,
+});
+
 const adminJobs = adminResource({
   group: 'adminJobs',
   path: '/admin/jobs',
@@ -1699,6 +1732,7 @@ const endpoints = {
   team,
   partners,
   pages,
+  headerMenus,
   jobs,
   leads,
   newsletter,
@@ -1727,6 +1761,7 @@ const endpoints = {
   adminTeam,
   adminPartners,
   adminPages,
+  adminHeaderMenus,
   adminJobs,
   adminJobApplications,
   adminNewsletterSubscribers,

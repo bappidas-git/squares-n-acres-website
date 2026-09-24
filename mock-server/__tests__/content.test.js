@@ -1037,7 +1037,7 @@ describe('pages', () => {
     });
   });
 
-  it('lists the header and footer pages with the five fields a link needs', async () => {
+  it('lists the header and footer pages with the six fields a link needs', async () => {
     await withServer(async ({ request }) => {
       const header = await request('GET', '/pages?showInHeader=true');
 
@@ -1047,6 +1047,7 @@ describe('pages', () => {
       assert.deepEqual(Object.keys(header.body.data[0]).sort(), [
         'footerColumn',
         'headerMenu',
+        'headerSubmenu',
         'order',
         'slug',
         'title',
@@ -1179,6 +1180,490 @@ describe('pages', () => {
 });
 
 /* ------------------------------------------------------------------ *
+ * Protected and built-in pages, submenus, header menus (QA-56)
+ * ------------------------------------------------------------------ */
+
+/** A built-in page as the seed carries one, for the fixtures below. */
+const builtInPage = (pages, overrides = {}) => ({
+  ...pages[0],
+  id: 900,
+  slug: 'buy',
+  title: 'Buy',
+  template: 'system',
+  status: 'published',
+  blocks: [],
+  showInHeader: false,
+  headerMenu: null,
+  headerSubmenu: null,
+  showInFooter: false,
+  footerColumn: null,
+  seo: { ...pages[0].seo, slug: 'buy' },
+  ...overrides,
+});
+
+describe('protected and built-in pages (QA-56)', () => {
+  it('never deletes the home page, and deletes an ordinary page', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const refused = await request('DELETE', '/admin/pages/1', { token });
+      assert.equal(refused.status, 409);
+      assert.match(refused.body.message, /home page cannot be deleted/);
+      assert.deepEqual(refused.body.data.usedBy, []);
+
+      assert.equal((await request('DELETE', '/admin/pages/2', { token })).status, 200);
+    });
+  });
+
+  it('keeps the address of a protected page, and derives nothing over it', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const home = (await request('GET', '/admin/pages/1', { token })).body.data;
+
+      const moved = await request('PATCH', '/admin/pages/1', { token, body: { slug: 'start' } });
+      assert.equal(moved.status, 422);
+      assert.match(moved.body.errors.slug[0], /keeps its address/);
+
+      // An empty slug on a `PUT` asks for one derived from the title (§5.9);
+      // a protected page keeps its own instead.
+      const replaced = await request('PUT', '/admin/pages/1', {
+        token,
+        body: { ...home, slug: '', title: 'Welcome to the site' },
+      });
+      assert.equal(replaced.status, 200);
+      assert.equal(replaced.body.data.slug, 'home');
+      assert.equal(replaced.body.data.seo.slug, 'home');
+    });
+  });
+
+  it('keeps the template of the built-in pages to them', async () => {
+    const seed = seedWith({ pages: (pages) => pages.push(builtInPage(pages)) });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const created = await request('POST', '/admin/pages', {
+        token,
+        body: { slug: 'my-listing', title: 'My listing', template: 'system', status: 'draft' },
+      });
+      assert.equal(created.status, 422);
+      assert.ok(created.body.errors.template);
+
+      const intoSystem = await request('PATCH', '/admin/pages/2', {
+        token,
+        body: { template: 'system' },
+      });
+      assert.equal(intoSystem.status, 422);
+
+      const outOfSystem = await request('PATCH', '/admin/pages/900', {
+        token,
+        body: { template: 'standard' },
+      });
+      assert.equal(outOfSystem.status, 422);
+      assert.match(outOfSystem.body.errors.template[0], /keeps its template/);
+    });
+  });
+
+  it('keeps a built-in page live, blockless and undeletable', async () => {
+    const seed = seedWith({ pages: (pages) => pages.push(builtInPage(pages)) });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const draft = await request('PATCH', '/admin/pages/900', {
+        token,
+        body: { status: 'draft' },
+      });
+      assert.equal(draft.status, 422);
+      assert.match(draft.body.errors.status[0], /always live/);
+
+      const blocks = await request('PATCH', '/admin/pages/900', {
+        token,
+        body: { blocks: [{ type: 'richText', order: 1, data: { html: '<p>Hi</p>' } }] },
+      });
+      assert.equal(blocks.status, 422);
+      assert.ok(blocks.body.errors.blocks);
+
+      const deleted = await request('DELETE', '/admin/pages/900', { token });
+      assert.equal(deleted.status, 409);
+      assert.match(deleted.body.message, /built into the site/);
+
+      // Its name and its place in the menus are an editor's to change.
+      const renamed = await request('PATCH', '/admin/pages/900', {
+        token,
+        body: { title: 'Buy a home', showInHeader: true, headerMenu: 'company' },
+      });
+      assert.equal(renamed.status, 200);
+      assert.equal(renamed.body.data.title, 'Buy a home');
+      assert.equal(renamed.body.data.slug, 'buy');
+    });
+  });
+
+  it('refuses a bulk action whole when a selected page cannot take it, naming the pages', async () => {
+    const seed = seedWith({ pages: (pages) => pages.push(builtInPage(pages)) });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const unpublish = await request('POST', '/admin/pages/bulk', {
+        token,
+        body: { ids: [2, 900], action: 'unpublish' },
+      });
+      assert.equal(unpublish.status, 422);
+      assert.deepEqual(
+        unpublish.body.data.refused.map((row) => row.id),
+        [900]
+      );
+      // All or nothing: About Us is still live.
+      assert.equal(
+        (await request('GET', '/admin/pages/2', { token })).body.data.status,
+        'published'
+      );
+
+      const remove = await request('POST', '/admin/pages/bulk', {
+        token,
+        body: { ids: [1, 2, 900], action: 'delete' },
+      });
+      assert.equal(remove.status, 409);
+      assert.match(remove.body.message, /2 of the selected pages cannot be deleted/);
+      assert.deepEqual(remove.body.data.refused.map((row) => row.id).sort(), [1, 900]);
+      assert.equal((await request('GET', '/admin/pages/2', { token })).status, 200);
+    });
+  });
+
+  it('never lets the home page’s SEO panel redirect the site root', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const home = (await request('GET', '/admin/pages/1', { token })).body.data;
+
+      const redirected = await request('PATCH', '/admin/pages/1', {
+        token,
+        body: {
+          seo: { ...home.seo, redirect: { enabled: true, toPath: '/about', statusCode: 301 } },
+        },
+      });
+      assert.equal(redirected.status, 422);
+      assert.match(redirected.body.errors['seo.redirect.enabled'][0], /cannot be redirected/);
+
+      // Any other page may still be sent elsewhere.
+      const about = (await request('GET', '/admin/pages/2', { token })).body.data;
+      const moved = await request('PATCH', '/admin/pages/2', {
+        token,
+        body: {
+          seo: { ...about.seo, redirect: { enabled: true, toPath: '/contact', statusCode: 301 } },
+        },
+      });
+      assert.equal(moved.status, 200);
+    });
+  });
+
+  it('answers the home page’s preview at the site root', async () => {
+    resetPreviewTokens();
+
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const issued = await request('GET', '/admin/pages/1/preview-token', { token });
+
+      assert.equal(issued.status, 200);
+      assert.match(issued.body.data.url, /\/\?preview=/);
+      assert.doesNotMatch(issued.body.data.url, /\/home\?preview=/);
+    });
+  });
+});
+
+describe('page placement in the header (QA-56)', () => {
+  it('names a menu that exists, and needs one while the page is in the header', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const unknown = await request('PATCH', '/admin/pages/2', {
+        token,
+        body: { headerMenu: 'no-such-menu' },
+      });
+      assert.equal(unknown.status, 422);
+      assert.ok(unknown.body.errors.headerMenu);
+
+      const menuless = await request('PATCH', '/admin/pages/2', {
+        token,
+        body: { showInHeader: true, headerMenu: null },
+      });
+      assert.equal(menuless.status, 422);
+      assert.ok(menuless.body.errors.headerMenu);
+
+      // Any menu of the header, not only the three the enum knew.
+      const plots = await request('PATCH', '/admin/pages/2', {
+        token,
+        body: { showInHeader: true, headerMenu: 'plots' },
+      });
+      assert.equal(plots.status, 200);
+      assert.equal(plots.body.data.headerMenu, 'plots');
+    });
+  });
+
+  it('files a page under a submenu of its own menu only', async () => {
+    const seed = seedWith({
+      headerMenus: (menus) => {
+        const company = menus.find((menu) => menu.slug === 'company');
+        company.submenus = [{ slug: 'who-we-are', name: 'Who we are' }];
+      },
+    });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const foreign = await request('PATCH', '/admin/pages/2', {
+        token,
+        body: { headerMenu: 'insights', headerSubmenu: 'who-we-are' },
+      });
+      assert.equal(foreign.status, 422);
+      assert.ok(foreign.body.errors.headerSubmenu);
+
+      const filed = await request('PATCH', '/admin/pages/2', {
+        token,
+        body: { headerMenu: 'company', headerSubmenu: 'who-we-are' },
+      });
+      assert.equal(filed.status, 200);
+
+      const nav = await request('GET', '/pages?showInHeader=true');
+      assert.equal(nav.body.data.find((row) => row.slug === 'about').headerSubmenu, 'who-we-are');
+
+      // No menu, no submenu.
+      const out = await request('PATCH', '/admin/pages/2', {
+        token,
+        body: { showInHeader: false, headerMenu: null, headerSubmenu: 'who-we-are' },
+      });
+      assert.equal(out.status, 200);
+      assert.equal(out.body.data.headerSubmenu, null);
+    });
+  });
+});
+
+describe('header menus (QA-56)', () => {
+  it('answers the active menus publicly, left to right, flagging the generated ones', async () => {
+    const seed = seedWith({
+      headerMenus: (menus) => {
+        menus.find((menu) => menu.slug === 'plots').isActive = false;
+      },
+    });
+
+    await withServer({ seed }, async ({ request }) => {
+      const response = await request('GET', '/header-menus');
+
+      assert.equal(response.status, 200);
+      const slugs = response.body.data.map((menu) => menu.slug);
+      assert.deepEqual(slugs, [
+        'buy',
+        'rent',
+        'commercial',
+        'localities',
+        'builders',
+        'buyer-assistance',
+        'insights',
+        'company',
+        'contact',
+      ]);
+      assert.equal(response.body.meta.total, 9);
+      assert.equal(response.body.data[0].builtIn, true);
+      assert.equal(response.body.data.at(-1).builtIn, false);
+    });
+  });
+
+  it('creates a menu of pages and links, deriving its key and its submenus’ keys', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const created = await request('POST', '/admin/header-menus', {
+        token,
+        body: {
+          name: 'Resources',
+          // Two names, one key: the second gets a suffix.
+          submenus: [
+            { slug: '', name: 'Guides & checklists' },
+            { slug: '', name: 'Guides, checklists' },
+          ],
+          links: [{ label: 'Budget homes', href: '/buy?maxPrice=5000000', submenu: null }],
+        },
+      });
+
+      assert.equal(created.status, 201);
+      assert.equal(created.body.data.slug, 'resources');
+      assert.equal(created.body.data.source, 'custom');
+      assert.deepEqual(
+        created.body.data.submenus.map((entry) => entry.slug),
+        ['guides-checklists', 'guides-checklists-2']
+      );
+
+      const generated = await request('POST', '/admin/header-menus', {
+        token,
+        body: { name: 'Another Buy', source: 'buy' },
+      });
+      assert.equal(generated.status, 422);
+      assert.ok(generated.body.errors.source);
+    });
+  });
+
+  it('refuses a menu name the header already has, and a submenu name twice, whatever the case', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const clash = await request('POST', '/admin/header-menus', {
+        token,
+        body: { name: '  company ' },
+      });
+      assert.equal(clash.status, 422);
+      assert.match(clash.body.errors.name[0], /already has a menu called “Company”/);
+
+      // A menu keeps its own name, and may change its case.
+      const renamed = await request('PATCH', '/admin/header-menus/9', {
+        token,
+        body: { name: 'COMPANY' },
+      });
+      assert.equal(renamed.status, 200);
+
+      const groups = await request('POST', '/admin/header-menus', {
+        token,
+        body: {
+          name: 'Resources',
+          submenus: [
+            { slug: '', name: 'Guides' },
+            { slug: '', name: 'guides' },
+          ],
+        },
+      });
+      assert.equal(groups.status, 422);
+      assert.ok(groups.body.errors['submenus.1.name']);
+    });
+  });
+
+  it('refuses a submenu key twice, a link to a submenu it lacks and an address that is neither', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const twice = await request('POST', '/admin/header-menus', {
+        token,
+        body: {
+          name: 'Twice',
+          submenus: [
+            { slug: 'a', name: 'A' },
+            { slug: 'a', name: 'B' },
+          ],
+        },
+      });
+      assert.equal(twice.status, 422);
+      assert.ok(twice.body.errors['submenus.1.slug']);
+
+      const stray = await request('POST', '/admin/header-menus', {
+        token,
+        body: { name: 'Stray', links: [{ label: 'X', href: '/x', submenu: 'nope' }] },
+      });
+      assert.equal(stray.status, 422);
+      assert.ok(stray.body.errors['links.0.submenu']);
+
+      const address = await request('POST', '/admin/header-menus', {
+        token,
+        // eslint-disable-next-line no-script-url -- the address being refused
+        body: { name: 'Address', href: 'javascript:alert(1)' },
+      });
+      assert.equal(address.status, 422);
+      assert.ok(address.body.errors.href);
+    });
+  });
+
+  it('keeps a menu’s key and what it is built from', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const company = (await request('GET', '/admin/header-menus/9', { token })).body.data;
+      assert.equal(company.slug, 'company');
+
+      const rekeyed = await request('PATCH', '/admin/header-menus/9', {
+        token,
+        body: { slug: 'about-us' },
+      });
+      assert.equal(rekeyed.status, 422);
+
+      // A `PUT` that leaves the key out keeps it, whatever the new name.
+      const renamed = await request('PUT', '/admin/header-menus/9', {
+        token,
+        body: { ...company, slug: undefined, name: 'About us' },
+      });
+      assert.equal(renamed.status, 200);
+      assert.equal(renamed.body.data.slug, 'company');
+      assert.equal(renamed.body.data.name, 'About us');
+
+      const regenerated = await request('PATCH', '/admin/header-menus/9', {
+        token,
+        body: { source: 'buy' },
+      });
+      assert.equal(regenerated.status, 422);
+    });
+  });
+
+  it('moves the pages of a removed submenu into the menu’s own list', async () => {
+    const seed = seedWith({
+      headerMenus: (menus) => {
+        menus.find((menu) => menu.slug === 'company').submenus = [
+          { slug: 'who-we-are', name: 'Who we are' },
+        ];
+      },
+      pages: (pages) => {
+        pages.find((page) => page.slug === 'about').headerSubmenu = 'who-we-are';
+      },
+    });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const cleared = await request('PATCH', '/admin/header-menus/9', {
+        token,
+        body: { submenus: [] },
+      });
+      assert.equal(cleared.status, 200);
+
+      const about = (await request('GET', '/admin/pages/2', { token })).body.data;
+      assert.equal(about.headerMenu, 'company');
+      assert.equal(about.headerSubmenu, null);
+    });
+  });
+
+  it('never deletes a generated menu, and takes a deleted menu’s pages out of the header', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const buy = await request('DELETE', '/admin/header-menus/1', { token });
+      assert.equal(buy.status, 409);
+      assert.match(buy.body.message, /cannot be deleted/);
+
+      const bulk = await request('POST', '/admin/header-menus/bulk', {
+        token,
+        body: { ids: [1, 4], action: 'delete' },
+      });
+      assert.equal(bulk.status, 409);
+      assert.equal((await request('GET', '/admin/header-menus/4', { token })).status, 200);
+
+      const company = await request('DELETE', '/admin/header-menus/9', { token });
+      assert.equal(company.status, 200);
+
+      const about = (await request('GET', '/admin/pages/2', { token })).body.data;
+      assert.equal(about.showInHeader, false);
+      assert.equal(about.headerMenu, null);
+      assert.equal(about.headerSubmenu, null);
+    });
+  });
+
+  it('is content: a manager writes it, a sales user may not read the admin list', async () => {
+    await withServer(async ({ request, login }) => {
+      const manager = await login(MANAGER);
+      const hidden = await request('PATCH', '/admin/header-menus/4', {
+        token: manager,
+        body: { isActive: false },
+      });
+      assert.equal(hidden.status, 200);
+
+      const sales = await login(SALES);
+      assert.equal((await request('GET', '/admin/header-menus', { token: sales })).status, 403);
+    });
+  });
+});
+
+/* ------------------------------------------------------------------ *
  * Settings and SEO
  * ------------------------------------------------------------------ */
 
@@ -1276,6 +1761,32 @@ describe('SEO', () => {
       });
       assert.ok(searched.body.data.length > 0);
       assert.ok(searched.body.data.length < all.body.data.length);
+    });
+  });
+
+  it('leaves the built-in pages out of the desk: their head is the templates’ (QA-56)', async () => {
+    const seed = seedWith({
+      pages: (pages) =>
+        pages.push({
+          ...pages[0],
+          id: 900,
+          slug: 'buy',
+          title: 'Buy',
+          template: 'system',
+          blocks: [],
+          seo: { ...pages[0].seo, slug: 'buy' },
+        }),
+    });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const response = await request('GET', '/admin/seo/overview?type=page&perPage=all', {
+        token,
+      });
+
+      assert.equal(response.status, 200);
+      assert.ok(response.body.data.length > 0);
+      assert.ok(!response.body.data.some((row) => row.slug === 'buy'));
     });
   });
 

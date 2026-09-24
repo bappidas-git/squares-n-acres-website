@@ -6,6 +6,7 @@ import AdminLayout from '../components/layout/AdminLayout';
 import PATHS from './paths';
 import ProtectedRoute from '../components/admin/ProtectedRoute';
 import RoleRoute from '../components/admin/RoleRoute';
+import { AdminNotFound } from '../components/admin/Forbidden';
 
 /**
  * The admin panel's routes, built from `adminRouteConfig.js`.
@@ -14,6 +15,9 @@ import RoleRoute from '../components/admin/RoleRoute';
  * in?), `AdminLayout` (the shell, and the only place the lead poller runs),
  * then `RoleRoute` per screen (may *this* role open it?). The login page sits
  * outside all three — it is where a session begins.
+ *
+ * An `/admin/…` address no screen answers is the panel's own 404, inside the
+ * layout: it used to fall through to the public site's (QA-56).
  */
 
 const AdminLogin = lazy(() => import('../pages/admin/AdminLogin'));
@@ -38,6 +42,7 @@ const adminRoutes = [
         element={<RoleRoute permission={route.permission}>{route.element}</RoleRoute>}
       />
     ))}
+    <Route path="*" element={<AdminNotFound />} />
   </Route>,
 ];
 

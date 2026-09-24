@@ -1,5 +1,6 @@
 /**
- * `pages` — the fifteen CMS pages of §6.10.
+ * `pages` — the fifteen CMS pages of §6.10, and the eleven built-in pages the
+ * site generates (QA-56).
  *
  * Every page the boilerplate had survives here as blocks rather than as JSX
  * (BUG-11): the copy, the cards, the steps, the quiz and the forms are data an
@@ -19,7 +20,31 @@
  * remainder of the path for that reason.
  */
 
+const { SYSTEM_PAGES, SYSTEM_TEMPLATE } = require('../../../src/config/pages');
 const { fitDescription, makeSeo } = require('../lib/seo');
+
+/**
+ * Where each built-in page appears in the header and the footer. Articles and
+ * FAQs are the Insights menu's first two entries, as they were when the menu
+ * spelled them out; the rest are reached from menus of their own (Buy, Plots,
+ * Localities…) and so sit in neither.
+ */
+const SYSTEM_PLACEMENT = {
+  'insights/articles': { header: 'insights', footer: 'insights' },
+  'insights/faqs': { header: 'insights', footer: 'insights' },
+};
+
+/**
+ * The `order` of every page: the home page, then the built-in pages, then the
+ * written ones — the order a visitor meets them in, and the order the admin
+ * list opens in. The ids stay as they were (the written pages keep 1–15).
+ */
+const orderOf = (slug, writtenIndex) => {
+  if (slug === 'home') return 1;
+  const system = SYSTEM_PAGES.findIndex((page) => page.slug === slug);
+  if (system !== -1) return 2 + system;
+  return 1 + SYSTEM_PAGES.length + writtenIndex;
+};
 
 /**
  * A lead-form field descriptor.
@@ -326,7 +351,8 @@ module.exports = function pages({ stamps, media, lookup }) {
       template: 'service',
       leadSource: 'sell-let',
       header: 'company',
-      footer: 'company',
+      // A service: the footer's Services column lists it (QA-56).
+      footer: 'services',
       seoTitle: 'Sell or Let Your Property in Bengaluru',
       seoDescription:
         'List your Bengaluru property with Squares N Acres: an honest valuation, a documentation check, screened viewings and negotiation handled for you.',
@@ -1648,7 +1674,7 @@ module.exports = function pages({ stamps, media, lookup }) {
     },
   ];
 
-  return DEFINITIONS.map((definition, index) => {
+  const written = DEFINITIONS.map((definition, index) => {
     const page = { slug: definition.slug };
     const blocks = definition.blocks(page).map((block, position) => ({
       id: position + 1,
@@ -1675,12 +1701,47 @@ module.exports = function pages({ stamps, media, lookup }) {
         secondaryKeywords: ['squares n acres', 'bengaluru property'],
         slug: definition.slug,
       }),
-      order: index + 1,
+      order: orderOf(definition.slug, index),
       showInFooter: Boolean(definition.footer),
       footerColumn: definition.footer,
       showInHeader: Boolean(definition.header),
       headerMenu: definition.header,
+      headerSubmenu: null,
       ...stamps({ createdDaysAgo: 158 - index }),
     };
   });
+
+  // The built-in pages: a name, an address and a place in the menus. Their
+  // content is the site's own — the listing, the locality index, the blog —
+  // so they carry no blocks, and their head comes from the page-type
+  // templates of SEO → Settings rather than from the record.
+  const builtIn = SYSTEM_PAGES.map((definition, index) => {
+    const placement = SYSTEM_PLACEMENT[definition.slug] ?? {};
+    return {
+      id: written.length + index + 1,
+      slug: definition.slug,
+      title: definition.title,
+      template: SYSTEM_TEMPLATE,
+      status: 'published',
+      heroImageUrl: null,
+      blocks: [],
+      leadSource: null,
+      seo: makeSeo({
+        title: '',
+        description: '',
+        focusKeyword: '',
+        secondaryKeywords: [],
+        slug: definition.slug,
+      }),
+      order: orderOf(definition.slug),
+      showInFooter: Boolean(placement.footer),
+      footerColumn: placement.footer ?? null,
+      showInHeader: Boolean(placement.header),
+      headerMenu: placement.header ?? null,
+      headerSubmenu: null,
+      ...stamps({ createdDaysAgo: 160 }),
+    };
+  });
+
+  return [...written, ...builtIn];
 };

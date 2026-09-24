@@ -66,6 +66,18 @@ poor specification.
 
 ---
 
+## Pages
+
+{{pages}}
+
+---
+
+## Header menus
+
+{{headerMenus}}
+
+---
+
 ## Writes that change nothing
 
 {{writesThatChangeNothing}}

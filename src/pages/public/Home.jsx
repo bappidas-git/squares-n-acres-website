@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { Icon } from '@iconify/react';
+import { Link, useSearchParams } from 'react-router-dom';
 
 // The two CMS blocks lead the imports, before any section that pulls a
 // stylesheet `components/cms/blocks/index.js` also pulls: that barrel registers
@@ -27,6 +29,7 @@ import useDeferredSection from '../../hooks/useDeferredSection';
 import usePrerenderReady from '../../hooks/usePrerenderReady';
 import { Container, ErrorState, Section } from '../../components/ui';
 import { HOME } from '../../config/copy';
+import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 /**
@@ -90,6 +93,14 @@ const TESTIMONIAL_PARAMS = { isFeatured: true, perPage: 9 };
 
 export default function Home() {
   const { siteName, tagline, settings } = useSiteSettings();
+  const { isAuthenticated } = useAdminAuth();
+  const [searchParams] = useSearchParams();
+
+  // "Save & preview" on the Home record of Admin → Pages opens the home page
+  // itself with a token, which also reads the record while it is a draft (D28).
+  // It used to open `/home`, a bare copy of the two bands at an address nobody
+  // should reach (QA-56).
+  const previewToken = searchParams.get('preview') ?? '';
 
   // The CMS page behind the home page. A 404 — an editor unpublished it —
   // leaves `features` and `steps` empty, and both sections stand down (§7).
@@ -98,7 +109,16 @@ export default function Home() {
     loading: pageLoading,
     error: pageError,
     refetch: refetchPage,
-  } = useApi((signal) => pageService.getBySlug('home', undefined, { signal }), []);
+  } = useApi(
+    (signal) =>
+      pageService.getBySlug('home', previewToken ? { preview: previewToken } : undefined, {
+        signal,
+      }),
+    [previewToken]
+  );
+
+  const previewing = Boolean(previewToken) && Boolean(page);
+  const draft = previewing && page.status !== 'published';
 
   // The testimonials band is eight bands down, so its request waits for the
   // scroll to get near it (§8.6) — the same deal every other lower band got.
@@ -157,7 +177,24 @@ export default function Home() {
         preloadImage={
           heroImageUrl ? { src: heroImageUrl, ratio: 'auto', sizes: '100vw' } : undefined
         }
+        overrides={draft ? { noindex: true } : undefined}
       />
+
+      {previewing ? (
+        <div className={styles.previewBanner} role="status">
+          <Icon icon="mdi:eye-outline" aria-hidden="true" />
+          <span>
+            {draft
+              ? 'Preview — the home page’s record is a draft. Visitors see the page without its two bands.'
+              : 'Preview — the home page’s record is published; visitors see the same page.'}
+          </span>
+          {isAuthenticated ? (
+            <Link to={PATHS.adminPageEdit(page.id)} className={styles.previewLink}>
+              Back to the form
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className={styles.home}>
         <HeroSection />

@@ -80,6 +80,7 @@ whole and never filters on:
 | `authors.social_links`, `team_members.social_links`                                                       | a handful of profile URLs                                                              |
 | `developers.rera_ids`, `highlights`; `banks.features`; `job_openings.responsibilities`, `requirements`    | lists rendered as bullets                                                              |
 | `articles.faqs`, `related_article_ids`, `related_property_ids`                                            | hand-picked sets, read whole with the article                                          |
+| `header_menus.submenus`, `links`                                                                          | a menu's groups and typed links (QA-56): short, ordered, read whole with the menu      |
 | `media.tags`                                                                                              | free-text labels for the library filter                                                |
 
 A JSON column is not an excuse to skip validation: every one of them has a shape
@@ -119,6 +120,13 @@ That is what `seoScoreBand` on the admin list filters on.
   key onto the unique `segments.slug` column (`exists:segments,slug` on write);
   the API never changes a segment's slug once it exists, so the reference never
   needs a cascade.
+- `pages.header_menu` is the second: a `header_menus.slug` (QA-56), where the
+  enum of three menus used to be. It is a foreign key onto the unique slug with
+  `ON DELETE SET NULL` — deleting a menu takes its pages out of the header, so
+  the same transaction sets `show_in_header = 0` and `header_submenu = NULL`.
+  `pages.header_submenu` names one of the menu's `submenus[].slug` inside the
+  JSON column: validate it on write (the menu's submenus), and clear it when a
+  submenu is removed. A menu's slug never changes once it exists.
 - The full column-by-column mapping is generated below; take it as the
   specification for the API Resources.
 

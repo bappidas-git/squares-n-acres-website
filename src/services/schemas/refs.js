@@ -23,4 +23,21 @@ const segmentRef = {
   default: 'residential',
 };
 
-module.exports = { segmentRef };
+/**
+ * A page's header menu: the slug of a `headerMenus` record (QA-56). It was one
+ * of three fixed values; an editor adds menus now, so it is a reference, and
+ * it is required while the page is set to show in the header.
+ */
+const headerMenuRef = {
+  type: 'string',
+  nullable: true,
+  // A menu slug's own limit (`MENU_SLUG_MAX_LENGTH` of `headerMenu.js`), so the
+  // column and the key it references are the same width.
+  maxLength: 60,
+  pattern: '^[a-z0-9-]+$',
+  exists: { collection: 'headerMenus', field: 'slug' },
+  requiredIf: { field: 'showInHeader', in: [true] },
+  default: null,
+};
+
+module.exports = { segmentRef, headerMenuRef };

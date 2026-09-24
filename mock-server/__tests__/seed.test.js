@@ -65,7 +65,10 @@ describe('the committed seed', () => {
     assert.equal(LIVE_SEED.propertyTypes.length, 17);
     assert.ok(LIVE_SEED.amenities.length >= 40, 'at least 40 amenities');
     assert.ok(LIVE_SEED.articles.length >= 12, 'at least 12 articles');
-    assert.equal(LIVE_SEED.pages.length, 15);
+    // Fifteen written pages and the eleven built-in ones (QA-56).
+    assert.equal(LIVE_SEED.pages.filter((row) => row.template !== 'system').length, 15);
+    assert.equal(LIVE_SEED.pages.filter((row) => row.template === 'system').length, 11);
+    assert.equal(LIVE_SEED.headerMenus.length, 10);
     assert.equal(LIVE_SEED.leads.length, 45);
   });
 

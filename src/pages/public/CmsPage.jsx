@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 
 // `NotFound` leads the component imports because a 404 is what this page
 // renders most often for an unknown slug, and `mini-css-extract-plugin`
@@ -15,6 +15,7 @@ import { ErrorState } from '../../components/ui';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { ERRORS } from '../../config/copy';
 import { CmsPageSkeleton } from '../../components/common/SkeletonLoaders';
+import { HOME_PAGE_SLUG } from '../../config/pages';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 
 import styles from './CmsPage.module.css';
@@ -93,6 +94,11 @@ export default function CmsPage({ slug: fixedSlug, prefix = '' }) {
   // (D11). A route that passes its own `slug` or `prefix` has already decided.
   const reserved = !fixedSlug && !prefix && isReservedPath(slug);
 
+  // The `home` record is the home page's (D81): its address is the site root.
+  // At `/home` it was a bare copy of two of the home page's bands, which the
+  // admin list linked to as "the home page" (QA-56).
+  const isHome = slug === HOME_PAGE_SLUG;
+
   const {
     data: page,
     loading,
@@ -102,7 +108,7 @@ export default function CmsPage({ slug: fixedSlug, prefix = '' }) {
     (signal) =>
       pageService.getBySlug(slug, previewToken ? { preview: previewToken } : undefined, { signal }),
     [slug, previewToken],
-    { enabled: Boolean(slug) && !reserved }
+    { enabled: Boolean(slug) && !reserved && !isHome }
   );
 
   // The prerender crawler saves this page once its primary query has settled
@@ -112,6 +118,10 @@ export default function CmsPage({ slug: fixedSlug, prefix = '' }) {
 
   const crumbs = useMemo(() => (page ? buildCrumbs(page) : []), [page]);
 
+  if (isHome) {
+    const query = previewToken ? `?preview=${encodeURIComponent(previewToken)}` : '';
+    return <Navigate to={`${PATHS.home}${query}`} replace />;
+  }
   if (!slug || reserved) return <NotFound />;
   if (loading) return <CmsPageSkeleton />;
 

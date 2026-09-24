@@ -17,11 +17,11 @@
 const {
   BLOCK_TYPES,
   FOOTER_COLUMNS,
-  HEADER_MENUS,
   LEAD_SOURCES,
   PAGE_STATUS,
   PAGE_TEMPLATES,
 } = require('../../config/enums');
+const { headerMenuRef } = require('./refs');
 const { seo } = require('./seo');
 
 /**
@@ -36,6 +36,13 @@ const PATH_SLUG_PATTERN = '^$|^[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]
 
 /** The contract's ceiling for a page path (§6.10). */
 const PATH_SLUG_MAX_LENGTH = 120;
+
+/** The largest `order` a page may carry. */
+const PAGE_ORDER_MAX = 100000;
+
+/** The contract's bounds for a page's title (§6.10) — the form's as well (QA-56). */
+const PAGE_TITLE_MIN_LENGTH = 2;
+const PAGE_TITLE_MAX_LENGTH = 150;
 
 /** A URL-path slug descriptor, with the message the pattern alone would not give. */
 const pathSlug = (extra = {}) => ({
@@ -60,7 +67,12 @@ const create = {
   // instead, which is why `pageService.duplicate()` had to resolve a slug of
   // its own before it could post a copy (MB-03).
   slug: pathSlug({ default: '' }),
-  title: { type: 'string', required: true, min: 2, maxLength: 150 },
+  title: {
+    type: 'string',
+    required: true,
+    min: PAGE_TITLE_MIN_LENGTH,
+    maxLength: PAGE_TITLE_MAX_LENGTH,
+  },
   template: { type: 'enum', enum: PAGE_TEMPLATES.values, required: true, default: 'standard' },
   status: { type: 'enum', enum: PAGE_STATUS.values, required: true, default: 'draft' },
   heroImageUrl: { type: 'url', nullable: true, default: null },
@@ -80,11 +92,29 @@ const create = {
   leadSource: { type: 'enum', enum: LEAD_SOURCES.values, nullable: true, default: null },
   // The shared `seo` shape, with the one field a page widens (see above).
   seo: { ...seo, shape: { ...seo.shape, slug: pathSlug({ default: '' }) } },
-  order: { type: 'int', min: 0, default: 0 },
+  // Capped so that a stray keystroke cannot store a number the column will
+  // not hold (QA-56): the form took 99 999 999 999 and so did the API.
+  order: { type: 'int', min: 0, max: PAGE_ORDER_MAX, default: 0 },
   showInFooter: { type: 'bool', default: false },
-  footerColumn: { type: 'enum', enum: FOOTER_COLUMNS.values, nullable: true, default: null },
+  footerColumn: {
+    type: 'enum',
+    enum: FOOTER_COLUMNS.values,
+    nullable: true,
+    requiredIf: { field: 'showInFooter', in: [true] },
+    default: null,
+  },
   showInHeader: { type: 'bool', default: false },
-  headerMenu: { type: 'enum', enum: HEADER_MENUS.values, nullable: true, default: null },
+  // A `headerMenus` slug (QA-56) — it was one of three fixed values.
+  headerMenu: headerMenuRef,
+  // One of that menu's `submenus[].slug`, or `null` for the menu's own list.
+  // The pages resource checks it against the menu it names.
+  headerSubmenu: {
+    type: 'string',
+    nullable: true,
+    maxLength: 75,
+    pattern: '^[a-z0-9-]+$',
+    default: null,
+  },
 };
 
 module.exports = {
@@ -93,4 +123,7 @@ module.exports = {
   patch: allOptional(create),
   PATH_SLUG_PATTERN,
   PATH_SLUG_MAX_LENGTH,
+  PAGE_ORDER_MAX,
+  PAGE_TITLE_MIN_LENGTH,
+  PAGE_TITLE_MAX_LENGTH,
 };

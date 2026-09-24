@@ -8,7 +8,7 @@ info:
     `src/services/endpoints.js`, `src/services/schemas/` and
     `mock-server/schemas/models.js`. Do not edit by hand.
 
-    generatedFrom: a732c3c
+    generatedFrom: ed920f5
 
     Read `01_API_CONTRACT.md` first: the envelopes of §5.2, the error body
     of §5.3 and the pagination of §5.6 apply to every operation below and
@@ -7100,6 +7100,543 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /admin/header-menus:
+    get:
+      operationId: adminHeaderMenus.list
+      tags:
+        - content
+      summary: List header menus for the admin table
+      description: 'Minimum role: `manager` (§7). Registry key `adminHeaderMenus.list`.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ids
+          in: query
+          required: false
+          description: comma-separated int values (§5.6)
+          schema:
+            type: string
+        - name: isActive
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - 'true'
+              - 'false'
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: perPage
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: HeaderMenuList (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HeaderMenu'
+                  meta:
+                    $ref: '#/components/schemas/ListMeta'
+                required:
+                  - data
+                  - meta
+              example:
+                data:
+                  - id: 1
+                    name: Buy
+                    slug: buy
+                    href: /buy
+                    source: buy
+                    submenus: []
+                    links: []
+                    isActive: true
+                    order: 1
+                    createdAt: 2026-01-15T09:30:00.000Z
+                    updatedAt: 2026-01-15T09:30:00.000Z
+                    builtIn: true
+                  - id: 2
+                    name: Rent
+                    slug: rent
+                    href: /rent
+                    source: rent
+                    submenus: []
+                    links: []
+                    isActive: true
+                    order: 2
+                    createdAt: 2026-01-15T09:30:00.000Z
+                    updatedAt: 2026-01-15T09:30:00.000Z
+                    builtIn: true
+                  - …8 more (trimmed for this example)
+                meta:
+                  page: 1
+                  perPage: 20
+                  total: 10
+                  totalPages: 1
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: adminHeaderMenus.create
+      tags:
+        - content
+      summary: Create a header menu
+      description: 'Minimum role: `manager` (§7). Registry key `adminHeaderMenus.create`.'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HeaderMenuCreate'
+            example:
+              name: Smoke name example-adminheadermenus-2
+              source: custom
+      responses:
+        '201':
+          description: HeaderMenu (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/HeaderMenu'
+                required:
+                  - data
+              example:
+                data:
+                  slug: smoke-name-example-adminheadermenus-2
+                  href: null
+                  source: custom
+                  submenus: []
+                  links: []
+                  isActive: true
+                  order: 0
+                  name: Smoke name example-adminheadermenus-2
+                  id: 12
+                  createdAt: 2026-01-15T09:30:00.000Z
+                  updatedAt: 2026-01-15T09:30:00.000Z
+                  builtIn: false
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: validation failed (§5.3)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/header-menus/{id}:
+    get:
+      operationId: adminHeaderMenus.get
+      tags:
+        - content
+      summary: Read one header menu with every admin field
+      description: 'Minimum role: `manager` (§7). Registry key `adminHeaderMenus.get`.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the id of the record
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: HeaderMenu (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/HeaderMenu'
+                required:
+                  - data
+              example:
+                data:
+                  id: 1
+                  name: Buy
+                  slug: buy
+                  href: /buy
+                  source: buy
+                  submenus: []
+                  links: []
+                  isActive: true
+                  order: 1
+                  createdAt: 2026-01-15T09:30:00.000Z
+                  updatedAt: 2026-01-15T09:30:00.000Z
+                  builtIn: true
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: no such record (§5.10)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      operationId: adminHeaderMenus.update
+      tags:
+        - content
+      summary: Replace a header menu with the full record from the form
+      description: 'Minimum role: `manager` (§7). Registry key `adminHeaderMenus.update`.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the id of the record
+          schema:
+            type: integer
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HeaderMenuUpdate'
+            example:
+              name: Smoke name example-adminheadermenus-3
+              source: custom
+      responses:
+        '200':
+          description: HeaderMenu (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/HeaderMenu'
+                required:
+                  - data
+              example:
+                data:
+                  slug: smoke-name-example-adminheadermenus-1
+                  href: null
+                  source: custom
+                  submenus: []
+                  links: []
+                  isActive: true
+                  order: 0
+                  id: 11
+                  createdAt: 2026-01-15T09:30:00.000Z
+                  updatedAt: 2026-01-15T09:30:00.000Z
+                  name: Smoke name example-adminheadermenus-3
+                  builtIn: false
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: no such record (§5.10)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: validation failed (§5.3)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      operationId: adminHeaderMenus.patch
+      tags:
+        - content
+      summary: Update the given fields of a header menu (toggles, order, SEO panel)
+      description: 'Minimum role: `manager` (§7). Registry key `adminHeaderMenus.patch`.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the id of the record
+          schema:
+            type: integer
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HeaderMenuPatch'
+            example:
+              isActive: true
+      responses:
+        '200':
+          description: HeaderMenu (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/HeaderMenu'
+                required:
+                  - data
+              example:
+                data:
+                  slug: smoke-name-example-adminheadermenus-1
+                  href: null
+                  source: custom
+                  submenus: []
+                  links: []
+                  isActive: true
+                  order: 0
+                  id: 11
+                  createdAt: 2026-01-15T09:30:00.000Z
+                  updatedAt: 2026-01-15T09:30:00.000Z
+                  name: Smoke name example-adminheadermenus-3
+                  builtIn: false
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: no such record (§5.10)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: validation failed (§5.3)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: adminHeaderMenus.remove
+      tags:
+        - content
+      summary: Delete a header menu; 409 when it is still in use
+      description: 'Minimum role: `manager` (§7). Registry key `adminHeaderMenus.remove`.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: the id of the record
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Null (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: 'null'
+                  message:
+                    type: string
+                required:
+                  - data
+                  - message
+              example:
+                data: null
+                message: Deleted
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: no such record (§5.10)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/header-menus/bulk:
+    post:
+      operationId: adminHeaderMenus.bulk
+      tags:
+        - content
+      summary: Apply one action to several header menus
+      description: 'Minimum role: `manager` (§7). Registry key `adminHeaderMenus.bulk`.'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Bulk'
+            example:
+              ids:
+                - 11
+              action: activate
+      responses:
+        '200':
+          description: BulkResult (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/BulkResult'
+                required:
+                  - data
+              example:
+                data:
+                  affected: 1
+                message: 1 menu updated.
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: validation failed (§5.3)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/header-menus/check-slug:
+    get:
+      operationId: adminHeaderMenus.checkSlug
+      tags:
+        - content
+      summary: Check whether a header menu slug is free and suggest an alternative
+      description: 'Minimum role: `manager` (§7). Registry key `adminHeaderMenus.checkSlug`.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: excludeId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: slug
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SlugCheck (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SlugCheck'
+                required:
+                  - data
+              example:
+                data:
+                  available: true
+                  suggestion: lakeview-heights-3-bhk-whitefield
+        '401':
+          description: the token is missing, expired or revoked (§5.4)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: the role may not do this (§7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /admin/job-applications:
     get:
       operationId: adminJobApplications.list
@@ -10814,39 +11351,23 @@ paths:
                     footerColumn: null
                     showInHeader: false
                     headerMenu: null
+                    headerSubmenu: null
                     createdAt: 2026-01-15T09:30:00.000Z
                     updatedAt: 2026-01-15T09:30:00.000Z
-                  - id: 2
-                    slug: about
-                    title: About Us
-                    template: about
+                  - id: 16
+                    slug: properties
+                    title: All properties
+                    template: system
                     status: published
-                    heroImageUrl: https://picsum.photos/seed/sna-page-about/1600/700
-                    blocks:
-                      - id: 1
-                        type: hero
-                        order: 1
-                        data:
-                          title: About Squares N Acres
-                          subtitle: 'A Bengaluru property advisory built around one idea: tell the client what we would want to be told.'
-                          imageUrl: https://picsum.photos/seed/sna-page-about/1600/700
-                          ctaLabel: null
-                          ctaHref: null
-                      - id: 2
-                        type: richText
-                        order: 2
-                        data:
-                          html: <h2>Our story</h2><p>[Placeholder — client to provide] This paragraph is where the founding story belongs — when the company started, what it set out to do differently, and what it has learned since. Replace it with the client’s own account before the site goes live.</p><p>[Placeholder — client to p…
-                      - …7 more (trimmed for this example)
-                    leadSource: contact-page
+                    heroImageUrl: null
+                    blocks: []
+                    leadSource: null
                     seo:
-                      focusKeyword: about squares n acres
-                      secondaryKeywords:
-                        - squares n acres
-                        - bengaluru property
-                      title: About Squares N Acres – Bengaluru Property Advisory
-                      description: Who we are, how we work and what we will and will not say about a property. The Squares N Acres approach to buying, selling and renting in Bengaluru.
-                      slug: about
+                      focusKeyword: ''
+                      secondaryKeywords: []
+                      title: ''
+                      description: ''
+                      slug: properties
                       canonicalUrl: null
                       robots:
                         index: true
@@ -10890,18 +11411,19 @@ paths:
                         contentReadability: []
                       lastAnalyzedAt: null
                     order: 2
-                    showInFooter: true
-                    footerColumn: company
-                    showInHeader: true
-                    headerMenu: company
+                    showInFooter: false
+                    footerColumn: null
+                    showInHeader: false
+                    headerMenu: null
+                    headerSubmenu: null
                     createdAt: 2026-01-15T09:30:00.000Z
                     updatedAt: 2026-01-15T09:30:00.000Z
-                  - …13 more (trimmed for this example)
+                  - …18 more (trimmed for this example)
                 meta:
                   page: 1
                   perPage: 20
-                  total: 15
-                  totalPages: 1
+                  total: 26
+                  totalPages: 2
         '401':
           description: the token is missing, expired or revoked (§5.4)
           content:
@@ -11005,8 +11527,9 @@ paths:
                   footerColumn: null
                   showInHeader: false
                   headerMenu: null
+                  headerSubmenu: null
                   title: Smoke title example-adminpages-2
-                  id: 17
+                  id: 28
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
         '401':
@@ -11155,6 +11678,7 @@ paths:
                   footerColumn: null
                   showInHeader: false
                   headerMenu: null
+                  headerSubmenu: null
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
         '401':
@@ -11274,7 +11798,8 @@ paths:
                   footerColumn: null
                   showInHeader: false
                   headerMenu: null
-                  id: 16
+                  headerSubmenu: null
+                  id: 27
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
                   title: Smoke title example-adminpages-3
@@ -11399,7 +11924,8 @@ paths:
                   footerColumn: null
                   showInHeader: false
                   headerMenu: null
-                  id: 16
+                  headerSubmenu: null
+                  id: 27
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
                   title: Smoke title example-adminpages-3
@@ -11512,7 +12038,7 @@ paths:
                 data:
                   token: 3f9a1c7e5b2d8a6f4c0e9b3d7a5f1c8e2b6d4a0f9c3e7b5d
                   expiresAt: 2026-01-15T09:30:00.000Z
-                  url: https://www.squaresnacres.com/home?preview=3f9a1c7e5b2d8a6f4c0e9b3d7a5f1c8e
+                  url: https://www.squaresnacres.com/?preview=3f9a1c7e5b2d8a6f4c0e9b3d7a5f1c8e
         '401':
           description: the token is missing, expired or revoked (§5.4)
           content:
@@ -21663,6 +22189,74 @@ paths:
                   perPage: 12
                   total: 20
                   totalPages: 2
+  /header-menus:
+    get:
+      operationId: headerMenus.list
+      tags:
+        - content
+      summary: The active header menus, left to right, with their submenus and links
+      description: 'Minimum role: `public` (§7). Registry key `headerMenus.list`.'
+      security: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: perPage
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: HeaderMenuList (§5.2)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HeaderMenu'
+                  meta:
+                    $ref: '#/components/schemas/ListMeta'
+                required:
+                  - data
+                  - meta
+              example:
+                data:
+                  - id: 1
+                    name: Buy
+                    slug: buy
+                    href: /buy
+                    source: buy
+                    submenus: []
+                    links: []
+                    isActive: true
+                    order: 1
+                    createdAt: 2026-01-15T09:30:00.000Z
+                    updatedAt: 2026-01-15T09:30:00.000Z
+                    builtIn: true
+                  - id: 2
+                    name: Rent
+                    slug: rent
+                    href: /rent
+                    source: rent
+                    submenus: []
+                    links: []
+                    isActive: true
+                    order: 2
+                    createdAt: 2026-01-15T09:30:00.000Z
+                    updatedAt: 2026-01-15T09:30:00.000Z
+                    builtIn: true
+                  - …8 more (trimmed for this example)
+                meta:
+                  page: 1
+                  perPage: 10
+                  total: 10
+                  totalPages: 1
   /jobs:
     get:
       operationId: jobs.list
@@ -22417,18 +23011,20 @@ paths:
                   - slug: home
                     title: Home
                     headerMenu: null
+                    headerSubmenu: null
                     footerColumn: null
                     order: 1
-                  - slug: about
-                    title: About Us
-                    headerMenu: company
-                    footerColumn: company
+                  - slug: properties
+                    title: All properties
+                    headerMenu: null
+                    headerSubmenu: null
+                    footerColumn: null
                     order: 2
-                  - …13 more (trimmed for this example)
+                  - …24 more (trimmed for this example)
                 meta:
                   page: 1
-                  perPage: 15
-                  total: 15
+                  perPage: 26
+                  total: 26
                   totalPages: 1
   /pages/slug/{slug}:
     get:
@@ -22538,11 +23134,12 @@ paths:
                       titleReadability: []
                       contentReadability: []
                     lastAnalyzedAt: null
-                  order: 2
+                  order: 13
                   showInFooter: true
                   footerColumn: company
                   showInHeader: true
                   headerMenu: company
+                  headerSubmenu: null
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
         '404':
@@ -34743,6 +35340,357 @@ components:
         - question
         - answer
         - category
+    HeaderMenu:
+      type: object
+      description: The `headerMenus` collection (§6). Read-only keys are marked.
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          maxLength: 40
+          minLength: 1
+        slug:
+          type: string
+          pattern: ^[a-z0-9-]+$
+          maxLength: 60
+          default: ''
+        href:
+          type:
+            - string
+            - 'null'
+          maxLength: 500
+          default: null
+        source:
+          type: string
+          enum:
+            - custom
+            - buy
+            - rent
+            - commercial
+          default: custom
+        submenus:
+          type: array
+          items:
+            type: object
+            properties:
+              slug:
+                type: string
+                maxLength: 75
+              name:
+                type: string
+                maxLength: 60
+                minLength: 1
+            required:
+              - slug
+              - name
+          maxItems: 12
+          default: []
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+                maxLength: 80
+                minLength: 1
+              href:
+                type: string
+                maxLength: 500
+              submenu:
+                type:
+                  - string
+                  - 'null'
+                maxLength: 75
+                default: null
+              order:
+                type: integer
+                minimum: 0
+                maximum: 100000
+                default: 0
+              newTab:
+                type: boolean
+                default: false
+            required:
+              - label
+              - href
+          maxItems: 40
+          default: []
+        isActive:
+          type: boolean
+          default: true
+        order:
+          type: integer
+          minimum: 0
+          maximum: 100000
+          default: 0
+        builtIn:
+          type: boolean
+          default: false
+          description: 'buy, rent and commercial: generated from master data, never deleted'
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    HeaderMenuCreate:
+      type: object
+      description: Request body `headerMenu.create` (`src/services/schemas/`).
+      properties:
+        name:
+          type: string
+          maxLength: 40
+          minLength: 1
+        slug:
+          type: string
+          pattern: ^[a-z0-9-]+$
+          maxLength: 60
+          default: ''
+        href:
+          type:
+            - string
+            - 'null'
+          maxLength: 500
+          default: null
+        source:
+          type: string
+          enum:
+            - custom
+            - buy
+            - rent
+            - commercial
+          default: custom
+        submenus:
+          type: array
+          items:
+            type: object
+            properties:
+              slug:
+                type: string
+                maxLength: 75
+              name:
+                type: string
+                maxLength: 60
+                minLength: 1
+            required:
+              - slug
+              - name
+          maxItems: 12
+          default: []
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+                maxLength: 80
+                minLength: 1
+              href:
+                type: string
+                maxLength: 500
+              submenu:
+                type:
+                  - string
+                  - 'null'
+                maxLength: 75
+                default: null
+              order:
+                type: integer
+                minimum: 0
+                maximum: 100000
+                default: 0
+              newTab:
+                type: boolean
+                default: false
+            required:
+              - label
+              - href
+          maxItems: 40
+          default: []
+        isActive:
+          type: boolean
+          default: true
+        order:
+          type: integer
+          minimum: 0
+          maximum: 100000
+          default: 0
+      required:
+        - name
+        - source
+    HeaderMenuPatch:
+      type: object
+      description: Request body `headerMenu.patch` (`src/services/schemas/`).
+      properties:
+        name:
+          type: string
+          maxLength: 40
+          minLength: 1
+        slug:
+          type: string
+          pattern: ^[a-z0-9-]+$
+          maxLength: 60
+          default: ''
+        href:
+          type:
+            - string
+            - 'null'
+          maxLength: 500
+          default: null
+        source:
+          type: string
+          enum:
+            - custom
+            - buy
+            - rent
+            - commercial
+          default: custom
+        submenus:
+          type: array
+          items:
+            type: object
+            properties:
+              slug:
+                type: string
+                maxLength: 75
+              name:
+                type: string
+                maxLength: 60
+                minLength: 1
+            required:
+              - slug
+              - name
+          maxItems: 12
+          default: []
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+                maxLength: 80
+                minLength: 1
+              href:
+                type: string
+                maxLength: 500
+              submenu:
+                type:
+                  - string
+                  - 'null'
+                maxLength: 75
+                default: null
+              order:
+                type: integer
+                minimum: 0
+                maximum: 100000
+                default: 0
+              newTab:
+                type: boolean
+                default: false
+            required:
+              - label
+              - href
+          maxItems: 40
+          default: []
+        isActive:
+          type: boolean
+          default: true
+        order:
+          type: integer
+          minimum: 0
+          maximum: 100000
+          default: 0
+    HeaderMenuUpdate:
+      type: object
+      description: Request body `headerMenu.update` (`src/services/schemas/`).
+      properties:
+        name:
+          type: string
+          maxLength: 40
+          minLength: 1
+        slug:
+          type: string
+          pattern: ^[a-z0-9-]+$
+          maxLength: 60
+          default: ''
+        href:
+          type:
+            - string
+            - 'null'
+          maxLength: 500
+          default: null
+        source:
+          type: string
+          enum:
+            - custom
+            - buy
+            - rent
+            - commercial
+          default: custom
+        submenus:
+          type: array
+          items:
+            type: object
+            properties:
+              slug:
+                type: string
+                maxLength: 75
+              name:
+                type: string
+                maxLength: 60
+                minLength: 1
+            required:
+              - slug
+              - name
+          maxItems: 12
+          default: []
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+                maxLength: 80
+                minLength: 1
+              href:
+                type: string
+                maxLength: 500
+              submenu:
+                type:
+                  - string
+                  - 'null'
+                maxLength: 75
+                default: null
+              order:
+                type: integer
+                minimum: 0
+                maximum: 100000
+                default: 0
+              newTab:
+                type: boolean
+                default: false
+            required:
+              - label
+              - href
+          maxItems: 40
+          default: []
+        isActive:
+          type: boolean
+          default: true
+        order:
+          type: integer
+          minimum: 0
+          maximum: 100000
+          default: 0
+      required:
+        - name
+        - source
     Job:
       type: object
       description: The `jobOpenings` collection (§6). Read-only keys are marked.
@@ -38199,6 +39147,7 @@ components:
             - awareness
             - legal
             - landing
+            - system
           default: standard
         status:
           type: string
@@ -38650,6 +39599,7 @@ components:
         order:
           type: integer
           minimum: 0
+          maximum: 100000
           default: 0
         showInFooter:
           type: boolean
@@ -38671,11 +39621,13 @@ components:
           type:
             - string
             - 'null'
-          enum:
-            - buyer-assistance
-            - company
-            - insights
-            - null
+          maxLength: 60
+          default: null
+        headerSubmenu:
+          type:
+            - string
+            - 'null'
+          maxLength: 75
           default: null
         createdAt:
           type: string
@@ -38706,6 +39658,7 @@ components:
             - awareness
             - legal
             - landing
+            - system
           default: standard
         status:
           type: string
@@ -39157,6 +40110,7 @@ components:
         order:
           type: integer
           minimum: 0
+          maximum: 100000
           default: 0
         showInFooter:
           type: boolean
@@ -39178,11 +40132,13 @@ components:
           type:
             - string
             - 'null'
-          enum:
-            - buyer-assistance
-            - company
-            - insights
-            - null
+          maxLength: 60
+          default: null
+        headerSubmenu:
+          type:
+            - string
+            - 'null'
+          maxLength: 75
           default: null
       required:
         - title
@@ -39235,6 +40191,7 @@ components:
             - awareness
             - legal
             - landing
+            - system
           default: standard
         status:
           type: string
@@ -39686,6 +40643,7 @@ components:
         order:
           type: integer
           minimum: 0
+          maximum: 100000
           default: 0
         showInFooter:
           type: boolean
@@ -39707,11 +40665,13 @@ components:
           type:
             - string
             - 'null'
-          enum:
-            - buyer-assistance
-            - company
-            - insights
-            - null
+          maxLength: 60
+          default: null
+        headerSubmenu:
+          type:
+            - string
+            - 'null'
+          maxLength: 75
           default: null
     PageUpdate:
       type: object
@@ -39736,6 +40696,7 @@ components:
             - awareness
             - legal
             - landing
+            - system
           default: standard
         status:
           type: string
@@ -40187,6 +41148,7 @@ components:
         order:
           type: integer
           minimum: 0
+          maximum: 100000
           default: 0
         showInFooter:
           type: boolean
@@ -40208,11 +41170,13 @@ components:
           type:
             - string
             - 'null'
-          enum:
-            - buyer-assistance
-            - company
-            - insights
-            - null
+          maxLength: 60
+          default: null
+        headerSubmenu:
+          type:
+            - string
+            - 'null'
+          maxLength: 75
           default: null
       required:
         - title

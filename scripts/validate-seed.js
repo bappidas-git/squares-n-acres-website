@@ -35,6 +35,7 @@ const { TRACE_PATTERNS, ALLOW_LIST } = require('./check-traces');
 const { wordCount } = require('../mock-server/lib/html');
 const { MODELS } = require('../mock-server/schemas/models');
 const { BUILT_IN_SEGMENT_SLUGS, segmentKind } = require('../src/config/segments');
+const { SYSTEM_PAGES, isSystemPage } = require('../src/config/pages');
 const { SECTION_VISIBILITY_KEYS } = require('../src/config/enums');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -663,9 +664,40 @@ function checkQuality(db, add, warn) {
     }
   }
 
-  // Every entity that owns a public URL carries a filled-in `seo` object.
+  // The built-in pages (QA-56): the set `src/config/pages.js` names, live,
+  // with no blocks — the site generates their content — and a submenu only
+  // where the page's menu has one by that slug.
+  const builtIn = (db.pages ?? []).filter(isSystemPage);
+  for (const definition of SYSTEM_PAGES) {
+    if (!builtIn.some((page) => page.slug === definition.slug)) {
+      add('pages', `pages: the built-in page "${definition.slug}" is missing`);
+    }
+  }
+  for (const page of builtIn) {
+    const label = `pages[${page.id}]`;
+    if (!SYSTEM_PAGES.some((definition) => definition.slug === page.slug)) {
+      add('pages', `${label}: "${page.slug}" is not a built-in page of src/config/pages.js`);
+    }
+    if (page.status !== 'published') add('pages', `${label}: a built-in page is always published`);
+    if ((page.blocks ?? []).length > 0) add('pages', `${label}: a built-in page carries no blocks`);
+  }
+  const menus = new Map((db.headerMenus ?? []).map((menu) => [menu.slug, menu]));
+  for (const page of db.pages ?? []) {
+    if (!page.headerSubmenu) continue;
+    const menu = menus.get(page.headerMenu);
+    if (!(menu?.submenus ?? []).some((entry) => entry.slug === page.headerSubmenu)) {
+      add(
+        'pages',
+        `pages[${page.id}]: headerSubmenu "${page.headerSubmenu}" is not a submenu of "${page.headerMenu}"`
+      );
+    }
+  }
+
+  // Every entity that owns a public URL carries a filled-in `seo` object — a
+  // built-in page aside: its head comes from the page-type templates (QA-56).
   for (const collection of ['properties', 'articles', 'pages', 'localities', 'developers']) {
     for (const record of db[collection] ?? []) {
+      if (collection === 'pages' && isSystemPage(record)) continue;
       for (const key of SEO_FILLED) {
         if (!record.seo || String(record.seo[key] ?? '').trim() === '') {
           add(collection, `${collection}[${record.id}].seo.${key} is empty`);

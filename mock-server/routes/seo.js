@@ -31,6 +31,7 @@
 const express = require('express');
 
 const { SEO_ENTITY_TYPES } = require('../lib/enums');
+const { isSystemPage } = require('../../src/config/pages');
 const { absoluteUrl, generateLlms, publicPathOf } = require('../lib/sitemapBuilder');
 const { applySettingsUpdate } = require('./settings');
 const { forbidden } = require('../middleware/errors');
@@ -42,12 +43,21 @@ const { sortItems } = require('../lib/sort');
 /**
  * The collection behind each SEO entity type, and how to read a row from it.
  *
- * @type {Record<string, {collection: string, title: (record: object) => string}>}
+ * `include` leaves out the records of a collection that the desk has nothing
+ * to say about: a built-in page (`src/config/pages.js`, QA-56) is a route of
+ * the site whose head comes from the page-type templates, not from its record.
+ *
+ * @type {Record<string, {collection: string, title: (record: object) => string,
+ *   include?: (record: object) => boolean}>}
  */
 const ENTITY_SOURCES = {
   property: { collection: 'properties', title: (record) => record.title },
   article: { collection: 'articles', title: (record) => record.title },
-  page: { collection: 'pages', title: (record) => record.title },
+  page: {
+    collection: 'pages',
+    title: (record) => record.title,
+    include: (record) => !isSystemPage(record),
+  },
   locality: { collection: 'localities', title: (record) => record.name },
   developer: { collection: 'developers', title: (record) => record.name },
   articleCategory: { collection: 'articleCategories', title: (record) => record.name },
@@ -155,11 +165,13 @@ module.exports = ({ db, getModel }) => {
 
   /** Every row of every requested type, before filtering. */
   function overviewRows(types, siteUrl) {
-    return types.flatMap((type) =>
-      db
-        .getCollection(ENTITY_SOURCES[type].collection)
-        .map((record) => overviewRow(type, record, siteUrl))
-    );
+    return types.flatMap((type) => {
+      const { collection, include } = ENTITY_SOURCES[type];
+      return db
+        .getCollection(collection)
+        .filter((record) => (include ? include(record) : true))
+        .map((record) => overviewRow(type, record, siteUrl));
+    });
   }
 
   /**

@@ -1,45 +1,55 @@
 import { useEffect, useState } from 'react';
 
+import headerMenuService from '../services/headerMenuService';
 import pageService from '../services/pageService';
-import { isCanceled } from '../services/apiError';
 
 /**
- * The CMS pages the header and the footer are built from
- * (`GET /pages?showInHeader=true` and `?showInFooter=true`).
+ * What the header and the footer are built from: the CMS pages placed in them
+ * (`GET /pages?showInHeader=true` and `?showInFooter=true`) and the header's
+ * menus themselves (`GET /header-menus`, QA-56).
  *
- * Four components need the same two lists — `Header`, `MobileDrawer`, `Footer`
+ * Four components need the same answer — `Header`, `MobileDrawer`, `Footer`
  * and the bottom bar's drawer — and they are mounted on every public page, so
- * the answer is cached in memory for the page load the way `SiteSettingsContext`
- * caches the settings (D93). The first component to mount makes the request;
- * the rest join the promise already in flight.
+ * it is cached in memory for the page load the way `SiteSettingsContext`
+ * caches the settings (D93). The first component to mount makes the requests;
+ * the rest join the ones already in flight.
  *
- * A failed request leaves both lists empty, which is exactly what the menus do
- * with it: a menu key with no pages behind it is not rendered (§7).
+ * Each list fails alone. A page list that cannot be read is empty, which is
+ * exactly what the menus do with it: a menu with nothing behind it is not
+ * rendered (§7). A menu list that cannot be read is `null`, not empty — the
+ * header then draws the menus the site ships with (`config/headerMenus.js`)
+ * rather than no header at all, where an empty list would be an editor having
+ * hidden every menu. A partial answer is not cached, so the next page asks
+ * again.
  */
 
-/** `{ header, footer }` once the request has resolved. */
+/** `{ header, footer, menus }` once every request has answered. */
 let cache = null;
 
-/** The request in flight, so three mounts in one tick make one call. */
+/** The requests in flight, so three mounts in one tick make one set of calls. */
 let pending = null;
 
-const EMPTY = { header: [], footer: [] };
+const EMPTY = { header: [], footer: [], menus: null };
 
-/** Both lists, fetched once per page load. */
+/** The rows of a settled request, or `null` when it failed. */
+const rowsOf = (result) =>
+  result.status === 'fulfilled' && Array.isArray(result.value?.data) ? result.value.data : null;
+
+/** The three lists, fetched once per page load. */
 function load() {
   if (cache) return Promise.resolve(cache);
   if (pending) return pending;
 
-  pending = Promise.all([
+  pending = Promise.allSettled([
     pageService.list({ showInHeader: true }),
     pageService.list({ showInFooter: true }),
+    headerMenuService.list(),
   ])
-    .then(([header, footer]) => {
-      cache = {
-        header: Array.isArray(header?.data) ? header.data : [],
-        footer: Array.isArray(footer?.data) ? footer.data : [],
-      };
-      return cache;
+    .then((results) => {
+      const [header, footer, menus] = results.map(rowsOf);
+      const answer = { header: header ?? [], footer: footer ?? [], menus };
+      if (results.every((result) => result.status === 'fulfilled')) cache = answer;
+      return answer;
     })
     .finally(() => {
       pending = null;
@@ -48,23 +58,27 @@ function load() {
   return pending;
 }
 
-/** Forgets the cached lists — for tests, and for a settings save that adds a page. */
+/**
+ * Forgets the cached lists — for tests, and for an admin write that changes a
+ * menu: a page published, placed or moved, a menu renamed.
+ */
 export function resetNavPagesCache() {
   cache = null;
   pending = null;
 }
 
 /**
- * @returns {{header: Array<object>, footer: Array<object>, loading: boolean}}
- *   each row is `{ slug, title, headerMenu, footerColumn, order }`
+ * @returns {{header: Array<object>, footer: Array<object>, menus: Array<object>|null,
+ *   loading: boolean}} a page row is `{ slug, title, headerMenu, headerSubmenu,
+ *   footerColumn, order }`; `menus` is `null` until the menus are read
  */
 export default function useNavPages() {
-  const [pages, setPages] = useState(cache ?? EMPTY);
+  const [lists, setLists] = useState(cache ?? EMPTY);
   const [loading, setLoading] = useState(!cache);
 
   useEffect(() => {
     if (cache) {
-      setPages(cache);
+      setLists(cache);
       setLoading(false);
       return undefined;
     }
@@ -72,22 +86,16 @@ export default function useNavPages() {
     let alive = true;
     setLoading(true);
 
-    load()
-      .then((result) => {
-        if (!alive) return;
-        setPages(result);
-        setLoading(false);
-      })
-      .catch((error) => {
-        if (!alive || isCanceled(error)) return;
-        setPages(EMPTY);
-        setLoading(false);
-      });
+    load().then((result) => {
+      if (!alive) return;
+      setLists(result);
+      setLoading(false);
+    });
 
     return () => {
       alive = false;
     };
   }, []);
 
-  return { header: pages.header, footer: pages.footer, loading };
+  return { header: lists.header, footer: lists.footer, menus: lists.menus, loading };
 }

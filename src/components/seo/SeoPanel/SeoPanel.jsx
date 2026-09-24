@@ -140,6 +140,8 @@ const TABS = [
  * @param {Function} [props.checkSlug] the host's availability check
  * @param {number|string|null} [props.excludeId]
  * @param {string} [props.slugBase] e.g. `/properties/`
+ * @param {string} [props.fixedPath] the record's address when it cannot change
+ *   — the home page's `/` — shown as it is instead of a slug field (QA-56)
  * @param {string} [props.initialField] a dotted path to open on and focus — what
  *   the SEO dashboard's "Fix" hands the panel when a failed test is clicked
  *   (prompt 37); ignored for a path the panel does not own
@@ -163,6 +165,7 @@ export default function SeoPanel({
   checkSlug,
   excludeId,
   slugBase,
+  fixedPath,
   initialField,
   focusRequest = null,
 }) {
@@ -320,6 +323,7 @@ export default function SeoPanel({
     checkSlug,
     excludeId,
     slugBase,
+    fixedPath,
     disabled,
     variant,
   };
