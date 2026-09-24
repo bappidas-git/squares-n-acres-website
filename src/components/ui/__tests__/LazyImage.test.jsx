@@ -1,6 +1,7 @@
 /* eslint-disable testing-library/no-node-access, testing-library/no-container --
    a `<source>` has no role and no accessible name, so the only way to assert
    what `Picture` offered the browser is to read the elements themselves. */
+import { useLayoutEffect, useRef } from 'react';
 import { fireEvent, screen } from '@testing-library/react';
 
 import LazyImage, { DEFAULT_SIZES } from '../LazyImage';
@@ -9,7 +10,65 @@ import renderWith from '../../../test-utils';
 
 const CLOUD = 'https://res.cloudinary.com/dn9gyaiik/image/upload';
 
+/**
+ * A picture the browser already holds — its HTTP cache on a reload, a preload
+ * of the LCP image — answers `load` almost at once, before React has run the
+ * effects of the render that drew it. A layout effect is the same moment. The
+ * event is a bare DOM one: `fireEvent` wraps itself in `act()`, which settles
+ * React's queue in an order no browser does.
+ */
+function LoadsAtOnce(props) {
+  const box = useRef(null);
+  useLayoutEffect(() => {
+    box.current.querySelector('img').dispatchEvent(new Event('load'));
+  }, []);
+  return (
+    <div ref={box}>
+      <LazyImage {...props} />
+    </div>
+  );
+}
+
 describe('LazyImage', () => {
+  it('fades the picture in once it has loaded', () => {
+    renderWith(<LazyImage src="https://picsum.photos/seed/a/1200/800" alt="Whitefield" />);
+
+    const image = screen.getByAltText('Whitefield');
+    expect(image).not.toHaveClass('loaded');
+    fireEvent.load(image);
+    expect(image).toHaveClass('loaded');
+  });
+
+  it('shows a picture that loaded before its effects ran, as a cached one does', () => {
+    renderWith(<LoadsAtOnce src="https://picsum.photos/seed/b/1200/800" alt="From the cache" />);
+
+    expect(screen.getByAltText('From the cache')).toHaveClass('loaded');
+    expect(screen.queryByTestId('lazy-image-placeholder')).not.toBeInTheDocument();
+  });
+
+  it('waits for a new picture when the src changes, and shows it when it loads', () => {
+    const { rerender } = renderWith(<LazyImage src="/first.jpg" alt="Cover" />);
+    const image = screen.getByAltText('Cover');
+    fireEvent.load(image);
+    expect(image).toHaveClass('loaded');
+
+    rerender(<LazyImage src="/second.jpg" alt="Cover" />);
+    expect(screen.getByAltText('Cover')).not.toHaveClass('loaded');
+    fireEvent.load(screen.getByAltText('Cover'));
+    expect(screen.getByAltText('Cover')).toHaveClass('loaded');
+  });
+
+  it('forgets a failure when the src changes', () => {
+    const { rerender } = renderWith(<LazyImage src="/broken.jpg" alt="Cover" />);
+    fireEvent.error(screen.getByAltText('Cover'));
+    expect(screen.getByTestId('lazy-image-monogram')).toBeInTheDocument();
+
+    rerender(<LazyImage src="/fixed.jpg" alt="Cover" />);
+    expect(screen.queryByTestId('lazy-image-monogram')).not.toBeInTheDocument();
+    fireEvent.load(screen.getByAltText('Cover'));
+    expect(screen.getByAltText('Cover')).toHaveClass('loaded');
+  });
+
   it('reserves the ratio box and lazy-loads with the given alt text', () => {
     renderWith(<LazyImage src="/a.jpg" alt="Lakeview Heights facade" ratio="16/9" />);
 
