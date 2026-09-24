@@ -36,7 +36,8 @@ const {
   DEFAULT_PER_PAGE_ADMIN,
   DEFAULT_PER_PAGE_PUBLIC,
 } = require('./paginate');
-const { sortItems } = require('./sort');
+const { compareValues, getPath, sortItems } = require('./sort');
+const { stripHtml } = require('./html');
 const { validateBody } = require('../middleware/validate');
 const {
   buildDefaults,
@@ -92,8 +93,8 @@ function unchanged(existing, record) {
  *
  * A reorder sends **one** write — the moved record's new position — and the
  * API works out what everything else becomes: the collection is sorted by
- * `order`, ties are broken in favour of the record that was just touched
- * (newest `updatedAt` first), and the result is renumbered `1..n`.
+ * `order`, ties are broken in favour of the record that was just touched, and
+ * the result is renumbered `1..n`.
  *
  * That is what lets an editor drag a row while the table is filtered. The
  * rows on screen are a slice of the collection, so the client can only say
@@ -101,19 +102,65 @@ function unchanged(existing, record) {
  * it, `neighbour.order + 1` to land after it — and the records it cannot see
  * keep their relative positions either way.
  *
+ * The touched record is named rather than guessed (QA-59). It used to be "the
+ * newest `updatedAt`", and every other tie was broken the same way, so three
+ * FAQs created at `order` 0 — listed A, B, C by question — were renumbered
+ * newest first the moment anything moved, and the editor watched two rows they
+ * never touched swap places. The rest of a tie now keeps the order the list
+ * shows it in (`tieBreak`, the resource's own `order` sort).
+ *
  * @param {Array<object>} list the collection, mutated in place
+ * @param {object} [options]
+ * @param {number|string|null} [options.touchedId] the record this write placed,
+ *   which goes first among the records sharing its number; without one the
+ *   collection is only made dense, in the order it already reads
+ * @param {Array<string>} [options.tieBreak] the fields that order a tie after
+ *   that — `['question']` for FAQs, whose list reads `order,question`
+ * @returns {boolean} whether any record's `order` changed
  */
-function renumberOrder(list) {
-  const positioned = [...list].sort((left, right) => {
-    const a = Number.isFinite(Number(left.order)) ? Number(left.order) : 0;
-    const b = Number.isFinite(Number(right.order)) ? Number(right.order) : 0;
-    if (a !== b) return a - b;
-    return String(right.updatedAt ?? '').localeCompare(String(left.updatedAt ?? ''));
-  });
+function renumberOrder(list, { touchedId = null, tieBreak = [] } = {}) {
+  const position = (record) => (Number.isFinite(Number(record?.order)) ? Number(record.order) : 0);
+  const touched = (record) =>
+    touchedId !== null && touchedId !== undefined && sameId(record?.id, touchedId);
 
-  positioned.forEach((record, index) => {
+  const positioned = list
+    .map((record, index) => ({ record, index }))
+    .sort((left, right) => {
+      const a = position(left.record);
+      const b = position(right.record);
+      if (a !== b) return a - b;
+
+      if (touched(left.record) !== touched(right.record)) return touched(left.record) ? -1 : 1;
+
+      for (const field of tieBreak) {
+        const result = compareValues(getPath(left.record, field), getPath(right.record, field));
+        if (result !== 0) return result;
+      }
+      return left.index - right.index;
+    });
+
+  let changed = false;
+  positioned.forEach(({ record }, index) => {
+    if (record.order !== index + 1) changed = true;
     record.order = index + 1;
   });
+  return changed;
+}
+
+/**
+ * The fields after `order` in a resource's own `order` sort — what orders a
+ * tie on screen, and so what a renumber keeps a tie in (QA-59).
+ *
+ * @param {object} sorts the resource's `sorts`
+ * @returns {Array<string>} `['question']` for `order,question`
+ */
+function tieBreakOf(sorts) {
+  const entry = sorts?.order;
+  if (!entry) return [];
+  return parseSortEntry(entry)
+    .spec.split(',')
+    .map((field) => field.trim())
+    .filter((field) => field && field !== 'order');
 }
 
 /**
@@ -207,6 +254,11 @@ function matchesFilter(record, descriptor, raw, context) {
  *   segment — only the CMS pages, whose `buyer-assistance/home-loan` must keep
  *   its separator (§6.10)
  * @param {boolean} [options.publicScoped] force the public active scope on/off
+ * @param {boolean} [options.settleOrder] a `POST`, and a `PUT` that moves
+ *   `order`, settle the collection `1..n` the way an `order` PATCH does, with
+ *   the written record placed at the position it names (QA-59). Without it two
+ *   records can share a number, and a reorder dropped next to them lands in
+ *   the wrong place: "before the one holding 0" is before every one of them
  * @param {Array<string>} [options.routes] the subset to build — `list`,
  *   `bySlug`, `adminList`, `create`, `get`, `update`, `patch`, `remove`,
  *   `bulk`, `checkSlug`. All of them by default; a resource whose contract
@@ -241,6 +293,7 @@ function makeCrudRouter(options) {
     noun = { one: 'record', many: 'records' },
     pathSlug = false,
     publicScoped = Boolean(model.publicScope),
+    settleOrder = false,
     routes = null,
   } = options;
 
@@ -250,6 +303,29 @@ function makeCrudRouter(options) {
   const has = (route) => routes === null || routes.includes(route);
   const searchable = model.searchable ?? [];
   const hasField = (field) => Object.prototype.hasOwnProperty.call(model.fields, field);
+
+  /**
+   * A record as `q` reads it: an HTML field by its text (QA-59). A FAQ's
+   * answer is stored as markup, so "p>" found every FAQ, and a link or a bold
+   * word made "href", "strong" or "blank" find the answers that held one —
+   * while "R&D" found nothing, the editor having written `R&amp;D`.
+   */
+  const htmlSearchable = searchable.filter((field) => model.fields?.[field]?.type === 'html');
+  const searchView = (record) =>
+    htmlSearchable.length === 0
+      ? record
+      : {
+          ...record,
+          ...Object.fromEntries(htmlSearchable.map((field) => [field, stripHtml(record[field])])),
+        };
+
+  /**
+   * Renumbers the collection `1..n` around the record a write just placed,
+   * keeping a tie in the order the list shows it (QA-59).
+   *
+   * @returns {boolean} whether anything was renumbered
+   */
+  const settle = (touchedId) => renumberOrder(rows(), { touchedId, tieBreak: tieBreakOf(sorts) });
 
   /** How this resource turns text into its slug (§5.9, §6.10). */
   const toSlug = pathSlug ? slugifyPath : slugify;
@@ -342,7 +418,7 @@ function makeCrudRouter(options) {
     }
 
     const q = first(query.q);
-    if (q) result = result.filter((record) => matchesQ(record, searchable, q));
+    if (q) result = result.filter((record) => matchesQ(searchView(record), searchable, q));
 
     const ids = inCsv(query.ids);
     if (ids.length > 0) {
@@ -510,6 +586,94 @@ function makeCrudRouter(options) {
     throw conflict('This item is in use.', { id: [describeUsages(usedBy)] }, { usedBy });
   }
 
+  /**
+   * The row a reorder was dropped next to: `{ before: id }` or `{ after: id }`
+   * beside the `order` of §5.8 (QA-59).
+   *
+   * The number alone could not say where a row landed once two records shared
+   * it — "before the one holding 0" was before every one of them — nor once it
+   * was stale: a second move sent before the list had re-read carried the
+   * numbers of the first. The neighbour's id says both. An anchor that names
+   * nothing (deleted meanwhile) or the record itself is no anchor, and the
+   * number is used as it always was.
+   *
+   * @param {object} body the request body
+   * @param {object} existing the record being moved
+   * @returns {{record: object, after: boolean}|null}
+   */
+  function anchorOf(body, existing) {
+    const after = body?.after !== undefined && body?.after !== null && body?.after !== '';
+    const raw = after ? body.after : body?.before;
+    if (raw === undefined || raw === null || raw === '') return null;
+    const record = find(raw);
+    if (!record || sameId(record.id, existing.id)) return null;
+    return { record, after };
+  }
+
+  /** What a refusal calls a record: its name, its title or its question. */
+  const labelOf = (record) =>
+    record?.name ?? record?.title ?? record?.question ?? record?.email ?? `#${record?.id}`;
+
+  /**
+   * The 409 of a bulk delete, naming **every** selected record that is in the
+   * way and what holds each one (QA-59).
+   *
+   * It used to stop at the first one and answer that record's usages alone,
+   * as "This item is in use." — and the list said "Used by 1 page" over three
+   * selected FAQs without saying which of them, or which page. `usedBy` is
+   * still the union, so a client reading it the old way sees every holder.
+   *
+   * @param {Array<object>} targets the records the bulk delete names
+   * @throws {import('../middleware/errors').ApiError} 409 when any is held
+   */
+  function guardBulkDelete(targets) {
+    const refused = [];
+    for (const record of targets) {
+      const reason = protect ? protect(record) : null;
+      const usedBy =
+        !reason && deleteGuard ? findUsages(deleteGuard, record.id, usageSource()) : [];
+      if (reason || usedBy.length > 0) {
+        refused.push({
+          id: record.id,
+          label: labelOf(record),
+          reason: reason ?? describeUsages(usedBy),
+          usedBy,
+        });
+      }
+    }
+    if (refused.length === 0) return;
+
+    const usedBy = [];
+    const seen = new Set();
+    for (const usage of refused.flatMap((entry) => entry.usedBy)) {
+      const key = `${usage.type}:${usage.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      usedBy.push(usage);
+    }
+
+    // One record selected is the single delete's answer, word for word.
+    if (targets.length === 1) {
+      const [only] = refused;
+      const protectedReason = protect ? protect(targets[0]) : null;
+      throw conflict(
+        protectedReason ?? 'This item is in use.',
+        { id: [only.reason] },
+        { usedBy, refused }
+      );
+    }
+
+    // A protected record is not "in use"; it simply cannot go.
+    const inUse = refused.every((entry) => entry.usedBy.length > 0);
+    const verb = refused.length === 1 ? 'is' : 'are';
+    const why = inUse ? `${verb} still in use` : 'cannot be deleted';
+    throw conflict(
+      `${refused.length} of the selected ${noun.many} ${why}, so none was deleted.`,
+      { id: refused.map((entry) => `${entry.label}: ${entry.reason}`) },
+      { usedBy, refused }
+    );
+  }
+
   /* ------------------------------------------------------------------ *
    * Public
    * ------------------------------------------------------------------ */
@@ -567,7 +731,7 @@ function makeCrudRouter(options) {
         if (body.action === 'delete') {
           // All or nothing: a bulk delete that would strand a reference is
           // refused whole, so the editor sees one list of what is in the way.
-          for (const record of targets) guardDelete(record);
+          guardBulkDelete(targets);
           for (const record of targets) {
             if (beforeDelete) beforeDelete(record, { user: req.user, db });
             db.removeRecord(name, record.id);
@@ -616,6 +780,8 @@ function makeCrudRouter(options) {
         if (slugged) applySlug(record, resolveSlug(body, null));
 
         store(record, null);
+        // The new record takes the position it names, and nothing shares it.
+        if (settleOrder && hasField('order') && settle(record.id)) db.write();
         if (afterSave) afterSave(record, { method: 'POST', user: req.user, db });
 
         res.created(present(record, { admin: true, query: req.query }));
@@ -660,7 +826,10 @@ function makeCrudRouter(options) {
           return;
         }
 
+        const moved = hasField('order') && Number(record.order) !== Number(existing.order);
         store(record, existing);
+        // A form that changes the number is moving the record to that position.
+        if (settleOrder && moved && settle(record.id)) db.write();
         if (afterSave) afterSave(record, { existing, method: 'PUT', user: req.user, db });
 
         res.ok(present(record, { admin: true, query: req.query }));
@@ -684,6 +853,14 @@ function makeCrudRouter(options) {
           lookup: db.getCollection,
         });
 
+        // A reorder that names the row it was dropped next to is placed by
+        // that row: the collection is made dense in the order it reads, and
+        // the position is read off the neighbour then — whatever numbers the
+        // client last saw, and however many records shared one (QA-59).
+        const anchor = hasField('order') ? anchorOf(body, existing) : null;
+        const densified = anchor ? renumberOrder(rows(), { tieBreak: tieBreakOf(sorts) }) : false;
+        if (anchor) body.order = Number(anchor.record.order) + (anchor.after ? 1 : 0);
+
         const record = buildRecord(body, { existing, method: 'PATCH', user: req.user });
 
         // A `PATCH` re-slugs only when it says so: renaming a record must not
@@ -692,7 +869,14 @@ function makeCrudRouter(options) {
           applySlug(record, resolveSlug({ [model.slugField]: body[model.slugField] }, existing));
         }
 
+        const ordering = hasField('order') && body.order !== undefined;
+
         if (unchanged(existing, record)) {
+          // A position that is already the record's own still settles a tie:
+          // two rows sharing 3, the second dragged above the first, sends
+          // `order: 3` — the number it has — and was answered with nothing
+          // moving at all (QA-59).
+          if ((ordering && settle(existing.id)) || densified) db.write();
           res.ok(present(existing, { admin: true, query: req.query }));
           return;
         }
@@ -701,8 +885,8 @@ function makeCrudRouter(options) {
 
         // Moving one record moves the collection: a `PATCH { order }` is a
         // position, and the API is what turns it back into `1..n` (§5.8).
-        if (hasField('order') && body.order !== undefined) {
-          renumberOrder(rows());
+        if (ordering) {
+          settle(record.id);
           db.write();
         }
 

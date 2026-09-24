@@ -126,6 +126,12 @@ poor specification.
 
 ---
 
+## FAQs
+
+{{faqs}}
+
+---
+
 ## Segments
 
 {{segments}}

@@ -660,6 +660,13 @@ duplicateOf, isActive, status, updatedAt }`. `perPage=all` is allowed.
   scheduled article that is bulk-published goes live now. A page's bulk `delete`
   or `unpublish` that names a protected page is refused whole with
   `data.refused[]` ([Pages](#pages)).
+- A bulk `delete` refused over the delete guard names **every** selected record
+  in the way, not the first one (QA-59): `message` counts them ("2 of the
+  selected FAQs are still in use, so none was deleted."; "… cannot be deleted,
+  so none was deleted." when one of them is protected rather than used),
+  `data.refused[]` is `{ id, label, reason, usedBy[] }` per record, and
+  `data.usedBy` stays the union so a client reading only that still lists every
+  holder. A bulk delete of one record answers exactly as the single delete does.
 
 ## Duplicating a property
 
@@ -728,6 +735,34 @@ legitimately be replaced.
 At the database level this is `ON DELETE RESTRICT`, which makes the guard a
 belt-and-braces check rather than the only thing standing between a listing and
 a missing locality.
+
+## FAQs
+
+The FAQ library (`faqs`) feeds `/insights/faqs`, the home page (`show_on_home`),
+the FAQ block of a CMS page (`faq_ids`) and property pages (QA-59):
+
+- **Property pages.** A property page asks `GET /faqs?propertyTypeId=<its type>`
+  and shows those questions after the listing's own, in the library's order,
+  and in its `FAQPage` markup. A question the listing already asks is not asked
+  twice. Only active FAQs are public, as everywhere.
+- **The answer has words.** `answer` is required and a string of markup with
+  no text (`<ul><li><p></p></li></ul>`, `<h3> </h3>`) is empty: **422** on
+  `answer`, "The answer field is required."
+- **The answer runs nothing.** A `<script>`, an inline event handler or a
+  `javascript:` address (entity-encoded too) is **422** on `answer`, as for an
+  article body ([Article writes](#article-writes)).
+- **The property type exists.** `property_type_id` is `exists:property_types,id`
+  (**422**), and deleting a property type a FAQ names is refused by the delete
+  guard.
+- **A category asks a question once.** A question equal to another FAQ's in the
+  same category — ignoring case, runs of spaces and a final "?" — is **422** on
+  `question`: "This question is already under Legal." Another category may ask
+  it. A record is never its own twin.
+- **The question is trimmed** before it is checked and stored.
+- **`order` is 0–100 000** and is a position: see [Ordering](#ordering).
+- **Search.** `q` matches the question and the answer's **text**: the markup is
+  stripped and entities decoded first, so `<p` or `href` matches nothing and
+  `R&D` matches `R&amp;D`.
 
 ## Segments
 
@@ -812,11 +847,35 @@ property images all carry `order`, and the admin reorders them by dragging.
 
 A reorder sends **one** `PATCH` — the moved record's new position — and the API
 works out the rest: sort the collection by `order`, break ties in favour of the
-record just touched (newest `updated_at` first), then renumber the whole
-collection `1..n`.
+record just touched, then in the order the admin list shows them (the
+resource's own `order` sort: `order, question` for FAQs, `order, name` for most
+master data), then renumber the whole collection `1..n`.
 
 That is what lets an editor drag a row while the table is filtered: the rows on
 screen are a slice, so the client can only say "put it where this other one is"
 (`order = neighbour.order` to land before it, `neighbour.order + 1` to land
 after it), and the records it cannot see keep their relative positions either
 way. Renumber inside the transaction, and return the record the client patched.
+
+**The neighbour by id (QA-59).** The admin also sends the row it dropped the
+record next to: `{ "order": 12, "before": 7 }` or `{ "order": 13, "after": 7 }`.
+When `before`/`after` names another record of the collection, it wins over the
+number: make the collection dense `1..n` in the order it reads, then place the
+record immediately before or after that one, then renumber. The number alone
+could not say where a row landed once two records shared it ("before the one
+holding 0" is before every one of them), nor when it was stale — a second move
+sent before the list had been re-read carried the numbers of the first. An
+anchor that names nothing, or the record itself, is ignored and the number is
+used. Neither key is stored.
+
+**An `order` PATCH always settles.** A position equal to the record's own still
+renumbers: with two records sharing 3, dragging the second above the first sends
+`order: 3`, and must put it first of the two rather than answer "nothing
+changed".
+
+**FAQs settle on every write that places one (QA-59).** A `POST`, and a `PUT`
+whose `order` differs from the stored one, renumber the FAQs the same way, with
+the written FAQ first among any it ties with: a FAQ created at 0 (the form's
+default) is first and the rest move down one; one saved at 3 is third. No two
+FAQs ever share a number, which is what keeps the neighbour rule above exact.
+The other collections keep §5.8's rule — only an `order` PATCH renumbers.

@@ -124,7 +124,7 @@ MB-02) — and it is capped at the page's own 120 characters.
 
 ### 6.9 `faqs`, `testimonials`, `teamMembers`, `partners`
 
-`faqs`: `question`, `answer` (HTML), `category` (`buying|selling|renting|home-loan|legal|rera|nri|general`), `order`, `isActive`, `showOnHome` (bool), `propertyTypeId?`.
+`faqs`: `question` (trimmed; unique within its `category`, ignoring case, spacing and a final "?"), `answer` (HTML with words in it — no script, handler or `javascript:` link), `category` (`buying|selling|renting|home-loan|legal|rera|nri|general`), `order` (0–100 000; a position, `1..n` after every write that places one), `isActive`, `showOnHome` (bool), `propertyTypeId?` (an existing property type; the FAQ is then listed on that type's property pages). QA-59.
 `testimonials`: `name`, `designation?`, `location?`, `rating` (1–5), `message`, `avatarUrl?`, `propertyId?`, `isFeatured`, `isActive`, `order`, `isSample` (true in seed; sample records never render in production builds).
 `teamMembers`: `name`, `slug`, `designation`, `phone?`, `whatsapp?`, `email?`, `photoUrl?`, `bio?`, `reraId?`, `socialLinks` (object), `order`, `isActive`, `showOnAbout`.
 `partners`: `name`, `logoUrl`, `websiteUrl?`, `category` (`developer|bank|legal|interior|other`), `order`, `isActive`.

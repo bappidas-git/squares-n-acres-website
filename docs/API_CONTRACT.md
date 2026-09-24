@@ -76,8 +76,17 @@ is on screen — which may be filtered, sorted and paginated:
 | down (after the row it landed on) | `neighbour.order + 1` |
 
 The API then settles the collection: it sorts by `order`, breaks a tie in favour of the record
-whose `updatedAt` is newest — the one this `PATCH` just touched — and renumbers everything
-`1..n`. The response is the moved record with its settled `order`.
+this `PATCH` just touched and then in the order the admin list reads (the resource's own `order`
+sort — `order,question` for FAQs), and renumbers everything `1..n`. The response is the moved
+record with its settled `order`. A position equal to the record's own still settles (QA-59).
+
+**The neighbour by id (QA-59).** The body may also name the row the record was dropped next to —
+`{ order, before: id }` moving up, `{ order, after: id }` moving down. When it names another record
+of the collection it wins over the number: the collection is made dense in the order it reads, the
+record is placed immediately before or after that one, and everything is renumbered. The number
+alone was ambiguous once two records shared it and wrong once it was stale (a second move sent
+before the list had re-read); the id is neither. An anchor that names nothing, or the record
+itself, is ignored. `before`/`after` are never stored.
 
 Two consequences worth stating, because they are the point of the rule:
 
@@ -90,7 +99,10 @@ Two consequences worth stating, because they are the point of the rule:
 
 A `PATCH` that does not mention `order`, and a `POST`/`PUT` that does, leave the rest of the
 collection alone; only an `order` `PATCH` renumbers. Laravel implements the same rule inside
-the transaction that writes the moved row.
+the transaction that writes the moved row. **FAQs are the exception (QA-59):** a `POST`, and a
+`PUT` whose `order` differs from the stored one, settle the FAQs the same way with the written
+FAQ first of any it ties with — created at 0 it is first, saved at 3 it is third — so no two FAQs
+ever share a number.
 
 ### 5.9 Slugs
 
@@ -958,6 +970,16 @@ publicly.
 ### `Faq`, `Testimonial`, `TeamMember`, `Partner`
 
 The fields of §6.9, unchanged.
+
+**FAQ writes (QA-59).** `question` is trimmed, and one its category already asks — ignoring
+case, spacing and a final "?" — is 422 on `question`. An `answer` with no text once the markup is
+stripped (an empty list, an empty heading) is 422 on `answer` ("The answer field is required."),
+and so is one carrying a `<script>`, an inline event handler or a `javascript:` link.
+`propertyTypeId` must name a property type (422). `order` is 0–100 000 and a position (§5.8). `q`
+searches the answer's text, not its markup. A property page lists the active FAQs tied to its
+`propertyTypeId` after its own (`GET /faqs?propertyTypeId=`). A bulk delete refused over the
+delete guard names every record in the way in `data.refused[] { id, label, reason, usedBy[] }`.
+The rules are in `docs/backend-notes/05_business_rules.md` → "FAQs".
 
 ### `Page`
 

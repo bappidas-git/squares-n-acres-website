@@ -177,6 +177,17 @@ leaves them published; deleting Buy, Rent or Commercial is 409.
 names the properties; reordering by dragging renumbers the collection; a
 duplicate slug is 409 and `check-slug` offers a free one.
 
+**FAQs** — an `order` PATCH carrying `after: <id>` lands immediately after that
+record even when several records share a number, and one sent with stale numbers
+still lands by the id; a FAQ created at 0 is first and at 3 is third, and no two
+FAQs share an `order`; an answer with no words (`<ul><li><p></p></li></ul>`) or
+with a `<script>` is 422 on `answer`; `propertyTypeId: 99999` is 422; the same
+question twice in one category is 422 on `question`, and in another category is
+201; `q=<p` finds nothing and `q=R%26D` finds an answer stored as `R&amp;D`; a
+bulk delete naming two FAQs a page shows is 409 with both in `data.refused[]`,
+and deletes nothing; a property page lists the FAQs tied to its type after its
+own (QA-59).
+
 **SEO** — the panel saves and the score comes back on the next read; the overview
 flags two records that share a focus keyword; a redirect added in the admin
 resolves; `/sitemap.xml`, `/robots.txt`, `/rss.xml` and `/llms.txt` all answer

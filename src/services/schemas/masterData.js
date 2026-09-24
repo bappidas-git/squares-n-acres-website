@@ -193,11 +193,16 @@ const author = {
   seo,
 };
 
+/**
+ * A FAQ. `order` is a position (QA-59): the API settles the collection `1..n`
+ * around every write that places one, so the ceiling is only there to refuse a
+ * number nobody meant — the pages' own bound (QA-56).
+ */
 const faq = {
   question: { type: 'string', required: true, min: 5, maxLength: 300 },
   answer: { type: 'html', required: true },
   category: { type: 'enum', enum: FAQ_CATEGORIES.values, required: true, default: 'general' },
-  order: { type: 'int', min: 0, default: 0 },
+  order: { type: 'int', min: 0, max: 100000, default: 0 },
   isActive: { type: 'bool', default: true },
   showOnHome: { type: 'bool', default: false },
   propertyTypeId: { type: 'int', nullable: true, default: null },
