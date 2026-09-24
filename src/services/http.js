@@ -10,7 +10,9 @@
  *     — there is no transformation layer in the frontend (§5.1);
  *   - a failure is always an `ApiError`, never an axios error;
  *   - a 401 logs the session out only when the call was an admin or auth call:
- *     a public page whose token has gone stale keeps rendering (BUG-14/NEW-13).
+ *     a public page whose token has gone stale keeps rendering (BUG-14/NEW-13);
+ *   - a 403 that only an API older than this web app would give says so, with
+ *     how to fix it, instead of "You do not have permission…" (QA-58).
  */
 
 import axios from 'axios';
@@ -19,6 +21,7 @@ import ApiError, { GENERIC_MESSAGE, NETWORK_MESSAGE } from './apiError';
 import PATHS from '../routes/paths';
 import storage from '../utils/storage';
 import { endpoints } from './endpoints';
+import { isStaleRefusal, staleApiMessage } from './staleApi';
 
 /** The three keys a signed-in session owns (§5.4, D10). */
 export const AUTH_STORAGE_KEYS = {
@@ -204,6 +207,39 @@ client.interceptors.response.use(
   }
 );
 
+/**
+ * A refusal the signed-in role cannot have earned, from an API on this machine
+ * that is not the mock of this checkout, reads as what it is: that API is older
+ * than the web app (`services/staleApi.js`). Every other failure passes through
+ * as it came.
+ *
+ * @param {unknown} error what `client.request` rejected with
+ * @param {object} endpoint the registry entry that was called
+ * @returns {unknown}
+ */
+function explainRefusal(error, endpoint) {
+  if (!(error instanceof ApiError)) return error;
+
+  const stale = isStaleRefusal({
+    status: error.status,
+    method: endpoint.method,
+    auth: endpoint.auth,
+    role: storage.getItem(AUTH_STORAGE_KEYS.user, null)?.role,
+    headers: error.original?.response?.headers,
+    baseUrl: BASE_URL,
+  });
+  if (!stale) return error;
+
+  console.warn(
+    `${endpoint.method} ${endpoint.path} answered 403 (“${error.message}”) from an API that ` +
+      `does not know it: ${BASE_URL} is running older code than this web app. ` +
+      'README → Troubleshooting.'
+  );
+  error.message = staleApiMessage(BASE_URL);
+  error.isStaleApi = true;
+  return error;
+}
+
 /* ------------------------------------------------------------------ *
  * URL building
  * ------------------------------------------------------------------ */
@@ -322,8 +358,12 @@ export async function request(
   if (responseType) config.responseType = responseType;
   if (headers) config.headers = headers;
 
-  const response = await client.request(config);
-  return response.data;
+  try {
+    const response = await client.request(config);
+    return response.data;
+  } catch (error) {
+    throw explainRefusal(error, endpoint);
+  }
 }
 
 /** The façade every service imports. */

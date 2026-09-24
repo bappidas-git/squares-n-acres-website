@@ -17,9 +17,13 @@
  *   - one with another revision is asked to stop (`POST /__mock/shutdown`);
  *   - one from before this protocol (it answers `/api/health` like the mock
  *     but has no `/__mock/identity`) cannot be asked, so the process listening
- *     on the port is looked up (`lsof`/`fuser`, `netstat` on Windows) and
- *     stopped, and only once its command line shows that it runs
- *     `mock-server/server.js`;
+ *     on the port is looked up (`lsof`/`fuser`/`ss`, `netstat` on Windows) and
+ *     stopped, and only once it is known to be the mock: its command line runs
+ *     `mock-server/server.js`, or — when it answers exactly as every mock
+ *     answers a path it does not know — it is a Node process running a
+ *     `server.js`, or a Node process whose command line cannot be read
+ *     (QA-58: on Windows that takes PowerShell or `wmic`, and either can be
+ *     missing or too slow);
  *   - anything else is not the mock, and is left alone.
  *
  * The `/__mock/*` routes are the standalone server's, not the API's: they sit
@@ -27,11 +31,12 @@
  * know nothing of them.
  */
 
-const crypto = require('crypto');
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
 const { execFile } = require('child_process');
+
+const { revisionOf, snapshotModules } = require('./hotReload');
 
 /** What `/__mock/identity` calls this server, so another program is never taken for it. */
 const APP_ID = 'squares-n-acres-mock';
@@ -45,6 +50,15 @@ const TAKEOVER_HEADER = 'x-mock-takeover';
 /** How a process that runs the mock appears in its command line. */
 const MOCK_COMMAND_RE = /mock-server[\\/]+server\.js\b/;
 
+/** Node, by its executable's name or at the head of a command line. */
+const NODE_RE = /^"?(?:[^"]*[\\/])?node(?:\.exe)?"?(?:\s|$)/i;
+
+/** A command line that runs a script called `server.js`, as `node server.js` inside `mock-server/` does. */
+const SERVER_SCRIPT_RE = /(?:^|[\s"'\\/])server\.js(?:["']|\s|$)/;
+
+/** How long PowerShell may take to start: a cold one on a busy Windows machine takes seconds. */
+const POWERSHELL_TIMEOUT_MS = 15000;
+
 /** Addresses a shutdown request may come from: this machine only. */
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 
@@ -57,34 +71,14 @@ const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
  * middleware or a `src/config` module the mock shares changes it. The runtime
  * database and the seed are read with `fs`, never `require`d, so what an
  * editor writes never changes the revision — the same boundary `node --watch`
- * restarts on.
+ * restarts on. A running mock that reloads its code (`hotReload.js`) reports
+ * the revision of what it reloaded.
  *
  * @param {{root: string, modules?: string[]}} options
  * @returns {string} 12 hex characters
  */
 function sourceRevision({ root, modules = Object.keys(require.cache) }) {
-  const hash = crypto.createHash('sha1');
-  const inside = `${path.resolve(root)}${path.sep}`;
-  const vendored = `${path.sep}node_modules${path.sep}`;
-
-  modules
-    .filter((file) => file.startsWith(inside) && !file.includes(vendored))
-    .map((file) => ({ file, name: path.relative(root, file).split(path.sep).join('/') }))
-    .sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0))
-    .forEach(({ file, name }) => {
-      let content;
-      try {
-        content = fs.readFileSync(file);
-      } catch {
-        return;
-      }
-      hash.update(name);
-      hash.update('\0');
-      hash.update(content);
-      hash.update('\0');
-    });
-
-  return hash.digest('hex').slice(0, 12);
+  return revisionOf(snapshotModules({ root, modules }));
 }
 
 /* ------------------------------------------------------------------ *
@@ -205,6 +199,17 @@ const isMockHealth = (answer) =>
   answer.body?.data?.status === 'ok' &&
   typeof answer.body.data.version === 'string';
 
+/**
+ * Whether a path answered the way every version of the mock answers a path it
+ * does not know — the last handler of `app.js`: `404 {"message":"Not found"}`.
+ */
+const isMockNotFound = (answer) =>
+  answer?.status === 404 &&
+  answer.body !== null &&
+  typeof answer.body === 'object' &&
+  answer.body.message === 'Not found' &&
+  Object.keys(answer.body).length === 1;
+
 /** Runs a program and resolves its standard output, or `null` when it failed to run. */
 function runText(file, args, { timeoutMs = 5000 } = {}) {
   return new Promise((resolve) => {
@@ -261,6 +266,20 @@ function parseNetstat(output, port) {
 }
 
 /**
+ * The processes in the output of `ss -ltnp`: `users:(("node",pid=2252,fd=21))`.
+ *
+ * @param {string} output
+ * @returns {number[]}
+ */
+const parseSs = (output) => [
+  ...new Set(
+    [...String(output ?? '').matchAll(/\bpid=(\d+)/g)]
+      .map((match) => Number.parseInt(match[1], 10))
+      .filter((pid) => Number.isInteger(pid) && pid > 0)
+  ),
+];
+
+/**
  * The processes listening on a TCP port on this machine.
  *
  * @param {number} port
@@ -275,9 +294,13 @@ async function listeningPids(port, { platform = process.platform, run = runText 
   const lsof = await run('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t']);
   if (lsof !== null) return parsePidList(lsof);
 
-  // A Linux without `lsof` usually still has `fuser` (psmisc).
+  // A Linux without `lsof` usually still has `fuser` (psmisc), and always `ss` (iproute2).
   const fuser = await run('fuser', ['-n', 'tcp', String(port)]);
-  return fuser === null ? [] : parsePidList(fuser);
+  if (fuser !== null) return parsePidList(fuser);
+  if (platform !== 'linux') return [];
+
+  const ss = await run('ss', ['-ltnp', 'sport', '=', `:${port}`]);
+  return ss === null ? [] : parseSs(ss);
 }
 
 /**
@@ -293,12 +316,16 @@ async function commandLineOf(
 ) {
   if (platform === 'win32') {
     const filter = `ProcessId=${Number(pid)}`;
-    const line = await run('powershell.exe', [
-      '-NoProfile',
-      '-NonInteractive',
-      '-Command',
-      `(Get-CimInstance Win32_Process -Filter '${filter}').CommandLine`,
-    ]);
+    const line = await run(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        `(Get-CimInstance Win32_Process -Filter '${filter}').CommandLine`,
+      ],
+      { timeoutMs: POWERSHELL_TIMEOUT_MS }
+    );
     if (line) return line.trim() || null;
     const wmic = await run('wmic', ['process', 'where', filter, 'get', 'CommandLine', '/value']);
     return wmic ? wmic.replace(/^\s*CommandLine=/im, '').trim() || null : null;
@@ -322,6 +349,69 @@ async function commandLineOf(
 }
 
 /**
+ * The image name in `tasklist /FO CSV /NH` output: `"node.exe","9120",…`. The
+ * "no tasks" line is translated on a non-English Windows, and is not CSV.
+ *
+ * @param {string} output
+ * @returns {string|null}
+ */
+function parseTasklist(output) {
+  const line = String(output ?? '')
+    .split(/\r?\n/)
+    .find((candidate) => candidate.trim().startsWith('"'));
+  const match = line ? /^\s*"([^"]+)"/.exec(line) : null;
+  return match ? match[1] : null;
+}
+
+/**
+ * The name of a process's executable (`node.exe`, `/usr/local/bin/node`), or
+ * `null`. It needs neither PowerShell nor `wmic`: Windows answers it with
+ * `tasklist`, which every edition has.
+ *
+ * @param {number} pid
+ * @param {{platform?: string, run?: typeof runText}} [deps]
+ * @returns {Promise<string|null>}
+ */
+async function imageNameOf(pid, { platform = process.platform, run = runText } = {}) {
+  if (platform === 'win32') {
+    return parseTasklist(
+      await run('tasklist', ['/FI', `PID eq ${Number(pid)}`, '/FO', 'CSV', '/NH'])
+    );
+  }
+  const ps = await run('ps', ['-o', 'comm=', '-p', String(Number(pid))]);
+  return ps ? ps.trim() || null : null;
+}
+
+/**
+ * Whether the process listening on the port is a mock from before the control
+ * routes, and may therefore be stopped.
+ *
+ * Its command line naming `mock-server/server.js` settles it. Without that,
+ * the port's answers must be the mock's (`answersLikeMock`: the health check
+ * and the 404 of every version of it) and the process must be Node: running a
+ * `server.js` when its command line can be read, as `node server.js` inside
+ * `mock-server/` does, or of any command line when it cannot be read, as
+ * happens on a Windows where PowerShell is slow or blocked and `wmic` is gone.
+ *
+ * @param {number} pid
+ * @param {object} options
+ * @param {boolean} options.answersLikeMock
+ * @param {(pid: number) => Promise<string|null>} options.readCommand
+ * @param {(pid: number) => Promise<string|null>} options.readImage
+ * @returns {Promise<boolean>}
+ */
+async function isLegacyMock(pid, { answersLikeMock, readCommand, readImage }) {
+  const command = await readCommand(pid);
+  if (command) {
+    if (MOCK_COMMAND_RE.test(command)) return true;
+    return answersLikeMock && NODE_RE.test(command) && SERVER_SCRIPT_RE.test(command);
+  }
+  if (!answersLikeMock) return false;
+  const image = await readImage(pid);
+  return Boolean(image && NODE_RE.test(image));
+}
+
+/**
  * Finds out what holds the port and, when it is an older copy of the mock,
  * stops it.
  *
@@ -333,7 +423,7 @@ async function commandLineOf(
  * @param {string} options.revision this process's `sourceRevision`
  * @param {string} options.root this checkout
  * @param {object} [options.deps] injectable for the tests: `exchange`,
- *   `listeningPids`, `commandLineOf`, `kill`, `pid`
+ *   `listeningPids`, `commandLineOf`, `imageNameOf`, `kill`, `pid`
  * @returns {Promise<{outcome: 'same'|'stopped'|'stuck'|'foreign', pid?: number|null,
  *   root?: string}>}
  *   `same` — this checkout's mock, with this very code, already answers;
@@ -346,6 +436,7 @@ async function takeOver({ port, revision, root, deps = {} }) {
     exchange: ask = exchange,
     listeningPids: findPids = listeningPids,
     commandLineOf: readCommand = commandLineOf,
+    imageNameOf: readImage = imageNameOf,
     kill = (pid) => process.kill(pid, 'SIGTERM'),
     pid: ownPid = process.pid,
   } = deps;
@@ -372,11 +463,12 @@ async function takeOver({ port, revision, root, deps = {} }) {
 
   // A mock from before `/__mock/identity` existed: it cannot be asked to stop.
   if (!isMockHealth(await ask(`${base}/api/health`))) return { outcome: 'foreign' };
+  // It answered the identity path as it answers any path it does not know.
+  const answersLikeMock = isMockNotFound(identity);
 
   const pids = (await findPids(port)).filter((candidate) => candidate !== ownPid);
   for (const candidate of pids) {
-    const command = await readCommand(candidate);
-    if (!command || !MOCK_COMMAND_RE.test(command)) continue;
+    if (!(await isLegacyMock(candidate, { answersLikeMock, readCommand, readImage }))) continue;
     try {
       kill(candidate);
       return { outcome: 'stopped', pid: candidate };
@@ -392,13 +484,20 @@ module.exports = {
   CONTROL_PATH,
   TAKEOVER_HEADER,
   MOCK_COMMAND_RE,
+  NODE_RE,
+  SERVER_SCRIPT_RE,
   sourceRevision,
   controlRoutes,
   exchange,
   isMockHealth,
+  isMockNotFound,
   parsePidList,
   parseNetstat,
+  parseSs,
+  parseTasklist,
   listeningPids,
   commandLineOf,
+  imageNameOf,
+  isLegacyMock,
   takeOver,
 };

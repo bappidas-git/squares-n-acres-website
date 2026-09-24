@@ -8,7 +8,15 @@
  */
 
 import ApiError from '../apiError';
-import http, { buildUrl, client, onUnauthorized, setAuthToken, toApiError } from '../http';
+import http, {
+  AUTH_STORAGE_KEYS,
+  buildUrl,
+  client,
+  onUnauthorized,
+  setAuthToken,
+  toApiError,
+} from '../http';
+import storage from '../../utils/storage';
 import { endpoints } from '../endpoints';
 
 const respond = (data = { data: null }) => Promise.resolve({ data, status: 200 });
@@ -163,6 +171,77 @@ describe('401 handling', () => {
   it('signs the session out when the profile call expires', async () => {
     await reject('/auth/profile');
     expect(onSessionEnd).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('a refusal only an older API gives (QA-58)', () => {
+  let request;
+  let warn;
+
+  /** A 403 as the response interceptor hands it on, with the response's headers. */
+  const refused = (headers = {}) => {
+    const handler = client.interceptors.response.handlers.find((entry) => entry?.rejected);
+    const error = httpError(403, { message: 'You do not have permission to perform this action.' });
+    error.response.headers = headers;
+    return handler.rejected(error).catch((thrown) => Promise.reject(thrown));
+  };
+
+  const signIn = (role) => storage.setItem(AUTH_STORAGE_KEYS.user, { id: 1, role });
+
+  beforeEach(() => {
+    request = jest.spyOn(client, 'request');
+    warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    request.mockRestore();
+    warn.mockRestore();
+    storage.removeItem(AUTH_STORAGE_KEYS.user);
+  });
+
+  it('says the API is older than the web app, and how to fix it, instead of blaming the role', async () => {
+    signIn('admin');
+    request.mockImplementation(() => refused());
+    const error = await http
+      .request(endpoints.adminSegments.list, { params: { page: 1 } })
+      .catch((thrown) => thrown);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(403);
+    expect(error.isStaleApi).toBe(true);
+    expect(error.message).toMatch(/^The API at localhost:4000 is running older code/);
+    expect(error.message).toMatch(/npm run dev/);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toMatch(/GET \/admin\/segments answered 403/);
+  });
+
+  it('does the same for the header menus of a manager', async () => {
+    signIn('manager');
+    request.mockImplementation(() => refused());
+    const error = await http.request(endpoints.adminHeaderMenus.list).catch((thrown) => thrown);
+    expect(error.isStaleApi).toBe(true);
+  });
+
+  it('passes on the refusal of the mock that reloads its code untouched', async () => {
+    signIn('admin');
+    request.mockImplementation(() => refused({ 'x-mock-revision': '99ff6d391149' }));
+    const error = await http.request(endpoints.adminSegments.list).catch((thrown) => thrown);
+    expect(error.isStaleApi).toBeUndefined();
+    expect(error.message).toBe('You do not have permission to perform this action.');
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('passes on a refusal the role has earned untouched', async () => {
+    signIn('sales');
+    request.mockImplementation(() => refused());
+    const lead = await http
+      .request(endpoints.adminLeads.get, { pathParams: { id: 7 } })
+      .catch((thrown) => thrown);
+    expect(lead.message).toBe('You do not have permission to perform this action.');
+
+    signIn('manager');
+    const users = await http.request(endpoints.adminUsers.create, { body: {} }).catch((e) => e);
+    expect(users.message).toBe('You do not have permission to perform this action.');
+    expect(warn).not.toHaveBeenCalled();
   });
 });
 

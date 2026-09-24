@@ -12,6 +12,13 @@
  * process takes its place (`lib/takeover.js`). That happens before the runtime
  * database is read, because the old process rewrites the whole file from memory
  * on its next write and would undo what `ensureRuntimeDb` adds to it.
+ *
+ * Once it serves, the process keeps to the code on disk: when a pull changes
+ * the API's code, the next request reloads it in place (`lib/hotReload.js`,
+ * QA-58), so a mock that nobody restarts cannot fall behind the web app. Every
+ * answer names the code that gave it (`X-Mock-Revision`), which is how the web
+ * app tells this mock from an older one still answering on the port
+ * (`src/services/staleApi.js`).
  */
 
 const http = require('http');
@@ -20,10 +27,21 @@ const path = require('path');
 const config = require('./config');
 const { createApp } = require('./app');
 const { ensureRuntimeDb, createRouter } = require('./db');
-const { APP_ID, controlRoutes, sourceRevision, takeOver } = require('./lib/takeover');
+const { createHotReload, revisionOf, snapshotModules } = require('./lib/hotReload');
+const { APP_ID, controlRoutes, takeOver } = require('./lib/takeover');
 
 /** The repository root. */
 const ROOT = path.join(__dirname, '..');
+
+/**
+ * The header every answer carries: the revision of the code that gave it. The
+ * web app reads it (`src/services/staleApi.js`) across origins, so CORS
+ * exposes it.
+ */
+const REVISION_HEADER = 'X-Mock-Revision';
+
+/** The shell: the modules that hold the port, which a reload leaves as they are. */
+const SHELL = [__filename, require.resolve('./lib/hotReload'), require.resolve('./lib/takeover')];
 
 /** How long a stopped mock gets to let go of the port. */
 const RELEASE_TIMEOUT_MS = 10000;
@@ -85,7 +103,23 @@ async function claimPort(server, port, revision) {
 /** Why a new admin screen answers 403 while an older mock serves the port. */
 const STALE_MOCK_EFFECT =
   'The web app talks to whatever answers there, and an older copy refuses the screens it does ' +
-  'not know yet ("You do not have permission to perform this action.").';
+  'not know yet: they say the API is older than the web app.';
+
+/**
+ * The API as the modules on disk build it now: what a reload serves. The
+ * runtime database gains what the seed gained since, as it does on a start.
+ * `require` here loads each module afresh, because `lib/hotReload.js` has
+ * dropped them from the cache before it calls this.
+ */
+function loadApi() {
+  const freshConfig = require('./config');
+  const db = require('./db');
+  const { added } = db.ensureRuntimeDb({ fresh: false });
+  if (added.length > 0) {
+    console.info(`Runtime db gained ${added.join(', ')} from ${relative(freshConfig.seedPath)}`);
+  }
+  return require('./app').createApp({ router: db.createRouter(), config: freshConfig });
+}
 
 /** The line that says what to do about a port this process could not claim. */
 function portMessage({ status, holder }, port) {
@@ -107,7 +141,9 @@ function portMessage({ status, holder }, port) {
 }
 
 async function start() {
-  const revision = sourceRevision({ root: ROOT });
+  // Every module the API is built from is loaded by now: what this process runs.
+  const snapshot = snapshotModules({ root: ROOT });
+  const revision = revisionOf(snapshot);
   const startedAt = new Date().toISOString();
 
   // A request that arrives while the database is still loading waits for it
@@ -155,11 +191,24 @@ async function start() {
     setTimeout(() => process.exit(0), 1000).unref();
   };
 
-  const app = createApp({ router: createRouter(), config });
+  /** Every answer names the code that gave it, read when the answer starts. */
+  const withRevision = (api) => (req, res) => {
+    res.setHeader(REVISION_HEADER, hot.revision());
+    res.setHeader('Access-Control-Expose-Headers', REVISION_HEADER);
+    api(req, res);
+  };
+
+  const hot = createHotReload({
+    root: ROOT,
+    app: withRevision(createApp({ router: createRouter(), config })),
+    snapshot,
+    load: () => withRevision(loadApi()),
+    keep: SHELL,
+  });
   const control = controlRoutes({
     identity: () => ({
       app: APP_ID,
-      revision,
+      revision: hot.revision(),
       pid: process.pid,
       port: config.port,
       root: ROOT,
@@ -174,7 +223,7 @@ async function start() {
     },
   });
 
-  handle = (req, res) => (control.handles(req.url) ? control(req, res) : app(req, res));
+  handle = (req, res) => (control.handles(req.url) ? control(req, res) : hot.handle(req, res));
   waiting.splice(0).forEach(([req, res]) => handle(req, res));
 
   console.info(
