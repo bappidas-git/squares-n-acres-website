@@ -14,13 +14,20 @@ import {
   getEmailErrorMessage,
   getMobileErrorMessage,
   getNameErrorMessage,
+  localPhoneDigits,
+  normalizePhone,
 } from '../../../../utils/validators';
 import copy from './financeCopy';
 
-/** The answers a fresh form starts from; the three known ones are prefilled. */
+/**
+ * The answers a fresh form starts from; the three known ones are prefilled.
+ * The phone is its last ten digits, as the lead form and the job application
+ * prefill it: a visitor is saved as `+919876543210`, and beside the box's own
+ * "+91" that read "+91 +919876543210" (QA-61).
+ */
 export const emptyAnswers = (saved = {}) => ({
   name: saved.name ?? '',
-  phone: saved.phone ?? '',
+  phone: localPhoneDigits(saved.phone),
   email: saved.email ?? '',
   occupation: '',
   employmentYears: '',
@@ -84,7 +91,8 @@ export const summaryLine = (values, score, bank) =>
  * An untouched optional e-mail is left out of the body rather than sent as
  * `''`, which §6.7 types as an e-mail address and the API refuses (NEW-31). A
  * co-applicant's income is dropped when the visitor said there is none, so the
- * record never contradicts itself.
+ * record never contradicts itself. The phone goes in the one shape every lead
+ * form sends, `+919876543210`, however it was typed (QA-53, QA-61).
  *
  * @param {object} options
  * @param {object} options.values the answers
@@ -108,7 +116,7 @@ export function assessmentLead({
     score,
     body: {
       name: String(values.name ?? '').trim(),
-      phone: String(values.phone ?? '').trim(),
+      phone: normalizePhone(String(values.phone ?? '').trim()),
       ...(email ? { email } : {}),
       source,
       ...(propertyId ? { propertyId } : {}),

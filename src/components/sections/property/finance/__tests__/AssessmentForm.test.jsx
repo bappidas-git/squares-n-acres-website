@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import AssessmentForm from '../AssessmentForm';
-import { assessmentLead, validateAnswers } from '../assessmentLead';
+import { assessmentLead, emptyAnswers, validateAnswers } from '../assessmentLead';
 import { leadStorage } from '../../../../../utils/leadStorage';
 import leadService from '../../../../../services/leadService';
 import renderWith from '../../../../../test-utils';
@@ -94,6 +94,11 @@ describe('validateAnswers', () => {
     expect(given.exactMonthlyIncome).toBeUndefined();
   });
 
+  it('takes a phone number as people write it (QA-61)', () => {
+    expect(validateAnswers({ ...answered, phone: '98451 00121' }).phone).toBeUndefined();
+    expect(validateAnswers({ ...answered, phone: '+91 98451-00121' }).phone).toBeUndefined();
+  });
+
   it('refuses a name or a phone number the API would', () => {
     expect(validateAnswers({ ...answered, name: '' }).name).toEqual(expect.any(String));
     expect(validateAnswers({ ...answered, phone: '12345' }).phone).toEqual(expect.any(String));
@@ -136,6 +141,21 @@ describe('assessmentLead', () => {
     expect(
       assessmentLead({ values: answered, source: 'financial-assessment' }).body
     ).not.toHaveProperty('email');
+  });
+
+  it('sends the phone in the one shape every lead form sends (QA-61)', () => {
+    const { body } = assessmentLead({
+      values: { ...answered, phone: '98451 00121' },
+      source: 'financial-assessment',
+    });
+
+    expect(body.phone).toBe('+919845100121');
+  });
+
+  it('prefills the ten digits of a saved number, beside the box’s own +91 (QA-61)', () => {
+    // The other lead forms save `+919876543210`; it read "+91 +919876543210".
+    expect(emptyAnswers({ phone: '+919876543210' }).phone).toBe('9876543210');
+    expect(emptyAnswers({}).phone).toBe('');
   });
 
   it('drops a co-applicant income the visitor said not to count', () => {
@@ -197,7 +217,7 @@ describe('<AssessmentForm>', () => {
     expect(leadService.create).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Asha Rao',
-        phone: '9876543210',
+        phone: '+919876543210',
         source: 'financial-assessment',
         propertyId: 7,
         meta: expect.objectContaining({ occupation: 'salaried', propertyPrice: 12500000 }),
@@ -208,6 +228,34 @@ describe('<AssessmentForm>', () => {
     const { score } = onComplete.mock.calls[0][0];
     expect(score.score).toBe(85);
     expect(score.label).toBe('Excellent');
+  });
+
+  it('takes "98451 00121" and files it as +919845100121 (QA-61)', async () => {
+    renderWith(<AssessmentForm source="financial-assessment" onComplete={jest.fn()} />);
+
+    // Capped at ten characters, "98450 12345" was cut to "98450 1234" and
+    // refused. (The cap is read off the box: the user-event this suite runs
+    // types past a `maxlength`.)
+    expect(screen.getByLabelText(/phone number/i)).toHaveAttribute('maxlength', '18');
+
+    await fillIn();
+    await userEvent.clear(screen.getByLabelText(/phone number/i));
+    await userEvent.type(screen.getByLabelText(/phone number/i), '98451 00121');
+    await userEvent.click(screen.getByRole('button', { name: /check my eligibility/i }));
+
+    await waitFor(() =>
+      expect(leadService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ phone: '+919845100121' })
+      )
+    );
+    expect(leadStorage.getVisitor()).toMatchObject({ phone: '+919845100121' });
+  });
+
+  it('prefills a saved visitor’s number without a second +91 (QA-61)', () => {
+    leadStorage.saveVisitor({ name: 'Asha Rao', phone: '+919876543210' });
+    renderWith(<AssessmentForm source="financial-assessment" onComplete={jest.fn()} />);
+
+    expect(screen.getByLabelText(/phone number/i)).toHaveValue('9876543210');
   });
 
   it('opens the gated content on the listing, because the questions asked for more', async () => {
