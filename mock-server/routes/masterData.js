@@ -20,7 +20,7 @@ const { makeCrudRouter } = require('../lib/crud');
 const { embedLocality } = require('../lib/embed');
 const { isLive } = require('../lib/articleFilters');
 const { isBuiltInSegment } = require('../../src/config/segments');
-const { FAQ_CATEGORIES } = require('../../src/config/enums');
+const { AMENITY_CATEGORIES, FAQ_CATEGORIES } = require('../../src/config/enums');
 const { publicAuthor } = require('../lib/scope');
 const { stripHtml, unsafeMarkup } = require('../lib/html');
 const { validation } = require('../middleware/errors');
@@ -154,6 +154,47 @@ function checkFaq(record, { method, body, existing, db }) {
   return record;
 }
 
+/** A name as two names are compared: case and spacing aside. */
+const nameKey = (text) =>
+  String(text ?? '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * A city lists a locality once (QA-60): `name` is unique within its city, as
+ * the data model has always said and the mock never checked. A second
+ * "Whitefield" in Bengaluru was stored, and every locality picker, the
+ * listing filters and `/localities` then offered two. Case and spacing aside;
+ * another city may have a locality of the same name.
+ *
+ * Asked of a create, and of a write that changes the name or the city — a
+ * record that already shares its name keeps it until it is renamed.
+ *
+ * @param {object} record the record about to be stored
+ * @param {{existing?: object, db: object}} context
+ * @returns {object} the same record
+ */
+function checkLocality(record, { existing, db }) {
+  const key = nameKey(record.name);
+  if (!key) return record;
+  if (existing && nameKey(existing.name) === key && sameId(existing.cityId, record.cityId)) {
+    return record;
+  }
+
+  const twin = (db.getCollection('localities') ?? []).find(
+    (locality) =>
+      !sameId(locality.id, existing?.id ?? record.id) &&
+      sameId(locality.cityId, record.cityId) &&
+      nameKey(locality.name) === key
+  );
+  if (twin) {
+    const city = (db.getCollection('cities') ?? []).find((row) => sameId(row.id, record.cityId));
+    throw validation({ name: [`This locality is already in ${city?.name ?? 'this city'}.`] });
+  }
+  return record;
+}
+
 /** `{ id, name, slug }` of a record in `collection`. */
 const refOf = (rows, id) => {
   const record = (rows ?? []).find((row) => sameId(row.id, id));
@@ -181,6 +222,7 @@ const RESOURCES = [
     needs: ['cities', 'properties'],
     noun: { one: 'locality', many: 'localities' },
     deleteGuard: 'locality',
+    beforeSave: checkLocality,
     afterRead: (record, { collections }) => ({
       ...record,
       city: embedLocality(refOf(collections.cities, record.cityId)),
@@ -290,7 +332,10 @@ const RESOURCES = [
     sorts: {
       order: 'order,name',
       name: 'name',
-      category: 'category,order',
+      // The categories in the order the property form and a listing page
+      // group them — Basic, Lifestyle, Safety… — not the alphabet's, which
+      // put Commercial second in the admin's grouped table (QA-60).
+      category: { spec: 'category,order', rank: { category: AMENITY_CATEGORIES.values } },
       propertyCount: '-propertyCount',
     },
     defaultSort: 'order',
@@ -499,6 +544,9 @@ module.exports = ({ db, getModel }) => {
         beforeValidate: resource.beforeValidate,
         beforeSave: resource.beforeSave,
         settleOrder: resource.settleOrder ?? false,
+        // Every collection here is typed into a form, and the real API trims
+        // what a form sends (Laravel's `TrimStrings`, QA-60).
+        trimStrings: true,
         routes: resource.routes ?? null,
         noun: resource.noun,
       })

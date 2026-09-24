@@ -69,20 +69,47 @@ function embedAgent(agent, source) {
   };
 }
 
+/** Whether a master-data record is switched on (`isActive` defaults to true). */
+const isLive = (record) => Boolean(record) && record.isActive !== false;
+
+/**
+ * A reference to a record whose page is not public: its name still labels
+ * the listing, but without a slug nothing links to a page that answers 404
+ * (QA-60). Every link the site draws from a listing's locality or developer
+ * — the guide button, the builder button, the breadcrumb, the JSON-LD — is
+ * already drawn only when there is a slug.
+ */
+const withoutPage = (reference) => (reference ? { ...reference, slug: null } : reference);
+
 /**
  * A property with its `propertyType`, `amenities`, `badges`,
  * `location.locality`, `location.city`, `project.developer` and `agent`
  * display fields embedded.
  *
+ * The public read (`publicRead`) shows what the admin has switched on and
+ * nothing else (QA-60): an amenity or a badge an editor deactivated — "Price
+ * Drop" once the offer is over — was still printed on every card and listing
+ * page that carried it, and a deactivated locality or developer was still
+ * linked from every one of its listings, to a page that answers 404. The
+ * admin read keeps them all, so the property form never drops a tick it
+ * cannot see.
+ *
  * @param {object} property
  * @param {object} [source] collections to resolve the ids against
+ * @param {{publicRead?: boolean}} [options]
  * @returns {object} a copy — the stored record is never mutated
  */
-function embedProperty(property, source) {
+function embedProperty(property, source, { publicRead = false } = {}) {
   if (!property) return property;
   const db = resolveSource(source);
   const amenityIds = property.amenityIds ?? [];
   const badgeIds = property.badgeIds ?? [];
+  const shown = (record) => Boolean(record) && (!publicRead || isLive(record));
+
+  const locality = byId(db, 'localities', property.location?.localityId);
+  const developer = byId(db, 'developers', property.project?.developerId);
+  const linkable = (record, reference) =>
+    publicRead && record && !isLive(record) ? withoutPage(reference) : reference;
 
   return {
     ...property,
@@ -94,20 +121,20 @@ function embedProperty(property, source) {
     ]),
     amenities: amenityIds
       .map((id) => byId(db, 'amenities', id))
-      .filter(Boolean)
+      .filter(shown)
       .map((amenity) => pick(amenity, ['id', 'name', 'slug', 'icon', 'category'])),
     badges: badgeIds
       .map((id) => byId(db, 'badges', id))
-      .filter(Boolean)
+      .filter(shown)
       .map((badge) => pick(badge, ['id', 'name', 'slug', 'color', 'icon'])),
     location: {
       ...property.location,
-      locality: embedLocality(byId(db, 'localities', property.location?.localityId)),
+      locality: linkable(locality, embedLocality(locality)),
       city: ref(byId(db, 'cities', property.location?.cityId)),
     },
     project: {
       ...property.project,
-      developer: embedDeveloper(byId(db, 'developers', property.project?.developerId)),
+      developer: linkable(developer, embedDeveloper(developer)),
     },
     agent: embedAgent(property.agent, db),
   };

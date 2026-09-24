@@ -243,6 +243,45 @@ describe('the remaining public property routes', () => {
     });
   });
 
+  it('shows only what master data has switched on (QA-60)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const slug = 'lakeview-heights-3-bhk-whitefield';
+
+      // Lakeview carries amenities 1 and 2 and badge 3, in locality 1, by
+      // developer 1. Switch one of each off.
+      for (const path of ['amenities/1', 'badges/3', 'localities/1', 'developers/1']) {
+        const off = await request('PATCH', `/admin/${path}`, { token, body: { isActive: false } });
+        assert.equal(off.status, 200, path);
+      }
+
+      const { data } = (await request('GET', `/properties/slug/${slug}`)).body;
+      assert.ok(!data.amenities.some((amenity) => amenity.id === 1), 'the inactive amenity');
+      assert.ok(
+        data.amenities.some((amenity) => amenity.id === 2),
+        'an active one stays'
+      );
+      assert.ok(!data.badges.some((badge) => badge.id === 3), 'the inactive badge');
+      // The name still labels the listing; without a slug, nothing links to a
+      // page that answers 404.
+      assert.deepEqual(data.location.locality, { id: 1, name: 'Whitefield', slug: null });
+      assert.equal(data.project.developer.slug, null);
+      assert.ok(data.project.developer.name);
+
+      // A list reads the same way — the cards carry the badges.
+      const card = (await request('GET', '/properties?ids=1')).body.data[0];
+      assert.ok(!card.badges.some((badge) => badge.id === 3));
+      assert.equal(card.location.locality.slug, null);
+
+      // The admin read keeps every tick, so the property form never drops one.
+      const admin = (await request('GET', '/admin/properties/1', { token })).body.data;
+      assert.ok(admin.amenities.some((amenity) => amenity.id === 1));
+      assert.ok(admin.badges.some((badge) => badge.id === 3));
+      assert.equal(admin.location.locality.slug, 'whitefield');
+      assert.ok(admin.project.developer.slug);
+    });
+  });
+
   it('answers similar listings with the editor’s picks first', async () => {
     await withServer(async ({ request, login }) => {
       const chosen = await request('GET', '/properties/1/similar');
@@ -937,6 +976,35 @@ describe('/admin/properties', () => {
       assert.equal(created.status, 201);
       assert.equal(created.body.data.slug, 'empty-slug-tower-2-bhk-apartments-in-hebbal');
       assert.equal(created.body.data.seo.slug, created.body.data.slug);
+    });
+  });
+
+  it('gives a title with no Latin letter or digit a slug of its own (QA-60)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      // A title in Devanagari alone makes no slug at all. It was stored as ''
+      // — for both of these — and neither listing had a page.
+      const hindi = {
+        ...NEW_PROPERTY,
+        title: 'व्हाइटफील्ड में शानदार फ्लैट',
+        slug: '',
+        seo: { slug: '' },
+      };
+      const first = await request('POST', '/admin/properties', { token, body: hindi });
+      const second = await request('POST', '/admin/properties', { token, body: hindi });
+      assert.equal(first.status, 201);
+      assert.equal(first.body.data.slug, `property-${first.body.data.id}`);
+      assert.equal(first.body.data.seo.slug, first.body.data.slug, 'the two slugs are one');
+      assert.equal(second.body.data.slug, `property-${second.body.data.id}`);
+
+      // A replace that asks for a derived slug again keeps the one it has.
+      const replaced = await request('PUT', `/admin/properties/${first.body.data.id}`, {
+        token,
+        body: { ...hindi, title: 'व्हाइटफील्ड में नया फ्लैट' },
+      });
+      assert.equal(replaced.status, 200);
+      assert.equal(replaced.body.data.slug, first.body.data.slug);
     });
   });
 

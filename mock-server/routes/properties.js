@@ -152,7 +152,7 @@ module.exports = ({ db, getModel }) => {
   const active = () => rows().filter((property) => property.isActive);
 
   const present = (property, { admin, collections = source() }) => {
-    const embedded = embedProperty(property, collections);
+    const embedded = embedProperty(property, collections, { publicRead: !admin });
     return admin ? embedded : publicProperty(embedded);
   };
 
@@ -244,8 +244,17 @@ module.exports = ({ db, getModel }) => {
    *
    * An explicit duplicate is a 409 (§5.9); an empty one is de-duplicated
    * silently, which is what lets the form leave the field alone.
+   *
+   * A title with no Latin letter or digit in it — "व्हाइटफील्ड में 3 BHK" has
+   * some, "व्हाइटफील्ड में फ्लैट" none — makes no slug at all, and an empty
+   * slug is no address: the listing keeps the slug it has, or is given
+   * `property-<id>`, as every other collection is (QA-60).
+   *
+   * @param {object} body the request body
+   * @param {{existing?: object|null, id?: number|string|null}} context
+   * @returns {string}
    */
-  function resolveSlug(body, { existing = null }) {
+  function resolveSlug(body, { existing = null, id = null }) {
     const requested = slugify(body?.slug ?? '');
     const excludeId = existing?.id ?? null;
 
@@ -260,7 +269,10 @@ module.exports = ({ db, getModel }) => {
     }
 
     const fallback = slugify(body?.title ?? existing?.title ?? '');
-    return ensureUniqueSlug(rows(), fallback, excludeId);
+    const derived = ensureUniqueSlug(rows(), fallback, excludeId);
+    if (derived) return derived;
+    if (existing?.slug) return existing.slug;
+    return ensureUniqueSlug(rows(), `property-${id ?? existing?.id ?? ''}`, excludeId);
   }
 
   /** The entity slug and `seo.slug` are always the same string (§5.9). */
@@ -470,8 +482,8 @@ module.exports = ({ db, getModel }) => {
         lookup: db.getCollection,
       });
 
-      const slug = resolveSlug(body, {});
-      const record = applySlug(buildRecord(body, { method: 'POST', user: req.user }), slug);
+      const built = buildRecord(body, { method: 'POST', user: req.user });
+      const record = applySlug(built, resolveSlug(body, { id: built.id }));
 
       rows().push(record);
       db.write();
