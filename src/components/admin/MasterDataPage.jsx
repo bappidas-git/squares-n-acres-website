@@ -147,6 +147,29 @@ export function useMasterDataCrud(config) {
 }
 
 /**
+ * What a dialog shows: `value` while it is set, and once it has been cleared,
+ * the last value it had — until `release`, the dialog's `onExited`.
+ *
+ * Each dialog here is closed by clearing the state it is drawn from, and then
+ * takes its exit transition to leave. Drawn from that state, it faded out as
+ * something else: an edit as an empty "New badge", a delete confirmation
+ * without its sentence, the usage guard as "“undefined” cannot be deleted"
+ * over an empty list (QA-54).
+ *
+ * @template T
+ * @param {T|null} value
+ * @returns {[T|null, () => void]}
+ */
+function useLingering(value) {
+  const [kept, setKept] = useState(value);
+  // Kept in the render it arrives in (React's "storing information from
+  // previous renders"), so no frame of the dialog is drawn without it.
+  if (value !== null && value !== undefined && value !== kept) setKept(value);
+  const release = useCallback(() => setKept(null), []);
+  return [value ?? kept, release];
+}
+
+/**
  * A complete master-data screen from one configuration object.
  *
  * Localities, cities, property types, amenities, badges, developers, banks,
@@ -257,8 +280,6 @@ export default function MasterDataPage({ config }) {
   } = crud;
 
   const [editing, setEditing] = useState(null); // `{}` for a new record
-  // The record a closing dialog was showing, until its exit transition ends.
-  const [closing, setClosing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [deletingBusy, setDeletingBusy] = useState(false);
   const [guard, setGuard] = useState(null);
@@ -268,14 +289,15 @@ export default function MasterDataPage({ config }) {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
+  // What each dialog draws: its state, or what it showed while it fades out.
+  // Whether it acts is still asked of the state — a closing dialog is inert.
+  const [shown, releaseEditing] = useLingering(editing);
+  const [shownDeleting, releaseDeleting] = useLingering(deleting);
+  const [shownGuard, releaseGuard] = useLingering(guard);
+  const [shownWarning, releaseWarning] = useLingering(saveWarning);
+
   const isNew = Boolean(editing) && !editing.id;
   const activeSchema = isNew ? (createSchema ?? schema) : schema;
-
-  // What the form shows. `editing` is cleared the moment the dialog is asked
-  // to close, and the dialog then takes its exit transition to leave: drawn
-  // from `editing`, an edit faded out as an empty "New badge" with a "Create
-  // badge" button. So a closing dialog keeps the record it was showing.
-  const shown = editing ?? closing;
 
   // A screen whose fields depend on the record — the users form disables an
   // admin's own role select — passes a function instead of a list.
@@ -346,9 +368,6 @@ export default function MasterDataPage({ config }) {
   const closeForm = () => {
     setConfirmDiscard(false);
     setSaveWarning(null);
-    // The dialog fades out as it was; its `onExited` lets go of the record. A
-    // page-mode form has no exit transition to wait for.
-    if (formMode === 'dialog') setClosing(editing);
     setEditing(null);
   };
 
@@ -670,20 +689,24 @@ export default function MasterDataPage({ config }) {
   const saveGuard = (
     <DeleteGuardDialog
       open={Boolean(saveWarning)}
-      heading={saveWarning?.heading ?? 'Check before saving'}
-      title={saveWarning?.title}
-      message={saveWarning?.message}
-      usedBy={saveWarning?.usedBy ?? []}
-      hint={saveWarning?.hint ?? ''}
-      confirmLabel={saveWarning?.confirmLabel ?? FORMS.saveAnyway}
+      heading={shownWarning?.heading ?? 'Check before saving'}
+      title={shownWarning?.title}
+      message={shownWarning?.message}
+      usedBy={shownWarning?.usedBy ?? []}
+      hint={shownWarning?.hint ?? ''}
+      confirmLabel={shownWarning?.confirmLabel ?? FORMS.saveAnyway}
       loading={form.submitting}
       onClose={() => setSaveWarning(null)}
       onConfirm={async () => {
+        // Cancelled, the warning fades out over a form that is still open: a
+        // click that lands on its button then would save what was declined.
+        if (!saveWarning) return;
         // The dialog stays up while the write is in flight and closes with the
         // form on success; a refusal lands on the field behind it, so it gets
         // out of the way instead.
         if (!(await persist())) setSaveWarning(null);
       }}
+      onExited={releaseWarning}
     />
   );
 
@@ -837,22 +860,24 @@ export default function MasterDataPage({ config }) {
               </Button>
             </>
           }
-          // Faded out: nothing is on screen to keep any more.
-          slotProps={{ transition: { onExited: () => setClosing(null) } }}
+          slotProps={{ transition: { onExited: releaseEditing } }}
         >
           {shown ? formBody : null}
         </Modal>
       ) : null}
 
+      {/* `confirmDelete` does nothing once `deleting` is gone, so a second
+          "Delete" while this fades out deletes nothing. */}
       <ConfirmDialog
         open={Boolean(deleting)}
         title={DIALOGS.deleteTitle(singular)}
-        message={deleting ? DIALOGS.deleteMessage(labelOf(deleting, columns)) : ''}
+        message={shownDeleting ? DIALOGS.deleteMessage(labelOf(shownDeleting, columns)) : ''}
         confirmLabel={DIALOGS.deleteConfirm}
         danger
         loading={deletingBusy}
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
+        onExited={releaseDeleting}
       />
 
       <ConfirmDialog
@@ -863,15 +888,20 @@ export default function MasterDataPage({ config }) {
         cancelLabel={DIALOGS.discardCancel}
         danger
         onClose={() => setConfirmDiscard(false)}
-        onConfirm={closeForm}
+        // "Keep editing" fades this out over a form still open, with "Discard"
+        // beside the pointer: a click on it then must not throw the edits away.
+        onConfirm={() => {
+          if (confirmDiscard) closeForm();
+        }}
       />
 
       <DeleteGuardDialog
         open={Boolean(guard)}
-        title={guard?.title}
-        message={guard?.message}
-        usedBy={guard?.usedBy ?? []}
+        title={shownGuard?.title}
+        message={shownGuard?.message}
+        usedBy={shownGuard?.usedBy ?? []}
         onClose={() => setGuard(null)}
+        onExited={releaseGuard}
       />
 
       {saveGuard}
