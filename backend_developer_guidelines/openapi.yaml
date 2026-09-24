@@ -8,7 +8,7 @@ info:
     `src/services/endpoints.js`, `src/services/schemas/` and
     `mock-server/schemas/models.js`. Do not edit by hand.
 
-    generatedFrom: e26e7d2
+    generatedFrom: a732c3c
 
     Read `01_API_CONTRACT.md` first: the envelopes of §5.2, the error body
     of §5.3 and the pagination of §5.6 apply to every operation below and

@@ -39,6 +39,69 @@ const ENTITIES = {
 /** Words per minute the reading-time estimate assumes (§6.8). */
 const WORDS_PER_MINUTE = 200;
 
+/** An opening tag, attributes and all. */
+const TAG_RE = /<[a-z][^>]*>/gi;
+
+/** A quoted attribute value — what is left out when attribute names are read. */
+const QUOTED_RE = /"[^"]*"|'[^']*'/g;
+
+/** An inline event handler's name: `onclick=`, `onerror =`. */
+const HANDLER_RE = /\son[a-z]+\s*=/i;
+
+/** An attribute that holds an address, and the address, however it is quoted. */
+const URL_ATTRIBUTE_RE =
+  /\s(?:href|src|action|formaction|xlink:href)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+
+/** A string without spaces and control characters, which browsers skip inside a scheme. */
+const withoutBlanks = (value) =>
+  [...value].filter((character) => character.charCodeAt(0) > 32).join('');
+
+/** The entities a browser decodes in an attribute value before it reads a scheme. */
+const NAMED_IN_SCHEME = { colon: ':', tab: '\t', newline: '\n' };
+
+/**
+ * An attribute value as the browser reads it: `&#106;avascript&colon;` is a
+ * `javascript:` address to the browser, and would be text to a plain compare.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+const decodeAttribute = (value) =>
+  value
+    .replace(/&#x([0-9a-f]+);?/gi, (_match, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);?/g, (_match, decimal) => String.fromCodePoint(Number(decimal)))
+    .replace(
+      /&(colon|tab|newline);/gi,
+      (match, name) => NAMED_IN_SCHEME[name.toLowerCase()] ?? match
+    );
+
+/**
+ * Whether a stored HTML string carries markup the site must never run (QA-55):
+ * a script element, an inline event handler, a `javascript:` address.
+ *
+ * Handlers and addresses are looked for inside tags only, and a handler among
+ * the attribute **names** only, so neither prose nor an alt text that happens
+ * to read "onward=" is mistaken for one.
+ *
+ * Sanitising is the editor's job (`dompurify`, `components/editor/sanitize`);
+ * this is the API's second line of defence against a body that reached it
+ * some other way, as the pages API refuses a `<script` in a block.
+ *
+ * @param {string} html
+ * @returns {boolean}
+ */
+function unsafeMarkup(html) {
+  if (typeof html !== 'string' || html === '') return false;
+  if (/<script\b/i.test(html)) return true;
+
+  return (html.match(TAG_RE) ?? []).some((tag) => {
+    if (HANDLER_RE.test(tag.replace(QUOTED_RE, '""'))) return true;
+    return [...tag.matchAll(URL_ATTRIBUTE_RE)].some((match) =>
+      /^javascript:/i.test(withoutBlanks(decodeAttribute(match[1] ?? match[2] ?? match[3] ?? '')))
+    );
+  });
+}
+
 /**
  * The plain text of an HTML fragment.
  *
@@ -87,4 +150,4 @@ function readingTime(words, wordsPerMinute = WORDS_PER_MINUTE) {
   return Math.max(1, Math.ceil(count / wordsPerMinute));
 }
 
-module.exports = { stripHtml, wordCount, readingTime, WORDS_PER_MINUTE };
+module.exports = { stripHtml, wordCount, readingTime, unsafeMarkup, WORDS_PER_MINUTE };

@@ -548,9 +548,19 @@ async function captureExamples({ baseUrl, accounts, log = () => {} }) {
       // with an `isActive` column accepts it; `delete` is the one action the
       // rest share, and an id nothing matches makes it a safe no-op (§5.8).
       const collection = MODELS[collectionOfGroup(group)];
-      base.body = collection?.fields?.isActive
-        ? { ids: [fixtures[group]?.id ?? 1], action: 'activate' }
-        : { ids: [999999], action: 'delete' };
+      if (collection?.fields?.isActive) {
+        // `affected` counts the records that change (QA-55): activating an
+        // active record is "0 updated", which documents nothing. The record is
+        // switched off first, uncaptured, and the example switches it back on.
+        const id = fixtures[group]?.id ?? 1;
+        await api('PATCH', `${endpoint.path.replace(/\/bulk$/, '')}/${id}`, {
+          token: tokens.admin,
+          body: { isActive: false },
+        });
+        base.body = { ids: [id], action: 'activate' };
+      } else {
+        base.body = { ids: [999999], action: 'delete' };
+      }
     } else if (endpoint.path.endsWith('/check-slug')) {
       base.path = `${endpoint.path}?slug=lakeview-heights-3-bhk-whitefield`;
     } else if (spec && (endpoint.method === 'POST' || endpoint.method === 'PUT')) {

@@ -60,6 +60,18 @@ poor specification.
 
 ---
 
+## Article writes
+
+{{articleWrites}}
+
+---
+
+## Writes that change nothing
+
+{{writesThatChangeNothing}}
+
+---
+
 ## Gated files
 
 {{gatedFiles}}

@@ -51,7 +51,7 @@ Integer auto-increment `id` (the mock uses `max(id)+1` per collection). ISO-8601
 
 ### 5.6 Pagination, sorting, filtering
 
-Query params `page` (1-based, default 1), `perPage` (default 12 public / 20 admin, max 100; `perPage=all` allowed **only on admin endpoints** and returns everything), `sort` (a field name or an alias from the endpoint's allowed list; default per endpoint), `order` (`asc|desc`), `q` (full-text on the endpoint's searchable fields, case-insensitive substring), plus endpoint-specific filters. Multi-value filters are comma-separated (`bedrooms=2,3`, `localityId=4,7`). Booleans are the strings `true|false`. Dates are `yyyy-mm-dd` (`from`, `to` inclusive). Unknown params are ignored. Out-of-range `page` returns an empty `data` with correct `meta`.
+Query params `page` (1-based, default 1), `perPage` (default 12 public / 20 admin, max 100; `perPage=all` allowed **only on admin endpoints** and returns everything), `sort` (a field name or an alias from the endpoint's allowed list; default per endpoint), `order` (`asc|desc`), `q` (full-text on the endpoint's searchable fields, case-insensitive substring), plus endpoint-specific filters. Multi-value filters are comma-separated (`bedrooms=2,3`, `localityId=4,7`). Booleans are the strings `true|false`. Dates are `yyyy-mm-dd` (`from`, `to` inclusive). Unknown params are ignored. Out-of-range `page` returns an empty `data` with correct `meta`. A missing value (`null` or empty) sorts **last whichever the `order`**: "Published, newest first" lists the drafts after every dated article, not before them (QA-55) — in SQL, `ORDER BY published_at IS NULL, published_at DESC`.
 
 ### 5.7 Property list filters (`GET /properties`, `GET /admin/properties`)
 
@@ -59,7 +59,7 @@ Query params `page` (1-based, default 1), `perPage` (default 12 public / 20 admi
 
 ### 5.8 Write semantics
 
-`POST` creates → **201** + full record. `PUT` replaces the full record (the client always sends the complete record from the form; missing optional fields become their defaults). `PATCH` updates only the provided fields — used by toggles, bulk actions, SEO panel saves, lead status changes, section-visibility toggles, `order` reorders. `DELETE` → 200 `{ data: null, message }`. Bulk: `POST /admin/<resource>/bulk { ids: [], action: 'activate'|'deactivate'|'delete'|'feature'|'unfeature'|'verify'|'unverify'|'publish'|'unpublish'|'assign'|'status', payload? }` → `{ data: { affected: n }, message }` (unsupported action for the resource → 422).
+`POST` creates → **201** + full record. `PUT` replaces the full record (the client always sends the complete record from the form; missing optional fields become their defaults). `PATCH` updates only the provided fields — used by toggles, bulk actions, SEO panel saves, lead status changes, section-visibility toggles, `order` reorders. `DELETE` → 200 `{ data: null, message }`. Bulk: `POST /admin/<resource>/bulk { ids: [], action: 'activate'|'deactivate'|'delete'|'feature'|'unfeature'|'verify'|'unverify'|'publish'|'unpublish'|'assign'|'status', payload? }` → `{ data: { affected: n }, message }` (unsupported action for the resource → 422). `affected` counts the records that changed. **A write that changes nothing writes nothing** (QA-55): a `PUT` or `PATCH` whose result equals the stored record — `updatedAt`/`updatedBy` aside — answers 200 with the stored record and leaves `updatedAt` where it was, and a bulk action skips a record already in its target state.
 
 #### Reordering — `PATCH /admin/<resource>/:id { order }` (prompt 17, D98)
 
@@ -908,6 +908,18 @@ active unit configurations.
 returns) drops `content`, `contentText`, `faqs`, `relatedArticleIds`,
 `relatedPropertyIds` and the full `seo` object, keeping `seo.title` and
 `seo.description`.
+
+**Writes (QA-55).** An article that is `published` or `scheduled` needs an `excerpt`, a
+`featuredImage.url` and 300 words in `content` — 422 on `excerpt`, `featuredImage.url` and
+`content`, by `POST`, `PUT`, a `PATCH` that touches them or the status, and the bulk
+`publish`, which refuses the whole batch with `data.notReady[] { id, title, gaps[] }`.
+`published` with a future `publishedAt` is 422 on `publishedAt`; a scheduled article that
+is bulk-published goes live now. `categoryId`, `authorId`, `tagIds[]`,
+`relatedArticleIds[]` and `relatedPropertyIds[]` must name records that exist, and an
+article cannot be related to itself (422 on the field, `tagIds.2` for the third). `content`
+and `faqs[].answer` carrying a `<script>`, an inline event handler or a `javascript:` link
+are 422. The rules, the messages and a Laravel sketch are in
+`docs/backend-notes/05_business_rules.md` → "Article writes".
 
 ### `ArticleAdjacent`
 
