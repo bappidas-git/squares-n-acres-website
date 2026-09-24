@@ -24,12 +24,15 @@ export default function CitiesPage() {
     () => ({
       key: 'cities',
       title: 'Cities',
+      subtitle: 'The cities a locality belongs to. A city has no page of its own.',
       singular: 'city',
       service: cityService,
       onMutated: refresh,
       schema: schemas['city.update'],
       createSchema: schemas['city.create'],
-      slugBase: '/',
+      // A city has no page of its own, so its slug is not an address: under
+      // "URL" and "/" it read as if `/mysuru` answered (QA-60).
+      slugBase: '',
       defaultSort: { field: 'name', order: 'asc' },
       activeToggle: true,
       usageGuard: true,
@@ -70,7 +73,7 @@ export default function CitiesPage() {
           confirm: {
             title: 'Delete the selected cities?',
             message:
-              '{count} will be deleted. A city a locality or a property still points at is refused.',
+              '{count} will be deleted. If a locality or a property still points at any of them, none is deleted and you are told which. This cannot be undone.',
           },
         },
       ],
@@ -78,7 +81,12 @@ export default function CitiesPage() {
       formFields: [
         { name: 'name', type: 'text', label: 'Name', required: true, half: true },
         { name: 'state', type: 'text', label: 'State', required: true, half: true },
-        { name: 'slug', type: 'slug', label: 'URL', source: 'name' },
+        {
+          name: 'slug',
+          type: 'slug',
+          label: 'Slug',
+          source: 'name',
+        },
         { name: 'isActive', type: 'switch', label: 'Active' },
       ],
 

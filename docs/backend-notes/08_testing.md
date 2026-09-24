@@ -134,7 +134,8 @@ five-and-above; a price filter drops `priceOnRequest` listings; `sort=price-asc`
 puts them last; an inactive listing is 404 by slug; `POST …/view` moves the
 counter once an hour and not twice; `similar` returns the editor's picks first;
 create, edit, publish and duplicate a listing from the admin and find the copy
-inactive with a `-copy` slug.
+inactive with a `-copy` slug; two listings titled in Devanagari alone are given
+`property-<id>` each, never `''`, and a replace keeps it (QA-60).
 
 **Leads** — submit every public form and check the source lands as the documented
 value; a legacy source value is mapped, not rejected; the honeypot answers 200 and
@@ -185,7 +186,19 @@ and the public list reads the same way; a `PUT` of the whole first record at
 1 moves it first again, and a `PUT` that keeps the number moves nothing. The
 placing itself: a record moved down to 3 is third, one at 3 among records that
 share 0 or skip numbers is third, 0 or no number is first and 99 is last
-(QA-59).
+(QA-59). A name with no Latin letter or digit in it (`"!!"`, `"北京 नगर"`) is given
+`<noun>-<id>` — never `''` — and a replace asking for a derived slug again keeps
+it; a second "Whitefield" (or "  whitefield ") in Bengaluru is 422 on `name`,
+one in another city is 201, and renaming or moving a locality into a twin is
+422 while a write that keeps its own name is 200; `"  Mysuru  "` and `" Karnataka "` are stored as `Mysuru` and `Karnataka`
+(and sort after Bengaluru), a locality's highlights and connectivity rows are
+trimmed too, a `PATCH` is trimmed, and a badge named `" A "` is 422 on `name`;
+`sort=category` on amenities reads basic, lifestyle, safety, sports, kids, eco,
+convenience, commercial, and the reverse with `order=desc`; with an amenity, a
+badge, a locality and a developer switched off, the public read of a listing
+leaves out the amenity and the badge (its card too) and answers
+`{ id, name, slug: null }` for the locality and the developer, while the admin
+read keeps all four as stored (QA-60).
 
 **FAQs** — an `order` PATCH carrying `after: <id>` lands immediately after that
 record even when several records share a number, and one sent with stale numbers

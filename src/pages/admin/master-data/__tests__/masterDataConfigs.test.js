@@ -4,11 +4,15 @@ import {
   banksConfig,
   propertyTypesConfig,
   segmentsConfig,
+  typeMoves,
   usedBySentence,
 } from '../masterDataConfigs';
+import redirectService from '../../../../services/redirectService';
 import { AMENITY_CATEGORIES, BADGE_TONES, SEGMENTS } from '../../../../config/enums';
 import { SEGMENT_KIND_OPTIONS } from '../../../../config/segments';
 import { schemas } from '../../../../services/schemas';
+
+jest.mock('../../../../services/redirectService');
 
 /**
  * The configurations of prompt 15, and the segments of QA-52, checked against
@@ -110,6 +114,10 @@ describe.each(CONFIGS)('$key config', ({ entity, key, config }) => {
     expect(config.orderable).toBe(true);
     expect(config.activeToggle).toBe(true);
     expect(config.defaultSort).toEqual(expect.objectContaining({ order: 'asc' }));
+  });
+
+  it('proposes the end of the list for a new record (QA-60)', () => {
+    expect(config.appendNew).toBe(true);
   });
 
   it('explains where the data is used', () => {
@@ -253,6 +261,92 @@ describe('property types', () => {
     expect(warning.confirmLabel).toBe('Change segment');
   });
 
+  describe('a live type whose URL moves (QA-60)', () => {
+    const VILLAS = {
+      id: 2,
+      name: 'Villas',
+      slug: 'villas',
+      segment: 'residential',
+      isActive: true,
+    };
+
+    it('says which addresses move before the save', async () => {
+      jest.spyOn(config.service, 'get').mockResolvedValue({ data: { usedBy: [] } });
+
+      const warning = await config.confirmSave(
+        { name: 'Villas', slug: 'luxury-villas', segment: 'residential' },
+        VILLAS
+      );
+
+      expect(warning.heading).toBe('Change the URL?');
+      expect(warning.confirmLabel).toBe('Change URL');
+      expect(warning.message).toContain(
+        'Its pages move from /buy/villas and /rent/villas to /buy/luxury-villas and /rent/luxury-villas.'
+      );
+      expect(warning.message).toContain('sent to the new ones (301)');
+      // A slug-only change looks nothing up.
+      expect(config.service.get).not.toHaveBeenCalled();
+    });
+
+    it('reads an emptied box as the name’s slug, and a type switched off as no page', async () => {
+      await expect(
+        config.confirmSave({ name: 'Villas', slug: '', segment: 'residential' }, VILLAS)
+      ).resolves.toBeNull();
+      await expect(
+        config.confirmSave(
+          { name: 'Villas', slug: 'luxury-villas', segment: 'residential' },
+          { ...VILLAS, isActive: false }
+        )
+      ).resolves.toBeNull();
+    });
+
+    it('asks once about both a new segment and a new URL', async () => {
+      jest
+        .spyOn(config.service, 'get')
+        .mockResolvedValue({ data: { usedBy: [{ type: 'property', id: 1 }] } });
+
+      const warning = await config.confirmSave(
+        { name: 'Villas', slug: 'luxury-villas', segment: 'land' },
+        VILLAS
+      );
+      expect(warning.heading).toBe('Change the segment and the URL?');
+      expect(warning.confirmLabel).toBe('Change both');
+      expect(warning.message).toContain('from Residential to');
+      expect(warning.message).toContain('/buy/villas');
+    });
+
+    it('redirects the addresses it left once saved', async () => {
+      redirectService.deactivateByFromPath.mockResolvedValue(null);
+      redirectService.upsertByFromPath.mockResolvedValue({ data: {} });
+      const toast = { info: jest.fn(), error: jest.fn() };
+
+      await config.afterSave({ ...VILLAS, slug: 'luxury-villas' }, VILLAS, { toast });
+
+      expect(redirectService.upsertByFromPath).toHaveBeenCalledWith(
+        expect.objectContaining({ fromPath: '/buy/villas', toPath: '/buy/luxury-villas' })
+      );
+      expect(redirectService.upsertByFromPath).toHaveBeenCalledWith(
+        expect.objectContaining({ fromPath: '/rent/villas', toPath: '/rent/luxury-villas' })
+      );
+      expect(toast.info).toHaveBeenCalledWith(
+        '/buy/villas and /rent/villas now redirect to the new address.'
+      );
+      expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    it('pairs a commercial type’s one address with its new one', () => {
+      expect(
+        typeMoves(
+          { id: 9, slug: 'office-spaces', segment: 'commercial', isActive: true },
+          { id: 9, slug: 'offices', segment: 'commercial' },
+          []
+        )
+      ).toEqual([['/commercial/office-spaces', '/commercial/offices']]);
+      expect(typeMoves({ id: 9, slug: 'a', segment: 'commercial' }, { slug: 'a' }, [])).toEqual([]);
+      expect(typeMoves(null, { slug: 'a' }, [])).toEqual([]);
+    });
+  });
+
   it('says nothing when the segment is unchanged or nothing points at the type', async () => {
     jest.spyOn(config.service, 'get').mockResolvedValue({ data: { usedBy: [] } });
 
@@ -336,6 +430,26 @@ describe('banks', () => {
     expect(byName.interestRateMax).toEqual(expect.objectContaining({ min: 5, max: 20 }));
     expect(byName.maxTenureYears).toEqual(expect.objectContaining({ min: 5, max: 40 }));
     expect(byName.maxLtvPercent).toEqual(expect.objectContaining({ min: 50, max: 95 }));
+  });
+});
+
+describe('bulk delete (QA-60)', () => {
+  // The API refuses a batch whole when any of it is in use (QA-59); "one …
+  // is refused" promised that the rest would go.
+  const deleteOf = (config) => config.bulkActions.find((action) => action.key === 'delete');
+
+  it.each(CONFIGS.filter(({ config }) => config.usageGuard !== false))(
+    '$key says none is deleted when one is held',
+    ({ config }) => {
+      expect(deleteOf(config).confirm.message).toMatch(/none is deleted and you are told which/);
+      expect(deleteOf(config).confirm.message).not.toMatch(/is refused/);
+    }
+  );
+
+  it('says only that a bank goes, since nothing holds one', () => {
+    expect(deleteOf(banksConfig()).confirm.message).toBe(
+      '{count} will be deleted. This cannot be undone.'
+    );
   });
 });
 

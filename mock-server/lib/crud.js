@@ -205,18 +205,81 @@ function tieBreakOf(sorts) {
  * `'order,name'` sorts ascending by both; `'-propertyCount'` defaults to
  * descending and still honours an explicit `order=asc`.
  *
- * @param {string|{spec: string, order?: string}} entry
- * @returns {{spec: string, order: 'asc'|'desc'}}
+ * The object form may carry `rank: { field: [values…] }`: that field sorts by
+ * its place in the list rather than by its spelling — an amenity's category in
+ * the order the site groups them, not the alphabet (QA-60). Laravel writes it
+ * `ORDER BY FIELD(category, 'basic', 'lifestyle', …)`.
+ *
+ * @param {string|{spec: string, order?: string, rank?: Record<string, Array<string>>}} entry
+ * @returns {{spec: string, order: 'asc'|'desc', rank?: Record<string, Array<string>>}}
  */
 function parseSortEntry(entry) {
   if (isPlainObject(entry)) {
-    return { spec: entry.spec, order: entry.order === 'desc' ? 'desc' : 'asc' };
+    return {
+      spec: entry.spec,
+      order: entry.order === 'desc' ? 'desc' : 'asc',
+      ...(isPlainObject(entry.rank) ? { rank: entry.rank } : {}),
+    };
   }
 
   const text = String(entry);
   return text.startsWith('-')
     ? { spec: text.slice(1), order: 'desc' }
     : { spec: text, order: 'asc' };
+}
+
+/** Where a ranked sort keeps the record it was handed (see {@link parseSortEntry}). */
+const ORIGINAL = Symbol('original');
+
+/**
+ * A record's ranked fields as their place in their list: `{ category: 2 }`
+ * for a `lifestyle` amenity. A value the list does not name goes last.
+ *
+ * @param {object} record
+ * @param {Record<string, Array<string>>} rank
+ * @returns {Record<string, number>}
+ */
+function rankedFields(record, rank) {
+  return Object.fromEntries(
+    Object.entries(rank).map(([field, values]) => {
+      const at = values.indexOf(getPath(record, field));
+      return [field, at === -1 ? values.length : at];
+    })
+  );
+}
+
+/**
+ * Trims the text a write sends, in place — Laravel's `TrimStrings` (QA-60).
+ *
+ * Only what the shape declares as text is touched: a `string`, the strings of
+ * an array of them (a locality's highlights) and the strings of an array of
+ * objects (its connectivity rows). HTML, slugs, URLs and passwords are left as
+ * they came: the first two have rules of their own, and an address with a
+ * space in it is refused rather than repaired.
+ *
+ * @param {object} body the request body, mutated
+ * @param {Record<string, object>|null} shape the resource's write schema
+ * @returns {object} the same body
+ */
+function trimText(body, shape) {
+  if (!isPlainObject(body) || !isPlainObject(shape)) return body;
+
+  const trimValue = (value, descriptor) => {
+    if (descriptor?.type === 'string') return typeof value === 'string' ? value.trim() : value;
+    if (descriptor?.type === 'object' && isPlainObject(value))
+      return trimText(value, descriptor.shape);
+    if (descriptor?.type === 'array' && Array.isArray(value)) {
+      return value.map((entry) => trimValue(entry, descriptor.items));
+    }
+    return value;
+  };
+
+  for (const [field, descriptor] of Object.entries(shape)) {
+    if (Object.prototype.hasOwnProperty.call(body, field)) {
+      body[field] = trimValue(body[field], descriptor);
+    }
+  }
+  return body;
 }
 
 /**
@@ -297,6 +360,9 @@ function matchesFilter(record, descriptor, raw, context) {
  *   column repeats itself until a drag settles it. On for every master-data
  *   and content collection with an `order` (`routes/masterData.js`); pages and
  *   header menus keep §5.8's rule
+ * @param {boolean} [options.trimStrings] trim the text a write sends before it
+ *   is checked — Laravel's `TrimStrings` ({@link trimText}, QA-60). On for
+ *   every collection of `routes/masterData.js`
  * @param {Array<string>} [options.routes] the subset to build — `list`,
  *   `bySlug`, `adminList`, `create`, `get`, `update`, `patch`, `remove`,
  *   `bulk`, `checkSlug`. All of them by default; a resource whose contract
@@ -332,6 +398,7 @@ function makeCrudRouter(options) {
     pathSlug = false,
     publicScoped = Boolean(model.publicScope),
     settleOrder = false,
+    trimStrings = false,
     routes = null,
   } = options;
 
@@ -484,9 +551,15 @@ function makeCrudRouter(options) {
     const key = Object.prototype.hasOwnProperty.call(sorts, requested) ? requested : fallback;
     if (!key || !sorts[key]) return items;
 
-    const { spec, order } = parseSortEntry(sorts[key]);
+    const { spec, order, rank } = parseSortEntry(sorts[key]);
     const wanted = String(first(query.order) ?? '').toLowerCase();
-    return sortItems(items, spec, wanted === 'asc' || wanted === 'desc' ? wanted : order);
+    const direction = wanted === 'asc' || wanted === 'desc' ? wanted : order;
+    if (!rank) return sortItems(items, spec, direction);
+
+    // A field sorted by its place in a list rather than by its spelling: the
+    // record is read with that place in the field, and handed back unchanged.
+    const views = items.map((item) => ({ ...item, ...rankedFields(item, rank), [ORIGINAL]: item }));
+    return sortItems(views, spec, direction).map((view) => view[ORIGINAL]);
   }
 
   /** `perPage`, with `all` reserved for the admin routes (§5.6). */
@@ -524,8 +597,19 @@ function makeCrudRouter(options) {
   /**
    * The slug of a write: the one the client chose, or one made from the title.
    * An explicit duplicate is a 409 (§5.9); an empty one is de-duplicated.
+   *
+   * A name with no Latin letter or digit in it — "!!", "北京 नगर" — makes no
+   * slug at all, and an empty slug is no address: it was stored as `''`, two
+   * such records shared it, and neither had a page (QA-60). Such a record keeps
+   * the slug it already has, or is given one after its kind and number —
+   * `locality-21` — which the editor can replace with a better one.
+   *
+   * @param {object} body the request body
+   * @param {object|null} existing the stored record, on a replace
+   * @param {number|string} id the record's id, for the fallback
+   * @returns {string}
    */
-  function resolveSlug(body, existing) {
+  function resolveSlug(body, existing, id) {
     const requested = toSlug(body?.slug ?? '');
     const excludeId = existing?.id ?? null;
 
@@ -540,7 +624,18 @@ function makeCrudRouter(options) {
     }
 
     const fallback = body?.name ?? body?.title ?? existing?.name ?? existing?.title ?? '';
-    return ensureUniqueSlug(rows(), toSlug(fallback), excludeId, model.slugField, toSlug);
+    const derived = ensureUniqueSlug(rows(), toSlug(fallback), excludeId, model.slugField, toSlug);
+    if (derived) return derived;
+
+    const kept = existing?.[model.slugField];
+    if (kept) return kept;
+    return ensureUniqueSlug(
+      rows(),
+      toSlug(`${noun.one}-${id ?? existing?.id ?? ''}`),
+      excludeId,
+      model.slugField,
+      toSlug
+    );
   }
 
   /** The entity slug and `seo.slug` are always the same string (§5.9, D34). */
@@ -551,9 +646,17 @@ function makeCrudRouter(options) {
     return record;
   }
 
-  /** The request body a write starts from, after the resource's own pass. */
+  /**
+   * The request body a write starts from, after the resource's own pass.
+   *
+   * With `trimStrings`, the text a form sends is stored without the spaces a
+   * paste leaves around it (QA-60) — Laravel's `TrimStrings` middleware, which
+   * every request to the real API passes through. "  Mysuru  " was stored as
+   * typed, sorted above "Bengaluru" and printed with its spaces on the site.
+   */
   function prepare(body, context) {
     const copy = { ...(body ?? {}) };
+    if (trimStrings) trimText(copy, schemas.getSchema(`${schema}.create`));
     return beforeValidate ? beforeValidate(copy, { ...context, db }) : copy;
   }
 
@@ -823,7 +926,7 @@ function makeCrudRouter(options) {
         });
 
         const record = buildRecord(body, { method: 'POST', user: req.user });
-        if (slugged) applySlug(record, resolveSlug(body, null));
+        if (slugged) applySlug(record, resolveSlug(body, null, record.id));
 
         store(record, null);
         // The new record takes the position it names, and nothing shares it.
@@ -865,7 +968,7 @@ function makeCrudRouter(options) {
         });
 
         const record = buildRecord(body, { existing, method: 'PUT', user: req.user });
-        if (slugged) applySlug(record, resolveSlug(body, existing));
+        if (slugged) applySlug(record, resolveSlug(body, existing, existing.id));
 
         if (unchanged(existing, record)) {
           res.ok(present(existing, { admin: true, query: req.query }));
@@ -913,7 +1016,10 @@ function makeCrudRouter(options) {
         // A `PATCH` re-slugs only when it says so: renaming a record must not
         // silently move its public URL (§5.9).
         if (slugged && body[model.slugField] !== undefined) {
-          applySlug(record, resolveSlug({ [model.slugField]: body[model.slugField] }, existing));
+          applySlug(
+            record,
+            resolveSlug({ [model.slugField]: body[model.slugField] }, existing, existing.id)
+          );
         }
 
         const ordering = hasField('order') && body.order !== undefined;
@@ -976,4 +1082,11 @@ function makeCrudRouter(options) {
   return router;
 }
 
-module.exports = { makeCrudRouter, parseSortEntry, matchesFilter, renumberOrder, placeOrder };
+module.exports = {
+  makeCrudRouter,
+  parseSortEntry,
+  matchesFilter,
+  renumberOrder,
+  placeOrder,
+  trimText,
+};

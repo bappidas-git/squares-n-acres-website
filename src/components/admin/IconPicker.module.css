@@ -45,6 +45,13 @@
   outline: none;
 }
 
+/* The box draws its own clear button; Chrome's native one beside it made two
+   (QA-60, the filter bar's fix of QA-59). */
+.input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .customRow {
   display: flex;
   align-items: center;

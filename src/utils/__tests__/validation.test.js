@@ -74,6 +74,18 @@ describe('validate', () => {
       expect(validate({ [type]: bad }, { [type]: { type } })[type]).toBe(message);
     });
 
+    it('reads an empty slug as "derive it", as the API does (QA-60)', () => {
+      const schema = { slug: { type: 'slug', maxLength: 75, default: '' } };
+      expect(validate({ slug: '' }, schema)).toEqual({});
+      expect(validate({ slug: 'Not A Slug' }, schema).slug).toBe(
+        'The slug may only contain lowercase letters, numbers and hyphens.'
+      );
+      // A slug that has to be there still says so.
+      expect(validate({ slug: '' }, { slug: { type: 'slug', required: true } }).slug).toBe(
+        'The slug field is required.'
+      );
+    });
+
     it('checks Indian mobile numbers, spacing and +91 included', () => {
       const schema = { phone: { type: 'phone' } };
       expect(validate({ phone: '9876543210' }, schema)).toEqual({});

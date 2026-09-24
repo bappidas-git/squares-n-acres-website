@@ -34,7 +34,9 @@ import { LeadCaptureProvider } from '../contexts/LeadCaptureContext';
 import { MasterDataProvider } from '../contexts/MasterDataContext';
 import { getVisibleSections } from '../utils/propertySections';
 import { sectionElementId } from '../components/sections/property/SectionNav';
+import { withTypeFaqs } from '../components/sections/property/FaqsSection';
 import PropertyDetails from '../pages/public/PropertyDetails';
+import masterDataService from '../services/masterDataService';
 import propertyService from '../services/propertyService';
 import renderWith from '../test-utils';
 import storage from '../utils/storage';
@@ -89,7 +91,8 @@ const masterData = {
 };
 
 /** One listing exactly as `GET /properties/slug/:slug` presents it (§5.5, §5.10). */
-const asPublicRecord = (property) => publicProperty(embedProperty(property, source));
+const asPublicRecord = (property) =>
+  publicProperty(embedProperty(property, source, { publicRead: true }));
 
 const published = seed.properties.filter((property) => property.isActive);
 
@@ -114,7 +117,18 @@ function stubServices(record) {
 
   propertyService.similar.mockResolvedValue(envelope(picks));
 
-  return picks;
+  // `GET /faqs?propertyTypeId=` — the library's live questions tied to the
+  // listing's type, in its order (QA-59). Left to the network, the call went to
+  // whatever answered on :4000, and its refusal was console output whenever it
+  // landed inside a test (QA-60).
+  const typeFaqs = (seed.faqs ?? [])
+    .filter((faq) => faq.isActive !== false && faq.propertyTypeId === record.propertyTypeId)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .slice(0, 20);
+
+  jest.spyOn(masterDataService.faqs, 'list').mockResolvedValue(envelope(typeFaqs));
+
+  return { picks, typeFaqs };
 }
 
 const renderProperty = (record) =>
@@ -165,7 +179,7 @@ describe('every active seed property renders its detail page', () => {
     'renders %s (#%i) with one h1, no console output and a truthful section nav',
     async (slug) => {
       const record = asPublicRecord(seed.properties.find((row) => row.slug === slug));
-      const similar = stubServices(record);
+      const { picks: similar, typeFaqs } = stubServices(record);
 
       renderProperty(record);
 
@@ -177,10 +191,13 @@ describe('every active seed property renders its detail page', () => {
       // chip scrolls to the anchor that section was given (BUG-06). `enquiry`
       // always has data, so the strip is never empty and this can never pass
       // by finding nothing.
-      const expected = getVisibleSections(record, {
-        banksAvailable: masterData.banks.some((bank) => bank.isActive !== false),
-        similarAvailable: similar.length > 0,
-      });
+      const expected = getVisibleSections(
+        { ...record, faqs: withTypeFaqs(record.faqs, typeFaqs) },
+        {
+          banksAvailable: masterData.banks.some((bank) => bank.isActive !== false),
+          similarAvailable: similar.length > 0,
+        }
+      );
 
       const chipsNow = () =>
         within(screen.getByRole('navigation', { name: /sections of this property/i })).getAllByRole(

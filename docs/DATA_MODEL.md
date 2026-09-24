@@ -18,6 +18,8 @@ Column legend: **Type** · **Null** (Y/N) · **Default** · **Enum/notes**. Ever
 
 **`order` is a position** in the collections an admin drags — `localities`, `segments`, `propertyTypes`, `amenities`, `badges`, `developers`, `banks`, `articleCategories`, `faqs`, `testimonials`, `teamMembers`, `partners`: `1..n`, nothing shared, after every write that places a record (API_CONTRACT §5.8, QA-59). `pages` and `headerMenus` are renumbered by a reorder only.
 
+**Text is stored trimmed, and no slug is empty.** A `string` field, and the strings of a list or of a list's rows, are stored without the spaces around them (Laravel's `TrimStrings`; the mock trims the master-data and content collections of `routes/masterData.js`); a name with no Latin letter or digit in it keeps its record's slug or is given `<noun>-<id>` (`locality-21`). A public property read names a switched-off locality or developer with `slug: null` and leaves out a switched-off amenity or badge (API_CONTRACT §5.8–§5.10, QA-60).
+
 ### 6.1 `properties`
 
 | Field | Type | Null | Default | Enum / notes |

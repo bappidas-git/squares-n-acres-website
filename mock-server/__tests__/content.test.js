@@ -682,9 +682,15 @@ describe('master data', () => {
     await withServer(async ({ request, login }) => {
       const token = await login(ADMIN);
 
+      // A city lists a locality once (QA-60), and a slug is unique across
+      // cities: a Whitefield of another city is the one that needs the `-2`.
+      const city = await request('POST', '/admin/cities', {
+        token,
+        body: { name: 'Mysuru', state: 'Karnataka' },
+      });
       const created = await request('POST', '/admin/localities', {
         token,
-        body: { name: 'Whitefield', cityId: 1 },
+        body: { name: 'Whitefield', cityId: city.body.data.id },
       });
       assert.equal(created.body.data.slug, 'whitefield-2');
 
@@ -926,6 +932,187 @@ describe('master data', () => {
           [1, 2, 3, 4, 5, 6, 7, 8]
         );
       });
+    });
+  });
+});
+
+describe('master-data writes (QA-60)', () => {
+  it('gives a name with no Latin letter or digit a slug of its own', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      // "!!" and "北京 नगर" make no slug at all. They were stored as '' — both
+      // of them — and neither had a page.
+      const first = await request('POST', '/admin/localities', {
+        token,
+        body: { name: '!!', cityId: 1 },
+      });
+      const second = await request('POST', '/admin/localities', {
+        token,
+        body: { name: '北京 नगर', cityId: 1 },
+      });
+      assert.equal(first.status, 201);
+      assert.equal(second.status, 201);
+      assert.equal(first.body.data.slug, `locality-${first.body.data.id}`);
+      assert.equal(second.body.data.slug, `locality-${second.body.data.id}`);
+      assert.equal(first.body.data.seo.slug, first.body.data.slug, 'D34: one URL');
+
+      // A replace that asks for a derived slug again keeps the one it has.
+      const replaced = await request('PUT', `/admin/localities/${first.body.data.id}`, {
+        token,
+        body: { name: '@@', cityId: 1, slug: '' },
+      });
+      assert.equal(replaced.status, 200);
+      assert.equal(replaced.body.data.slug, first.body.data.slug);
+
+      // Every slugged collection of the router does the same.
+      const type = await request('POST', '/admin/property-types', {
+        token,
+        body: { name: '★★', segment: 'residential', icon: 'mdi:star' },
+      });
+      assert.equal(type.status, 201);
+      assert.equal(type.body.data.slug, `property-type-${type.body.data.id}`);
+    });
+  });
+
+  it('stores the text a form sends without the spaces around it', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const city = await request('POST', '/admin/cities', {
+        token,
+        body: { name: '  Mysuru  ', state: ' Karnataka ' },
+      });
+      assert.equal(city.status, 201);
+      assert.equal(city.body.data.name, 'Mysuru');
+      assert.equal(city.body.data.state, 'Karnataka');
+      assert.equal(city.body.data.slug, 'mysuru');
+
+      // It sorts where its name says, not above every other city.
+      const cities = await request('GET', '/admin/cities?perPage=all&sort=name', { token });
+      assert.deepEqual(
+        cities.body.data.map((row) => row.name),
+        ['Bengaluru', 'Mysuru']
+      );
+
+      // Inside lists and rows too: a locality's highlights and connectivity.
+      const locality = await request('POST', '/admin/localities', {
+        token,
+        body: {
+          name: ' Hoskote ',
+          cityId: 1,
+          highlights: ['  Near the airport road  '],
+          connectivity: [{ label: ' Metro ', value: ' 3 km ' }],
+          priceTrendNote: ' Indicative ',
+        },
+      });
+      assert.equal(locality.status, 201);
+      assert.equal(locality.body.data.name, 'Hoskote');
+      assert.deepEqual(locality.body.data.highlights, ['Near the airport road']);
+      assert.deepEqual(locality.body.data.connectivity, [{ label: 'Metro', value: '3 km' }]);
+      assert.equal(locality.body.data.priceTrendNote, 'Indicative');
+
+      // Trimmed first, then checked: " A " is one character.
+      const short = await request('POST', '/admin/badges', {
+        token,
+        body: { name: ' A ', color: 'info' },
+      });
+      assert.equal(short.status, 422);
+      assert.ok(short.body.errors.name);
+
+      // A patch is trimmed as well.
+      const patched = await request('PATCH', `/admin/cities/${city.body.data.id}`, {
+        token,
+        body: { state: '  Karnataka State  ' },
+      });
+      assert.equal(patched.body.data.state, 'Karnataka State');
+    });
+  });
+
+  it('lists a locality once in its city', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      // Whitefield (1) is in Bengaluru (1) already — in any case or spacing.
+      for (const name of ['Whitefield', '  whitefield ', 'WHITE  FIELD'.replace('  ', '')]) {
+        const twin = await request('POST', '/admin/localities', {
+          token,
+          body: { name, cityId: 1 },
+        });
+        assert.equal(twin.status, 422, name);
+        assert.deepEqual(twin.body.errors.name, ['This locality is already in Bengaluru.']);
+      }
+
+      // Another city may have one of the same name.
+      const city = await request('POST', '/admin/cities', {
+        token,
+        body: { name: 'Mysuru', state: 'Karnataka' },
+      });
+      const elsewhere = await request('POST', '/admin/localities', {
+        token,
+        body: { name: 'Whitefield', cityId: city.body.data.id },
+      });
+      assert.equal(elsewhere.status, 201);
+
+      // Renaming into a twin is refused; a record keeps its own name, and a
+      // write that leaves the name alone is not asked.
+      const renamed = await request('PATCH', '/admin/localities/2', {
+        token,
+        body: { name: 'whitefield' },
+      });
+      assert.equal(renamed.status, 422);
+      const own = await request('PATCH', '/admin/localities/1', {
+        token,
+        body: { name: 'Whitefield' },
+      });
+      assert.equal(own.status, 200);
+      const moved = await request('PATCH', `/admin/localities/${elsewhere.body.data.id}`, {
+        token,
+        body: { cityId: 1 },
+      });
+      assert.equal(moved.status, 422, 'moving it into a city that has one');
+      const off = await request('PATCH', '/admin/localities/2', {
+        token,
+        body: { isActive: false },
+      });
+      assert.equal(off.status, 200);
+    });
+  });
+
+  it('groups amenities by category in the order the site does', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const categories = async (query) => {
+        const { body } = await request('GET', `/admin/amenities?perPage=all&${query}`, { token });
+        return [...new Set(body.data.map((row) => row.category))];
+      };
+
+      // Basic, Lifestyle, Safety… — the order of the property form and of a
+      // listing page. By the alphabet, Commercial came second.
+      const expected = [
+        'basic',
+        'lifestyle',
+        'safety',
+        'sports',
+        'kids',
+        'eco',
+        'convenience',
+        'commercial',
+      ];
+      assert.deepEqual(await categories('sort=category'), expected);
+      assert.deepEqual(await categories('sort=category&order=desc'), [...expected].reverse());
+
+      // Inside a category, the amenities keep their order; the rows come back
+      // exactly as stored, with no rank added to them.
+      const { body } = await request('GET', '/admin/amenities?perPage=all&sort=category', {
+        token,
+      });
+      const lifestyle = body.data.filter((row) => row.category === 'lifestyle');
+      assert.deepEqual(
+        lifestyle.map((row) => row.order),
+        [...lifestyle.map((row) => row.order)].sort((a, b) => a - b)
+      );
+      assert.ok(body.data.every((row) => typeof row.category === 'string'));
     });
   });
 });

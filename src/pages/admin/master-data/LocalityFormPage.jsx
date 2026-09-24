@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
-import ApiError from '../../../services/apiError';
 import MapEmbed from '../../../components/common/MapEmbed';
 import PATHS from '../../../routes/paths';
 import useApi from '../../../hooks/useApi';
 import useForm from '../../../hooks/useForm';
+import MovedNotice from './MovedNotice';
+import useRecordPage from './useRecordPage';
+import useRowKeys from '../../../components/admin/useRowKeys';
 import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
-import { useNavigationGuard } from '../../../contexts/NavigationGuardContext';
+import withSlugSuggestion from '../../../components/admin/slugSuggestion';
 // The kit is imported file by file, in the order `MasterDataPage` reaches for
 // the same components: the barrel's own order disagrees with it, and webpack
 // then cannot give the extracted CSS one order across the admin chunks.
@@ -30,7 +32,7 @@ import {
 } from '../../../components/ui';
 import { LOCALITY_ZONES } from '../../../config/enums';
 import { adminCrud, localities } from '../../../services/masterDataService';
-import { applySeoSideEffects, validateSeoBranch } from '../../../components/seo/seoSideEffects';
+import { validateSeoBranch } from '../../../components/seo/seoSideEffects';
 import {
   createSeo,
   toSeoPaths,
@@ -42,7 +44,7 @@ import { useMasterData } from '../../../contexts/MasterDataContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './LocalityFormPage.module.css';
-import { FORMS, TOASTS } from '../../../config/adminCopy';
+import { FORMS } from '../../../config/adminCopy';
 
 const localityService = adminCrud(localities);
 
@@ -114,13 +116,78 @@ const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');
 const checkLocalitySlug = (slug, { excludeId, signal } = {}) =>
   localityService.checkSlug(slug, { excludeId, signal });
 
-/** What the SEO analysers call a field, and where it is on this screen. */
+/**
+ * What the SEO analysers call a field, and where it is on this screen. Every
+ * id names a block below: none of them used to exist, so a hint that pointed
+ * at the guide, the image or the lists did nothing when pressed (QA-60).
+ */
 const FIELD_TARGET = {
   content: 'locality-description',
+  tableOfContents: 'locality-description',
+  images: 'locality-hero',
   highlights: 'locality-highlights',
   connectivity: 'locality-connectivity',
   slug: 'locality-slug',
 };
+
+/**
+ * What a message calls a field whose key is not a word (QA-60): "The
+ * avgPricePerSqft must be an integer." reads "The average price per sq ft
+ * must be an integer.", as in every dialog of the panel since QA-55.
+ */
+const LABELS = {
+  cityId: 'city',
+  shortDescription: 'short description',
+  heroImageUrl: 'hero image',
+  avgPricePerSqft: 'average price per sq ft',
+  priceTrendNote: 'price trend note',
+  'seo.slug': 'URL',
+};
+
+/**
+ * The rules the schema cannot word for this form (QA-60): a connectivity row
+ * needs both halves, and the schema's "The connectivity.0.value field is
+ * required." named neither the row nor what was missing from it.
+ */
+function connectivityRules(values) {
+  const errors = {};
+  (values.connectivity ?? []).forEach((row, index) => {
+    const label = trimmed(row?.label);
+    const value = trimmed(row?.value);
+    if (label && !value) {
+      errors[`connectivity.${index}.value`] = 'Say how far or how — or remove the row.';
+    }
+    if (value && !label) {
+      errors[`connectivity.${index}.label`] = 'Say what is near — or remove the row.';
+    }
+  });
+  return errors;
+}
+
+/**
+ * The locality schema with a connectivity row's two halves left to
+ * {@link connectivityRules}. The payload drops the rows left empty, so the
+ * schema counted what was left: with an empty row above it, a half-filled
+ * row's message landed on the empty one (QA-60). The API still requires both.
+ */
+function withRowsCheckedByForm(schema) {
+  const items = schema.connectivity.items;
+  return {
+    ...schema,
+    connectivity: {
+      ...schema.connectivity,
+      items: {
+        ...items,
+        shape: Object.fromEntries(
+          Object.entries(items.shape).map(([key, rule]) => [key, { ...rule, required: false }])
+        ),
+      },
+    },
+  };
+}
+
+const CREATE_SCHEMA = withRowsCheckedByForm(schemas['locality.create']);
+const UPDATE_SCHEMA = withRowsCheckedByForm(schemas['locality.update']);
 
 /** Brings the block a hint names into view, and focuses the first control in it. */
 function focusField(path) {
@@ -147,19 +214,19 @@ function focusField(path) {
 export default function LocalityFormPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
-  const navigate = useNavigate();
   const toast = useToast();
-  const { cities, refresh: refreshMasterData } = useMasterData();
+  const { cities, loading: citiesLoading, refresh: refreshMasterData } = useMasterData();
+  const formRef = useRef(null);
 
   const {
     data: record,
     loading,
     error,
     refetch,
+    setData: setRecord,
   } = useApi((signal) => localityService.get(id, { signal }), [id], { enabled: isEdit });
 
   const [preview, setPreview] = useState({ latitude: null, longitude: null });
-  const [redirect, setRedirect] = useState(null);
 
   const toPayload = useCallback(
     (values) => ({
@@ -190,11 +257,16 @@ export default function LocalityFormPage() {
 
   const form = useForm({
     initialValues: BLANK,
-    schema: isEdit ? schemas['locality.update'] : schemas['locality.create'],
+    schema: isEdit ? UPDATE_SCHEMA : CREATE_SCHEMA,
     normalize: toPayload,
-    // The SEO panel's own two blockers: JSON-LD that would invalidate the
-    // page's script tag, and a redirect with nowhere to send anybody.
-    validate: (candidate) => validateSeoBranch(candidate.seo),
+    labels: LABELS,
+    // A connectivity row with one half, and the SEO panel's own two blockers:
+    // JSON-LD that would invalidate the page's script tag, and a redirect with
+    // nowhere to send anybody.
+    validate: (candidate) => ({
+      ...connectivityRules(candidate),
+      ...validateSeoBranch(candidate.seo),
+    }),
     onSubmit: async (payload) => {
       try {
         const envelope = isEdit
@@ -202,15 +274,18 @@ export default function LocalityFormPage() {
           : await localityService.create(payload);
         return envelope?.data ?? null;
       } catch (thrown) {
-        throw await withSlugSuggestion(thrown, payload.slug, id);
+        throw await withSlugSuggestion(thrown, payload.slug, {
+          checkSlug: localityService.checkSlug,
+          excludeId: id ?? null,
+        });
       }
     },
   });
 
-  const { reset, values, setField } = form;
+  const { reset, values, setField, setComputed } = form;
 
   // A loaded record becomes the form and its baseline, so an untouched form is
-  // never reported as dirty.
+  // never reported as dirty. A saved one does the same, from the API's answer.
   useEffect(() => {
     if (!record) return;
     reset(toFormValues(record));
@@ -231,48 +306,64 @@ export default function LocalityFormPage() {
     reset({ ...valuesRef.current, cityId: cities[0].id });
   }, [isEdit, cities, reset]);
 
+  // A new locality goes after the last one unless the editor says otherwise
+  // (QA-60). The box read 0, which the API reads as "first": every locality
+  // added headed the list and the home strip. Written as computed, so the
+  // form does not claim to have been changed.
+  useEffect(() => {
+    if (isEdit) return undefined;
+    const controller = new AbortController();
+    localityService
+      .list({ perPage: 1 }, { signal: controller.signal })
+      .then((envelope) => {
+        const total = envelope?.meta?.total;
+        if (!Number.isFinite(total) || valuesRef.current.order !== BLANK.order) return;
+        setComputed({ order: total + 1 });
+      })
+      .catch(() => {
+        // The default stands.
+      });
+    return () => controller.abort();
+  }, [isEdit, setComputed]);
+
   useUnsavedChanges(form.dirty);
 
-  // Leaving after a save waits for the guard to let go, twice over. A saved
-  // form is clean, but the provider only learns that one render later, and
-  // `useBlocker` re-registers the question in an effect of its own — which runs
-  // after this component's, because a child's effects run before its parent's.
-  // So: wait for `isBlocking` to clear, then leave on the next tick. Navigating
-  // any sooner meets a blocker still holding the previous, dirty answer, and
-  // asks the editor whether to discard changes that have just been written.
-  const { isBlocking } = useNavigationGuard();
-  useEffect(() => {
-    if (!redirect || isBlocking) return undefined;
-    const timer = setTimeout(() => navigate(redirect), 0);
-    return () => clearTimeout(timer);
-  }, [redirect, isBlocking, navigate]);
-
-  const cityOptions = useMemo(
-    () => cities.map((city) => ({ value: city.id, label: city.name })),
-    [cities]
-  );
-
-  const save = async (after = 'stay') => {
-    const saved = await form.submit();
-    if (!saved) return;
-
-    // The redirect this record's `seo` asks for, against the slug the API
-    // answered with — a new record has none until now (§9.6).
-    await applySeoSideEffects('locality', saved);
-    toast.success(isEdit ? TOASTS.saved('Locality') : TOASTS.created('Locality'));
+  const { save, slugMoved, liveSlug, canRedirect, redirectOld, setRedirectOld } = useRecordPage({
+    entityType: 'locality',
+    noun: 'Locality',
+    isEdit,
+    record,
+    setRecord,
+    form,
+    publicPath: PATHS.locality,
+    editPath: PATHS.adminLocalityEdit,
     // The home strip and every locality picker read the cached list (D93).
-    refreshMasterData();
+    onSaved: refreshMasterData,
+    formRef,
+  });
 
-    if (after === 'view' && saved.slug) {
-      setRedirect(PATHS.locality(saved.slug));
-      return;
+  // The active cities, and the one this locality is filed under when it has
+  // since been switched off — offered, and labelled so. Without it the select
+  // read "Select a city" over a locality that has one (QA-60).
+  const cityOptions = useMemo(() => {
+    const options = cities.map((city) => ({ value: city.id, label: city.name }));
+    const current = record?.cityId;
+    if (current === null || current === undefined || current === '') return options;
+    if (options.some((option) => String(option.value) === String(current))) return options;
+    const name = record?.city?.name ?? `City ${current}`;
+    return [...options, { value: current, label: `${name} (inactive)` }];
+  }, [cities, record]);
+
+  const cityHint = useMemo(() => {
+    const chosen = cityOptions.find((option) => String(option.value) === String(values.cityId));
+    if (chosen?.label.endsWith('(inactive)')) {
+      return 'This city is switched off. The locality keeps it; switch it on under Master data → Cities, or choose another.';
     }
-    if (!isEdit && saved.id) {
-      setRedirect(PATHS.adminLocalityEdit(saved.id));
-      return;
+    if (!citiesLoading && cities.length === 0) {
+      return 'No city is switched on. Add one, or switch one on, under Master data → Cities.';
     }
-    refetch();
-  };
+    return undefined;
+  }, [cities.length, citiesLoading, cityOptions, values.cityId]);
 
   const showPreview = () => setPreview({ latitude: values.latitude, longitude: values.longitude });
 
@@ -346,6 +437,7 @@ export default function LocalityFormPage() {
       />
 
       <form
+        ref={formRef}
         className={styles.form}
         noValidate
         onSubmit={(event) => {
@@ -361,7 +453,7 @@ export default function LocalityFormPage() {
               disabled={form.submitting}
             />
           </FormColumn>
-          <FormColumn half>
+          <FormColumn half id="locality-slug">
             <FormFieldControl
               field={{
                 name: 'slug',
@@ -375,6 +467,15 @@ export default function LocalityFormPage() {
               checkSlug={localityService.checkSlug}
               excludeId={id}
             />
+            {slugMoved ? (
+              <MovedNotice
+                from={PATHS.locality(liveSlug)}
+                canRedirect={canRedirect}
+                checked={redirectOld}
+                disabled={form.submitting}
+                onChange={setRedirectOld}
+              />
+            ) : null}
           </FormColumn>
 
           <FormColumn half>
@@ -386,6 +487,7 @@ export default function LocalityFormPage() {
                 required: true,
                 placeholder: 'Select a city',
                 options: cityOptions,
+                hint: cityHint,
               }}
               form={form}
               disabled={form.submitting}
@@ -419,7 +521,7 @@ export default function LocalityFormPage() {
             />
           </FormColumn>
 
-          <FormColumn>
+          <FormColumn id="locality-description">
             <RichTextField
               label="Description"
               variant="full"
@@ -432,7 +534,7 @@ export default function LocalityFormPage() {
             />
           </FormColumn>
 
-          <FormColumn>
+          <FormColumn id="locality-hero">
             <FormFieldControl
               field={{ name: 'heroImageUrl', type: 'image', label: 'Hero image', hint: 'hero' }}
               form={form}
@@ -499,9 +601,12 @@ export default function LocalityFormPage() {
               hint="Six digits each. Type one and choose “Add …”."
               placeholder="560066"
               onCreate={(input) => {
-                const code = String(input).replace(/\D/g, '').slice(0, 6);
-                if (code.length !== 6) {
-                  toast.warning('A pincode is six digits.');
+                // Spaces are how a pincode is often written ("560 066"); any
+                // other character, or a seventh digit, is a typo to fix — not
+                // something to strip until six digits are left (QA-60).
+                const code = String(input).replace(/\s+/g, '');
+                if (!/^\d{6}$/.test(code)) {
+                  toast.warning('A pincode is six digits, like 560066.');
                   return null;
                 }
                 return { value: code, label: code };
@@ -512,7 +617,7 @@ export default function LocalityFormPage() {
         </FormSection>
 
         <FormSection title="Content">
-          <FormColumn>
+          <FormColumn id="locality-highlights">
             <HighlightsField
               values={values.highlights ?? []}
               errors={form.errors}
@@ -521,7 +626,7 @@ export default function LocalityFormPage() {
             />
           </FormColumn>
 
-          <FormColumn>
+          <FormColumn id="locality-connectivity">
             <ConnectivityField
               values={values.connectivity ?? []}
               errors={form.errors}
@@ -642,39 +747,17 @@ export default function LocalityFormPage() {
   );
 }
 
-/**
- * The 409 of a duplicate slug, with the free variant to take.
- *
- * The API answers `{ message, errors: { slug } }` but no suggestion, and the
- * suggestion is the useful half — so it is fetched from `check-slug` and put in
- * front of the field that caused it (§5.9, §7 of prompt 14).
- */
-async function withSlugSuggestion(thrown, slug, excludeId) {
-  if (thrown?.status !== 409 || !slug) return thrown;
-
-  try {
-    const { data } = await localityService.checkSlug(slug, { excludeId });
-    if (!data?.suggestion || data.suggestion === slug) return thrown;
-
-    return new ApiError({
-      status: thrown.status,
-      message: thrown.message,
-      data: thrown.data,
-      original: thrown,
-      errors: { ...thrown.errors, slug: [`${thrown.message} Try “${data.suggestion}”.`] },
-    });
-  } catch {
-    // The suggestion is a nicety; the refusal is the answer.
-    return thrown;
-  }
-}
-
 /** The check-listed reasons to live here, in the order they are shown. */
 function HighlightsField({ values, errors, disabled, onChange }) {
-  const rows = values.map((text, index) => ({ id: index, text }));
+  // Keyed so a moved row keeps the focus, not its neighbour (QA-60).
+  const rowKeys = useRowKeys(values.length);
+  const rows = values.map((text, index) => ({ id: rowKeys.keys[index], text }));
 
   const update = (index, text) => onChange(values.map((row, at) => (at === index ? text : row)));
-  const remove = (index) => onChange(values.filter((_row, at) => at !== index));
+  const remove = (index) => {
+    rowKeys.remove(index);
+    onChange(values.filter((_row, at) => at !== index));
+  };
 
   return (
     <fieldset className={styles.repeater}>
@@ -690,7 +773,10 @@ function HighlightsField({ values, errors, disabled, onChange }) {
           label="Highlights, in order"
           getId={(item) => item.id}
           getLabel={(item, index) => item.text || `Highlight ${index + 1}`}
-          onReorder={(next) => onChange(next.map((item) => item.text))}
+          onReorder={(next, move) => {
+            if (move) rowKeys.move(move.from, move.to);
+            onChange(next.map((item) => item.text));
+          }}
           renderItem={(item, index) => (
             <div className={styles.repeaterRow}>
               <TextField
@@ -730,11 +816,16 @@ function HighlightsField({ values, errors, disabled, onChange }) {
 
 /** `{label, value}` pairs — "Metro", "Purple Line, along Whitefield Main Road". */
 function ConnectivityField({ values, errors, disabled, onChange }) {
-  const rows = values.map((row, index) => ({ id: index, ...row }));
+  // Keyed so a moved row keeps the focus, not its neighbour (QA-60).
+  const rowKeys = useRowKeys(values.length);
+  const rows = values.map((row, index) => ({ ...row, id: rowKeys.keys[index] }));
 
   const update = (index, patch) =>
     onChange(values.map((row, at) => (at === index ? { ...row, ...patch } : row)));
-  const remove = (index) => onChange(values.filter((_row, at) => at !== index));
+  const remove = (index) => {
+    rowKeys.remove(index);
+    onChange(values.filter((_row, at) => at !== index));
+  };
 
   return (
     <fieldset className={styles.repeater}>
@@ -750,9 +841,10 @@ function ConnectivityField({ values, errors, disabled, onChange }) {
           label="Connectivity rows, in order"
           getId={(item) => item.id}
           getLabel={(item, index) => item.label || `Row ${index + 1}`}
-          onReorder={(next) =>
-            onChange(next.map((item) => ({ label: item.label ?? '', value: item.value ?? '' })))
-          }
+          onReorder={(next, move) => {
+            if (move) rowKeys.move(move.from, move.to);
+            onChange(next.map((item) => ({ label: item.label ?? '', value: item.value ?? '' })));
+          }}
           renderItem={(item, index) => (
             <div className={styles.repeaterRow}>
               <TextField

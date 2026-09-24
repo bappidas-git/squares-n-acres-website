@@ -19,6 +19,8 @@ import useBreakpoint from '../../hooks/useBreakpoint';
 import useForm from '../../hooks/useForm';
 import useLingering from '../../hooks/useLingering';
 import useUnsavedChanges from '../../hooks/useUnsavedChanges';
+import focusFirstError from './focusFirstError';
+import withSlugSuggestion from './slugSuggestion';
 import { DIALOGS, FORMS, TABLES, TOASTS } from '../../config/adminCopy';
 import { applySeoSideEffects, validateSeoBranch } from '../seo/seoSideEffects';
 import { firstFieldMessage } from '../../services/apiError';
@@ -245,16 +247,24 @@ const inSentence = (label) =>
  * be a valid URL.", and `avatarUrl` is the "photograph" the form labels it
  * (QA-55).
  *
- * @param {Array<{name?: string, label?: string, type?: string}>} fields
+ * A field whose label does not read inside a sentence names itself for one
+ * with `messageLabel`: "The interest rate from (% p.a.) field is required."
+ * reads "The lowest interest rate field is required." (QA-60).
+ *
+ * @param {Array<{name?: string, label?: string, messageLabel?: string, type?: string}>} fields
  * @returns {Record<string, string>}
  */
 export function labelsOf(fields) {
   return Object.fromEntries(
     (Array.isArray(fields) ? fields : [])
       .filter(
-        (field) => field?.name && typeof field.label === 'string' && /[.A-Z]/.test(field.name)
+        (field) =>
+          field?.name &&
+          typeof (field.messageLabel ?? field.label) === 'string' &&
+          /[.A-Z]/.test(field.name)
       )
       .map((field) => {
+        if (field.messageLabel) return [field.name, field.messageLabel];
         const label = inSentence(field.label);
         // A box for a link is named after where it points: "the LinkedIn
         // address", not "the LinkedIn".
@@ -289,6 +299,10 @@ export function labelsOf(fields) {
  * @param {(row: object) => void} [props.config.onEdit] navigate instead of opening the form
  * @param {{field: string, order: 'asc'|'desc'}} [props.config.defaultSort]
  * @param {boolean} [props.config.orderable] drag to reorder while sorted by `order`
+ * @param {boolean} [props.config.appendNew] a new record's Order box proposes
+ *   the end of the collection instead of the form's default — master data,
+ *   which the site lists in that order (QA-60). FAQs and the other content
+ *   lists keep QA-59's rule: created at 0, a record is first
  * @param {(row: object) => React.ReactNode} [props.config.renderOrderItem] the reorder row
  * @param {boolean} [props.config.activeToggle]
  * @param {boolean} [props.config.featuredToggle]
@@ -313,6 +327,10 @@ export function labelsOf(fields) {
  * @param {(values: object, row: object|null) => Promise<object|null>} [props.config.confirmSave]
  *   asked before a save; a returned `{message, usedBy, confirmLabel}` becomes a
  *   confirm over the records the change reaches (D88)
+ * @param {(saved: object, row: object|null, helpers: {toast: object}) => Promise<void>|void}
+ *   [props.config.afterSave] runs after a successful save, with the record the
+ *   API answered and the one the form opened on — a property type whose URL
+ *   moved redirects the old one
  * @param {(row: object) => Array<object>} [props.config.extraRowActions]
  * @param {(values: object, row: object|null) => object} [props.config.toPayload]
  * @param {(row: object) => object} [props.config.toFormValues]
@@ -338,9 +356,12 @@ export default function MasterDataPage({ config }) {
     onEdit,
     onMutated,
     confirmSave,
+    afterSave,
+    defaultSort,
     groupBy,
     groupSort,
     orderable = false,
+    appendNew = false,
     reorderHint,
     renderOrderItem,
     activeToggle = true,
@@ -384,6 +405,15 @@ export default function MasterDataPage({ config }) {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  // Where a new record of a screen that `appendNew`s goes when its Order box
+  // is left alone: after the last one (QA-60). The box used to read 0, which
+  // the API reads as "first", so a new amenity headed every listing's amenity
+  // block and a new segment became the property form's first choice.
+  const [newPosition, setNewPosition] = useState(null);
+  // Asks for the first field in error to be brought into view, once the
+  // messages of a refused save have been drawn (QA-60).
+  const [refusals, setRefusals] = useState(0);
+  const formRef = useRef(null);
 
   // What each dialog draws: its state, or what it showed while it fades out.
   // Whether it acts is still asked of the state — a closing dialog is inert.
@@ -402,37 +432,58 @@ export default function MasterDataPage({ config }) {
     [formFieldsProp, shown]
   );
 
+  const hasOrderField = useMemo(
+    () => formFields.some((field) => field.name === 'order'),
+    [formFields]
+  );
+
   const initialValues = useMemo(() => {
     if (!editing) return {};
     const base = editing.id
       ? toFormValues
         ? toFormValues(editing)
         : pickFields(editing, formFields)
-      : { ...defaultsFromFields(formFields), ...newValues };
+      : {
+          ...defaultsFromFields(formFields),
+          ...newValues,
+          ...(hasOrderField && newPosition !== null ? { order: newPosition } : {}),
+        };
 
     // The panel reads fifty fields of §9.6 and must never meet `undefined`; a
     // screen without a panel keeps the values it always had.
     return seoPanel ? { ...base, seo: withSeoDefaults(editing.seo) } : base;
-  }, [editing, formFields, newValues, toFormValues, seoPanel]);
+  }, [editing, formFields, newValues, toFormValues, seoPanel, hasOrderField, newPosition]);
 
   /** The body the API receives, with the `seo` branch when the panel is on. */
   const normalize = useCallback(
     (values) => {
-      const payload = toPayload ? toPayload(values, editing) : values;
+      // The text boxes are sent without the spaces a paste leaves around them,
+      // as the API stores them (QA-60), so " A " is checked as the one letter
+      // it is before it is sent.
+      const tidy = trimText(values, formFields);
+      const payload = toPayload ? toPayload(tidy, editing) : tidy;
       if (!seoPanel) return payload;
       // D34: one URL — `seo.slug` always mirrors the record's own.
-      return { ...payload, seo: toSeoPayload(values.seo, payload.slug ?? values.slug ?? '') };
+      return { ...payload, seo: toSeoPayload(tidy.seo, payload.slug ?? tidy.slug ?? '') };
     },
-    [toPayload, editing, seoPanel]
+    [toPayload, editing, seoPanel, formFields]
   );
 
-  /** The screen's own rules, plus the panel's two blockers when it is on. */
+  /**
+   * The screen's own rules, plus the panel's two blockers when it is on.
+   *
+   * A number box's own bounds come first: the bank form declared 5–20 % a
+   * year and 50–95 % of the value, and took 25 % and 99 %, because a form
+   * that validates itself (`noValidate`) never asks the browser (QA-60). A
+   * screen's own rule for the same field still has the last word.
+   */
   const validate = useCallback(
     (values) => ({
+      ...rangeErrors(values, formFields),
       ...(customValidate ? (customValidate(values, editing) ?? {}) : {}),
       ...(seoPanel ? validateSeoBranch(values.seo) : {}),
     }),
-    [customValidate, editing, seoPanel]
+    [customValidate, editing, seoPanel, formFields]
   );
 
   const labels = useMemo(() => labelsOf(formFields), [formFields]);
@@ -444,10 +495,24 @@ export default function MasterDataPage({ config }) {
     normalize,
     labels,
     onSubmit: async (payload) => {
-      if (editing?.id) return service.update(editing.id, payload);
-      return service.create(payload);
+      try {
+        if (editing?.id) return await service.update(editing.id, payload);
+        return await service.create(payload);
+      } catch (thrown) {
+        throw await withSlugSuggestion(thrown, payload.slug, {
+          checkSlug: service.checkSlug,
+          excludeId: editing?.id ?? null,
+        });
+      }
     },
   });
+
+  // A refused save draws its messages first; then the first one is brought
+  // into view, with the cursor in its field.
+  useEffect(() => {
+    if (refusals === 0) return;
+    focusFirstError(formRef.current);
+  }, [refusals]);
 
   // A new `editing` record is a new form: `useForm` holds its own state, so the
   // values are handed over when the dialog changes what it is editing — and
@@ -499,11 +564,26 @@ export default function MasterDataPage({ config }) {
       closeForm();
       return true;
     }
-    const saved = await form.submit();
-    if (!saved) return false;
+    const answer = await form.submit();
+    if (!answer) {
+      setRefusals((count) => count + 1);
+      return false;
+    }
+    // The service answers the envelope; the record is its `data`. Handed the
+    // envelope, the SEO side effect found no slug on it and never wrote the
+    // redirect a property type's panel asked for (QA-60).
+    const saved = answer?.data ?? answer;
     // The redirect this record's `seo` asks for, against the slug the API
     // answered with — a new record has none until now (§9.6).
     if (seoPanel && seoEntityType) await applySeoSideEffects(seoEntityType, saved);
+    if (afterSave) {
+      try {
+        await afterSave(saved, editing, { toast });
+      } catch (thrown) {
+        // A side effect never turns a save that happened into a failure.
+        console.warn('A step after the save did not complete.', thrown);
+      }
+    }
     toast.success(
       editing?.id ? TOASTS.saved(capitalise(singular)) : TOASTS.created(capitalise(singular))
     );
@@ -528,7 +608,10 @@ export default function MasterDataPage({ config }) {
       return;
     }
 
-    if (!form.validateAll()) return;
+    if (!form.validateAll()) {
+      setRefusals((count) => count + 1);
+      return;
+    }
 
     setCheckingSave(true);
     try {
@@ -646,7 +729,30 @@ export default function MasterDataPage({ config }) {
    * modules that follow it — passes `onCreate` / `onEdit` and navigates; every
    * other screen edits in place, in the dialog or on the same route.
    */
-  const startCreate = useCallback(() => (onCreate ? onCreate() : setEditing({})), [onCreate]);
+  const startCreate = useCallback(async () => {
+    if (onCreate) {
+      onCreate();
+      return;
+    }
+    // The end of the collection, not of the page or the filter on screen: an
+    // unfiltered list's total is the collection's, a filtered one asks.
+    let position = null;
+    if (hasOrderField && appendNew) {
+      const filtered = filters.some((filter) => isFilterSet(params, filter));
+      if (!filtered && Number.isFinite(meta?.total)) {
+        position = meta.total + 1;
+      } else {
+        try {
+          const envelope = await service.list({ perPage: 1 });
+          if (Number.isFinite(envelope?.meta?.total)) position = envelope.meta.total + 1;
+        } catch {
+          // The form's own default stands.
+        }
+      }
+    }
+    setNewPosition(position);
+    setEditing({});
+  }, [onCreate, hasOrderField, appendNew, filters, params, meta, service]);
   const startEdit = useCallback((row) => (onEdit ? onEdit(row) : setEditing(row)), [onEdit]);
 
   /* ---------------- reordering ---------------- */
@@ -873,9 +979,15 @@ export default function MasterDataPage({ config }) {
   // What "Table view" sorts by: the first order the columns offer that is not
   // the one the drag list is already showing.
   const tableSort = useMemo(() => {
+    // The screen's own table when it has one besides the drag list: the
+    // amenities' is grouped by category, and "Table view" opened a list sorted
+    // by name, with the groups gone (QA-60).
+    if (defaultSort?.field && defaultSort.field !== 'order') {
+      return { sort: defaultSort.field, order: defaultSort.order === 'desc' ? 'desc' : 'asc' };
+    }
     const column = columns.find((entry) => entry.sortable && entry.key !== 'order');
     return column ? { sort: column.key, order: 'asc' } : null;
-  }, [columns]);
+  }, [columns, defaultSort?.field, defaultSort?.order]);
 
   // The way into the drag list from the table: on a phone the table is cards,
   // with no "Order" header to press, and after "Table view" there was no way
@@ -939,7 +1051,7 @@ export default function MasterDataPage({ config }) {
   const formBody = (
     // The mark Ctrl/Cmd+S looks for: a key pressed in a dialog that does not
     // hold it is that dialog's own (QA-59).
-    <div data-master-data-form>
+    <div data-master-data-form ref={formRef}>
       <MasterDataForm
         fields={formFields}
         form={form}
@@ -1290,6 +1402,63 @@ function pickFields(record, fields) {
     values[field.name] = record[field.name];
   }
   return values;
+}
+
+/** The controls whose value is text a person typed, and so is sent trimmed. */
+const TEXT_TYPES = new Set(['text', 'textarea', undefined]);
+
+/**
+ * The form's values with every text box trimmed (QA-60) — what the API
+ * stores, Laravel's `TrimStrings`, so the form checks what will be kept.
+ *
+ * @param {object} values
+ * @param {Array<{name: string, type?: string}>} fields
+ * @returns {object} a copy, or `values` itself when nothing needed trimming
+ */
+export function trimText(values, fields) {
+  let copy = null;
+  for (const field of Array.isArray(fields) ? fields : []) {
+    if (!TEXT_TYPES.has(field.type) || String(field.name).includes('.')) continue;
+    const value = values?.[field.name];
+    if (typeof value !== 'string' || value === value.trim()) continue;
+    copy = copy ?? { ...values };
+    copy[field.name] = value.trim();
+  }
+  return copy ?? values;
+}
+
+/** "5" or "0.05", without the float noise of a step. */
+const plain = (number) => String(Number(number.toFixed(4)));
+
+/**
+ * A number box's own bounds, as messages (QA-60): the bank form's "5–20 % a
+ * year" was an attribute nobody read. An empty box is the schema's business.
+ *
+ * @param {object} values
+ * @param {Array<{name: string, type?: string, min?: number, max?: number}>} fields
+ * @returns {Record<string, string>}
+ */
+export function rangeErrors(values, fields) {
+  const errors = {};
+  for (const field of Array.isArray(fields) ? fields : []) {
+    if (field.type !== 'number') continue;
+    const value = values?.[field.name];
+    if (value === null || value === undefined || value === '' || !Number.isFinite(Number(value))) {
+      continue;
+    }
+    const number = Number(value);
+    const hasMin = Number.isFinite(field.min);
+    const hasMax = Number.isFinite(field.max);
+    if ((hasMin && number < field.min) || (hasMax && number > field.max)) {
+      errors[field.name] =
+        hasMin && hasMax
+          ? `Use a value between ${plain(field.min)} and ${plain(field.max)}.`
+          : hasMin
+            ? `Use a value of ${plain(field.min)} or more.`
+            : `Use a value of ${plain(field.max)} or less.`;
+    }
+  }
+  return errors;
 }
 
 /** Whether a filter currently holds a value (for the "Reset" affordance). */

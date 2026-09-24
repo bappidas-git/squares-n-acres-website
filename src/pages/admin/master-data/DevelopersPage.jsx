@@ -147,19 +147,24 @@ export default function DevelopersPage() {
           confirm: {
             title: 'Delete the selected developers?',
             message:
-              '{count} will be deleted. A developer a property still points at is refused. This cannot be undone.',
+              '{count} will be deleted. If a property still points at any of them, none is deleted and you are told which. This cannot be undone.',
           },
         },
       ],
 
-      extraRowActions: (row) => [
-        {
-          key: 'view',
-          label: `View ${row.name} on the site`,
-          icon: 'mdi:open-in-new',
-          href: PATHS.builder(row.slug),
-        },
-      ],
+      // An inactive developer's page answers 404, so there is nothing to view
+      // (QA-60); switched back on, the link comes back with it.
+      extraRowActions: (row) =>
+        row.isActive === false || !row.slug
+          ? []
+          : [
+              {
+                key: 'view',
+                label: `View ${row.name} on the site`,
+                icon: 'mdi:open-in-new',
+                href: PATHS.builder(row.slug),
+              },
+            ],
 
       renderOrderItem: (row) => (
         <span className={styles.orderRow}>
@@ -167,6 +172,8 @@ export default function DevelopersPage() {
           <span className={styles.orderMeta}>
             {row.headquarters || 'No headquarters'} · {formatNumber(row.propertyCount ?? 0)}{' '}
             {row.propertyCount === 1 ? 'project' : 'projects'}
+            {/* The home row is the featured ones in this order (QA-60). */}
+            {row.isFeatured ? ' · Featured' : ''}
           </span>
         </span>
       ),

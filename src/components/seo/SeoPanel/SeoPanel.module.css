@@ -669,6 +669,10 @@
   font-size: var(--font-size-sm);
   line-height: var(--line-height-normal);
   color: var(--color-charcoal);
+  /* "Canonical: https://www.squaresnacres.com/localities/whitefield." is one
+     unbreakable word: on a phone it pushed every form holding the panel
+     sideways (QA-60). */
+  overflow-wrap: anywhere;
 }
 
 .testHint {
@@ -693,6 +697,7 @@
   font-size: var(--font-size-xs);
   line-height: var(--line-height-normal);
   color: var(--color-text-muted);
+  overflow-wrap: anywhere;
 }
 
 .skeletonRows {

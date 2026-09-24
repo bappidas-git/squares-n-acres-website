@@ -36,6 +36,7 @@ export default function LocalitiesPage() {
     () => ({
       key: 'localities',
       title: 'Localities',
+      subtitle: 'The neighbourhoods listings sit in — one guide page each at /localities.',
       singular: 'locality',
       service: localityService,
       formMode: 'page',
@@ -157,19 +158,24 @@ export default function LocalitiesPage() {
           confirm: {
             title: 'Delete the selected localities?',
             message:
-              '{count} will be deleted. A locality a property still points at is refused. This cannot be undone.',
+              '{count} will be deleted. If a property still points at any of them, none is deleted and you are told which. This cannot be undone.',
           },
         },
       ],
 
-      extraRowActions: (row) => [
-        {
-          key: 'view',
-          label: `View ${row.name} on the site`,
-          icon: 'mdi:open-in-new',
-          href: PATHS.locality(row.slug),
-        },
-      ],
+      // An inactive locality's page answers 404, so there is nothing to view
+      // (QA-60); switched back on, the link comes back with it.
+      extraRowActions: (row) =>
+        row.isActive === false || !row.slug
+          ? []
+          : [
+              {
+                key: 'view',
+                label: `View ${row.name} on the site`,
+                icon: 'mdi:open-in-new',
+                href: PATHS.locality(row.slug),
+              },
+            ],
 
       renderOrderItem: (row) => (
         <span className={styles.orderRow}>
@@ -178,6 +184,9 @@ export default function LocalitiesPage() {
             {row.zone ? LOCALITY_ZONES.labelOf(row.zone) : 'No zone'} ·{' '}
             {formatNumber(row.propertyCount ?? 0)}{' '}
             {row.propertyCount === 1 ? 'property' : 'properties'}
+            {/* The home strip is the featured ones in this order, so which of
+                them are featured is part of reading it (QA-60). */}
+            {row.isFeatured ? ' · Featured' : ''}
           </span>
         </span>
       ),

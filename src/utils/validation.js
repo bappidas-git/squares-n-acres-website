@@ -93,7 +93,12 @@ function typeError(key, value, descriptor) {
         ? null
         : `The ${key} must be a valid URL.`;
     case 'slug':
-      return typeof value === 'string' && SLUG_PATTERN.test(value)
+      // §5.9: an empty slug asks the API to derive one, which is how the API
+      // reads it too (`mock-server/middleware/validate.js`). Refused here, a
+      // blank "Add" form answered its empty name with a second error under an
+      // empty URL box — and a third, "The seo.slug …", about a field the
+      // editor never sees (QA-60). A slug that must be there is `required`.
+      return typeof value === 'string' && (value === '' || SLUG_PATTERN.test(value))
         ? null
         : `The ${key} may only contain lowercase letters, numbers and hyphens.`;
     case 'array':
