@@ -12,7 +12,8 @@
  * the map to build canonicals, and `scripts/check-links.js` has to `require`
  * that chain from Node with no bundler in front of it. `module.exports` is the
  * `PATHS` object itself, so `import PATHS from '../routes/paths'` and
- * `import { isReservedPath } from '../routes/paths'` both keep working.
+ * `import { isReservedPath, isAdminPath } from '../routes/paths'` both keep
+ * working.
  */
 
 const seg = (value) => encodeURIComponent(String(value ?? ''));
@@ -177,8 +178,21 @@ const isReservedPath = (slug) =>
       .toLowerCase()
   );
 
+/**
+ * Whether a pathname is the admin panel's: `/admin` or anything below it,
+ * matched by segment, so a CMS page at `/administration` is not.
+ *
+ * @param {string} pathname
+ * @returns {boolean}
+ */
+const isAdminPath = (pathname) => {
+  const path = String(pathname ?? '');
+  return path === adminPaths.adminRoot || path.startsWith(`${adminPaths.adminRoot}/`);
+};
+
 const PATHS = { ...publicPaths, ...adminPaths };
 
 module.exports = PATHS;
 module.exports.RESERVED_PATH_PREFIXES = RESERVED_PATH_PREFIXES;
 module.exports.isReservedPath = isReservedPath;
+module.exports.isAdminPath = isAdminPath;

@@ -14,23 +14,28 @@ import styles from './ErrorBoundary.module.css';
  * 1. The outer one wraps the whole app in `App.js` and is the last resort: it
  *    catches a failure in the router itself, so it can render nothing that
  *    needs a router — no `<Seo>`, no links.
- * 2. The route boundary sits inside the router (`routes/index.js`) and passes
- *    `head={<Seo type="error" />}`, which is what gives a crashed *page* a
- *    title and a `noindex` (§9.3). It is keyed on the pathname, so navigating
- *    away from a page that threw remounts the boundary and the next page
- *    renders — recovery without a full reload, which is what a visitor who
- *    clicks the header after a crash expects.
+ * 2. The route boundary sits inside the router (`routes/RouteBoundary.jsx`)
+ *    and passes `head={<Seo type="error" />}`, which is what gives a crashed
+ *    *page* a title and a `noindex` (§9.3). Its `resetKey` is the pathname, so
+ *    navigating away from a page that threw clears the screen and the next
+ *    page renders — recovery without a full reload, which is what a visitor
+ *    who clicks the header after a crash expects.
  * 3. `variant="inline"` sits inside `AdminLayout`, below the topbar and beside
  *    the sidebar, so an admin screen that throws leaves the panel navigable and
  *    offers "Reload this page" rather than a full-viewport apology.
  *
- * React gives a class no way to read the location, so the **key** is the reset
- * mechanism rather than `componentDidUpdate`: a remounted boundary starts with
- * `hasError: false` and nothing has to be un-set by hand.
+ * There are two ways to clear the screen. A new **key** remounts the boundary,
+ * and everything below it, with `hasError: false` — which is what the inline
+ * boundary wants, since the screen below it is new on every navigation. A new
+ * **`resetKey`** clears a screen that is showing and leaves the children alone
+ * when nothing threw: the route boundary has the whole admin shell below it,
+ * and remounting that on every navigation is what sent the sidebar back to its
+ * top after each click.
  *
  * @param {object} props
  * @param {React.ReactNode} [props.head] rendered beside the screen when it shows
  * @param {'page'|'inline'} [props.variant]
+ * @param {string|number} [props.resetKey] a change clears the screen if it shows
  */
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -44,6 +49,20 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('Application error:', error, errorInfo);
+  }
+
+  componentDidUpdate(previousProps, previousState) {
+    // Only a screen that was already showing is cleared. The update that
+    // caught the error may be the very one that moved `resetKey` — a page that
+    // throws as it is navigated to — and clearing it there would render the
+    // same page straight into the same error.
+    if (
+      this.state.hasError &&
+      previousState.hasError &&
+      previousProps.resetKey !== this.props.resetKey
+    ) {
+      this.setState({ hasError: false });
+    }
   }
 
   render() {

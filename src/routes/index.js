@@ -6,13 +6,11 @@ import {
   RouterProvider,
   createBrowserRouter,
   createRoutesFromElements,
-  useLocation,
 } from 'react-router-dom';
 
 import AnalyticsScripts from '../components/seo/AnalyticsScripts';
-import ErrorBoundary from '../components/common/ErrorBoundary';
-import Seo from '../components/seo/Seo';
 import RedirectHandler from '../components/common/RedirectHandler';
+import RouteBoundary from './RouteBoundary';
 import adminRoutes from './adminRoutes';
 import publicRoutes, { PublicRoute } from './publicRoutes';
 import { AdminAuthProvider } from '../contexts/AdminAuthContext';
@@ -58,40 +56,34 @@ const loadMotionFeatures = () => import('../utils/motionFeatures').then((mod) =>
 const NotFound = lazy(() => import('../pages/public/NotFound'));
 
 /** The app's providers, mounted once inside the router. */
-const AppShell = () => {
-  const location = useLocation();
-
-  return (
-    <LazyMotion features={loadMotionFeatures} strict>
-      <ToastProvider>
-        <SiteSettingsProvider>
-          <MasterDataProvider>
-            <AdminAuthProvider>
-              <NavigationGuardProvider>
-                <ShortlistProvider>
-                  <LeadCaptureProvider>
-                    <RedirectHandler />
-                    <AnalyticsScripts />
-                    {/* Inside the router, so a page that throws still gets a head
-                    that says `noindex` rather than indexing a crash (§9.3).
-                    Keyed on the pathname so the boundary remounts on the next
-                    navigation: a crashed page recovers by being navigated away
-                    from, without a full reload (§7). */}
-                    <ErrorBoundary key={location.pathname} head={<Seo type="error" />}>
-                      <Suspense fallback={<PageLoader />}>
-                        <Outlet />
-                      </Suspense>
-                    </ErrorBoundary>
-                  </LeadCaptureProvider>
-                </ShortlistProvider>
-              </NavigationGuardProvider>
-            </AdminAuthProvider>
-          </MasterDataProvider>
-        </SiteSettingsProvider>
-      </ToastProvider>
-    </LazyMotion>
-  );
-};
+const AppShell = () => (
+  <LazyMotion features={loadMotionFeatures} strict>
+    <ToastProvider>
+      <SiteSettingsProvider>
+        <MasterDataProvider>
+          <AdminAuthProvider>
+            <NavigationGuardProvider>
+              <ShortlistProvider>
+                <LeadCaptureProvider>
+                  <RedirectHandler />
+                  <AnalyticsScripts />
+                  {/* A crashed page gets a `noindex` head and recovers on the
+                      next navigation; the admin shell below it is not
+                      remounted by one (`RouteBoundary`). */}
+                  <RouteBoundary>
+                    <Suspense fallback={<PageLoader />}>
+                      <Outlet />
+                    </Suspense>
+                  </RouteBoundary>
+                </LeadCaptureProvider>
+              </ShortlistProvider>
+            </NavigationGuardProvider>
+          </AdminAuthProvider>
+        </MasterDataProvider>
+      </SiteSettingsProvider>
+    </ToastProvider>
+  </LazyMotion>
+);
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
