@@ -343,8 +343,8 @@ guidelines 12 / 12, env. `npm run e2e` 62 / 62 (59).
 - **Every admin heading reads its count as part of the title** — "Jobs4" — because the
   count pill sits inside the `h1` with no separator.
 - **`SeoPanel.test.jsx`'s performance test** (analysis under 100 ms) failed once at 101 ms
-  on a loaded machine (the baseline run, with the end-to-end suite running beside it); it
-  passed in every gate run. A timing budget in a unit test is a flake waiting to happen.
+  on a loaded machine (the baseline run, with the end-to-end suite running beside it). Fixed
+  as a follow-up — §10.
 
 ## 9. Follow-up: the profile page and the Agent tab
 
@@ -375,3 +375,33 @@ and `9845067890`, and the public card reading the same. No console errors.
 | `src/pages/admin/properties/property-form/__tests__/toPayload.test.js`  | +1             | the agent's numbers sent as ten digits, a non-mobile as typed                                                |
 | `src/pages/admin/properties/property-form/__tests__/validators.test.js` | +1             | a number read as it will be stored                                                                           |
 | `src/utils/__tests__/validators.test.js`                                | +2             | `tidyPhone`: the spellings of one number, the 91-series, what is not a mobile number                         |
+
+## 10. Follow-up: the SEO panel's timing test
+
+"Analyses a heavy listing fast enough to run on every keystroke" read one wall-clock sample
+after one warm-up and asked for under 100 ms. Wall time is whatever the machine gives the
+test: the analysis costs about 30 ms, but a single sample read up to 95 ms with four busy
+processes on this four-core machine, and 101 ms once while the e2e suite shared it.
+
+- **The clock.** The main thread's own CPU time (`process.threadCpuUsage`) where Node has
+  it, the wall clock otherwise (the repository's `.nvmrc` is Node 20, which has not): time
+  spent waiting for a core is not the analysis's.
+- **The statistic.** The fastest of five runs after a warm-up: a slower run measured the
+  machine, and only a real regression makes every run slower. The budget stays 100 ms.
+- **The shape.** A second test times a listing four times the size and asks for less than
+  eight times the cost. The analysis is linear (about 4×); a pass over every pair grows
+  sixteen-fold, and fails this while the heaviest listing is still inside the budget.
+
+Measured on the heaviest listing (1×) and four times it (4×):
+
+| Machine                           | Clock           | 1× (budget 100 ms) | 4× ÷ 1× (limit 8) |
+| --------------------------------- | --------------- | ------------------ | ----------------- |
+| idle                              | thread CPU      | 26 ms              | 4.3               |
+| beside a full `npm run test:ci`   | thread CPU      | 26–28 ms           | 3.7–4.2           |
+| four busy loops on the four cores | thread CPU      | 32–33 ms           | 4.0–4.4           |
+| four busy loops on the four cores | wall (fallback) | 49–63 ms           | 4.9–6.3           |
+
+Both tests passed in four runs of the file during a concurrent `npm run test:ci` (which also
+passed). With the analysis made four times slower throughout, the budget test fails (117 ms);
+with a quadratic pass worth about 25 ms added (55 ms in all, inside the budget), the shape
+test fails (8.85). The two tests take about 1.2 s together.
