@@ -175,18 +175,28 @@ leaves them published; deleting Buy, Rent or Commercial is 409.
 
 **Master data** — deleting a locality a property uses is 409 and the response
 names the properties; reordering by dragging renumbers the collection; a
-duplicate slug is 409 and `check-slug` offers a free one.
+duplicate slug is 409 and `check-slug` offers a free one. In every collection
+that settles on write (testimonials, team members, partners, localities,
+segments, property types, amenities, badges, developers, banks, article
+categories): two records created at 0 are first in turn and one created at 3 is
+third, the seeded rows follow in the order they had, the numbers read `1..n`,
+and the public list reads the same way; a `PUT` of the whole first record at
+`n` moves it last and answers `n` (placed by a tie it stopped one short), back at
+1 moves it first again, and a `PUT` that keeps the number moves nothing. The
+placing itself: a record moved down to 3 is third, one at 3 among records that
+share 0 or skip numbers is third, 0 or no number is first and 99 is last
+(QA-59).
 
 **FAQs** — an `order` PATCH carrying `after: <id>` lands immediately after that
 record even when several records share a number, and one sent with stale numbers
-still lands by the id; a FAQ created at 0 is first and at 3 is third, and no two
-FAQs share an `order`; an answer with no words (`<ul><li><p></p></li></ul>`) or
-with a `<script>` is 422 on `answer`; `propertyTypeId: 99999` is 422; the same
-question twice in one category is 422 on `question`, and in another category is
-201; `q=<p` finds nothing and `q=R%26D` finds an answer stored as `R&amp;D`; a
-bulk delete naming two FAQs a page shows is 409 with both in `data.refused[]`,
-and deletes nothing; a property page lists the FAQs tied to its type after its
-own (QA-59).
+still lands by the id; a FAQ created at 0 is first and at 3 is third, one saved
+from 2 to 5 is fifth, and no two FAQs share an `order`; an answer with no words
+(`<ul><li><p></p></li></ul>`) or with a `<script>` is 422 on `answer`;
+`propertyTypeId: 99999` is 422; the same question twice in one category is 422
+on `question`, and in another category is 201; `q=<p` finds nothing and
+`q=R%26D` finds an answer stored as `R&amp;D`; a bulk delete naming two FAQs a
+page shows is 409 with both in `data.refused[]`, and deletes nothing; a property
+page lists the FAQs tied to its type after its own (QA-59).
 
 **SEO** — the panel saves and the score comes back on the next read; the overview
 flags two records that share a focus keyword; a redirect added in the admin

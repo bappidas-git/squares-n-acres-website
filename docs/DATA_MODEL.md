@@ -16,6 +16,8 @@ comes from `src/config/enums.js`. The endpoints that serve them are in
 
 Column legend: **Type** · **Null** (Y/N) · **Default** · **Enum/notes**. Every record also has `id` (int), `createdAt`, `updatedAt` unless stated.
 
+**`order` is a position** in the collections an admin drags — `localities`, `segments`, `propertyTypes`, `amenities`, `badges`, `developers`, `banks`, `articleCategories`, `faqs`, `testimonials`, `teamMembers`, `partners`: `1..n`, nothing shared, after every write that places a record (API_CONTRACT §5.8, QA-59). `pages` and `headerMenus` are renumbered by a reorder only.
+
 ### 6.1 `properties`
 
 | Field | Type | Null | Default | Enum / notes |

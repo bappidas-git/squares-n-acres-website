@@ -197,7 +197,9 @@ seeded mock (`check:guidelines` 12 / 12).
 - **Tie-breaking (every collection).** The touched record, then the list's own order.
   An `order` PATCH at the record's own number still settles.
 - **FAQs settle on write.** A `POST`, and a `PUT` that changes `order`, renumber the FAQs
-  `1..n` with the written FAQ first of its tie. The other collections keep §5.8's rule.
+  `1..n` with the written FAQ first of its tie. The other collections kept §5.8's rule in
+  this pass. The follow-up in §9 turns it on for the eleven other drag-ordered ones, and
+  places the written record at its position instead of tying it (F1).
 - **FAQ validation.** An answer with no words, or with a script, handler or
   `javascript:` link: 422 on `answer`. An unknown `propertyTypeId`: 422. The same question
   twice in a category: 422 on `question`. The question is trimmed. `order` 0–100 000.
@@ -243,10 +245,8 @@ env. `npm run e2e` 59 / 59.
 
 ## 8. Risks and follow-ups
 
-- **The other drag-ordered collections still create at `order` 0.** Their moves are exact
-  now (the anchor), but their Order columns can show a shared number until the next move
-  settles it. Turning `settleOrder` on for them is a one-line change per resource, left out
-  of this pass because their screens were not audited.
+- ~~**The other drag-ordered collections still create at `order` 0.**~~ Resolved by the
+  follow-up in §9: all eleven settle on write now.
 - **Deactivating a FAQ removes it silently** from every CMS page and listing that shows it
   (the public list answers active FAQs only). Deleting one is guarded; deactivating is not.
 - **The duplicate check is exact** up to case, spacing and a final "?"; a reworded twin is
@@ -254,3 +254,109 @@ env. `npm run e2e` 59 / 59.
 - **A property type deactivated after a FAQ was tied to it** is still named from the
   session's cache in the admin, or as "Property type #11" in a new session; the tie itself
   keeps working.
+
+---
+
+## 9. Follow-up — the other drag-ordered collections settle too
+
+QA-59 turned `settleOrder` on for FAQs only. The eleven other collections an admin drags
+still created every record at `order` 0 (their forms' default), so their Order columns read
+"0, 0, 0, 1, 2…" until a drag settled them, and a public list ordered each tie by name. This
+pass checked, collection by collection, whether settling on write suits the admin screen and
+what the public site reads, turned it on where it does, and drove the two full-page forms in
+the browser.
+
+### Fit
+
+| Collection         | Admin screen (form)                                 | Public site reads it in                                          | Settles |
+| ------------------ | --------------------------------------------------- | ---------------------------------------------------------------- | ------- |
+| testimonials       | Content → Testimonials (dialog)                     | `order`: the home page and the testimonials block                | yes     |
+| team members       | Content → Team (dialog)                             | `order`: the team block                                          | yes     |
+| partners           | Content → Partners (dialog)                         | `order`: the home partners strip                                 | yes     |
+| localities         | Master data → Localities (full page; quick-create)  | `order` on `/localities` (or by name); the filters by name       | yes     |
+| segments           | Master data → Segments (dialog; quick-create)       | `order`: the master-data cache (filters, the property form)      | yes     |
+| property types     | Master data → Property types (dialog; quick-create) | `order`: the master-data cache                                   | yes     |
+| amenities          | Master data → Amenities (dialog)                    | `order` inside each category (pickers, and a listing's own list) | yes     |
+| badges             | Master data → Badges (dialog; quick-create)         | `order`: the master-data cache                                   | yes     |
+| developers         | Master data → Developers (full page; quick-create)  | `order` on `/builders` (or by name); the master-data cache       | yes     |
+| banks              | Master data → Banks (dialog)                        | `order`: the lender cards and the EMI calculator                 | yes     |
+| article categories | Articles → Categories (dialog; quick-create)        | `order`: the archive's navigation                                | yes     |
+
+All eleven fit. Their seeds are `1..n` already, and every public list sorts by `order,name`
+(or by name), which is the order a renumber keeps a tie in — so nothing a visitor sees
+moves. The quick-creates keep their places: segments, property types and badges are sent at
+the number after the highest they know and still go to the end; localities, developers and
+categories are sent without one and are first, as they were at 0. One `order` runs through
+every amenity category, so the amenities hint says each category lists its own in it.
+Pages and header menus stay as they were: a header menu is created at the end of the list
+and has no Order field, and pages were outside this pass.
+
+### What changed
+
+- **API.** `settleOrder: true` on the eleven resources (`mock-server/routes/masterData.js`;
+  article categories are routed there, not in `routes/articles.js`). A `POST`, and a `PUT`
+  whose `order` differs from the stored one, **place** the record (`placeOrder`,
+  `lib/crud.js`): the others are made dense in the order they read, the record takes the
+  position its `order` names, clamped to `1..n`, and the ones from there on move down one.
+  The reorder `PATCH` keeps its tie (§5.8).
+- **Admin.** Every Order field says it is a position — "Its place in the list: 1 is first,
+  and the others move down to make room." (`FORMS.orderHint`); amenities and article
+  categories name their list; the full-page forms add that dragging a row changes it too.
+  `LocalityFormPage` and `DeveloperFormPage` already read the record back after a save (a new
+  one opens its edit page; an edit re-reads), so the field shows the settled position.
+- **Docs.** API_CONTRACT §5.8 and `backend-notes/05_business_rules.md` ("Ordering") name the
+  twelve collections that settle, `08_testing.md` the tests, DATA_MODEL §6 the rule;
+  DECISIONS has the entry; `backend_developer_guidelines/` is regenerated from a freshly
+  seeded mock (`check:guidelines` 12 / 12) — the captured `POST`, `PUT` and `PATCH` examples
+  of the eleven now answer `"order": 1`.
+
+### F1 — a record moved down from a form landed one place short (High, fixed)
+
+- **Where:** every settling `PUT` — Admin → Localities / Developers (full page), each
+  dialog's Edit, and FAQs since QA-59.
+- **Steps:** Master data → Localities → Add → name it, leave Order at 0 → Save (the edit
+  page reads 1) → set Order to 3 → Save.
+- **Expected:** the locality is third, and the field reads 3.
+- **Actual:** it was second, and the field read 2. A move up was right; a move down, from a
+  form, always landed one place above the number typed. No console or network error — the
+  API answered 200 with `"order": 2`.
+- **Root cause:** QA-59 settled a `POST`/`PUT` the way it settles a reorder `PATCH`: sort
+  by `order` and put the written record first of its tie. A drag's number is read off the
+  list before the move, so that is right for a `PATCH`; a form's number is a position in the
+  list as it will read, and leaving position 1 had already moved the record holding 3 up to
+  second, where the tie put the moved record just ahead of it.
+- **Fix:** `placeOrder` (above). A create was never affected (the new record is not in the
+  list yet), nor was a drag.
+- **Held by:** the replace test of every settling collection (first → last, then back to 1),
+  the FAQ replace test (2 → 5 is fifth), five `placeOrder` cases; all twelve replace tests
+  fail on the tie.
+
+### Tests and verification
+
+- **Mock API** (`mock-server/__tests__/content.test.js`): for each of the eleven, two
+  records created at 0 are first in turn and one at 3 is third, the seeded rows follow in
+  their order, the numbers read `1..n`, and the public list reads the same way (the QA-59
+  FAQ test, table-driven); a `PUT` moves a record down and up to the position it names and a
+  `PUT` at its own number moves nothing. With `settleOrder` off, all 22 fail. `test:mock`
+  303 / 303.
+- **Browser** (fresh mock, admin, 1 440 px): Localities and Developers — the new form's
+  Order starts at 0 and its hint says it is a position; created at 0 the edit page reads 1;
+  saved at 3 the record is third and the field reads 3 (F1 was found here); saved at 99 it
+  is last and reads `n`; the form is clean after the re-read; renamed at the same number
+  nothing moves; the list shows it where the field says (18 checks). Badges — the dialog's
+  hint, and Add creates at 1 with the drag list showing it first (3). Badges and
+  Testimonials — Edit from 1 to 3 in the dialog puts it third in the API and the drag list
+  (6). 27 / 27, no console or page errors beyond the sandbox's blocked font and image
+  hosts.
+- **Gate:** `npm run check:all` passes — lint; test:ci 190 suites / 3 886 tests; test:mock
+  303; test:scripts; build:ci; traces; seed; contrast; guidelines 12 / 12; env.
+
+### What remains
+
+- **A delete leaves a gap** (deleting the first of `1..n` leaves `2..n`) until the next
+  placing write or drag renumbers the collection. The numbers stay unique and in order, so
+  nothing ties and every move stays exact; the Order column just starts at 2 meanwhile.
+- **A database from before QA-59 keeps its ties** until the first write that places a
+  record, or a drag, settles its collection. Moves are exact meanwhile (the anchor).
+- **Pages keep `order` as a weight** ("Lower comes first"), and a page created at 0 can
+  share it; they were not audited here.

@@ -8,7 +8,7 @@ info:
     `src/services/endpoints.js`, `src/services/schemas/` and
     `mock-server/schemas/models.js`. Do not edit by hand.
 
-    generatedFrom: a09ad0f
+    generatedFrom: 0ba81e2
 
     Read `01_API_CONTRACT.md` first: the envelopes of §5.2, the error body
     of §5.3 and the pagination of §5.6 apply to every operation below and
@@ -203,7 +203,7 @@ paths:
                   slug: smoke-name-example-adminamenities-2
                   category: basic
                   isActive: true
-                  order: 0
+                  order: 1
                   name: Smoke name example-adminamenities-2
                   icon: Smoke icon example-adminamenities-2
                   id: 48
@@ -338,7 +338,7 @@ paths:
                   slug: smoke-name-example-adminamenities-3
                   category: basic
                   isActive: true
-                  order: 0
+                  order: 1
                   id: 47
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
@@ -410,7 +410,7 @@ paths:
                   slug: smoke-name-example-adminamenities-3
                   category: basic
                   isActive: true
-                  order: 0
+                  order: 1
                   id: 47
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
@@ -879,7 +879,7 @@ paths:
                       titleReadability: []
                       contentReadability: []
                     lastAnalyzedAt: null
-                  order: 0
+                  order: 1
                   isActive: true
                   name: Smoke name example-adminarticlecategories-2
                   id: 6
@@ -1107,7 +1107,7 @@ paths:
                       titleReadability: []
                       contentReadability: []
                     lastAnalyzedAt: null
-                  order: 0
+                  order: 1
                   isActive: true
                   id: 5
                   createdAt: 2026-01-15T09:30:00.000Z
@@ -1226,7 +1226,7 @@ paths:
                       titleReadability: []
                       contentReadability: []
                     lastAnalyzedAt: null
-                  order: 0
+                  order: 1
                   isActive: true
                   id: 5
                   createdAt: 2026-01-15T09:30:00.000Z
@@ -4061,7 +4061,7 @@ paths:
                   color: primary
                   icon: null
                   isActive: true
-                  order: 0
+                  order: 1
                   name: Smoke name example-adminbadges-2
                   id: 10
                   createdAt: 2026-01-15T09:30:00.000Z
@@ -4195,7 +4195,7 @@ paths:
                   color: primary
                   icon: null
                   isActive: true
-                  order: 0
+                  order: 1
                   id: 9
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
@@ -4267,7 +4267,7 @@ paths:
                   color: primary
                   icon: null
                   isActive: true
-                  order: 0
+                  order: 1
                   id: 9
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
@@ -4621,7 +4621,7 @@ paths:
                   features: []
                   applyUrl: null
                   isActive: true
-                  order: 0
+                  order: 1
                   name: Smoke name example-adminbanks-2
                   interestRateMin: 0
                   interestRateMax: 0
@@ -4775,7 +4775,7 @@ paths:
                   features: []
                   applyUrl: null
                   isActive: true
-                  order: 0
+                  order: 1
                   id: 7
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
@@ -4854,7 +4854,7 @@ paths:
                   features: []
                   applyUrl: null
                   isActive: true
-                  order: 0
+                  order: 1
                   id: 7
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
@@ -5967,7 +5967,7 @@ paths:
                   highlights: []
                   isFeatured: false
                   isActive: true
-                  order: 0
+                  order: 1
                   seo:
                     focusKeyword: ''
                     secondaryKeywords: []
@@ -6224,7 +6224,7 @@ paths:
                   highlights: []
                   isFeatured: false
                   isActive: true
-                  order: 0
+                  order: 1
                   seo:
                     focusKeyword: ''
                     secondaryKeywords: []
@@ -6355,7 +6355,7 @@ paths:
                   highlights: []
                   isFeatured: true
                   isActive: true
-                  order: 0
+                  order: 1
                   seo:
                     focusKeyword: ''
                     secondaryKeywords: []
@@ -9765,7 +9765,7 @@ paths:
                   priceTrendNote: null
                   isFeatured: false
                   isActive: true
-                  order: 0
+                  order: 1
                   seo:
                     focusKeyword: ''
                     secondaryKeywords: []
@@ -10037,7 +10037,7 @@ paths:
                   priceTrendNote: null
                   isFeatured: false
                   isActive: true
-                  order: 0
+                  order: 1
                   seo:
                     focusKeyword: ''
                     secondaryKeywords: []
@@ -10172,7 +10172,7 @@ paths:
                   priceTrendNote: null
                   isFeatured: false
                   isActive: true
-                  order: 0
+                  order: 1
                   seo:
                     focusKeyword: ''
                     secondaryKeywords: []
@@ -12310,7 +12310,7 @@ paths:
                 data:
                   websiteUrl: null
                   category: developer
-                  order: 0
+                  order: 1
                   isActive: true
                   name: Smoke name example-adminpartners-2
                   logoUrl: https://example.com/smoke-test.png
@@ -12443,7 +12443,7 @@ paths:
                 data:
                   websiteUrl: null
                   category: developer
-                  order: 0
+                  order: 1
                   isActive: true
                   id: 7
                   createdAt: 2026-01-15T09:30:00.000Z
@@ -12514,7 +12514,7 @@ paths:
                 data:
                   websiteUrl: null
                   category: developer
-                  order: 0
+                  order: 1
                   isActive: true
                   id: 7
                   createdAt: 2026-01-15T09:30:00.000Z
@@ -15938,7 +15938,7 @@ paths:
                   segment: residential
                   description: null
                   isActive: true
-                  order: 0
+                  order: 1
                   seo:
                     focusKeyword: ''
                     secondaryKeywords: []
@@ -16172,7 +16172,7 @@ paths:
                   segment: residential
                   description: null
                   isActive: true
-                  order: 0
+                  order: 1
                   seo:
                     focusKeyword: ''
                     secondaryKeywords: []
@@ -16293,7 +16293,7 @@ paths:
                   segment: residential
                   description: null
                   isActive: true
-                  order: 0
+                  order: 1
                   seo:
                     focusKeyword: ''
                     secondaryKeywords: []
@@ -17249,7 +17249,7 @@ paths:
                   description: null
                   icon: null
                   isActive: true
-                  order: 0
+                  order: 1
                   name: Smoke name example-adminsegments-2
                   id: 5
                   createdAt: 2026-01-15T09:30:00.000Z
@@ -17389,7 +17389,7 @@ paths:
                   description: null
                   icon: null
                   isActive: true
-                  order: 0
+                  order: 1
                   id: 4
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
@@ -17464,7 +17464,7 @@ paths:
                   description: null
                   icon: null
                   isActive: true
-                  order: 0
+                  order: 1
                   id: 4
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
@@ -18679,7 +18679,7 @@ paths:
                     facebook: null
                     instagram: null
                     website: null
-                  order: 0
+                  order: 1
                   isActive: true
                   showOnAbout: true
                   name: Smoke name example-adminteam-2
@@ -18835,7 +18835,7 @@ paths:
                     facebook: null
                     instagram: null
                     website: null
-                  order: 0
+                  order: 1
                   isActive: true
                   showOnAbout: true
                   id: 7
@@ -18918,7 +18918,7 @@ paths:
                     facebook: null
                     instagram: null
                     website: null
-                  order: 0
+                  order: 1
                   isActive: true
                   showOnAbout: true
                   id: 7
@@ -19275,7 +19275,7 @@ paths:
                   propertyId: null
                   isFeatured: false
                   isActive: true
-                  order: 0
+                  order: 1
                   isSample: false
                   name: Smoke name example-admintestimonials-2
                   message: Smoke message example-admintestimonials-2
@@ -19418,7 +19418,7 @@ paths:
                   propertyId: null
                   isFeatured: false
                   isActive: true
-                  order: 0
+                  order: 1
                   isSample: false
                   id: 9
                   createdAt: 2026-01-15T09:30:00.000Z
@@ -19494,7 +19494,7 @@ paths:
                   propertyId: null
                   isFeatured: true
                   isActive: true
-                  order: 0
+                  order: 1
                   isSample: false
                   id: 9
                   createdAt: 2026-01-15T09:30:00.000Z

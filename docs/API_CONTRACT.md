@@ -64,8 +64,8 @@ Query params `page` (1-based, default 1), `perPage` (default 12 public / 20 admi
 #### Reordering — `PATCH /admin/<resource>/:id { order }` (prompt 17, D98)
 
 Collections with an `order` field (FAQs, testimonials, team members, partners, localities,
-property types, amenities, badges, banks, pages, header menus, article categories) are
-reordered with **one write per move**: a `PATCH` on the record that moved, carrying the position it landed on.
+segments, property types, amenities, badges, developers, banks, article categories, pages, header
+menus) are reordered with **one write per move**: a `PATCH` on the record that moved, carrying the position it landed on.
 
 The client reads that position off the row the moved record was dropped on, in the list as it
 is on screen — which may be filtered, sorted and paginated:
@@ -97,12 +97,22 @@ Two consequences worth stating, because they are the point of the rule:
 - **`order` is always a dense `1..n` sequence** after any reorder. `GET /admin/<resource>?perPage=all&sort=order`
   is the check.
 
-A `PATCH` that does not mention `order`, and a `POST`/`PUT` that does, leave the rest of the
-collection alone; only an `order` `PATCH` renumbers. Laravel implements the same rule inside
-the transaction that writes the moved row. **FAQs are the exception (QA-59):** a `POST`, and a
-`PUT` whose `order` differs from the stored one, settle the FAQs the same way with the written
-FAQ first of any it ties with — created at 0 it is first, saved at 3 it is third — so no two FAQs
-ever share a number.
+A `PATCH` that does not mention `order` leaves the rest of the collection alone. **A `POST`, and
+a `PUT` whose `order` differs from the stored one, settle the collection too (QA-59)** — in FAQs,
+testimonials, team members, partners, localities, segments, property types, amenities, badges,
+developers, banks and article categories. The written record is **placed**: the others keep the
+order they read in, made dense `1..n-1`; the record takes the position its `order` names, clamped
+to `1..n`; the ones from there on move down one. Created at 0 (every admin form's default) it is
+first; saved at 3 it is third, whether it moved up or down; saved at 99 it is last, and the
+response says `n`. So no two records share a number, the admin's Order column reads as positions,
+and the public lists never fall back to their secondary sort inside a tie. A `PUT` that keeps the
+stored `order` moves nothing. (A reorder `PATCH` is not placed this way: its number is read off
+the list as it was before the move, so `neighbour.order + 1` has to tie with the next row to land
+after the neighbour. A form's number is a position in the list as it will read — placed by the
+tie, a record saved from 1 to 3 came second, because leaving 1 had moved the others up.) Pages
+and header menus are not among them: a `POST`/`PUT` leaves those collections alone, and only an
+`order` `PATCH` renumbers them. Laravel implements these rules inside the transaction that writes
+the record.
 
 ### 5.9 Slugs
 
