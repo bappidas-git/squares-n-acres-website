@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "3fc3a194-d939-44aa-8997-e0af3ffe473f",
     "name": "Squares N Acres API",
-    "description": "Every endpoint of the contract, generated from `src/services/endpoints.js`.\n\n**Start here:** select the *Squares N Acres — Local mock* environment, open\n`auth › auth › POST /auth/login` and send it. Its test script writes\n`{{token}}` into the environment and every other request inherits it.\nTo work as another role, change `email` and `password` in the environment\n(the manager and sales values are there, disabled) and sign in again.\n\nRunning the whole collection is the parity check of `08_TESTING_AND_PARITY.md`:\npoint `{{baseUrl}}` at the Laravel API and every test that passes against\nthe mock must pass against it.\n\ngeneratedFrom: a732c3c",
+    "description": "Every endpoint of the contract, generated from `src/services/endpoints.js`.\n\n**Start here:** select the *Squares N Acres — Local mock* environment, open\n`auth › auth › POST /auth/login` and send it. Its test script writes\n`{{token}}` into the environment and every other request inherits it.\nTo work as another role, change `email` and `password` in the environment\n(the manager and sales values are there, disabled) and sign in again.\n\nRunning the whole collection is the parity check of `08_TESTING_AND_PARITY.md`:\npoint `{{baseUrl}}` at the Laravel API and every test that passes against\nthe mock must pass against it.\n\ngeneratedFrom: ed920f5",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -4739,6 +4739,690 @@
           ]
         },
         {
+          "id": "d66951d9-8e74-46ac-8966-882b35b68bf9",
+          "name": "adminHeaderMenus",
+          "item": [
+            {
+              "id": "ac99322f-129f-4325-88d4-503a28516ebb",
+              "name": "GET /admin/header-menus — List header menus for the admin table",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/header-menus",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "header-menus"
+                  ],
+                  "query": [
+                    {
+                      "key": "ids",
+                      "value": "",
+                      "disabled": true,
+                      "description": "csv:int"
+                    },
+                    {
+                      "key": "isActive",
+                      "value": "",
+                      "disabled": true,
+                      "description": "bool"
+                    },
+                    {
+                      "key": "order",
+                      "value": "",
+                      "disabled": true,
+                      "description": "enum:asc,desc"
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "disabled": true,
+                      "description": "int"
+                    },
+                    {
+                      "key": "perPage",
+                      "value": "",
+                      "disabled": true,
+                      "description": "int"
+                    },
+                    {
+                      "key": "q",
+                      "value": "",
+                      "disabled": true,
+                      "description": "string"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "",
+                      "disabled": true,
+                      "description": "string"
+                    }
+                  ]
+                },
+                "description": "List header menus for the admin table\n\n- **Registry key** `adminHeaderMenus.list`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `HeaderMenuList` — see `01_API_CONTRACT.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "293ddb1d-f216-42ed-8951-ac4bae7bb0c2",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 — the status the contract promises', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('a list envelope with pagination meta (§5.2)', function () {",
+                      "  var body = pm.response.json();",
+                      "  pm.expect(body.data).to.be.an('array');",
+                      "  ['page', 'perPage', 'total', 'totalPages'].forEach(function (key) {",
+                      "    pm.expect(body.meta[key], 'meta.' + key).to.be.a('number');",
+                      "  });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "response": [
+                {
+                  "id": "f18b1b71-6d66-4fe2-8b03-ca26136a7073",
+                  "name": "200 — captured from the mock server",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/admin/header-menus",
+                      "host": [
+                        "{{baseUrl}}"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"name\": \"Buy\",\n      \"slug\": \"buy\",\n      \"href\": \"/buy\",\n      \"source\": \"buy\",\n      \"submenus\": [],\n      \"links\": [],\n      \"isActive\": true,\n      \"order\": 1,\n      \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n      \"updatedAt\": \"2026-01-15T09:30:00.000Z\",\n      \"builtIn\": true\n    },\n    {\n      \"id\": 2,\n      \"name\": \"Rent\",\n      \"slug\": \"rent\",\n      \"href\": \"/rent\",\n      \"source\": \"rent\",\n      \"submenus\": [],\n      \"links\": [],\n      \"isActive\": true,\n      \"order\": 2,\n      \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n      \"updatedAt\": \"2026-01-15T09:30:00.000Z\",\n      \"builtIn\": true\n    },\n    \"…8 more (trimmed for this example)\"\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"perPage\": 20,\n    \"total\": 10,\n    \"totalPages\": 1\n  }\n}"
+                }
+              ]
+            },
+            {
+              "id": "5d87fbc2-1e9a-45f2-8de2-19a364003a8e",
+              "name": "POST /admin/header-menus — Create a header menu",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Smoke name example-adminheadermenus-2\",\n  \"source\": \"custom\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/header-menus",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "header-menus"
+                  ]
+                },
+                "description": "Create a header menu\n\n- **Registry key** `adminHeaderMenus.create`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `HeaderMenu` — see `01_API_CONTRACT.md`\n- **Body schema** `headerMenu.create` — see `03_ENDPOINTS.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "10956415-8c13-48e0-8182-b528f6b4bb36",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201 — the status the contract promises', function () {",
+                      "  pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "pm.test('a single-resource envelope (§5.2)', function () {",
+                      "  var body = pm.response.json();",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "response": [
+                {
+                  "id": "2d4f6dab-3851-4ac8-8903-1127a7ebdd2d",
+                  "name": "201 — captured from the mock server",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/admin/header-menus",
+                      "host": [
+                        "{{baseUrl}}"
+                      ]
+                    }
+                  },
+                  "status": "Created",
+                  "code": 201,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"data\": {\n    \"slug\": \"smoke-name-example-adminheadermenus-2\",\n    \"href\": null,\n    \"source\": \"custom\",\n    \"submenus\": [],\n    \"links\": [],\n    \"isActive\": true,\n    \"order\": 0,\n    \"name\": \"Smoke name example-adminheadermenus-2\",\n    \"id\": 12,\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\",\n    \"builtIn\": false\n  }\n}"
+                }
+              ]
+            },
+            {
+              "id": "b83c9bd8-ad24-4727-87d6-9b79fca434d1",
+              "name": "GET /admin/header-menus/:id — Read one header menu with every admin field",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/header-menus/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "header-menus",
+                    "1"
+                  ]
+                },
+                "description": "Read one header menu with every admin field\n\n- **Registry key** `adminHeaderMenus.get`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `HeaderMenu` — see `01_API_CONTRACT.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "9df0c64a-afe5-400c-833f-9e9eb34a2295",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 — the status the contract promises', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('a single-resource envelope (§5.2)', function () {",
+                      "  var body = pm.response.json();",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "response": [
+                {
+                  "id": "b28c7d35-8279-4c7f-897c-521cdb5bde90",
+                  "name": "200 — captured from the mock server",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/admin/header-menus/1",
+                      "host": [
+                        "{{baseUrl}}"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Buy\",\n    \"slug\": \"buy\",\n    \"href\": \"/buy\",\n    \"source\": \"buy\",\n    \"submenus\": [],\n    \"links\": [],\n    \"isActive\": true,\n    \"order\": 1,\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\",\n    \"builtIn\": true\n  }\n}"
+                }
+              ]
+            },
+            {
+              "id": "22d58bbf-ecb0-4943-8e1b-470fdbc49784",
+              "name": "PUT /admin/header-menus/:id — Replace a header menu with the full record from the form",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Smoke name example-adminheadermenus-3\",\n  \"source\": \"custom\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/header-menus/11",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "header-menus",
+                    "11"
+                  ]
+                },
+                "description": "Replace a header menu with the full record from the form\n\n- **Registry key** `adminHeaderMenus.update`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `HeaderMenu` — see `01_API_CONTRACT.md`\n- **Body schema** `headerMenu.update` — see `03_ENDPOINTS.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "83aa4bb7-94bd-49d1-8241-8242bf80e0db",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 — the status the contract promises', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('a single-resource envelope (§5.2)', function () {",
+                      "  var body = pm.response.json();",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "response": [
+                {
+                  "id": "5a1089c3-a823-4763-8541-e4261abe3b24",
+                  "name": "200 — captured from the mock server",
+                  "originalRequest": {
+                    "method": "PUT",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/admin/header-menus/11",
+                      "host": [
+                        "{{baseUrl}}"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"data\": {\n    \"slug\": \"smoke-name-example-adminheadermenus-1\",\n    \"href\": null,\n    \"source\": \"custom\",\n    \"submenus\": [],\n    \"links\": [],\n    \"isActive\": true,\n    \"order\": 0,\n    \"id\": 11,\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\",\n    \"name\": \"Smoke name example-adminheadermenus-3\",\n    \"builtIn\": false\n  }\n}"
+                }
+              ]
+            },
+            {
+              "id": "a0010711-06fd-44a5-8b95-5c7fe4719e9b",
+              "name": "PATCH /admin/header-menus/:id — Update the given fields of a header menu (toggles, order, SEO panel)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"isActive\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/header-menus/11",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "header-menus",
+                    "11"
+                  ]
+                },
+                "description": "Update the given fields of a header menu (toggles, order, SEO panel)\n\n- **Registry key** `adminHeaderMenus.patch`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `HeaderMenu` — see `01_API_CONTRACT.md`\n- **Body schema** `headerMenu.patch` — see `03_ENDPOINTS.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "7c1c99c7-11f6-472f-84ff-c53de364b332",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 — the status the contract promises', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('a single-resource envelope (§5.2)', function () {",
+                      "  var body = pm.response.json();",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "response": [
+                {
+                  "id": "ee769714-1181-47d5-8b36-7a611f6ebdc6",
+                  "name": "200 — captured from the mock server",
+                  "originalRequest": {
+                    "method": "PATCH",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/admin/header-menus/11",
+                      "host": [
+                        "{{baseUrl}}"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"data\": {\n    \"slug\": \"smoke-name-example-adminheadermenus-1\",\n    \"href\": null,\n    \"source\": \"custom\",\n    \"submenus\": [],\n    \"links\": [],\n    \"isActive\": true,\n    \"order\": 0,\n    \"id\": 11,\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\",\n    \"name\": \"Smoke name example-adminheadermenus-3\",\n    \"builtIn\": false\n  }\n}"
+                }
+              ]
+            },
+            {
+              "id": "dab64d36-a741-4846-86e1-7acad9a410dc",
+              "name": "DELETE /admin/header-menus/:id — Delete a header menu; 409 when it is still in use",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/header-menus/13",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "header-menus",
+                    "13"
+                  ]
+                },
+                "description": "Delete a header menu; 409 when it is still in use\n\n- **Registry key** `adminHeaderMenus.remove`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `Null` — see `01_API_CONTRACT.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "97d2ef79-6774-45b7-83ce-dab327fce655",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 — the status the contract promises', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('an action envelope: null data and a message (§5.2)', function () {",
+                      "  var body = pm.response.json();",
+                      "  pm.expect(body).to.have.property('data', null);",
+                      "  pm.expect(body.message).to.be.a('string');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "response": [
+                {
+                  "id": "44543877-06af-4496-8b76-71eb6db0f08a",
+                  "name": "200 — captured from the mock server",
+                  "originalRequest": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/admin/header-menus/13",
+                      "host": [
+                        "{{baseUrl}}"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"data\": null,\n  \"message\": \"Deleted\"\n}"
+                }
+              ]
+            },
+            {
+              "id": "a4071672-7618-4448-85e3-fc57a9126f88",
+              "name": "POST /admin/header-menus/bulk — Apply one action to several header menus",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ids\": [\n    11\n  ],\n  \"action\": \"activate\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/header-menus/bulk",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "header-menus",
+                    "bulk"
+                  ]
+                },
+                "description": "Apply one action to several header menus\n\n- **Registry key** `adminHeaderMenus.bulk`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `BulkResult` — see `01_API_CONTRACT.md`\n- **Body schema** `bulk` — see `03_ENDPOINTS.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "76094f8e-2135-46b6-8834-86c65379c8cc",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 — the status the contract promises', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('a single-resource envelope (§5.2)', function () {",
+                      "  var body = pm.response.json();",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "response": [
+                {
+                  "id": "baacda9d-06cc-40da-8c92-9a1b2e214fd2",
+                  "name": "200 — captured from the mock server",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/admin/header-menus/bulk",
+                      "host": [
+                        "{{baseUrl}}"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"data\": {\n    \"affected\": 1\n  },\n  \"message\": \"1 menu updated.\"\n}"
+                }
+              ]
+            },
+            {
+              "id": "3be5e03d-22bb-4e0f-84f9-47949e8f71bb",
+              "name": "GET /admin/header-menus/check-slug — Check whether a header menu slug is free and suggest an alternative",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/header-menus/check-slug?slug=lakeview-heights-3-bhk-whitefield",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "header-menus",
+                    "check-slug"
+                  ],
+                  "query": [
+                    {
+                      "key": "slug",
+                      "value": "lakeview-heights-3-bhk-whitefield"
+                    },
+                    {
+                      "key": "excludeId",
+                      "value": "",
+                      "disabled": true,
+                      "description": "int"
+                    }
+                  ]
+                },
+                "description": "Check whether a header menu slug is free and suggest an alternative\n\n- **Registry key** `adminHeaderMenus.checkSlug`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `SlugCheck` — see `01_API_CONTRACT.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "e32f1876-1191-48be-8f5a-fe76cb1d5ed7",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 — the status the contract promises', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('a single-resource envelope (§5.2)', function () {",
+                      "  var body = pm.response.json();",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "response": [
+                {
+                  "id": "8ec18c4a-cf78-4a34-8d77-0d3d40a06a28",
+                  "name": "200 — captured from the mock server",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/admin/header-menus/check-slug",
+                      "host": [
+                        "{{baseUrl}}"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"data\": {\n    \"available\": true,\n    \"suggestion\": \"lakeview-heights-3-bhk-whitefield\"\n  }\n}"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "id": "892c9367-49d5-40e0-8d6a-58c50337977a",
           "name": "adminJobApplications",
           "item": [
@@ -6104,7 +6788,7 @@
                     }
                   ],
                   "cookie": [],
-                  "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"slug\": \"home\",\n      \"title\": \"Home\",\n      \"template\": \"landing\",\n      \"status\": \"published\",\n      \"heroImageUrl\": null,\n      \"blocks\": [\n        {\n          \"id\": 1,\n          \"type\": \"features\",\n          \"order\": 1,\n          \"data\": {\n            \"title\": \"Why choose Squares N Acres\",\n            \"subtitle\": \"Curated inventory, verified information and one advisor from the first call to registration.\",\n            \"items\": [\n              {\n                \"icon\": \"mdi:home-search-outline\",\n                \"title\": \"Expert local guidance\",\n                \"text\": \"We work one city properly rather than many superficially, which is what makes the locality advice worth acting on.\"\n              },\n              {\n                \"icon\": \"mdi:shield-check-outline\",\n                \"title\": \"Verified listings\",\n                \"text\": \"Areas, approvals and charges are checked before a listing is published, and corrected when they change.\"\n              },\n              \"…2 more (trimmed for this example)\"\n            ]\n          }\n        },\n        {\n          \"id\": 2,\n          \"type\": \"steps\",\n          \"order\": 2,\n          \"data\": {\n            \"title\": \"How it works\",\n            \"subtitle\": \"Four steps from the first conversation to the keys.\",\n            \"items\": [\n              {\n                \"title\": \"Search\",\n                \"text\": \"Tell us the locality, the budget and the configuration. The more specific the brief, the shorter the shortlist.\"\n              },\n              {\n                \"title\": \"Shortlist & visit\",\n                \"text\": \"We come back with options that fit, arrange the visits and go with you, so every comparison is made on the same basis.\"\n              },\n              \"…2 more (trimmed for this example)\"\n            ]\n          }\n        }\n      ],\n      \"leadSource\": \"post-requirement\",\n      \"seo\": {\n        \"focusKeyword\": \"property in bengaluru\",\n        \"secondaryKeywords\": [\n          \"squares n acres\",\n          \"bengaluru property\"\n        ],\n        \"title\": \"Buy, Sell and Rent Property in Bengaluru\",\n        \"description\": \"Verified apartments, villas, plots and commercial space across twenty Bengaluru localities, with an advisor from the first call to registration.\",\n        \"slug\": \"home\",\n        \"canonicalUrl\": null,\n        \"robots\": {\n          \"index\": true,\n          \"follow\": true,\n          \"noarchive\": false,\n          \"nosnippet\": false,\n          \"noimageindex\": false,\n          \"maxSnippet\": null,\n          \"maxImagePreview\": \"large\",\n          \"maxVideoPreview\": null\n        },\n        \"og\": {\n          \"title\": null,\n          \"description\": null,\n          \"imageUrl\": null\n        },\n        \"twitter\": {\n          \"card\": \"summary_large_image\",\n          \"title\": null,\n          \"description\": null,\n          \"imageUrl\": null\n        },\n        \"breadcrumbTitle\": null,\n        \"schema\": {\n          \"type\": \"auto\",\n          \"custom\": \"\",\n          \"disabledAutoTypes\": []\n        },\n        \"sitemap\": {\n          \"include\": true,\n          \"priority\": null,\n          \"changefreq\": null\n        },\n        \"redirect\": {\n          \"enabled\": false,\n          \"toPath\": \"\",\n          \"statusCode\": 301\n        },\n        \"score\": null,\n        \"scoreBand\": \"none\",\n        \"testsPassed\": 0,\n        \"testsTotal\": 0,\n        \"analysis\": {\n          \"basic\": [],\n          \"additional\": [],\n          \"titleReadability\": [],\n          \"contentReadability\": []\n        },\n        \"lastAnalyzedAt\": null\n      },\n      \"order\": 1,\n      \"showInFooter\": false,\n      \"footerColumn\": null,\n      \"showInHeader\": false,\n      \"headerMenu\": null,\n      \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n      \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n    },\n    {\n      \"id\": 2,\n      \"slug\": \"about\",\n      \"title\": \"About Us\",\n      \"template\": \"about\",\n      \"status\": \"published\",\n      \"heroImageUrl\": \"https://picsum.photos/seed/sna-page-about/1600/700\",\n      \"blocks\": [\n        {\n          \"id\": 1,\n          \"type\": \"hero\",\n          \"order\": 1,\n          \"data\": {\n            \"title\": \"About Squares N Acres\",\n            \"subtitle\": \"A Bengaluru property advisory built around one idea: tell the client what we would want to be told.\",\n            \"imageUrl\": \"https://picsum.photos/seed/sna-page-about/1600/700\",\n            \"ctaLabel\": null,\n            \"ctaHref\": null\n          }\n        },\n        {\n          \"id\": 2,\n          \"type\": \"richText\",\n          \"order\": 2,\n          \"data\": {\n            \"html\": \"<h2>Our story</h2><p>[Placeholder — client to provide] This paragraph is where the founding story belongs — when the company started, what it set out to do differently, and what it has learned since. Replace it with the client’s own account before the site goes live.</p><p>[Placeholder — client to p…\"\n          }\n        },\n        \"…7 more (trimmed for this example)\"\n      ],\n      \"leadSource\": \"contact-page\",\n      \"seo\": {\n        \"focusKeyword\": \"about squares n acres\",\n        \"secondaryKeywords\": [\n          \"squares n acres\",\n          \"bengaluru property\"\n        ],\n        \"title\": \"About Squares N Acres – Bengaluru Property Advisory\",\n        \"description\": \"Who we are, how we work and what we will and will not say about a property. The Squares N Acres approach to buying, selling and renting in Bengaluru.\",\n        \"slug\": \"about\",\n        \"canonicalUrl\": null,\n        \"robots\": {\n          \"index\": true,\n          \"follow\": true,\n          \"noarchive\": false,\n          \"nosnippet\": false,\n          \"noimageindex\": false,\n          \"maxSnippet\": null,\n          \"maxImagePreview\": \"large\",\n          \"maxVideoPreview\": null\n        },\n        \"og\": {\n          \"title\": null,\n          \"description\": null,\n          \"imageUrl\": null\n        },\n        \"twitter\": {\n          \"card\": \"summary_large_image\",\n          \"title\": null,\n          \"description\": null,\n          \"imageUrl\": null\n        },\n        \"breadcrumbTitle\": null,\n        \"schema\": {\n          \"type\": \"auto\",\n          \"custom\": \"\",\n          \"disabledAutoTypes\": []\n        },\n        \"sitemap\": {\n          \"include\": true,\n          \"priority\": null,\n          \"changefreq\": null\n        },\n        \"redirect\": {\n          \"enabled\": false,\n          \"toPath\": \"\",\n          \"statusCode\": 301\n        },\n        \"score\": null,\n        \"scoreBand\": \"none\",\n        \"testsPassed\": 0,\n        \"testsTotal\": 0,\n        \"analysis\": {\n          \"basic\": [],\n          \"additional\": [],\n          \"titleReadability\": [],\n          \"contentReadability\": []\n        },\n        \"lastAnalyzedAt\": null\n      },\n      \"order\": 2,\n      \"showInFooter\": true,\n      \"footerColumn\": \"company\",\n      \"showInHeader\": true,\n      \"headerMenu\": \"company\",\n      \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n      \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n    },\n    \"…13 more (trimmed for this example)\"\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"perPage\": 20,\n    \"total\": 15,\n    \"totalPages\": 1\n  }\n}"
+                  "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"slug\": \"home\",\n      \"title\": \"Home\",\n      \"template\": \"landing\",\n      \"status\": \"published\",\n      \"heroImageUrl\": null,\n      \"blocks\": [\n        {\n          \"id\": 1,\n          \"type\": \"features\",\n          \"order\": 1,\n          \"data\": {\n            \"title\": \"Why choose Squares N Acres\",\n            \"subtitle\": \"Curated inventory, verified information and one advisor from the first call to registration.\",\n            \"items\": [\n              {\n                \"icon\": \"mdi:home-search-outline\",\n                \"title\": \"Expert local guidance\",\n                \"text\": \"We work one city properly rather than many superficially, which is what makes the locality advice worth acting on.\"\n              },\n              {\n                \"icon\": \"mdi:shield-check-outline\",\n                \"title\": \"Verified listings\",\n                \"text\": \"Areas, approvals and charges are checked before a listing is published, and corrected when they change.\"\n              },\n              \"…2 more (trimmed for this example)\"\n            ]\n          }\n        },\n        {\n          \"id\": 2,\n          \"type\": \"steps\",\n          \"order\": 2,\n          \"data\": {\n            \"title\": \"How it works\",\n            \"subtitle\": \"Four steps from the first conversation to the keys.\",\n            \"items\": [\n              {\n                \"title\": \"Search\",\n                \"text\": \"Tell us the locality, the budget and the configuration. The more specific the brief, the shorter the shortlist.\"\n              },\n              {\n                \"title\": \"Shortlist & visit\",\n                \"text\": \"We come back with options that fit, arrange the visits and go with you, so every comparison is made on the same basis.\"\n              },\n              \"…2 more (trimmed for this example)\"\n            ]\n          }\n        }\n      ],\n      \"leadSource\": \"post-requirement\",\n      \"seo\": {\n        \"focusKeyword\": \"property in bengaluru\",\n        \"secondaryKeywords\": [\n          \"squares n acres\",\n          \"bengaluru property\"\n        ],\n        \"title\": \"Buy, Sell and Rent Property in Bengaluru\",\n        \"description\": \"Verified apartments, villas, plots and commercial space across twenty Bengaluru localities, with an advisor from the first call to registration.\",\n        \"slug\": \"home\",\n        \"canonicalUrl\": null,\n        \"robots\": {\n          \"index\": true,\n          \"follow\": true,\n          \"noarchive\": false,\n          \"nosnippet\": false,\n          \"noimageindex\": false,\n          \"maxSnippet\": null,\n          \"maxImagePreview\": \"large\",\n          \"maxVideoPreview\": null\n        },\n        \"og\": {\n          \"title\": null,\n          \"description\": null,\n          \"imageUrl\": null\n        },\n        \"twitter\": {\n          \"card\": \"summary_large_image\",\n          \"title\": null,\n          \"description\": null,\n          \"imageUrl\": null\n        },\n        \"breadcrumbTitle\": null,\n        \"schema\": {\n          \"type\": \"auto\",\n          \"custom\": \"\",\n          \"disabledAutoTypes\": []\n        },\n        \"sitemap\": {\n          \"include\": true,\n          \"priority\": null,\n          \"changefreq\": null\n        },\n        \"redirect\": {\n          \"enabled\": false,\n          \"toPath\": \"\",\n          \"statusCode\": 301\n        },\n        \"score\": null,\n        \"scoreBand\": \"none\",\n        \"testsPassed\": 0,\n        \"testsTotal\": 0,\n        \"analysis\": {\n          \"basic\": [],\n          \"additional\": [],\n          \"titleReadability\": [],\n          \"contentReadability\": []\n        },\n        \"lastAnalyzedAt\": null\n      },\n      \"order\": 1,\n      \"showInFooter\": false,\n      \"footerColumn\": null,\n      \"showInHeader\": false,\n      \"headerMenu\": null,\n      \"headerSubmenu\": null,\n      \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n      \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n    },\n    {\n      \"id\": 16,\n      \"slug\": \"properties\",\n      \"title\": \"All properties\",\n      \"template\": \"system\",\n      \"status\": \"published\",\n      \"heroImageUrl\": null,\n      \"blocks\": [],\n      \"leadSource\": null,\n      \"seo\": {\n        \"focusKeyword\": \"\",\n        \"secondaryKeywords\": [],\n        \"title\": \"\",\n        \"description\": \"\",\n        \"slug\": \"properties\",\n        \"canonicalUrl\": null,\n        \"robots\": {\n          \"index\": true,\n          \"follow\": true,\n          \"noarchive\": false,\n          \"nosnippet\": false,\n          \"noimageindex\": false,\n          \"maxSnippet\": null,\n          \"maxImagePreview\": \"large\",\n          \"maxVideoPreview\": null\n        },\n        \"og\": {\n          \"title\": null,\n          \"description\": null,\n          \"imageUrl\": null\n        },\n        \"twitter\": {\n          \"card\": \"summary_large_image\",\n          \"title\": null,\n          \"description\": null,\n          \"imageUrl\": null\n        },\n        \"breadcrumbTitle\": null,\n        \"schema\": {\n          \"type\": \"auto\",\n          \"custom\": \"\",\n          \"disabledAutoTypes\": []\n        },\n        \"sitemap\": {\n          \"include\": true,\n          \"priority\": null,\n          \"changefreq\": null\n        },\n        \"redirect\": {\n          \"enabled\": false,\n          \"toPath\": \"\",\n          \"statusCode\": 301\n        },\n        \"score\": null,\n        \"scoreBand\": \"none\",\n        \"testsPassed\": 0,\n        \"testsTotal\": 0,\n        \"analysis\": {\n          \"basic\": [],\n          \"additional\": [],\n          \"titleReadability\": [],\n          \"contentReadability\": []\n        },\n        \"lastAnalyzedAt\": null\n      },\n      \"order\": 2,\n      \"showInFooter\": false,\n      \"footerColumn\": null,\n      \"showInHeader\": false,\n      \"headerMenu\": null,\n      \"headerSubmenu\": null,\n      \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n      \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n    },\n    \"…18 more (trimmed for this example)\"\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"perPage\": 20,\n    \"total\": 26,\n    \"totalPages\": 2\n  }\n}"
                 }
               ]
             },
@@ -6187,7 +6871,7 @@
                     }
                   ],
                   "cookie": [],
-                  "body": "{\n  \"data\": {\n    \"slug\": \"smoke-title-example-adminpages-2\",\n    \"template\": \"standard\",\n    \"status\": \"draft\",\n    \"heroImageUrl\": null,\n    \"blocks\": [],\n    \"leadSource\": null,\n    \"seo\": {\n      \"focusKeyword\": \"\",\n      \"secondaryKeywords\": [],\n      \"title\": \"\",\n      \"description\": \"\",\n      \"slug\": \"smoke-title-example-adminpages-2\",\n      \"canonicalUrl\": null,\n      \"robots\": {\n        \"index\": true,\n        \"follow\": true,\n        \"noarchive\": false,\n        \"nosnippet\": false,\n        \"noimageindex\": false,\n        \"maxSnippet\": null,\n        \"maxImagePreview\": \"large\",\n        \"maxVideoPreview\": null\n      },\n      \"og\": {\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"twitter\": {\n        \"card\": \"summary_large_image\",\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"breadcrumbTitle\": null,\n      \"schema\": {\n        \"type\": \"auto\",\n        \"custom\": \"\",\n        \"disabledAutoTypes\": []\n      },\n      \"sitemap\": {\n        \"include\": true,\n        \"priority\": null,\n        \"changefreq\": null\n      },\n      \"redirect\": {\n        \"enabled\": false,\n        \"toPath\": \"\",\n        \"statusCode\": 301\n      },\n      \"score\": null,\n      \"scoreBand\": \"none\",\n      \"testsPassed\": 0,\n      \"testsTotal\": 0,\n      \"analysis\": {\n        \"basic\": [],\n        \"additional\": [],\n        \"titleReadability\": [],\n        \"contentReadability\": []\n      },\n      \"lastAnalyzedAt\": null\n    },\n    \"order\": 0,\n    \"showInFooter\": false,\n    \"footerColumn\": null,\n    \"showInHeader\": false,\n    \"headerMenu\": null,\n    \"title\": \"Smoke title example-adminpages-2\",\n    \"id\": 17,\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n  }\n}"
+                  "body": "{\n  \"data\": {\n    \"slug\": \"smoke-title-example-adminpages-2\",\n    \"template\": \"standard\",\n    \"status\": \"draft\",\n    \"heroImageUrl\": null,\n    \"blocks\": [],\n    \"leadSource\": null,\n    \"seo\": {\n      \"focusKeyword\": \"\",\n      \"secondaryKeywords\": [],\n      \"title\": \"\",\n      \"description\": \"\",\n      \"slug\": \"smoke-title-example-adminpages-2\",\n      \"canonicalUrl\": null,\n      \"robots\": {\n        \"index\": true,\n        \"follow\": true,\n        \"noarchive\": false,\n        \"nosnippet\": false,\n        \"noimageindex\": false,\n        \"maxSnippet\": null,\n        \"maxImagePreview\": \"large\",\n        \"maxVideoPreview\": null\n      },\n      \"og\": {\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"twitter\": {\n        \"card\": \"summary_large_image\",\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"breadcrumbTitle\": null,\n      \"schema\": {\n        \"type\": \"auto\",\n        \"custom\": \"\",\n        \"disabledAutoTypes\": []\n      },\n      \"sitemap\": {\n        \"include\": true,\n        \"priority\": null,\n        \"changefreq\": null\n      },\n      \"redirect\": {\n        \"enabled\": false,\n        \"toPath\": \"\",\n        \"statusCode\": 301\n      },\n      \"score\": null,\n      \"scoreBand\": \"none\",\n      \"testsPassed\": 0,\n      \"testsTotal\": 0,\n      \"analysis\": {\n        \"basic\": [],\n        \"additional\": [],\n        \"titleReadability\": [],\n        \"contentReadability\": []\n      },\n      \"lastAnalyzedAt\": null\n    },\n    \"order\": 0,\n    \"showInFooter\": false,\n    \"footerColumn\": null,\n    \"showInHeader\": false,\n    \"headerMenu\": null,\n    \"headerSubmenu\": null,\n    \"title\": \"Smoke title example-adminpages-2\",\n    \"id\": 28,\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n  }\n}"
                 }
               ]
             },
@@ -6266,7 +6950,7 @@
                     }
                   ],
                   "cookie": [],
-                  "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"slug\": \"home\",\n    \"title\": \"Home\",\n    \"template\": \"landing\",\n    \"status\": \"published\",\n    \"heroImageUrl\": null,\n    \"blocks\": [\n      {\n        \"id\": 1,\n        \"type\": \"features\",\n        \"order\": 1,\n        \"data\": {\n          \"title\": \"Why choose Squares N Acres\",\n          \"subtitle\": \"Curated inventory, verified information and one advisor from the first call to registration.\",\n          \"items\": [\n            {\n              \"icon\": \"mdi:home-search-outline\",\n              \"title\": \"Expert local guidance\",\n              \"text\": \"We work one city properly rather than many superficially, which is what makes the locality advice worth acting on.\"\n            },\n            {\n              \"icon\": \"mdi:shield-check-outline\",\n              \"title\": \"Verified listings\",\n              \"text\": \"Areas, approvals and charges are checked before a listing is published, and corrected when they change.\"\n            },\n            \"…2 more (trimmed for this example)\"\n          ]\n        }\n      },\n      {\n        \"id\": 2,\n        \"type\": \"steps\",\n        \"order\": 2,\n        \"data\": {\n          \"title\": \"How it works\",\n          \"subtitle\": \"Four steps from the first conversation to the keys.\",\n          \"items\": [\n            {\n              \"title\": \"Search\",\n              \"text\": \"Tell us the locality, the budget and the configuration. The more specific the brief, the shorter the shortlist.\"\n            },\n            {\n              \"title\": \"Shortlist & visit\",\n              \"text\": \"We come back with options that fit, arrange the visits and go with you, so every comparison is made on the same basis.\"\n            },\n            \"…2 more (trimmed for this example)\"\n          ]\n        }\n      }\n    ],\n    \"leadSource\": \"post-requirement\",\n    \"seo\": {\n      \"focusKeyword\": \"property in bengaluru\",\n      \"secondaryKeywords\": [\n        \"squares n acres\",\n        \"bengaluru property\"\n      ],\n      \"title\": \"Buy, Sell and Rent Property in Bengaluru\",\n      \"description\": \"Verified apartments, villas, plots and commercial space across twenty Bengaluru localities, with an advisor from the first call to registration.\",\n      \"slug\": \"home\",\n      \"canonicalUrl\": null,\n      \"robots\": {\n        \"index\": true,\n        \"follow\": true,\n        \"noarchive\": false,\n        \"nosnippet\": false,\n        \"noimageindex\": false,\n        \"maxSnippet\": null,\n        \"maxImagePreview\": \"large\",\n        \"maxVideoPreview\": null\n      },\n      \"og\": {\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"twitter\": {\n        \"card\": \"summary_large_image\",\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"breadcrumbTitle\": null,\n      \"schema\": {\n        \"type\": \"auto\",\n        \"custom\": \"\",\n        \"disabledAutoTypes\": []\n      },\n      \"sitemap\": {\n        \"include\": true,\n        \"priority\": null,\n        \"changefreq\": null\n      },\n      \"redirect\": {\n        \"enabled\": false,\n        \"toPath\": \"\",\n        \"statusCode\": 301\n      },\n      \"score\": null,\n      \"scoreBand\": \"none\",\n      \"testsPassed\": 0,\n      \"testsTotal\": 0,\n      \"analysis\": {\n        \"basic\": [],\n        \"additional\": [],\n        \"titleReadability\": [],\n        \"contentReadability\": []\n      },\n      \"lastAnalyzedAt\": null\n    },\n    \"order\": 1,\n    \"showInFooter\": false,\n    \"footerColumn\": null,\n    \"showInHeader\": false,\n    \"headerMenu\": null,\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n  }\n}"
+                  "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"slug\": \"home\",\n    \"title\": \"Home\",\n    \"template\": \"landing\",\n    \"status\": \"published\",\n    \"heroImageUrl\": null,\n    \"blocks\": [\n      {\n        \"id\": 1,\n        \"type\": \"features\",\n        \"order\": 1,\n        \"data\": {\n          \"title\": \"Why choose Squares N Acres\",\n          \"subtitle\": \"Curated inventory, verified information and one advisor from the first call to registration.\",\n          \"items\": [\n            {\n              \"icon\": \"mdi:home-search-outline\",\n              \"title\": \"Expert local guidance\",\n              \"text\": \"We work one city properly rather than many superficially, which is what makes the locality advice worth acting on.\"\n            },\n            {\n              \"icon\": \"mdi:shield-check-outline\",\n              \"title\": \"Verified listings\",\n              \"text\": \"Areas, approvals and charges are checked before a listing is published, and corrected when they change.\"\n            },\n            \"…2 more (trimmed for this example)\"\n          ]\n        }\n      },\n      {\n        \"id\": 2,\n        \"type\": \"steps\",\n        \"order\": 2,\n        \"data\": {\n          \"title\": \"How it works\",\n          \"subtitle\": \"Four steps from the first conversation to the keys.\",\n          \"items\": [\n            {\n              \"title\": \"Search\",\n              \"text\": \"Tell us the locality, the budget and the configuration. The more specific the brief, the shorter the shortlist.\"\n            },\n            {\n              \"title\": \"Shortlist & visit\",\n              \"text\": \"We come back with options that fit, arrange the visits and go with you, so every comparison is made on the same basis.\"\n            },\n            \"…2 more (trimmed for this example)\"\n          ]\n        }\n      }\n    ],\n    \"leadSource\": \"post-requirement\",\n    \"seo\": {\n      \"focusKeyword\": \"property in bengaluru\",\n      \"secondaryKeywords\": [\n        \"squares n acres\",\n        \"bengaluru property\"\n      ],\n      \"title\": \"Buy, Sell and Rent Property in Bengaluru\",\n      \"description\": \"Verified apartments, villas, plots and commercial space across twenty Bengaluru localities, with an advisor from the first call to registration.\",\n      \"slug\": \"home\",\n      \"canonicalUrl\": null,\n      \"robots\": {\n        \"index\": true,\n        \"follow\": true,\n        \"noarchive\": false,\n        \"nosnippet\": false,\n        \"noimageindex\": false,\n        \"maxSnippet\": null,\n        \"maxImagePreview\": \"large\",\n        \"maxVideoPreview\": null\n      },\n      \"og\": {\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"twitter\": {\n        \"card\": \"summary_large_image\",\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"breadcrumbTitle\": null,\n      \"schema\": {\n        \"type\": \"auto\",\n        \"custom\": \"\",\n        \"disabledAutoTypes\": []\n      },\n      \"sitemap\": {\n        \"include\": true,\n        \"priority\": null,\n        \"changefreq\": null\n      },\n      \"redirect\": {\n        \"enabled\": false,\n        \"toPath\": \"\",\n        \"statusCode\": 301\n      },\n      \"score\": null,\n      \"scoreBand\": \"none\",\n      \"testsPassed\": 0,\n      \"testsTotal\": 0,\n      \"analysis\": {\n        \"basic\": [],\n        \"additional\": [],\n        \"titleReadability\": [],\n        \"contentReadability\": []\n      },\n      \"lastAnalyzedAt\": null\n    },\n    \"order\": 1,\n    \"showInFooter\": false,\n    \"footerColumn\": null,\n    \"showInHeader\": false,\n    \"headerMenu\": null,\n    \"headerSubmenu\": null,\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n  }\n}"
                 }
               ]
             },
@@ -6295,14 +6979,14 @@
                   }
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/admin/pages/16",
+                  "raw": "{{baseUrl}}/admin/pages/27",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "admin",
                     "pages",
-                    "16"
+                    "27"
                   ]
                 },
                 "description": "Replace a page with the full record from the form\n\n- **Registry key** `adminPages.update`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `Page` — see `01_API_CONTRACT.md`\n- **Body schema** `page.update` — see `03_ENDPOINTS.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
@@ -6334,7 +7018,7 @@
                     "method": "PUT",
                     "header": [],
                     "url": {
-                      "raw": "{{baseUrl}}/admin/pages/16",
+                      "raw": "{{baseUrl}}/admin/pages/27",
                       "host": [
                         "{{baseUrl}}"
                       ]
@@ -6350,7 +7034,7 @@
                     }
                   ],
                   "cookie": [],
-                  "body": "{\n  \"data\": {\n    \"slug\": \"smoke-title-example-adminpages-3\",\n    \"template\": \"standard\",\n    \"status\": \"draft\",\n    \"heroImageUrl\": null,\n    \"blocks\": [],\n    \"leadSource\": null,\n    \"seo\": {\n      \"focusKeyword\": \"\",\n      \"secondaryKeywords\": [],\n      \"title\": \"\",\n      \"description\": \"\",\n      \"slug\": \"smoke-title-example-adminpages-3\",\n      \"canonicalUrl\": null,\n      \"robots\": {\n        \"index\": true,\n        \"follow\": true,\n        \"noarchive\": false,\n        \"nosnippet\": false,\n        \"noimageindex\": false,\n        \"maxSnippet\": null,\n        \"maxImagePreview\": \"large\",\n        \"maxVideoPreview\": null\n      },\n      \"og\": {\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"twitter\": {\n        \"card\": \"summary_large_image\",\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"breadcrumbTitle\": null,\n      \"schema\": {\n        \"type\": \"auto\",\n        \"custom\": \"\",\n        \"disabledAutoTypes\": []\n      },\n      \"sitemap\": {\n        \"include\": true,\n        \"priority\": null,\n        \"changefreq\": null\n      },\n      \"redirect\": {\n        \"enabled\": false,\n        \"toPath\": \"\",\n        \"statusCode\": 301\n      },\n      \"score\": null,\n      \"scoreBand\": \"none\",\n      \"testsPassed\": 0,\n      \"testsTotal\": 0,\n      \"analysis\": {\n        \"basic\": [],\n        \"additional\": [],\n        \"titleReadability\": [],\n        \"contentReadability\": []\n      },\n      \"lastAnalyzedAt\": null\n    },\n    \"order\": 0,\n    \"showInFooter\": false,\n    \"footerColumn\": null,\n    \"showInHeader\": false,\n    \"headerMenu\": null,\n    \"id\": 16,\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\",\n    \"title\": \"Smoke title example-adminpages-3\"\n  }\n}"
+                  "body": "{\n  \"data\": {\n    \"slug\": \"smoke-title-example-adminpages-3\",\n    \"template\": \"standard\",\n    \"status\": \"draft\",\n    \"heroImageUrl\": null,\n    \"blocks\": [],\n    \"leadSource\": null,\n    \"seo\": {\n      \"focusKeyword\": \"\",\n      \"secondaryKeywords\": [],\n      \"title\": \"\",\n      \"description\": \"\",\n      \"slug\": \"smoke-title-example-adminpages-3\",\n      \"canonicalUrl\": null,\n      \"robots\": {\n        \"index\": true,\n        \"follow\": true,\n        \"noarchive\": false,\n        \"nosnippet\": false,\n        \"noimageindex\": false,\n        \"maxSnippet\": null,\n        \"maxImagePreview\": \"large\",\n        \"maxVideoPreview\": null\n      },\n      \"og\": {\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"twitter\": {\n        \"card\": \"summary_large_image\",\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"breadcrumbTitle\": null,\n      \"schema\": {\n        \"type\": \"auto\",\n        \"custom\": \"\",\n        \"disabledAutoTypes\": []\n      },\n      \"sitemap\": {\n        \"include\": true,\n        \"priority\": null,\n        \"changefreq\": null\n      },\n      \"redirect\": {\n        \"enabled\": false,\n        \"toPath\": \"\",\n        \"statusCode\": 301\n      },\n      \"score\": null,\n      \"scoreBand\": \"none\",\n      \"testsPassed\": 0,\n      \"testsTotal\": 0,\n      \"analysis\": {\n        \"basic\": [],\n        \"additional\": [],\n        \"titleReadability\": [],\n        \"contentReadability\": []\n      },\n      \"lastAnalyzedAt\": null\n    },\n    \"order\": 0,\n    \"showInFooter\": false,\n    \"footerColumn\": null,\n    \"showInHeader\": false,\n    \"headerMenu\": null,\n    \"headerSubmenu\": null,\n    \"id\": 27,\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\",\n    \"title\": \"Smoke title example-adminpages-3\"\n  }\n}"
                 }
               ]
             },
@@ -6379,14 +7063,14 @@
                   }
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/admin/pages/16",
+                  "raw": "{{baseUrl}}/admin/pages/27",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "admin",
                     "pages",
-                    "16"
+                    "27"
                   ]
                 },
                 "description": "Update the given fields of a page (toggles, order, SEO panel)\n\n- **Registry key** `adminPages.patch`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `Page` — see `01_API_CONTRACT.md`\n- **Body schema** `page.patch` — see `03_ENDPOINTS.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
@@ -6418,7 +7102,7 @@
                     "method": "PATCH",
                     "header": [],
                     "url": {
-                      "raw": "{{baseUrl}}/admin/pages/16",
+                      "raw": "{{baseUrl}}/admin/pages/27",
                       "host": [
                         "{{baseUrl}}"
                       ]
@@ -6434,7 +7118,7 @@
                     }
                   ],
                   "cookie": [],
-                  "body": "{\n  \"data\": {\n    \"slug\": \"smoke-title-example-adminpages-3\",\n    \"template\": \"standard\",\n    \"status\": \"published\",\n    \"heroImageUrl\": null,\n    \"blocks\": [],\n    \"leadSource\": null,\n    \"seo\": {\n      \"focusKeyword\": \"\",\n      \"secondaryKeywords\": [],\n      \"title\": \"\",\n      \"description\": \"\",\n      \"slug\": \"smoke-title-example-adminpages-3\",\n      \"canonicalUrl\": null,\n      \"robots\": {\n        \"index\": true,\n        \"follow\": true,\n        \"noarchive\": false,\n        \"nosnippet\": false,\n        \"noimageindex\": false,\n        \"maxSnippet\": null,\n        \"maxImagePreview\": \"large\",\n        \"maxVideoPreview\": null\n      },\n      \"og\": {\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"twitter\": {\n        \"card\": \"summary_large_image\",\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"breadcrumbTitle\": null,\n      \"schema\": {\n        \"type\": \"auto\",\n        \"custom\": \"\",\n        \"disabledAutoTypes\": []\n      },\n      \"sitemap\": {\n        \"include\": true,\n        \"priority\": null,\n        \"changefreq\": null\n      },\n      \"redirect\": {\n        \"enabled\": false,\n        \"toPath\": \"\",\n        \"statusCode\": 301\n      },\n      \"score\": null,\n      \"scoreBand\": \"none\",\n      \"testsPassed\": 0,\n      \"testsTotal\": 0,\n      \"analysis\": {\n        \"basic\": [],\n        \"additional\": [],\n        \"titleReadability\": [],\n        \"contentReadability\": []\n      },\n      \"lastAnalyzedAt\": null\n    },\n    \"order\": 0,\n    \"showInFooter\": false,\n    \"footerColumn\": null,\n    \"showInHeader\": false,\n    \"headerMenu\": null,\n    \"id\": 16,\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\",\n    \"title\": \"Smoke title example-adminpages-3\"\n  }\n}"
+                  "body": "{\n  \"data\": {\n    \"slug\": \"smoke-title-example-adminpages-3\",\n    \"template\": \"standard\",\n    \"status\": \"published\",\n    \"heroImageUrl\": null,\n    \"blocks\": [],\n    \"leadSource\": null,\n    \"seo\": {\n      \"focusKeyword\": \"\",\n      \"secondaryKeywords\": [],\n      \"title\": \"\",\n      \"description\": \"\",\n      \"slug\": \"smoke-title-example-adminpages-3\",\n      \"canonicalUrl\": null,\n      \"robots\": {\n        \"index\": true,\n        \"follow\": true,\n        \"noarchive\": false,\n        \"nosnippet\": false,\n        \"noimageindex\": false,\n        \"maxSnippet\": null,\n        \"maxImagePreview\": \"large\",\n        \"maxVideoPreview\": null\n      },\n      \"og\": {\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"twitter\": {\n        \"card\": \"summary_large_image\",\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"breadcrumbTitle\": null,\n      \"schema\": {\n        \"type\": \"auto\",\n        \"custom\": \"\",\n        \"disabledAutoTypes\": []\n      },\n      \"sitemap\": {\n        \"include\": true,\n        \"priority\": null,\n        \"changefreq\": null\n      },\n      \"redirect\": {\n        \"enabled\": false,\n        \"toPath\": \"\",\n        \"statusCode\": 301\n      },\n      \"score\": null,\n      \"scoreBand\": \"none\",\n      \"testsPassed\": 0,\n      \"testsTotal\": 0,\n      \"analysis\": {\n        \"basic\": [],\n        \"additional\": [],\n        \"titleReadability\": [],\n        \"contentReadability\": []\n      },\n      \"lastAnalyzedAt\": null\n    },\n    \"order\": 0,\n    \"showInFooter\": false,\n    \"footerColumn\": null,\n    \"showInHeader\": false,\n    \"headerMenu\": null,\n    \"headerSubmenu\": null,\n    \"id\": 27,\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\",\n    \"title\": \"Smoke title example-adminpages-3\"\n  }\n}"
                 }
               ]
             },
@@ -6450,14 +7134,14 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/admin/pages/18",
+                  "raw": "{{baseUrl}}/admin/pages/29",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "admin",
                     "pages",
-                    "18"
+                    "29"
                   ]
                 },
                 "description": "Delete a page; 409 when it is still in use\n\n- **Registry key** `adminPages.remove`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `Null` — see `01_API_CONTRACT.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
@@ -6490,7 +7174,7 @@
                     "method": "DELETE",
                     "header": [],
                     "url": {
-                      "raw": "{{baseUrl}}/admin/pages/18",
+                      "raw": "{{baseUrl}}/admin/pages/29",
                       "host": [
                         "{{baseUrl}}"
                       ]
@@ -6745,7 +7429,7 @@
                     }
                   ],
                   "cookie": [],
-                  "body": "{\n  \"data\": {\n    \"token\": \"3f9a1c7e5b2d8a6f4c0e9b3d7a5f1c8e2b6d4a0f9c3e7b5d\",\n    \"expiresAt\": \"2026-01-15T09:30:00.000Z\",\n    \"url\": \"https://www.squaresnacres.com/home?preview=3f9a1c7e5b2d8a6f4c0e9b3d7a5f1c8e\"\n  }\n}"
+                  "body": "{\n  \"data\": {\n    \"token\": \"3f9a1c7e5b2d8a6f4c0e9b3d7a5f1c8e2b6d4a0f9c3e7b5d\",\n    \"expiresAt\": \"2026-01-15T09:30:00.000Z\",\n    \"url\": \"https://www.squaresnacres.com/?preview=3f9a1c7e5b2d8a6f4c0e9b3d7a5f1c8e\"\n  }\n}"
                 }
               ]
             }
@@ -8823,6 +9507,101 @@
           ]
         },
         {
+          "id": "8109bcdd-c390-4574-8a93-d06106930c4f",
+          "name": "headerMenus",
+          "item": [
+            {
+              "id": "33bb629a-835a-4537-8807-ffc54b8e62f0",
+              "name": "GET /header-menus — The active header menus, left to right, with their submenus and links",
+              "request": {
+                "method": "GET",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/header-menus",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "header-menus"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "",
+                      "disabled": true,
+                      "description": "int"
+                    },
+                    {
+                      "key": "perPage",
+                      "value": "",
+                      "disabled": true,
+                      "description": "int"
+                    }
+                  ]
+                },
+                "description": "The active header menus, left to right, with their submenus and links\n\n- **Registry key** `headerMenus.list`\n- **Auth** none\n- **Response shape** `HeaderMenuList` — see `01_API_CONTRACT.md`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "54ab63b6-ba22-4736-8f05-440eb112e9b0",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200 — the status the contract promises', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test('a list envelope with pagination meta (§5.2)', function () {",
+                      "  var body = pm.response.json();",
+                      "  pm.expect(body.data).to.be.an('array');",
+                      "  ['page', 'perPage', 'total', 'totalPages'].forEach(function (key) {",
+                      "    pm.expect(body.meta[key], 'meta.' + key).to.be.a('number');",
+                      "  });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "response": [
+                {
+                  "id": "11525b46-8bc8-4fda-8459-e67608be7807",
+                  "name": "200 — captured from the mock server",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/header-menus",
+                      "host": [
+                        "{{baseUrl}}"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"name\": \"Buy\",\n      \"slug\": \"buy\",\n      \"href\": \"/buy\",\n      \"source\": \"buy\",\n      \"submenus\": [],\n      \"links\": [],\n      \"isActive\": true,\n      \"order\": 1,\n      \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n      \"updatedAt\": \"2026-01-15T09:30:00.000Z\",\n      \"builtIn\": true\n    },\n    {\n      \"id\": 2,\n      \"name\": \"Rent\",\n      \"slug\": \"rent\",\n      \"href\": \"/rent\",\n      \"source\": \"rent\",\n      \"submenus\": [],\n      \"links\": [],\n      \"isActive\": true,\n      \"order\": 2,\n      \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n      \"updatedAt\": \"2026-01-15T09:30:00.000Z\",\n      \"builtIn\": true\n    },\n    \"…8 more (trimmed for this example)\"\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"perPage\": 10,\n    \"total\": 10,\n    \"totalPages\": 1\n  }\n}"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "id": "6763e931-de65-4673-843a-2e0a40d21383",
           "name": "jobs",
           "item": [
@@ -9257,7 +10036,7 @@
                     }
                   ],
                   "cookie": [],
-                  "body": "{\n  \"data\": [\n    {\n      \"slug\": \"home\",\n      \"title\": \"Home\",\n      \"headerMenu\": null,\n      \"footerColumn\": null,\n      \"order\": 1\n    },\n    {\n      \"slug\": \"about\",\n      \"title\": \"About Us\",\n      \"headerMenu\": \"company\",\n      \"footerColumn\": \"company\",\n      \"order\": 2\n    },\n    \"…13 more (trimmed for this example)\"\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"perPage\": 15,\n    \"total\": 15,\n    \"totalPages\": 1\n  }\n}"
+                  "body": "{\n  \"data\": [\n    {\n      \"slug\": \"home\",\n      \"title\": \"Home\",\n      \"headerMenu\": null,\n      \"headerSubmenu\": null,\n      \"footerColumn\": null,\n      \"order\": 1\n    },\n    {\n      \"slug\": \"properties\",\n      \"title\": \"All properties\",\n      \"headerMenu\": null,\n      \"headerSubmenu\": null,\n      \"footerColumn\": null,\n      \"order\": 2\n    },\n    \"…24 more (trimmed for this example)\"\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"perPage\": 26,\n    \"total\": 26,\n    \"totalPages\": 1\n  }\n}"
                 }
               ]
             },
@@ -9339,7 +10118,7 @@
                     }
                   ],
                   "cookie": [],
-                  "body": "{\n  \"data\": {\n    \"id\": 2,\n    \"slug\": \"about\",\n    \"title\": \"About Us\",\n    \"template\": \"about\",\n    \"status\": \"published\",\n    \"heroImageUrl\": \"https://picsum.photos/seed/sna-page-about/1600/700\",\n    \"blocks\": [\n      {\n        \"id\": 1,\n        \"type\": \"hero\",\n        \"order\": 1,\n        \"data\": {\n          \"title\": \"About Squares N Acres\",\n          \"subtitle\": \"A Bengaluru property advisory built around one idea: tell the client what we would want to be told.\",\n          \"imageUrl\": \"https://picsum.photos/seed/sna-page-about/1600/700\",\n          \"ctaLabel\": null,\n          \"ctaHref\": null\n        }\n      },\n      {\n        \"id\": 2,\n        \"type\": \"richText\",\n        \"order\": 2,\n        \"data\": {\n          \"html\": \"<h2>Our story</h2><p>[Placeholder — client to provide] This paragraph is where the founding story belongs — when the company started, what it set out to do differently, and what it has learned since. Replace it with the client’s own account before the site goes live.</p><p>[Placeholder — client to p…\"\n        }\n      },\n      \"…7 more (trimmed for this example)\"\n    ],\n    \"leadSource\": \"contact-page\",\n    \"seo\": {\n      \"focusKeyword\": \"about squares n acres\",\n      \"secondaryKeywords\": [\n        \"squares n acres\",\n        \"bengaluru property\"\n      ],\n      \"title\": \"About Squares N Acres – Bengaluru Property Advisory\",\n      \"description\": \"Who we are, how we work and what we will and will not say about a property. The Squares N Acres approach to buying, selling and renting in Bengaluru.\",\n      \"slug\": \"about\",\n      \"canonicalUrl\": null,\n      \"robots\": {\n        \"index\": true,\n        \"follow\": true,\n        \"noarchive\": false,\n        \"nosnippet\": false,\n        \"noimageindex\": false,\n        \"maxSnippet\": null,\n        \"maxImagePreview\": \"large\",\n        \"maxVideoPreview\": null\n      },\n      \"og\": {\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"twitter\": {\n        \"card\": \"summary_large_image\",\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"breadcrumbTitle\": null,\n      \"schema\": {\n        \"type\": \"auto\",\n        \"custom\": \"\",\n        \"disabledAutoTypes\": []\n      },\n      \"sitemap\": {\n        \"include\": true,\n        \"priority\": null,\n        \"changefreq\": null\n      },\n      \"redirect\": {\n        \"enabled\": false,\n        \"toPath\": \"\",\n        \"statusCode\": 301\n      },\n      \"score\": null,\n      \"scoreBand\": \"none\",\n      \"testsPassed\": 0,\n      \"testsTotal\": 0,\n      \"analysis\": {\n        \"basic\": [],\n        \"additional\": [],\n        \"titleReadability\": [],\n        \"contentReadability\": []\n      },\n      \"lastAnalyzedAt\": null\n    },\n    \"order\": 2,\n    \"showInFooter\": true,\n    \"footerColumn\": \"company\",\n    \"showInHeader\": true,\n    \"headerMenu\": \"company\",\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n  }\n}"
+                  "body": "{\n  \"data\": {\n    \"id\": 2,\n    \"slug\": \"about\",\n    \"title\": \"About Us\",\n    \"template\": \"about\",\n    \"status\": \"published\",\n    \"heroImageUrl\": \"https://picsum.photos/seed/sna-page-about/1600/700\",\n    \"blocks\": [\n      {\n        \"id\": 1,\n        \"type\": \"hero\",\n        \"order\": 1,\n        \"data\": {\n          \"title\": \"About Squares N Acres\",\n          \"subtitle\": \"A Bengaluru property advisory built around one idea: tell the client what we would want to be told.\",\n          \"imageUrl\": \"https://picsum.photos/seed/sna-page-about/1600/700\",\n          \"ctaLabel\": null,\n          \"ctaHref\": null\n        }\n      },\n      {\n        \"id\": 2,\n        \"type\": \"richText\",\n        \"order\": 2,\n        \"data\": {\n          \"html\": \"<h2>Our story</h2><p>[Placeholder — client to provide] This paragraph is where the founding story belongs — when the company started, what it set out to do differently, and what it has learned since. Replace it with the client’s own account before the site goes live.</p><p>[Placeholder — client to p…\"\n        }\n      },\n      \"…7 more (trimmed for this example)\"\n    ],\n    \"leadSource\": \"contact-page\",\n    \"seo\": {\n      \"focusKeyword\": \"about squares n acres\",\n      \"secondaryKeywords\": [\n        \"squares n acres\",\n        \"bengaluru property\"\n      ],\n      \"title\": \"About Squares N Acres – Bengaluru Property Advisory\",\n      \"description\": \"Who we are, how we work and what we will and will not say about a property. The Squares N Acres approach to buying, selling and renting in Bengaluru.\",\n      \"slug\": \"about\",\n      \"canonicalUrl\": null,\n      \"robots\": {\n        \"index\": true,\n        \"follow\": true,\n        \"noarchive\": false,\n        \"nosnippet\": false,\n        \"noimageindex\": false,\n        \"maxSnippet\": null,\n        \"maxImagePreview\": \"large\",\n        \"maxVideoPreview\": null\n      },\n      \"og\": {\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"twitter\": {\n        \"card\": \"summary_large_image\",\n        \"title\": null,\n        \"description\": null,\n        \"imageUrl\": null\n      },\n      \"breadcrumbTitle\": null,\n      \"schema\": {\n        \"type\": \"auto\",\n        \"custom\": \"\",\n        \"disabledAutoTypes\": []\n      },\n      \"sitemap\": {\n        \"include\": true,\n        \"priority\": null,\n        \"changefreq\": null\n      },\n      \"redirect\": {\n        \"enabled\": false,\n        \"toPath\": \"\",\n        \"statusCode\": 301\n      },\n      \"score\": null,\n      \"scoreBand\": \"none\",\n      \"testsPassed\": 0,\n      \"testsTotal\": 0,\n      \"analysis\": {\n        \"basic\": [],\n        \"additional\": [],\n        \"titleReadability\": [],\n        \"contentReadability\": []\n      },\n      \"lastAnalyzedAt\": null\n    },\n    \"order\": 13,\n    \"showInFooter\": true,\n    \"footerColumn\": \"company\",\n    \"showInHeader\": true,\n    \"headerMenu\": \"company\",\n    \"headerSubmenu\": null,\n    \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n    \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n  }\n}"
                 }
               ]
             }

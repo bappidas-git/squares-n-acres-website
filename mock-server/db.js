@@ -74,8 +74,15 @@ function ensureRuntimeDb({ fresh = false } = {}) {
     const added = Object.keys(seed).filter(
       (key) => !Object.prototype.hasOwnProperty.call(runtime, key)
     );
+    for (const key of added) runtime[key] = seed[key];
+
+    // The built-in pages joined an existing collection (QA-56), so the rule
+    // above cannot bring them: a kept copy gains each one it lacks, by slug,
+    // under a free id — its own pages keep theirs.
+    const builtIn = backfillBuiltInPages(runtime, seed);
+    if (builtIn > 0) added.push(`${builtIn} built-in pages`);
+
     if (added.length > 0) {
-      for (const key of added) runtime[key] = seed[key];
       fs.writeFileSync(runtimePath, `${JSON.stringify(runtime, null, 2)}\n`, 'utf8');
     }
     return { created: false, path: runtimePath, added };
@@ -83,6 +90,27 @@ function ensureRuntimeDb({ fresh = false } = {}) {
 
   fs.writeFileSync(runtimePath, `${JSON.stringify(seed, null, 2)}\n`, 'utf8');
   return { created: true, path: runtimePath, added: [] };
+}
+
+/**
+ * Adds the seed's built-in pages (template `system`) a runtime copy lacks.
+ *
+ * @param {object} runtime the runtime database, mutated in place
+ * @param {object} seed the committed seed
+ * @returns {number} how many pages were added
+ */
+function backfillBuiltInPages(runtime, seed) {
+  if (!Array.isArray(runtime.pages) || !Array.isArray(seed.pages)) return 0;
+
+  const slugs = new Set(runtime.pages.map((page) => page?.slug));
+  const missing = seed.pages.filter((page) => page?.template === 'system' && !slugs.has(page.slug));
+  let highest = runtime.pages.reduce((max, page) => Math.max(max, Number(page?.id) || 0), 0);
+
+  for (const page of missing) {
+    highest += 1;
+    runtime.pages.push({ ...page, id: highest });
+  }
+  return missing.length;
 }
 
 /**

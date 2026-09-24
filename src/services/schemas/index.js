@@ -26,6 +26,7 @@ const property = require('./property');
 const lead = require('./lead');
 const article = require('./article');
 const page = require('./page');
+const headerMenu = require('./headerMenu');
 const masterData = require('./masterData');
 const settings = require('./settings');
 const auth = require('./auth');
@@ -52,7 +53,9 @@ const groups = {
   property,
   lead,
   article,
-  page,
+  // Only the write shapes: the two modules also export their constants.
+  page: { create: page.create, update: page.update, patch: page.patch },
+  headerMenu: { create: headerMenu.create, update: headerMenu.update, patch: headerMenu.patch },
   auth,
   newsletter,
   jobApplication,

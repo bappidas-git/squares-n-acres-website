@@ -131,7 +131,20 @@ MB-02) — and it is capped at the page's own 120 characters.
 
 ### 6.10 `pages` (CMS)
 
-`slug`, `title`, `template` (`standard|service|about|contact|careers|awareness|legal|landing`), `status` (`draft|published`), `heroImageUrl?`, `blocks[]` (`{ id, type, order, data }`), `leadSource?`, `seo`, `order`, `showInFooter` (bool), `footerColumn?` (`company|services|insights`), `showInHeader` (bool), `headerMenu?` (`buyer-assistance|company|insights`).
+`slug`, `title`, `template` (`standard|service|about|contact|careers|awareness|legal|landing|system`), `status` (`draft|published`), `heroImageUrl?`, `blocks[]` (`{ id, type, order, data }`), `leadSource?`, `seo`, `order` (0–100 000), `showInFooter` (bool), `footerColumn?` (`company|services|insights`; required while `showInFooter`), `showInHeader` (bool), `headerMenu?` (a `headerMenus` slug; required while `showInHeader` — it was one of `buyer-assistance|company|insights` until QA-56), `headerSubmenu?` (one of that menu's `submenus[].slug`; `null` is the menu's own list).
+
+**Built-in and protected pages (QA-56).** The collection also holds one record
+per page the site generates from its own data, `template: 'system'`: `properties`,
+`buy`, `rent`, `commercial`, `lease`, `plots`, `localities`, `builders`,
+`insights/articles`, `insights/faqs`, `shortlist` (`SYSTEM_PAGES` in
+`src/config/pages.js`). Before, the Pages screen listed only the fifteen written
+pages, so the pages a visitor meets most could not be named or placed in a menu.
+A built-in page is always `published`, carries no blocks and is never created by
+a client; its name, placement and `order` are an editor's. It and the written
+pages the site links to by address — `home`, `contact`, `careers`, `sell-let`,
+the three legal texts, `insights/real-estate-awareness` — are **protected**:
+never deleted, and their slug never changes. The `home` record is the home page
+(D81): its public address is `/`, never `/home`.
 
 A page's `slug` is a URL **path** — one or more slug segments joined by `/`,
 ≤ 120 characters — and `seo.slug` mirrors it. Two rules the API enforces (prompt
@@ -175,6 +188,19 @@ Block types and `data` shapes (BLOCK_TYPES):
 | `gallery` | `{ title, items[] { url, alt, caption? } }` |
 
 Seed pages (each reproduces the HOM page's structure/type of content with SNA-neutral placeholder copy): `home` (landing: `features` "Why choose Squares N Acres" ×4, `steps` "How it works" ×4), `about` (about: hero, richText story, `steps` timeline-as-steps, `features` values, richText mission/vision, `stats` (empty → hidden), `team`, `testimonials`, `cta`), `contact` (contact: hero, `contactInfo`, `leadForm` source `contact-page` with subject select, `map`), `sell-let` (service: hero, `stats` (empty), `features` benefits ×4, `steps` ×4, `leadForm` source `sell-let` with propertyType/location/askingPrice/description fields), `careers` (careers: hero, `features` culture ×3, `jobs`, `features` perks ×6), `partnership` (service: hero, `features` why ×4, `features` types ×4, `partners`, `leadForm` source `partnership` with companyName/partnershipType), `buyer-assistance/home-loan` (service: hero, `banks` with EMI calculator, `steps` ×4, `checklist` documents ×8, `leadForm` source `home-loan` with monthlyIncome/desiredLoanAmount, `faq`), `buyer-assistance/legal-assistance` (service: hero, `stats` (empty), `expandableCards` services ×6, `steps` ×3, `leadForm` source `legal-assistance` with serviceType, `faq`), `buyer-assistance/interior-designing` (service: hero, `features` rooms ×6, `steps` ×5, `gallery` ×8 placeholders, `packages` ×3, `leadForm` source `interior-design` with propertyType/budget), `flexible-workspace` (service: hero, `features` ×6, `features` benefits ×4, `leadForm` source `flexible-workspace` with workspaceType/teamSize), `direct-lease-retails` (service: hero, `features` ×4, `features` ×4, `steps` ×4, `leadForm` source `direct-lease-retail` with spaceType/areaRequired), `insights/real-estate-awareness` (awareness: hero, `facts` ×6, `expandableCards` ×6, `quiz` ×5, `checklist` ×10, `leadForm` source `real-estate-awareness` with interest select), `privacy-policy`, `terms-of-use`, `disclaimer` (legal: hero + richText placeholders clearly marked "[Client to provide]").
+
+### 6.10a `headerMenus` (added after 1.0.0 — `docs/DECISIONS.md`, QA-56)
+
+The header's menus, left to right by `order`. It was a list in
+`src/config/navigation.js` that a page could join three of; the ten seeded menus
+reproduce that header exactly.
+
+`name` (≤ 40, unique in the header, any case), `slug` (≤ 60; derived from the name, kept once it exists — pages are filed under it), `href?` (where the label itself goes: `/path` or `http(s)://…`; empty opens the menu's first entry), `source` (`custom|buy|rent|commercial` — the last three are the generated mega menus, never created by a client and never deleted), `submenus[]` (`{ slug, name }`, ≤ 12; slug derived from the name, unique within the menu, as is the name), `links[]` (`{ label, href, submenu?, order, newTab }`, ≤ 40; `submenu` is one of the menu's submenu slugs or `null`), `isActive` (a hidden menu keeps its pages and links), `order`, `builtIn` (read: `true` for a generated menu).
+
+A menu draws, in its own list and then under each submenu's heading, the
+published pages placed in it (by their own `order`) and then its links. Deleting
+a menu takes its pages out of the header; removing a submenu moves its pages into
+the menu's own list.
 
 ### 6.11 `jobOpenings`, `jobApplications`
 
@@ -289,7 +315,8 @@ prompt adds.
 | `testimonials`          | 1–20         | 8                                     |
 | `teamMembers`           | 1–15         | 6                                     |
 | `partners`              | 1–15         | 6                                     |
-| `pages`                 | 1–30         | 15                                    |
+| `pages`                 | 1–30         | 26 (15 written, 11 built-in)          |
+| `headerMenus`           | 1–20         | 10                                    |
 | `jobOpenings`           | 1–10         | 4                                     |
 | `jobApplications`       | 1–20         | 3                                     |
 | `media`                 | 1–400        | one per seeded image                  |

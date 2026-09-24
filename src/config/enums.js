@@ -467,12 +467,27 @@ const PAGE_TEMPLATES = makeEnum([
   { value: 'awareness', label: 'Awareness' },
   { value: 'legal', label: 'Legal' },
   { value: 'landing', label: 'Landing' },
+  // A page the site generates from its own data — Buy, Localities, Articles —
+  // listed so that it can be named and placed in the menus (QA-56). The API
+  // keeps it for the pages that come with the site: none is created with it.
+  { value: 'system', label: 'Built-in' },
 ]);
 
-const HEADER_MENUS = makeEnum([
-  { value: 'buyer-assistance', label: 'Buyer Assistance' },
-  { value: 'company', label: 'Company' },
-  { value: 'insights', label: 'Insights' },
+/**
+ * What a header menu's panel is built from (QA-56).
+ *
+ * The header's menus were a list in code and a page could join only three of
+ * them; they are the `headerMenus` collection now. A `custom` menu is made of
+ * the pages placed in it and the links typed into it; the other three are the
+ * mega menus the site generates from master data — the construction statuses,
+ * the property types, the budget bands and the featured localities — which
+ * come with the site and take pages and links on top.
+ */
+const HEADER_MENU_SOURCES = makeEnum([
+  { value: 'custom', label: 'Pages and links' },
+  { value: 'buy', label: 'Buy — generated from the listings' },
+  { value: 'rent', label: 'Rent — generated from the property types' },
+  { value: 'commercial', label: 'Commercial — generated from the property types' },
 ]);
 
 const FOOTER_COLUMNS = makeEnum([
@@ -823,7 +838,7 @@ module.exports = {
   ARTICLE_STATUS,
   PAGE_STATUS,
   PAGE_TEMPLATES,
-  HEADER_MENUS,
+  HEADER_MENU_SOURCES,
   FOOTER_COLUMNS,
   BLOCK_TYPES,
   // Careers, media, users, newsletter

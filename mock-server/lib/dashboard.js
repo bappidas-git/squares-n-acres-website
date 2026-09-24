@@ -17,6 +17,7 @@
  * filtered list agree — and a lead that arrived at 01:30 is one of today's.
  */
 
+const { isSystemPage } = require('../../src/config/pages');
 const { LEAD_STATUS } = require('./enums');
 const { isLive } = require('./articleFilters');
 const { istClock, istDay } = require('./ist');
@@ -105,7 +106,11 @@ const percentage = (part, whole) => (whole === 0 ? 0 : Math.round((part / whole)
  * analysed part scored (§6.16).
  */
 function seoHealth(state) {
-  const records = SEO_COLLECTIONS.flatMap((name) => rows(state, name));
+  // A built-in page's head comes from the page-type templates, not from its
+  // record, so it has no SEO of its own to count (QA-56).
+  const records = SEO_COLLECTIONS.flatMap((name) => rows(state, name)).filter(
+    (record) => !isSystemPage(record)
+  );
   const scores = records
     .map((record) => record?.seo?.score)
     .filter((score) => typeof score === 'number' && Number.isFinite(score));

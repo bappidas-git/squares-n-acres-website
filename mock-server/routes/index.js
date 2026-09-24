@@ -20,6 +20,7 @@ const customRouters = [
   require('./masterData'),
   require('./articles'),
   require('./pages'),
+  require('./headerMenus'),
   require('./media'),
   require('./settings'),
   require('./seo'),

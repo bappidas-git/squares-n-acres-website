@@ -6830,6 +6830,138 @@
       "updatedAt": "2026-09-10T09:00:00.000Z"
     }
   ],
+  "headerMenus": [
+    {
+      "id": 1,
+      "name": "Buy",
+      "slug": "buy",
+      "href": "/buy",
+      "source": "buy",
+      "submenus": [],
+      "links": [],
+      "isActive": true,
+      "order": 1,
+      "createdAt": "2026-04-19T10:00:00.000Z",
+      "updatedAt": "2026-04-19T10:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "name": "Rent",
+      "slug": "rent",
+      "href": "/rent",
+      "source": "rent",
+      "submenus": [],
+      "links": [],
+      "isActive": true,
+      "order": 2,
+      "createdAt": "2026-04-19T10:00:00.000Z",
+      "updatedAt": "2026-04-19T10:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "name": "Commercial",
+      "slug": "commercial",
+      "href": "/commercial",
+      "source": "commercial",
+      "submenus": [],
+      "links": [],
+      "isActive": true,
+      "order": 3,
+      "createdAt": "2026-04-19T10:00:00.000Z",
+      "updatedAt": "2026-04-19T10:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "name": "Plots",
+      "slug": "plots",
+      "href": "/plots",
+      "source": "custom",
+      "submenus": [],
+      "links": [],
+      "isActive": true,
+      "order": 4,
+      "createdAt": "2026-04-19T10:00:00.000Z",
+      "updatedAt": "2026-04-19T10:00:00.000Z"
+    },
+    {
+      "id": 5,
+      "name": "Localities",
+      "slug": "localities",
+      "href": "/localities",
+      "source": "custom",
+      "submenus": [],
+      "links": [],
+      "isActive": true,
+      "order": 5,
+      "createdAt": "2026-04-19T10:00:00.000Z",
+      "updatedAt": "2026-04-19T10:00:00.000Z"
+    },
+    {
+      "id": 6,
+      "name": "Builders",
+      "slug": "builders",
+      "href": "/builders",
+      "source": "custom",
+      "submenus": [],
+      "links": [],
+      "isActive": true,
+      "order": 6,
+      "createdAt": "2026-04-19T10:00:00.000Z",
+      "updatedAt": "2026-04-19T10:00:00.000Z"
+    },
+    {
+      "id": 7,
+      "name": "Buyer assistance",
+      "slug": "buyer-assistance",
+      "href": null,
+      "source": "custom",
+      "submenus": [],
+      "links": [],
+      "isActive": true,
+      "order": 7,
+      "createdAt": "2026-04-19T10:00:00.000Z",
+      "updatedAt": "2026-04-19T10:00:00.000Z"
+    },
+    {
+      "id": 8,
+      "name": "Insights",
+      "slug": "insights",
+      "href": "/insights/articles",
+      "source": "custom",
+      "submenus": [],
+      "links": [],
+      "isActive": true,
+      "order": 8,
+      "createdAt": "2026-04-19T10:00:00.000Z",
+      "updatedAt": "2026-04-19T10:00:00.000Z"
+    },
+    {
+      "id": 9,
+      "name": "Company",
+      "slug": "company",
+      "href": null,
+      "source": "custom",
+      "submenus": [],
+      "links": [],
+      "isActive": true,
+      "order": 9,
+      "createdAt": "2026-04-19T10:00:00.000Z",
+      "updatedAt": "2026-04-19T10:00:00.000Z"
+    },
+    {
+      "id": 10,
+      "name": "Contact",
+      "slug": "contact",
+      "href": "/contact",
+      "source": "custom",
+      "submenus": [],
+      "links": [],
+      "isActive": true,
+      "order": 10,
+      "createdAt": "2026-04-19T10:00:00.000Z",
+      "updatedAt": "2026-04-19T10:00:00.000Z"
+    }
+  ],
   "jobOpenings": [
     {
       "id": 1,

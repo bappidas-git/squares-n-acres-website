@@ -15,6 +15,7 @@
  * `priority` and `changefreq` or drops it from the file entirely.
  */
 
+const { isSystemPage } = require('../../src/config/pages');
 const { document, element, escape } = require('./xml');
 const { isLive, liveArticles } = require('./articleFilters');
 const { segmentKind } = require('../../src/config/segments');
@@ -233,7 +234,13 @@ function sitemapSets(data, now = Date.now()) {
       ]
     : [];
 
-  const cmsPages = rows('pages').filter((page) => page.status === 'published');
+  // A built-in page (`src/config/pages.js`, QA-56) is a route the site
+  // answers itself — `/buy`, `/localities` — listed with the static routes
+  // above, or, like `/shortlist`, a visitor's own list that is no page for a
+  // crawler. Its record is how it is named in the menus, not a second URL.
+  const cmsPages = rows('pages').filter(
+    (page) => page.status === 'published' && !isSystemPage(page)
+  );
 
   // A property-type landing page (`/buy/apartments`, `/commercial/warehouses`,
   // D25) is a listing route like `/buy/ready-to-move` next to it, so it takes

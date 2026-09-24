@@ -5,7 +5,7 @@
  *   npm run seed:build
  *
  * The seed is generated rather than hand-written for one reason: forty
- * properties, twenty localities, twelve articles, fifteen pages and forty-five
+ * properties, twenty localities, twelve articles, twenty-six pages and forty-five
  * leads have to agree with each other, and a cross-reference maintained by
  * hand drifts the first time somebody edits one side of it. Here a property's
  * price per square foot is derived from its price, its badges from its status,
@@ -128,6 +128,7 @@ function build() {
   const articles = data('articles')({ stamps: stampsFor('articles'), media, lookup, dates });
 
   const pages = data('pages')({ stamps: stampsFor('pages'), media, lookup });
+  const headerMenus = data('headerMenus')({ stamps: stampsFor('headerMenus') });
   const { jobOpenings, jobApplications } = data('jobs')({ stamps: stampsFor('jobs'), dates });
 
   /* ---------------- leads and the counters they move ---------------- */
@@ -164,6 +165,7 @@ function build() {
     teamMembers,
     partners,
     pages,
+    headerMenus,
     jobOpenings,
     jobApplications,
     media: [],

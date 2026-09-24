@@ -224,6 +224,31 @@ describe('the other child sitemaps', () => {
     });
   });
 
+  // QA-56: a built-in page is a route the site answers itself. Its record
+  // names it in the menus; it is not a second URL, and the shortlist — a
+  // visitor's own list — is no page for a crawler at all.
+  it('lists a built-in page once, as the route it is, and never the shortlist', async () => {
+    const builtIn = (slug, id) => ({
+      ...SEED.pages[0],
+      id,
+      slug,
+      title: slug,
+      template: 'system',
+      blocks: [],
+      seo: { ...SEED.pages[0].seo, slug },
+    });
+    const seed = seedWith({
+      pages: (pages) => pages.push(builtIn('buy', 900), builtIn('shortlist', 901)),
+    });
+
+    await withServer({ seed }, async ({ request }) => {
+      const found = locations((await request('GET', '/sitemap-pages.xml')).text);
+
+      assert.equal(found.filter((loc) => loc === `${SITE}/buy`).length, 1);
+      assert.ok(!found.includes(`${SITE}/shortlist`));
+    });
+  });
+
   it('lists every active property-type landing page under its segment (D25)', async () => {
     await withServer(async ({ request }) => {
       const found = locations((await request('GET', '/sitemap-pages.xml')).text);

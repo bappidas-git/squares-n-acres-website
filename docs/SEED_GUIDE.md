@@ -36,7 +36,8 @@ instant rather than from the clock, which is what makes two builds identical.
 | `testimonials`          | 8      | `isSample: true` — never rendered in a production build (D41)                    |
 | `teamMembers`           | 6      | Placeholders (`Team Member 1`…)                                                  |
 | `partners`              | 6      | Fictional, across all five categories                                            |
-| `pages`                 | 15     | The §6.10 set; four slugs are paths (`buyer-assistance/home-loan`)               |
+| `pages`                 | 26     | The §6.10 set (four slugs are paths) + the 11 built-in pages, template `system`  |
+| `headerMenus`           | 10     | The header as it was hard-coded before QA-56: Buy, Rent, Commercial … Contact    |
 | `jobOpenings`           | 4      | `real-estate-advisor-bengaluru` is id 1                                          |
 | `jobApplications`       | 3      |                                                                                  |
 | `media`                 | 389    | One record per distinct image, document and video URL                            |
@@ -209,6 +210,15 @@ pieces need 800 words. The two block markers (`data-sna-block="properties"`,
 them and their `order`. Use the `field()` helper for lead-form fields — §6.10
 leaves the field config's shape open and the seed fixes one:
 `{ name, label, type, required, placeholder, options[], fullWidth }`.
+
+**A built-in page** is not added here: it is one of `SYSTEM_PAGES` in
+`src/config/pages.js`, which the seed turns into a record (and the mock adds to a
+runtime database that predates it). Its place in the menus is `SYSTEM_PLACEMENT`
+in `scripts/seed/data/pages.js`.
+
+**A header menu.** Add an entry to `scripts/seed/data/headerMenus.js`
+(`DEFAULT_HEADER_MENUS` in `src/config/headerMenus.js` is the order and the
+labels); pages join it through their `headerMenu`.
 
 **A locality, developer, bank, FAQ or job.** One entry in the corresponding
 `scripts/seed/data/*.js` table.

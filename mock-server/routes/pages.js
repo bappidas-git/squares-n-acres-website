@@ -7,9 +7,15 @@
  *
  * The navigation list exists because the header and the footer are built from
  * data (prompt 27): an editor who adds a service page decides where it appears
- * by ticking `showInHeader` and picking a `headerMenu`, and no menu is spelled
- * out in the frontend. It answers the five fields a link needs and nothing
- * else — a menu is not a reason to download fifteen pages of blocks.
+ * by ticking `showInHeader` and picking a `headerMenu` — any of the header's
+ * menus, and one of its submenus (`headerSubmenu`, QA-56) — and no menu is
+ * spelled out in the frontend. It answers the six fields a link needs and
+ * nothing else — a menu is not a reason to download fifteen pages of blocks.
+ *
+ * Some pages are **protected** (`src/config/pages.js`, QA-56): the built-in
+ * pages the site generates (template `system`) and the written pages its own
+ * templates link to by address. They are never deleted and keep their slug; a
+ * built-in page is never a draft and carries no blocks.
  *
  * A page is a list of blocks, and the two things the API owes the editor are
  * about that list: every block gets an id the moment it is saved — the same
@@ -25,14 +31,25 @@
 
 const express = require('express');
 
-const { isReservedPath } = require('../../src/routes/paths');
+const PATHS = require('../../src/routes/paths');
+const {
+  SYSTEM_TEMPLATE,
+  deleteRefusal,
+  homeRedirectRefusal,
+  isHomePage,
+  isSystemPage,
+  slugRefusal,
+  unpublishRefusal,
+} = require('../../src/config/pages');
+const { ApiError, notFound, validation } = require('../middleware/errors');
 const { issueToken, verifyToken } = require('../lib/previewTokens');
 const { makeCrudRouter } = require('../lib/crud');
 const { maxId } = require('../lib/ids');
-const { notFound, validation } = require('../middleware/errors');
 const { paginate, toPositiveInt } = require('../lib/paginate');
 const { slugifyPath } = require('../lib/slug');
 const { toBool } = require('../lib/filters');
+
+const { isReservedPath } = PATHS;
 
 /** Block types whose `data.html` is rendered as markup (§6.10). */
 const HTML_BLOCKS = new Set(['richText', 'html']);
@@ -47,14 +64,128 @@ const first = (value) => (Array.isArray(value) ? value[0] : value);
 
 const sameId = (left, right) => String(left) === String(right);
 
-/** The five fields a navigation link is built from. */
+/** The six fields a navigation link is built from. */
 const navShape = (page) => ({
   slug: page.slug,
   title: page.title,
   headerMenu: page.headerMenu ?? null,
+  headerSubmenu: page.headerSubmenu ?? null,
   footerColumn: page.footerColumn ?? null,
   order: Number.isFinite(page.order) ? page.order : 0,
 });
+
+/**
+ * The rules of the protected and the built-in pages (`src/config/pages.js`,
+ * QA-56), and the check that a submenu belongs to the menu a page names.
+ *
+ *   - `system` is the template of the pages that come with the site: no page
+ *     is created with it, none is moved into or out of it;
+ *   - a protected page keeps its address — an empty slug on a `PUT`, which
+ *     would otherwise be derived afresh from the title (§5.9), keeps it too;
+ *   - a built-in page is never a draft and carries no blocks: its route
+ *     answers whatever the record says, and its content is generated;
+ *   - the home page is never redirected: its address is `/`, where every
+ *     visitor arrives, and its SEO panel would write that rule on save;
+ *   - `headerSubmenu` names one of the submenus of `headerMenu`, and goes when
+ *     the page has no menu.
+ *
+ * @param {object} body the request body, copied by the caller
+ * @param {{existing?: object, method?: string, db?: object}} [context]
+ * @returns {object} the same body
+ * @throws {import('../middleware/errors').ApiError} 422
+ */
+function enforcePageRules(body, { existing, method, db } = {}) {
+  const errors = {};
+  const mentions = (field) => Object.prototype.hasOwnProperty.call(body, field);
+
+  if (!existing) {
+    if (body.template === SYSTEM_TEMPLATE) {
+      errors.template = ['“Built-in” is kept for the pages that come with the site.'];
+    }
+  } else {
+    const system = isSystemPage(existing);
+    if (mentions('template') && (body.template === SYSTEM_TEMPLATE) !== system) {
+      errors.template = [
+        system
+          ? 'A built-in page keeps its template: the site generates it.'
+          : '“Built-in” is kept for the pages that come with the site.',
+      ];
+    }
+
+    const refusal = slugRefusal(existing);
+    if (refusal) {
+      const sent = typeof body.slug === 'string' ? body.slug.trim() : '';
+      if (sent && slugifyPath(sent) !== existing.slug) errors.slug = [refusal];
+      else if (method !== 'PATCH' || mentions('slug')) body.slug = existing.slug;
+    }
+
+    if (isHomePage(existing) && body.seo?.redirect?.enabled === true) {
+      errors['seo.redirect.enabled'] = [homeRedirectRefusal()];
+    }
+
+    if (system) {
+      if (mentions('status') && body.status !== 'published') {
+        errors.status = [unpublishRefusal(existing)];
+      }
+      if (Array.isArray(body.blocks) && body.blocks.length > 0) {
+        errors.blocks = ['A built-in page has no blocks: the site generates its content.'];
+      }
+    }
+  }
+
+  // The submenu belongs to the menu the page will be in once this write lands.
+  const menuSlug = mentions('headerMenu') ? body.headerMenu : existing?.headerMenu;
+  if (mentions('headerMenu') && !body.headerMenu) body.headerSubmenu = null;
+  const submenu = mentions('headerSubmenu') ? body.headerSubmenu : undefined;
+  if (typeof submenu === 'string' && submenu !== '') {
+    const menu = (db?.getCollection('headerMenus') ?? []).find((row) => row.slug === menuSlug);
+    const known = (menu?.submenus ?? []).some((entry) => entry.slug === submenu);
+    if (!known) errors.headerSubmenu = ['The selected headerSubmenu is invalid.'];
+  } else if (submenu === '') {
+    body.headerSubmenu = null;
+  }
+
+  if (Object.keys(errors).length > 0) throw validation(errors);
+  return body;
+}
+
+/**
+ * A bulk action that cannot apply to every selected page is refused whole,
+ * with the pages in the way named — the rule a single write applies (QA-56).
+ * A built-in page is never unpublished; a protected page is never deleted.
+ *
+ * @param {string} action
+ * @param {Array<object>} targets
+ * @throws {ApiError} 409 for a delete, 422 for an unpublish
+ */
+function refuseProtected(action, targets) {
+  const reasonOf =
+    action === 'delete' ? deleteRefusal : action === 'unpublish' ? unpublishRefusal : null;
+  if (!reasonOf) return;
+
+  const refused = targets
+    .map((page) => ({ page, reason: reasonOf(page) }))
+    .filter(({ reason }) => reason);
+  if (refused.length === 0) return;
+
+  const verb = action === 'delete' ? 'deleted' : 'unpublished';
+  const message =
+    refused.length === 1
+      ? refused[0].reason
+      : `${refused.length} of the selected pages cannot be ${verb}: ${refused
+          .map(({ page }) => `“${page.title}”`)
+          .join(', ')}.`;
+
+  throw new ApiError(
+    action === 'delete' ? 409 : 422,
+    message,
+    { ids: refused.map(({ reason }) => reason) },
+    {
+      refused: refused.map(({ page, reason }) => ({ id: page.id, title: page.title, reason })),
+      ...(action === 'delete' ? { usedBy: [] } : {}),
+    }
+  );
+}
 
 /**
  * Gives every block an id and renumbers `order` as `1…n`.
@@ -224,7 +355,9 @@ module.exports = ({ db, getModel }) => {
     }
 
     const { token, expiresAt } = issueToken('page', page.id);
-    res.ok({ token, expiresAt, url: `${siteUrl()}/${page.slug}?preview=${token}` });
+    // `PATHS.page`, so the home record's link is the site root (QA-56).
+    const path = PATHS.page(page.slug);
+    res.ok({ token, expiresAt, url: `${siteUrl()}${path}?preview=${token}` });
   });
 
   router.use(
@@ -240,7 +373,14 @@ module.exports = ({ db, getModel }) => {
       // and `check-slug` answers about the whole path (§6.10).
       pathSlug: true,
       beforeValidate: (body, context) =>
-        rejectReservedSlug(rejectScripts(normaliseBlocks(body)), context),
+        rejectReservedSlug(
+          enforcePageRules(rejectScripts(normaliseBlocks(body)), context),
+          context
+        ),
+      // A protected page is never deleted (`src/config/pages.js`, QA-56); a
+      // bulk action is refused whole, naming the pages in the way.
+      protect: deleteRefusal,
+      beforeBulk: refuseProtected,
       adminFilters: {
         status: { field: 'status', type: 'csv' },
         template: { field: 'template', type: 'csv' },
@@ -258,3 +398,5 @@ module.exports = ({ db, getModel }) => {
 module.exports.normaliseBlocks = normaliseBlocks;
 module.exports.rejectScripts = rejectScripts;
 module.exports.rejectReservedSlug = rejectReservedSlug;
+module.exports.enforcePageRules = enforcePageRules;
+module.exports.refuseProtected = refuseProtected;

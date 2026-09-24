@@ -36,6 +36,8 @@ const ON_DELETE = {
   articleId: SET_NULL,
   userId: CASCADE,
   jobId: CASCADE,
+  // Deleting a header menu takes its pages out of the header (QA-56).
+  headerMenu: SET_NULL,
   propertyTypeId: RESTRICT,
   localityId: RESTRICT,
   cityId: RESTRICT,
@@ -144,6 +146,9 @@ const MAPPING = {
   testimonials: {},
   teamMembers: { json: ['socialLinks'] },
   partners: {},
+  // A menu's submenus and links are small, ordered and only ever read whole
+  // with it (QA-56).
+  headerMenus: { json: ['submenus', 'links'] },
   pages: { children: [child('page_blocks', 'blocks')], json: ['seo'] },
   jobOpenings: { json: ['responsibilities', 'requirements'] },
   jobApplications: {},
@@ -563,6 +568,8 @@ function buildSchema() {
     'authors',
     'properties',
     'articles',
+    // Before `pages`: a page names its menu by the menu's slug.
+    'headerMenus',
     'pages',
     'faqs',
     'testimonials',

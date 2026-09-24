@@ -70,13 +70,20 @@ const publicPaths = {
   /**
    * A CMS page. Its slug may itself be a path (`buyer-assistance/home-loan`),
    * so the segments are encoded one by one and the separators survive.
+   *
+   * The `home` record is the home page — its two bands and its head are read
+   * from it (D81) — so it lives at the root. Built as `/home`, its admin row,
+   * its "View on the site" and every link to it led to a bare copy of those
+   * two bands at an address nobody should reach (QA-56).
    */
-  page: (slug) =>
-    `/${String(slug ?? '')
+  page: (slug) => {
+    const path = String(slug ?? '')
       .split('/')
       .filter(Boolean)
       .map(seg)
-      .join('/')}`,
+      .join('/');
+    return path === 'home' ? '/' : `/${path}`;
+  },
 };
 
 /** Admin routes — never linked from the public site (D24). */
@@ -103,6 +110,7 @@ const adminPaths = {
   adminPages: '/admin/pages',
   adminPageNew: '/admin/pages/add',
   adminPageEdit: (id) => `/admin/pages/edit/${seg(id)}`,
+  adminPageMenus: '/admin/pages/menus',
   adminFaqs: '/admin/faqs',
 
   adminLocalities: '/admin/master-data/localities',

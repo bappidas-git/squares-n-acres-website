@@ -97,6 +97,8 @@ const RESOURCE_AREAS = {
   authors: 'articles',
 
   pages: 'content',
+  'header-menus': 'content',
+  headerMenus: 'content',
   faqs: 'content',
   testimonials: 'content',
   team: 'content',
