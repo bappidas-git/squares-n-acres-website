@@ -90,16 +90,22 @@ cp .env.example .env
 
 `npm start` runs the web app alone; `npm run mock` runs the API alone.
 
-Both halves of `npm run dev` pick up code changes on their own, a `git pull` included: the
-web app hot-reloads, and the mock API restarts when one of its files changes — or one of the
-`src/` modules it shares with the web app, such as `src/config/rbac.js`. Writes to the runtime
-database do not restart it. `npm run mock` on its own does not watch; restart it after pulling.
+The web app and the mock API both pick up code changes on their own, a `git pull` included: the
+web app hot-reloads, and the mock API reloads its own code on the next request after one of its
+files changes, or one of the `src/` modules it shares with the web app, such as
+`src/config/rbac.js`. That holds for `npm run mock` on its own, and for a mock left running in a
+terminal nobody looks at. It says so (`The mock's code changed on disk (…); the API reloaded
+it`). Writes to the runtime database do not reload it. `npm run dev` also restarts the mock
+outright (`node --watch`).
 
 A mock that starts while an older copy of the mock still holds its port — one left running by an
 earlier session, or started from another checkout — stops that copy and takes the port, so the
 web app never goes on talking to a route map from before the pull. It says so in its first line
 of output. A copy running this very code is left alone, and a port held by any other program is
 never touched: the mock exits and says what holds it.
+
+If a screen ever meets an API older than itself anyway, it says so, and says how to restart it,
+instead of "You do not have permission…" ([Troubleshooting](#troubleshooting)).
 
 ---
 
@@ -113,7 +119,7 @@ Chrome; the ones marked **API** need `npm run mock` running in another terminal.
 | Script                 | What it does                                                     |
 | ---------------------- | ---------------------------------------------------------------- |
 | `npm start`            | CRA dev server on port 3000                                      |
-| `npm run mock`         | Mock API on port 4000, over the runtime copy of the seed         |
+| `npm run mock`         | Mock API on port 4000, over the runtime copy of the seed; reloads its own code when it changes |
 | `npm run mock:watch`   | `mock`, restarted whenever a file it loads changes (`node --watch`) |
 | `npm run mock:reset`   | Restores the runtime database from `db.json` — see [Seed](#the-seed-and-the-runtime-database) |
 | `npm run dev`          | `mock:watch` and `start` together, via `concurrently`            |
@@ -540,15 +546,17 @@ Get-NetTCPConnection -LocalPort 4000 | Select-Object -ExpandProperty OwningProce
 The mock's port is `MOCK_PORT`; change `REACT_APP_API_URL` to match when you move it. CRA
 offers another port for the web app on its own.
 
-**A screen says "You do not have permission to perform this action." to the admin.** The
-web app is newer than the mock API answering it. The API refuses an admin route it has no
-rule for, so a screen added since that process started — Master data → Segments, Pages →
-Header menu — fails with a 403 even for the admin. It happens when a mock started with
-`npm run mock` before a `git pull` is still running (it does not restart itself; `npm run dev`
-does). Start the mock again — `npm run dev` or `npm run mock`, in any terminal: the new process
-stops the older copy and takes port 4000 over (`Stopped an older mock API (pid …)`), then
-reload the screen. If it says the older copy `could not be stopped automatically`, stop that
-process id yourself (the commands above), then start the mock again.
+**A screen says "The API at localhost:4000 is running older code than this web app" — or,
+before QA-58, "You do not have permission to perform this action." to the admin.** The web app
+is newer than the mock API answering it. The API refuses an admin route it has no rule for, so
+a screen added since that process started (Master data → Segments, Pages → Header menu) fails
+with a 403 even for the admin. A mock from QA-58 on reloads its own code and cannot fall behind
+like this; an older one does not, and it keeps answering for as long as it runs, even after
+`git pull`. Stop `npm run dev` with Ctrl+C and start it again, then reload the screen. If
+you cannot find the terminal it runs in, just start the mock again (`npm run dev` or
+`npm run mock`, in any terminal): the new process stops the older copy and takes port 4000 over
+(`Stopped an older mock API (pid …)`). If it says the older copy `could not be stopped
+automatically`, stop that process id yourself (the commands above), then start the mock again.
 
 **`REACT_APP_API_URL is not set. Copy .env.example to .env.`** Thrown at startup, on
 purpose — there is no fallback URL. In development `.env.development` supplies it, so this
