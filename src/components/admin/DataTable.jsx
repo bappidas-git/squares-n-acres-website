@@ -169,11 +169,6 @@ export default function DataTable({
   const wrapperRef = useRef(null);
   const scrollerRef = useRef(null);
 
-  const page = meta?.page ?? 1;
-  const perPage = meta?.perPage ?? DEFAULT_PER_PAGE;
-  const total = meta?.total ?? rows.length;
-  const totalPages = meta?.totalPages ?? 1;
-
   const pageIds = useMemo(() => rows.map((row) => getRowId(row)), [rows, getRowId]);
   const selected = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
 
@@ -280,14 +275,6 @@ export default function DataTable({
     />
   ) : null;
 
-  // `?page=5` of a two-page list is a real address — a shared link outliving
-  // the rows it pointed at — so the footer says where the reader is rather
-  // than counting a slice that is not there (§7 of prompt 22).
-  const summary =
-    rows.length > 0
-      ? `Showing ${(page - 1) * perPage + 1}–${Math.min(page * perPage, total)} of ${total}`
-      : `Page ${page} of ${totalPages} — no rows on this page`;
-
   // The pager sits under the last row, so the next page used to arrive with
   // the reader still looking at its bottom. The table's top comes back into
   // view — only when it has scrolled out of it, so a short list does not jump.
@@ -299,29 +286,14 @@ export default function DataTable({
     }
   };
 
-  const footer =
-    total > 0 ? (
-      <div className={styles.footer}>
-        <p className={styles.summary} aria-live="polite">
-          {summary}
-        </p>
-        <Pagination page={page} totalPages={totalPages} onChange={changePage} />
-        <label className={styles.perPage}>
-          Rows per page
-          <select
-            className={styles.perPageSelect}
-            value={perPage}
-            onChange={(event) => onPerPageChange?.(Number(event.target.value))}
-          >
-            {perPageOptionsFor(perPage).map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-    ) : null;
+  const footer = (
+    <TableFooter
+      meta={meta}
+      rowCount={rows.length}
+      onPageChange={changePage}
+      onPerPageChange={onPerPageChange}
+    />
+  );
 
   /* ---------------- states shared by both layouts ---------------- */
 
@@ -549,6 +521,59 @@ export default function DataTable({
         </Table>
       </div>
       {footer}
+    </div>
+  );
+}
+
+/**
+ * The line under a list: where the reader is, the pager and the page size.
+ *
+ * Its own export for the drag list of an orderable screen (QA-59), which
+ * replaces the table but not its pages: without it a twenty-first FAQ was
+ * listed nowhere on the screen the FAQs open on, and nothing said so.
+ *
+ * @param {object} props
+ * @param {{page: number, perPage: number, total: number, totalPages: number}} [props.meta]
+ * @param {number} props.rowCount the rows on screen
+ * @param {(page: number) => void} [props.onPageChange]
+ * @param {(perPage: number) => void} [props.onPerPageChange]
+ */
+export function TableFooter({ meta = null, rowCount = 0, onPageChange, onPerPageChange }) {
+  const page = meta?.page ?? 1;
+  const perPage = meta?.perPage ?? DEFAULT_PER_PAGE;
+  const total = meta?.total ?? rowCount;
+  const totalPages = meta?.totalPages ?? 1;
+
+  if (!(total > 0)) return null;
+
+  // `?page=5` of a two-page list is a real address — a shared link outliving
+  // the rows it pointed at — so the footer says where the reader is rather
+  // than counting a slice that is not there (§7 of prompt 22).
+  const summary =
+    rowCount > 0
+      ? `Showing ${(page - 1) * perPage + 1}–${Math.min(page * perPage, total)} of ${total}`
+      : `Page ${page} of ${totalPages} — no rows on this page`;
+
+  return (
+    <div className={styles.footer}>
+      <p className={styles.summary} aria-live="polite">
+        {summary}
+      </p>
+      <Pagination page={page} totalPages={totalPages} onChange={onPageChange} />
+      <label className={styles.perPage}>
+        Rows per page
+        <select
+          className={styles.perPageSelect}
+          value={perPage}
+          onChange={(event) => onPerPageChange?.(Number(event.target.value))}
+        >
+          {perPageOptionsFor(perPage).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
     </div>
   );
 }

@@ -34,3 +34,61 @@
 .starOff {
   color: var(--color-text-muted);
 }
+
+/* ---------------- the two views of an orderable list (QA-59) ---------------- */
+
+/* The "Reorder" button of a screen with no filter bar to sit in. */
+.viewBar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-4);
+}
+
+/* "Table view" keeps its words on one line: squeezed beside a long hint it
+   wrapped to four ("Back / to / the / table") on a tablet. */
+.viewButton {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* One drag row: what the record is, whether it is live, and its actions —
+   centred on the handle beside it, where the text used to sit at the top of
+   a row twice its height. */
+.reorderItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 36px;
+  min-width: 0;
+}
+
+.reorderItem .reorderRow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.reorderChip {
+  flex-shrink: 0;
+}
+
+.reorderActions {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+@media (max-width: 599.98px) {
+  .reorderHead {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reorderHead .viewButton {
+    align-self: flex-start;
+  }
+
+  /* The question wraps beside its menu rather than pushing it onto a line
+     of its own. */
+  .reorderItem {
+    align-items: flex-start;
+  }
+}

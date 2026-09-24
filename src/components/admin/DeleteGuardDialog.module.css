@@ -49,3 +49,40 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
+
+/* A refused bulk delete: one group per selected record that is in the way (QA-59). */
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: 360px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.group .list {
+  max-height: none;
+  overflow: visible;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.groupReason {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}

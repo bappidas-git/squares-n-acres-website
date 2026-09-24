@@ -113,6 +113,8 @@ function statsOf(editor) {
  * @param {number} [props.maxWords] a target shown beside the word count
  * @param {string} [props.id]
  * @param {string} [props.label]
+ * @param {boolean} [props.required] marks the label, as every other field does —
+ *   a FAQ's required answer was the one label without its asterisk (QA-59)
  * @param {string} [props.error]
  * @param {string} [props.helper]
  */
@@ -129,6 +131,7 @@ const RichTextEditor = forwardRef(function RichTextEditor(
     maxWords,
     id,
     label,
+    required = false,
     error,
     helper,
   },
@@ -265,6 +268,15 @@ const RichTextEditor = forwardRef(function RichTextEditor(
   }, [editor, value]);
 
   const onKeyDown = (event) => {
+    // Ctrl/Cmd+S saves the form around the editor, which hears about typing
+    // 200 ms late: the words typed just before it were not in the save, and a
+    // required answer read as empty (QA-59). They are handed over now; the
+    // form's own shortcut does the saving.
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+      clearTimeout(timerRef.current);
+      emit(editor);
+      return;
+    }
     if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return;
     if (disabled) return;
     event.preventDefault();
@@ -399,6 +411,7 @@ const RichTextEditor = forwardRef(function RichTextEditor(
       label={label}
       hint={helper}
       error={error}
+      required={required}
       labelAs="span"
       className={styles.field}
     >

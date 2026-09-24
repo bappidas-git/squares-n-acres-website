@@ -53,12 +53,19 @@ const TYPE_LABEL = {
  * property type to another segment. Pass `onConfirm` and it becomes a confirm
  * over the usages instead of a dead end.
  *
+ * A bulk delete refused whole hands over `refused` — each selected record the
+ * API would not delete, with what holds it — and the list is drawn per record
+ * (QA-59): the union of the usages alone said which pages were in the way, not
+ * which of the selected FAQs they were holding.
+ *
  * @param {object} props
  * @param {boolean} props.open
  * @param {() => void} props.onClose
  * @param {string} props.title the record the admin tried to delete
  * @param {string} [props.message] the API's message
  * @param {Array<{type: string, id: number|string, title: string}>} props.usedBy
+ * @param {Array<{id: number|string, label: string, reason?: string,
+ *   usedBy?: Array<object>}>} [props.refused] the records of a refused bulk delete
  * @param {string} [props.heading] the dialog's own title
  * @param {string} [props.hint] the line under the list
  * @param {() => void} [props.onConfirm] renders the confirm button
@@ -72,6 +79,7 @@ export default function DeleteGuardDialog({
   title,
   message,
   usedBy = [],
+  refused = [],
   heading = 'Still in use',
   hint = 'Remove the reference on each record above, then delete this one.',
   onConfirm,
@@ -79,6 +87,25 @@ export default function DeleteGuardDialog({
   loading = false,
   onExited,
 }) {
+  const usageItem = (usage) => {
+    const to = USAGE_LINK[usage.type]?.(usage);
+    const typeLabel = TYPE_LABEL[usage.type] ?? usage.type;
+
+    return (
+      <li key={`${usage.type}-${usage.id}`} className={styles.item}>
+        <span className={styles.type}>{typeLabel}</span>
+        {to ? (
+          <Link to={to} className={styles.link} onClick={onClose}>
+            {usage.title}
+            <Icon icon="mdi:open-in-new" width="14" height="14" aria-hidden="true" />
+          </Link>
+        ) : (
+          <span>{usage.title}</span>
+        )}
+      </li>
+    );
+  };
+
   return (
     <Modal
       open={open}
@@ -108,27 +135,21 @@ export default function DeleteGuardDialog({
         {message || `“${title}” cannot be deleted while other records point at it.`}
       </p>
 
-      {usedBy.length > 0 ? (
-        <ul className={styles.list}>
-          {usedBy.map((usage) => {
-            const to = USAGE_LINK[usage.type]?.(usage);
-            const typeLabel = TYPE_LABEL[usage.type] ?? usage.type;
-
-            return (
-              <li key={`${usage.type}-${usage.id}`} className={styles.item}>
-                <span className={styles.type}>{typeLabel}</span>
-                {to ? (
-                  <Link to={to} className={styles.link} onClick={onClose}>
-                    {usage.title}
-                    <Icon icon="mdi:open-in-new" width="14" height="14" aria-hidden="true" />
-                  </Link>
-                ) : (
-                  <span>{usage.title}</span>
-                )}
-              </li>
-            );
-          })}
+      {refused.length > 0 ? (
+        <ul className={styles.groups}>
+          {refused.map((entry) => (
+            <li key={entry.id} className={styles.group}>
+              <p className={styles.groupTitle}>“{entry.label}”</p>
+              {Array.isArray(entry.usedBy) && entry.usedBy.length > 0 ? (
+                <ul className={styles.list}>{entry.usedBy.map(usageItem)}</ul>
+              ) : entry.reason ? (
+                <p className={styles.groupReason}>{entry.reason}</p>
+              ) : null}
+            </li>
+          ))}
         </ul>
+      ) : usedBy.length > 0 ? (
+        <ul className={styles.list}>{usedBy.map(usageItem)}</ul>
       ) : null}
 
       {hint ? <p className={styles.hint}>{hint}</p> : null}

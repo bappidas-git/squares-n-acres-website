@@ -3,8 +3,17 @@
 .nameCell {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 2px;
   min-width: 0;
+}
+
+/* A name over a line, or a question over two lines of its answer, is taller
+   than the 48 px row the table's cells are drawn for, and they have no
+   padding of their own: the text touched the rules above and below it
+   (QA-59). A phone's card has its own padding. */
+td > .nameCell {
+  padding-block: var(--space-2);
 }
 
 .name {
@@ -34,17 +43,20 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The whole question, wrapping: cut to one line it read "How do I start a
+   property sear…" on a phone, which is not enough to decide where it goes
+   (QA-59). The line under it follows it when there is no room beside it. */
 .orderRow {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-3);
+  row-gap: 2px;
   min-width: 0;
 }
 
 .orderRow .name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .contactCell {

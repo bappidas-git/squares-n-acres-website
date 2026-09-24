@@ -4,6 +4,7 @@ import Chip from '../../../components/ui/Chip';
 import LazyImage from '../../../components/ui/LazyImage';
 import PATHS from '../../../routes/paths';
 import { AMENITY_CATEGORIES, BADGE_TONES, SEGMENTS } from '../../../config/enums';
+import { FORMS } from '../../../config/adminCopy';
 import { ICON_ID_PATTERN } from '../../../utils/validation';
 import {
   adminCrud,
@@ -124,9 +125,12 @@ const NameCell = ({ name, hint }) => (
   </span>
 );
 
-/** The `Active` / `Order` half of every form below. */
+/**
+ * The `Active` / `Order` half of every form below. The number is a position:
+ * the API places the record there and moves the rest (QA-59).
+ */
 const STATE_FIELDS = [
-  { name: 'order', type: 'number', label: 'Order', min: 0, half: true, hint: 'Lowest first.' },
+  { name: 'order', type: 'number', label: 'Order', min: 0, half: true, hint: FORMS.orderHint },
   { name: 'isActive', type: 'switch', label: 'Active', half: true },
 ];
 
@@ -687,7 +691,13 @@ export const amenitiesConfig = ({ onMutated } = {}) => ({
       hint: 'The block this amenity appears in on a listing page.',
     },
     { name: 'icon', type: 'icon', label: 'Icon', required: true },
-    ...STATE_FIELDS,
+    {
+      ...STATE_FIELDS[0],
+      // One order runs through every category, and each category's block on
+      // a listing reads its own amenities in it (QA-59).
+      hint: 'Its place among all the amenities: 1 is first, and the others move down to make room. Each category lists its own in this order.',
+    },
+    STATE_FIELDS[1],
   ],
 
   newValues: { category: 'basic', order: 0, isActive: true },

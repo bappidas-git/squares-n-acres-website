@@ -20,7 +20,9 @@ const { makeCrudRouter } = require('../lib/crud');
 const { embedLocality } = require('../lib/embed');
 const { isLive } = require('../lib/articleFilters');
 const { isBuiltInSegment } = require('../../src/config/segments');
+const { FAQ_CATEGORIES } = require('../../src/config/enums');
 const { publicAuthor } = require('../lib/scope');
+const { stripHtml, unsafeMarkup } = require('../lib/html');
 const { validation } = require('../middleware/errors');
 
 const sameId = (left, right) =>
@@ -67,6 +69,91 @@ function keepSegmentIdentity(body, { existing }) {
   return body;
 }
 
+/** What an answer carrying a script is told — the articles API's sentence (QA-55). */
+const UNSAFE_ANSWER =
+  'The text may not carry a script, an inline event handler or a javascript: link.';
+
+/** A question as two questions are compared: case, spacing and the final "?" aside. */
+const questionKey = (text) =>
+  String(text ?? '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[\s?？]+$/, '')
+    .trim();
+
+/**
+ * What a FAQ write sends, tidied before it is checked (QA-59): the question
+ * without the spaces a paste leaves around it — they were stored, and the
+ * list, the site and the `FAQPage` markup all printed them.
+ *
+ * @param {object} body the request body
+ * @returns {object} the same body
+ */
+function tidyFaq(body) {
+  if (typeof body.question === 'string') body.question = body.question.trim();
+  return body;
+}
+
+/**
+ * The rules of a FAQ the schema cannot state (QA-59), answered as one 422:
+ *
+ * - **The answer has words.** `answer` is required, and an empty bullet or an
+ *   empty heading is not an answer: `<ul><li><p></p></li></ul>` passed, and
+ *   the site showed a question that opened onto nothing.
+ * - **The answer runs nothing** — no script, inline handler or `javascript:`
+ *   link, which the articles API has refused since QA-55. The editor never
+ *   writes one; arriving here, it came from somewhere else.
+ * - **The property type exists.** `exists:property_types,id` is the Laravel
+ *   rule the guidelines already document; the mock stored `99999`, and the
+ *   question then appeared on no listing at all.
+ * - **A category asks a question once.** The same question twice in one tab
+ *   is a double submission or a paste, and the site listed it twice.
+ *
+ * A `PATCH` is asked only about the fields it sends.
+ *
+ * @param {object} record the record about to be stored
+ * @param {{method: string, body: object, existing?: object, db: object}} context
+ * @returns {object} the same record
+ */
+function checkFaq(record, { method, body, existing, db }) {
+  const touches = (field) =>
+    method !== 'PATCH' || Object.prototype.hasOwnProperty.call(body ?? {}, field);
+  const found = {};
+
+  if (touches('answer') && typeof record.answer === 'string' && record.answer.trim() !== '') {
+    if (unsafeMarkup(record.answer)) found.answer = [UNSAFE_ANSWER];
+    else if (stripHtml(record.answer) === '') found.answer = ['The answer field is required.'];
+  }
+
+  if (
+    touches('propertyTypeId') &&
+    record.propertyTypeId !== null &&
+    record.propertyTypeId !== undefined &&
+    !(db.getCollection('propertyTypes') ?? []).some((type) =>
+      sameId(type.id, record.propertyTypeId)
+    )
+  ) {
+    found.propertyTypeId = ['The selected propertyTypeId is invalid.'];
+  }
+
+  if (touches('question') || touches('category')) {
+    const key = questionKey(record.question);
+    const twin = (db.getCollection('faqs') ?? []).find(
+      (faq) =>
+        !sameId(faq.id, existing?.id ?? record.id) &&
+        faq.category === record.category &&
+        questionKey(faq.question) === key
+    );
+    if (key && twin) {
+      const tab = FAQ_CATEGORIES.labelOf(record.category) || record.category;
+      found.question = [`This question is already under ${tab}.`];
+    }
+  }
+
+  if (Object.keys(found).length > 0) throw validation(found);
+  return record;
+}
+
 /** `{ id, name, slug }` of a record in `collection`. */
 const refOf = (rows, id) => {
   const record = (rows ?? []).find((row) => sameId(row.id, id));
@@ -75,6 +162,14 @@ const refOf = (rows, id) => {
 
 /**
  * One resource's configuration, minus the wiring every one of them shares.
+ *
+ * Every collection here whose `order` the admin drags settles on write
+ * (`settleOrder`, QA-59): a `POST`, and a `PUT` that changes the number, put
+ * the record at that position and renumber the rest `1..n`, so the Order
+ * column is a list of positions and no two records share one. Their seeds are
+ * `1..n` already, and the public lists read them in the same `order` sort the
+ * renumber breaks a tie by, so what a visitor sees does not move. Cities, tags
+ * and authors have no `order`.
  *
  * @type {Array<object>}
  */
@@ -100,6 +195,7 @@ const RESOURCES = [
     },
     sorts: { order: 'order,name', name: 'name', propertyCount: '-propertyCount' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -155,6 +251,7 @@ const RESOURCES = [
       propertyCount: '-propertyCount',
     },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -173,6 +270,7 @@ const RESOURCES = [
     publicFilters: { segment: { field: 'segment' } },
     sorts: { order: 'order,name', name: 'name', propertyCount: '-propertyCount' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -196,6 +294,7 @@ const RESOURCES = [
       propertyCount: '-propertyCount',
     },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -213,6 +312,7 @@ const RESOURCES = [
     }),
     sorts: { order: 'order,name', name: 'name', propertyCount: '-propertyCount' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -231,6 +331,7 @@ const RESOURCES = [
     publicFilters: { isFeatured: { field: 'isFeatured', type: 'bool' } },
     sorts: { order: 'order,name', name: 'name', propertyCount: '-propertyCount' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -243,6 +344,7 @@ const RESOURCES = [
     deleteGuard: false,
     sorts: { order: 'order,name', name: 'name', interestRateMin: 'interestRateMin' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -260,6 +362,7 @@ const RESOURCES = [
     }),
     sorts: { order: 'order,name', name: 'name', articleCount: '-articleCount' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -305,6 +408,9 @@ const RESOURCES = [
     schema: 'faq',
     noun: { one: 'FAQ', many: 'FAQs' },
     deleteGuard: 'faq',
+    beforeValidate: tidyFaq,
+    beforeSave: checkFaq,
+    settleOrder: true,
     publicFilters: {
       category: { field: 'category' },
       showOnHome: { field: 'showOnHome', type: 'bool' },
@@ -337,6 +443,7 @@ const RESOURCES = [
       updatedAt: '-updatedAt',
     },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -348,6 +455,7 @@ const RESOURCES = [
     publicFilters: { showOnAbout: { field: 'showOnAbout', type: 'bool' } },
     sorts: { order: 'order,name', name: 'name' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -359,6 +467,7 @@ const RESOURCES = [
     publicFilters: { category: { field: 'category' } },
     sorts: { order: 'order,name', name: 'name' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 ];
 
@@ -388,6 +497,8 @@ module.exports = ({ db, getModel }) => {
         deleteGuard: resource.deleteGuard,
         protect: resource.protect,
         beforeValidate: resource.beforeValidate,
+        beforeSave: resource.beforeSave,
+        settleOrder: resource.settleOrder ?? false,
         routes: resource.routes ?? null,
         noun: resource.noun,
       })

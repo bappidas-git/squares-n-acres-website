@@ -38,6 +38,10 @@ const TABLES = {
   emptyPageText: 'The list is shorter than the address you opened.',
   firstPage: 'Go to first page',
   resetFilters: 'Reset filters',
+  /** The two views of an orderable list (QA-59). */
+  reorder: 'Reorder',
+  tableView: 'Table view',
+  inactive: 'Inactive',
   clearFilters: 'Clear filters',
 
   rowActions: 'Row actions',
@@ -78,6 +82,14 @@ const FORMS = {
   optional: 'Optional',
   unsaved: 'Unsaved changes',
   fixFields: 'Fix the highlighted fields before saving.',
+  /** A save pressed on a record nobody changed: nothing is written (QA-55, QA-59). */
+  noChanges: 'No changes to save.',
+  /**
+   * What an `order` box means where the API settles the collection on every
+   * write that places a record (QA-59): a position, not a weight. Saved at 3,
+   * the record is third, and the box reads 3 afterwards.
+   */
+  orderHint: 'Its place in the list: 1 is first, and the others move down to make room.',
 };
 
 /* ------------------------------------------------------------------ *

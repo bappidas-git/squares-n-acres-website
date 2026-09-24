@@ -19,7 +19,7 @@ import BuilderSection from '../../components/sections/property/BuilderSection';
 import ConstructionSection from '../../components/sections/property/ConstructionSection';
 import DocumentsSection from '../../components/sections/property/DocumentsSection';
 import EnquirySection from '../../components/sections/property/EnquirySection';
-import FaqsSection from '../../components/sections/property/FaqsSection';
+import FaqsSection, { withTypeFaqs } from '../../components/sections/property/FaqsSection';
 import FinanceSection from '../../components/sections/property/finance/FinanceSection';
 import FloorPlansSection from '../../components/sections/property/FloorPlansSection';
 import GallerySection from '../../components/sections/property/GallerySection';
@@ -38,6 +38,7 @@ import SimilarSection from '../../components/sections/property/SimilarSection';
 import SpecificationsSection from '../../components/sections/property/SpecificationsSection';
 import TitleBlock from '../../components/sections/property/TitleBlock';
 import UnitConfigurationsSection from '../../components/sections/property/UnitConfigurationsSection';
+import masterDataService from '../../services/masterDataService';
 import propertyService from '../../services/propertyService';
 import recentlyViewed from '../../utils/recentlyViewed';
 import useApi from '../../hooks/useApi';
@@ -49,6 +50,9 @@ import usePrerenderReady from '../../hooks/usePrerenderReady';
 
 /** `?preview=admin` — what the property form's "Preview" link appends (§5.10). */
 const PREVIEW_TOKEN = 'admin';
+
+/** How many of its type's library questions a listing shows (QA-59). */
+const TYPE_FAQ_LIMIT = 20;
 
 /**
  * The component each `sectionVisibility` key is printed by.
@@ -154,6 +158,26 @@ const PropertyDetails = () => {
   );
   const similarProperties = Array.isArray(similar) ? similar : [];
 
+  // The FAQ library's questions tied to this listing's type (QA-59): Admin →
+  // FAQs offers the tie — "it also appears on those listings" — and until now
+  // no page read it. Public, so only the live ones; in the library's order.
+  const propertyTypeId = property?.propertyTypeId ?? property?.propertyType?.id ?? null;
+  const { data: typeFaqs } = useApi(
+    (signal) =>
+      masterDataService.faqs.list(
+        { propertyTypeId, sort: 'order', order: 'asc', perPage: TYPE_FAQ_LIMIT },
+        { signal }
+      ),
+    [propertyTypeId],
+    { enabled: Boolean(propertyTypeId), initialData: [] }
+  );
+
+  // The listing as its sections read it: its own questions, then its type's.
+  const shown = useMemo(
+    () => (property ? { ...property, faqs: withTypeFaqs(property.faqs, typeFaqs) } : property),
+    [property, typeFaqs]
+  );
+
   // Every CTA on the page goes through the one dialog of `LeadCaptureContext`;
   // the entry point decides the source, the heading and the boxes (§6.17).
   const openLead = useCallback(
@@ -211,13 +235,13 @@ const PropertyDetails = () => {
 
   const visibleSections = useMemo(
     () =>
-      property
-        ? getVisibleSections(property, {
+      shown
+        ? getVisibleSections(shown, {
             banksAvailable: banks.length > 0,
             similarAvailable: similarProperties.length > 0,
           })
         : [],
-    [property, banks.length, similarProperties.length]
+    [shown, banks.length, similarProperties.length]
   );
 
   if (loading) return <PropertyDetailSkeleton />;
@@ -238,7 +262,7 @@ const PropertyDetails = () => {
 
   const unpublished = property.isActive === false;
   const crumbs = breadcrumbsFor('property', property);
-  const faqs = [...(Array.isArray(property.faqs) ? property.faqs : []), ...blockFaqs];
+  const faqs = [...shown.faqs, ...blockFaqs];
 
   const visibility = property.sectionVisibility ?? {};
 
@@ -336,7 +360,7 @@ const PropertyDetails = () => {
                   onFaqItems={setBlockFaqs}
                 />
               ) : (
-                <Section key={section.key} property={property} background={background} />
+                <Section key={section.key} property={shown} background={background} />
               );
             })}
 

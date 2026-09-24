@@ -3,16 +3,19 @@ import { Icon } from '@iconify/react';
 import Switch from '@mui/material/Switch';
 
 import Button from '../ui/Button';
+import Chip from '../ui/Chip';
 import ConfirmDialog from '../ui/ConfirmDialog';
-import DataTable, { DEFAULT_PER_PAGE } from './DataTable';
+import DataTable, { DEFAULT_PER_PAGE, TableFooter } from './DataTable';
 import DeleteGuardDialog from './DeleteGuardDialog';
 import FilterBar from './FilterBar';
 import IconButton from '../ui/IconButton';
 import MasterDataForm from './MasterDataForm';
 import Modal from '../ui/Modal';
 import PageHeader from './PageHeader';
+import RowActions from './RowActions';
 import SortableList from './SortableList';
 import useApiList from '../../hooks/useApiList';
+import useBreakpoint from '../../hooks/useBreakpoint';
 import useForm from '../../hooks/useForm';
 import useLingering from '../../hooks/useLingering';
 import useUnsavedChanges from '../../hooks/useUnsavedChanges';
@@ -31,6 +34,57 @@ const PARAM_TYPE = {
   multiselect: 'csv',
   toggle: 'string',
 };
+
+/** The values a toggle filter can hold (§5.6). */
+const TOGGLE_VALUES = new Set(['true', 'false']);
+
+/**
+ * The list's parameters as the screen may act on them (QA-59).
+ *
+ * The URL is somebody's to type, and a value no control can show is no
+ * filter: `?category=bogus&showOnHome=maybe` drew "Category: bogus" and "Home
+ * page: Not on the home page" chips over selects reading "All categories" and
+ * "Anywhere", and a list narrowed to nothing by the one the API did read. A
+ * sort that is not a column is the default sort, and an `order` that is not a
+ * direction is the default direction — `?order=desc` of a drag list used to
+ * turn it upside down and every move into its opposite.
+ *
+ * @param {object} params what the URL holds
+ * @param {{filters?: Array<object>, sortKeys?: Array<string>, defaults?: object}} spec
+ * @returns {object} the params, with what cannot be honoured left out
+ */
+export function sanitiseParams(params, { filters = [], sortKeys = [], defaults = {} } = {}) {
+  const clean = { ...params };
+
+  for (const filter of filters) {
+    const value = clean[filter.key];
+    if (value === undefined || value === null || value === '') continue;
+
+    if (filter.type === 'toggle') {
+      if (!TOGGLE_VALUES.has(String(value))) clean[filter.key] = undefined;
+      continue;
+    }
+
+    const known = Array.isArray(filter.options)
+      ? new Set(filter.options.map((option) => String(option.value)))
+      : null;
+    if (!known) continue;
+
+    if (filter.type === 'select' && !known.has(String(value))) clean[filter.key] = undefined;
+    if (filter.type === 'multiselect' && Array.isArray(value)) {
+      const kept = value.filter((entry) => known.has(String(entry)));
+      clean[filter.key] = kept.length > 0 ? kept : undefined;
+    }
+  }
+
+  if (sortKeys.length > 0 && !sortKeys.includes(clean.sort)) {
+    clean.sort = defaults.sort;
+    clean.order = defaults.order;
+  }
+  if (clean.order !== 'asc' && clean.order !== 'desc') clean.order = defaults.order;
+
+  return clean;
+}
 
 /** `{ key: type }` for `useApiList`, derived from the filters a config declares. */
 function paramKeysOf(filters = [], extra = {}) {
@@ -84,20 +138,45 @@ export function useMasterDataCrud(config) {
 
   const paramKeys = useMemo(() => paramKeysOf(filters, extraParamKeys), [filters, extraParamKeys]);
 
-  const list = useApiList((params, opts) => service.list(params, opts), {
+  // The orders a request may name: the sortable columns, and the default one.
+  const sortKeys = useMemo(
+    () => [
+      ...new Set([
+        defaultSort.field,
+        ...columns.filter((column) => column.sortable).map((column) => column.key),
+      ]),
+    ],
+    [columns, defaultSort.field]
+  );
+  const sanitise = useCallback(
+    (params) => sanitiseParams(params, { filters, sortKeys, defaults }),
+    [filters, sortKeys, defaults]
+  );
+
+  const list = useApiList((params, opts) => service.list(sanitise(params), opts), {
     syncToUrl: true,
     paramKeys,
     defaults,
   });
+
+  const view = useMemo(() => sanitise(list.params), [sanitise, list.params]);
 
   // An optimistic toggle writes here first; a failed call takes it back out.
   // Keeping it beside the fetched rows means a switch answers instantly without
   // the whole table reloading behind it (§8.2).
   const [overrides, setOverrides] = useState({});
   const [busyIds, setBusyIds] = useState([]);
+  // The switches whose own answer is still on its way, read when the rows are
+  // replaced: a re-read that lands first must not put their old value back.
+  const inFlight = useRef(new Set());
 
   useEffect(() => {
-    setOverrides({});
+    setOverrides((current) => {
+      const kept = Object.fromEntries(
+        Object.entries(current).filter(([id]) => inFlight.current.has(id))
+      );
+      return Object.keys(kept).length === Object.keys(current).length ? current : kept;
+    });
   }, [list.items]);
 
   const rows = useMemo(
@@ -112,11 +191,14 @@ export function useMasterDataCrud(config) {
    * Flips one field of one record, showing the new value at once and putting
    * the old one back if the API disagrees.
    */
+  const { refetch } = list;
+
   const patchField = useCallback(
     async (row, field, value) => {
       const id = String(row.id);
       setOverrides((current) => ({ ...current, [id]: { ...current[id], [field]: value } }));
       setBusyIds((current) => [...current, id]);
+      inFlight.current.add(id);
 
       try {
         await service.patch(row.id, { [field]: value });
@@ -124,6 +206,10 @@ export function useMasterDataCrud(config) {
         // The switch moved before the request went out; this is the receipt
         // that it landed, in the same words every other list uses (§8.2).
         toast.success(TOASTS.flagged(`“${labelOf(row, columns)}”`, field, value));
+        // The list is read again: a FAQ switched off under "Status: Active"
+        // stayed in that list, unticked, and the count above it did not move
+        // (QA-59). The new value stays on screen until the answer lands.
+        refetch();
       } catch (thrown) {
         setOverrides((current) => {
           const { [id]: _reverted, ...rest } = current;
@@ -131,14 +217,16 @@ export function useMasterDataCrud(config) {
         });
         toast.error(firstFieldMessage(thrown, 'The change could not be saved.'));
       } finally {
+        inFlight.current.delete(id);
         setBusyIds((current) => current.filter((entry) => entry !== id));
       }
     },
-    [service, toast, onMutated, collectionKey, columns]
+    [service, toast, onMutated, collectionKey, columns, refetch]
   );
 
   return {
     ...list,
+    view,
     rows,
     busyIds,
     patchField,
@@ -235,6 +323,7 @@ export default function MasterDataPage({ config }) {
     title,
     subtitle,
     singular,
+    plural = String(config.title ?? '').toLowerCase(),
     service,
     columns = [],
     filters = [],
@@ -269,6 +358,7 @@ export default function MasterDataPage({ config }) {
   } = config;
 
   const toast = useToast();
+  const { isMobile } = useBreakpoint();
   const crud = useMasterDataCrud(config);
   const {
     rows,
@@ -276,7 +366,7 @@ export default function MasterDataPage({ config }) {
     loading,
     error,
     refetch,
-    params,
+    view: params,
     busyIds,
     patchField,
     setFilters,
@@ -401,6 +491,14 @@ export default function MasterDataPage({ config }) {
     // may click again — and with `editing` gone, a submit would create a copy
     // of the record just saved.
     if (!editing) return false;
+    // "Save changes" on a record nobody changed wrote it anyway and said
+    // "saved" (QA-59); the API wrote nothing, the list re-read itself for
+    // nothing. It says so instead, and the dialog closes as a save would.
+    if (editing.id && !form.dirty) {
+      toast.info(FORMS.noChanges);
+      closeForm();
+      return true;
+    }
     const saved = await form.submit();
     if (!saved) return false;
     // The redirect this record's `seo` asks for, against the slug the API
@@ -448,6 +546,19 @@ export default function MasterDataPage({ config }) {
     await persist();
   };
 
+  /**
+   * After a delete: the previous page when this one has just been emptied,
+   * rather than an empty table saying "No FAQs yet" over a list that still has
+   * FAQs on the page before it (QA-56's rule for pages, QA-59).
+   *
+   * @param {number} removed how many of the rows on screen went
+   */
+  const afterRemoval = (removed) => {
+    const page = Number(params.page) || 1;
+    if (page > 1 && removed >= rows.length) setPage(page - 1);
+    else refetch();
+  };
+
   const confirmDelete = async () => {
     if (!deleting) return;
     setDeletingBusy(true);
@@ -457,16 +568,21 @@ export default function MasterDataPage({ config }) {
       setDeleting(null);
       setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
       onMutated?.(collectionKey);
-      refetch();
+      afterRemoval(1);
     } catch (thrown) {
       // 409 is not a failure to report as one: it is a list of what to unlink
       // first, and the dialog is where that list belongs (D88).
       if (usageGuard && thrown?.status === 409) {
+        const usedBy = thrown.data?.usedBy ?? [];
+        const label = labelOf(deleting, columns);
         setDeleting(null);
         setGuard({
-          title: labelOf(deleting, columns),
-          message: thrown.message,
-          usedBy: thrown.data?.usedBy ?? [],
+          title: label,
+          // "This item is in use." named nothing; the dialog names the record.
+          // A refusal with no usages is a protected record, and the API's
+          // sentence is the reason (a built-in segment).
+          message: usedBy.length > 0 ? `“${label}” is still used by:` : thrown.message,
+          usedBy,
         });
       } else {
         toast.error(firstFieldMessage(thrown, 'The record could not be deleted.'));
@@ -484,13 +600,40 @@ export default function MasterDataPage({ config }) {
     if (!service.bulk) return;
     setBulkBusy(true);
     try {
-      const { message } = await service.bulk({ ids, action });
-      toast.success(message || TOASTS.updatedCount(ids.length, 'record'));
+      const { data, message } = await service.bulk({ ids, action });
+      // "0 FAQs updated." over a selection that was already inactive read like
+      // a failure (QA-59): the API changed nothing because nothing needed it.
+      if (action !== 'delete' && data?.affected === 0) {
+        toast.info(
+          ALREADY[action]
+            ? `Nothing to change: the selected ${plural} were already ${ALREADY[action]}.`
+            : 'Nothing to change.'
+        );
+      } else {
+        toast.success(message || TOASTS.updatedCount(ids.length, 'record'));
+      }
       setSelectedIds([]);
       onMutated?.(collectionKey);
-      refetch();
+      if (action === 'delete') afterRemoval(ids.length);
+      else refetch();
     } catch (thrown) {
-      toast.error(firstFieldMessage(thrown, 'The bulk action could not be applied.'));
+      // A bulk delete refused over what still points at the selection is the
+      // single delete's 409, several times over: it belongs in the same dialog,
+      // naming each record and what holds it. It was a toast reading "Used by
+      // 1 page" over three selected FAQs (QA-59). The selection stays, so the
+      // ones in the way can be unticked and the rest deleted.
+      if (usageGuard && action === 'delete' && thrown?.status === 409) {
+        const refused = Array.isArray(thrown.data?.refused) ? thrown.data.refused : [];
+        setGuard({
+          title: `${ids.length} ${ids.length === 1 ? singular : plural}`,
+          message: thrown.message,
+          usedBy: thrown.data?.usedBy ?? [],
+          refused,
+          hint: 'Untick these to delete the rest, or remove each reference first.',
+        });
+      } else {
+        toast.error(firstFieldMessage(thrown, 'The bulk action could not be applied.'));
+      }
     } finally {
       setBulkBusy(false);
     }
@@ -506,6 +649,34 @@ export default function MasterDataPage({ config }) {
   const startCreate = useCallback(() => (onCreate ? onCreate() : setEditing({})), [onCreate]);
   const startEdit = useCallback((row) => (onEdit ? onEdit(row) : setEditing(row)), [onEdit]);
 
+  /* ---------------- reordering ---------------- */
+
+  // The order the editor left the rows in, while the moves that made it are
+  // being saved — keyed to the view it was made in, so a filter changed
+  // meanwhile shows its own rows and not these.
+  const viewKey = JSON.stringify(params);
+  const [pendingOrder, setPendingOrder] = useState(null);
+  const moveQueue = useRef(Promise.resolve());
+  const movesLeft = useRef(0);
+  const queueGeneration = useRef(0);
+
+  const orderedRows = pendingOrder && pendingOrder.key === viewKey ? pendingOrder.rows : rows;
+
+  // A move not yet written goes with the tab: closing or reloading it while
+  // one is on its way asks first. Leaving for another screen loses nothing —
+  // the moves already made are written after the screen has gone.
+  const movesPending = pendingOrder !== null;
+  useEffect(() => {
+    if (!movesPending) return undefined;
+    const warn = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+      return '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [movesPending]);
+
   /**
    * Writes one new position.
    *
@@ -518,28 +689,58 @@ export default function MasterDataPage({ config }) {
    * makes a drag correct while the table is filtered and on page two alike: the
    * rows on screen are a slice of the collection, and the records this editor
    * cannot see keep their relative positions (NEW-23).
+   *
+   * Since QA-59 the move also names that row — `before` or `after` its id —
+   * and three things follow from it:
+   *
+   * - **The row moves at once.** The list shows the new order before the API
+   *   answers. It used to snap back and jump a moment later, and the focus
+   *   that followed a keyboard move landed on the neighbour still sitting in
+   *   the row's old place — so a second Alt+↓ moved the neighbour back up.
+   * - **Moves are written one at a time, in the order they were made.** A
+   *   second move sent before the list had re-read carried the numbers of the
+   *   first; three quick Alt+↓ moved three different FAQs.
+   * - **A tie is no longer ambiguous.** "Before the one holding 0" was before
+   *   every record holding 0; "before that one" is exactly one place.
+   *
+   * A move that fails drops the ones queued behind it — they were made on top
+   * of a list that no longer holds — and the list is read again.
    */
-  const reorder = async (next, move) => {
+  const reorder = (next, move) => {
+    const shownRows = orderedRows;
     const row = move?.item;
-    const neighbour = move ? rows[move.to] : null;
+    const neighbour = move ? shownRows[move.to] : null;
     if (!row || !neighbour) return;
 
+    const up = move.to < move.from;
     const anchor = Number(neighbour.order);
     const offset = ((meta?.page ?? 1) - 1) * (meta?.perPage ?? DEFAULT_PER_PAGE);
-    const order = Number.isFinite(anchor)
-      ? move.to < move.from
-        ? anchor
-        : anchor + 1
-      : offset + move.to + 1;
+    const order = Number.isFinite(anchor) ? (up ? anchor : anchor + 1) : offset + move.to + 1;
+    const body = { order, [up ? 'before' : 'after']: neighbour.id };
 
-    try {
-      await service.patch(row.id, { order });
-      onMutated?.(collectionKey);
-      refetch();
-    } catch (thrown) {
-      toast.error(firstFieldMessage(thrown, 'The new order could not be saved.'));
-      refetch();
-    }
+    setPendingOrder({ key: viewKey, rows: next });
+
+    const generation = queueGeneration.current;
+    movesLeft.current += 1;
+
+    moveQueue.current = moveQueue.current
+      .then(async () => {
+        if (generation !== queueGeneration.current) return;
+        try {
+          await service.patch(row.id, body);
+        } catch (thrown) {
+          queueGeneration.current += 1;
+          toast.error(firstFieldMessage(thrown, 'The new order could not be saved.'));
+        }
+      })
+      .then(async () => {
+        movesLeft.current -= 1;
+        if (movesLeft.current > 0) return;
+        onMutated?.(collectionKey);
+        await refetch();
+        // A move made while the list was being read keeps its own order.
+        if (movesLeft.current === 0) setPendingOrder(null);
+      });
   };
 
   /* ---------------- table columns ---------------- */
@@ -652,17 +853,44 @@ export default function MasterDataPage({ config }) {
     [canEdit, canDelete, columns, extraRowActions, startEdit]
   );
 
+  // What a row's checkbox is called: "Select How much home loan am I eligible
+  // for?", not "Select row 9" (QA-59).
+  const rowLabel = useCallback((row) => String(labelOf(row, columns)), [columns]);
+
   // Reordering replaces the table only while the list is in the order it is
   // reordering: dragging a row of a list sorted by name would be writing
-  // positions nobody can see.
-  const reordering = orderable && params.sort === 'order' && !loading && !error && rows.length > 0;
+  // positions nobody can see. Upside down (`?order=desc`) is not that order
+  // either — "up" there is down in the collection, and every move wrote its
+  // opposite (QA-59) — so it stays a table, sorted as asked.
+  const reordering =
+    orderable &&
+    params.sort === 'order' &&
+    params.order !== 'desc' &&
+    !loading &&
+    !error &&
+    rows.length > 0;
 
-  // What "back to the table" sorts by: the first order the columns offer that
-  // is not the one the drag list is already showing.
+  // What "Table view" sorts by: the first order the columns offer that is not
+  // the one the drag list is already showing.
   const tableSort = useMemo(() => {
     const column = columns.find((entry) => entry.sortable && entry.key !== 'order');
     return column ? { sort: column.key, order: 'asc' } : null;
   }, [columns]);
+
+  // The way into the drag list from the table: on a phone the table is cards,
+  // with no "Order" header to press, and after "Table view" there was no way
+  // back but the address bar (QA-59).
+  const reorderButton =
+    orderable && canEdit && !reordering ? (
+      <Button
+        variant="outline"
+        size="sm"
+        icon={<Icon icon="mdi:swap-vertical" width="18" height="18" />}
+        onClick={() => setParams({ sort: 'order', order: 'asc' })}
+      >
+        {TABLES.reorder}
+      </Button>
+    ) : null;
 
   // The group headings belong to one sort — the rows have to arrive grouped for
   // "a new key" to mean "a new group" (§6 of prompt 15).
@@ -670,25 +898,62 @@ export default function MasterDataPage({ config }) {
 
   const saving = form.submitting || checkingSave;
 
+  /**
+   * Ctrl/Cmd+S saves the form (QA-59), as it saves every full-page form since
+   * QA-55: it opened the browser's "Save page as" over the dialog. Once per
+   * press — a held key repeats — and not while a save is already running or a
+   * confirm is up over the form, nor from a dialog of the form's own (a link
+   * being added to the answer).
+   *
+   * A window listener, like the article form's: it hears the key after React
+   * has rendered what the key did, so an answer the editor hands over on the
+   * same keystroke is part of the save.
+   */
+  const saveRef = useRef(save);
+  saveRef.current = save;
+  const shortcutBlocked = useRef(false);
+  shortcutBlocked.current = saving || confirmDiscard || Boolean(saveWarning);
+  const formOpen = Boolean(editing);
+
+  useEffect(() => {
+    if (!formOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key !== 's' && event.key !== 'S') return;
+      if (!event.ctrlKey && !event.metaKey) return;
+      if (event.altKey || event.shiftKey) return;
+      const dialog = event.target?.closest?.('[role="dialog"]');
+      if (dialog && !dialog.querySelector('[data-master-data-form]')) return;
+      event.preventDefault();
+      if (event.repeat || shortcutBlocked.current) return;
+      saveRef.current();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [formOpen]);
+
   const activeFilterCount = filters.reduce(
     (count, filter) => count + (isFilterSet(params, filter) ? 1 : 0),
     0
   );
 
   const formBody = (
-    <MasterDataForm
-      fields={formFields}
-      form={form}
-      disabled={form.submitting}
-      checkSlug={service.checkSlug}
-      excludeId={shown?.id}
-      slugBase={config.slugBase}
-      seoPanel={seoPanel}
-      seoEntityType={seoEntityType}
-      seoRecord={shown}
-    >
-      {typeof formFooter === 'function' ? formFooter(shown) : formFooter}
-    </MasterDataForm>
+    // The mark Ctrl/Cmd+S looks for: a key pressed in a dialog that does not
+    // hold it is that dialog's own (QA-59).
+    <div data-master-data-form>
+      <MasterDataForm
+        fields={formFields}
+        form={form}
+        disabled={form.submitting}
+        checkSlug={service.checkSlug}
+        excludeId={shown?.id}
+        slugBase={config.slugBase}
+        seoPanel={seoPanel}
+        seoEntityType={seoEntityType}
+        seoRecord={shown}
+      >
+        {typeof formFooter === 'function' ? formFooter(shown) : formFooter}
+      </MasterDataForm>
+    </div>
   );
 
   /**
@@ -766,8 +1031,12 @@ export default function MasterDataPage({ config }) {
             activeCount={activeFilterCount}
             onChange={setFilters}
             onReset={resetFilters}
-          />
+          >
+            {reorderButton}
+          </FilterBar>
         </div>
+      ) : reorderButton ? (
+        <div className={styles.viewBar}>{reorderButton}</div>
       ) : null}
 
       {reordering ? (
@@ -775,7 +1044,7 @@ export default function MasterDataPage({ config }) {
           <div className={styles.reorderHead}>
             <p className={styles.reorderHint}>
               {reorderHint ??
-                'Drag a row, or focus it and press Alt + ↑ / ↓, to change the order they appear in.'}
+                'Drag a row by its handle, or use its arrows, to change the order they appear in. With the keyboard: focus a row and press Alt + ↑ / ↓.'}
             </p>
             {/* The drag list replaces the table, headers and all, so it owes
                 the editor the way back that a column header would have been. */}
@@ -783,24 +1052,48 @@ export default function MasterDataPage({ config }) {
               <Button
                 variant="outline"
                 size="sm"
+                className={styles.viewButton}
                 icon={<Icon icon="mdi:table" width="18" height="18" />}
                 onClick={() => setParams(tableSort)}
               >
-                Back to the table
+                {TABLES.tableView}
               </Button>
             ) : null}
           </div>
           <SortableList
-            items={rows}
+            items={orderedRows}
             disabled={!canEdit}
             label={`${title}, in order`}
             getLabel={(row) => labelOf(row, columns)}
             onReorder={reorder}
             renderItem={(row) => (
-              <span className={styles.reorderRow}>
-                {renderOrderItem ? renderOrderItem(row) : labelOf(row, columns)}
+              // The screen this list is the first view of used to offer no way
+              // to edit or delete a record from it (QA-59): the row carries the
+              // table's own actions, and says when it is not live.
+              <span className={styles.reorderItem}>
+                <span className={styles.reorderRow}>
+                  {renderOrderItem ? renderOrderItem(row) : labelOf(row, columns)}
+                </span>
+                {activeToggle && row.isActive === false ? (
+                  <Chip tone="neutral" className={styles.reorderChip}>
+                    {TABLES.inactive}
+                  </Chip>
+                ) : null}
+                <span className={styles.reorderActions}>
+                  <RowActions
+                    actions={rowActions(row)}
+                    compact={isMobile}
+                    menuLabel={`Actions for ${labelOf(row, columns)}`}
+                  />
+                </span>
               </span>
             )}
+          />
+          <TableFooter
+            meta={meta}
+            rowCount={orderedRows.length}
+            onPageChange={setPage}
+            onPerPageChange={(perPage) => setParams({ perPage })}
           />
         </div>
       ) : (
@@ -820,35 +1113,52 @@ export default function MasterDataPage({ config }) {
           onSelectionChange={setSelectedIds}
           bulkActions={bulkActions}
           bulkNounOne={singular}
-          bulkNounMany={title.toLowerCase()}
+          bulkNounMany={plural}
           bulkBusy={bulkBusy}
           onBulkAction={runBulk}
           rowActions={rowActions}
+          rowLabel={rowLabel}
           groupBy={grouping}
           caption={title}
-          emptyState={{
-            // A filtered list is not an empty collection: "No localities yet"
-            // over "No records match the current filters" told an operator two
-            // contradictory things at once (prompt 43 §4.1).
-            title:
-              activeFilterCount > 0
-                ? `No ${title.toLowerCase()} match`
-                : (emptyState?.title ?? `No ${title.toLowerCase()} yet`),
-            text:
-              activeFilterCount > 0
-                ? TABLES.emptyFiltered
-                : (emptyState?.text ?? `Add the first ${singular} to get started.`),
-            // §8.2: "Add your first …", and only for somebody who may
-            // (`canEdit` is §7's `can(area, 'create')`, resolved by the screen).
-            action:
-              activeFilterCount > 0 ? (
-                <Button variant="outline" onClick={resetFilters}>
-                  {TABLES.resetFilters}
-                </Button>
-              ) : canEdit ? (
-                <Button onClick={startCreate}>Add your first {singular}</Button>
-              ) : null,
-          }}
+          emptyState={
+            (Number(params.page) || 1) > 1 && (meta?.total ?? 0) > 0
+              ? {
+                  // `?page=9` of a one-page list, or the last page emptied
+                  // under someone else's delete: there are records, just not
+                  // here — "No FAQs yet · Add your first FAQ" said otherwise
+                  // (QA-56's rule for pages, QA-59).
+                  title: TABLES.emptyPage,
+                  text: TABLES.emptyPageText,
+                  action: (
+                    <Button variant="outline" onClick={() => setPage(1)}>
+                      {TABLES.firstPage}
+                    </Button>
+                  ),
+                }
+              : {
+                  // A filtered list is not an empty collection: "No localities
+                  // yet" over "No records match the current filters" told an
+                  // operator two contradictory things at once (prompt 43 §4.1).
+                  title:
+                    activeFilterCount > 0
+                      ? `No ${plural} match`
+                      : (emptyState?.title ?? `No ${plural} yet`),
+                  text:
+                    activeFilterCount > 0
+                      ? TABLES.emptyFiltered
+                      : (emptyState?.text ?? `Add the first ${singular} to get started.`),
+                  // §8.2: "Add your first …", and only for somebody who may
+                  // (`canEdit` is §7's `can(area, 'create')`, resolved by the screen).
+                  action:
+                    activeFilterCount > 0 ? (
+                      <Button variant="outline" onClick={resetFilters}>
+                        {TABLES.resetFilters}
+                      </Button>
+                    ) : canEdit ? (
+                      <Button onClick={startCreate}>Add your first {singular}</Button>
+                    ) : null,
+                }
+          }
         />
       )}
 
@@ -909,6 +1219,8 @@ export default function MasterDataPage({ config }) {
         title={shownGuard?.title}
         message={shownGuard?.message}
         usedBy={shownGuard?.usedBy ?? []}
+        refused={shownGuard?.refused ?? []}
+        hint={shownGuard?.hint}
         onClose={() => setGuard(null)}
         onExited={releaseGuard}
       />
@@ -917,6 +1229,14 @@ export default function MasterDataPage({ config }) {
     </>
   );
 }
+
+/** What a bulk action's records already were when it changed none of them. */
+const ALREADY = {
+  activate: 'active',
+  deactivate: 'inactive',
+  feature: 'featured',
+  unfeature: 'not featured',
+};
 
 /** What `Escape` on a dirty dialog asks before throwing the edits away. */
 const DISCARD_MESSAGE = 'The changes you made to this record have not been saved.';

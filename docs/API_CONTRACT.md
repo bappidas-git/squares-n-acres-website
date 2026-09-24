@@ -64,8 +64,8 @@ Query params `page` (1-based, default 1), `perPage` (default 12 public / 20 admi
 #### Reordering — `PATCH /admin/<resource>/:id { order }` (prompt 17, D98)
 
 Collections with an `order` field (FAQs, testimonials, team members, partners, localities,
-property types, amenities, badges, banks, pages, header menus, article categories) are
-reordered with **one write per move**: a `PATCH` on the record that moved, carrying the position it landed on.
+segments, property types, amenities, badges, developers, banks, article categories, pages, header
+menus) are reordered with **one write per move**: a `PATCH` on the record that moved, carrying the position it landed on.
 
 The client reads that position off the row the moved record was dropped on, in the list as it
 is on screen — which may be filtered, sorted and paginated:
@@ -76,8 +76,17 @@ is on screen — which may be filtered, sorted and paginated:
 | down (after the row it landed on) | `neighbour.order + 1` |
 
 The API then settles the collection: it sorts by `order`, breaks a tie in favour of the record
-whose `updatedAt` is newest — the one this `PATCH` just touched — and renumbers everything
-`1..n`. The response is the moved record with its settled `order`.
+this `PATCH` just touched and then in the order the admin list reads (the resource's own `order`
+sort — `order,question` for FAQs), and renumbers everything `1..n`. The response is the moved
+record with its settled `order`. A position equal to the record's own still settles (QA-59).
+
+**The neighbour by id (QA-59).** The body may also name the row the record was dropped next to —
+`{ order, before: id }` moving up, `{ order, after: id }` moving down. When it names another record
+of the collection it wins over the number: the collection is made dense in the order it reads, the
+record is placed immediately before or after that one, and everything is renumbered. The number
+alone was ambiguous once two records shared it and wrong once it was stale (a second move sent
+before the list had re-read); the id is neither. An anchor that names nothing, or the record
+itself, is ignored. `before`/`after` are never stored.
 
 Two consequences worth stating, because they are the point of the rule:
 
@@ -88,9 +97,22 @@ Two consequences worth stating, because they are the point of the rule:
 - **`order` is always a dense `1..n` sequence** after any reorder. `GET /admin/<resource>?perPage=all&sort=order`
   is the check.
 
-A `PATCH` that does not mention `order`, and a `POST`/`PUT` that does, leave the rest of the
-collection alone; only an `order` `PATCH` renumbers. Laravel implements the same rule inside
-the transaction that writes the moved row.
+A `PATCH` that does not mention `order` leaves the rest of the collection alone. **A `POST`, and
+a `PUT` whose `order` differs from the stored one, settle the collection too (QA-59)** — in FAQs,
+testimonials, team members, partners, localities, segments, property types, amenities, badges,
+developers, banks and article categories. The written record is **placed**: the others keep the
+order they read in, made dense `1..n-1`; the record takes the position its `order` names, clamped
+to `1..n`; the ones from there on move down one. Created at 0 (every admin form's default) it is
+first; saved at 3 it is third, whether it moved up or down; saved at 99 it is last, and the
+response says `n`. So no two records share a number, the admin's Order column reads as positions,
+and the public lists never fall back to their secondary sort inside a tie. A `PUT` that keeps the
+stored `order` moves nothing. (A reorder `PATCH` is not placed this way: its number is read off
+the list as it was before the move, so `neighbour.order + 1` has to tie with the next row to land
+after the neighbour. A form's number is a position in the list as it will read — placed by the
+tie, a record saved from 1 to 3 came second, because leaving 1 had moved the others up.) Pages
+and header menus are not among them: a `POST`/`PUT` leaves those collections alone, and only an
+`order` `PATCH` renumbers them. Laravel implements these rules inside the transaction that writes
+the record.
 
 ### 5.9 Slugs
 
@@ -958,6 +980,16 @@ publicly.
 ### `Faq`, `Testimonial`, `TeamMember`, `Partner`
 
 The fields of §6.9, unchanged.
+
+**FAQ writes (QA-59).** `question` is trimmed, and one its category already asks — ignoring
+case, spacing and a final "?" — is 422 on `question`. An `answer` with no text once the markup is
+stripped (an empty list, an empty heading) is 422 on `answer` ("The answer field is required."),
+and so is one carrying a `<script>`, an inline event handler or a `javascript:` link.
+`propertyTypeId` must name a property type (422). `order` is 0–100 000 and a position (§5.8). `q`
+searches the answer's text, not its markup. A property page lists the active FAQs tied to its
+`propertyTypeId` after its own (`GET /faqs?propertyTypeId=`). A bulk delete refused over the
+delete guard names every record in the way in `data.refused[] { id, label, reason, usedBy[] }`.
+The rules are in `docs/backend-notes/05_business_rules.md` → "FAQs".
 
 ### `Page`
 

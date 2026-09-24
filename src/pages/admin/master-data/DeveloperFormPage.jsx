@@ -42,7 +42,7 @@ import { useMasterData } from '../../../contexts/MasterDataContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './DeveloperFormPage.module.css';
-import { TOASTS } from '../../../config/adminCopy';
+import { FORMS, TOASTS } from '../../../config/adminCopy';
 
 const developerService = adminCrud(developers);
 
@@ -567,7 +567,9 @@ export default function DeveloperFormPage() {
                 type: 'number',
                 label: 'Order',
                 min: 0,
-                hint: 'Lower comes first. The list sorts by this, and drag-and-drop writes it.',
+                // A position (QA-59): the API places the record there, moves
+                // the rest, and the form reads the settled number back.
+                hint: `${FORMS.orderHint} Dragging a row in the list changes it too.`,
               }}
               form={form}
               disabled={form.submitting}
