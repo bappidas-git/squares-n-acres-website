@@ -9,7 +9,15 @@ import {
 import userEvent from '@testing-library/user-event';
 
 import ApiError from '../../../services/apiError';
-import MasterDataPage, { labelsOf, rangeErrors, sanitiseParams, trimText } from '../MasterDataPage';
+import MasterDataPage, {
+  keysTogether,
+  labelsOf,
+  rangeErrors,
+  sanitiseParams,
+  tidyPhone,
+  tidyPhones,
+  trimText,
+} from '../MasterDataPage';
 import ToastProvider from '../../common/ToastProvider';
 import renderWith from '../../../test-utils';
 
@@ -138,7 +146,7 @@ describe('MasterDataPage', () => {
       });
     });
 
-    it('labels only the keys that are not words already', () => {
+    it('labels only the keys that do not read as their label', () => {
       expect(
         labelsOf([
           { name: 'name', label: 'Name' },
@@ -151,6 +159,34 @@ describe('MasterDataPage', () => {
         'socialLinks.website': 'website address',
         'socialLinks.linkedin': 'LinkedIn address',
       });
+    });
+
+    it('names a key that is a word by its label when the two differ (QA-61)', () => {
+      expect(
+        labelsOf([
+          { name: 'message', type: 'textarea', label: 'Quote' },
+          { name: 'whatsapp', type: 'phone', label: 'WhatsApp' },
+          { name: 'email', type: 'email', label: 'E-mail' },
+          { name: 'designation', type: 'text', label: 'Designation' },
+        ])
+      ).toEqual({ message: 'quote', whatsapp: 'WhatsApp', email: 'e-mail' });
+    });
+
+    it('says "Quote" under the Quote box of an empty testimonial (QA-61)', async () => {
+      const service = fakeService();
+      render({
+        ...baseConfig(service),
+        singular: 'testimonial',
+        formFields: [{ name: 'message', type: 'textarea', label: 'Quote', required: true }],
+        schema: { message: { type: 'string', required: true } },
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add testimonial' }));
+      const dialog = await screen.findByRole('dialog');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Create testimonial' }));
+
+      expect(await within(dialog).findByText('The quote field is required.')).toBeInTheDocument();
+      expect(service.create).not.toHaveBeenCalled();
     });
   });
 
@@ -611,6 +647,89 @@ describe('MasterDataPage', () => {
     await waitFor(() => expect(service.list).toHaveBeenCalledTimes(2));
   });
 
+  describe('a record deleted elsewhere (QA-61)', () => {
+    const gone = () =>
+      jest.fn().mockRejectedValue(new ApiError({ status: 404, message: 'Not found' }));
+
+    it('treats a delete that finds nothing as done, and reads the list again', async () => {
+      const service = fakeService({ remove: gone() });
+      render(baseConfig(service));
+      await screen.findByText('Whitefield');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Delete Whitefield' }));
+      await userEvent.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' })
+      );
+
+      expect(await screen.findByText('“Whitefield” had already been deleted.')).toBeInTheDocument();
+      await waitFor(() => expect(service.list).toHaveBeenCalledTimes(2));
+      expect(screen.queryByText('Not found')).toBeNull();
+    });
+
+    it('closes the dialog of a save that finds nothing to save into', async () => {
+      const service = fakeService({ update: gone() });
+      render(baseConfig(service));
+      await screen.findByText('Whitefield');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Edit Whitefield' }));
+      const dialog = await screen.findByRole('dialog');
+      await userEvent.type(within(dialog).getByLabelText(/^Name/), ' East');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+      expect(
+        await screen.findByText(
+          'This locality is no longer here — it was deleted elsewhere. The list has been refreshed.'
+        )
+      ).toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      await waitFor(() => expect(service.list).toHaveBeenCalledTimes(2));
+    });
+
+    it('says so when a switch finds nothing to switch, and reads the list again', async () => {
+      const service = fakeService({ patch: gone() });
+      render(baseConfig(service));
+      await screen.findByText('Whitefield');
+
+      await userEvent.click(screen.getByRole('switch', { name: 'Whitefield is active' }));
+
+      expect(await screen.findByText(/“Whitefield” is no longer here/)).toBeInTheDocument();
+      await waitFor(() => expect(service.list).toHaveBeenCalledTimes(2));
+    });
+  });
+
+  it('puts the row actions in a menu when the screen asks for one (QA-61)', async () => {
+    const service = fakeService();
+    render({ ...baseConfig(service), rowActionsMenu: true });
+    await screen.findByText('Whitefield');
+
+    expect(screen.queryByRole('button', { name: 'Edit Whitefield' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for Whitefield' }));
+    expect(await screen.findByRole('menuitem', { name: 'Edit Whitefield' })).toBeInTheDocument();
+  });
+
+  it('says what to do instead when a screen has its own answer to "still in use" (QA-61)', async () => {
+    const service = fakeService({
+      remove: jest.fn().mockRejectedValue(
+        new ApiError({
+          status: 409,
+          message: 'This item is in use.',
+          data: { usedBy: [{ type: 'jobApplication', id: 3, title: 'Vivek Nair' }] },
+        })
+      ),
+    });
+    render({ ...baseConfig(service), guardHint: { one: 'Switch it off instead.' } });
+    await screen.findByText('Whitefield');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete Whitefield' }));
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' })
+    );
+
+    const guard = await screen.findByRole('dialog', { name: 'Still in use' });
+    expect(within(guard).getByText('Switch it off instead.')).toBeInTheDocument();
+    expect(within(guard).getByText('Application')).toBeInTheDocument();
+  });
+
   describe('parameters no control can show (QA-59)', () => {
     const filters = [
       { key: 'zone', type: 'select', label: 'Zone', options: [{ value: 'east', label: 'East' }] },
@@ -726,6 +845,20 @@ describe('MasterDataPage', () => {
 
       expect(await screen.findByText('Down.')).toBeInTheDocument();
       await waitFor(() => expect(shownOrder()).toEqual(['First', 'Second', 'Third']));
+    });
+
+    it('says a moved row was deleted elsewhere, and reads the list again (QA-61)', async () => {
+      const service = orderedService({
+        patch: jest.fn().mockRejectedValue(new ApiError({ status: 404, message: 'Not found' })),
+      });
+      render(orderedConfig(service));
+      await screen.findByRole('listitem', { name: /^First,/ });
+
+      fireEvent.keyDown(row('First'), { key: 'ArrowDown', altKey: true });
+
+      // It said "The new order could not be saved.", about a row that was gone.
+      expect(await screen.findByText(/“First” is no longer here/)).toBeInTheDocument();
+      await waitFor(() => expect(service.list).toHaveBeenCalledTimes(2));
     });
 
     it('keeps the focus on an arrow pressed from the keyboard', async () => {
@@ -1011,12 +1144,12 @@ describe('MasterDataPage — QA-60', () => {
     await settle();
     for (const text of ['Alpha', 'Beta', 'Gamma']) {
       await userEvent.click(within(dialog).getByRole('button', { name: 'Add item' }));
-      const boxes = within(dialog).getAllByLabelText(/^Items \d$/);
+      const boxes = within(dialog).getAllByLabelText(/^Item \d$/);
       fireEvent.change(boxes[boxes.length - 1], { target: { value: text } });
     }
     const values = () =>
       within(dialog)
-        .getAllByLabelText(/^Items \d$/)
+        .getAllByLabelText(/^Item \d$/)
         .map((box) => box.value);
     expect(values()).toEqual(['Alpha', 'Beta', 'Gamma']);
 
@@ -1034,6 +1167,68 @@ describe('MasterDataPage — QA-60', () => {
       altKey: true,
     });
     await waitFor(() => expect(values()).toEqual(['Beta', 'Gamma', 'Alpha']));
+  });
+
+  describe('phone numbers (QA-61)', () => {
+    it('keeps the ten digits of a number however it was typed', () => {
+      for (const typed of ['98450 12345', '+91 98450-12345', '919845012345', '098450 12345']) {
+        expect(tidyPhone(typed)).toBe('9845012345');
+      }
+      // A ten-digit mobile of the 91xxx series keeps its 91 (QA-53's rule).
+      expect(tidyPhone('91234 56780')).toBe('9123456780');
+      expect(tidyPhone('12345')).toBe('12345');
+      expect(tidyPhone(null)).toBeNull();
+    });
+
+    it('tidies the phone boxes of a form and nothing else', () => {
+      const fields = [
+        { name: 'phone', type: 'phone' },
+        { name: 'whatsapp', type: 'phone' },
+        { name: 'name', type: 'text' },
+      ];
+      expect(
+        tidyPhones({ phone: '98450 12345', whatsapp: null, name: '98450 12345' }, fields)
+      ).toEqual({ phone: '9845012345', whatsapp: null, name: '98450 12345' });
+      const untouched = { phone: '9845012345' };
+      expect(tidyPhones(untouched, fields)).toBe(untouched);
+    });
+
+    it('sends the ten digits a team member’s number is stored as', async () => {
+      const service = fakeService();
+      render({
+        ...baseConfig(service),
+        formFields: [
+          { name: 'name', type: 'text', label: 'Name', required: true },
+          { name: 'phone', type: 'phone', label: 'Phone' },
+        ],
+        schema: {
+          name: { type: 'string', required: true },
+          phone: { type: 'phone', nullable: true },
+        },
+      });
+      await screen.findByText('Whitefield');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add locality' }));
+      const dialog = await screen.findByRole('dialog');
+      await userEvent.type(within(dialog).getByLabelText(/^Name/), 'Priya');
+      // Room for the number as people write it: it was cut at ten characters.
+      // (Read off the box: the user-event this suite runs types past a cap.)
+      expect(within(dialog).getByLabelText('Phone')).toHaveAttribute('maxlength', '18');
+      await userEvent.type(within(dialog).getByLabelText('Phone'), '+91 98450 12345');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Create locality' }));
+
+      await waitFor(() =>
+        expect(service.create).toHaveBeenCalledWith(
+          expect.objectContaining({ phone: '9845012345' })
+        )
+      );
+    });
+  });
+
+  it('keeps a key combination on one line (QA-61)', () => {
+    expect(keysTogether('focus a row and press Alt + ↑ / ↓.')).toBe(
+      'focus a row and press Alt\u00a0+\u00a0↑\u00a0/\u00a0↓.'
+    );
   });
 
   describe('helpers', () => {

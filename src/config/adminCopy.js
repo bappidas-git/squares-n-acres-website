@@ -111,6 +111,8 @@ const FLAG_STATES = {
   isVerified: (on) => (on ? 'is now verified' : 'is no longer verified'),
   isTrending: (on) => (on ? 'is now trending' : 'is no longer trending'),
   showOnHome: (on) => (on ? 'is now on the home page' : 'is off the home page'),
+  // The team table's "About page" switch said "is on" / "is off" (QA-61).
+  showOnAbout: (on) => (on ? 'is now on the About page' : 'is off the About page'),
   isSample: (on) => (on ? 'is marked as a sample' : 'is no longer a sample'),
   default: (on) => (on ? 'is on' : 'is off'),
 };
@@ -155,6 +157,18 @@ const TOASTS = {
    * there is one.
    */
   failed: (message) => message,
+
+  /**
+   * A write to a record somebody else has deleted since the list was read — in
+   * another tab, or by another editor (QA-61). The API answers 404; "Not found"
+   * named nothing, and the list went on showing the record.
+   *
+   * `gone('“Aurelia Estates”')` → `'“Aurelia Estates” is no longer here — …'`.
+   */
+  gone: (entity) =>
+    `${entity} is no longer here — it was deleted elsewhere. The list has been refreshed.`,
+  /** `alreadyDeleted('“Aurelia Estates”')` — a delete that found nothing to delete. */
+  alreadyDeleted: (entity) => `${entity} had already been deleted.`,
 
   copyBlocked: 'Your browser did not allow copying. Select the text and copy it instead.',
   addressCopyBlocked: 'Your browser did not allow copying. Select the address and copy it instead.',

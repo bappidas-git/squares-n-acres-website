@@ -278,6 +278,11 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
       return (
         <PhoneField
           {...shared}
+          // Room for a number as people write it — "98450 12345", "+91
+          // 98450-12345" — which `MasterDataPage` tidies to the ten digits a
+          // record stores. Capped at ten, "98450 12345" was cut to "98450 1234"
+          // and refused (QA-61).
+          maxLength={18}
           value={value ?? ''}
           onBlur={onBlur}
           onChange={(event) => set(event.target.value || null)}
@@ -358,6 +363,7 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
           orderable={field.orderable}
           renderOption={field.renderOption}
           selectedRecords={field.selectedRecords}
+          resolveSelected={field.resolveSelected}
           value={value ?? (field.multiple === false ? null : [])}
           onChange={set}
         />
@@ -486,6 +492,8 @@ function StringListField({
     String(label ?? 'item')
       .replace(/s$/i, '')
       .toLowerCase();
+  // Each row is one of them: "Responsibility 2", not "Responsibilities 2" (QA-61).
+  const rowLabel = `${singular.charAt(0).toUpperCase()}${singular.slice(1)}`;
 
   const update = (index, text) => onChange(value.map((row, at) => (at === index ? text : row)));
   const remove = (index) => {
@@ -519,7 +527,7 @@ function StringListField({
           renderItem={(item, index) => (
             <div className={styles.repeaterRow}>
               <TextField
-                label={`${label} ${index + 1}`}
+                label={`${rowLabel} ${index + 1}`}
                 fieldClassName={styles.repeaterField}
                 value={item.text}
                 disabled={disabled}

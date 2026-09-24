@@ -108,6 +108,16 @@ const NameCell = ({ name, hint }) => (
   </span>
 );
 
+/**
+ * The listings a testimonial's picker has to name without having searched for
+ * them — the one it was saved with (QA-61). One request, by id (§5.7).
+ *
+ * @param {Array<string|number>} ids
+ * @param {{signal?: AbortSignal}} [opts]
+ */
+const resolveProperties = (ids, opts) =>
+  propertyService.adminList({ ids: ids.join(','), perPage: ids.length }, opts);
+
 /** A property type's name, from the types the site lists; its id when it is not one of them. */
 const typeNameOf = (types, id) =>
   (Array.isArray(types) ? types : []).find((type) => String(type.id) === String(id))?.name ??
@@ -121,6 +131,26 @@ const STATE_FIELDS = [
   { name: 'order', type: 'number', label: 'Order', min: 0, half: true, hint: FORMS.orderHint },
   { name: 'isActive', type: 'switch', label: 'Active', half: true },
 ];
+
+/**
+ * Where a new testimonial, team member or partner goes: first, as it always
+ * has (QA-60 kept content lists at "created first") — but said as the 1 the
+ * hint under the box calls first. The box read 0 beside "1 is first" (QA-61).
+ */
+const FIRST = 1;
+
+/**
+ * An emptied Order box, said in the words of the hint under it. The schema's
+ * own sentence was "The order must be an integer." — QA-59 fixed that for the
+ * FAQs, and the three content forms beside them still said it (QA-61).
+ *
+ * @param {object} values
+ * @returns {Record<string, string>}
+ */
+const orderErrors = (values) =>
+  values.order === null || values.order === undefined || values.order === ''
+    ? { order: 'Give it a place in the list: 1 is first.' }
+    : {};
 
 const searchFilter = (placeholder) => ({
   key: 'q',
@@ -138,8 +168,15 @@ const statusFilter = {
   placeholder: 'Any status',
 };
 
-/** Activate / deactivate / delete, with the sentence the confirm needs. */
-const bulkActions = (plural) => [
+/**
+ * Activate / deactivate / delete, with the sentence the confirm needs.
+ *
+ * @param {string} plural
+ * @param {{heldBy?: string}} [options] what refuses a delete — "a page still
+ *   shows" by default; a team member is also held by a listing that names
+ *   them as its advisor, which the sentence left out (QA-61)
+ */
+const bulkActions = (plural, { heldBy = 'a page still shows' } = {}) => [
   { key: 'activate', label: 'Activate', icon: 'mdi:eye-outline' },
   { key: 'deactivate', label: 'Deactivate', icon: 'mdi:eye-off-outline' },
   {
@@ -151,7 +188,7 @@ const bulkActions = (plural) => [
       title: `Delete the selected ${plural}?`,
       // It read "One a page still points at is refused", and the API refuses
       // the whole batch, not the one (QA-59).
-      message: `{count} will be deleted. If a page still shows any of them, none is deleted and you are told which. This cannot be undone.`,
+      message: `{count} will be deleted. If ${heldBy} any of them, none is deleted and you are told which. This cannot be undone.`,
     },
   },
 ];
@@ -581,9 +618,18 @@ export const testimonialsConfig = ({ onMutated } = {}) => ({
       multiple: false,
       labelKey: 'title',
       fetcher: (params, opts) => propertyService.adminList(params, opts),
+      // The chosen listing is named by its title: reopened, the box said "#1"
+      // — the picker knew only the listings it had searched for (QA-61).
+      resolveSelected: resolveProperties,
       hint: 'Optional. The listing this client bought or rented.',
     },
-    { name: 'isFeatured', type: 'switch', label: 'Featured', half: true },
+    {
+      name: 'isFeatured',
+      type: 'switch',
+      label: 'Featured',
+      half: true,
+      hint: 'The home page shows the featured quotes, in the order of this list.',
+    },
     {
       name: 'isSample',
       type: 'switch',
@@ -599,12 +645,12 @@ export const testimonialsConfig = ({ onMutated } = {}) => ({
     propertyId: null,
     isFeatured: false,
     isSample: false,
-    order: 0,
+    order: FIRST,
     isActive: true,
   },
 
   validate: (values) => {
-    const errors = {};
+    const errors = orderErrors(values);
     const message = String(values.message ?? '').trim();
     if (message.length > 0 && message.length < 20) {
       errors.message = 'A quote needs at least 20 characters.';
@@ -621,7 +667,16 @@ export const testimonialsConfig = ({ onMutated } = {}) => ({
       <Avatar src={row.avatarUrl} name={row.name} size={28} />
       <span className={styles.name}>{row.name}</span>
       <span className={styles.hint}>
-        {row.rating ?? 0}/5{row.isSample ? ' · sample' : ''}
+        {/* The home page shows the featured quotes in this order, and nothing
+            here said which they were: reordering the carousel was blind
+            (QA-61, QA-60's rule for localities). */}
+        {[
+          `${row.rating ?? 0}/5`,
+          row.isFeatured ? 'featured' : null,
+          row.isSample ? 'sample' : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
       </span>
     </span>
   ),
@@ -714,7 +769,12 @@ export const teamConfig = ({ onMutated } = {}) => ({
       label: 'RERA',
       hideBelow: 'lg',
       mobile: false,
-      render: (row) => row.reraId || <span className={styles.hint}>—</span>,
+      render: (row) =>
+        row.reraId ? (
+          <span className={styles.text}>{row.reraId}</span>
+        ) : (
+          <span className={styles.hint}>—</span>
+        ),
     },
     toggleColumn({
       key: 'showOnAbout',
@@ -738,7 +798,10 @@ export const teamConfig = ({ onMutated } = {}) => ({
     statusFilter,
   ],
 
-  bulkActions: bulkActions('team members'),
+  bulkActions: bulkActions('team members', {
+    // A listing that names somebody as its advisor holds them too (D88).
+    heldBy: 'a page or a listing still names',
+  }),
 
   formFields: [
     { name: 'name', type: 'text', label: 'Name', required: true, half: true },
@@ -790,9 +853,11 @@ export const teamConfig = ({ onMutated } = {}) => ({
     socialLinks: {},
     reraId: null,
     showOnAbout: true,
-    order: 0,
+    order: FIRST,
     isActive: true,
   },
+
+  validate: orderErrors,
 
   // The three social boxes are one `socialLinks` object on the record, and the
   // form edits them by dotted path; `pickFields` cannot read those, so the
@@ -904,7 +969,13 @@ export const partnersConfig = ({ onMutated } = {}) => ({
         />
       ),
     },
-    { key: 'name', label: 'Name', sortable: true, primary: true },
+    {
+      key: 'name',
+      label: 'Name',
+      sortable: true,
+      primary: true,
+      render: (row) => <span className={styles.text}>{row.name}</span>,
+    },
     {
       key: 'category',
       label: 'Category',
@@ -963,11 +1034,14 @@ export const partnersConfig = ({ onMutated } = {}) => ({
     ...STATE_FIELDS,
   ],
 
-  newValues: { category: 'developer', websiteUrl: null, order: 0, isActive: true },
+  newValues: { category: 'developer', websiteUrl: null, order: FIRST, isActive: true },
 
   validate: (values) => {
     const logo = String(values.logoUrl ?? '').trim();
-    return logo ? {} : { logoUrl: 'A partner is a logo — add one before saving.' };
+    return {
+      ...orderErrors(values),
+      ...(logo ? {} : { logoUrl: 'A partner is a logo — add one before saving.' }),
+    };
   },
 
   formFooter: (

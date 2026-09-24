@@ -325,6 +325,12 @@ describe('relabel', () => {
     });
   });
 
+  it('names the field the sentence is about, and leaves the key further on alone (QA-61)', () => {
+    expect(
+      relabel({ email: 'The email must be a valid email address.' }, { email: 'email address' })
+    ).toEqual({ email: 'The email address must be a valid email address.' });
+  });
+
   it('hands the errors back untouched when there are no labels', () => {
     const errors = { name: 'The name field is required.' };
     expect(relabel(errors, null)).toBe(errors);

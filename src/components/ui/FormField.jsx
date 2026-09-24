@@ -23,7 +23,9 @@ export function Field({
   labelAs: LabelTag = 'label',
   ...rest
 }) {
-  const hintId = hint ? `${id}-hint` : undefined;
+  // The hint gives way to the error, and so does its id: a control described
+  // by a hint that was not on the page named an id nothing carried (QA-61).
+  const hintId = hint && !error ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
 
   return (

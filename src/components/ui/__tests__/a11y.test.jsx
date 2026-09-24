@@ -115,6 +115,26 @@ describe('BottomSheet', () => {
 });
 
 describe('Drawer', () => {
+  it('keeps its name and role when the caller brings paper props of its own (QA-61)', () => {
+    renderWith(
+      <Drawer
+        open
+        onClose={jest.fn()}
+        title="Vivek Nair"
+        PaperProps={{ className: 'caller-paper' }}
+      >
+        <p>The application</p>
+      </Drawer>
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expectDialogSemantics(dialog);
+    // A caller's class replaced the kit's props wholesale: the panel was a
+    // dialog called nothing.
+    expect(dialog).toHaveAccessibleName('Vivek Nair');
+    expect(dialog).toHaveClass('caller-paper');
+  });
+
   it('is a modal dialog with a name even when it has no title', () => {
     renderWith(
       <Drawer open onClose={jest.fn()} label="Menu" padded={false}>

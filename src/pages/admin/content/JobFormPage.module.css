@@ -1,0 +1,60 @@
+/* Admin → Jobs → add / edit: the opening's own page (QA-61). */
+
+.form {
+  display: grid;
+  gap: var(--space-6);
+  padding-bottom: var(--space-6);
+}
+
+.loading {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* The sticky twin of the header actions: the form runs to several screens, and
+   its only Save sat at the top — an editor at the requirements scrolled all the
+   way back up to reach it (QA-61, the developer form's bar of QA-60). */
+.actionBar {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+@media (max-width: 899.98px) {
+  .headerActions {
+    display: none;
+  }
+
+  .actionBar {
+    margin: 0 calc(var(--container-padding) * -1) calc(var(--safe-bottom) * -1);
+    padding: var(--space-3) var(--container-padding) calc(var(--space-3) + var(--safe-bottom));
+  }
+
+  .actionBar > * {
+    flex: 1 1 auto;
+  }
+}

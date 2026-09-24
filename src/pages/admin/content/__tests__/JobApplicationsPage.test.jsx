@@ -11,6 +11,7 @@ jest.mock('../../../../services/careerService', () => ({
   default: {
     adminApplicationList: jest.fn(),
     adminJobList: jest.fn(),
+    adminJobGet: jest.fn(),
     patchApplication: jest.fn(),
     removeApplication: jest.fn(),
   },
@@ -48,12 +49,16 @@ const envelope = (data) => ({
   meta: { page: 1, perPage: 20, total: data.length, totalPages: 1 },
 });
 
-const render = () => renderWith(<JobApplicationsPage />);
+const render = (url) =>
+  renderWith(<JobApplicationsPage />, url ? { initialEntries: [url] } : undefined);
 
 beforeEach(() => {
   jest.clearAllMocks();
   careerService.adminApplicationList.mockResolvedValue(envelope(ROWS));
   careerService.adminJobList.mockResolvedValue(envelope([]));
+  careerService.adminJobGet.mockResolvedValue({
+    data: { id: 4, title: 'Customer Relations Manager', slug: 'customer-relations-manager' },
+  });
   careerService.patchApplication.mockResolvedValue({ data: { ...ROWS[0], status: 'shortlisted' } });
   careerService.removeApplication.mockResolvedValue({ data: null, message: 'Deleted' });
 });
@@ -103,7 +108,9 @@ it('changes a status from the chip, showing it before the API answers', async ()
   ).toBeInTheDocument();
 
   resolve({ data: { ...ROWS[0], status: 'shortlisted' } });
-  expect(await screen.findByText(/is now Shortlisted/i)).toBeInTheDocument();
+  expect(await screen.findByText('“Vivek Nair” moved to Shortlisted.')).toBeInTheDocument();
+  // The desk is read again, so a status filter and the count stay true (QA-61).
+  await waitFor(() => expect(careerService.adminApplicationList).toHaveBeenCalledTimes(2));
 });
 
 it('puts the old status back when the API refuses the change', async () => {
@@ -155,4 +162,126 @@ it('asks before deleting, and names who is being deleted', async () => {
 
   await userEvent.click(screen.getByRole('button', { name: /^delete$/i }));
   await waitFor(() => expect(careerService.removeApplication).toHaveBeenCalledWith(3));
+});
+
+describe('QA-61', () => {
+  it('names the role a link filters by, with a chip and a way out, when the desk has none', async () => {
+    careerService.adminApplicationList.mockResolvedValue(envelope([]));
+    render('/admin/jobs/applications?jobId=4');
+
+    // The page holds no application for the role, so the opening is read once.
+    await waitFor(() =>
+      expect(careerService.adminJobGet).toHaveBeenCalledWith('4', expect.anything())
+    );
+    expect(
+      await screen.findByRole('button', { name: 'Remove filter Role: Customer Relations Manager' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
+    // The choice reads in the box, not as a second chip under it.
+    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveAttribute(
+      'placeholder',
+      'Customer Relations Manager'
+    );
+  });
+
+  it('ignores what the URL holds that no control can show', async () => {
+    render('/admin/jobs/applications?status=bogus,new&sort=nope&order=sideways&jobId=abc');
+
+    await screen.findByText('Vivek Nair');
+    const call = careerService.adminApplicationList.mock.calls[0][0];
+    expect(call).toMatchObject({ status: ['new'], sort: 'createdAt', order: 'desc' });
+    expect(call.jobId).toBeUndefined();
+    expect(screen.queryByText(/bogus/)).toBeNull();
+  });
+
+  it('keeps a half-written note when the status changes in the panel', async () => {
+    render();
+    await userEvent.click(await screen.findByText('Vivek Nair'));
+    const panel = await screen.findByRole('dialog', { name: 'Vivek Nair' });
+
+    await userEvent.type(within(panel).getByRole('textbox', { name: 'Notes' }), 'Call Monday.');
+    await userEvent.selectOptions(within(panel).getByLabelText('Status'), 'interview');
+
+    await waitFor(() =>
+      expect(careerService.patchApplication).toHaveBeenCalledWith(3, { status: 'interview' })
+    );
+    await waitFor(() => expect(careerService.adminApplicationList).toHaveBeenCalledTimes(2));
+    expect(within(panel).getByRole('textbox', { name: 'Notes' })).toHaveValue('Call Monday.');
+  });
+
+  it('keeps the panel open on an application a status change takes out of the list', async () => {
+    render('/admin/jobs/applications?status=new');
+    await userEvent.click(await screen.findByText('Vivek Nair'));
+    const panel = await screen.findByRole('dialog', { name: 'Vivek Nair' });
+
+    // Read again under "Status: New", the desk no longer holds the row.
+    careerService.patchApplication.mockResolvedValue({ data: { ...ROWS[0], status: 'interview' } });
+    careerService.adminApplicationList.mockResolvedValue(envelope([]));
+    await userEvent.selectOptions(within(panel).getByLabelText('Status'), 'interview');
+
+    await waitFor(() => expect(careerService.adminApplicationList).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('No applications match')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Vivek Nair' })).toBeInTheDocument();
+    expect(within(panel).getByLabelText('Status')).toHaveValue('interview');
+  });
+
+  it('draws no line for a detail the application does not have', async () => {
+    careerService.adminApplicationList.mockResolvedValue(
+      envelope([{ ...ROWS[0], phone: '', linkedinUrl: null }])
+    );
+    render();
+    await userEvent.click(await screen.findByText('Vivek Nair'));
+    const panel = await screen.findByRole('dialog', { name: 'Vivek Nair' });
+
+    // A link around nothing is still an element: "Phone" stood over an empty one.
+    expect(within(panel).getByText('E-mail')).toBeInTheDocument();
+    expect(within(panel).queryByText('Phone')).toBeNull();
+    expect(within(panel).queryByText('LinkedIn')).toBeNull();
+  });
+
+  it('asks before a note that was not saved is thrown away', async () => {
+    render();
+    await userEvent.click(await screen.findByText('Vivek Nair'));
+    const panel = await screen.findByRole('dialog', { name: 'Vivek Nair' });
+    await userEvent.type(within(panel).getByRole('textbox', { name: 'Notes' }), 'Call Monday.');
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Close' }));
+    expect(await screen.findByText('Discard your note?')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+    // The confirm hides the panel from assistive tech while it is up.
+    await waitFor(() =>
+      expect(within(panel).getByRole('textbox', { name: 'Notes' })).toHaveValue('Call Monday.')
+    );
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Close' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Discard note' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Vivek Nair' })).toBeNull());
+    expect(careerService.patchApplication).not.toHaveBeenCalled();
+  });
+
+  it('treats an application deleted elsewhere as deleted, and reads the desk again', async () => {
+    careerService.removeApplication.mockRejectedValue(
+      new ApiError({ status: 404, message: 'Not found' })
+    );
+    render();
+
+    await userEvent.click(await screen.findByRole('button', { name: /actions for vivek nair/i }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /delete/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /^delete$/i }));
+
+    expect(
+      await screen.findByText('The application from “Vivek Nair” had already been deleted.')
+    ).toBeInTheDocument();
+    await waitFor(() => expect(careerService.adminApplicationList).toHaveBeenCalledTimes(2));
+  });
+
+  it('offers the first page from a page past the end', async () => {
+    careerService.adminApplicationList.mockResolvedValue({
+      data: [],
+      meta: { page: 3, perPage: 20, total: 3, totalPages: 1 },
+    });
+    render('/admin/jobs/applications?page=3');
+
+    expect(await screen.findByRole('button', { name: 'Go to first page' })).toBeInTheDocument();
+  });
 });

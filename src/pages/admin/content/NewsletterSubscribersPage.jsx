@@ -8,6 +8,7 @@ import FilterBar from '../../../components/admin/FilterBar';
 import PageHeader from '../../../components/admin/PageHeader';
 import StatusChip from '../../../components/admin/StatusChip';
 import newsletterService from '../../../services/newsletterService';
+import sanitiseParams from '../../../components/admin/sanitiseParams';
 import useApiList from '../../../hooks/useApiList';
 import { LEAD_SOURCES, NEWSLETTER_STATUS } from '../../../config/enums';
 import { csvFileName } from '../../../utils/csv';
@@ -32,6 +33,32 @@ const PARAM_KEYS = {
   page: 'int',
   perPage: 'int',
 };
+
+/** The orders the table offers — its sortable columns. */
+const SORT_KEYS = ['email', 'status', 'createdAt'];
+
+const STATUS_FILTER = {
+  key: 'status',
+  type: 'select',
+  label: 'Status',
+  placeholder: 'Any status',
+  options: NEWSLETTER_STATUS.options,
+};
+
+/**
+ * The URL's parameters as the list may act on them (QA-61, QA-59's rule for
+ * the master-data lists): `?status=bogus` drew a "Status: bogus" chip over an
+ * empty list and an "Export CSV (0)" button.
+ *
+ * @param {object} params
+ * @returns {object}
+ */
+export const sanitiseSubscriberParams = (params) =>
+  sanitiseParams(params, {
+    filters: [STATUS_FILTER],
+    sortKeys: SORT_KEYS,
+    defaults: LIST_DEFAULTS,
+  });
 
 /**
  * The filters `GET /admin/newsletter-subscribers/export` accepts (§5.14).
@@ -74,25 +101,50 @@ export default function NewsletterSubscribersPage() {
     setFilters,
     resetFilters,
     refetch,
-  } = useApiList((query, options) => newsletterService.adminList(query, options), {
-    syncToUrl: true,
-    paramKeys: PARAM_KEYS,
-    defaults: LIST_DEFAULTS,
-  });
+  } = useApiList(
+    (query, options) => newsletterService.adminList(sanitiseSubscriberParams(query), options),
+    {
+      syncToUrl: true,
+      paramKeys: PARAM_KEYS,
+      defaults: LIST_DEFAULTS,
+    }
+  );
+
+  // What the screen shows and acts on: the URL, less what it cannot honour.
+  const view = useMemo(() => sanitiseSubscriberParams(params), [params]);
 
   const [deleting, setDeleting] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  /**
+   * After a removal: the page before when this one has just been emptied. It
+   * stayed on "Page 2 of 1 — no rows on this page" with no way back (QA-61,
+   * QA-56's rule for pages).
+   */
+  const finishRemoval = () => {
+    setDeleting(null);
+    const page = Number(view.page) || 1;
+    if (page > 1 && items.length <= 1) setPage(page - 1);
+    else refetch();
+  };
 
   const confirmDelete = async () => {
     if (!deleting) return;
     setDeleteBusy(true);
     try {
       await newsletterService.remove(deleting.id);
-      toast.success(TOASTS.deleted(`“${deleting.email}”`));
-      setDeleting(null);
-      refetch();
+      // The action is "Remove", and so is what it did (QA-61).
+      toast.success(`“${deleting.email}” removed`);
+      finishRemoval();
     } catch (thrown) {
+      // Removed elsewhere since the list was read: what was asked for has
+      // happened, and the row goes (QA-61).
+      if (thrown?.status === 404) {
+        toast.info(`“${deleting.email}” had already been removed.`);
+        finishRemoval();
+        return;
+      }
       toast.error(firstFieldMessage(thrown, 'The subscriber could not be removed.'));
       // A refusal will not become an acceptance on a second press.
       if (thrown?.status >= 400 && thrown?.status < 500) setDeleting(null);
@@ -106,7 +158,7 @@ export default function NewsletterSubscribersPage() {
     try {
       await downloadAuthenticated(
         endpoints.adminNewsletterSubscribers.exportCsv,
-        exportParamsOf(params),
+        exportParamsOf(view),
         csvFileName('newsletter-subscribers'),
         { type: 'text/csv;charset=utf-8' }
       );
@@ -188,25 +240,24 @@ export default function NewsletterSubscribersPage() {
   const filterFields = useMemo(
     () => [
       { key: 'q', type: 'search', label: 'Search', placeholder: 'E-mail or name' },
-      {
-        key: 'status',
-        type: 'select',
-        label: 'Status',
-        placeholder: 'Any status',
-        options: NEWSLETTER_STATUS.options,
-      },
+      STATUS_FILTER,
     ],
     []
   );
 
-  const filtered = Boolean(params.q || params.status);
+  const filtered = Boolean(view.q || view.status);
   const total = meta?.total;
 
   const emptyState = useMemo(() => {
-    if (params.page > 1) {
+    if (view.page > 1) {
       return {
         title: TABLES.emptyPage,
         text: TABLES.emptyPageText,
+        action: (
+          <Button variant="outline" onClick={() => setPage(1)}>
+            {TABLES.firstPage}
+          </Button>
+        ),
       };
     }
     if (filtered) {
@@ -224,7 +275,7 @@ export default function NewsletterSubscribersPage() {
       title: 'No subscribers yet',
       text: 'Every address entered in the footer form arrives here.',
     };
-  }, [params.page, filtered, resetFilters]);
+  }, [view.page, filtered, resetFilters, setPage]);
 
   return (
     <>
@@ -247,7 +298,7 @@ export default function NewsletterSubscribersPage() {
       <div className={styles.screen}>
         <FilterBar
           fields={filterFields}
-          values={params}
+          values={view}
           onChange={setFilters}
           onReset={resetFilters}
         />
@@ -260,7 +311,7 @@ export default function NewsletterSubscribersPage() {
           loading={loading}
           error={error}
           onRetry={refetch}
-          sort={{ field: params.sort, order: params.order }}
+          sort={{ field: view.sort, order: view.order }}
           onSortChange={(next) => setSort(next.field, next.order)}
           onPageChange={setPage}
           onPerPageChange={(perPage) => setFilters({ perPage })}

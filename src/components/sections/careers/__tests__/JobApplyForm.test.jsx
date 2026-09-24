@@ -148,6 +148,21 @@ describe('with no Cloudinary configured', () => {
     expect(leadStorage.getVisitor()).toMatchObject({ name: 'Asha Rao' });
   });
 
+  it('takes a number written with a space, and sends it whole (QA-61)', async () => {
+    renderWith(<JobApplyForm job={JOB} />);
+
+    // Capped at ten characters, "98450 12345" was cut to "98450 1234" and
+    // refused as not a mobile number. (The cap is read off the box: the
+    // user-event this suite runs types past a `maxlength`.)
+    expect(screen.getByLabelText(/^phone/i)).toHaveAttribute('maxlength', '18');
+    await fillIdentity({ phone: '98451 00121' });
+    await userEvent.type(screen.getByLabelText(/résumé link/i), 'https://drive.example.com/cv.pdf');
+    await submit();
+
+    await waitFor(() => expect(careerService.apply).toHaveBeenCalledTimes(1));
+    expect(careerService.apply.mock.calls[0][1].phone).toBe('+919845100121');
+  });
+
   it('refuses to send without a résumé and marks the box', async () => {
     renderWith(<JobApplyForm job={JOB} />);
 

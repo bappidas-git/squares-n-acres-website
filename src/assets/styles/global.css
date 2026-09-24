@@ -256,6 +256,18 @@ img {
   display: block;
 }
 
+/* An icon is never what a press is aimed at: the button, the link or the label
+   around it is. Iconify writes an icon's paths afresh on every render (Chrome's
+   Trusted Types make each one a new object to React), so a press whose
+   `mousedown` landed on a path that a re-render then replaced — a star of the
+   rating, pressed while leaving the box above it — never became a click. The
+   first press on a star after typing in the testimonial form did nothing
+   (QA-61). With the icons out of hit-testing, the press lands on the element
+   that owns it, which a re-render keeps. */
+svg.iconify {
+  pointer-events: none;
+}
+
 ul,
 ol {
   list-style: none;

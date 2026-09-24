@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
+import Button from '../../../components/ui/Button';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import DataTable, { DEFAULT_PER_PAGE } from '../../../components/admin/DataTable';
 import EntityPicker from '../../../components/admin/EntityPicker';
@@ -16,6 +17,8 @@ import StatusChip from '../../../components/admin/StatusChip';
 // refuses.
 import ApplicationDrawer from './ApplicationDrawer';
 import careerService from '../../../services/careerService';
+import sanitiseParams from '../../../components/admin/sanitiseParams';
+import useApi from '../../../hooks/useApi';
 import useApiList from '../../../hooks/useApiList';
 import { JOB_APPLICATION_STATUS } from '../../../config/enums';
 import { firstFieldMessage } from '../../../services/apiError';
@@ -40,6 +43,38 @@ const PARAM_KEYS = {
 };
 
 const FILTER_KEYS = ['q', 'jobId', 'status'];
+
+/** The orders the table offers — its sortable columns. */
+const SORT_KEYS = ['createdAt', 'status', 'name'];
+
+const STATUS_FILTER = {
+  key: 'status',
+  type: 'multiselect',
+  label: 'Status',
+  placeholder: 'Any status',
+  options: JOB_APPLICATION_STATUS.options,
+};
+
+/**
+ * The URL's parameters as the desk may act on them (QA-61, QA-59's rule for
+ * the master-data lists). `?status=bogus` drew a "Status: bogus" chip over a
+ * desk narrowed to nothing; a status nobody can choose, a sort that is not a
+ * column and a role that is not an id are no filter at all.
+ *
+ * @param {object} params
+ * @returns {object}
+ */
+export function sanitiseApplicationParams(params) {
+  const clean = sanitiseParams(params, {
+    filters: [STATUS_FILTER],
+    sortKeys: SORT_KEYS,
+    defaults: LIST_DEFAULTS,
+  });
+  if (clean.jobId !== undefined && clean.jobId !== null && !/^\d+$/.test(String(clean.jobId))) {
+    clean.jobId = undefined;
+  }
+  return clean;
+}
 
 /**
  * An application's status, as the control that changes it.
@@ -129,22 +164,40 @@ export default function JobApplicationsPage() {
     setFilters,
     resetFilters,
     refetch,
-  } = useApiList((query, options) => careerService.adminApplicationList(query, options), {
-    syncToUrl: true,
-    paramKeys: PARAM_KEYS,
-    defaults: LIST_DEFAULTS,
-  });
+  } = useApiList(
+    (query, options) =>
+      careerService.adminApplicationList(sanitiseApplicationParams(query), options),
+    {
+      syncToUrl: true,
+      paramKeys: PARAM_KEYS,
+      defaults: LIST_DEFAULTS,
+    }
+  );
+
+  // What the screen shows and acts on: the URL, less what it cannot honour.
+  const view = useMemo(() => sanitiseApplicationParams(params), [params]);
 
   // An optimistic status change is shown from here until the fetch that
-  // follows it answers with the same thing; a refusal takes it back out.
+  // follows it answers; a refusal takes it back out.
   const [overrides, setOverrides] = useState({});
   const [busyIds, setBusyIds] = useState([]);
-  const [openId, setOpenId] = useState(null);
+  // The changes whose own answer is still on its way: a list read that lands
+  // first must not put their old value back.
+  const inFlight = useRef(new Set());
+  // The application the panel shows. It is kept here rather than looked up in
+  // the page of rows, so the panel stays open when a change takes its row out
+  // of the filtered list (QA-61).
+  const [open, setOpen] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
 
   useEffect(() => {
-    setOverrides({});
+    setOverrides((current) => {
+      const kept = Object.fromEntries(
+        Object.entries(current).filter(([id]) => inFlight.current.has(id))
+      );
+      return Object.keys(kept).length === Object.keys(current).length ? current : kept;
+    });
   }, [items]);
 
   const rows = useMemo(
@@ -155,40 +208,69 @@ export default function JobApplicationsPage() {
     [items, overrides]
   );
 
-  const openApplication = useMemo(
-    () => rows.find((row) => String(row.id) === String(openId)) ?? null,
-    [rows, openId]
-  );
+  // The row when the page holds it — the freshest copy — else what was opened.
+  const openApplication = useMemo(() => {
+    if (!open) return null;
+    return rows.find((row) => String(row.id) === String(open.id)) ?? open;
+  }, [rows, open]);
 
   const patch = useCallback(
     async (row, changes, message) => {
       const id = String(row.id);
       setOverrides((current) => ({ ...current, [id]: { ...current[id], ...changes } }));
       setBusyIds((current) => [...current, id]);
+      inFlight.current.add(id);
 
       try {
         await careerService.patchApplication(row.id, changes);
+        setOpen((current) =>
+          current && String(current.id) === id ? { ...current, ...changes } : current
+        );
         toast.success(message);
+        // The desk is read again: an application moved to "Hired" under
+        // "Status: Interview" stayed in that list, and the count did not move
+        // (QA-61, QA-59's rule for the master-data switches).
+        refetch();
         return true;
       } catch (thrown) {
         setOverrides((current) => {
           const { [id]: _reverted, ...rest } = current;
           return rest;
         });
-        toast.error(firstFieldMessage(thrown, 'The change could not be saved.'));
+        if (thrown?.status === 404) {
+          toast.error(TOASTS.gone(`The application from “${row.name}”`));
+          setOpen((current) => (current && String(current.id) === id ? null : current));
+          refetch();
+        } else {
+          toast.error(firstFieldMessage(thrown, 'The change could not be saved.'));
+        }
         return false;
       } finally {
+        inFlight.current.delete(id);
         setBusyIds((current) => current.filter((entry) => entry !== id));
       }
     },
-    [toast]
+    [toast, refetch]
   );
 
   const changeStatus = useCallback(
     (row, status) =>
-      patch(row, { status }, `“${row.name}” is now ${JOB_APPLICATION_STATUS.labelOf(status)}.`),
+      patch(row, { status }, `“${row.name}” moved to ${JOB_APPLICATION_STATUS.labelOf(status)}.`),
     [patch]
   );
+
+  /**
+   * After a delete: the page before when this one has just been emptied —
+   * "Page 2 of 1 — no rows on this page" with no way back (QA-61, QA-56's rule
+   * for pages).
+   */
+  const finishRemoval = (row) => {
+    if (open && String(open.id) === String(row.id)) setOpen(null);
+    setDeleting(null);
+    const page = Number(view.page) || 1;
+    if (page > 1 && rows.length <= 1) setPage(page - 1);
+    else refetch();
+  };
 
   const confirmDelete = async () => {
     if (!deleting) return;
@@ -196,10 +278,14 @@ export default function JobApplicationsPage() {
     try {
       await careerService.removeApplication(deleting.id);
       toast.success(TOASTS.deleted(`The application from “${deleting.name}”`));
-      if (String(openId) === String(deleting.id)) setOpenId(null);
-      setDeleting(null);
-      refetch();
+      finishRemoval(deleting);
     } catch (thrown) {
+      // Deleted elsewhere: what was asked for has happened (QA-61).
+      if (thrown?.status === 404) {
+        toast.info(TOASTS.alreadyDeleted(`The application from “${deleting.name}”`));
+        finishRemoval(deleting);
+        return;
+      }
       toast.error(firstFieldMessage(thrown, 'The application could not be deleted.'));
       // A refusal will not become an acceptance on a second press.
       if (thrown?.status >= 400 && thrown?.status < 500) setDeleting(null);
@@ -230,7 +316,9 @@ export default function JobApplicationsPage() {
         key: 'job',
         label: 'Role',
         mobile: true,
-        render: (row) => row.job?.title ?? `Job #${row.jobId}`,
+        render: (row) => (
+          <span className={styles.text}>{row.job?.title ?? `Job #${row.jobId}`}</span>
+        ),
       },
       {
         key: 'status',
@@ -312,7 +400,7 @@ export default function JobApplicationsPage() {
         key: 'open',
         label: 'Open',
         icon: 'mdi:eye-outline',
-        onClick: () => setOpenId(row.id),
+        onClick: () => setOpen(row),
       },
     ];
 
@@ -336,9 +424,36 @@ export default function JobApplicationsPage() {
     return actions;
   }, []);
 
-  // An application row carries its job, so the picker can name the one the URL
-  // filters by without a request of its own.
-  const knownJobs = useMemo(() => items.map((item) => item.job).filter(Boolean), [items]);
+  /* ---------------- the role filter ---------------- */
+
+  const jobId = view.jobId;
+
+  // An application row carries its job, so the picker can usually name the
+  // one the URL filters by without a request of its own. When the page holds
+  // no such row — the role has no applications yet, or the other filters leave
+  // none — the opening is read once, so the filter says "Property Analyst"
+  // rather than nothing at all (QA-61, QA-53's rule for the lead list).
+  const pageJobs = useMemo(() => items.map((item) => item.job).filter(Boolean), [items]);
+  const onPage = pageJobs.some((job) => String(job.id) === String(jobId));
+
+  const { data: filteredJob } = useApi(
+    (signal) => careerService.adminJobGet(jobId, { signal }),
+    [jobId ?? null],
+    { enabled: Boolean(jobId) && !loading && !onPage }
+  );
+
+  const knownJobs = useMemo(
+    () => (filteredJob ? [...pageJobs, filteredJob] : pageJobs),
+    [pageJobs, filteredJob]
+  );
+
+  // One identity for the life of the screen: the picker searches again when it
+  // changes, and a new arrow on every render asked the API after every
+  // re-render of the desk (QA-61).
+  const searchJobs = useCallback(
+    (query, options) => careerService.adminJobList(query, options),
+    []
+  );
 
   const filterFields = useMemo(
     () => [
@@ -347,6 +462,7 @@ export default function JobApplicationsPage() {
         key: 'jobId',
         type: 'custom',
         label: 'Role',
+        width: '260px',
         render: ({ values, onChange, labelClassName, fieldClassName }) => (
           <EntityPicker
             label="Role"
@@ -354,35 +470,44 @@ export default function JobApplicationsPage() {
             fieldClassName={fieldClassName}
             placeholder="Search openings…"
             multiple={false}
+            // The choice is the filter bar's chip, not a second chip under the
+            // box that put the row out of line (QA-61, QA-53).
+            showChosen={false}
             labelKey="title"
             value={values.jobId ?? null}
             selectedRecords={knownJobs}
-            fetcher={(query, options) => careerService.adminJobList(query, options)}
+            fetcher={searchJobs}
             onChange={(value) => onChange({ jobId: value ? String(value) : undefined })}
           />
         ),
+        // Without a chip the role filter counted as no filter: no Reset, and on
+        // a phone the desk was filtered with nothing on screen saying so.
+        chipLabel: (values) =>
+          `Role: ${
+            knownJobs.find((job) => String(job.id) === String(values.jobId))?.title ??
+            `#${values.jobId}`
+          }`,
       },
-      {
-        key: 'status',
-        type: 'multiselect',
-        label: 'Status',
-        placeholder: 'Any status',
-        options: JOB_APPLICATION_STATUS.options,
-      },
+      STATUS_FILTER,
     ],
-    [knownJobs]
+    [knownJobs, searchJobs]
   );
 
   const filtered = FILTER_KEYS.some((key) => {
-    const value = params[key];
+    const value = view[key];
     return Array.isArray(value) ? value.length > 0 : Boolean(value);
   });
 
   const emptyState = useMemo(() => {
-    if (params.page > 1) {
+    if (view.page > 1) {
       return {
         title: TABLES.emptyPage,
         text: TABLES.emptyPageText,
+        action: (
+          <Button variant="outline" onClick={() => setPage(1)}>
+            {TABLES.firstPage}
+          </Button>
+        ),
       };
     }
 
@@ -390,6 +515,11 @@ export default function JobApplicationsPage() {
       return {
         title: 'No applications match',
         text: 'Nothing on the desk answers every filter you have set.',
+        action: (
+          <Button variant="outline" onClick={resetFilters}>
+            {TABLES.resetFilters}
+          </Button>
+        ),
       };
     }
 
@@ -397,7 +527,7 @@ export default function JobApplicationsPage() {
       title: 'No applications yet',
       text: 'Every application sent through a job page arrives here, with the résumé attached.',
     };
-  }, [params.page, filtered]);
+  }, [view.page, filtered, setPage, resetFilters]);
 
   return (
     <>
@@ -410,7 +540,7 @@ export default function JobApplicationsPage() {
       <div className={styles.screen}>
         <FilterBar
           fields={filterFields}
-          values={params}
+          values={view}
           onChange={setFilters}
           onReset={resetFilters}
         />
@@ -423,11 +553,11 @@ export default function JobApplicationsPage() {
           loading={loading}
           error={error}
           onRetry={refetch}
-          sort={{ field: params.sort, order: params.order }}
+          sort={{ field: view.sort, order: view.order }}
           onSortChange={(next) => setSort(next.field, next.order)}
           onPageChange={setPage}
           onPerPageChange={(perPage) => setFilters({ perPage })}
-          onRowClick={(row) => setOpenId(row.id)}
+          onRowClick={(row) => setOpen(row)}
           rowActions={rowActions}
           rowActionsMenu
           rowActionsLabel={(row) => `Actions for ${row.name}`}
@@ -438,8 +568,8 @@ export default function JobApplicationsPage() {
 
       <ApplicationDrawer
         application={openApplication}
-        busy={busyIds.includes(String(openId))}
-        onClose={() => setOpenId(null)}
+        busy={Boolean(openApplication) && busyIds.includes(String(openApplication.id))}
+        onClose={() => setOpen(null)}
         onStatusChange={(status) => changeStatus(openApplication, status)}
         onNotesChange={(notes) => patch(openApplication, { notes }, 'The notes were saved.')}
         onDelete={() => setDeleting(openApplication)}
