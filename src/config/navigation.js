@@ -278,13 +278,47 @@ function groupLinks(menu, pages, submenu, known) {
 }
 
 /**
+ * A menu's own page, offered again at the top of its panel (QA-57).
+ *
+ * The label of a menu with an address of its own is a link as well as the
+ * panel's trigger — Insights opens the articles — and nothing in the panel
+ * said so: a visitor who opened it to look for "Insights" found only what is
+ * filed under it. So the panel lists the menu's own page first, under the
+ * menu's name. The phone drawer has its own line for it ("All insights") and
+ * skips this one; the generated menus keep their panels as they are, because
+ * those are the listing itself, cut by status, type and budget.
+ *
+ * It is listed even when a page of the menu has the same address (the
+ * "Articles" page is the Insights index): the two answer different questions,
+ * "the section" and "that page".
+ *
+ * @param {object} menu a `headerMenus` record with an `href`
+ * @param {Array<object>} columns the panel, already built
+ * @returns {Array<object>}
+ */
+function withOverview(menu, columns) {
+  const overview = {
+    key: `${menu.slug}-overview`,
+    label: menu.name,
+    to: menu.href,
+    overview: true,
+  };
+  const ownKey = `${menu.slug}-own`;
+  if (columns[0]?.key === ownKey) {
+    return [{ ...columns[0], links: [overview, ...columns[0].links] }, ...columns.slice(1)];
+  }
+  return [{ key: ownKey, title: menu.name, links: [overview] }, ...columns];
+}
+
+/**
  * One menu of the bar, from its record.
  *
  * A generated menu keeps its own columns and takes the pages and links an
  * editor put in it on top — its own list under "More", each submenu under its
  * name. A menu of pages and links is its own list under its name, then its
- * submenus. With nothing in its panel a menu is a plain link when it has
- * somewhere to go, and is left out when it has not (§7).
+ * submenus, with its own page first when it has one (`withOverview`). With
+ * nothing in its panel a menu is a plain link when it has somewhere to go, and
+ * is left out when it has not (§7).
  *
  * @param {object} menu a `headerMenus` record
  * @param {{propertyTypes: Array<object>, localities: Array<object>, pages: Array<object>}} input
@@ -318,7 +352,8 @@ function buildMenu(menu, input) {
   if (!to) return null;
 
   const base = { key: menu.slug, label: menu.name, to };
-  return columns.length > 0 ? { ...base, columns } : base;
+  if (columns.length === 0) return base;
+  return { ...base, columns: !generated && menu.href ? withOverview(menu, columns) : columns };
 }
 
 /**

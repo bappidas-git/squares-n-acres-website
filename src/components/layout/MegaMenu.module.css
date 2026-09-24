@@ -120,6 +120,14 @@
   color: var(--color-primary-dark);
 }
 
+/* The menu's own page, first in its panel (QA-57): drawn as the phone
+   drawer draws its "All …" line, so it reads as the section, not one more
+   entry of it. */
+.overview {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary-dark);
+}
+
 @media (max-width: 1199.98px) {
   .wide {
     grid-template-columns: repeat(2, minmax(160px, 1fr));
