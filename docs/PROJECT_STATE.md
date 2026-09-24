@@ -240,8 +240,9 @@ The renormalisation is therefore invisible in the diff.
 | Script                  | Command                                                                                                         | Added by                        |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------- |
 | `start`                 | `react-scripts start`                                                                                           | boilerplate                     |
-| `dev`                   | `concurrently -n mock,web -c blue,green "npm run mock" "npm start"`                                             | boilerplate (replaced in 06)    |
+| `dev`                   | `concurrently -n mock,web -c blue,green "npm run mock:watch" "npm start"`                                       | boilerplate (replaced in 06, QA-54) |
 | `mock`                  | `node mock-server/server.js`                                                                                    | 06                              |
+| `mock:watch`            | `node --watch --watch-preserve-output mock-server/server.js`                                                    | QA-54                           |
 | `mock:reset`            | `node mock-server/reset.js`                                                                                     | 06                              |
 | `build`                 | `react-scripts build`                                                                                           | boilerplate                     |
 | `test`                  | `react-scripts test`                                                                                            | boilerplate                     |

@@ -36,8 +36,16 @@ function start() {
 
   server.on('error', (error) => {
     if (error.code === 'EADDRINUSE') {
+      // Usually a mock left running by an earlier session — and the web app
+      // keeps talking to it, so this checkout's API changes never arrive: a
+      // screen added since then is refused with a 403 (§7: a route the matrix
+      // does not know is denied).
       console.error(
-        `Port ${config.port} is already in use. Stop the other process, or set MOCK_PORT.`
+        `Port ${config.port} is already in use, most likely by a mock API still running from ` +
+          'an earlier `npm run dev` or `npm run mock`. The web app talks to whatever answers ' +
+          'there, and an older copy refuses the screens it does not know yet ("You do not have ' +
+          'permission to perform this action."). Stop that process (README → Troubleshooting), ' +
+          'or set MOCK_PORT.'
       );
       process.exit(1);
     }
