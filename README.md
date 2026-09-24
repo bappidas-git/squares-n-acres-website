@@ -95,6 +95,12 @@ web app hot-reloads, and the mock API restarts when one of its files changes —
 `src/` modules it shares with the web app, such as `src/config/rbac.js`. Writes to the runtime
 database do not restart it. `npm run mock` on its own does not watch; restart it after pulling.
 
+A mock that starts while an older copy of the mock still holds its port — one left running by an
+earlier session, or started from another checkout — stops that copy and takes the port, so the
+web app never goes on talking to a route map from before the pull. It says so in its first line
+of output. A copy running this very code is left alone, and a port held by any other program is
+never touched: the mock exits and says what holds it.
+
 ---
 
 ## Scripts
@@ -536,11 +542,13 @@ offers another port for the web app on its own.
 
 **A screen says "You do not have permission to perform this action." to the admin.** The
 web app is newer than the mock API answering it. The API refuses an admin route it has no
-rule for, so a screen added since that process started — Master data → Segments, say — fails
-with a 403 even for the admin. Two things cause it: a mock started with `npm run mock` before
-a `git pull` (it does not restart itself; `npm run dev` does), or an earlier mock still holding
-port 4000, which makes the new one exit with `Port 4000 is already in use`. Stop every mock
-(the commands above free the port), then `npm run dev` again.
+rule for, so a screen added since that process started — Master data → Segments, Pages →
+Header menu — fails with a 403 even for the admin. It happens when a mock started with
+`npm run mock` before a `git pull` is still running (it does not restart itself; `npm run dev`
+does). Start the mock again — `npm run dev` or `npm run mock`, in any terminal: the new process
+stops the older copy and takes port 4000 over (`Stopped an older mock API (pid …)`), then
+reload the screen. If it says the older copy `could not be stopped automatically`, stop that
+process id yourself (the commands above), then start the mock again.
 
 **`REACT_APP_API_URL is not set. Copy .env.example to .env.`** Thrown at startup, on
 purpose — there is no fallback URL. In development `.env.development` supplies it, so this

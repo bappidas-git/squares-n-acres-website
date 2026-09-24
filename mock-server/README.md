@@ -30,6 +30,31 @@ npm run smoke         # walk every endpoint of the registry (needs a running moc
 All four are documented in `.env.example`. They are read by Node at runtime,
 so they are **not** prefixed `REACT_APP_` and never reach the bundle.
 
+## A port held by an older mock
+
+The web app talks to whatever answers on `MOCK_PORT`, and an older copy of
+the mock refuses every admin screen added since it started (403: its route map
+has no rule for them). So `server.js` claims the port before it reads the
+runtime database, and when the port is taken it looks at what holds it
+(`lib/takeover.js`, QA-57):
+
+| What holds the port                              | What the new mock does                                                                                             |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| this checkout's mock, running the same code      | leaves it serving and exits 0 (`Nothing to start.`)                                                                |
+| a mock running other code, or another checkout's | `POST /__mock/shutdown`, then takes the port                                                                       |
+| a mock from before `/__mock/identity` existed    | finds the process on the port, checks that its command line runs `mock-server/server.js`, stops it, takes the port |
+| any other program                                | touches nothing, exits 1 and says so                                                                               |
+
+"The same code" is `sourceRevision()`: a digest of every module the process
+loaded from the repository — the mock's own files and the `src/` modules it
+shares — which is exactly what `node --watch` restarts on.
+
+`GET /__mock/identity` and `POST /__mock/shutdown` belong to the standalone
+server, not to the API: they sit outside `/api`, and neither the contract nor
+the Laravel API has them. A shutdown is accepted only from this machine, only
+with the `X-Mock-Takeover: 1` header and never with an `Origin` — a web page
+cannot stop the developer's mock.
+
 ## The runtime database
 
 `db.json` at the repository root is a **seed**, and the server never writes to
