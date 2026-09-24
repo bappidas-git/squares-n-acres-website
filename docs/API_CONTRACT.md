@@ -59,7 +59,7 @@ Query params `page` (1-based, default 1), `perPage` (default 12 public / 20 admi
 
 ### 5.8 Write semantics
 
-`POST` creates → **201** + full record. `PUT` replaces the full record (the client always sends the complete record from the form; missing optional fields become their defaults). `PATCH` updates only the provided fields — used by toggles, bulk actions, SEO panel saves, lead status changes, section-visibility toggles, `order` reorders. `DELETE` → 200 `{ data: null, message }`. Bulk: `POST /admin/<resource>/bulk { ids: [], action: 'activate'|'deactivate'|'delete'|'feature'|'unfeature'|'verify'|'unverify'|'publish'|'unpublish'|'assign'|'status', payload? }` → `{ data: { affected: n }, message }` (unsupported action for the resource → 422). `affected` counts the records that changed. **Text is trimmed** before it is checked and stored (Laravel's `TrimStrings`, which is on by default; QA-60): string fields, and the strings inside arrays and array rows — HTML, slugs and URLs are left as sent. The mock trims the writes of `routes/masterData.js`: the eight master-data collections, article categories, tags and authors, FAQs, testimonials, team members and partners. **A write that changes nothing writes nothing** (QA-55): a `PUT` or `PATCH` whose result equals the stored record — `updatedAt`/`updatedBy` aside — answers 200 with the stored record and leaves `updatedAt` where it was, and a bulk action skips a record already in its target state.
+`POST` creates → **201** + full record. `PUT` replaces the full record (the client always sends the complete record from the form; missing optional fields become their defaults). `PATCH` updates only the provided fields — used by toggles, bulk actions, SEO panel saves, lead status changes, section-visibility toggles, `order` reorders. `DELETE` → 200 `{ data: null, message }`. Bulk: `POST /admin/<resource>/bulk { ids: [], action: 'activate'|'deactivate'|'delete'|'feature'|'unfeature'|'verify'|'unverify'|'publish'|'unpublish'|'assign'|'status', payload? }` → `{ data: { affected: n }, message }` (unsupported action for the resource → 422). `affected` counts the records that changed. **Text is trimmed** before it is checked and stored (Laravel's `TrimStrings`, which is on by default; QA-60): string fields, and the strings inside arrays and array rows — HTML, slugs and URLs are left as sent. The mock trims the writes of `routes/masterData.js`: the eight master-data collections, article categories, tags and authors, FAQs, testimonials, team members and partners — and job openings (`routes/jobs.js`, QA-61: `"Sales "` was stored beside `"Sales"`, and the department filter offered both). **A write that changes nothing writes nothing** (QA-55): a `PUT` or `PATCH` whose result equals the stored record — `updatedAt`/`updatedBy` aside — answers 200 with the stored record and leaves `updatedAt` where it was, and a bulk action skips a record already in its target state.
 
 #### Reordering — `PATCH /admin/<resource>/:id { order }` (prompt 17, D98)
 
@@ -102,7 +102,8 @@ a `PUT` whose `order` differs from the stored one, settle the collection too (QA
 testimonials, team members, partners, localities, segments, property types, amenities, badges,
 developers, banks and article categories. The written record is **placed**: the others keep the
 order they read in, made dense `1..n-1`; the record takes the position its `order` names, clamped
-to `1..n`; the ones from there on move down one. Created at 0 (every admin form's default) it is
+to `1..n`; the ones from there on move down one. Created at 0 or 1 (the admin forms' defaults —
+the testimonial, team and partner forms open at 1, the number their hint calls first, QA-61) it is
 first; saved at 3 it is third, whether it moved up or down; saved at 99 it is last, and the
 response says `n`. So no two records share a number, the admin's Order column reads as positions,
 and the public lists never fall back to their secondary sort inside a tie. A `PUT` that keeps the
@@ -114,6 +115,13 @@ and header menus are not among them: a `POST`/`PUT` leaves those collections alo
 `order` `PATCH` renumbers them. Laravel implements these rules inside the transaction that writes
 the record.
 
+**A delete closes the gap it leaves (QA-61).** In the same collections, a `DELETE` — and a bulk
+`delete` — renumbers what is left `1..n` in the order it read: deleting the first of three
+testimonials leaves `1, 2`, not `2, 3`. The gap had made the first record read 2 in the Order
+column and in its form until a drag or a placing save happened to settle the collection. Nothing
+else about the remaining records changes (`updatedAt` included). Laravel renumbers inside the
+transaction that deletes.
+
 ### 5.9 Slugs
 
 Every public entity has a unique `slug` (lowercase, `[a-z0-9-]`, ≤ 75 chars). **CMS pages are the one exception:** a page's slug is a URL **path** — one or more slug segments joined by `/`, ≤ 120 chars (`buyer-assistance/home-loan`, §6.10) — because the public route serves the page at exactly that path. Each segment is slugified on its own, and `seo.slug` follows the same rule. Lookup: `GET /<resource>/slug/:slug`. Check: `GET /admin/<resource>/check-slug?slug=&excludeId=` → `{ data: { available: true|false, suggestion } }`. The API auto-generates a slug from the title when the client sends an empty slug and de-duplicates with `-2`, `-3`… A duplicate explicit slug → 409 with `errors.slug`. **An empty slug is never stored** (QA-60): a title with no Latin letter or digit in it (`"!!"`, `"北京 नगर"`, a listing titled in Devanagari alone) keeps the slug its record already has, or is given `<noun>-<id>` (`locality-21`, `property-45`). The entity `slug` and `seo.slug` are always kept identical by the API. **A page is derived from its title like everything else** — an empty `slug` on `POST /admin/pages` is a request to derive one, not a 422 (prompt 45, MB-03). **A page's slug may not begin with a segment a static route owns** — `properties`, `buy`, `rent`, `lease`, `commercial`, `plots`, `localities`, `builders`, `insights`, `careers`, `shortlist`, `admin` (`RESERVED_PATH_PREFIXES` in `src/routes/paths.js`): the router answers those paths first, so a page stored under one exists and can never be opened (D11). A create, or an update that *changes* the slug into a reserved prefix, answers **422** with `errors.slug`; a page already living under one keeps its slug, which is how the seeded `insights/real-estate-awareness` page stays where it is (prompt 45, MB-04). **A protected page keeps its slug** (QA-56): the built-in pages and the written pages the site's own templates link to by address (`src/config/pages.js`) answer **422** on `slug` to a write that changes it, and an empty slug on their `PUT` keeps the stored one rather than deriving a new one. The `home` record's public address is the site root, `/`, not `/home`.
@@ -123,6 +131,8 @@ Every public entity has a unique `slug` (lowercase, `[a-z0-9-]`, ≤ 75 chars). 
 Public list endpoints return only `isActive: true` records (and `status: 'published'` for articles/pages, `publishedAt <= now`); public detail endpoints return 404 for inactive/unpublished/unknown slugs (except `?preview=<token>` on articles/pages, D28). Public responses strip private fields: `agent.phone/whatsapp/email` only when `agent.showOnListing`; never `leads`, `adminUsers`, `apiTokens`, `media`, `createdBy/updatedBy`, `authors[].email`, internal notes, `siteSettings.integrations.*Secret`, `siteSettings.leads`. Admin endpoints return everything, with `isActive` filterable.
 
 **A public property read shows only the master data that is switched on** (QA-60): an inactive amenity or badge is left out of `amenities[]` / `badges[]`, and an inactive locality or developer keeps its `id` and `name` in `location.locality` / `project.developer` with `slug: null` — it has no page, and the site links a listing to one only when there is a slug. Admin reads are unchanged.
+
+**A switched-off team member answers for no listing** (QA-61): on a public property read, `agent` is filled from its `teamMemberId` only while that member `isActive`. Switched off — somebody who has left — they fill in nothing: the fields the listing typed itself still show, and with none typed `name`, `phone`, `whatsapp`, `email` and `photoUrl` read `null`, and the site draws no advisor card (it needs a way to reach somebody). It had gone on showing the name, photograph, phone and e-mail of a person who had left on every listing that named them. Admin reads are unchanged, so the property form still names the member.
 
 **Properties have no preview token.** `GET /properties/slug/:slug` answers 404 for an unpublished listing to everybody, signed in or not. An editor previews one at `/properties/<slug>?preview=admin`, which the public route serves only while an admin session exists: it reads the record through **`GET /admin/properties/slug/:slug`** — an ordinary admin endpoint behind the usual Bearer token — and marks the page `noindex, nofollow`. Nothing about the query string grants access; the token does. (Articles and pages keep their 24-hour signed tokens, D28: a draft article is shown to somebody who is not an editor.)
 
@@ -1082,6 +1092,23 @@ out of the header; removing a submenu moves its pages into the menu's own list.
 
 The fields of §6.11. `Job` adds the computed `applicationCount` on admin reads;
 `JobApplication` embeds `job {id,title,slug}`.
+
+**An opening is open to the end of its closing day in IST** (D22, QA-61): `closesAt` names the
+last day it takes applications, read as that day in `Asia/Kolkata`. From the next day `GET /jobs`
+leaves it out, `GET /jobs/slug/:slug` still answers it with `isOpen: false`, and
+`POST /jobs/:id/apply` answers 404 "This opening is closed." It had been Greenwich's day, which
+ends at 05:30 the next morning in Bengaluru.
+
+**An opening's description has words and runs nothing** (QA-61, the FAQ answer's rule of
+QA-59): a `description` that is empty once its markup is stripped (`<ul><li><p></p></li></ul>`)
+is 422 "The description field is required.", and one carrying a script, an inline handler or a
+`javascript:` link is 422 with the articles API's sentence. A `PATCH` is asked only about the
+fields it sends.
+
+**`GET /admin/job-applications?sort=status`** (QA-61) sorts by where an application stands, in
+the order the desk moves it — `new`, `shortlisted`, `interview`, `rejected`, `hired` — and the
+newest first within a status; `order=desc` reverses the statuses. It had sorted by spelling
+(hired, interview, new…). `status` accepts a comma-separated list; `jobId` is an opening's id.
 
 ### `Media`, `Redirect`, `NewsletterSubscriber`, `User`
 

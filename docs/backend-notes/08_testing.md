@@ -211,6 +211,21 @@ on `question`, and in another category is 201; `q=<p` finds nothing and
 page shows is 409 with both in `data.refused[]`, and deletes nothing; a property
 page lists the FAQs tied to its type after its own (QA-59).
 
+**Content** — delete the first of three testimonials and the others read `1, 2`,
+not `2, 3`; a bulk delete of two leaves the rest dense too, and the same holds for
+team members and partners; an opening created with `"  Site Engineer "` and
+`"Sales "` is stored as `Site Engineer` and `Sales`, and one whose description is
+`<ul><li><p></p></li></ul>` or carries an `onclick` is 422 on `description` (a
+`PATCH` of `isActive` alone is not asked about it); an opening whose `closesAt`
+is today in IST is on `GET /jobs` until midnight IST and off it from 00:00 IST,
+when `GET /jobs/slug/:slug` answers it with `isOpen: false` and
+`POST /jobs/:id/apply` is 404 "This opening is closed."; `GET
+/admin/job-applications?sort=status` reads new, shortlisted, interview,
+rejected, hired, and the reverse with `order=desc`; with a team member switched
+off, the public read of a listing that names them answers only what the listing
+typed itself (`name`, `phone`, `whatsapp`, `email`, `photoUrl` `null` when it
+typed nothing), while the admin read keeps them (QA-61).
+
 **SEO** — the panel saves and the score comes back on the next read; the overview
 flags two records that share a focus keyword; a redirect added in the admin
 resolves; `/sitemap.xml`, `/robots.txt`, `/rss.xml` and `/llms.txt` all answer

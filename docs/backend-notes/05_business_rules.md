@@ -779,6 +779,40 @@ What a master-data write keeps, and what a public read shows of it (QA-60).
   Admin reads are unchanged, so the property form never drops a tick it cannot
   see.
 
+## Content writes and reads
+
+What the Content screens' writes keep, and what a public read shows (QA-61).
+
+- **Job openings are trimmed like master data.** `"Sales "` was stored beside
+  `"Sales"`, and the department filter and the careers page offered both.
+  Laravel's `TrimStrings` covers it; the mock turns `trimStrings` on for
+  `routes/jobs.js`.
+- **An opening's description has words and runs nothing.** Empty once its
+  markup is stripped — an emptied bullet or heading, `<ul><li><p></p></li></ul>`
+  — is 422 on `description` ("The description field is required."), and the
+  careers page no longer prints "About the role" over nothing; a script, an
+  inline handler or a `javascript:` link is 422 with the articles' sentence (the
+  FAQ answer's rule, QA-59). A `PATCH` is asked only about what it sends.
+- **An opening is open to the end of its closing day in IST** (D22).
+  `closes_at` is a date — the last day the role takes applications — and the day
+  is Bengaluru's: `GET /jobs` lists it until midnight IST, then leaves it out;
+  `GET /jobs/slug/:slug` still answers it, with `isOpen: false`; and
+  `POST /jobs/:id/apply` answers 404 "This opening is closed." The mock compared
+  against the end of the day in UTC, which is 05:30 the next morning in IST.
+  Laravel: `today('Asia/Kolkata')->toDateString() <= $job->closes_at`.
+- **`sort=status` on applications is the desk's order** — `new, shortlisted,
+  interview, rejected, hired` (`JOB_APPLICATION_STATUS`), newest first within a
+  status; `order=desc` reverses the statuses. By spelling it read hired,
+  interview, new… Laravel: `ORDER BY FIELD(status, 'new', 'shortlisted', …),
+  created_at DESC`.
+- **A switched-off team member answers for no listing.** On a public property
+  read, `agent` is filled from its `team_member_id` only while that member is
+  active. Someone who had left went on showing — name, photograph, phone,
+  WhatsApp and e-mail — on every listing that named them. Switched off, they
+  fill in nothing: what the listing typed itself still shows, and with nothing
+  typed the site draws no advisor card. Admin reads are unchanged, so the
+  property form still names the member and an editor can pick somebody else.
+
 ## FAQs
 
 The FAQ library (`faqs`) feeds `/insights/faqs`, the home page (`show_on_home`),
@@ -939,9 +973,10 @@ around it:
 Placing: make the other records dense `1..n-1` in the order they read, give the
 record the position its `order` names, clamped to `1..n`, and move the ones from
 there on down one. A record created at 0 (every one of those forms' default) is
-first; one saved at 3 is third, whether it moved up or down; one saved at 99 is
-last and the response says `n`; a `PUT` that keeps the stored `order` moves
-nothing. The response carries the settled number, and the two full-page forms
+first, as is one created at 1 (the testimonial, team and partner forms open at
+1, the number their hint calls first — QA-61); one saved at 3 is third, whether
+it moved up or down; one saved at 99 is last and the response says `n`; a `PUT`
+that keeps the stored `order` moves nothing. The response carries the settled number, and the two full-page forms
 show it once they have saved. No two records share a number, so the Order column
 reads as positions, the neighbour rule above stays exact, and a public list
 never falls back to its secondary sort (the name; a FAQ's question) inside a
@@ -953,6 +988,13 @@ lands after the neighbour only because it ties with the next row and wins. A
 form's number is a position in the list as it will read: settled by the tie, a
 record saved from 1 to 3 landed second, because leaving 1 had already moved the
 others up one.
+
+**A delete closes the gap it leaves (QA-61).** In the same collections a
+`DELETE`, and a bulk `delete`, renumber what is left `1..n` in the order it
+reads — nothing else about those records changes, `updated_at` included.
+Deleting the first of three testimonials left `2, 3`: the new first read 2 in
+the Order column and in its form until a drag or a placing save happened to
+settle the collection. Renumber inside the transaction that deletes.
 
 Pages and header menus are not among them: a `POST`/`PUT` leaves those
 collections alone, and only an `order` PATCH renumbers them.
