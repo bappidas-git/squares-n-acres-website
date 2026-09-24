@@ -127,6 +127,15 @@ export default function MobileDrawer({ open, onClose }) {
 
             const isOpen = expanded === menu.key;
             const panelId = `drawer-panel-${menu.key}`;
+            // The group opens with its own "All …" line, so the menu's own
+            // page listed again at the top of the header's panel (QA-57)
+            // would be the same link twice.
+            const groups = columns
+              .map((column) => ({
+                ...column,
+                links: column.links.filter((link) => !link.overview),
+              }))
+              .filter((column) => column.links.length > 0);
 
             return (
               <div key={menu.key} className={styles.group}>
@@ -152,9 +161,9 @@ export default function MobileDrawer({ open, onClose }) {
                     <MenuLink link={menu} className={styles.panelAll} onClick={onClose}>
                       All {menu.label.toLowerCase()}
                     </MenuLink>
-                    {columns.map((column) => (
+                    {groups.map((column) => (
                       <div key={column.key} className={styles.panelGroup}>
-                        {columns.length > 1 ? (
+                        {groups.length > 1 ? (
                           <span className={styles.panelTitle}>{column.title}</span>
                         ) : null}
                         {column.links.map((link) => (

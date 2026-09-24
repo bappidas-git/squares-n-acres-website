@@ -241,7 +241,12 @@ export default function MegaMenu({ menu, transparent = false }) {
               <ul className={styles.list}>
                 {column.links.map((link) => (
                   <li key={link.key}>
-                    <MenuLink link={link} className={styles.link}>
+                    <MenuLink
+                      link={link}
+                      className={[styles.link, link.overview ? styles.overview : '']
+                        .filter(Boolean)
+                        .join(' ')}
+                    >
                       {link.label}
                     </MenuLink>
                   </li>

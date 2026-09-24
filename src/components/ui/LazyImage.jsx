@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { BRAND } from '../../config/site';
 import { SRCSET_WIDTHS, blurThumb, responsiveImage } from '../../utils/cloudinary';
@@ -76,9 +76,15 @@ export default function LazyImage({
   style,
   ...rest
 }) {
-  const [status, setStatus] = useState('loading');
-
-  useEffect(() => setStatus('loading'), [src]);
+  // What the browser said about one `src`; any other `src` is still loading.
+  // It is keyed to the `src` rather than reset by an effect when the `src`
+  // changes: a picture the browser already holds — its HTTP cache on a reload,
+  // the preload of an LCP image — answers `load` before React runs the effects
+  // of the render that drew it, and a reset landing after that `load` left the
+  // picture at `opacity: 0` for good, a grey box where a photograph had
+  // arrived (QA-57).
+  const [settled, setSettled] = useState({ src: null, status: 'loading' });
+  const status = settled.src === src ? settled.status : 'loading';
 
   const responsive = useMemo(() => {
     // `responsiveImage` owns the rule that a box the picture is cropped into is
@@ -109,8 +115,8 @@ export default function LazyImage({
       loading={loading ?? (priority ? 'eager' : 'lazy')}
       decoding="async"
       fetchpriority={fetchPriority ?? (priority ? 'high' : undefined)}
-      onLoad={() => setStatus('loaded')}
-      onError={() => setStatus('error')}
+      onLoad={() => setSettled({ src, status: 'loaded' })}
+      onError={() => setSettled({ src, status: 'error' })}
       className={[styles.image, styles[fit], loaded ? styles.loaded : '', imageClassName]
         .filter(Boolean)
         .join(' ')}

@@ -257,14 +257,32 @@ describe('buildHeaderMenus', () => {
 
   it('builds Insights from the pages placed in it, the built-in ones among them (QA-56)', () => {
     const insights = menuByKey(menus, 'insights');
+    const placed = insights.columns[0].links.filter((link) => !link.overview);
 
-    expect(hrefs(insights.columns[0].links)).toEqual([
+    expect(hrefs(placed)).toEqual([
       '/insights/articles',
       '/insights/faqs',
       '/insights/real-estate-awareness',
     ]);
     // The label goes to the articles, as it always has.
     expect(insights.to).toBe('/insights/articles');
+  });
+
+  it('lists Insights itself first in its panel, since its label is a link too (QA-57)', () => {
+    const [first, ...rest] = menuByKey(menus, 'insights').columns[0].links;
+
+    expect(first).toMatchObject({ label: 'Insights', to: '/insights/articles', overview: true });
+    // The Articles page stays: it is the same address, but another entry.
+    expect(rest.map((link) => link.label)).toEqual(['Articles', 'FAQs', 'Real Estate Awareness']);
+  });
+
+  it('adds no such entry where the label is no address of its own, nor to a generated menu', () => {
+    for (const key of ['buyer-assistance', 'company', 'buy', 'rent', 'commercial']) {
+      const links = menuByKey(menus, key).columns.flatMap((column) => column.links);
+      expect(links.filter((link) => link.overview)).toEqual([]);
+    }
+    // A menu that is only a link has no panel to add it to.
+    expect(menuByKey(menus, 'contact').columns).toBeUndefined();
   });
 
   it('drops a menu no page belongs to (§7)', () => {
@@ -311,6 +329,8 @@ describe('collapseMenus', () => {
     // A menu with no panel of its own contributes its own destination.
     expect(hrefs(more.columns.at(-1).links)).toEqual(['/contact']);
     expect(hrefs(more.columns[0].links)).toEqual(['/builders']);
+    // The column heading is not a link, so a folded Insights still opens with its own page.
+    expect(more.columns[2].links[0]).toMatchObject({ label: 'Insights', overview: true });
   });
 
   it('leaves a list that already fits alone', () => {
@@ -428,6 +448,30 @@ describe('buildHeaderMenus from the headerMenus collection (QA-56)', () => {
     expect(resources.columns[2].links[1]).toMatchObject({ label: 'RERA portal', newTab: true });
     // With no address of its own, the label opens the first entry.
     expect(resources.to).toBe('/why-us');
+  });
+
+  it('gives a menu with an address, all of whose entries sit in submenus, a column for itself', () => {
+    const menu = record('guides', 'Guides', {
+      href: '/guides',
+      submenus: [{ slug: 'nri', name: 'NRI' }],
+    });
+    const placed = [
+      {
+        slug: 'nri-guide',
+        title: 'NRI guide',
+        headerMenu: 'guides',
+        headerSubmenu: 'nri',
+        order: 1,
+      },
+    ];
+
+    const [guides] = buildHeaderMenus({ menus: [menu], pages: placed });
+
+    expect(guides.columns.map((column) => [column.title, hrefs(column.links)])).toEqual([
+      ['Guides', ['/guides']],
+      ['NRI', ['/nri-guide']],
+    ]);
+    expect(guides.columns[0].links[0]).toMatchObject({ label: 'Guides', overview: true });
   });
 
   it('adds the pages placed in a generated menu after its own columns', () => {

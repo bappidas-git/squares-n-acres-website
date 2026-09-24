@@ -84,6 +84,39 @@ describe('MegaMenu', () => {
     expect(panel.style.getPropertyValue('--panel-shift')).toBe(`${198 + PANEL_GUTTER}px`);
   });
 
+  it('draws a menu’s own page first in its panel, marked as the section (QA-57)', () => {
+    Element.prototype.getBoundingClientRect = function rect() {
+      return { left: 200, right: 500, width: 300, top: 0, bottom: 300, height: 300, x: 200, y: 0 };
+    };
+    const insights = {
+      key: 'insights',
+      label: 'Insights',
+      to: '/insights/articles',
+      columns: [
+        {
+          key: 'insights-own',
+          title: 'Insights',
+          links: [
+            { key: 'o', label: 'Insights', to: '/insights/articles', overview: true },
+            { key: 'a', label: 'Articles', to: '/insights/articles' },
+            { key: 'f', label: 'FAQs', to: '/insights/faqs' },
+          ],
+        },
+      ],
+    };
+
+    renderWith(<MegaMenu menu={insights} />);
+    const trigger = screen.getByRole('link', { name: 'Insights' });
+    fireEvent.mouseEnter(trigger.parentElement);
+
+    const panel = document.getElementById(trigger.getAttribute('aria-controls'));
+    const links = Array.from(panel.querySelectorAll('a'));
+    expect(links.map((link) => link.textContent)).toEqual(['Insights', 'Articles', 'FAQs']);
+    expect(links[0]).toHaveAttribute('href', '/insights/articles');
+    expect(links[0]).toHaveClass('overview');
+    expect(links[1]).not.toHaveClass('overview');
+  });
+
   it('keeps a panel that fits unshifted', () => {
     Element.prototype.getBoundingClientRect = function rect() {
       return { left: 200, right: 500, width: 300, top: 0, bottom: 300, height: 300, x: 200, y: 0 };
