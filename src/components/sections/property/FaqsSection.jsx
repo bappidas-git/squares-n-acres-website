@@ -28,6 +28,52 @@ export function orderedFaqs(faqs) {
     .map((entry) => entry.faq);
 }
 
+/** A question as two questions are compared: case, spacing and the final "?" aside. */
+const questionKey = (text) =>
+  String(text ?? '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[\s?？]+$/, '')
+    .trim();
+
+/**
+ * The listing's own questions, then the FAQ library's questions tied to its
+ * property type (QA-59).
+ *
+ * Admin → FAQs has always let an editor tie a question to a property type —
+ * "it also appears on those listings" — and `GET /faqs?propertyTypeId=` has
+ * always answered them, but no page asked: a question tied to "Office Spaces"
+ * appeared on no office at all. The listing's own questions come first and
+ * keep their order; the type's follow in the library's; a question the
+ * listing already asks is not asked twice. A library record's id is prefixed,
+ * so it can never collide with the id of one of the listing's own.
+ *
+ * @param {Array<object>} listingFaqs `property.faqs`
+ * @param {Array<object>} typeFaqs the library's answer, in its order
+ * @returns {Array<object>}
+ */
+export function withTypeFaqs(listingFaqs, typeFaqs) {
+  const own = orderedFaqs(listingFaqs);
+  const asked = new Set(own.map((faq) => questionKey(faq.question)));
+
+  const library = (Array.isArray(typeFaqs) ? typeFaqs : [])
+    .filter((faq) => faq && String(faq.question ?? '').trim() !== '')
+    .filter((faq) => {
+      const key = questionKey(faq.question);
+      if (asked.has(key)) return false;
+      asked.add(key);
+      return true;
+    })
+    .map((faq) => ({
+      id: `faq-${faq.id}`,
+      question: faq.question,
+      answer: faq.answer,
+      order: null,
+    }));
+
+  return [...own, ...library];
+}
+
 /**
  * The listing's own FAQs, in the one accordion the whole site uses.
  *

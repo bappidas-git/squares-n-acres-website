@@ -38,6 +38,10 @@ const TABLES = {
   emptyPageText: 'The list is shorter than the address you opened.',
   firstPage: 'Go to first page',
   resetFilters: 'Reset filters',
+  /** The two views of an orderable list (QA-59). */
+  reorder: 'Reorder',
+  tableView: 'Table view',
+  inactive: 'Inactive',
   clearFilters: 'Clear filters',
 
   rowActions: 'Row actions',
@@ -78,6 +82,8 @@ const FORMS = {
   optional: 'Optional',
   unsaved: 'Unsaved changes',
   fixFields: 'Fix the highlighted fields before saving.',
+  /** A save pressed on a record nobody changed: nothing is written (QA-55, QA-59). */
+  noChanges: 'No changes to save.',
 };
 
 /* ------------------------------------------------------------------ *

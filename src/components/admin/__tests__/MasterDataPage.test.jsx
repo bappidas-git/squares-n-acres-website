@@ -1,8 +1,15 @@
-import { screen, waitFor, waitForElementToBeRemoved, within } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  waitForElementToBeRemoved,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import ApiError from '../../../services/apiError';
-import MasterDataPage, { labelsOf } from '../MasterDataPage';
+import MasterDataPage, { labelsOf, sanitiseParams } from '../MasterDataPage';
 import ToastProvider from '../../common/ToastProvider';
 import renderWith from '../../../test-utils';
 
@@ -44,11 +51,12 @@ const baseConfig = (service) => ({
   schema: { name: { type: 'string', required: true, min: 2 } },
 });
 
-const render = (config) =>
+const render = (config, { initialEntries } = {}) =>
   renderWith(
     <ToastProvider>
       <MasterDataPage config={config} />
-    </ToastProvider>
+    </ToastProvider>,
+    { initialEntries }
   );
 
 const realRect = Element.prototype.getBoundingClientRect;
@@ -200,7 +208,8 @@ describe('MasterDataPage', () => {
       );
 
       const guard = await screen.findByRole('dialog', { name: 'Still in use' });
-      expect(within(guard).getByText('This item is in use.')).toBeInTheDocument();
+      // It names the record: "This item is in use." named nothing (QA-59).
+      expect(within(guard).getByText('“Whitefield” is still used by:')).toBeInTheDocument();
       expect(within(guard).getByRole('link', { name: /Lakeview Heights/ })).toHaveAttribute(
         'href',
         '/admin/properties/edit/12'
@@ -255,7 +264,8 @@ describe('MasterDataPage', () => {
     });
     await screen.findByText('Whitefield');
 
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Select row 2' }));
+    // Named for the record, not "Select row 2" (QA-59).
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Jayanagar' }));
     await userEvent.click(screen.getByRole('button', { name: 'Activate' }));
 
     await waitFor(() =>
@@ -311,13 +321,14 @@ describe('MasterDataPage', () => {
       await screen.findByText('Whitefield');
 
       const dialog = await openEdit('Whitefield');
+      await userEvent.type(within(dialog).getByLabelText(/Name/), ' East');
       await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
       // The toast is raised in the same moment the dialog is closed.
       await screen.findByText('Locality saved');
 
       expect(within(dialog).getByRole('heading', { name: 'Edit locality' })).toBeInTheDocument();
       expect(within(dialog).queryByText('New locality')).toBeNull();
-      expect(within(dialog).getByLabelText(/Name/)).toHaveValue('Whitefield');
+      expect(within(dialog).getByLabelText(/Name/)).toHaveValue('Whitefield East');
 
       // The button is still under the pointer. With `editing` gone, a submit
       // would have created a copy of the record just saved.
@@ -391,7 +402,7 @@ describe('MasterDataPage', () => {
 
       // Drawn from nothing, it read "“undefined” cannot be deleted" over an
       // empty list.
-      expect(within(guard).getByText('This item is in use.')).toBeInTheDocument();
+      expect(within(guard).getByText('“Whitefield” is still used by:')).toBeInTheDocument();
       expect(within(guard).getByRole('link', { name: /Lakeview Heights/ })).toBeInTheDocument();
       expect(within(guard).queryByText(/undefined/)).toBeNull();
 
@@ -456,6 +467,303 @@ describe('MasterDataPage', () => {
           expect.objectContaining({ name: 'Whitefield East' })
         )
       );
+    });
+  });
+
+  it('saves nothing, and says so, when nothing was changed (QA-59)', async () => {
+    const service = fakeService();
+    render(baseConfig(service));
+    await screen.findByText('Whitefield');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Whitefield' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit locality' });
+    await waitFor(() => expect(within(dialog).getByLabelText(/Name/)).toHaveValue('Whitefield'));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText('No changes to save.')).toBeInTheDocument();
+    expect(service.update).not.toHaveBeenCalled();
+    await waitForElementToBeRemoved(dialog);
+  });
+
+  it('saves the dialog with Ctrl+S (QA-59)', async () => {
+    const service = fakeService();
+    render(baseConfig(service));
+    await screen.findByText('Whitefield');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add locality' }));
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.type(within(dialog).getByLabelText(/Name/), 'Koramangala');
+    fireEvent.keyDown(within(dialog).getByLabelText(/Name/), { key: 's', ctrlKey: true });
+
+    await waitFor(() =>
+      expect(service.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'Koramangala' }))
+    );
+  });
+
+  it('names each record a refused bulk delete is refused over (QA-59)', async () => {
+    const service = fakeService({
+      bulk: jest.fn().mockRejectedValue(
+        new ApiError({
+          status: 409,
+          message: '1 of the selected localities is still in use, so none was deleted.',
+          data: {
+            usedBy: [{ type: 'property', id: 12, title: 'Lakeview Heights' }],
+            refused: [
+              {
+                id: 2,
+                label: 'Jayanagar',
+                reason: 'Used by 1 property',
+                usedBy: [{ type: 'property', id: 12, title: 'Lakeview Heights' }],
+              },
+            ],
+          },
+        })
+      ),
+    });
+    render({
+      ...baseConfig(service),
+      bulkActions: [{ key: 'delete', label: 'Delete', danger: true }],
+    });
+    await screen.findByText('Whitefield');
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Whitefield' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Jayanagar' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Delete$/ }));
+
+    const guard = await screen.findByRole('dialog', { name: 'Still in use' });
+    expect(
+      within(guard).getByText('1 of the selected localities is still in use, so none was deleted.')
+    ).toBeInTheDocument();
+    expect(within(guard).getByText('“Jayanagar”')).toBeInTheDocument();
+    expect(within(guard).getByRole('link', { name: /Lakeview Heights/ })).toBeInTheDocument();
+    // The selection stays, so the one in the way can be unticked.
+    expect(screen.getByRole('checkbox', { name: 'Select Whitefield', hidden: true })).toBeChecked();
+  });
+
+  it('says the page is past the end, not that the list is empty (QA-59)', async () => {
+    const service = fakeService({
+      list: jest.fn().mockResolvedValue({
+        data: [],
+        meta: { page: 9, perPage: 20, total: 2, totalPages: 1 },
+      }),
+    });
+    render(baseConfig(service), { initialEntries: ['/?page=9'] });
+
+    expect(await screen.findByText('Nothing on this page')).toBeInTheDocument();
+    expect(screen.queryByText('No localities yet')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Go to first page' }));
+    await waitFor(() =>
+      expect(service.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 1 }),
+        expect.anything()
+      )
+    );
+  });
+
+  it('steps back a page when a delete empties the one on screen (QA-59)', async () => {
+    const service = fakeService({
+      list: jest.fn().mockResolvedValue({
+        data: [ROWS[1]],
+        meta: { page: 2, perPage: 20, total: 21, totalPages: 2 },
+      }),
+    });
+    render(baseConfig(service), { initialEntries: ['/?page=2'] });
+    await screen.findByText('Jayanagar');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete Jayanagar' }));
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' })
+    );
+
+    await waitFor(() =>
+      expect(service.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 1 }),
+        expect.anything()
+      )
+    );
+  });
+
+  it('re-reads the list after a switch, so a filtered row can leave it (QA-59)', async () => {
+    const service = fakeService();
+    render(baseConfig(service));
+    await screen.findByText('Whitefield');
+    expect(service.list).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(screen.getByRole('switch', { name: 'Whitefield is active' }));
+
+    await waitFor(() => expect(service.patch).toHaveBeenCalledWith(1, { isActive: false }));
+    await waitFor(() => expect(service.list).toHaveBeenCalledTimes(2));
+  });
+
+  describe('parameters no control can show (QA-59)', () => {
+    const filters = [
+      { key: 'zone', type: 'select', label: 'Zone', options: [{ value: 'east', label: 'East' }] },
+      { key: 'isFeatured', type: 'toggle', label: 'Featured' },
+    ];
+
+    it('are left out of the request and the chips', async () => {
+      const service = fakeService();
+      render(
+        { ...baseConfig(service), filters },
+        { initialEntries: ['/?zone=bogus&isFeatured=maybe&sort=nonsense&order=sideways'] }
+      );
+      await screen.findByText('Whitefield');
+
+      const [params] = service.list.mock.calls[0];
+      expect(params.zone).toBeUndefined();
+      expect(params.isFeatured).toBeUndefined();
+      expect(params).toEqual(expect.objectContaining({ sort: 'name', order: 'asc' }));
+      expect(screen.queryByText(/Zone: bogus/)).toBeNull();
+      expect(screen.queryByText(/Featured: No/)).toBeNull();
+    });
+
+    it('keep the values an option names', () => {
+      const defaults = { sort: 'name', order: 'asc' };
+      expect(
+        sanitiseParams(
+          { zone: 'east', isFeatured: 'false', sort: 'name', order: 'desc' },
+          { filters, sortKeys: ['name'], defaults }
+        )
+      ).toEqual({ zone: 'east', isFeatured: 'false', sort: 'name', order: 'desc' });
+    });
+  });
+
+  describe('the drag list (QA-59)', () => {
+    const ORDERED = [
+      { id: 1, name: 'First', order: 1, isActive: true },
+      { id: 2, name: 'Second', order: 2, isActive: false },
+      { id: 3, name: 'Third', order: 3, isActive: true },
+    ];
+
+    const orderedService = (overrides = {}) =>
+      fakeService({ list: jest.fn().mockResolvedValue(envelope(ORDERED)), ...overrides });
+
+    const orderedConfig = (service) => ({
+      ...baseConfig(service),
+      defaultSort: { field: 'order', order: 'asc' },
+      orderable: true,
+      columns: [
+        { key: 'order', label: 'Order', sortable: true },
+        { key: 'name', label: 'Name', sortable: true, primary: true },
+      ],
+    });
+
+    const row = (name) => screen.getByRole('listitem', { name: new RegExp(`^${name},`) });
+    const shownOrder = () =>
+      screen
+        .getAllByRole('listitem')
+        .map((item) => item.getAttribute('aria-label')?.split(',')[0])
+        .filter(Boolean);
+
+    it('moves a row at once, and names the row it was dropped next to', async () => {
+      const service = orderedService();
+      render(orderedConfig(service));
+      await screen.findByRole('listitem', { name: /^First,/ });
+
+      fireEvent.keyDown(row('First'), { key: 'ArrowDown', altKey: true });
+
+      // Before the API has answered: it snapped back and jumped, and the
+      // focus that followed it landed on the neighbour.
+      expect(shownOrder()).toEqual(['Second', 'First', 'Third']);
+      await waitFor(() => expect(row('First')).toHaveFocus());
+      await waitFor(() => expect(service.patch).toHaveBeenCalledWith(1, { order: 3, after: 2 }));
+      await waitFor(() => expect(service.list).toHaveBeenCalledTimes(2));
+    });
+
+    it('writes quick moves one at a time, each placed by the row it landed next to', async () => {
+      let answerFirst;
+      const patch = jest
+        .fn()
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              answerFirst = () => resolve({ data: { id: 1 } });
+            })
+        )
+        .mockResolvedValue({ data: { id: 1 } });
+      const service = orderedService({ patch });
+      render(orderedConfig(service));
+      await screen.findByRole('listitem', { name: /^First,/ });
+
+      fireEvent.keyDown(row('First'), { key: 'ArrowDown', altKey: true });
+      fireEvent.keyDown(row('First'), { key: 'ArrowDown', altKey: true });
+
+      expect(shownOrder()).toEqual(['Second', 'Third', 'First']);
+      await waitFor(() => expect(patch).toHaveBeenCalledTimes(1));
+      expect(patch).toHaveBeenLastCalledWith(1, { order: 3, after: 2 });
+
+      // The second waits for the first, and names where it was dropped.
+      await act(async () => answerFirst());
+      await waitFor(() => expect(patch).toHaveBeenCalledTimes(2));
+      expect(patch).toHaveBeenLastCalledWith(1, { order: 4, after: 3 });
+      await waitFor(() => expect(service.list).toHaveBeenCalledTimes(2));
+    });
+
+    it('puts the order back when a move is refused', async () => {
+      const service = orderedService({
+        patch: jest.fn().mockRejectedValue(new ApiError({ status: 500, message: 'Down.' })),
+      });
+      render(orderedConfig(service));
+      await screen.findByRole('listitem', { name: /^First,/ });
+
+      fireEvent.keyDown(row('First'), { key: 'ArrowDown', altKey: true });
+
+      expect(await screen.findByText('Down.')).toBeInTheDocument();
+      await waitFor(() => expect(shownOrder()).toEqual(['First', 'Second', 'Third']));
+    });
+
+    it('keeps the focus on an arrow pressed from the keyboard', async () => {
+      render(orderedConfig(orderedService()));
+      await screen.findByRole('listitem', { name: /^First,/ });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Move First down' }));
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Move First down' })).toHaveFocus()
+      );
+    });
+
+    it('offers each row’s actions, and says which are not live', async () => {
+      render(orderedConfig(orderedService()));
+      await screen.findByRole('listitem', { name: /^First,/ });
+
+      expect(
+        within(row('Second')).getByRole('button', { name: 'Edit Second' })
+      ).toBeInTheDocument();
+      expect(
+        within(row('Second')).getByRole('button', { name: 'Delete Second' })
+      ).toBeInTheDocument();
+      expect(within(row('Second')).getByText('Inactive')).toBeInTheDocument();
+      expect(within(row('First')).queryByText('Inactive')).toBeNull();
+
+      await userEvent.click(within(row('First')).getByRole('button', { name: 'Edit First' }));
+      expect(await screen.findByRole('dialog', { name: 'Edit locality' })).toBeInTheDocument();
+    });
+
+    it('keeps the pages of a list longer than one', async () => {
+      const service = orderedService({
+        list: jest.fn().mockResolvedValue({
+          data: ORDERED,
+          meta: { page: 1, perPage: 3, total: 5, totalPages: 2 },
+        }),
+      });
+      render(orderedConfig(service));
+      await screen.findByRole('listitem', { name: /^First,/ });
+
+      expect(screen.getByText('Showing 1–3 of 5')).toBeInTheDocument();
+      expect(screen.getByLabelText('Rows per page')).toBeInTheDocument();
+    });
+
+    it('is a table, with a way back, when the list is upside down or sorted otherwise', async () => {
+      const service = orderedService();
+      render(orderedConfig(service), { initialEntries: ['/?order=desc'] });
+      await screen.findByRole('table');
+      expect(screen.queryByRole('listitem', { name: /^First,/ })).toBeNull();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Reorder' }));
+      expect(await screen.findByRole('listitem', { name: /^First,/ })).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Table view' }));
+      expect(await screen.findByRole('table')).toBeInTheDocument();
     });
   });
 });

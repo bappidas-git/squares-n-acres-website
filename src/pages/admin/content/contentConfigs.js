@@ -107,6 +107,11 @@ const NameCell = ({ name, hint }) => (
   </span>
 );
 
+/** A property type's name, from the types the site lists; its id when it is not one of them. */
+const typeNameOf = (types, id) =>
+  (Array.isArray(types) ? types : []).find((type) => String(type.id) === String(id))?.name ??
+  `Property type #${id}`;
+
 /** The `Order` / `Active` half of every form below. */
 const STATE_FIELDS = [
   { name: 'order', type: 'number', label: 'Order', min: 0, half: true, hint: 'Lowest first.' },
@@ -140,7 +145,9 @@ const bulkActions = (plural) => [
     danger: true,
     confirm: {
       title: `Delete the selected ${plural}?`,
-      message: `{count} will be deleted. One a page still points at is refused. This cannot be undone.`,
+      // It read "One a page still points at is refused", and the API refuses
+      // the whole batch, not the one (QA-59).
+      message: `{count} will be deleted. If a page still shows any of them, none is deleted and you are told which. This cannot be undone.`,
     },
   },
 ];
@@ -190,8 +197,13 @@ const orderColumn = {
   ),
 };
 
+/**
+ * What the drag list says above itself. It used to explain the API ("the
+ * position is saved on the record that moved") to people who only want to know
+ * how to move a row (QA-59).
+ */
 const REORDER_HINT =
-  'Sorted by Order the table becomes this list. Drag a row, or focus it and press Alt + ↑ / ↓, to move it — the position is saved on the record that moved, so a filtered list reorders correctly too.';
+  'Drag a row by its handle, or use its arrows, to change the order the site shows them in. A filtered list moves only the rows it shows, and the others keep their places. With the keyboard: focus a row and press Alt + ↑ / ↓.';
 
 /* ------------------------------------------------------------------ *
  * FAQs (§6.9, §6.17)
@@ -212,6 +224,8 @@ export const faqsConfig = ({ onMutated, propertyTypes: knownTypes = [] } = {}) =
   title: 'FAQs',
   subtitle: 'Answered on /insights/faqs, on the home page and on property pages.',
   singular: 'FAQ',
+  // "No faqs match", "3 faqs will be deleted" (QA-59).
+  plural: 'FAQs',
   service: faqService,
   onMutated,
   schema: schemas['faq.update'],
@@ -241,11 +255,19 @@ export const faqsConfig = ({ onMutated, propertyTypes: knownTypes = [] } = {}) =
       label: 'Category',
       sortable: true,
       mobile: true,
-      width: '140px',
+      width: '150px',
+      // The property type a question is tied to was set in the form and shown
+      // nowhere else, so which FAQs a listing type carries could only be
+      // learned by opening every one of them (QA-59).
       render: (row) => (
-        <Chip tone={FAQ_CATEGORIES.meta[row.category]?.tone ?? 'neutral'}>
-          {FAQ_CATEGORIES.labelOf(row.category) || 'General'}
-        </Chip>
+        <span className={styles.nameCell}>
+          <Chip tone={FAQ_CATEGORIES.meta[row.category]?.tone ?? 'neutral'}>
+            {FAQ_CATEGORIES.labelOf(row.category) || 'General'}
+          </Chip>
+          {row.propertyTypeId ? (
+            <span className={styles.hint}>{typeNameOf(knownTypes, row.propertyTypeId)}</span>
+          ) : null}
+        </span>
       ),
     },
     toggleColumn({
@@ -281,6 +303,18 @@ export const faqsConfig = ({ onMutated, propertyTypes: knownTypes = [] } = {}) =
       falseLabel: 'Not on the home page',
       placeholder: 'Anywhere',
     },
+    // The API has always filtered by it (§5.14); the screen never asked.
+    ...(knownTypes.length > 0
+      ? [
+          {
+            key: 'propertyTypeId',
+            type: 'select',
+            label: 'Property type',
+            placeholder: 'Any type',
+            options: knownTypes.map((type) => ({ value: String(type.id), label: type.name })),
+          },
+        ]
+      : []),
     statusFilter,
   ],
 
@@ -315,6 +349,9 @@ export const faqsConfig = ({ onMutated, propertyTypes: knownTypes = [] } = {}) =
       type: 'entity',
       label: 'Property type',
       multiple: false,
+      // Beside the category, rather than a row of its own under a half-width
+      // select with nothing next to it (QA-59).
+      half: true,
       fetcher: (params, opts) => propertyTypes.list(params, opts),
       selectedRecords: knownTypes,
       hint: 'Optional. Tie the question to one type and it also appears on those listings.',
@@ -326,8 +363,23 @@ export const faqsConfig = ({ onMutated, propertyTypes: knownTypes = [] } = {}) =
       half: true,
       hint: 'The home section shows the questions ticked here.',
     },
-    ...STATE_FIELDS,
+    {
+      ...STATE_FIELDS[0],
+      // A position (QA-59): the API places the FAQ there and moves the rest.
+      hint: 'Its place in the list: 1 is first, and the others move down to make room.',
+    },
+    STATE_FIELDS[1],
   ],
+
+  /**
+   * The body the API receives: the question without the spaces a paste
+   * leaves around it (QA-59) — the list, the site and the `FAQPage` markup
+   * all printed them.
+   */
+  toPayload: (values) => ({
+    ...values,
+    question: typeof values.question === 'string' ? values.question.trim() : values.question,
+  }),
 
   newValues: {
     category: 'general',
@@ -355,6 +407,17 @@ export const faqsConfig = ({ onMutated, propertyTypes: knownTypes = [] } = {}) =
     if (answer.length > 0 && answer.length < 20) {
       errors.answer = 'An answer needs at least 20 characters of text.';
     }
+    // An empty bullet, an empty heading: markup, but no answer (QA-59). The
+    // schema's `required` only sees that the string is not empty, and the API
+    // answers the same sentence.
+    if (answer.length === 0 && typeof values.answer === 'string' && values.answer.trim() !== '') {
+      errors.answer = 'The answer field is required.';
+    }
+
+    // An emptied box read "The order must be an integer." (QA-59).
+    if (values.order === null || values.order === undefined || values.order === '') {
+      errors.order = 'Give it a place in the list: 0 or more.';
+    }
 
     return errors;
   },
@@ -363,8 +426,13 @@ export const faqsConfig = ({ onMutated, propertyTypes: knownTypes = [] } = {}) =
     <span className={styles.orderRow}>
       <span className={styles.name}>{row.question}</span>
       <span className={styles.hint}>
-        {FAQ_CATEGORIES.labelOf(row.category) || 'General'}
-        {row.showOnHome ? ' · on the home page' : ''}
+        {[
+          FAQ_CATEGORIES.labelOf(row.category) || 'General',
+          row.propertyTypeId ? typeNameOf(knownTypes, row.propertyTypeId) : null,
+          row.showOnHome ? 'on the home page' : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
       </span>
     </span>
   ),

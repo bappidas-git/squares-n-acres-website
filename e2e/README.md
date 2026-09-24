@@ -1,10 +1,10 @@
 # End-to-end suite (Playwright)
 
-Eleven specs that drive the real application in a real browser, against the
+Twelve specs that drive the real application in a real browser, against the
 real mock API: **login**, **create a property**, **view a property**, **submit
 a lead**, **filter the listing** and **shortlist** (prompt 44), plus **publish
 an article**, **the SEO panel**, **publish a CMS page** and **site settings**
-(prompt 45), and **the header menus** (QA-56). They are the only tests in the
+(prompt 45), **the header menus** (QA-56) and **the FAQ screen** (QA-59). They are the only tests in the
 repository that exercise the browser; everything else is Jest in jsdom.
 
 ```

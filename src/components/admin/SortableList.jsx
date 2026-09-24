@@ -58,7 +58,13 @@ export default function SortableList({
 
   const nameOf = (item, index) => getLabel?.(item, index) ?? `Item ${index + 1}`;
 
-  const move = (from, to, { focus = false } = {}) => {
+  /**
+   * @param {number} from
+   * @param {number} to
+   * @param {{focus?: 'row'|'up'|'down'|null}} [options] what has the focus
+   *   after the move: the row (Alt+↑/↓), or the arrow that was pressed
+   */
+  const move = (from, to, { focus = null } = {}) => {
     if (disabled || to < 0 || to >= items.length || from === to) return;
 
     const next = [...items];
@@ -68,9 +74,25 @@ export default function SortableList({
     setAnnouncement(`${nameOf(moved, from)} moved to position ${to + 1} of ${items.length}.`);
 
     if (!focus) return;
-    // The row travelled; the focus follows it to its new position.
+    // The row travelled; the focus follows it to its new position. An arrow
+    // pressed from the keyboard stays pressed-on (QA-59): the row's move took
+    // the button out from under the focus, and a second Enter moved nothing.
+    // At the end of the list that arrow is disabled, so the row takes it.
+    //
+    // The row is found by its id, not by the index it moved to: a list that
+    // re-reads itself between the move and the next frame has put something
+    // else at that index, and the focus went to the neighbour (QA-59).
+    const movedId = String(getId(moved, from));
     window.requestAnimationFrame(() => {
-      listRef.current?.querySelectorAll(`[data-sortable-row]`)[to]?.focus();
+      const row = [...(listRef.current?.querySelectorAll('[data-sortable-row]') ?? [])].find(
+        (element) => element.getAttribute('data-sortable-id') === movedId
+      );
+      if (!row) return;
+      const arrow =
+        focus === 'row'
+          ? null
+          : row.querySelector(`[data-sortable-move="${focus}"]:not(:disabled)`);
+      (arrow ?? row).focus();
     });
   };
 
@@ -83,6 +105,7 @@ export default function SortableList({
             <li
               key={id}
               data-sortable-row
+              data-sortable-id={String(id)}
               tabIndex={disabled ? undefined : 0}
               draggable={!disabled && armedIndex === index}
               aria-label={`${nameOf(item, index)}, position ${index + 1} of ${items.length}`}
@@ -123,11 +146,11 @@ export default function SortableList({
                 if (event.target !== event.currentTarget) return;
                 if (event.key === 'ArrowUp') {
                   event.preventDefault();
-                  move(index, index - 1, { focus: true });
+                  move(index, index - 1, { focus: 'row' });
                 }
                 if (event.key === 'ArrowDown') {
                   event.preventDefault();
-                  move(index, index + 1, { focus: true });
+                  move(index, index + 1, { focus: 'row' });
                 }
               }}
             >
@@ -149,16 +172,18 @@ export default function SortableList({
                 <IconButton
                   label={`Move ${nameOf(item, index)} up`}
                   size="sm"
+                  data-sortable-move="up"
                   disabled={disabled || index === 0}
-                  onClick={() => move(index, index - 1)}
+                  onClick={() => move(index, index - 1, { focus: 'up' })}
                 >
                   <Icon icon="mdi:arrow-up" width="18" height="18" />
                 </IconButton>
                 <IconButton
                   label={`Move ${nameOf(item, index)} down`}
                   size="sm"
+                  data-sortable-move="down"
                   disabled={disabled || index === items.length - 1}
-                  onClick={() => move(index, index + 1)}
+                  onClick={() => move(index, index + 1, { focus: 'down' })}
                 >
                   <Icon icon="mdi:arrow-down" width="18" height="18" />
                 </IconButton>
