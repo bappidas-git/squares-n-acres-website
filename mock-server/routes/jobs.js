@@ -19,11 +19,14 @@
 const express = require('express');
 
 const schemas = require('../../src/services/schemas');
+const { JOB_APPLICATION_STATUS } = require('../../src/config/enums');
 const { embedJobApplication } = require('../lib/embed');
+const { istDay } = require('../lib/ist');
+const { stripHtml, unsafeMarkup } = require('../lib/html');
 const { makeCrudRouter } = require('../lib/crud');
 const { matchesQ } = require('../lib/filters');
 const { nextId } = require('../lib/ids');
-const { notFound } = require('../middleware/errors');
+const { notFound, validation } = require('../middleware/errors');
 const { paginate, toPositiveInt, DEFAULT_PER_PAGE_PUBLIC } = require('../lib/paginate');
 const { rateLimit } = require('../middleware/rateLimit');
 const { sortItems } = require('../lib/sort');
@@ -35,14 +38,48 @@ const SUBMISSIONS_PER_MINUTE = 10;
 /** What a closed opening answers, whichever way it is reached (§7). */
 const CLOSED_MESSAGE = 'This opening is closed.';
 
+/** The articles API's sentence for markup that would run (QA-55). */
+const UNSAFE_DESCRIPTION =
+  'The text may not carry a script, an inline event handler or a javascript: link.';
+
 const first = (value) => (Array.isArray(value) ? value[0] : value);
 
 const sameId = (left, right) => String(left) === String(right);
 
 /**
+ * The rule of an opening's description the schema cannot state (QA-61, QA-59's
+ * rule for a FAQ's answer): it has words once its markup is stripped — an
+ * emptied bullet or heading (`<ul><li><p></p></li></ul>`) was stored, and the
+ * careers page printed "About the role" over nothing — and it runs nothing,
+ * which the articles API has refused since QA-55. A `PATCH` is asked only
+ * about the fields it sends.
+ *
+ * @param {object} record the record about to be stored
+ * @param {{method: string, body: object}} context
+ * @returns {object} the same record
+ */
+function checkJob(record, { method, body }) {
+  if (method === 'PATCH' && !Object.prototype.hasOwnProperty.call(body ?? {}, 'description')) {
+    return record;
+  }
+  const html = record.description;
+  if (typeof html !== 'string' || html.trim() === '') return record;
+
+  if (unsafeMarkup(html)) throw validation({ description: [UNSAFE_DESCRIPTION] });
+  if (stripHtml(html) === '') {
+    throw validation({ description: ['The description field is required.'] });
+  }
+  return record;
+}
+
+/**
  * Whether an opening still accepts applications.
  *
- * `closesAt` is a date, so the day it names is the last day the role is open.
+ * `closesAt` is a date, so the day it names is the last day the role is open —
+ * that day in Bengaluru, where every calendar date the API answers is read
+ * (D22). It was Greenwich's day, which ends at 05:30 the next morning in IST:
+ * an opening that closed on the 30th took applications until breakfast on the
+ * 1st (QA-61).
  *
  * @param {object} job
  * @param {number} [now]
@@ -52,8 +89,9 @@ function isOpen(job, now = Date.now()) {
   if (!job || !job.isActive) return false;
   if (!job.closesAt) return true;
 
-  const closes = Date.parse(`${String(job.closesAt).slice(0, 10)}T23:59:59.999Z`);
-  return !Number.isFinite(closes) || closes >= now;
+  const last = String(job.closesAt).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(last)) return true;
+  return istDay(now) <= last;
 }
 
 /**
@@ -174,6 +212,10 @@ module.exports = ({ db, getModel }) => {
       defaultSort: 'postedAt',
       deleteGuard: 'job',
       noun: { one: 'opening', many: 'openings' },
+      // Laravel's `TrimStrings` (QA-60): "Sales " was stored beside "Sales",
+      // and the department filter offered both (QA-61).
+      trimStrings: true,
+      beforeSave: checkJob,
     })
   );
 
@@ -194,7 +236,17 @@ module.exports = ({ db, getModel }) => {
         jobId: { field: 'jobId' },
         status: { field: 'status', type: 'csv' },
       },
-      sorts: { createdAt: '-createdAt', status: 'status', name: 'name' },
+      sorts: {
+        createdAt: '-createdAt',
+        // Where somebody stands, in the order the desk moves them — new,
+        // shortlisted, interview, rejected, hired — and the newest first
+        // within a status. By spelling it read Hired, Interview, New… (QA-61).
+        status: {
+          spec: 'status,-createdAt',
+          rank: { status: JOB_APPLICATION_STATUS.values },
+        },
+        name: 'name',
+      },
       defaultSort: 'createdAt',
       noun: { one: 'application', many: 'applications' },
     })
