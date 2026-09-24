@@ -90,6 +90,11 @@ cp .env.example .env
 
 `npm start` runs the web app alone; `npm run mock` runs the API alone.
 
+Both halves of `npm run dev` pick up code changes on their own, a `git pull` included: the
+web app hot-reloads, and the mock API restarts when one of its files changes — or one of the
+`src/` modules it shares with the web app, such as `src/config/rbac.js`. Writes to the runtime
+database do not restart it. `npm run mock` on its own does not watch; restart it after pulling.
+
 ---
 
 ## Scripts
@@ -103,8 +108,9 @@ Chrome; the ones marked **API** need `npm run mock` running in another terminal.
 | ---------------------- | ---------------------------------------------------------------- |
 | `npm start`            | CRA dev server on port 3000                                      |
 | `npm run mock`         | Mock API on port 4000, over the runtime copy of the seed         |
+| `npm run mock:watch`   | `mock`, restarted whenever a file it loads changes (`node --watch`) |
 | `npm run mock:reset`   | Restores the runtime database from `db.json` — see [Seed](#the-seed-and-the-runtime-database) |
-| `npm run dev`          | `mock` and `start` together, via `concurrently`                  |
+| `npm run dev`          | `mock:watch` and `start` together, via `concurrently`            |
 | `npm run serve:build`  | Serves `build/` statically on port 5000, with SPA fallback       |
 
 ### Building
@@ -527,6 +533,14 @@ Get-NetTCPConnection -LocalPort 4000 | Select-Object -ExpandProperty OwningProce
 
 The mock's port is `MOCK_PORT`; change `REACT_APP_API_URL` to match when you move it. CRA
 offers another port for the web app on its own.
+
+**A screen says "You do not have permission to perform this action." to the admin.** The
+web app is newer than the mock API answering it. The API refuses an admin route it has no
+rule for, so a screen added since that process started — Master data → Segments, say — fails
+with a 403 even for the admin. Two things cause it: a mock started with `npm run mock` before
+a `git pull` (it does not restart itself; `npm run dev` does), or an earlier mock still holding
+port 4000, which makes the new one exit with `Port 4000 is already in use`. Stop every mock
+(the commands above free the port), then `npm run dev` again.
 
 **`REACT_APP_API_URL is not set. Copy .env.example to .env.`** Thrown at startup, on
 purpose — there is no fallback URL. In development `.env.development` supplies it, so this

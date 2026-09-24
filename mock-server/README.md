@@ -10,8 +10,9 @@ to `REACT_APP_API_URL` and nothing else.
 
 ```
 npm run mock          # http://localhost:4000/api
+npm run mock:watch    # the same, restarted whenever a file it loads changes
 npm run mock:reset    # restore the runtime db from db.json
-npm run dev           # mock + React dev server together
+npm run dev           # mock:watch + React dev server together
 npm run validate:seed # check db.json against the data model
 npm run test:mock     # the mock's own tests (node --test, no framework)
 npm run smoke         # walk every endpoint of the registry (needs a running mock)

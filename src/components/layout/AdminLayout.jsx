@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useState } from 'react';
+import { Suspense, useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Drawer } from '@mui/material';
 import { Outlet, useLocation } from 'react-router-dom';
 
@@ -23,10 +23,13 @@ import styles from './AdminLayout.module.css';
  * poller exists only while an admin screen is open — a visitor on the public
  * site never polls (D45).
  *
- * The canvas carries its own `ErrorBoundary` (§8.2). The route boundary in
- * `routes/index.js` would replace the whole viewport, which for an operator who
- * can simply open another screen is the wrong answer; this one fills the
- * content column and leaves the panel navigable.
+ * The canvas carries its own `ErrorBoundary` (§8.2). The route boundary
+ * (`routes/RouteBoundary.jsx`) would replace the whole viewport, which for an
+ * operator who can simply open another screen is the wrong answer; this one
+ * fills the content column and leaves the panel navigable.
+ *
+ * The shell itself is mounted once for the whole panel, not once per screen:
+ * `RouteBoundary` gives every admin path the same key.
  */
 
 /** Persisted rail state (§4.2 storage keys). */
@@ -55,8 +58,19 @@ const AdminShell = () => {
 
   const [collapsed, setCollapsed] = useState(() => getItem(SIDEBAR_STORAGE_KEY, false) === true);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const mainRef = useRef(null);
 
   const title = getAdminPageTitle(location.pathname);
+
+  // The shell stays mounted from one screen to the next (`RouteBoundary`), and
+  // the sidebar keeps its scroll position with it. What a remount used to do
+  // by the way is done here on purpose: the next screen starts at the top of
+  // the canvas, and a drawer still open — after the back button, say — closes.
+  // A new query string (a filter, the next page) is the same screen.
+  useLayoutEffect(() => {
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+    setDrawerOpen(false);
+  }, [location.pathname]);
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((previous) => {
@@ -121,7 +135,7 @@ const AdminShell = () => {
           onOpenDrawer={() => setDrawerOpen(true)}
         />
 
-        <main id="admin-main" tabIndex={-1} className={styles.main}>
+        <main ref={mainRef} id="admin-main" tabIndex={-1} className={styles.main}>
           <div
             className={[styles.content, isWide(location.pathname) ? styles.contentWide : '']
               .filter(Boolean)

@@ -123,11 +123,13 @@ describe('ErrorBoundary', () => {
   });
 
   /**
-   * The route boundary is keyed on the pathname (`routes/index.js`), which is
-   * what makes a crashed page recover on the next navigation without a full
-   * reload (§7). A key change remounts the boundary, so `hasError` starts false
-   * again — that is the behaviour asserted here, with the key stood in for by a
-   * state change so the test needs no router.
+   * The admin canvas's inline boundary is keyed on the pathname
+   * (`AdminLayout`), and so is the route boundary on the public site
+   * (`routes/RouteBoundary.jsx`): that is what makes a crashed page recover on
+   * the next navigation without a full reload (§7). A key change remounts the
+   * boundary, so `hasError` starts false again — that is the behaviour
+   * asserted here, with the key stood in for by a state change so the test
+   * needs no router.
    */
   it('recovers when its key changes, without a reload', () => {
     const Harness = () => {
@@ -153,5 +155,79 @@ describe('ErrorBoundary', () => {
 
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByText('All is well')).toBeInTheDocument();
+  });
+
+  /**
+   * The route boundary is not keyed on the pathname inside the admin panel —
+   * a new key would remount the whole admin shell below it — so there the
+   * pathname is its `resetKey` (`routes/RouteBoundary.jsx`).
+   */
+  describe('resetKey', () => {
+    /** A boundary whose `resetKey` walks through `routes`, one per click. */
+    const Walk = ({ routes, children }) => {
+      const [index, setIndex] = useState(0);
+      const route = routes[index];
+
+      return (
+        <>
+          <button type="button" onClick={() => setIndex((current) => current + 1)}>
+            Navigate
+          </button>
+          <ErrorBoundary resetKey={route}>{children(route)}</ErrorBoundary>
+        </>
+      );
+    };
+
+    it('clears a screen that is showing when it changes, without a reload', () => {
+      renderWith(
+        <Walk routes={['/crashes', '/works']}>
+          {(route) => <Boom fail={route === '/crashes'} />}
+        </Walk>
+      );
+
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Navigate' }));
+
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.getByText('All is well')).toBeInTheDocument();
+    });
+
+    it('shows the screen for a page that throws as it is navigated to, and clears it on the next', () => {
+      renderWith(
+        <Walk routes={['/works', '/crashes', '/works-again']}>
+          {(route) => <Boom fail={route === '/crashes'} />}
+        </Walk>
+      );
+
+      expect(screen.getByText('All is well')).toBeInTheDocument();
+
+      // The render that moved the key is the one that threw: the screen stays.
+      fireEvent.click(screen.getByRole('button', { name: 'Navigate' }));
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Navigate' }));
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.getByText('All is well')).toBeInTheDocument();
+    });
+
+    it('leaves children that did not throw mounted when it changes', () => {
+      const Counter = () => {
+        const [count, setCount] = useState(0);
+        return (
+          <button type="button" onClick={() => setCount((current) => current + 1)}>
+            Clicked {count}
+          </button>
+        );
+      };
+
+      renderWith(<Walk routes={['/one', '/two']}>{() => <Counter />}</Walk>);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Clicked 0' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Navigate' }));
+
+      // A remount would have started the count again at 0.
+      expect(screen.getByRole('button', { name: 'Clicked 1' })).toBeInTheDocument();
+    });
   });
 });

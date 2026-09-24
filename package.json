@@ -57,8 +57,9 @@
   "scripts": {
     "start": "react-scripts start",
     "mock": "node mock-server/server.js",
+    "mock:watch": "node --watch --watch-preserve-output mock-server/server.js",
     "mock:reset": "node mock-server/reset.js",
-    "dev": "concurrently -n mock,web -c blue,green \"npm run mock\" \"npm start\"",
+    "dev": "concurrently -n mock,web -c blue,green \"npm run mock:watch\" \"npm start\"",
     "build": "react-scripts build",
     "build:ci": "cross-env CI=true react-scripts build",
     "build:prerender": "npm run build && node scripts/prerender.js",

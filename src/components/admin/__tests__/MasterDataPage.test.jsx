@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, waitForElementToBeRemoved, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import ApiError from '../../../services/apiError';
@@ -225,5 +225,190 @@ describe('MasterDataPage', () => {
 
     await waitFor(() => expect(service.list).toHaveBeenCalled());
     expect(await screen.findByText('No localities yet')).toBeInTheDocument();
+  });
+
+  /**
+   * `editing` is cleared the moment the dialog is asked to close, and the
+   * dialog then takes its exit transition to leave. MUI keeps it in the
+   * document until it has faded out, which is where these assertions run: a
+   * dialog drawn from `editing` read "New locality" there, with no fields and a
+   * "Create locality" button.
+   */
+  describe('the dialog as it closes', () => {
+    /** Opens a row's dialog and waits for its form to be filled in. */
+    const openEdit = async (name) => {
+      await userEvent.click(screen.getByRole('button', { name: `Edit ${name}` }));
+      const dialog = await screen.findByRole('dialog', { name: 'Edit locality' });
+      await waitFor(() => expect(within(dialog).getByLabelText(/Name/)).toHaveValue(name));
+      return dialog;
+    };
+
+    it('still reads "Edit …", with its fields, while it fades out after Cancel', async () => {
+      render(baseConfig(fakeService()));
+      await screen.findByText('Whitefield');
+
+      const dialog = await openEdit('Whitefield');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+      expect(within(dialog).getByRole('heading', { name: 'Edit locality' })).toBeInTheDocument();
+      expect(within(dialog).queryByText('New locality')).toBeNull();
+      expect(within(dialog).getByLabelText(/Name/)).toHaveValue('Whitefield');
+      expect(within(dialog).getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+
+      await waitForElementToBeRemoved(dialog);
+    });
+
+    it('still reads "Edit …" after Save changes, and a click that lands then creates nothing', async () => {
+      const service = fakeService();
+      render(baseConfig(service));
+      await screen.findByText('Whitefield');
+
+      const dialog = await openEdit('Whitefield');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+      // The toast is raised in the same moment the dialog is closed.
+      await screen.findByText('Locality saved');
+
+      expect(within(dialog).getByRole('heading', { name: 'Edit locality' })).toBeInTheDocument();
+      expect(within(dialog).queryByText('New locality')).toBeNull();
+      expect(within(dialog).getByLabelText(/Name/)).toHaveValue('Whitefield');
+
+      // The button is still under the pointer. With `editing` gone, a submit
+      // would have created a copy of the record just saved.
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+      expect(service.update).toHaveBeenCalledTimes(1);
+      expect(service.create).not.toHaveBeenCalled();
+
+      await waitForElementToBeRemoved(dialog);
+    });
+
+    it('opens a clean create form after an edit, and the right record after an add', async () => {
+      render(baseConfig(fakeService()));
+      await screen.findByText('Whitefield');
+
+      const edit = await openEdit('Whitefield');
+      await userEvent.click(within(edit).getByRole('button', { name: 'Cancel' }));
+      await waitForElementToBeRemoved(edit);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add locality' }));
+      const add = await screen.findByRole('dialog', { name: 'New locality' });
+      await waitFor(() => expect(within(add).getByLabelText(/Name/)).toHaveValue(''));
+
+      await userEvent.click(within(add).getByRole('button', { name: 'Cancel' }));
+      // A create form fades out as one too, not as an empty box.
+      expect(within(add).getByLabelText(/Name/)).toBeInTheDocument();
+      expect(within(add).getByRole('button', { name: 'Create locality' })).toBeInTheDocument();
+      await waitForElementToBeRemoved(add);
+
+      // `openEdit` waits for the form to read "Jayanagar".
+      await openEdit('Jayanagar');
+    });
+
+    it('keeps the delete confirmation’s sentence while it fades out, and a second "Delete" deletes nothing', async () => {
+      const service = fakeService();
+      render(baseConfig(service));
+      await screen.findByText('Whitefield');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Delete Whitefield' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Delete locality?' });
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+      // The toast is raised in the same moment the dialog is closed.
+      await screen.findByText('“Whitefield” deleted');
+
+      expect(within(dialog).getByText(/“Whitefield” will be removed/)).toBeInTheDocument();
+
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+      expect(service.remove).toHaveBeenCalledTimes(1);
+
+      await waitForElementToBeRemoved(dialog);
+    });
+
+    it('keeps the usage guard’s message and list while it fades out', async () => {
+      const service = fakeService({
+        remove: jest.fn().mockRejectedValue(
+          new ApiError({
+            status: 409,
+            message: 'This item is in use.',
+            data: { usedBy: [{ type: 'property', id: 12, title: 'Lakeview Heights' }] },
+          })
+        ),
+      });
+      render(baseConfig(service));
+      await screen.findByText('Whitefield');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Delete Whitefield' }));
+      await userEvent.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' })
+      );
+      const guard = await screen.findByRole('dialog', { name: 'Still in use' });
+      await userEvent.click(within(guard).getByRole('button', { name: 'Got it' }));
+
+      // Drawn from nothing, it read "“undefined” cannot be deleted" over an
+      // empty list.
+      expect(within(guard).getByText('This item is in use.')).toBeInTheDocument();
+      expect(within(guard).getByRole('link', { name: /Lakeview Heights/ })).toBeInTheDocument();
+      expect(within(guard).queryByText(/undefined/)).toBeNull();
+
+      await waitForElementToBeRemoved(guard);
+    });
+
+    it('keeps a save warning whole while Cancel fades it out, and its button then saves nothing', async () => {
+      const service = fakeService();
+      render({
+        ...baseConfig(service),
+        confirmSave: async () => ({
+          heading: 'Change the zone?',
+          title: 'Whitefield',
+          confirmLabel: 'Change zone',
+          message: '“Whitefield” moves from East to South.',
+          usedBy: [{ type: 'property', id: 12, title: 'Lakeview Heights' }],
+          hint: '',
+        }),
+      });
+      await screen.findByText('Whitefield');
+
+      const dialog = await openEdit('Whitefield');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+      const warning = await screen.findByRole('dialog', { name: 'Change the zone?' });
+      await userEvent.click(within(warning).getByRole('button', { name: 'Cancel' }));
+
+      expect(
+        within(warning).getByRole('heading', { name: 'Change the zone?' })
+      ).toBeInTheDocument();
+      expect(
+        within(warning).getByText('“Whitefield” moves from East to South.')
+      ).toBeInTheDocument();
+      expect(within(warning).getByRole('link', { name: /Lakeview Heights/ })).toBeInTheDocument();
+
+      // The form behind it is still open, so a click that lands on "Change
+      // zone" now would save the change that was just declined.
+      await userEvent.click(within(warning).getByRole('button', { name: 'Change zone' }));
+      await waitForElementToBeRemoved(warning);
+      expect(service.update).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog', { name: 'Edit locality' })).toBeInTheDocument();
+    });
+
+    it('keeps the edits when "Discard changes" is clicked as "Keep editing" fades the question out', async () => {
+      const service = fakeService();
+      render(baseConfig(service));
+      await screen.findByText('Whitefield');
+
+      const dialog = await openEdit('Whitefield');
+      await userEvent.type(within(dialog).getByLabelText(/Name/), ' East');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+      const discard = await screen.findByRole('dialog', { name: 'Discard unsaved changes?' });
+      await userEvent.click(within(discard).getByRole('button', { name: 'Keep editing' }));
+      await userEvent.click(within(discard).getByRole('button', { name: 'Discard changes' }));
+      await waitForElementToBeRemoved(discard);
+
+      // Still open, still holding the edit: saving it sends it.
+      expect(within(dialog).getByLabelText(/Name/)).toHaveValue('Whitefield East');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+      await waitFor(() =>
+        expect(service.update).toHaveBeenCalledWith(
+          1,
+          expect.objectContaining({ name: 'Whitefield East' })
+        )
+      );
+    });
   });
 });

@@ -64,6 +64,7 @@ const TYPE_LABEL = {
  * @param {() => void} [props.onConfirm] renders the confirm button
  * @param {string} [props.confirmLabel]
  * @param {boolean} [props.loading]
+ * @param {() => void} [props.onExited] once the close transition has finished
  */
 export default function DeleteGuardDialog({
   open,
@@ -76,6 +77,7 @@ export default function DeleteGuardDialog({
   onConfirm,
   confirmLabel = 'Continue',
   loading = false,
+  onExited,
 }) {
   return (
     <Modal
@@ -84,6 +86,7 @@ export default function DeleteGuardDialog({
       size="sm"
       mobile="fullscreen"
       title={heading}
+      slotProps={{ transition: { onExited } }}
       footer={
         onConfirm ? (
           <>

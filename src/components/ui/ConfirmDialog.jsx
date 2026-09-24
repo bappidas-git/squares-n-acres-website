@@ -23,6 +23,7 @@ import Modal from './Modal';
  * @param {boolean} [props.danger]
  * @param {boolean} [props.loading]
  * @param {'confirm'|'alert'} [props.variant]
+ * @param {() => void} [props.onExited] once the close transition has finished
  */
 export default function ConfirmDialog({
   open,
@@ -36,6 +37,7 @@ export default function ConfirmDialog({
   danger = false,
   loading = false,
   variant = 'confirm',
+  onExited,
   children,
 }) {
   const isAlert = variant === 'alert';
@@ -48,6 +50,7 @@ export default function ConfirmDialog({
       size="sm"
       dismissible={!loading}
       showClose={!loading}
+      slotProps={{ transition: { onExited } }}
       footer={
         isAlert ? (
           <Button variant="primary" onClick={onClose} autoFocus>
