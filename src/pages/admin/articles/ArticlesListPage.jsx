@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import Button from '../../../components/ui/Button';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
@@ -9,11 +9,14 @@ import FilterBar from '../../../components/admin/FilterBar';
 import PATHS from '../../../routes/paths';
 import PageHeader from '../../../components/admin/PageHeader';
 import articleService from '../../../services/articleService';
+import openInNewTab from '../../../utils/openInNewTab';
 import useApiList from '../../../hooks/useApiList';
 import useArticleTaxonomy, { toTaxonomyOptions } from './useArticleTaxonomy';
+import useLingering from '../../../hooks/useLingering';
 import { ARTICLE_STATUS } from '../../../config/enums';
 import { buildArticleColumns, renderArticleCard } from './articleColumns';
 import { firstFieldMessage } from '../../../services/apiError';
+import { publishGaps, publishProblems } from '../../../config/articleRules';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
@@ -71,7 +74,9 @@ export const ARTICLE_LIST_PARAM_KEYS = {
   categoryId: 'string',
   authorId: 'string',
   tagId: 'string',
-  isFeatured: 'string',
+  // A boolean, so `?isFeatured=maybe` is no filter at all — as a string it
+  // showed a "Featured: Not featured" chip over the unfiltered list (QA-55).
+  isFeatured: 'bool',
   sort: 'string',
   order: 'string',
   page: 'int',
@@ -84,6 +89,34 @@ const FILTER_KEYS = ['q', 'status', 'categoryId', 'authorId', 'tagId', 'isFeatur
 const isSet = (value) =>
   value !== undefined && value !== null && value !== '' && !(Array.isArray(value) && !value.length);
 
+/** What an article is called where a list of them is read aloud (QA-55). */
+const rowLabel = (row) => row.title;
+
+/**
+ * A select's options, plus one for a value the address carries that is not
+ * among them — a category deleted since the link was shared, a hand-edited
+ * `?tagId=1,2` — so the chip names it rather than printing the raw id. Only
+ * once the lists have loaded: before that every value is unknown.
+ *
+ * @param {Array<{value: number, label: string}>} options
+ * @param {string|undefined} value the URL's value
+ * @param {string} noun what an unknown one is called
+ * @param {boolean} loaded
+ */
+function withCurrent(options, value, noun, loaded) {
+  if (
+    !loaded ||
+    !isSet(value) ||
+    options.some((option) => String(option.value) === String(value))
+  ) {
+    return options;
+  }
+  const parts = String(value).split(',').filter(Boolean);
+  const names = parts.map((part) => options.find((option) => String(option.value) === part)?.label);
+  const label = names.every(Boolean) ? names.join(', ') : `Unknown ${noun}`;
+  return [...options, { value, label }];
+}
+
 export default function ArticlesListPage() {
   const navigate = useNavigate();
   const toast = useToast();
@@ -94,12 +127,13 @@ export default function ArticlesListPage() {
   const canDelete = can('articles', 'delete');
   const canBulk = can('articles', 'bulk');
 
-  const { categories, tags, authors } = useArticleTaxonomy();
+  const { categories, tags, authors, loading: taxonomyLoading } = useArticleTaxonomy();
 
   const {
     items,
     meta,
     loading,
+    refreshing,
     error,
     params,
     setPage,
@@ -119,6 +153,12 @@ export default function ArticlesListPage() {
   const [deleting, setDeleting] = useState(null);
   const [deletingBusy, setDeletingBusy] = useState(false);
   const [busyId, setBusyId] = useState(null);
+  // The bulk "Publish" asked about articles that cannot go live yet.
+  const [publishCheck, setPublishCheck] = useState(null);
+
+  // What the two dialogs draw while they fade out (QA-54, QA-55).
+  const [shownDeleting, releaseDeleting] = useLingering(deleting);
+  const [shownCheck, releaseCheck] = useLingering(publishCheck);
 
   useEffect(() => {
     setOverrides({});
@@ -143,7 +183,8 @@ export default function ArticlesListPage() {
    *
    * The token is asked for first, so the tab is opened after an `await` and a
    * pop-up blocker may refuse it. A refusal must not swallow the action: the tab
-   * it could not open becomes a navigation in this one.
+   * it could not open becomes a navigation in this one — and only a refusal
+   * does (`openInNewTab`, QA-55).
    */
   const preview = useCallback(
     async (row) => {
@@ -151,7 +192,7 @@ export default function ArticlesListPage() {
       try {
         const { data } = await articleService.previewToken(row.id);
         const path = `${PATHS.article(row.slug)}?preview=${data.token}`;
-        if (!window.open(path, '_blank', 'noopener,noreferrer')) navigate(path);
+        if (!openInNewTab(path)) navigate(path);
       } catch (thrown) {
         toast.error(firstFieldMessage(thrown, 'The preview link could not be created.'));
       } finally {
@@ -187,6 +228,9 @@ export default function ArticlesListPage() {
       try {
         await articleService.patch(row.id, { isFeatured: value });
         toast.success(TOASTS.flagged(`“${row.title}”`, 'isFeatured', value));
+        // Read again: under the Featured filter, the piece just unfeatured
+        // belongs to another list (QA-55).
+        refetch();
       } catch (thrown) {
         setOverrides((current) => {
           const { [id]: _reverted, ...rest } = current;
@@ -197,21 +241,79 @@ export default function ArticlesListPage() {
         setBusyId(null);
       }
     },
-    [toast]
+    [refetch, toast]
   );
 
-  const runBulk = async (action, ids) => {
+  /**
+   * After a delete: the previous page when this one has just been emptied,
+   * rather than "Nothing on this page" over the rows that were there (QA-55).
+   *
+   * @param {number} removed how many of the rows on screen went
+   */
+  const afterRemoval = (removed) => {
+    const page = Number(params.page) || 1;
+    if (page > 1 && removed >= rows.length) setPage(page - 1);
+    else refetch();
+  };
+
+  const applyBulk = async (action, ids) => {
     setBulkBusy(true);
     try {
       const { message } = await articleService.bulk({ ids, action });
       toast.success(message || TOASTS.updatedCount(ids.length, 'article'));
       setSelectedIds([]);
-      refetch();
+      if (action === 'delete') afterRemoval(ids.length);
+      else refetch();
     } catch (thrown) {
-      toast.error(firstFieldMessage(thrown, 'The bulk action could not be applied.'));
+      // A refused publish names every article that is not ready; the message
+      // says how many, the first line which one.
+      toast.error(
+        thrown?.status === 422 && thrown?.message && action === 'publish'
+          ? thrown.message
+          : firstFieldMessage(thrown, 'The bulk action could not be applied.')
+      );
     } finally {
       setBulkBusy(false);
     }
+  };
+
+  /**
+   * The bulk actions, with "Publish" asking first what the API would refuse:
+   * the rules the form enforces — an excerpt, a featured image, 300 words —
+   * hold for a batch too (`config/articleRules`, QA-55). The rows on screen
+   * carry what the rules read, so the editor hears which piece lacks what,
+   * and may publish the ones that are ready.
+   */
+  const runBulk = async (action, ids) => {
+    if (action === 'publish') {
+      const chosen = new Set(ids.map(String));
+      // An article already live is left as it is — publishing it again
+      // changes nothing — so only the others are asked the rules.
+      const candidates = rows.filter(
+        (row) => chosen.has(String(row.id)) && row.status !== 'published'
+      );
+      const notReady = candidates
+        .map((row) => {
+          const words = Number(row.wordCount) || 0;
+          return {
+            id: row.id,
+            title: row.title,
+            gaps: publishGaps(publishProblems(row, words), words),
+          };
+        })
+        .filter((entry) => entry.gaps.length > 0);
+
+      if (notReady.length > 0) {
+        const refused = new Set(notReady.map((entry) => String(entry.id)));
+        setPublishCheck({
+          total: ids.length,
+          notReady,
+          readyIds: candidates.map((row) => row.id).filter((id) => !refused.has(String(id))),
+        });
+        return;
+      }
+    }
+    await applyBulk(action, ids);
   };
 
   const confirmDelete = async () => {
@@ -222,7 +324,7 @@ export default function ArticlesListPage() {
       toast.success(TOASTS.deleted(`“${deleting.title}”`));
       setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
       setDeleting(null);
-      refetch();
+      afterRemoval(1);
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'The article could not be deleted.'));
       // A refusal will not become an acceptance on a second press.
@@ -303,36 +405,51 @@ export default function ArticlesListPage() {
     [busyId, canCreate, canDelete, canEdit, duplicate, preview, setFeatured]
   );
 
+  // Six filters share one row on a laptop from 1,440 px up: at their natural
+  // widths the last one wrapped onto a row of its own at 1,440–1,536 px
+  // (QA-55). A select never goes below `FilterBar`'s 160 px; the category's
+  // 190 px is what "Investment & Finance" needs to show whole once chosen.
+  const loaded = !taxonomyLoading;
   const filterFields = useMemo(
     () => [
-      { key: 'q', type: 'search', label: 'Search', placeholder: 'Title, excerpt or body' },
+      {
+        key: 'q',
+        type: 'search',
+        label: 'Search',
+        placeholder: 'Title, excerpt or body',
+        width: '220px',
+      },
       {
         key: 'status',
         type: 'multiselect',
         label: 'Status',
         placeholder: 'Any status',
         options: ARTICLE_STATUS.options,
+        width: '170px',
       },
       {
         key: 'categoryId',
         type: 'select',
         label: 'Category',
         placeholder: 'All categories',
-        options: toTaxonomyOptions(categories),
+        options: withCurrent(toTaxonomyOptions(categories), params.categoryId, 'category', loaded),
+        width: '190px',
       },
       {
         key: 'authorId',
         type: 'select',
         label: 'Author',
         placeholder: 'All authors',
-        options: toTaxonomyOptions(authors),
+        options: withCurrent(toTaxonomyOptions(authors), params.authorId, 'author', loaded),
+        width: '160px',
       },
       {
         key: 'tagId',
         type: 'select',
         label: 'Tag',
         placeholder: 'All tags',
-        options: toTaxonomyOptions(tags),
+        options: withCurrent(toTaxonomyOptions(tags), params.tagId, 'tag', loaded),
+        width: '160px',
       },
       {
         key: 'isFeatured',
@@ -341,9 +458,10 @@ export default function ArticlesListPage() {
         placeholder: 'Any',
         trueLabel: 'Featured',
         falseLabel: 'Not featured',
+        width: '160px',
       },
     ],
-    [authors, categories, tags]
+    [authors, categories, tags, loaded, params.authorId, params.categoryId, params.tagId]
   );
 
   const filtered = FILTER_KEYS.some((key) => isSet(params[key]));
@@ -417,6 +535,7 @@ export default function ArticlesListPage() {
           rows={rows}
           meta={meta}
           loading={loading}
+          refreshing={refreshing}
           error={error}
           onRetry={refetch}
           sort={{ field: params.sort, order: params.order }}
@@ -434,8 +553,10 @@ export default function ArticlesListPage() {
           rowActions={rowActions}
           rowActionsMenu
           rowActionsLabel={(row) => `Actions for ${row.title}`}
+          rowLabel={rowLabel}
           mobileCard={mobileCard}
           emptyState={emptyState}
+          density="compact"
         />
       </div>
 
@@ -443,8 +564,8 @@ export default function ArticlesListPage() {
         open={Boolean(deleting)}
         title="Delete this article?"
         message={
-          deleting
-            ? `“${deleting.title}” will be deleted, and /insights/articles/${deleting.slug} will answer 404. This cannot be undone.`
+          shownDeleting
+            ? `“${shownDeleting.title}” will be deleted, and /insights/articles/${shownDeleting.slug} will answer 404. This cannot be undone.`
             : undefined
         }
         confirmLabel="Delete"
@@ -452,7 +573,76 @@ export default function ArticlesListPage() {
         loading={deletingBusy}
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
+        onExited={releaseDeleting}
+      />
+
+      <PublishCheckDialog
+        open={Boolean(publishCheck)}
+        check={shownCheck}
+        onClose={() => setPublishCheck(null)}
+        onExited={releaseCheck}
+        onPublishReady={() => {
+          const ids = publishCheck?.readyIds ?? [];
+          setPublishCheck(null);
+          if (ids.length > 0) applyBulk('publish', ids);
+        }}
       />
     </>
+  );
+}
+
+/**
+ * "2 of the 3 selected articles are not ready to go live" — each one named,
+ * with what it lacks and a link to finish it; and, when some of the batch is
+ * ready, the button that publishes those (QA-55).
+ *
+ * @param {object} props
+ * @param {boolean} props.open
+ * @param {{total: number, notReady: Array<{id: number, title: string, gaps: string[]}>,
+ *   readyIds: Array<number|string>}|null} props.check
+ * @param {() => void} props.onClose
+ * @param {() => void} props.onExited
+ * @param {() => void} props.onPublishReady
+ */
+function PublishCheckDialog({ open, check, onClose, onExited, onPublishReady }) {
+  const notReady = check?.notReady ?? [];
+  const ready = check?.readyIds?.length ?? 0;
+  const noun = (count) => (count === 1 ? 'article' : 'articles');
+
+  const title =
+    notReady.length === 1 && (check?.total ?? 0) === 1
+      ? `“${notReady[0].title}” is not ready to go live`
+      : `${notReady.length} of the ${check?.total ?? 0} selected articles ${
+          notReady.length === 1 ? 'is' : 'are'
+        } not ready to go live`;
+
+  return (
+    <ConfirmDialog
+      open={open}
+      variant={ready > 0 ? 'confirm' : 'alert'}
+      title={title}
+      message={
+        ready > 0
+          ? `${ready === 1 ? 'One other is' : `${ready} others are`} ready, and can be published now; the rest stay as they are.`
+          : 'An article needs an excerpt, a featured image and 300 words before it goes live. Open it to finish it.'
+      }
+      confirmLabel={`Publish ${ready} ${noun(ready)}`}
+      cancelLabel="Cancel"
+      okLabel="Got it"
+      onClose={onClose}
+      onConfirm={onPublishReady}
+      onExited={onExited}
+    >
+      <ul className={styles.gapList}>
+        {notReady.map((entry) => (
+          <li key={entry.id}>
+            <Link className={styles.gapTitle} to={PATHS.adminArticleEdit(entry.id)}>
+              {entry.title}
+            </Link>
+            <span className={styles.meta}>{entry.gaps.join(' · ')}</span>
+          </li>
+        ))}
+      </ul>
+    </ConfirmDialog>
   );
 }

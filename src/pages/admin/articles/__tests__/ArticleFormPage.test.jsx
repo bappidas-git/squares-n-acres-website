@@ -7,18 +7,21 @@
  * also refuses — §6.8), and the ten-second draft is offered back after a crash.
  */
 
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useLocation } from 'react-router-dom';
 
 import ArticleFormPage from '../ArticleFormPage';
 import ToastProvider from '../../../../components/common/ToastProvider';
 import articleService from '../../../../services/articleService';
 import authService from '../../../../services/authService';
+import masterDataService from '../../../../services/masterDataService';
+import ApiError from '../../../../services/apiError';
 import renderWith from '../../../../test-utils';
 import storage from '../../../../utils/storage';
 import { AUTH_STORAGE_KEYS, clearSession } from '../../../../services/http';
 import { AdminAuthProvider } from '../../../../contexts/AdminAuthContext';
-import { draftKey } from '../useArticleForm';
+import { draftKey, savedMessage } from '../useArticleForm';
 import { toDateTimeLocal } from '../../../../utils/articleUtils';
 
 jest.mock('../../../../services/authService');
@@ -135,6 +138,12 @@ const setViewport = (width) => {
   };
 };
 
+/** A change the save has to send: the headline, a few words longer. */
+const editHeadline = (suffix = ' (revised)') => {
+  const field = screen.getByDisplayValue(RECORD.title);
+  fireEvent.change(field, { target: { value: `${RECORD.title}${suffix}` } });
+};
+
 const realRect = Element.prototype.getBoundingClientRect;
 beforeAll(() => {
   Element.prototype.getBoundingClientRect = function boundingRect() {
@@ -153,6 +162,12 @@ const ADMIN = {
   phone: '9880000012',
   avatarUrl: null,
 };
+
+/** Wherever a navigation away from the form landed. */
+function Elsewhere() {
+  const location = useLocation();
+  return <p data-testid="elsewhere">{`${location.pathname}${location.search}`}</p>;
+}
 
 /** Renders the form at `/admin/articles/edit/:id`, or at `/add` with no id. */
 const renderForm = ({ id = '7' } = {}) => {
@@ -174,6 +189,7 @@ const renderForm = ({ id = '7' } = {}) => {
       <AdminAuthProvider>
         <Routes>
           <Route path={path} element={<ArticleFormPage />} />
+          <Route path="*" element={<Elsewhere />} />
         </Routes>
       </AdminAuthProvider>
     </ToastProvider>,
@@ -397,9 +413,43 @@ describe('ArticleFormPage — the autosaved draft', () => {
     await screen.findByDisplayValue(RECORD.title);
     await screen.findByText('Unsaved changes were found in this browser');
 
+    editHeadline();
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(articleService.update).toHaveBeenCalled());
+    expect(storage.getItem(draftKey('7'), null)).toBeNull();
+  });
+
+  it('keeps a draft on offer through a Save that had nothing to save', async () => {
+    storage.setItem(draftKey('7'), {
+      savedAt: new Date(Date.parse(RECORD.updatedAt) + 60000).toISOString(),
+      values: { ...RECORD, title: 'Khata Transfer: the version on offer', scheduledAt: '' },
+    });
+
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+    await screen.findByText('Unsaved changes were found in this browser');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('No changes to save.')).toBeInTheDocument();
+    expect(screen.getByText('Unsaved changes were found in this browser')).toBeInTheDocument();
+    expect(storage.getItem(draftKey('7'), null)).not.toBeNull();
+  });
+
+  it('forgets a copy autosaved before the edit was taken back (QA-55)', async () => {
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    // What the ten-second autosave wrote while the headline was different.
+    storage.setItem(draftKey('7'), {
+      savedAt: new Date().toISOString(),
+      values: { ...RECORD, title: 'An edit that was typed and then taken back' },
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('No changes to save.')).toBeInTheDocument();
     expect(storage.getItem(draftKey('7'), null)).toBeNull();
   });
 });
@@ -448,6 +498,7 @@ describe('ArticleFormPage — one save at a time', () => {
 
     renderForm();
     await screen.findByDisplayValue(RECORD.title);
+    editHeadline();
 
     const press = (init) =>
       // `keydown` on the window, which is where the shortcut listens.
@@ -476,6 +527,7 @@ describe('ArticleFormPage — the payload', () => {
     });
     renderForm();
     await screen.findByDisplayValue(RECORD.title);
+    editHeadline();
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -483,5 +535,368 @@ describe('ArticleFormPage — the payload', () => {
     const [, body] = articleService.update.mock.calls[0];
     expect(body.tagIds).toEqual([2, 1]);
     expect(body.relatedArticleIds).toEqual([3]);
+  });
+});
+
+describe('ArticleFormPage — saving what changed (QA-55)', () => {
+  it('says so, and sends nothing, when Save is pressed with nothing changed', async () => {
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('No changes to save.')).toBeInTheDocument();
+    expect(articleService.update).not.toHaveBeenCalled();
+  });
+
+  it('tells a Save of a live article that it stayed live, not that it was published', async () => {
+    const live = { ...RECORD, status: 'published', publishedAt: '2026-09-10T06:00:00.000Z' };
+    articleService.adminGet.mockResolvedValue({ data: live });
+    articleService.update.mockImplementation((id, body) =>
+      Promise.resolve({ data: { ...live, ...body, id: Number(id) } })
+    );
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+    editHeadline();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Changes saved. The article is live.')).toBeInTheDocument();
+    expect(screen.queryByText('Article published.')).not.toBeInTheDocument();
+  });
+
+  it('puts the status back when "Publish now" is refused', async () => {
+    articleService.adminGet.mockResolvedValue({ data: { ...RECORD, excerpt: '' } });
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Publish now' }));
+
+    expect(
+      await screen.findByText('An excerpt is required before an article goes live.')
+    ).toBeInTheDocument();
+    // Still a draft, and still offering the button that publishes it — a plain
+    // Save after the fix must not publish the article on the way.
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Draft' })).toBeChecked());
+    expect(screen.getByRole('button', { name: 'Publish now' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/^Excerpt/), {
+      target: { value: 'What the BBMP asks for, and in what order.' },
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(articleService.update).toHaveBeenCalled());
+    expect(articleService.update.mock.calls[0][1].status).toBe('draft');
+  });
+
+  it('names the category and the author rather than their keys', async () => {
+    renderForm({ id: null });
+    await screen.findByRole('button', { name: 'Save' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('The category field is required.')).toBeInTheDocument();
+    expect(screen.getByText('The author field is required.')).toBeInTheDocument();
+    expect(screen.queryByText(/categoryId|authorId/)).not.toBeInTheDocument();
+    expect(articleService.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('savedMessage', () => {
+  it.each([
+    [{ status: 'published' }, 'draft', 'Article published.'],
+    [{ status: 'published' }, 'published', 'Changes saved. The article is live.'],
+    [{ status: 'scheduled' }, 'draft', 'Article scheduled.'],
+    [{ status: 'scheduled' }, 'scheduled', 'Changes saved. The article is still scheduled.'],
+    [{ status: 'draft' }, 'published', 'Article unpublished and saved as a draft.'],
+    [{ status: 'draft' }, 'scheduled', 'Article unpublished and saved as a draft.'],
+    [{ status: 'draft' }, 'draft', 'Article saved as a draft.'],
+    [{ status: 'draft' }, null, 'Article saved as a draft.'],
+    [{ status: 'archived' }, 'published', 'Article archived.'],
+    [{ status: 'archived' }, 'archived', 'Changes saved.'],
+  ])('%j after %s says "%s"', (saved, before, message) => {
+    expect(savedMessage(saved, before)).toBe(message);
+  });
+});
+
+describe('ArticleFormPage — the FAQ rows (QA-55)', () => {
+  it('takes a removed row’s errors with it rather than leaving them on the next one', async () => {
+    articleService.adminGet.mockResolvedValue({
+      data: {
+        ...RECORD,
+        faqs: [
+          { question: '', answer: '' },
+          { question: 'Does a khata transfer need the seller?', answer: '<p>Yes.</p>' },
+        ],
+      },
+    });
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('Write the question, or remove this row.')).toBeInTheDocument();
+    expect(screen.getByText('Write the answer, or remove this row.')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove question 1' }));
+
+    expect(screen.getByDisplayValue('Does a khata transfer need the seller?')).toBeInTheDocument();
+    expect(screen.queryByText('Write the question, or remove this row.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Write the answer, or remove this row.')).not.toBeInTheDocument();
+  });
+});
+
+describe('ArticleFormPage — preview (QA-55)', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('opens the preview in a new tab and leaves the editor where it is', async () => {
+    const tab = { opener: window };
+    const open = jest.spyOn(window, 'open').mockImplementation(() => tab);
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Preview' }));
+
+    await waitFor(() => expect(articleService.previewToken).toHaveBeenCalledWith('7'));
+    expect(open).toHaveBeenCalledWith(
+      '/insights/articles/khata-transfer-checklist?preview=tok-1',
+      '_blank'
+    );
+    expect(tab.opener).toBeNull();
+    // A clean article is not saved again just to be looked at.
+    expect(articleService.update).not.toHaveBeenCalled();
+    await new Promise((done) => setTimeout(done, 20));
+    expect(screen.queryByTestId('elsewhere')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue(RECORD.title)).toBeInTheDocument();
+  });
+
+  it('opens it in this tab only when the browser refuses a new one', async () => {
+    jest.spyOn(window, 'open').mockImplementation(() => null);
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Preview' }));
+
+    expect(await screen.findByTestId('elsewhere')).toHaveTextContent(
+      '/insights/articles/khata-transfer-checklist?preview=tok-1'
+    );
+  });
+});
+
+describe('ArticleFormPage — keys that belong to a dialog (QA-55)', () => {
+  it('leaves Ctrl+S to a dialog open over the form', async () => {
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+    editHeadline();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add a category' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add a category' });
+    fireEvent.keyDown(within(dialog).getByRole('textbox', { name: /Name/ }), {
+      key: 's',
+      ctrlKey: true,
+    });
+
+    await new Promise((done) => setTimeout(done, 20));
+    expect(articleService.update).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document.body, { key: 's', ctrlKey: true });
+    await waitFor(() => expect(articleService.update).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('ArticleFormPage — replacing the excerpt (QA-55)', () => {
+  const content = '<h2>Khata</h2><p>A khata is the record of a property in the city ledger.</p>';
+
+  it('asks before the body’s first paragraph takes the place of a written excerpt', async () => {
+    articleService.adminGet.mockResolvedValue({ data: { ...RECORD, content } });
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    await userEvent.click(screen.getByRole('button', { name: /Generate from content/ }));
+    const question = await screen.findByRole('dialog', { name: 'Replace the excerpt?' });
+    await userEvent.click(within(question).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByDisplayValue(RECORD.excerpt)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Generate from content/ }));
+    await userEvent.click(
+      within(await screen.findByRole('dialog', { name: 'Replace the excerpt?' })).getByRole(
+        'button',
+        { name: 'Replace it' }
+      )
+    );
+    expect(
+      await screen.findByDisplayValue('A khata is the record of a property in the city ledger.')
+    ).toBeInTheDocument();
+  });
+});
+
+describe('ArticleFormPage — the classification card (QA-55)', () => {
+  const LEGAL = { id: 1, name: 'Legal & RERA', slug: 'legal-rera', order: 1, isActive: true };
+  const RETIRED = { id: 2, name: 'Old Section', slug: 'old-section', order: 2, isActive: false };
+  const GONE = {
+    id: 3,
+    name: 'Retired Section',
+    slug: 'retired-section',
+    order: 3,
+    isActive: false,
+  };
+
+  const categorySelect = () => screen.getByRole('combobox', { name: /^Category/ });
+
+  // CRA resets every mock before each test, the factory's lists included.
+  beforeEach(() => {
+    masterDataService.articleCategories.adminList.mockResolvedValue({ data: [LEGAL] });
+    masterDataService.articleTags.adminList.mockResolvedValue({ data: [] });
+    masterDataService.authors.adminList.mockResolvedValue({
+      data: [{ id: 1, name: 'Editorial Team', slug: 'editorial-team', isActive: true }],
+    });
+  });
+
+  it('offers only active categories, and keeps the article’s own inactive one, marked', async () => {
+    masterDataService.articleCategories.adminList.mockResolvedValueOnce({
+      data: [LEGAL, RETIRED, GONE],
+    });
+    articleService.adminGet.mockResolvedValue({
+      data: { ...RECORD, categoryId: 2, category: { id: 2, name: 'Old Section' } },
+    });
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    const select = categorySelect();
+    await within(select).findByRole('option', { name: 'Old Section (inactive)' });
+    expect(within(select).getByRole('option', { name: 'Legal & RERA' })).toBeInTheDocument();
+    expect(within(select).queryByRole('option', { name: /Retired Section/ })).toBeNull();
+    expect(select).toHaveValue('2');
+  });
+
+  it('shows the article’s own category when the lists fail, and offers to load them again', async () => {
+    masterDataService.articleCategories.adminList.mockRejectedValueOnce(
+      new ApiError({ status: 500, message: 'Internal server error' })
+    );
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    expect(
+      await screen.findByText('The categories, tags and authors could not be loaded.')
+    ).toBeInTheDocument();
+    expect(categorySelect()).toHaveValue('1');
+    expect(
+      within(categorySelect()).getByRole('option', { name: 'Legal & RERA' })
+    ).toBeInTheDocument();
+
+    const calls = masterDataService.articleCategories.adminList.mock.calls.length;
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() =>
+      expect(masterDataService.articleCategories.adminList.mock.calls.length).toBeGreaterThan(calls)
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByText('The categories, tags and authors could not be loaded.')
+      ).not.toBeInTheDocument()
+    );
+  });
+
+  it('answers a category name that already exists with that category, ready to select', async () => {
+    renderForm({ id: null });
+    await within(categorySelect()).findByRole('option', { name: 'Legal & RERA' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add a category' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add a category' });
+    await userEvent.type(within(dialog).getByRole('textbox', { name: /Name/ }), ' legal & rera ');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create and select' }));
+
+    expect(
+      await within(dialog).findByText('“Legal & RERA” is already a category.')
+    ).toBeInTheDocument();
+    expect(masterDataService.articleCategories.create).not.toHaveBeenCalled();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Select “Legal & RERA”' }));
+
+    expect(await screen.findByText('“Legal & RERA” selected.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(categorySelect()).toHaveValue('1');
+  });
+
+  it('finds the category behind a 409 when this screen’s list did not know it', async () => {
+    const created = { id: 5, name: 'Rental Guides', slug: 'rental-guides', isActive: true };
+    masterDataService.articleCategories.create.mockRejectedValueOnce(
+      new ApiError({
+        status: 409,
+        message: 'The slug has already been taken.',
+        errors: { slug: ['The slug has already been taken.'] },
+      })
+    );
+    renderForm({ id: null });
+    await within(categorySelect()).findByRole('option', { name: 'Legal & RERA' });
+    // The lookup by slug that follows the 409 finds it.
+    masterDataService.articleCategories.adminList.mockResolvedValueOnce({ data: [created] });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add a category' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add a category' });
+    await userEvent.type(within(dialog).getByRole('textbox', { name: /Name/ }), 'Rental Guides');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create and select' }));
+
+    expect(
+      await within(dialog).findByText('“Rental Guides” is already a category.')
+    ).toBeInTheDocument();
+    expect(masterDataService.articleCategories.adminList).toHaveBeenLastCalledWith({
+      q: 'rental-guides',
+      perPage: 20,
+    });
+    expect(screen.queryByText('The slug has already been taken.')).not.toBeInTheDocument();
+  });
+});
+
+describe('ArticleFormPage — the URL (QA-55)', () => {
+  it('drops the API’s complaint about the URL once the URL is typed again', async () => {
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+    editHeadline();
+    // A live article's URL does not follow its headline, however soon after
+    // the record arrived the headline was typed.
+    expect(screen.getByDisplayValue(RECORD.slug)).toBeInTheDocument();
+    articleService.update.mockRejectedValueOnce(
+      new ApiError({
+        status: 422,
+        message: 'The given data was invalid.',
+        errors: { 'seo.slug': ['The seo.slug may only contain lowercase letters.'] },
+      })
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    // Named the way the editor knows it, under the one box that holds it.
+    expect(
+      await screen.findByText('The URL may only contain lowercase letters.')
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByDisplayValue(RECORD.slug), {
+      target: { value: 'khata-transfer-guide' },
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText('The URL may only contain lowercase letters.')
+      ).not.toBeInTheDocument()
+    );
+  });
+});
+
+describe('ArticleFormPage — related articles (QA-55)', () => {
+  it('offers only the pieces a reader can reach — live, or scheduled and on their way', async () => {
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+    articleService.adminList.mockClear();
+
+    fireEvent.change(screen.getByRole('combobox', { name: /^Related articles/ }), {
+      target: { value: 'rera' },
+    });
+
+    await waitFor(() =>
+      expect(articleService.adminList).toHaveBeenCalledWith(
+        expect.objectContaining({ q: 'rera', status: ['published', 'scheduled'] }),
+        expect.anything()
+      )
+    );
   });
 });

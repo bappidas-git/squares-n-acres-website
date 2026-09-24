@@ -20,14 +20,23 @@ import { slugify } from '../../../utils/slug';
  * it is shown rather than hidden because it is a public URL from the moment the
  * first article in the category is published.
  *
+ * **A name that is already a category is that category.** The editor typed a
+ * name, so "The slug has already been taken." answered a question they did not
+ * ask (QA-55); the dialog now says which category it is and offers to select
+ * it — before the request when the list knows it, after the API's 409 when it
+ * does not.
+ *
  * @param {object} props
  * @param {boolean} props.open
+ * @param {Array<object>} [props.categories] the categories already loaded
  * @param {() => void} props.onClose
- * @param {(category: object) => void} props.onCreated the new record
+ * @param {(category: object) => void} props.onCreated the new record — or the
+ *   existing one the editor chose to select instead
  */
-export default function CategoryQuickCreateDialog({ open, onClose, onCreated }) {
+export default function CategoryQuickCreateDialog({ open, categories = [], onClose, onCreated }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [existing, setExisting] = useState(null);
   const [saving, setSaving] = useState(false);
 
   // Opening a second time starts from a clean form rather than the last one.
@@ -35,10 +44,31 @@ export default function CategoryQuickCreateDialog({ open, onClose, onCreated }) 
     if (!open) return;
     setName('');
     setError('');
+    setExisting(null);
     setSaving(false);
   }, [open]);
 
   const slug = slugify(name);
+
+  /** The loaded category a name or its slug already belongs to. */
+  const findExisting = (typed) => {
+    const wanted = typed.trim().toLowerCase();
+    const wantedSlug = slugify(typed);
+    return (
+      categories.find(
+        (category) =>
+          String(category.name ?? '')
+            .trim()
+            .toLowerCase() === wanted ||
+          (wantedSlug && category.slug === wantedSlug)
+      ) ?? null
+    );
+  };
+
+  const refuseAsExisting = (category) => {
+    setExisting(category);
+    setError(`“${category.name}” is already a category.`);
+  };
 
   const submit = async () => {
     const trimmed = name.trim();
@@ -47,8 +77,15 @@ export default function CategoryQuickCreateDialog({ open, onClose, onCreated }) 
       return;
     }
 
+    const known = findExisting(trimmed);
+    if (known) {
+      refuseAsExisting(known);
+      return;
+    }
+
     setSaving(true);
     setError('');
+    setExisting(null);
     try {
       const response = await masterDataService.articleCategories.create({
         name: trimmed,
@@ -56,8 +93,16 @@ export default function CategoryQuickCreateDialog({ open, onClose, onCreated }) 
       });
       onCreated?.(response?.data ?? null);
     } catch (thrown) {
-      setError(firstFieldMessage(thrown, 'The category could not be created.'));
       setSaving(false);
+      // Created elsewhere since this screen loaded its list: find it by slug.
+      if (thrown?.status === 409) {
+        const found = await findCategoryBySlug(slug);
+        if (found) {
+          refuseAsExisting(found);
+          return;
+        }
+      }
+      setError(firstFieldMessage(thrown, 'The category could not be created.'));
     }
   };
 
@@ -74,6 +119,11 @@ export default function CategoryQuickCreateDialog({ open, onClose, onCreated }) 
           <Button variant="ghost" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
+          {existing ? (
+            <Button variant="outline" onClick={() => onCreated?.(existing, { existing: true })}>
+              Select “{existing.name}”
+            </Button>
+          ) : null}
           <Button onClick={submit} loading={saving}>
             Create and select
           </Button>
@@ -91,10 +141,30 @@ export default function CategoryQuickCreateDialog({ open, onClose, onCreated }) 
             maxLength={120}
             placeholder="e.g. Rental Guides"
             hint={slug ? `The archive will live at /insights/articles/category/${slug}` : undefined}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => {
+              setName(event.target.value);
+              setExisting(null);
+              setError('');
+            }}
           />
         </FormColumn>
       </FormSection>
     </Modal>
   );
+}
+
+/**
+ * The category that already holds a slug, as the API answers it — asked only
+ * after a 409, the one case where it exists but the loaded list lacks it.
+ *
+ * @param {string} slug
+ * @returns {Promise<object|null>}
+ */
+async function findCategoryBySlug(slug) {
+  try {
+    const { data } = await masterDataService.articleCategories.adminList({ q: slug, perPage: 20 });
+    return (Array.isArray(data) ? data : []).find((category) => category.slug === slug) ?? null;
+  } catch {
+    return null;
+  }
 }

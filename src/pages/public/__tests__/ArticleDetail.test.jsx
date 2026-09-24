@@ -293,6 +293,9 @@ describe('ArticleDetail', () => {
       )
     );
     await settle();
+    // A piece that is not live has no neighbours; asking was a 404 on every
+    // preview (QA-55).
+    expect(articleService.prevNext).not.toHaveBeenCalled();
   });
 
   it('draws an article with no image and no author without either block', async () => {

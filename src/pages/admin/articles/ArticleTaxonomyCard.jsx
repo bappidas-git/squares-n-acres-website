@@ -4,7 +4,7 @@ import { Icon } from '@iconify/react';
 import CategoryQuickCreateDialog from './CategoryQuickCreateDialog';
 import MultiSelect from '../../../components/admin/MultiSelect';
 import masterDataService from '../../../services/masterDataService';
-import { Button, SelectField } from '../../../components/ui';
+import { Alert, Button, SelectField } from '../../../components/ui';
 import { firstFieldMessage } from '../../../services/apiError';
 import { slugify } from '../../../utils/slug';
 import { toTaxonomyOptions } from './useArticleTaxonomy';
@@ -28,17 +28,31 @@ import styles from './ArticleFormPage.module.css';
  * category is a section of the site with a URL and a landing page, so it is
  * worth the one dialog that says so.
  *
+ * **What is offered, and what is kept.** Only active categories and authors
+ * are offered — but the one an article already has stays, marked "inactive",
+ * rather than turning the select blank (QA-55: a category switched off still
+ * sat among the live ones, for any new article to be filed under). The
+ * record's own embedded names stand in for a list that failed to load, so a
+ * failed request shows the article's category rather than "Select a category",
+ * and the card says the lists are missing.
+ *
  * @param {object} props
  * @param {ReturnType<import('./useArticleForm').default>} props.form
  * @param {ReturnType<import('./useArticleTaxonomy').default>} props.taxonomy
  */
 export default function ArticleTaxonomyCard({ form, taxonomy }) {
-  const { values, errors, setField, readOnly, saving } = form;
-  const { categories, tags, authors, addCategory, addTag } = taxonomy;
+  const { values, errors, setField, readOnly, saving, record } = form;
+  const { categories, tags, authors, addCategory, addTag, error, refresh } = taxonomy;
   const toast = useToast();
 
   const [creatingCategory, setCreatingCategory] = useState(false);
   const disabled = readOnly || saving;
+
+  const categoryOptions = offered(categories, values.categoryId, record?.category);
+  const authorOptions = offered(authors, values.authorId, record?.author);
+  const tagOptions = toTaxonomyOptions(
+    withKnown(tags, Array.isArray(record?.tags) ? record.tags : [])
+  );
 
   /**
    * Creates a tag from what was typed, or selects the one that already exists
@@ -92,11 +106,20 @@ export default function ArticleTaxonomyCard({ form, taxonomy }) {
         Classification
       </h2>
 
+      {error ? (
+        <Alert tone="warning" icon={<Icon icon="mdi:alert-outline" width="20" height="20" />}>
+          <p>The categories, tags and authors could not be loaded.</p>
+          <Button variant="link" size="sm" onClick={refresh}>
+            Try again
+          </Button>
+        </Alert>
+      ) : null}
+
       <SelectField
         label="Category"
         required
         placeholder="Select a category"
-        options={toTaxonomyOptions(categories)}
+        options={categoryOptions}
         value={values.categoryId ?? ''}
         error={errors.categoryId}
         disabled={disabled}
@@ -117,7 +140,7 @@ export default function ArticleTaxonomyCard({ form, taxonomy }) {
 
       <MultiSelect
         label="Tags"
-        options={toTaxonomyOptions(tags)}
+        options={tagOptions}
         value={Array.isArray(values.tagIds) ? values.tagIds : []}
         error={errors.tagIds}
         disabled={disabled}
@@ -136,15 +159,7 @@ export default function ArticleTaxonomyCard({ form, taxonomy }) {
         label="Author"
         required
         placeholder="Select an author"
-        // Only active authors are offered — but an article already signed by one
-        // who has since been retired keeps showing their name rather than a
-        // blank select.
-        options={toTaxonomyOptions(
-          authors.filter(
-            (author) =>
-              author.isActive !== false || String(author.id) === String(values.authorId ?? '')
-          )
-        )}
+        options={authorOptions}
         value={values.authorId ?? ''}
         error={errors.authorId}
         disabled={disabled}
@@ -154,17 +169,50 @@ export default function ArticleTaxonomyCard({ form, taxonomy }) {
 
       <CategoryQuickCreateDialog
         open={creatingCategory}
+        categories={categories}
         onClose={() => setCreatingCategory(false)}
-        onCreated={(created) => {
+        onCreated={(created, { existing = false } = {}) => {
           setCreatingCategory(false);
           if (!created?.id) return;
           addCategory(created);
           setField('categoryId', created.id);
-          toast.success(`“${created.name}” created and selected.`);
+          toast.success(
+            existing ? `“${created.name}” selected.` : `“${created.name}” created and selected.`
+          );
         }}
       />
     </aside>
   );
+}
+
+/** The records of a list, plus any the article names that the list lacks. */
+function withKnown(records, extra) {
+  const known = new Set(records.map((record) => String(record.id)));
+  return [
+    ...records,
+    ...extra.filter((record) => record?.id !== undefined && !known.has(String(record.id))),
+  ];
+}
+
+/**
+ * A select's options: the active records, and the one the article already
+ * holds even when it is not — marked, so nobody picks it for a new piece
+ * thinking it is live.
+ *
+ * @param {Array<object>} records the admin list
+ * @param {number|string} current the article's id for this field
+ * @param {object} [embedded] the record's own `{ id, name }`, for a list that
+ *   failed to load
+ */
+function offered(records, current, embedded) {
+  const chosen = String(current ?? '');
+  const list = withKnown(records, embedded && String(embedded.id) === chosen ? [embedded] : []);
+  return list
+    .filter((record) => record.isActive !== false || String(record.id) === chosen)
+    .map((record) => ({
+      value: record.id,
+      label: record.isActive === false ? `${record.name} (inactive)` : record.name,
+    }));
 }
 
 /**

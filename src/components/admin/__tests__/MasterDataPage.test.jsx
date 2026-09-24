@@ -2,7 +2,7 @@ import { screen, waitFor, waitForElementToBeRemoved, within } from '@testing-lib
 import userEvent from '@testing-library/user-event';
 
 import ApiError from '../../../services/apiError';
-import MasterDataPage from '../MasterDataPage';
+import MasterDataPage, { labelsOf } from '../MasterDataPage';
 import ToastProvider from '../../common/ToastProvider';
 import renderWith from '../../../test-utils';
 
@@ -81,6 +81,53 @@ describe('MasterDataPage', () => {
       expect.objectContaining({ page: 1, perPage: 20, sort: 'name', order: 'asc' }),
       expect.anything()
     );
+  });
+
+  describe('field names in messages (QA-55)', () => {
+    it('names a field by its label rather than its key', async () => {
+      const service = fakeService({
+        create: jest.fn().mockRejectedValue(
+          new ApiError({
+            status: 422,
+            message: 'The given data was invalid.',
+            errors: { 'socialLinks.linkedin': ['The socialLinks.linkedin must be a valid URL.'] },
+          })
+        ),
+      });
+      const config = baseConfig(service);
+      render({
+        ...config,
+        formFields: [
+          ...config.formFields,
+          { name: 'socialLinks.linkedin', type: 'url', label: 'LinkedIn' },
+        ],
+      });
+      await screen.findByText('Whitefield');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add locality' }));
+      const dialog = await screen.findByRole('dialog');
+      await userEvent.type(within(dialog).getByLabelText(/^Name/), 'Koramangala');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Create locality' }));
+
+      expect(
+        await within(dialog).findByText('The LinkedIn address must be a valid URL.')
+      ).toBeInTheDocument();
+    });
+
+    it('labels only the keys that are not words already', () => {
+      expect(
+        labelsOf([
+          { name: 'name', label: 'Name' },
+          { name: 'avatarUrl', type: 'image', label: 'Photograph' },
+          { name: 'socialLinks.website', type: 'url', label: 'Website' },
+          { name: 'socialLinks.linkedin', type: 'url', label: 'LinkedIn' },
+        ])
+      ).toEqual({
+        avatarUrl: 'photograph',
+        'socialLinks.website': 'website address',
+        'socialLinks.linkedin': 'LinkedIn address',
+      });
+    });
   });
 
   describe('create', () => {

@@ -12,6 +12,9 @@ import styles from './ArticleFormPage.module.css';
 export const RELATED_ARTICLES_MAX = 5;
 export const RELATED_PROPERTIES_MAX = 4;
 
+/** The states of an article worth pointing a reader at. */
+const RELATED_STATUSES = ['published', 'scheduled'];
+
 /**
  * The records behind a list of ids, so a chosen id shows a name rather than
  * `#7`.
@@ -108,10 +111,19 @@ export default function ArticleRelatedCard({ form }) {
     'listings'
   );
 
-  /** The article search: everything but this article itself. */
+  /**
+   * The article search: pieces a reader can reach — published, or scheduled
+   * and on their way — and never this article itself. A draft or an archived
+   * piece offered here was accepted and then silently left off the public
+   * page, which shows only what is live (QA-55); the listing search has asked
+   * for published listings only since prompt 33.
+   */
   const searchArticles = useCallback(
     async ({ q, perPage }, options) => {
-      const envelope = await articleService.adminList({ q, perPage }, options);
+      const envelope = await articleService.adminList(
+        { q, perPage, status: RELATED_STATUSES },
+        options
+      );
       const data = (Array.isArray(envelope?.data) ? envelope.data : []).filter(
         (record) => !articleId || String(record.id) !== String(articleId)
       );

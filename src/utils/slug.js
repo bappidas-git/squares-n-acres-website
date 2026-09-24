@@ -59,16 +59,23 @@ export function slugify(value, { maxLength = SLUG_MAX_LENGTH } = {}) {
  * next letter arrives. This keeps one trailing hyphen and only forbids what the
  * pattern forbids; `slugify` tidies the result when the field is left.
  *
+ * It spells letters the way the title's own slug does — "Ümlaut" is `umlaut`,
+ * "Crème" is `creme` — rather than dropping them: a typed "Ü" used to vanish
+ * while the same word in the title became a `u` (QA-55).
+ *
  * @param {string} value
  * @param {object} [options]
  * @param {number} [options.maxLength]
  * @returns {string}
  */
 export function toSlugInput(value, { maxLength = SLUG_MAX_LENGTH } = {}) {
-  return String(value ?? '')
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
+  return slugifyLib(String(value ?? ''), {
+    lower: true,
+    strict: true,
+    trim: false,
+    locale: 'en',
+    remove: /['’`]/g,
+  })
     .replace(/-{2,}/g, '-')
     .slice(0, maxLength);
 }

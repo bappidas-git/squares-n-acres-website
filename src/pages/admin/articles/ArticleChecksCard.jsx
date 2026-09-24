@@ -18,7 +18,7 @@ import styles from './ArticleFormPage.module.css';
  * @param {ReturnType<import('./useArticleForm').default>} props.form
  */
 export default function ArticleChecksCard({ form }) {
-  const { checks, stats, draftSavedAt, dirty } = form;
+  const { checks, stats, draftSavedAt, draftChanged } = form;
   const done = checks.filter((check) => check.done).length;
 
   return (
@@ -89,7 +89,7 @@ export default function ArticleChecksCard({ form }) {
       {draftSavedAt ? (
         <p className={styles.cardNote} aria-live="polite">
           Draft saved {formatTime(draftSavedAt)} in this browser
-          {dirty ? ' — with changes since' : ''}.
+          {draftChanged ? ' — with changes since' : ''}.
         </p>
       ) : null}
     </aside>

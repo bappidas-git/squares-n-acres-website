@@ -25,6 +25,7 @@ import useBreakpoint from '../../../hooks/useBreakpoint';
 import {
   Alert,
   Button,
+  ConfirmDialog,
   EmptyState,
   ErrorState,
   Skeleton,
@@ -116,6 +117,10 @@ export default function ArticleFormPage() {
   const form = useArticleForm({ articleId: id ?? null, record, readOnly });
 
   const [activeTab, setActiveTab] = useState('content');
+  // "Generate from content" over an excerpt somebody wrote asks first: the
+  // box takes the new text wholesale, and its own undo cannot bring the old
+  // one back (QA-55).
+  const [replaceExcerpt, setReplaceExcerpt] = useState(false);
   // Focusing a control the SEO tab has just hidden has to wait for the render
   // that brings it back, which is what this ref and the callback below are for.
   const pendingFocus = useRef(null);
@@ -313,7 +318,7 @@ export default function ArticleFormPage() {
                   value={values.title}
                   guide={TITLE_GUIDE}
                   max={TITLE_MAX_LENGTH}
-                  label="The headline"
+                  empty="A headline is required before anything can be saved."
                 />
               </FormColumn>
 
@@ -354,7 +359,10 @@ export default function ArticleFormPage() {
                       size="sm"
                       disabled={saving || !values.content}
                       icon={<Icon icon="mdi:auto-fix" width="16" height="16" />}
-                      onClick={() => setField('excerpt', generateExcerpt(values.content))}
+                      onClick={() => {
+                        if ((values.excerpt ?? '').trim()) setReplaceExcerpt(true);
+                        else setField('excerpt', generateExcerpt(values.content));
+                      }}
                     >
                       Generate from content
                     </Button>
@@ -423,6 +431,18 @@ export default function ArticleFormPage() {
 
         {beside ? <div className={styles.railColumn}>{rail}</div> : null}
       </div>
+
+      <ConfirmDialog
+        open={replaceExcerpt}
+        title="Replace the excerpt?"
+        message="The first paragraph of the body takes the place of the excerpt you wrote."
+        confirmLabel="Replace it"
+        onClose={() => setReplaceExcerpt(false)}
+        onConfirm={() => {
+          setReplaceExcerpt(false);
+          setField('excerpt', generateExcerpt(values.content));
+        }}
+      />
 
       {beside || readOnly ? null : (
         <div className={styles.bottomBar}>
@@ -512,9 +532,11 @@ function DraftBanner({ draft, onRestore, onDiscard }) {
  * a search result prints, a warning outside it.
  *
  * Neither end is an error — a long title is truncated in the result, not
- * refused — so the counter never carries `role="alert"`.
+ * refused — so the counter never carries `role="alert"`. What it says while
+ * empty is the caller's: the headline's counter used to borrow the SEO title's
+ * "the site template is used instead", and a headline has no stand-in (QA-55).
  */
-function Counter({ value, guide, max, label }) {
+function Counter({ value, guide, max, empty }) {
   const length = String(value ?? '').length;
   const tone = length === 0 ? 'muted' : length >= guide.min && length <= guide.max ? 'ok' : 'warn';
 
@@ -528,7 +550,7 @@ function Counter({ value, guide, max, label }) {
       </span>
       <span>
         {tone === 'muted'
-          ? `${label} is empty — the site template is used instead.`
+          ? empty
           : tone === 'ok'
             ? 'Inside the length a search result prints.'
             : length < guide.min

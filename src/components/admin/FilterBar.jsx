@@ -86,6 +86,7 @@ export default function FilterBar({
             field={searchField}
             value={values[searchField.key] ?? ''}
             onChange={onChange}
+            stacked={isMobile}
           />
         ) : null}
 
@@ -162,7 +163,7 @@ export default function FilterBar({
  * filters synced to the URL, propagating a keystroke at a time would leave one
  * history entry — and one request — per letter.
  */
-function SearchInput({ field, value, onChange }) {
+function SearchInput({ field, value, onChange, stacked = false }) {
   const id = useId();
   const [text, setText] = useState(value);
   const committed = useRef(value);
@@ -183,8 +184,13 @@ function SearchInput({ field, value, onChange }) {
     return () => clearTimeout(timer);
   }, [text, field.key, onChange]);
 
+  // A laptop row of six filters has no room for the 300 px the box takes by
+  // default; a phone gives it the whole row whatever it asks for.
+  const style =
+    field.width && !stacked ? { width: field.width, flexBasis: field.width } : undefined;
+
   return (
-    <div className={[styles.control, styles.search].join(' ')}>
+    <div className={[styles.control, styles.search].join(' ')} style={style}>
       <label className={styles.label} htmlFor={id}>
         {field.label}
       </label>

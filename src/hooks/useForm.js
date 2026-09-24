@@ -27,6 +27,11 @@ import { validate as validateSchema } from '../utils/validation';
  *   receive; it is what gets validated, so the form checks what it sends
  * @param {boolean} [options.partial] validate as a PATCH (no `required` checks)
  * @param {string} [options.successMessage] toasted when `submit()` resolves
+ * @param {Record<string, string>} [options.labels] what the messages call a
+ *   field whose key is not a word — `categoryId` → "category",
+ *   `socialLinks.linkedin` → "LinkedIn". The schema and the API both name the
+ *   key ("The categoryId field is required."), which is the contract's
+ *   sentence but not one an editor should read (QA-55).
  */
 export default function useForm({
   initialValues = {},
@@ -36,6 +41,7 @@ export default function useForm({
   onSubmit = null,
   partial = false,
   successMessage = '',
+  labels = null,
 } = {}) {
   const toast = useToast();
 
@@ -62,6 +68,7 @@ export default function useForm({
     successMessage,
     toast,
     values,
+    labels,
   };
 
   const dirty = useMemo(
@@ -96,7 +103,10 @@ export default function useForm({
       const { schema: shape, customValidate: extra, partial: isPartial } = latest.current;
       const payload = toPayload(candidate);
       return {
-        ...(shape ? validateSchema(payload, shape, { partial: isPartial }) : {}),
+        ...relabel(
+          shape ? validateSchema(payload, shape, { partial: isPartial }) : {},
+          latest.current.labels
+        ),
         ...(extra ? (extra(candidate) ?? {}) : {}),
       };
     },
@@ -123,11 +133,14 @@ export default function useForm({
    */
   const setServerErrors = useCallback((apiError) => {
     const fields = apiError?.errors ?? {};
-    const mapped = Object.fromEntries(
-      Object.entries(fields).map(([key, messages]) => [
-        key,
-        Array.isArray(messages) ? String(messages[0]) : String(messages),
-      ])
+    const mapped = relabel(
+      Object.fromEntries(
+        Object.entries(fields).map(([key, messages]) => [
+          key,
+          Array.isArray(messages) ? String(messages[0]) : String(messages),
+        ])
+      ),
+      latest.current.labels
     );
 
     if (Object.keys(mapped).length > 0) {
@@ -274,4 +287,29 @@ export function setIn(source, path, value) {
 function omit(source, key) {
   const { [key]: _removed, ...rest } = source;
   return rest;
+}
+
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Messages that name a field by its label rather than its key.
+ *
+ * Only the key as a whole word is replaced — "The categoryId field is
+ * required." becomes "The category field is required." — so a message that
+ * never named the key is left exactly as it was written.
+ *
+ * @param {Record<string, string>} errors `{ key: message }`
+ * @param {Record<string, string>|null} labels `{ key: label }`
+ * @returns {Record<string, string>}
+ */
+export function relabel(errors, labels) {
+  if (!labels) return errors;
+  return Object.fromEntries(
+    Object.entries(errors).map(([key, message]) => {
+      const label = labels[key];
+      if (!label || typeof message !== 'string') return [key, message];
+      const pattern = new RegExp(`(^|\\s)${escapeRegExp(key)}(?=[\\s.,]|$)`, 'g');
+      return [key, message.replace(pattern, `$1${label}`)];
+    })
+  );
 }

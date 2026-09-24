@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import Button from '../ui/Button';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import IconButton from '../ui/IconButton';
+import useLingering from '../../hooks/useLingering';
 import { DIALOGS, TABLES } from '../../config/adminCopy';
 
 import styles from './BulkActionsBar.module.css';
@@ -35,11 +36,17 @@ export default function BulkActionsBar({
   nounMany = 'records',
 }) {
   const [pending, setPending] = useState(null);
+  // The confirm fades out after it is answered; it keeps its sentence — and the
+  // count it was asked about — until it has gone (QA-55).
+  const asked = useMemo(
+    () => (pending ? { action: pending, count: selectedIds.length } : null),
+    [pending, selectedIds.length]
+  );
+  const [shown, release] = useLingering(asked);
 
   if (selectedIds.length === 0 || actions.length === 0) return null;
 
   const count = selectedIds.length;
-  const noun = count === 1 ? nounOne : nounMany;
 
   const run = (action) => {
     if (action.confirm) {
@@ -49,7 +56,11 @@ export default function BulkActionsBar({
     onAction?.(action.key, selectedIds);
   };
 
-  const confirmText = (template) => String(template ?? '').replace('{count}', `${count} ${noun}`);
+  const shownCount = shown?.count ?? count;
+  const shownNoun = shownCount === 1 ? nounOne : nounMany;
+  const confirmText = (template) =>
+    String(template ?? '').replace('{count}', `${shownCount} ${shownNoun}`);
+  const shownAction = shown?.action ?? null;
 
   return (
     <div className={styles.bar} role="region" aria-label={TABLES.bulkActions}>
@@ -77,14 +88,15 @@ export default function BulkActionsBar({
         // A confirm always names what it is about to change (§8.2); with no
         // title of its own the action's own verb and the selection are it.
         title={
-          confirmText(pending?.confirm?.title) ||
-          `${pending?.label ?? DIALOGS.deleteConfirm} ${count} ${noun}?`
+          confirmText(shownAction?.confirm?.title) ||
+          `${shownAction?.label ?? DIALOGS.deleteConfirm} ${shownCount} ${shownNoun}?`
         }
-        message={confirmText(pending?.confirm?.message)}
-        confirmLabel={pending?.label ?? DIALOGS.deleteConfirm}
-        danger={Boolean(pending?.danger)}
+        message={confirmText(shownAction?.confirm?.message)}
+        confirmLabel={shownAction?.label ?? DIALOGS.deleteConfirm}
+        danger={Boolean(shownAction?.danger)}
         loading={busy}
         onClose={() => setPending(null)}
+        onExited={release}
         onConfirm={() => {
           const action = pending;
           setPending(null);

@@ -33,13 +33,23 @@
     margin: calc(var(--space-3) * -1) 0;
   }
 
-  .link,
-  .current {
+  .link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-width: 44px;
     min-height: 44px;
+  }
+
+  /* The current crumb is text, not a flex box: a centred flex line cannot take
+     an ellipsis, so a long article title overflowed both ends — "ving in
+     Whitefield … Rente" — on the admin form and the public article alike
+     (QA-55). A block keeps the 44 px line and ends in "…". */
+  .current {
+    display: block;
+    min-width: 44px;
+    min-height: 44px;
+    line-height: 44px;
   }
 }
 

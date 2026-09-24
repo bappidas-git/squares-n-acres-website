@@ -14,6 +14,7 @@ import PageHeader from './PageHeader';
 import SortableList from './SortableList';
 import useApiList from '../../hooks/useApiList';
 import useForm from '../../hooks/useForm';
+import useLingering from '../../hooks/useLingering';
 import useUnsavedChanges from '../../hooks/useUnsavedChanges';
 import { DIALOGS, FORMS, TABLES, TOASTS } from '../../config/adminCopy';
 import { applySeoSideEffects, validateSeoBranch } from '../seo/seoSideEffects';
@@ -146,27 +147,32 @@ export function useMasterDataCrud(config) {
   };
 }
 
+/** "Website" → "website"; a label that capitalises inside ("LinkedIn", "URL") keeps it. */
+const inSentence = (label) =>
+  /[A-Z]/.test(label.slice(1)) ? label : `${label.charAt(0).toLowerCase()}${label.slice(1)}`;
+
 /**
- * What a dialog shows: `value` while it is set, and once it has been cleared,
- * the last value it had — until `release`, the dialog's `onExited`.
+ * What a message calls a field whose key is not a word — "The
+ * socialLinks.linkedin must be a valid URL." reads "The LinkedIn address must
+ * be a valid URL.", and `avatarUrl` is the "photograph" the form labels it
+ * (QA-55).
  *
- * Each dialog here is closed by clearing the state it is drawn from, and then
- * takes its exit transition to leave. Drawn from that state, it faded out as
- * something else: an edit as an empty "New badge", a delete confirmation
- * without its sentence, the usage guard as "“undefined” cannot be deleted"
- * over an empty list (QA-54).
- *
- * @template T
- * @param {T|null} value
- * @returns {[T|null, () => void]}
+ * @param {Array<{name?: string, label?: string, type?: string}>} fields
+ * @returns {Record<string, string>}
  */
-function useLingering(value) {
-  const [kept, setKept] = useState(value);
-  // Kept in the render it arrives in (React's "storing information from
-  // previous renders"), so no frame of the dialog is drawn without it.
-  if (value !== null && value !== undefined && value !== kept) setKept(value);
-  const release = useCallback(() => setKept(null), []);
-  return [value ?? kept, release];
+export function labelsOf(fields) {
+  return Object.fromEntries(
+    (Array.isArray(fields) ? fields : [])
+      .filter(
+        (field) => field?.name && typeof field.label === 'string' && /[.A-Z]/.test(field.name)
+      )
+      .map((field) => {
+        const label = inSentence(field.label);
+        // A box for a link is named after where it points: "the LinkedIn
+        // address", not "the LinkedIn".
+        return [field.name, field.type === 'url' ? `${label} address` : label];
+      })
+  );
 }
 
 /**
@@ -339,11 +345,14 @@ export default function MasterDataPage({ config }) {
     [customValidate, editing, seoPanel]
   );
 
+  const labels = useMemo(() => labelsOf(formFields), [formFields]);
+
   const form = useForm({
     initialValues,
     schema: activeSchema,
     validate,
     normalize,
+    labels,
     onSubmit: async (payload) => {
       if (editing?.id) return service.update(editing.id, payload);
       return service.create(payload);

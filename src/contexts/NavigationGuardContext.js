@@ -24,7 +24,8 @@ const FALLBACK = { register: () => () => {}, isBlocking: false };
 const NavigationGuardContext = createContext(null);
 
 /**
- * @returns {{ register: (id: symbol, dirty: boolean) => () => void, isBlocking: boolean }}
+ * @returns {{ register: (id: symbol, dirty: boolean, onDiscard?: () => void) => () => void,
+ *   isBlocking: boolean }}
  */
 export function useNavigationGuard() {
   return useContext(NavigationGuardContext) ?? FALLBACK;
@@ -34,18 +35,24 @@ export const NavigationGuardProvider = ({ children }) => {
   // A set of the forms that currently have unsaved changes. It is a ref because
   // registering must not re-render the tree; `blocking` is the rendered echo.
   const dirtyRef = useRef(new Set());
+  // What each dirty form does once its changes are discarded — the article
+  // form forgets the copy it autosaved to this browser (QA-55).
+  const discardRef = useRef(new Map());
   const [blocking, setBlocking] = useState(false);
 
   const sync = useCallback(() => setBlocking(dirtyRef.current.size > 0), []);
 
   const register = useCallback(
-    (id, dirty) => {
+    (id, dirty, onDiscard) => {
       if (dirty) dirtyRef.current.add(id);
       else dirtyRef.current.delete(id);
+      if (dirty && onDiscard) discardRef.current.set(id, onDiscard);
+      else discardRef.current.delete(id);
       sync();
 
       return () => {
         dirtyRef.current.delete(id);
+        discardRef.current.delete(id);
         sync();
       };
     },
@@ -63,8 +70,11 @@ export const NavigationGuardProvider = ({ children }) => {
   const value = useMemo(() => ({ register, isBlocking: blocking }), [register, blocking]);
 
   const leave = () => {
-    // The answer is "discard", so the forms that were dirty no longer are.
+    // The answer is "discard", so the forms that were dirty no longer are —
+    // and whatever they kept of those changes goes with them.
+    for (const id of dirtyRef.current) discardRef.current.get(id)?.();
     dirtyRef.current.clear();
+    discardRef.current.clear();
     setBlocking(false);
     blocker.proceed?.();
   };

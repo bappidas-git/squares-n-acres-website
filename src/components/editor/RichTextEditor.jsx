@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
+import { createDocument } from '@tiptap/core';
 
 import BubbleMenuBar from './toolbar/BubbleMenuBar';
 import FloatingInsertMenu from './toolbar/FloatingInsertMenu';
@@ -33,6 +34,35 @@ const WORDS_PER_MINUTE = 200;
 
 /** The document as it will be stored: tidied, then reduced to the allow-list. */
 const serialize = (editor) => sanitizeHtml(normalizeHtml(editor.getHTML()));
+
+/**
+ * Whether an editor is still one to read from.
+ *
+ * Tiptap destroys an instance whose component has not committed within a
+ * millisecond of creating it, and hands over a new one a render later; until
+ * then the render that was drawn with the old one still runs its effects. A
+ * destroyed editor keeps its object but drops its schema, and serialising it
+ * throws — the article form of a slow first load went to "Something went
+ * wrong" (QA-55). `isDestroyed` cannot tell: it also answers `true` for an
+ * editor whose view is not mounted yet, which is perfectly readable.
+ */
+const isLive = (editor) => Boolean(editor?.schema);
+
+/**
+ * Whether an editor already holds the document some HTML describes. The two
+ * are compared as documents, not as strings: a stored body and the editor's
+ * own HTML of it differ in whitespace and attribute order, and a string
+ * compare read that as a different article and loaded it again.
+ */
+function holds(editor, html) {
+  try {
+    return createDocument(html, editor.schema, editor.options.parseOptions ?? {}).eq(
+      editor.state.doc
+    );
+  } catch {
+    return false;
+  }
+}
 
 /** Reading time in whole minutes, never zero for a document with words in it. */
 const readingTimeOf = (words) =>
@@ -117,6 +147,13 @@ const RichTextEditor = forwardRef(function RichTextEditor(
   // The last HTML this editor handed the form. An incoming `value` equal to it
   // is our own change coming back and must not reset the document.
   const emittedRef = useRef(value ?? '');
+  // The last value that arrived from outside — a record loaded, a draft
+  // restored — and the document it became, read back through `serialize`. The
+  // two differ more often than not: a stored body carries the newlines between
+  // its blocks that the editor never writes. Without this, reading an untouched
+  // document back reported that difference as an edit, and every article opened
+  // with unsaved changes (QA-55).
+  const loadedRef = useRef({ editor: null, raw: value ?? '', serialized: null });
   const timerRef = useRef(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -127,10 +164,16 @@ const RichTextEditor = forwardRef(function RichTextEditor(
   );
 
   const emit = useCallback((editor) => {
+    if (!isLive(editor)) return;
     const html = serialize(editor);
-    if (html === emittedRef.current) return;
-    emittedRef.current = html;
-    onChangeRef.current?.(html);
+    // The document the form was given, unchanged, is handed back as the very
+    // string the form holds — so a click into the body and out again, or an
+    // edit typed and then undone, leaves the form as clean as it was.
+    const { raw, serialized } = loadedRef.current;
+    const next = serialized !== null && html === serialized ? raw : html;
+    if (next === emittedRef.current) return;
+    emittedRef.current = next;
+    onChangeRef.current?.(next);
   }, []);
 
   const editor = useEditor(
@@ -184,19 +227,41 @@ const RichTextEditor = forwardRef(function RichTextEditor(
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
+  // Without `emitUpdate: false` Tiptap announces an `update` for a change of
+  // editability — on mount, and every time a save disables the form and
+  // enables it again — and an update is what `emit` answers.
   useEffect(() => {
-    if (editor) editor.setEditable(!disabled);
+    if (isLive(editor)) editor.setEditable(!disabled, false);
   }, [editor, disabled]);
 
   // A value that did not come from here — a draft restored, a record loaded —
-  // replaces the document; one that did is ignored, cursor intact.
+  // replaces the document; one that did is ignored, cursor intact. A new
+  // editor instance holds whatever it was created with, which becomes the
+  // value it compares its own output against.
   useEffect(() => {
-    if (!editor) return;
+    if (!isLive(editor)) return;
     const incoming = value ?? '';
-    if (incoming === emittedRef.current) return;
-    if (incoming === serialize(editor)) return;
+    const fresh = loadedRef.current.editor !== editor;
+    if (!fresh && incoming === emittedRef.current) return;
     emittedRef.current = incoming;
-    editor.commands.setContent(incoming, { emitUpdate: false });
+
+    const settle = () => {
+      loadedRef.current = { editor, raw: incoming, serialized: serialize(editor) };
+    };
+    if (holds(editor, incoming)) {
+      settle();
+      return;
+    }
+    // Loaded a moment later, outside React's commit: Tiptap draws a React node
+    // view (a figure, a block) with `flushSync` once the editor is initialised,
+    // which React refuses — with a warning — from inside an effect. That was a
+    // record arriving after its editor had mounted empty, as Back and Forward
+    // do. A newer value, or the editor's replacement, supersedes this one.
+    queueMicrotask(() => {
+      if (!isLive(editor) || emittedRef.current !== incoming) return;
+      editor.commands.setContent(incoming, { emitUpdate: false });
+      settle();
+    });
   }, [editor, value]);
 
   const onKeyDown = (event) => {

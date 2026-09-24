@@ -25,6 +25,20 @@
   max-width: 40ch;
 }
 
+.titleLine {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+/* A featured piece's star, level with the first line of its headline. */
+.star {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-top: 3px;
+  color: var(--color-warning-dark);
+}
+
 .title {
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
@@ -55,6 +69,27 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+}
+
+/* The SEO score under the status below 1,536 px, where its own column has
+   folded away; the publication date there too below 1,200 px (QA-55). Both
+   breakpoints are `DataTable`'s own `hideBelow` ones, so a value is never
+   shown twice or not at all. */
+.seoInline,
+.publishedInline {
+  display: none;
+}
+
+@media (max-width: 1535.98px) {
+  .seoInline {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 1199.98px) {
+  .publishedInline {
+    display: block;
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -93,4 +128,33 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * The bulk "Publish" readiness dialog (QA-55)
+ * ------------------------------------------------------------------ */
+
+.gapList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gapList li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gapTitle {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.gapTitle:hover,
+.gapTitle:focus-visible {
+  color: var(--color-primary-dark);
 }
