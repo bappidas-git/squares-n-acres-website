@@ -1,6 +1,11 @@
 /* Admin → Leads → one lead: the two-column layout and every card in it.
    Shared with the eight components the screen is assembled from. */
 
+/* One column below 1 200 px, in the order the markup gives: who the lead is,
+   what we decide about them, then everything else. Above it, two columns — the
+   contact card and the rest of the record on the left, the rail on the right
+   beside both. The rail spans a flexible second row, so however tall it is it
+   never pushes the record apart under the contact card (QA-53). */
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -11,9 +16,26 @@
 @media (min-width: 1200px) {
   .layout {
     grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'lead rail'
+      'main rail';
+  }
+
+  .lead {
+    grid-area: lead;
+  }
+
+  .main {
+    grid-area: main;
+  }
+
+  .rail {
+    grid-area: rail;
   }
 }
 
+.lead,
 .main,
 .rail {
   display: flex;
@@ -23,12 +45,37 @@
 }
 
 /* The rail follows the reader down a long timeline, but only where there is
-   room for it to stand beside one. */
+   room for it to stand beside one — and it scrolls inside itself when it is
+   taller than the window, as the property form's does: stuck at 1 030 px in
+   a laptop's 800, its follow-up Save sat out of reach until the end of the
+   page (QA-53). */
 @media (min-width: 1200px) {
   .rail {
     position: sticky;
     top: var(--space-4);
+    max-height: calc(100dvh - 64px - var(--space-4) * 2);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    border-radius: var(--radius-lg);
   }
+}
+
+/* The heading is the control's visible label; this is its accessible one. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dangerButton {
+  align-self: flex-start;
 }
 
 .card,

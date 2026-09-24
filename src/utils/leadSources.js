@@ -705,6 +705,33 @@ export const ENTRY_POINTS = {
 /** Every entry key, for the tests and for an admin filter. */
 export const ENTRY_KEYS = Object.keys(ENTRY_POINTS);
 
+/** The boxes the API stores at the top level of a lead rather than in `meta`. */
+const TOP_LEVEL_FIELDS = new Set(['name', 'phone', 'email', 'message']);
+
+/**
+ * The boxes a source's forms ask for that land in `lead.meta`, keyed by name —
+ * so the CRM prints "When should we call?: Evening (4 pm – 8 pm)" rather than
+ * `preferredTime: evening` (QA-53). The first form that asks for a name wins
+ * when two entries of one source ask for it.
+ *
+ * @param {string} source a `LEAD_SOURCES` value
+ * @returns {Map<string, object>} field descriptors
+ */
+export function metaFieldsOf(source) {
+  const fields = new Map();
+
+  for (const config of Object.values(ENTRY_POINTS)) {
+    if (config.source !== source) continue;
+    for (const field of config.fields ?? []) {
+      if (field.toBody || field.group === 'requirement') continue;
+      if (TOP_LEVEL_FIELDS.has(field.name) && field.group !== 'meta') continue;
+      if (!fields.has(field.name)) fields.set(field.name, field);
+    }
+  }
+
+  return fields;
+}
+
 /**
  * One entry point, or `null` when the key is unknown.
  *
@@ -762,6 +789,7 @@ const leadSources = {
   ENTRY_KEYS,
   entryPoint,
   leadFormProps,
+  metaFieldsOf,
   withDefaults,
 };
 export default leadSources;

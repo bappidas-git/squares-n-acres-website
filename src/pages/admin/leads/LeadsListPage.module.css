@@ -60,6 +60,72 @@
   overflow-wrap: anywhere;
 }
 
+/* "Possible duplicate" is the way to the other enquiry, not only a warning. */
+.duplicateLink {
+  display: inline-flex;
+  border-radius: var(--radius-full);
+  text-decoration: none;
+}
+
+/* A ring, not a border: the chip paints its own border inline. */
+.duplicateLink:hover > * {
+  box-shadow: 0 0 0 1px var(--color-warning);
+}
+
+.duplicateLink:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* The listing, and below 1 536 px the form the lead came through under it:
+   the Source column is folded into this one there (QA-53). */
+.enquiry {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.sourceInline {
+  display: none;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 1535.98px) {
+  .sourceInline {
+    display: block;
+  }
+
+  /* "—" over "via Contact Page" says nothing the second line does not. */
+  .noProperty {
+    display: none;
+  }
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* The status, and between 900 and 1 199 px the priority under it: the
+   Priority column is folded into this one there (QA-53). */
+.statusCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.priorityInline {
+  display: none;
+}
+
+@media (min-width: 900px) and (max-width: 1199.98px) {
+  .priorityInline {
+    display: inline-flex;
+  }
+}
+
 /* A Bengaluru project title is a sentence ("Prakriti Earth Villas – 3 BHK
    Villa in Kanakapura Road"); two lines of it identify the listing, six make
    every row in the table twice as tall as it needs to be. */
@@ -129,10 +195,22 @@
   max-width: none;
 }
 
+/* Centred: the status chip is a 44 px button on a phone, and the plain chips
+   beside it used to stretch to its height into tall pink and grey blobs. */
 .cardChips {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-1);
+}
+
+.cardProperty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.cardProperty .propertyLink {
+  max-width: none;
 }
 
 .cardMeta {

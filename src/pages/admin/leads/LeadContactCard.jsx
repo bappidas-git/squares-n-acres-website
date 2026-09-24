@@ -5,7 +5,7 @@ import Card from '../../../components/ui/Card';
 import Chip from '../../../components/ui/Chip';
 import StatusChip from '../../../components/admin/StatusChip';
 import { LEAD_SOURCES } from '../../../config/enums';
-import { formatDateTime } from '../../../utils/format';
+import { formatDateTime, formatPhone } from '../../../utils/format';
 import { leadTelLink, leadWhatsappLink } from './leadColumns';
 
 import styles from './LeadDetailPage.module.css';
@@ -28,6 +28,9 @@ const UTM_KEYS = [
  * enquiry came from, which page it was made on, and whether the visitor agreed
  * to be contacted.
  *
+ * The card is headed "Contact": the page's own heading is already the lead's
+ * name, and a card repeating it read as the name printed twice (QA-53).
+ *
  * @param {object} props
  * @param {object} props.lead
  */
@@ -41,7 +44,7 @@ export default function LeadContactCard({ lead }) {
     <Card as="section" className={styles.card} aria-labelledby="lead-contact-heading">
       <div className={styles.cardHead}>
         <h2 className={styles.cardTitle} id="lead-contact-heading">
-          {lead.name}
+          Contact
         </h2>
         <StatusChip label={LEAD_SOURCES.labelOfAny(lead.source) || 'Unknown source'} />
       </div>
@@ -53,7 +56,7 @@ export default function LeadContactCard({ lead }) {
             href={tel}
             icon={<Icon icon="mdi:phone-outline" width="18" height="18" />}
           >
-            {lead.phone}
+            {formatPhone(lead.phone)}
           </Button>
         ) : null}
         {wa ? (

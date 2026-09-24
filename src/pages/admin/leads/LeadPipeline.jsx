@@ -86,13 +86,17 @@ export default function LeadPipeline({ status, lostReason, onChange, onLost, bus
       </ol>
 
       {isLost ? (
-        <p className={styles.lostBanner} role="status">
-          <Icon icon="mdi:close-circle-outline" width="18" height="18" aria-hidden="true" />
-          <span>
-            <span className={styles.lostLabel}>Lost</span>
-            {lostReason ? <span className={styles.lostReason}>{lostReason}</span> : null}
-          </span>
-        </p>
+        <>
+          <p className={styles.lostBanner} role="status">
+            <Icon icon="mdi:close-circle-outline" width="18" height="18" aria-hidden="true" />
+            <span>
+              <span className={styles.lostLabel}>Lost</span>
+              {lostReason ? <span className={styles.lostReason}>{lostReason}</span> : null}
+            </span>
+          </p>
+          {/* The rungs are faded, and nothing else said they still work. */}
+          <p className={styles.emptyLine}>Choose a stage above to reopen the lead.</p>
+        </>
       ) : (
         <Button
           variant="outline"
@@ -105,15 +109,19 @@ export default function LeadPipeline({ status, lostReason, onChange, onLost, bus
         </Button>
       )}
 
+      {/* Reopening a lost lead is not "moving it back" — it was never on the
+          rung it goes to — so it asks its own question (QA-53). */}
       <ConfirmDialog
         open={Boolean(pending)}
-        title="Move this lead back?"
+        title={isLost ? 'Reopen this lead?' : 'Move this lead back?'}
         message={
           pending
-            ? `The lead goes from ${LEAD_STATUS.labelOf(status)} to ${LEAD_STATUS.labelOf(pending)}. The change is recorded in the timeline.`
+            ? isLost
+              ? `The lead goes back into the pipeline at ${LEAD_STATUS.labelOf(pending)}. Why it was lost stays in the timeline.`
+              : `The lead goes from ${LEAD_STATUS.labelOf(status)} to ${LEAD_STATUS.labelOf(pending)}. The change is recorded in the timeline.`
             : undefined
         }
-        confirmLabel="Move it"
+        confirmLabel={isLost ? 'Reopen' : 'Move it'}
         loading={busy}
         onClose={() => setPending(null)}
         onConfirm={() => {

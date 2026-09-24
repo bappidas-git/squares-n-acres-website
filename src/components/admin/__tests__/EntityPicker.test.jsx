@@ -140,4 +140,19 @@ describe('EntityPicker', () => {
 
     await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(2));
   });
+
+  // QA-53: in a filter bar the choice is one of the bar's own chips; a second
+  // chip under the box grew that one control and put the row out of line.
+  it('as a filter, reads its one choice in the empty box instead of a chip', () => {
+    setup({ value: 3, multiple: false, showChosen: false, placeholder: 'Search articles…' });
+
+    expect(screen.getByRole('combobox')).toHaveAttribute('placeholder', 'Stamp duty in Karnataka');
+    expect(screen.queryByRole('button', { name: /Remove Stamp duty/i })).not.toBeInTheDocument();
+  });
+
+  it('as a filter with nothing chosen, keeps its own placeholder', () => {
+    setup({ value: null, multiple: false, showChosen: false, placeholder: 'Search articles…' });
+
+    expect(screen.getByRole('combobox')).toHaveAttribute('placeholder', 'Search articles…');
+  });
 });

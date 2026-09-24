@@ -36,6 +36,10 @@ const sameId = (left, right) => String(left) === String(right);
  * @param {boolean} [props.orderable] drag the chosen records into order
  * @param {Array<object>} [props.selectedRecords] known records for the current ids
  * @param {React.ReactNode} [props.action] rendered beside the search box
+ * @param {boolean} [props.showChosen] `false` for a filter: the choice is not
+ *   repeated as a chip under the box — the filter bar already lists it among its
+ *   own chips, and one more line under one control put the row out of line — and
+ *   a single choice reads in the empty box instead (QA-53)
  */
 export default function EntityPicker({
   label = 'Records',
@@ -56,6 +60,7 @@ export default function EntityPicker({
   error,
   action,
   disabled = false,
+  showChosen = true,
 }) {
   const id = useId();
   const [query, setQuery] = useState('');
@@ -148,6 +153,10 @@ export default function EntityPicker({
     record: knownRef.current.get(String(entry)) ?? null,
   }));
 
+  // Without its chips, a single choice is what the empty box says.
+  const shownPlaceholder =
+    !showChosen && !multiple && chosen.length > 0 ? chosen[0].label : placeholder;
+
   return (
     <div className={[styles.field, fieldClassName].filter(Boolean).join(' ')}>
       <label className={[styles.label, labelClassName].filter(Boolean).join(' ')} htmlFor={id}>
@@ -173,7 +182,7 @@ export default function EntityPicker({
           role="combobox"
           className={styles.input}
           value={query}
-          placeholder={placeholder}
+          placeholder={shownPlaceholder}
           disabled={disabled || (full && !multiple)}
           aria-expanded={open && results.length > 0}
           aria-controls={`${id}-results`}
@@ -218,7 +227,7 @@ export default function EntityPicker({
         </ul>
       ) : null}
 
-      {chosen.length > 0 ? (
+      {showChosen && chosen.length > 0 ? (
         orderable ? (
           <SortableList
             items={chosen}

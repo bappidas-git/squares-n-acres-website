@@ -270,6 +270,29 @@ function formatPhoneForTel(value) {
 }
 
 /**
+ * A phone number as a person reads it: `+91 98765 43210`.
+ *
+ * The CRM stores what arrived — `9876543210` from an older form,
+ * `+919876543210` from a current one — and printed as stored the two looked
+ * like different numbers (QA-53). An Indian mobile prints in one shape however
+ * it was stored; anything else prints as stored.
+ *
+ * @param {string|number|null} value
+ * @returns {string} `''` when there is no number
+ */
+function formatPhone(value) {
+  if (value === null || value === undefined) return '';
+  const raw = String(value).trim();
+
+  let digits = raw.replace(/[\s()-]/g, '').replace(/^\+/, '');
+  if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
+  else if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+  if (!/^[6-9]\d{9}$/.test(digits)) return raw;
+
+  return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+}
+
+/**
  * The digits `wa.me` wants: an international number with no `+` and no spaces.
  * `98765 43210` -> `919876543210`.
  *
@@ -304,6 +327,7 @@ module.exports = {
   formatDateTime,
   formatNumber,
   formatTime,
+  formatPhone,
   formatPhoneForTel,
   formatPrice,
   formatPriceRange,

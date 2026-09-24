@@ -13,6 +13,15 @@ import { TABLES } from '../../config/adminCopy';
 const EXTERNAL = { target: '_blank', rel: 'noopener noreferrer' };
 
 /**
+ * The attributes an `href` action's link carries.
+ *
+ * A web address opens in a new tab. A `tel:` or `mailto:` one is handed to the
+ * dialler or the mail app from this tab: given a new tab of its own, it left an
+ * empty one behind on a desktop browser every time "Call" was chosen (QA-53).
+ */
+const linkProps = (href) => (href && /^https?:/i.test(href) ? EXTERNAL : null);
+
+/**
  * The per-row controls of `DataTable`.
  *
  * Wide enough (≥ 900 px) and they are icon buttons; below that they collapse
@@ -22,7 +31,8 @@ const EXTERNAL = { target: '_blank', rel: 'noopener noreferrer' };
  *
  * An action is a button, a router link (`to`) or an external one (`href`,
  * opened in a new tab — "View on site" is a different context, not a
- * navigation away from the record being edited).
+ * navigation away from the record being edited — unless it is a `tel:` or a
+ * `mailto:`, which the device answers without a tab).
  *
  * @param {object} props
  * @param {Array<{key: string, label: string, icon?: string, onClick?: () => void,
@@ -49,7 +59,7 @@ export default function RowActions({
             size="sm"
             to={action.disabled ? undefined : action.to}
             href={action.disabled ? undefined : action.href}
-            {...(action.href ? EXTERNAL : null)}
+            {...linkProps(action.href)}
             disabled={action.disabled || undefined}
             className={action.danger ? styles.danger : undefined}
             onClick={(event) => {
@@ -95,7 +105,7 @@ export default function RowActions({
             component={action.to ? Link : action.href ? 'a' : 'li'}
             to={action.to}
             href={action.href}
-            {...(action.href ? EXTERNAL : null)}
+            {...linkProps(action.href)}
             className={action.danger ? styles.dangerItem : undefined}
             onClick={(event) => {
               event.stopPropagation();

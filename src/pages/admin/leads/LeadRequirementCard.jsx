@@ -38,7 +38,8 @@ export default function LeadRequirementCard({ requirement }) {
     ['Looking to', LISTING_TYPES.labelOf(wanted.listingType) || null],
     ['Property type', nameOf(propertyTypes, wanted.propertyTypeId)],
     ['Locality', nameOf(localities, wanted.localityId)],
-    ['Configuration', wanted.bedrooms ? formatBhk(wanted.bedrooms) : null],
+    // 0 is an answer — a studio — as the export prints it, not "not asked".
+    ['Configuration', Number.isFinite(wanted.bedrooms) ? formatBhk(wanted.bedrooms) : null],
     ['Budget', budget],
     ['Timeline', REQUIREMENT_TIMELINES.labelOf(wanted.timeline) || null],
   ].filter(([, value]) => Boolean(value));

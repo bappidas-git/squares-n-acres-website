@@ -19,6 +19,7 @@ import {
   formatDateTime,
   formatMonthYear,
   formatNumber,
+  formatPhone,
   formatPhoneForTel,
   formatPrice,
   formatPriceRange,
@@ -261,5 +262,29 @@ describe('phone numbers', () => {
 
   it('builds a bare link when there is no message', () => {
     expect(whatsappLink('9876543210')).toBe('https://wa.me/919876543210');
+  });
+});
+
+// QA-53: the CRM printed `9876500100` for one lead and `+919876500100` for the
+// next — the same kind of number, stored as it arrived.
+describe('formatPhone', () => {
+  it.each([
+    ['9876500100', '+91 98765 00100'],
+    ['+919876500100', '+91 98765 00100'],
+    ['98765 00100', '+91 98765 00100'],
+    ['09876500100', '+91 98765 00100'],
+    ['9123456780', '+91 91234 56780'],
+    [9876500100, '+91 98765 00100'],
+  ])('prints %p as %p', (stored, shown) => {
+    expect(formatPhone(stored)).toBe(shown);
+  });
+
+  it('prints any other number as it was stored', () => {
+    expect(formatPhone('+1 415 555 0100')).toBe('+1 415 555 0100');
+    expect(formatPhone('1800 123 4567')).toBe('1800 123 4567');
+  });
+
+  it.each([null, undefined])('prints nothing for %p', (value) => {
+    expect(formatPhone(value)).toBe('');
   });
 });
