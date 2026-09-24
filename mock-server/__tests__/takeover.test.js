@@ -21,12 +21,18 @@ const { describe, it } = require('node:test');
 const {
   APP_ID,
   MOCK_COMMAND_RE,
+  NODE_RE,
+  SERVER_SCRIPT_RE,
   TAKEOVER_HEADER,
   commandLineOf,
   controlRoutes,
+  imageNameOf,
+  isMockNotFound,
   listeningPids,
   parseNetstat,
   parsePidList,
+  parseSs,
+  parseTasklist,
   sourceRevision,
   takeOver,
 } = require('../lib/takeover');
@@ -58,12 +64,28 @@ const call = (port, method, url, headers = {}) =>
     request.end();
   });
 
-/** `takeOver`'s dependencies, answering as a scripted port holder would. */
-function holderDeps({ identity, shutdown = 202, health, pids = [], commands = {}, pid = 1000 }) {
-  const calls = { posts: [], killed: [] };
+/** What every mock answers a path it does not know (`app.js`). */
+const MOCK_NOT_FOUND = { status: 404, body: { message: 'Not found' } };
+
+/**
+ * `takeOver`'s dependencies, answering as a scripted port holder would.
+ * `unknownPath` is what the holder answers `/__mock/identity` with when it
+ * has no identity: a bare 404 by default, `MOCK_NOT_FOUND` for a legacy mock.
+ */
+function holderDeps({
+  identity,
+  unknownPath = { status: 404, body: null },
+  shutdown = 202,
+  health,
+  pids = [],
+  commands = {},
+  images = {},
+  pid = 1000,
+}) {
+  const calls = { posts: [], killed: [], images: [] };
   const exchange = async (url, options = {}) => {
     if (url.endsWith('/__mock/identity')) {
-      return identity ? { status: 200, body: { data: identity } } : { status: 404, body: null };
+      return identity ? { status: 200, body: { data: identity } } : unknownPath;
     }
     if (url.endsWith('/__mock/shutdown')) {
       calls.posts.push(options);
@@ -78,6 +100,10 @@ function holderDeps({ identity, shutdown = 202, health, pids = [], commands = {}
       exchange,
       listeningPids: async () => pids,
       commandLineOf: async (candidate) => commands[candidate] ?? null,
+      imageNameOf: async (candidate) => {
+        calls.images.push(candidate);
+        return images[candidate] ?? null;
+      },
       kill: (candidate) => calls.killed.push(candidate),
       pid,
     },
@@ -156,6 +182,81 @@ describe('takeOver — what holds the port decides', () => {
     const result = await takeOver({ port: 4000, revision: 'new', root, deps });
     assert.deepEqual(result, { outcome: 'stuck', pid: 77 });
     assert.deepEqual(calls.killed, []);
+  });
+
+  it('stops a legacy mock whose command line cannot be read, when it is Node', async () => {
+    // Windows without a working PowerShell or `wmic` (QA-58): only the image name is known.
+    const { deps, calls } = holderDeps({
+      health: LEGACY_HEALTH,
+      unknownPath: MOCK_NOT_FOUND,
+      pids: [52],
+      images: { 52: 'node.exe' },
+    });
+    const result = await takeOver({ port: 4000, revision: 'new', root, deps });
+    assert.deepEqual(result, { outcome: 'stopped', pid: 52 });
+    assert.deepEqual(calls.killed, [52]);
+  });
+
+  it('does not stop an unreadable process that is not Node', async () => {
+    const { deps, calls } = holderDeps({
+      health: LEGACY_HEALTH,
+      unknownPath: MOCK_NOT_FOUND,
+      pids: [52],
+      images: { 52: 'java.exe' },
+    });
+    const result = await takeOver({ port: 4000, revision: 'new', root, deps });
+    assert.deepEqual(result, { outcome: 'stuck', pid: 52 });
+    assert.deepEqual(calls.killed, []);
+  });
+
+  it('does not stop an unreadable Node process when the port does not answer like the mock', async () => {
+    for (const unknownPath of [
+      { status: 404, body: null },
+      { status: 404, body: { message: 'Not Found.' } },
+      { status: 404, body: { message: 'Not found', path: '/__mock/identity' } },
+      { status: 200, body: { data: null } },
+    ]) {
+      const { deps, calls } = holderDeps({
+        health: LEGACY_HEALTH,
+        unknownPath,
+        pids: [52],
+        images: { 52: 'node.exe' },
+      });
+      const result = await takeOver({ port: 4000, revision: 'new', root, deps });
+      assert.deepEqual(result, { outcome: 'stuck', pid: 52 }, JSON.stringify(unknownPath));
+      assert.deepEqual(calls.killed, []);
+      assert.deepEqual(calls.images, [], 'the image is not even looked up');
+    }
+  });
+
+  it('stops `node server.js` run inside mock-server/, when the port answers like the mock', async () => {
+    const stopped = holderDeps({
+      health: LEGACY_HEALTH,
+      unknownPath: MOCK_NOT_FOUND,
+      pids: [61],
+      commands: { 61: 'node server.js' },
+    });
+    assert.deepEqual(await takeOver({ port: 4000, revision: 'new', root, deps: stopped.deps }), {
+      outcome: 'stopped',
+      pid: 61,
+    });
+
+    for (const [command, unknownPath] of [
+      ['node server.js', { status: 404, body: null }],
+      ['node index.js', MOCK_NOT_FOUND],
+      ['python server.js', MOCK_NOT_FOUND],
+      ['nodemon server.js', MOCK_NOT_FOUND],
+    ]) {
+      const { deps, calls } = holderDeps({
+        health: LEGACY_HEALTH,
+        unknownPath,
+        pids: [61],
+        commands: { 61: command },
+      });
+      const result = await takeOver({ port: 4000, revision: 'new', root, deps });
+      assert.deepEqual(result, { outcome: 'stuck', pid: 61 }, command);
+      assert.deepEqual(calls.killed, [], command);
+    }
   });
 
   it('treats a port whose holder does not answer like the mock as foreign', async () => {
@@ -294,6 +395,71 @@ describe('parsing what the operating system says', () => {
     assert.ok(runs.includes('fuser -n tcp 4000'));
   });
 
+  it('falls back to ss on a Linux without lsof and fuser', async () => {
+    const linux = await listeningPids(4000, {
+      platform: 'linux',
+      run: async (file, args) =>
+        file === 'ss' && args.join(' ') === '-ltnp sport = :4000'
+          ? [
+              'State  Recv-Q Send-Q Local Address:Port Peer Address:Port Process',
+              'LISTEN 0      511                *:4000            *:*    users:(("node",pid=2252,fd=21))',
+            ].join('\n')
+          : null,
+    });
+    assert.deepEqual(linux, [2252]);
+
+    const mac = await listeningPids(4000, { platform: 'darwin', run: async () => null });
+    assert.deepEqual(mac, [], 'ss is Linux only');
+  });
+
+  it('reads the process ids that ss prints', () => {
+    assert.deepEqual(
+      parseSs('LISTEN 0 511 *:4000 *:* users:(("node",pid=2252,fd=21),("node",pid=2252,fd=22))'),
+      [2252]
+    );
+    assert.deepEqual(parseSs('State Recv-Q Send-Q Local Address:Port'), []);
+    assert.deepEqual(parseSs(null), []);
+  });
+
+  it('reads an image name from tasklist on Windows and ps elsewhere', async () => {
+    assert.equal(parseTasklist('"node.exe","9120","Console","1","45,600 K"\r\n'), 'node.exe');
+    assert.equal(
+      parseTasklist('INFO: No tasks are running which match the specified criteria.\r\n'),
+      null
+    );
+    assert.equal(parseTasklist(''), null);
+
+    const runs = [];
+    const windows = await imageNameOf(9120, {
+      platform: 'win32',
+      run: async (file, args) => {
+        runs.push([file, ...args].join(' '));
+        return '"node.exe","9120","Console","1","45,600 K"\r\n';
+      },
+    });
+    assert.equal(windows, 'node.exe');
+    assert.deepEqual(runs, ['tasklist /FI PID eq 9120 /FO CSV /NH']);
+
+    const mac = await imageNameOf(12, {
+      platform: 'darwin',
+      run: async (file, args) =>
+        file === 'ps' && args.join(' ') === '-o comm= -p 12' ? '/usr/local/bin/node\n' : null,
+    });
+    assert.equal(mac, '/usr/local/bin/node');
+  });
+
+  it('gives PowerShell more time than the other lookups', async () => {
+    const timeouts = {};
+    await commandLineOf(12, {
+      platform: 'win32',
+      run: async (file, args, options) => {
+        timeouts[file] = options?.timeoutMs;
+        return null;
+      },
+    });
+    assert.ok(timeouts['powershell.exe'] >= 15000);
+  });
+
   it('reads a command line from /proc on Linux, ps elsewhere, CIM on Windows', async () => {
     const linux = await commandLineOf(12, {
       platform: 'linux',
@@ -333,6 +499,54 @@ describe('parsing what the operating system says', () => {
       'node mock-server/server.jsx',
     ]) {
       assert.ok(!MOCK_COMMAND_RE.test(command), command);
+    }
+  });
+
+  it('recognises Node, and a server.js it runs, in names and command lines', () => {
+    for (const name of [
+      'node',
+      'node.exe',
+      'NODE.EXE',
+      '/usr/local/bin/node',
+      '/opt/node22/bin/node --watch-preserve-output server.js',
+      '"C:\\Program Files\\nodejs\\node.exe" server.js',
+      'C:\\Program Files\\nodejs\\node.exe .\\server.js',
+    ]) {
+      assert.ok(NODE_RE.test(name), name);
+    }
+    for (const name of [
+      'nodemon server.js',
+      'java.exe',
+      '/home/me/node/bin/python',
+      'deno run x',
+    ]) {
+      assert.ok(!NODE_RE.test(name), name);
+    }
+
+    for (const command of [
+      'node server.js',
+      'node .\\server.js',
+      'node ./server.js',
+      '"C:\\Program Files\\nodejs\\node.exe" "C:\\dev\\mock-server\\server.js"',
+    ]) {
+      assert.ok(SERVER_SCRIPT_RE.test(command), command);
+    }
+    for (const command of ['node myserver.js', 'node server.jsx', 'node server.js.bak']) {
+      assert.ok(!SERVER_SCRIPT_RE.test(command), command);
+    }
+  });
+
+  it('knows the 404 every mock answers, and nothing like it', () => {
+    assert.equal(isMockNotFound(MOCK_NOT_FOUND), true);
+    for (const answer of [
+      null,
+      { status: 404, body: null },
+      { status: 404, body: { message: 'Not Found' } },
+      { status: 404, body: { message: 'Not found', errors: {} } },
+      { status: 200, body: { message: 'Not found' } },
+      { status: 404, body: 'Not found' },
+    ]) {
+      assert.equal(isMockNotFound(answer), false, JSON.stringify(answer));
     }
   });
 });
@@ -391,55 +605,82 @@ describe('sourceRevision — the code a process runs', () => {
 
 /** Whether this machine can say which process listens on a port. */
 const canFindListeners =
-  process.platform !== 'win32' && ['lsof', 'fuser'].some((tool) => !spawnSync(tool, ['-v']).error);
+  process.platform !== 'win32' &&
+  ['lsof', 'fuser', 'ss'].some((tool) => !spawnSync(tool, ['-v']).error);
+
+/**
+ * Starts what an older mock looks like from outside: `server.js` in a
+ * `mock-server/` folder, an `/api/health` like every mock's, the mock's 404 for
+ * any other path, and so no `/__mock/identity`. `cwd` is the folder the
+ * command runs in, and `script` the path it names.
+ */
+async function startLegacyMock({ cwd = '.', script = 'mock-server/server.js' } = {}) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sna-legacy-mock-'));
+  fs.mkdirSync(path.join(dir, 'mock-server'));
+  fs.writeFileSync(
+    path.join(dir, 'mock-server', 'server.js'),
+    [
+      "const http = require('http');",
+      'const server = http.createServer((req, res) => {',
+      "  res.setHeader('Content-Type', 'application/json');",
+      "  if (req.url === '/api/health') {",
+      "    res.end(JSON.stringify({ data: { status: 'ok', time: new Date().toISOString(), version: '1.0.0' } }));",
+      '  } else {',
+      '    res.statusCode = 404;',
+      "    res.end(JSON.stringify({ message: 'Not found' }));",
+      '  }',
+      '});',
+      "server.listen(0, () => process.stdout.write(String(server.address().port) + '\\n'));",
+      "process.on('SIGTERM', () => server.close(() => process.exit(0)));",
+    ].join('\n')
+  );
+
+  const child = spawn(process.execPath, [script], {
+    cwd: path.join(dir, cwd),
+    stdio: ['ignore', 'pipe', 'inherit'],
+  });
+  const exited = new Promise((resolve) =>
+    child.once('exit', (code, signal) => resolve({ code, signal }))
+  );
+  const port = await new Promise((resolve, reject) => {
+    child.stdout.once('data', (chunk) => resolve(Number.parseInt(String(chunk), 10)));
+    child.once('error', reject);
+  });
+  const stop = () => {
+    if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+    fs.rmSync(dir, { recursive: true, force: true });
+  };
+  return { dir, child, port, exited, stop };
+}
 
 describe('a mock from before the control routes', () => {
+  const skip = canFindListeners ? false : 'needs lsof, fuser or ss';
+
+  it('is found by its port, recognised by its command line and stopped', { skip }, async () => {
+    const legacy = await startLegacyMock();
+    try {
+      const result = await takeOver({ port: legacy.port, revision: 'new', root: legacy.dir });
+      assert.deepEqual(result, { outcome: 'stopped', pid: legacy.child.pid });
+      const { code } = await legacy.exited;
+      assert.equal(code, 0);
+    } finally {
+      legacy.stop();
+    }
+  });
+
   it(
-    'is found by its port, recognised by its command line and stopped',
-    { skip: canFindListeners ? false : 'needs lsof or fuser' },
+    'is stopped when it was started as `node server.js` inside mock-server/',
+    { skip },
     async () => {
-      // What an older mock looks like from outside: `node mock-server/server.js`,
-      // an `/api/health` like every mock's, and no `/__mock/identity`.
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sna-legacy-mock-'));
-      fs.mkdirSync(path.join(dir, 'mock-server'));
-      fs.writeFileSync(
-        path.join(dir, 'mock-server', 'server.js'),
-        [
-          "const http = require('http');",
-          'const server = http.createServer((req, res) => {',
-          "  res.setHeader('Content-Type', 'application/json');",
-          "  if (req.url === '/api/health') {",
-          "    res.end(JSON.stringify({ data: { status: 'ok', time: new Date().toISOString(), version: '1.0.0' } }));",
-          '  } else {',
-          '    res.statusCode = 404;',
-          "    res.end(JSON.stringify({ message: 'Not found' }));",
-          '  }',
-          '});',
-          "server.listen(0, () => process.stdout.write(String(server.address().port) + '\\n'));",
-          "process.on('SIGTERM', () => server.close(() => process.exit(0)));",
-        ].join('\n')
-      );
-
-      const child = spawn(process.execPath, ['mock-server/server.js'], {
-        cwd: dir,
-        stdio: ['ignore', 'pipe', 'inherit'],
-      });
-      const exited = new Promise((resolve) =>
-        child.once('exit', (code, signal) => resolve({ code, signal }))
-      );
+      // QA-57 could not tell this one from any other program (QA-58).
+      const legacy = await startLegacyMock({ cwd: 'mock-server', script: 'server.js' });
       try {
-        const port = await new Promise((resolve, reject) => {
-          child.stdout.once('data', (chunk) => resolve(Number.parseInt(String(chunk), 10)));
-          child.once('error', reject);
-        });
-
-        const result = await takeOver({ port, revision: 'new', root: dir });
-        assert.deepEqual(result, { outcome: 'stopped', pid: child.pid });
-        const { code } = await exited;
+        const result = await takeOver({ port: legacy.port, revision: 'new', root: legacy.dir });
+        assert.deepEqual(result, { outcome: 'stopped', pid: legacy.child.pid });
+        const { code } = await legacy.exited;
         assert.equal(code, 0);
       } finally {
-        if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
-        fs.rmSync(dir, { recursive: true, force: true });
+        legacy.stop();
       }
     }
   );

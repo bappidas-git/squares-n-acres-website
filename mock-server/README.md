@@ -9,7 +9,7 @@ app never knows which backend it is talking to. Switching backends is a change
 to `REACT_APP_API_URL` and nothing else.
 
 ```
-npm run mock          # http://localhost:4000/api
+npm run mock          # http://localhost:4000/api; reloads its own code when a pull changes it
 npm run mock:watch    # the same, restarted whenever a file it loads changes
 npm run mock:reset    # restore the runtime db from db.json
 npm run dev           # mock:watch + React dev server together
@@ -30,24 +30,77 @@ npm run smoke         # walk every endpoint of the registry (needs a running moc
 All four are documented in `.env.example`. They are read by Node at runtime,
 so they are **not** prefixed `REACT_APP_` and never reach the bundle.
 
+## A running mock keeps to the code on disk
+
+A `git pull` changes the web app and the mock together, but only the web app
+reloads by itself (CRA). A mock that went on running kept the route map it
+started with and refused every admin screen added since: "You do not have
+permission to perform this action." to the admin too, because an admin route
+without a rule is denied (§7). Master data → Segments and Pages → Header menu
+failed that way three times (QA-54, QA-57, QA-58).
+
+So the running process follows its own files (`lib/hotReload.js`, QA-58).
+When a request arrives, at most every 500 ms, it compares every module it
+loaded from the repository (its own files and the `src/` modules it shares)
+with the file on disk. It checks size and mtime first, and the content when
+either moved. When one changed, it:
+
+1. waits until the files have been left alone for 300 ms (a pull writes many),
+2. lets the requests in flight finish and holds the new ones,
+3. loads the API again in the same process: fresh modules, `ensureRuntimeDb`
+   for what the seed gained, a new JSON Server router over the runtime file,
+   a new Express app,
+4. answers the held requests with it, and prints
+   `The mock's code changed on disk (…); the API reloaded it in 60ms…`.
+
+The port never closes, and nothing needs restarting: `npm run mock`, `npm run
+dev` and a mock in a forgotten terminal all behave the same way. No file
+watcher is involved, so a drive that does not report changes (a network share,
+a WSL mount of a Windows disk) cannot hide one. When the new code does not
+load (a file still half-written, a syntax error), the previous code goes on
+answering and one line names the file. The same files are tried again after
+1 s, then 2 s, 4 s and so on, and any further change is tried at once.
+
+`server.js`, `lib/takeover.js` and `lib/hotReload.js` are the shell around the
+API and are not reloaded. When one of them changes, the mock says so once, and
+a restart applies it (`npm run dev` restarts on its own under `node --watch`).
+
+Every answer carries `X-Mock-Revision`, the revision of the code that gave it,
+exposed through CORS. The web app reads it (`src/services/staleApi.js`): a 403
+that the signed-in admin or manager cannot have earned, from an API on this
+machine that does not send the header, is an API older than the web app. The
+screen then says so, and says how to restart it, instead of repeating
+"You do not have permission…".
+
 ## A port held by an older mock
 
-The web app talks to whatever answers on `MOCK_PORT`, and an older copy of
-the mock refuses every admin screen added since it started (403: its route map
-has no rule for them). So `server.js` claims the port before it reads the
-runtime database, and when the port is taken it looks at what holds it
-(`lib/takeover.js`, QA-57):
+A mock from before the reload above cannot follow a pull, and it goes on
+refusing the screens added since for as long as it runs. So `server.js`
+claims the port before it reads the runtime database, and when the port is
+taken it looks at what holds it (`lib/takeover.js`, QA-57, QA-58):
 
-| What holds the port                              | What the new mock does                                                                                             |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| this checkout's mock, running the same code      | leaves it serving and exits 0 (`Nothing to start.`)                                                                |
-| a mock running other code, or another checkout's | `POST /__mock/shutdown`, then takes the port                                                                       |
-| a mock from before `/__mock/identity` existed    | finds the process on the port, checks that its command line runs `mock-server/server.js`, stops it, takes the port |
-| any other program                                | touches nothing, exits 1 and says so                                                                               |
+| What holds the port                              | What the new mock does                                                                     |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| this checkout's mock, running the same code      | leaves it serving and exits 0 (`Nothing to start.`)                                        |
+| a mock running other code, or another checkout's | `POST /__mock/shutdown`, then takes the port                                               |
+| a mock from before `/__mock/identity` existed    | finds the process on the port, makes sure it is the mock (below), stops it, takes the port |
+| any other program                                | touches nothing, exits 1 and says so                                                       |
 
-"The same code" is `sourceRevision()`: a digest of every module the process
-loaded from the repository — the mock's own files and the `src/` modules it
-shares — which is exactly what `node --watch` restarts on.
+A mock from before `/__mock/identity` is found with `lsof`, `fuser` or `ss`
+(`netstat -ano` on Windows) and is stopped when its command line runs
+`mock-server/server.js`. When the command line does not say that, the port
+must answer exactly as every mock has answered (`/api/health`, and
+`404 {"message":"Not found"}` for `/__mock/identity`), and the process must be
+Node. Either it runs a `server.js`, as `node server.js` inside `mock-server/`
+does, or its command line cannot be read at all. On Windows that happens when
+PowerShell is slow or blocked (it gets 15 s) and `wmic` is gone (Windows 11
+24H2), and then the process is recognised by `tasklist`'s image name.
+
+"The same code" is the revision: a digest of every module the process loaded
+from the repository (the mock's own files and the `src/` modules it shares),
+which is exactly what `node --watch` restarts on. A mock that reloaded its code
+reports the revision of what it reloaded, so a second start after a pull finds
+it current and leaves it alone.
 
 `GET /__mock/identity` and `POST /__mock/shutdown` belong to the standalone
 server, not to the API: they sit outside `/api`, and neither the contract nor
