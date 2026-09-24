@@ -143,7 +143,7 @@ export const categoriesConfig = ({ onMutated } = {}) => ({
   seoPanel: 'compact',
   seoEntityType: 'articleCategory',
   reorderHint:
-    'Sorted by Order the table becomes this list. Drag a row, or focus it and press Alt + ↑ / ↓, to change the order the archive lists the categories in.',
+    'Drag a row by its handle, or use its arrows, to change the order the archive lists the categories in. With the keyboard: focus a row and press Alt + ↑ / ↓.',
   // What every other drag list shows: the name, and what it holds (QA-55).
   renderOrderItem: (row) => <NameCell name={row.name} hint={orderHint(row)} />,
 
@@ -214,7 +214,8 @@ export const categoriesConfig = ({ onMutated } = {}) => ({
       label: 'Order',
       min: 0,
       half: true,
-      hint: 'Lowest first, in the archive’s own navigation.',
+      // A position (QA-59): the API places the category there and moves the rest.
+      hint: 'Its place in the archive’s own navigation: 1 is first, and the others move down to make room.',
     },
     { name: 'isActive', type: 'switch', label: 'Active', half: true },
   ],

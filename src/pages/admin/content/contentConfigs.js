@@ -16,6 +16,7 @@ import {
   team,
   testimonials,
 } from '../../../services/masterDataService';
+import { FORMS } from '../../../config/adminCopy';
 import { formatDate } from '../../../utils/format';
 import { schemas } from '../../../services/schemas';
 
@@ -112,9 +113,12 @@ const typeNameOf = (types, id) =>
   (Array.isArray(types) ? types : []).find((type) => String(type.id) === String(id))?.name ??
   `Property type #${id}`;
 
-/** The `Order` / `Active` half of every form below. */
+/**
+ * The `Order` / `Active` half of every form below. The number is a position:
+ * the API places the record there and moves the rest (QA-59).
+ */
 const STATE_FIELDS = [
-  { name: 'order', type: 'number', label: 'Order', min: 0, half: true, hint: 'Lowest first.' },
+  { name: 'order', type: 'number', label: 'Order', min: 0, half: true, hint: FORMS.orderHint },
   { name: 'isActive', type: 'switch', label: 'Active', half: true },
 ];
 
@@ -363,12 +367,7 @@ export const faqsConfig = ({ onMutated, propertyTypes: knownTypes = [] } = {}) =
       half: true,
       hint: 'The home section shows the questions ticked here.',
     },
-    {
-      ...STATE_FIELDS[0],
-      // A position (QA-59): the API places the FAQ there and moves the rest.
-      hint: 'Its place in the list: 1 is first, and the others move down to make room.',
-    },
-    STATE_FIELDS[1],
+    ...STATE_FIELDS,
   ],
 
   /**
