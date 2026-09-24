@@ -332,9 +332,10 @@ guidelines 12 / 12, env. `npm run e2e` 62 / 62 (59).
 - **CSV exports carry raw values** — ISO timestamps and enum keys (`subscribed`,
   `newsletter`) — which a spreadsheet user must read as they are. What the columns should
   say is a product decision.
-- **The profile page and the property form's Agent tab keep the ten-character phone box**
-  (R3): "98450 12345" is still cut there. Fixing it means tidying the number on their own
-  submit paths; outside this audit.
+- **The public finance assessment form keeps the ten-character phone box**, the last
+  `PhoneField` on the kit's default: "98450 12345" is cut there and refused. Its lead is
+  normalised by `POST /leads`, so the box's room is all it lacks; outside this audit. (The
+  profile page and the Agent tab, listed here first, are fixed — §9.)
 - **FAQs open a new question at 0** under "1 is first", as T7 was; outside this audit (QA-59
   kept 0 on purpose, and it places the question first either way).
 - **The kit's Alert, Chip and Toast still close with a text "×"** (S1 changed the dialog,
@@ -344,3 +345,33 @@ guidelines 12 / 12, env. `npm run e2e` 62 / 62 (59).
 - **`SeoPanel.test.jsx`'s performance test** (analysis under 100 ms) failed once at 101 ms
   on a loaded machine (the baseline run, with the end-to-end suite running beside it); it
   passed in every gate run. A timing budget in a unit test is a flake waiting to happen.
+
+## 9. Follow-up: the profile page and the Agent tab
+
+R3 left two admin forms on the kit's ten-character phone box; both now take a number as
+people write it and store its ten digits.
+
+- **My profile** (`/admin/profile`): the Phone box takes 18 characters; the save sends
+  `tidyPhone` of what was typed (`+91 98450 12345` → `9845012345`; what is not a mobile
+  number goes as typed, for the API's 422), and the box then shows the stored number.
+- **The property form's Agent tab**: Phone and WhatsApp take 18 characters; `toPayload`
+  sends their ten digits, `validateAgent` reads the number as it will be stored — so
+  "098450 12345" and "(98450) 12345" are accepted where they were refused — and the card
+  preview reads "+91 9845012345" where it would have read "+91 +91 98450 12345".
+- **`tidyPhone` moved beside `normalizePhone`** in `src/utils/validators.js` and is
+  re-exported by `MasterDataPage`: the property form's payload and validators are plain
+  modules, and importing the list screen into them would have brought its component and
+  stylesheet into the property form's chunk.
+
+Browser pass, a freshly seeded mock: **9 / 9** — the profile box's cap, the whole number
+typed, stored as `9845012345`, shown after the save and after a reload; the Agent tab's two
+caps, the preview in ten digits, `agent.phone` and `agent.whatsapp` stored as `9845012345`
+and `9845067890`, and the public card reading the same. No console errors.
+
+| Where                                                                   | Before → after | What they hold                                                                                               |
+| ----------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------ |
+| `src/pages/admin/settings/__tests__/ProfilePage.test.jsx`               | new, 4         | the box's room; `+91 98450 12345` saved and shown as `9845012345`; a non-mobile sent as typed; empty as null |
+| `src/pages/admin/properties/property-form/__tests__/AgentTab.test.jsx`  | 3 → 5          | both boxes' room; the preview in ten digits                                                                  |
+| `src/pages/admin/properties/property-form/__tests__/toPayload.test.js`  | +1             | the agent's numbers sent as ten digits, a non-mobile as typed                                                |
+| `src/pages/admin/properties/property-form/__tests__/validators.test.js` | +1             | a number read as it will be stored                                                                           |
+| `src/utils/__tests__/validators.test.js`                                | +2             | `tidyPhone`: the spellings of one number, the 91-series, what is not a mobile number                         |
