@@ -32,9 +32,18 @@ import { useToast } from '../../../components/common/ToastProvider';
  *   the editor switches that off — the rule the Pages form follows.
  * - **Ctrl/Cmd+S saves**, once per press, as it does on every other form.
  *
+ * The job opening form (QA-61) is a record page too, with no SEO branch and a
+ * title instead of a name: `entityType: null` skips the SEO side effect, and
+ * `labelField` names the field the slug follows and the redirect's note names.
+ *
  * @param {object} options
- * @param {'locality'|'developer'} options.entityType the SEO entity type
+ * @param {'locality'|'developer'|null} options.entityType the SEO entity type,
+ *   or `null` for a record with no `seo` branch
  * @param {string} options.noun "Locality", as the toasts name it
+ * @param {string} [options.labelField] what the record is called by — `name`,
+ *   or `title` for a job opening
+ * @param {string} [options.section] where the record is edited, for the note
+ *   a redirect carries — "Master data", "Jobs"
  * @param {boolean} options.isEdit
  * @param {object|null} options.record the stored record, as last read or saved
  * @param {(record: object) => void} options.setRecord replaces it without a read
@@ -47,6 +56,8 @@ import { useToast } from '../../../components/common/ToastProvider';
 export default function useRecordPage({
   entityType,
   noun,
+  labelField = 'name',
+  section = 'Master data',
   isEdit,
   record,
   setRecord,
@@ -67,7 +78,7 @@ export default function useRecordPage({
   const liveSlug = isEdit && record && record.isActive !== false ? (record.slug ?? null) : null;
   // An emptied box asks the API for the name's slug; a name with none keeps
   // the slug the record has.
-  const typedSlug = form.values.slug || slugify(form.values.name ?? '') || liveSlug;
+  const typedSlug = form.values.slug || slugify(form.values[labelField] ?? '') || liveSlug;
   const slugMoved = Boolean(liveSlug && typedSlug && typedSlug !== liveSlug);
 
   // The messages of a refused save are drawn first; then the first of them is
@@ -130,11 +141,11 @@ export default function useRecordPage({
 
         // The redirect this record's `seo` asks for, against the slug the API
         // answered with — a new record has none until now (§9.6).
-        await applySeoSideEffects(entityType, saved);
+        if (entityType) await applySeoSideEffects(entityType, saved);
         if (leaving && saved.slug && saved.slug !== leaving) {
           const result = await redirectMoves(
             [[publicPath(leaving), publicPath(saved.slug)]],
-            `“${saved.name}” moved (Admin → Master data).`
+            `“${saved[labelField]}” moved (Admin → ${section}).`
           );
           const { info, error } = describeMoves(result);
           if (info) toast.info(info);
@@ -173,6 +184,8 @@ export default function useRecordPage({
       liveSlug,
       setRecord,
       entityType,
+      labelField,
+      section,
       onSaved,
     ]
   );

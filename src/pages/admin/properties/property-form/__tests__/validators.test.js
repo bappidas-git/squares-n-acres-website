@@ -228,6 +228,18 @@ describe('validateAgent', () => {
   it('accepts an empty agent', () => {
     expect(validateAgent(base())).toEqual({});
   });
+
+  it('reads a number as the listing will store it (QA-61)', () => {
+    const agent = {
+      ...createInitialState().agent,
+      phone: '+91 98450 12345',
+      whatsapp: '098450 12345',
+    };
+    expect(validateAgent(base({ agent }))).toEqual({});
+    expect(
+      validateAgent(base({ agent: { ...agent, phone: '98450 1234' } }))['agent.phone']
+    ).toMatch(/Indian mobile/);
+  });
 });
 
 describe('validateForActivation (PROP-04)', () => {

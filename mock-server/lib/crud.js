@@ -357,7 +357,8 @@ function matchesFilter(record, descriptor, raw, context) {
  *   `order`, put the written record at the position it names and renumber the
  *   collection `1..n` around it ({@link placeOrder}, QA-59). Without it two
  *   records can share a number — every form creates at 0 — and the Order
- *   column repeats itself until a drag settles it. On for every master-data
+ *   column repeats itself until a drag settles it. A delete, single or bulk,
+ *   closes the gap it leaves the same way (QA-61). On for every master-data
  *   and content collection with an `order` (`routes/masterData.js`); pages and
  *   header menus keep §5.8's rule
  * @param {boolean} [options.trimStrings] trim the text a write sends before it
@@ -439,6 +440,19 @@ function makeCrudRouter(options) {
    * @returns {boolean} whether anything was renumbered
    */
   const place = (placedId) => placeOrder(rows(), placedId, { tieBreak: tieBreakOf(sorts) });
+
+  /**
+   * Renumbers what a delete leaves behind `1..n` (`settleOrder`, QA-61).
+   *
+   * A delete left a gap: the first testimonial read 2 in the Order column and
+   * in its form once the one above it had gone, and 3 after the next — until
+   * a drag or a placing save happened to settle the collection. The others
+   * keep the order they read in; nothing else about them changes.
+   */
+  const closeGap = () => {
+    if (!settleOrder || !hasField('order')) return;
+    if (renumberOrder(rows(), { tieBreak: tieBreakOf(sorts) })) db.write();
+  };
 
   /** How this resource turns text into its slug (§5.9, §6.10). */
   const toSlug = pathSlug ? slugifyPath : slugify;
@@ -886,6 +900,7 @@ function makeCrudRouter(options) {
             db.removeRecord(name, record.id);
           }
           affected = targets.length;
+          closeGap();
         } else {
           const now = new Date().toISOString();
           const changes = actions[body.action];
@@ -1072,6 +1087,7 @@ function makeCrudRouter(options) {
         }
 
         db.removeRecord(name, existing.id);
+        closeGap();
         res.message('Deleted');
       } catch (error) {
         next(error);

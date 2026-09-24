@@ -296,7 +296,10 @@ const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
  *
  * Only the key as a whole word is replaced — "The categoryId field is
  * required." becomes "The category field is required." — so a message that
- * never named the key is left exactly as it was written.
+ * never named the key is left exactly as it was written. And only its first
+ * occurrence, the field the sentence is about: a key can also be an ordinary
+ * word further on, and "The email must be a valid email address." labelled
+ * "email address" read "…a valid email address address." (QA-61).
  *
  * @param {Record<string, string>} errors `{ key: message }`
  * @param {Record<string, string>|null} labels `{ key: label }`
@@ -308,7 +311,7 @@ export function relabel(errors, labels) {
     Object.entries(errors).map(([key, message]) => {
       const label = labels[key];
       if (!label || typeof message !== 'string') return [key, message];
-      const pattern = new RegExp(`(^|\\s)${escapeRegExp(key)}(?=[\\s.,]|$)`, 'g');
+      const pattern = new RegExp(`(^|\\s)${escapeRegExp(key)}(?=[\\s.,]|$)`);
       return [key, message.replace(pattern, `$1${label}`)];
     })
   );

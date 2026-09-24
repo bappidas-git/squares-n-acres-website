@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import MuiDrawer from '@mui/material/Drawer';
+import { Icon } from '@iconify/react';
 
 import useScrollLock from '../../hooks/useScrollLock';
 
@@ -24,6 +25,8 @@ import styles from './Drawer.module.css';
  * @param {string} [props.label] the accessible name when there is no title
  * @param {boolean} [props.padded] `false` hands the body to the caller edge to
  *   edge, for a panel whose own rows carry the padding (the navigation drawer)
+ * @param {object} [props.PaperProps] merged into the panel's own — a class of
+ *   the caller's joins the kit's, and the role and the name stay
  */
 export default function Drawer({
   open,
@@ -36,6 +39,7 @@ export default function Drawer({
   padded = true,
   closeLabel = 'Close',
   children,
+  PaperProps: paperProps = {},
   ...rest
 }) {
   const titleId = useId();
@@ -46,8 +50,14 @@ export default function Drawer({
       anchor={anchor}
       open={open}
       onClose={onClose}
+      // A caller's own paper props are merged, not swapped in: spread over
+      // these, the application panel's `className` took the role's name away,
+      // and the panel announced itself as a dialog called nothing (QA-61).
       PaperProps={{
-        className: [styles.paper, size === 'wide' ? styles.wide : ''].filter(Boolean).join(' '),
+        ...paperProps,
+        className: [styles.paper, size === 'wide' ? styles.wide : '', paperProps.className]
+          .filter(Boolean)
+          .join(' '),
         role: 'dialog',
         'aria-modal': 'true',
         ...(title ? { 'aria-labelledby': titleId } : { 'aria-label': label || 'Panel' }),
@@ -61,7 +71,7 @@ export default function Drawer({
             {title}
           </h2>
           <IconButton label={closeLabel} size="sm" onClick={onClose}>
-            &times;
+            <Icon icon="mdi:close" width="20" height="20" />
           </IconButton>
         </div>
       ) : null}

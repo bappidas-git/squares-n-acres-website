@@ -259,3 +259,39 @@ describe('SlugField — what it says it follows (QA-60)', () => {
     expect(box.previousElementSibling).toBeNull();
   });
 });
+
+describe('SlugField — a slug that is not an address (QA-61)', () => {
+  it('calls an identifier an identifier', async () => {
+    renderWith(
+      <SlugField
+        label="Identifier"
+        value="priya-raman"
+        source="Priya Raman"
+        sourceLabel="name"
+        base="#"
+        checkSlug={available}
+        onChange={() => {}}
+      />
+    );
+
+    expect(await screen.findByText('This identifier is available.')).toBeInTheDocument();
+    expect(screen.queryByText('This URL is available.')).toBeNull();
+  });
+
+  it('names the field the lock follows', async () => {
+    renderWith(
+      <SlugField
+        value=""
+        source=""
+        sourceLabel="name"
+        base="#"
+        label="Identifier"
+        onChange={() => {}}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Edit the slug' }));
+    expect(
+      screen.getByRole('button', { name: 'Generate the slug from the name' })
+    ).toBeInTheDocument();
+  });
+});

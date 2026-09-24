@@ -109,3 +109,25 @@ describe('choosing who answers the listing', () => {
     expect(stored().name).toBe('Priya Nair');
   });
 });
+
+describe('phone numbers (QA-61)', () => {
+  const shown = { ...createFormState({}).values.agent, showOnListing: true };
+
+  it('gives both boxes room for a number as people write it', () => {
+    renderWith(<Harness patch={{ agent: shown }} />);
+
+    // Read off the boxes: the user-event this suite runs types past a cap.
+    expect(screen.getByLabelText(/^Phone/)).toHaveAttribute('maxlength', '18');
+    expect(screen.getByLabelText(/^WhatsApp/)).toHaveAttribute('maxlength', '18');
+  });
+
+  it('previews a number typed with its +91 as the ten digits the listing stores', async () => {
+    renderWith(<Harness patch={{ agent: shown }} />);
+
+    await userEvent.type(screen.getByLabelText(/^Phone/), '+91 98450 12345');
+
+    // The card read "+91 +91 98450 12345".
+    expect(screen.getByText('+91 9845012345')).toBeInTheDocument();
+    expect(stored().phone).toBe('+91 98450 12345');
+  });
+});

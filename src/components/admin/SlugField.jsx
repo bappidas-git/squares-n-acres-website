@@ -58,6 +58,12 @@ export default function SlugField({
 }) {
   // How this field turns text into a slug: one segment, or a whole path.
   const toSlug = path ? slugifyPath : slugify;
+  // What the field is, in its own sentences. A slug under a path is a URL; one
+  // with no page of its own is what its label calls it — a team member's
+  // "Identifier" said "This URL is available." over a record that has no URL
+  // (QA-61), and so did a city's slug.
+  const noun = base && String(base).startsWith('/') ? 'URL' : String(label).toLowerCase();
+  const aNoun = `${noun !== 'URL' && /^[aeiou]/i.test(noun) ? 'an' : 'a'} ${noun}`;
   const toInput = path ? toPathSlugInput : toSlugInput;
   const generatedId = useId();
   const id = idProp || generatedId;
@@ -227,7 +233,7 @@ export default function SlugField({
           onBlur={normalise}
         />
         <IconButton
-          label={locked ? 'Edit the slug' : 'Generate the slug from the title'}
+          label={locked ? 'Edit the slug' : `Generate the slug from the ${sourceLabel}`}
           size="sm"
           onClick={() => {
             if (locked) {
@@ -266,7 +272,7 @@ export default function SlugField({
         ) : status.state === 'available' ? (
           <span className={styles.available}>
             <Icon icon="mdi:check-circle-outline" width="14" height="14" aria-hidden="true" />
-            This URL is available.
+            This {noun} is available.
           </span>
         ) : status.state === 'taken' ? (
           <span className={styles.taken}>
@@ -287,7 +293,7 @@ export default function SlugField({
           </span>
         ) : nothingToFollow ? (
           <span className={styles.idle}>
-            The {sourceLabel} has no Latin letters or numbers to make a URL from, so one will be
+            The {sourceLabel} has no Latin letters or numbers to make {aNoun} from, so one will be
             made when it is saved — unlock to type your own.
           </span>
         ) : locked ? (

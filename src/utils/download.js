@@ -14,6 +14,7 @@
  * by returning `false` rather than throwing into a click handler.
  */
 
+import ApiError from '../services/apiError';
 import http from '../services/http';
 
 /**
@@ -57,16 +58,65 @@ export function downloadBlob(blob, filename) {
 export async function downloadAuthenticated(endpoint, params, filename, options = {}) {
   const { pathParams, signal, type } = options;
 
-  const body = await http.request(endpoint, {
-    pathParams,
-    params,
-    signal,
-    responseType: 'blob',
-  });
+  let body;
+  try {
+    body = await http.request(endpoint, {
+      pathParams,
+      params,
+      signal,
+      responseType: 'blob',
+    });
+  } catch (thrown) {
+    throw await readBlobError(thrown);
+  }
 
   const blob = body instanceof Blob ? body : new Blob([body ?? ''], type ? { type } : undefined);
   downloadBlob(blob, filename);
   return blob;
+}
+
+/** A blob's text, where `Blob.text()` is missing too (an older engine, jsdom). */
+const blobText = (blob) =>
+  typeof blob.text === 'function'
+    ? blob.text()
+    : new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result ?? ''));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(blob);
+      });
+
+/**
+ * The failure a file endpoint answered, read out of its body.
+ *
+ * Asked for a blob, the client hands the API's JSON error over as a blob too,
+ * so the `ApiError` knew nothing of it, and a failed export toasted the HTTP
+ * client's own words: "Request failed with status code 500" (QA-61). The
+ * body's `message` and `errors` are the API's (§5.3); a body that is not JSON
+ * leaves the message empty, for the caller's own sentence to stand.
+ *
+ * @param {unknown} thrown
+ * @returns {Promise<unknown>} an `ApiError` carrying the API's message, or
+ *   what was thrown when there is no body to read
+ */
+async function readBlobError(thrown) {
+  const data = thrown?.original?.response?.data;
+  if (typeof Blob === 'undefined' || !(data instanceof Blob)) return thrown;
+
+  let payload = null;
+  try {
+    payload = JSON.parse(await blobText(data));
+  } catch (_unreadable) {
+    payload = null;
+  }
+
+  return new ApiError({
+    status: thrown.status,
+    message: typeof payload?.message === 'string' ? payload.message : '',
+    errors: payload?.errors && typeof payload.errors === 'object' ? payload.errors : {},
+    data: payload?.data ?? null,
+    original: thrown.original,
+  });
 }
 
 const download = { downloadBlob, downloadAuthenticated };

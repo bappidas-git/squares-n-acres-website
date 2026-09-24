@@ -103,7 +103,7 @@ export default function AssessmentForm({
       // Answering the questionnaire identifies the visitor for the whole
       // listing, so every gated kind on it opens (prompt 25 §4.2) — and the
       // token it is answered with is what hands over the files' addresses.
-      leadStorage.saveVisitor({ name: values.name, phone: values.phone, email: values.email });
+      leadStorage.saveVisitor({ name: body.name, phone: body.phone, email: body.email });
       leadStorage.markCaptured(propertyId, source, response?.data?.access);
       track('lead_submit', { propertyId, source, score: score.score });
       onComplete?.({ values, score });
@@ -132,6 +132,9 @@ export default function AssessmentForm({
           <PhoneField
             label={copy.FORM_LABELS.phone}
             required
+            // "98450 12345" was cut to "98450 1234" and refused (QA-61); the
+            // lead forms' room, and `normalizePhone` tidies it on submit.
+            maxLength={18}
             value={values.phone}
             error={errors.phone}
             onChange={(event) => set('phone', event.target.value)}

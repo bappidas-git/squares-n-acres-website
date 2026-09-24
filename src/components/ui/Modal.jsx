@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import Dialog from '@mui/material/Dialog';
+import { Icon } from '@iconify/react';
 
 import useBreakpoint from '../../hooks/useBreakpoint';
 import useScrollLock from '../../hooks/useScrollLock';
@@ -91,9 +92,11 @@ export default function Modal({
               </p>
             ) : null}
           </div>
+          {/* The icon every other close control of the panel draws: a bare
+              "×" at the button's type size was a few pixels wide (QA-61). */}
           {showClose ? (
             <IconButton label={closeLabel} size="sm" onClick={onClose}>
-              &times;
+              <Icon icon="mdi:close" width="20" height="20" />
             </IconButton>
           ) : null}
         </div>

@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import SwipeableDrawerFallback from '@mui/material/Drawer';
+import { Icon } from '@iconify/react';
 
 import useScrollLock from '../../hooks/useScrollLock';
 
@@ -58,7 +59,7 @@ export default function BottomSheet({
             {title}
           </h2>
           <IconButton label={closeLabel} size="sm" onClick={onClose}>
-            &times;
+            <Icon icon="mdi:close" width="20" height="20" />
           </IconButton>
         </div>
       ) : null}

@@ -156,3 +156,45 @@ describe('EntityPicker', () => {
     expect(screen.getByRole('combobox')).toHaveAttribute('placeholder', 'Search articles…');
   });
 });
+
+describe('EntityPicker — a value it was never shown (QA-61)', () => {
+  it('asks for the names of the chosen ids it does not know, once', async () => {
+    const resolveSelected = jest.fn().mockResolvedValue({
+      data: [{ id: 7, title: 'Lakeview Heights' }],
+    });
+    renderWith(
+      <EntityPicker
+        label="Property"
+        labelKey="title"
+        multiple={false}
+        fetcher={fetcher}
+        value={7}
+        resolveSelected={resolveSelected}
+        onChange={() => {}}
+      />
+    );
+
+    // It read "#7" until the search had happened to return the listing.
+    expect(await screen.findByText('Lakeview Heights')).toBeInTheDocument();
+    expect(resolveSelected).toHaveBeenCalledTimes(1);
+    expect(resolveSelected).toHaveBeenCalledWith(['7'], expect.objectContaining({}));
+  });
+
+  it('keeps the id standing in when the record is gone', async () => {
+    const resolveSelected = jest.fn().mockResolvedValue({ data: [] });
+    renderWith(
+      <EntityPicker
+        label="Property"
+        labelKey="title"
+        multiple={false}
+        fetcher={fetcher}
+        value={9}
+        resolveSelected={resolveSelected}
+        onChange={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(resolveSelected).toHaveBeenCalledTimes(1));
+    expect(screen.getByText('#9')).toBeInTheDocument();
+  });
+});

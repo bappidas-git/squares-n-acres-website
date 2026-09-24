@@ -8,7 +8,7 @@
  * country code with eight digits after it.
  */
 
-import { getMobileErrorMessage, localPhoneDigits, normalizePhone } from '../validators';
+import { getMobileErrorMessage, localPhoneDigits, normalizePhone, tidyPhone } from '../validators';
 
 describe('normalizePhone', () => {
   it.each([
@@ -49,5 +49,21 @@ describe('localPhoneDigits', () => {
     expect(localPhoneDigits('+919123456780')).toBe('9123456780');
     expect(localPhoneDigits('9876500100')).toBe('9876500100');
     expect(localPhoneDigits(null)).toBe('');
+  });
+});
+
+describe('tidyPhone (QA-61)', () => {
+  it('writes a mobile number as the ten digits a record stores, however it was typed', () => {
+    for (const typed of ['98450 12345', '+91 98450-12345', '919845012345', '098450 12345']) {
+      expect(tidyPhone(typed)).toBe('9845012345');
+    }
+    // A ten-digit mobile of the 91-series keeps its 91 (QA-53).
+    expect(tidyPhone('91234 56780')).toBe('9123456780');
+  });
+
+  it('hands back what is not a mobile number as it came', () => {
+    expect(tidyPhone('98450 1234')).toBe('98450 1234');
+    expect(tidyPhone('')).toBe('');
+    expect(tidyPhone(null)).toBeNull();
   });
 });

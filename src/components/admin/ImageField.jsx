@@ -47,12 +47,19 @@ export const IMAGE_HINTS = {
   },
 };
 
-/** The one-line note under an image input. */
-export function ImageHint({ hint }) {
+/**
+ * The one-line note under an image input.
+ *
+ * @param {object} props
+ * @param {string} props.hint a key of {@link IMAGE_HINTS}
+ * @param {string} [props.id] what the input's `aria-describedby` names — it
+ *   named an id nothing carried, so the note was never read out (QA-61)
+ */
+export function ImageHint({ hint, id }) {
   const preset = IMAGE_HINTS[hint];
   if (!preset) return null;
   return (
-    <span className={styles.hint}>
+    <span className={styles.hint} id={id}>
       <Icon icon="mdi:information-outline" width="14" height="14" aria-hidden="true" />
       {preset.text}
     </span>
@@ -125,7 +132,7 @@ export default function ImageField({
   const openMedia = onOpenMedia ?? (disabled ? undefined : media.onOpenMedia);
   const upload = onUpload ?? (disabled ? undefined : media.onUpload);
   const preset = IMAGE_HINTS[hint] ?? {};
-  const hintId = hint ? `${id}-hint` : undefined;
+  const hintId = IMAGE_HINTS[hint] ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
 
   // Previewing every prefix of a URL fires a request per keystroke and fails
@@ -186,7 +193,7 @@ export default function ImageField({
         ) : null}
       </div>
 
-      {hint ? <ImageHint hint={hint} /> : null}
+      {hintId ? <ImageHint hint={hint} id={hintId} /> : null}
       {error ? (
         <span className={styles.error} id={errorId} role="alert">
           {error}

@@ -10,6 +10,8 @@ import { screen, within } from '@testing-library/react';
 
 import DataTable from '../DataTable';
 import IconPicker from '../IconPicker';
+import ImageField from '../ImageField';
+import { TextareaField } from '../../ui/FormField';
 import SortableList from '../SortableList';
 import renderWith from '../../../test-utils';
 import {
@@ -138,5 +140,33 @@ describe('IconPicker', () => {
     expectDialogSemantics(screen.getByRole('dialog'));
     expectLabelledInputs(baseElement);
     expectNoDuplicateIds(baseElement);
+  });
+});
+
+/** Every id an element's `aria-describedby` names, and whether each is on the page. */
+const describedByIds = (element) =>
+  String(element.getAttribute('aria-describedby') ?? '')
+    .split(/\s+/)
+    .filter(Boolean)
+    // eslint-disable-next-line testing-library/no-node-access -- the ids are the point
+    .map((id) => [id, Boolean(document.getElementById(id))]);
+
+describe('what a field says it is described by (QA-61)', () => {
+  it('names the image slot’s note, which the box pointed at without it carrying the id', () => {
+    renderWith(<ImageField label="Photo" hint="avatar" value="" onChange={() => {}} />);
+
+    const box = screen.getByLabelText('Photo');
+    expect(describedByIds(box)).toEqual([[expect.stringMatching(/-hint$/), true]]);
+    expect(box).toHaveAccessibleDescription(/256 × 256/);
+  });
+
+  it('drops the hint from the description while the error stands in its place', () => {
+    renderWith(
+      <TextareaField label="Quote" hint="Their words." error="The quote field is required." />
+    );
+
+    const box = screen.getByLabelText('Quote');
+    for (const [, present] of describedByIds(box)) expect(present).toBe(true);
+    expect(box).toHaveAccessibleDescription('The quote field is required.');
   });
 });

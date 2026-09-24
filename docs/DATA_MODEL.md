@@ -16,9 +16,9 @@ comes from `src/config/enums.js`. The endpoints that serve them are in
 
 Column legend: **Type** · **Null** (Y/N) · **Default** · **Enum/notes**. Every record also has `id` (int), `createdAt`, `updatedAt` unless stated.
 
-**`order` is a position** in the collections an admin drags — `localities`, `segments`, `propertyTypes`, `amenities`, `badges`, `developers`, `banks`, `articleCategories`, `faqs`, `testimonials`, `teamMembers`, `partners`: `1..n`, nothing shared, after every write that places a record (API_CONTRACT §5.8, QA-59). `pages` and `headerMenus` are renumbered by a reorder only.
+**`order` is a position** in the collections an admin drags — `localities`, `segments`, `propertyTypes`, `amenities`, `badges`, `developers`, `banks`, `articleCategories`, `faqs`, `testimonials`, `teamMembers`, `partners`: `1..n`, nothing shared, after every write that places a record (API_CONTRACT §5.8, QA-59) and every delete (QA-61). `pages` and `headerMenus` are renumbered by a reorder only.
 
-**Text is stored trimmed, and no slug is empty.** A `string` field, and the strings of a list or of a list's rows, are stored without the spaces around them (Laravel's `TrimStrings`; the mock trims the master-data and content collections of `routes/masterData.js`); a name with no Latin letter or digit in it keeps its record's slug or is given `<noun>-<id>` (`locality-21`). A public property read names a switched-off locality or developer with `slug: null` and leaves out a switched-off amenity or badge (API_CONTRACT §5.8–§5.10, QA-60).
+**Text is stored trimmed, and no slug is empty.** A `string` field, and the strings of a list or of a list's rows, are stored without the spaces around them (Laravel's `TrimStrings`; the mock trims the master-data and content collections of `routes/masterData.js`, and job openings — QA-61); a name with no Latin letter or digit in it keeps its record's slug or is given `<noun>-<id>` (`locality-21`). A public property read names a switched-off locality or developer with `slug: null` and leaves out a switched-off amenity or badge (API_CONTRACT §5.8–§5.10, QA-60).
 
 ### 6.1 `properties`
 
@@ -208,8 +208,8 @@ the menu's own list.
 
 ### 6.11 `jobOpenings`, `jobApplications`
 
-`jobOpenings`: `slug`, `title`, `department`, `location`, `employmentType` (`full-time|part-time|contract|internship`), `experience?`, `description` (HTML), `responsibilities[]`, `requirements[]`, `salaryRange?`, `isActive`, `postedAt`, `closesAt?`.
-`jobApplications`: `jobId`, `job` (read `{id,title,slug}`), `name`, `email`, `phone`, `resumeUrl`, `coverLetter?`, `linkedinUrl?`, `status` (`new|shortlisted|interview|rejected|hired`), `notes?`, `createdAt`.
+`jobOpenings`: `slug`, `title`, `department`, `location`, `employmentType` (`full-time|part-time|contract|internship`), `experience?`, `description` (HTML), `responsibilities[]`, `requirements[]`, `salaryRange?`, `isActive`, `postedAt`, `closesAt?` (the last day the opening takes applications, read in IST — D22, QA-61).
+`jobApplications`: `jobId`, `job` (read `{id,title,slug}`), `name`, `email`, `phone`, `resumeUrl`, `coverLetter?`, `linkedinUrl?`, `status` (`new|shortlisted|interview|rejected|hired` — the order `sort=status` reads them in, QA-61), `notes?`, `createdAt`.
 
 ### 6.12 `media`
 

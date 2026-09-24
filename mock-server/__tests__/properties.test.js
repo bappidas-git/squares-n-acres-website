@@ -282,6 +282,46 @@ describe('the remaining public property routes', () => {
     });
   });
 
+  it('does not publish a switched-off team member as a listing’s advisor (QA-61)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      // Lakeview names Team Member One and shows the card; the member gets a
+      // number and an e-mail for the card to be filled from.
+      await request('PATCH', '/admin/properties/1', {
+        token,
+        body: { agent: { teamMemberId: 1, showOnListing: true } },
+      });
+      await request('PATCH', '/admin/team/1', {
+        token,
+        body: { phone: '9880000001', email: 'one@squaresnacres.com' },
+      });
+      const shown = (await request('GET', '/properties/slug/lakeview-heights-3-bhk-whitefield'))
+        .body.data.agent;
+      assert.equal(shown.phone, '9880000001');
+
+      // They leave: switched off, they answer for the listing no more.
+      await request('PATCH', '/admin/team/1', { token, body: { isActive: false } });
+      const gone = (await request('GET', '/properties/slug/lakeview-heights-3-bhk-whitefield')).body
+        .data.agent;
+      assert.equal(gone.name, null);
+      assert.equal(gone.phone, null);
+      assert.equal(gone.email, null);
+
+      // What a listing typed itself still shows: Cauvery Green gives its own
+      // name and number beside Team Member Two.
+      await request('PATCH', '/admin/team/2', { token, body: { isActive: false } });
+      const typed = (await request('GET', '/properties/slug/cauvery-green-villas-yelahanka')).body
+        .data.agent;
+      assert.equal(typed.name, 'Team Member Two');
+      assert.equal(typed.phone, '9880000002');
+
+      // The admin read keeps the member, so the property form still names them.
+      const admin = (await request('GET', '/admin/properties/1', { token })).body.data.agent;
+      assert.equal(admin.phone, '9880000001');
+    });
+  });
+
   it('answers similar listings with the editor’s picks first', async () => {
     await withServer(async ({ request, login }) => {
       const chosen = await request('GET', '/properties/1/similar');

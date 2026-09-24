@@ -20,11 +20,13 @@ import useForm from '../../hooks/useForm';
 import useLingering from '../../hooks/useLingering';
 import useUnsavedChanges from '../../hooks/useUnsavedChanges';
 import focusFirstError from './focusFirstError';
+import sanitiseParams from './sanitiseParams';
 import withSlugSuggestion from './slugSuggestion';
 import { DIALOGS, FORMS, TABLES, TOASTS } from '../../config/adminCopy';
 import { applySeoSideEffects, validateSeoBranch } from '../seo/seoSideEffects';
-import { firstFieldMessage } from '../../services/apiError';
+import ApiError, { firstFieldMessage } from '../../services/apiError';
 import { toSeoPayload, withSeoDefaults } from '../seo/seoValues';
+import { tidyPhone } from '../../utils/validators';
 import { useToast } from '../common/ToastProvider';
 
 import styles from './MasterDataPage.module.css';
@@ -37,56 +39,14 @@ const PARAM_TYPE = {
   toggle: 'string',
 };
 
-/** The values a toggle filter can hold (§5.6). */
-const TOGGLE_VALUES = new Set(['true', 'false']);
-
-/**
- * The list's parameters as the screen may act on them (QA-59).
- *
- * The URL is somebody's to type, and a value no control can show is no
- * filter: `?category=bogus&showOnHome=maybe` drew "Category: bogus" and "Home
- * page: Not on the home page" chips over selects reading "All categories" and
- * "Anywhere", and a list narrowed to nothing by the one the API did read. A
- * sort that is not a column is the default sort, and an `order` that is not a
- * direction is the default direction — `?order=desc` of a drag list used to
- * turn it upside down and every move into its opposite.
- *
- * @param {object} params what the URL holds
- * @param {{filters?: Array<object>, sortKeys?: Array<string>, defaults?: object}} spec
- * @returns {object} the params, with what cannot be honoured left out
- */
-export function sanitiseParams(params, { filters = [], sortKeys = [], defaults = {} } = {}) {
-  const clean = { ...params };
-
-  for (const filter of filters) {
-    const value = clean[filter.key];
-    if (value === undefined || value === null || value === '') continue;
-
-    if (filter.type === 'toggle') {
-      if (!TOGGLE_VALUES.has(String(value))) clean[filter.key] = undefined;
-      continue;
-    }
-
-    const known = Array.isArray(filter.options)
-      ? new Set(filter.options.map((option) => String(option.value)))
-      : null;
-    if (!known) continue;
-
-    if (filter.type === 'select' && !known.has(String(value))) clean[filter.key] = undefined;
-    if (filter.type === 'multiselect' && Array.isArray(value)) {
-      const kept = value.filter((entry) => known.has(String(entry)));
-      clean[filter.key] = kept.length > 0 ? kept : undefined;
-    }
-  }
-
-  if (sortKeys.length > 0 && !sortKeys.includes(clean.sort)) {
-    clean.sort = defaults.sort;
-    clean.order = defaults.order;
-  }
-  if (clean.order !== 'asc' && clean.order !== 'desc') clean.order = defaults.order;
-
-  return clean;
-}
+// Moved to its own module so the screens that build their own list — the job
+// applications and the newsletter (QA-61) — sanitise the same way without
+// bringing this one along; re-exported for the callers that read it here.
+export { sanitiseParams };
+// Beside `normalizePhone`, so the forms that are not built on this screen —
+// the profile page, the property form's Agent tab — tidy a number the same way
+// without bringing it along (QA-61); re-exported for the callers that read it here.
+export { tidyPhone };
 
 /** `{ key: type }` for `useApiList`, derived from the filters a config declares. */
 function paramKeysOf(filters = [], extra = {}) {
@@ -163,6 +123,22 @@ export function useMasterDataCrud(config) {
 
   const view = useMemo(() => sanitise(list.params), [sanitise, list.params]);
 
+  // A filter's options can arrive after the list was asked for — the jobs'
+  // departments are read from the openings themselves — and they change what
+  // the URL means: `?department=Sales` was judged against no departments, the
+  // list was asked for every opening, and it went on showing all of them under
+  // a "Department: Sales" chip (QA-61). Judged again, the list is asked again
+  // when the answer differs and the URL has not moved.
+  const paramsKey = JSON.stringify(list.params);
+  const viewKey = JSON.stringify(view);
+  const judged = useRef({ paramsKey, viewKey });
+  const { refetch: refetchList } = list;
+  useEffect(() => {
+    const before = judged.current;
+    judged.current = { paramsKey, viewKey };
+    if (before.paramsKey === paramsKey && before.viewKey !== viewKey) refetchList();
+  }, [paramsKey, viewKey, refetchList]);
+
   // An optimistic toggle writes here first; a failed call takes it back out.
   // Keeping it beside the fetched rows means a switch answers instantly without
   // the whole table reloading behind it (§8.2).
@@ -217,7 +193,13 @@ export function useMasterDataCrud(config) {
           const { [id]: _reverted, ...rest } = current;
           return rest;
         });
-        toast.error(firstFieldMessage(thrown, 'The change could not be saved.'));
+        if (thrown?.status === 404) {
+          // Deleted elsewhere since the list was read: the row goes (QA-61).
+          toast.error(TOASTS.gone(`“${labelOf(row, columns)}”`));
+          refetch();
+        } else {
+          toast.error(firstFieldMessage(thrown, 'The change could not be saved.'));
+        }
       } finally {
         inFlight.current.delete(id);
         setBusyIds((current) => current.filter((entry) => entry !== id));
@@ -242,10 +224,16 @@ const inSentence = (label) =>
   /[A-Z]/.test(label.slice(1)) ? label : `${label.charAt(0).toLowerCase()}${label.slice(1)}`;
 
 /**
- * What a message calls a field whose key is not a word — "The
+ * What a message calls a field whose key is not the word its label is — "The
  * socialLinks.linkedin must be a valid URL." reads "The LinkedIn address must
  * be a valid URL.", and `avatarUrl` is the "photograph" the form labels it
  * (QA-55).
+ *
+ * A key that is a word, but not the label's, is named by its label too: the
+ * testimonial form said "The message field is required." under a box called
+ * "Quote", "The whatsapp must be…" under "WhatsApp", and the job form "The
+ * description field is required." under "About the role" (QA-61). A key that
+ * reads as its label ("name" under "Name") is left alone.
  *
  * A field whose label does not read inside a sentence names itself for one
  * with `messageLabel`: "The interest rate from (% p.a.) field is required."
@@ -255,21 +243,19 @@ const inSentence = (label) =>
  * @returns {Record<string, string>}
  */
 export function labelsOf(fields) {
+  const labelled = (field) => {
+    if (field.messageLabel) return field.messageLabel;
+    const label = inSentence(field.label);
+    // A box for a link is named after where it points: "the LinkedIn
+    // address", not "the LinkedIn".
+    return field.type === 'url' ? `${label} address` : label;
+  };
+
   return Object.fromEntries(
     (Array.isArray(fields) ? fields : [])
-      .filter(
-        (field) =>
-          field?.name &&
-          typeof (field.messageLabel ?? field.label) === 'string' &&
-          /[.A-Z]/.test(field.name)
-      )
-      .map((field) => {
-        if (field.messageLabel) return [field.name, field.messageLabel];
-        const label = inSentence(field.label);
-        // A box for a link is named after where it points: "the LinkedIn
-        // address", not "the LinkedIn".
-        return [field.name, field.type === 'url' ? `${label} address` : label];
-      })
+      .filter((field) => field?.name && typeof (field.messageLabel ?? field.label) === 'string')
+      .map((field) => [field.name, labelled(field)])
+      .filter(([name, label]) => /[.A-Z]/.test(name) || label !== name)
   );
 }
 
@@ -306,8 +292,15 @@ export function labelsOf(fields) {
  * @param {(row: object) => React.ReactNode} [props.config.renderOrderItem] the reorder row
  * @param {boolean} [props.config.activeToggle]
  * @param {boolean} [props.config.featuredToggle]
+ * @param {boolean} [props.config.rowActionsMenu] the table's row actions in a
+ *   menu rather than a row of icons — a screen with four of them (the jobs:
+ *   edit, applications, view, delete) left its first column a word wide (QA-61)
  * @param {Array<object>} [props.config.bulkActions]
  * @param {boolean} [props.config.usageGuard] render the 409 dialog (D88)
+ * @param {{one?: string, many?: string}} [props.config.guardHint] the line under
+ *   that dialog's list, for a single delete and a bulk one — where "remove the
+ *   reference" is not the way out: an opening's applications are not unlinked,
+ *   the opening is switched off instead (QA-61)
  * @param {boolean} [props.config.canEdit] false renders the screen read-only
  * @param {(row: object) => boolean} [props.config.canDelete] false leaves a
  *   row's delete action out — a built-in segment the API would refuse anyway
@@ -366,8 +359,10 @@ export default function MasterDataPage({ config }) {
     renderOrderItem,
     activeToggle = true,
     featuredToggle = false,
+    rowActionsMenu = false,
     bulkActions = [],
     usageGuard = true,
+    guardHint,
     canEdit = true,
     canDelete,
     emptyState,
@@ -414,6 +409,9 @@ export default function MasterDataPage({ config }) {
   // messages of a refused save have been drawn (QA-60).
   const [refusals, setRefusals] = useState(0);
   const formRef = useRef(null);
+  // Set when a save finds the record deleted elsewhere (QA-61): there is
+  // nothing left to save it into, so the dialog closes and the list is read.
+  const goneRef = useRef(false);
 
   // What each dialog draws: its state, or what it showed while it fades out.
   // Whether it acts is still asked of the state — a closing dialog is inert.
@@ -459,8 +457,9 @@ export default function MasterDataPage({ config }) {
     (values) => {
       // The text boxes are sent without the spaces a paste leaves around them,
       // as the API stores them (QA-60), so " A " is checked as the one letter
-      // it is before it is sent.
-      const tidy = trimText(values, formFields);
+      // it is before it is sent; a phone number as the ten digits every other
+      // number is stored as, however it was typed (QA-61).
+      const tidy = tidyPhones(trimText(values, formFields), formFields);
       const payload = toPayload ? toPayload(tidy, editing) : tidy;
       if (!seoPanel) return payload;
       // D34: one URL — `seo.slug` always mirrors the record's own.
@@ -499,6 +498,16 @@ export default function MasterDataPage({ config }) {
         if (editing?.id) return await service.update(editing.id, payload);
         return await service.create(payload);
       } catch (thrown) {
+        // "Not found" named nothing, and the dialog stayed open over a record
+        // that no longer existed, with no way forward (QA-61).
+        if (editing?.id && thrown?.status === 404) {
+          goneRef.current = true;
+          throw new ApiError({
+            status: 404,
+            message: TOASTS.gone(`This ${singular}`),
+            original: thrown,
+          });
+        }
         throw await withSlugSuggestion(thrown, payload.slug, {
           checkSlug: service.checkSlug,
           excludeId: editing?.id ?? null,
@@ -566,6 +575,13 @@ export default function MasterDataPage({ config }) {
     }
     const answer = await form.submit();
     if (!answer) {
+      if (goneRef.current) {
+        goneRef.current = false;
+        closeForm();
+        onMutated?.(collectionKey);
+        refetch();
+        return false;
+      }
       setRefusals((count) => count + 1);
       return false;
     }
@@ -653,6 +669,17 @@ export default function MasterDataPage({ config }) {
       onMutated?.(collectionKey);
       afterRemoval(1);
     } catch (thrown) {
+      // Deleted elsewhere since the list was read: what was asked for has
+      // happened. It said "Not found" and left the row on screen, to be
+      // deleted again with the same answer (QA-61).
+      if (thrown?.status === 404) {
+        toast.info(TOASTS.alreadyDeleted(`“${labelOf(deleting, columns)}”`));
+        setDeleting(null);
+        setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
+        onMutated?.(collectionKey);
+        afterRemoval(1);
+        return;
+      }
       // 409 is not a failure to report as one: it is a list of what to unlink
       // first, and the dialog is where that list belongs (D88).
       if (usageGuard && thrown?.status === 409) {
@@ -666,6 +693,7 @@ export default function MasterDataPage({ config }) {
           // sentence is the reason (a built-in segment).
           message: usedBy.length > 0 ? `“${label}” is still used by:` : thrown.message,
           usedBy,
+          hint: guardHint?.one,
         });
       } else {
         toast.error(firstFieldMessage(thrown, 'The record could not be deleted.'));
@@ -712,7 +740,8 @@ export default function MasterDataPage({ config }) {
           message: thrown.message,
           usedBy: thrown.data?.usedBy ?? [],
           refused,
-          hint: 'Untick these to delete the rest, or remove each reference first.',
+          hint:
+            guardHint?.many ?? 'Untick these to delete the rest, or remove each reference first.',
         });
       } else {
         toast.error(firstFieldMessage(thrown, 'The bulk action could not be applied.'));
@@ -836,7 +865,11 @@ export default function MasterDataPage({ config }) {
           await service.patch(row.id, body);
         } catch (thrown) {
           queueGeneration.current += 1;
-          toast.error(firstFieldMessage(thrown, 'The new order could not be saved.'));
+          toast.error(
+            thrown?.status === 404
+              ? TOASTS.gone(`“${labelOf(row, columns)}”`)
+              : firstFieldMessage(thrown, 'The new order could not be saved.')
+          );
         }
       })
       .then(async () => {
@@ -1155,8 +1188,10 @@ export default function MasterDataPage({ config }) {
         <div className={styles.reorder}>
           <div className={styles.reorderHead}>
             <p className={styles.reorderHint}>
-              {reorderHint ??
-                'Drag a row by its handle, or use its arrows, to change the order they appear in. With the keyboard: focus a row and press Alt + ↑ / ↓.'}
+              {keysTogether(
+                reorderHint ??
+                  'Drag a row by its handle, or use its arrows, to change the order they appear in. With the keyboard: focus a row and press Alt + ↑ / ↓.'
+              )}
             </p>
             {/* The drag list replaces the table, headers and all, so it owes
                 the editor the way back that a column header would have been. */}
@@ -1229,6 +1264,8 @@ export default function MasterDataPage({ config }) {
           bulkBusy={bulkBusy}
           onBulkAction={runBulk}
           rowActions={rowActions}
+          rowActionsMenu={rowActionsMenu}
+          rowActionsLabel={(row) => `Actions for ${labelOf(row, columns)}`}
           rowLabel={rowLabel}
           groupBy={grouping}
           caption={title}
@@ -1350,6 +1387,16 @@ const ALREADY = {
   unfeature: 'not featured',
 };
 
+/**
+ * A key combination kept on one line: the hint broke after "Alt + ↑" and put
+ * "/ ↓." on a line of its own (QA-61).
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export const keysTogether = (text) =>
+  String(text).replace(/Alt \+ ↑ \/ ↓/g, 'Alt\u00a0+\u00a0↑\u00a0/\u00a0↓');
+
 /** What `Escape` on a dirty dialog asks before throwing the edits away. */
 const DISCARD_MESSAGE = 'The changes you made to this record have not been saved.';
 
@@ -1423,6 +1470,26 @@ export function trimText(values, fields) {
     if (typeof value !== 'string' || value === value.trim()) continue;
     copy = copy ?? { ...values };
     copy[field.name] = value.trim();
+  }
+  return copy ?? values;
+}
+
+/**
+ * The form's values with every phone box as {@link tidyPhone} writes it.
+ *
+ * @param {object} values
+ * @param {Array<{name: string, type?: string}>} fields
+ * @returns {object} a copy, or `values` itself when nothing changed
+ */
+export function tidyPhones(values, fields) {
+  let copy = null;
+  for (const field of Array.isArray(fields) ? fields : []) {
+    if (field.type !== 'phone' || String(field.name).includes('.')) continue;
+    const value = values?.[field.name];
+    const tidy = tidyPhone(value);
+    if (tidy === value) continue;
+    copy = copy ?? { ...values };
+    copy[field.name] = tidy;
   }
   return copy ?? values;
 }

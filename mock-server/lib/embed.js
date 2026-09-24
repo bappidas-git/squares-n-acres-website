@@ -49,15 +49,24 @@ function embedDeveloper(developer) {
  * editor left empty. A field typed on the property always wins — that is how a
  * listing gives one project its own direct line.
  *
+ * On the public read a team member who is switched off fills in nothing
+ * (QA-61): somebody who has left went on answering for every listing that
+ * named them — name, photograph, phone, WhatsApp and e-mail — because the
+ * card was filled from the record whatever its `isActive` said. What the
+ * listing typed itself still shows; with nothing typed, the card has no way
+ * to reach anybody and the site does not draw it.
+ *
  * @param {object|null} agent
  * @param {object} source
+ * @param {{publicRead?: boolean}} [options]
  * @returns {object|null}
  */
-function embedAgent(agent, source) {
+function embedAgent(agent, source, { publicRead = false } = {}) {
   if (!agent) return agent ?? null;
 
   const member = byId(source, 'teamMembers', agent.teamMemberId);
   if (!member) return { ...agent };
+  if (publicRead && member.isActive === false) return { ...agent };
 
   return {
     ...agent,
@@ -136,7 +145,7 @@ function embedProperty(property, source, { publicRead = false } = {}) {
       ...property.project,
       developer: linkable(developer, embedDeveloper(developer)),
     },
-    agent: embedAgent(property.agent, db),
+    agent: embedAgent(property.agent, db, { publicRead }),
   };
 }
 

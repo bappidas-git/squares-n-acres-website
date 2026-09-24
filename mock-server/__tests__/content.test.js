@@ -26,6 +26,7 @@ const {
 const { resetPreviewTokens } = require('../lib/previewTokens');
 const { resetViews } = require('../lib/viewCounter');
 const { placeOrder } = require('../lib/crud');
+const { isOpen } = require('../routes/jobs');
 
 silenceRequestLog();
 
@@ -2866,6 +2867,157 @@ describe('jobs', () => {
       const list = await request('GET', '/admin/job-applications', { token });
       assert.equal(list.body.meta.total, 0, 'neither attempt was stored');
     });
+  });
+});
+
+describe('content writes (QA-61)', () => {
+  const APPLICATION = {
+    name: 'Asha Menon',
+    email: 'asha.menon@example.com',
+    phone: '9876543210',
+    resumeUrl: 'https://example.com/asha-menon.pdf',
+  };
+
+  it('closes the gap a delete leaves in a drag-ordered collection, one at a time and in bulk', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const orders = async () =>
+        (
+          await request('GET', '/admin/testimonials?perPage=all&sort=order', { token })
+        ).body.data.map((row) => row.order);
+      const add = async (name) =>
+        (
+          await request('POST', '/admin/testimonials', {
+            token,
+            body: { name, rating: 5, message: 'A quote long enough to be one quote.', order: 1 },
+          })
+        ).body.data;
+
+      const first = await add('First of all');
+      assert.deepEqual(await orders(), [1, 2, 3]);
+
+      // The first read 2 in the Order column once the one above it had gone.
+      assert.equal(
+        (await request('DELETE', `/admin/testimonials/${first.id}`, { token })).status,
+        200
+      );
+      assert.deepEqual(await orders(), [1, 2]);
+
+      const a = await add('Alpha');
+      const b = await add('Beta');
+      const bulk = await request('POST', '/admin/testimonials/bulk', {
+        token,
+        body: { action: 'delete', ids: [a.id, b.id] },
+      });
+      assert.equal(bulk.status, 200);
+      assert.deepEqual(await orders(), [1, 2]);
+    });
+  });
+
+  it('sorts applications by where they stand, in the order the desk moves them', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const statuses = ['hired', 'new', 'interview', 'shortlisted', 'rejected'];
+      for (const [index, status] of statuses.entries()) {
+        const applied = await request('POST', '/jobs/1/apply', {
+          body: { ...APPLICATION, email: `asha.${index}@example.com` },
+        });
+        await request('PATCH', `/admin/job-applications/${applied.body.data.id}`, {
+          token,
+          body: { status },
+        });
+      }
+
+      const read = async (order) =>
+        (
+          await request('GET', `/admin/job-applications?sort=status&order=${order}`, { token })
+        ).body.data.map((row) => row.status);
+
+      // By spelling it read hired, interview, new, rejected, shortlisted.
+      assert.deepEqual(await read('asc'), ['new', 'shortlisted', 'interview', 'rejected', 'hired']);
+      assert.deepEqual(await read('desc'), [
+        'hired',
+        'rejected',
+        'interview',
+        'shortlisted',
+        'new',
+      ]);
+    });
+  });
+
+  it('stores an opening’s text without the spaces around it', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const created = await request('POST', '/admin/jobs', {
+        token,
+        body: {
+          title: '  Site Engineer ',
+          department: 'Sales ',
+          location: ' Remote',
+          employmentType: 'contract',
+          description: '<p>Oversee handovers.</p>',
+        },
+      });
+      assert.equal(created.status, 201);
+      assert.equal(created.body.data.title, 'Site Engineer');
+      assert.equal(created.body.data.department, 'Sales');
+      assert.equal(created.body.data.location, 'Remote');
+    });
+  });
+
+  it('refuses an opening whose description has no words, or runs something', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const opening = (description) => ({
+        title: 'Site Engineer',
+        department: 'Projects',
+        location: 'Remote',
+        employmentType: 'contract',
+        description,
+      });
+
+      // An emptied bullet: the careers page printed "About the role" over nothing.
+      const empty = await request('POST', '/admin/jobs', {
+        token,
+        body: opening('<ul><li><p></p></li></ul>'),
+      });
+      assert.equal(empty.status, 422);
+      assert.deepEqual(empty.body.errors.description, ['The description field is required.']);
+
+      const unsafe = await request('POST', '/admin/jobs', {
+        token,
+        body: opening('<p onclick="alert(1)">Oversee handovers.</p>'),
+      });
+      assert.equal(unsafe.status, 422);
+      assert.match(unsafe.body.errors.description[0], /may not carry a script/);
+
+      // A PATCH that leaves the description alone is not asked about it.
+      const created = await request('POST', '/admin/jobs', {
+        token,
+        body: opening('<p>Oversee handovers.</p>'),
+      });
+      assert.equal(created.status, 201);
+      const toggled = await request('PATCH', `/admin/jobs/${created.body.data.id}`, {
+        token,
+        body: { isActive: false },
+      });
+      assert.equal(toggled.status, 200);
+      const emptied = await request('PATCH', `/admin/jobs/${created.body.data.id}`, {
+        token,
+        body: { description: '<h2></h2>' },
+      });
+      assert.equal(emptied.status, 422);
+    });
+  });
+
+  it('keeps an opening open to the end of its closing day in Bengaluru', () => {
+    const job = { isActive: true, closesAt: '2026-09-30' };
+    // 23:30 IST on the 30th: still the closing day.
+    assert.equal(isOpen(job, Date.parse('2026-09-30T18:00:00Z')), true);
+    // 01:30 IST on the 1st: Greenwich still read the 30th, and took it.
+    assert.equal(isOpen(job, Date.parse('2026-09-30T20:00:00Z')), false);
+    assert.equal(isOpen({ isActive: true, closesAt: null }, Date.now()), true);
+    assert.equal(isOpen({ isActive: false, closesAt: null }, Date.now()), false);
   });
 });
 

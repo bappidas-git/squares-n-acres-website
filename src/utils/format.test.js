@@ -10,6 +10,7 @@ import {
   formatPriceRange,
   formatRelative,
   formatWhatsappNumber,
+  istToday,
   whatsappLink,
 } from './format';
 
@@ -153,5 +154,13 @@ describe('whatsapp', () => {
     expect(formatWhatsappNumber(null)).toBe('');
     expect(whatsappLink(null, 'Hello')).toBe('');
     expect(whatsappLink('', 'Hello')).toBe('');
+  });
+});
+
+describe('istToday (QA-61)', () => {
+  it('is Bengaluru’s day, not Greenwich’s', () => {
+    // 21:00 UTC on the 24th is 02:30 on the 25th in IST.
+    expect(istToday(new Date('2026-09-24T21:00:00Z'))).toBe('2026-09-25');
+    expect(istToday(new Date('2026-09-24T18:29:00Z'))).toBe('2026-09-24');
   });
 });

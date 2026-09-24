@@ -196,6 +196,20 @@ function formatMonthYear(value) {
   }).format(date);
 }
 
+/**
+ * `2026-09-24` — the day in IST, as a `date` input reads and writes it (D22).
+ * A day taken from `toISOString()` is Greenwich's, which before 05:30 in
+ * Bengaluru is still yesterday: a job opening added then was "posted"
+ * yesterday (QA-61).
+ *
+ * @param {Date} [date]
+ * @returns {string}
+ */
+function istToday(date = new Date()) {
+  // `en-CA` writes a date as `yyyy-mm-dd`, as `csvDateStamp` relies on too.
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(date);
+}
+
 /** `04:30 pm` in IST — the clock alone, for "Draft saved …" style indicators. */
 function formatTime(value) {
   const date = parse(value);
@@ -334,5 +348,6 @@ module.exports = {
   formatRelative,
   formatWhatsappNumber,
   formatMonthYear,
+  istToday,
   whatsappLink,
 };

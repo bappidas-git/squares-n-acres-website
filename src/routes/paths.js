@@ -130,6 +130,9 @@ const adminPaths = {
   adminTeam: '/admin/team',
   adminPartners: '/admin/partners',
   adminJobs: '/admin/jobs',
+  // An opening is edited on a page of its own, with an address (QA-61).
+  adminJobNew: '/admin/jobs/add',
+  adminJobEdit: (id) => `/admin/jobs/edit/${seg(id)}`,
   adminJobApplications: '/admin/jobs/applications',
   adminNewsletter: '/admin/newsletter',
   adminMedia: '/admin/media',

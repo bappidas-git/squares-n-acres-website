@@ -132,6 +132,12 @@ poor specification.
 
 ---
 
+## Content writes and reads
+
+{{contentWritesAndReads}}
+
+---
+
 ## FAQs
 
 {{faqs}}

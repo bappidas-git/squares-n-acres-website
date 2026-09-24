@@ -48,6 +48,7 @@ const TestimonialsPage = lazy(() => import('../pages/admin/content/TestimonialsP
 const TeamPage = lazy(() => import('../pages/admin/content/TeamPage'));
 const PartnersPage = lazy(() => import('../pages/admin/content/PartnersPage'));
 const JobsPage = lazy(() => import('../pages/admin/content/JobsPage'));
+const JobFormPage = lazy(() => import('../pages/admin/content/JobFormPage'));
 const JobApplicationsPage = lazy(() => import('../pages/admin/content/JobApplicationsPage'));
 const NewsletterSubscribersPage = lazy(
   () => import('../pages/admin/content/NewsletterSubscribersPage')
@@ -143,6 +144,8 @@ export const ADMIN_ROUTES = [
   page('team', 'Team', ['content', 'view'], <TeamPage />),
   page('partners', 'Partners', ['content', 'view'], <PartnersPage />),
   page('jobs', 'Jobs', ['content', 'view'], <JobsPage />),
+  page('jobs/add', 'Add opening', ['content', 'create'], <JobFormPage />),
+  page('jobs/edit/:id', 'Edit opening', ['content', 'edit'], <JobFormPage />),
   page('jobs/applications', 'Job applications', ['content', 'view'], <JobApplicationsPage />),
   page('newsletter', 'Newsletter subscribers', ['content', 'view'], <NewsletterSubscribersPage />),
 

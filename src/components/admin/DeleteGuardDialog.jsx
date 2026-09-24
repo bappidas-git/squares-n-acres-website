@@ -23,6 +23,10 @@ const USAGE_LINK = {
   teamMember: () => PATHS.adminTeam,
   partner: () => PATHS.adminPartners,
   job: () => PATHS.adminJobs,
+  // The desk, searched for the applicant: an application has no page of its
+  // own, and it was listed as a bare "jobApplication" with no way to it (QA-61).
+  jobApplication: (usage) =>
+    `${PATHS.adminJobApplications}?q=${encodeURIComponent(usage.title ?? '')}`,
   user: () => PATHS.adminUsers,
 };
 
@@ -38,6 +42,7 @@ const TYPE_LABEL = {
   teamMember: 'Team member',
   partner: 'Partner',
   job: 'Job opening',
+  jobApplication: 'Application',
   user: 'User',
 };
 

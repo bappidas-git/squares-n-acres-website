@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import Chip from '../../../components/ui/Chip';
 import MasterDataPage from '../../../components/admin/MasterDataPage';
@@ -7,8 +7,7 @@ import PATHS from '../../../routes/paths';
 import careerService from '../../../services/careerService';
 import useApi from '../../../hooks/useApi';
 import { EMPLOYMENT_TYPES } from '../../../config/enums';
-import { formatDate, formatNumber } from '../../../utils/format';
-import { schemas } from '../../../services/schemas';
+import { formatDate, formatNumber, istToday } from '../../../utils/format';
 
 import styles from './contentConfigs.module.css';
 
@@ -25,15 +24,6 @@ const jobsService = {
     careerService.checkJobSlug({ slug, excludeId }, { signal }),
 };
 
-/** Today, as the `date` input writes it. */
-const today = () => new Date().toISOString().slice(0, 10);
-
-/** `''` is not a date the API can store; an absent answer is `null` (NEW-31). */
-const blankToNull = (value) => {
-  const text = typeof value === 'string' ? value.trim() : value;
-  return text === '' || text === undefined ? null : text;
-};
-
 /** The departments the openings actually use, for the filter's choices. */
 const departmentsOf = (jobs) =>
   [...new Set((jobs ?? []).map((job) => job.department).filter(Boolean))]
@@ -41,12 +31,25 @@ const departmentsOf = (jobs) =>
     .map((name) => ({ value: name, label: name }));
 
 /**
+ * Whether an opening's closing day has passed — in IST, as the API reads it
+ * (D22). Such an opening is off /careers and takes no applications, and the
+ * table said nothing of it: an active opening with a date in the Closes column
+ * (QA-61).
+ *
+ * @param {object} row
+ * @param {string} [today] `yyyy-mm-dd`
+ * @returns {boolean}
+ */
+export const hasClosed = (row, today = istToday()) =>
+  Boolean(row?.closesAt) && String(row.closesAt).slice(0, 10) < today;
+
+/**
  * Admin → Jobs (`/admin/jobs`) — the openings `/careers` lists (§6.11).
  *
- * A posting is a record with a page of its own, so the form is a screen rather
- * than a dialog (`formMode: 'page'`): a description, two ordered lists and the
- * dates an opening runs between do not fit in a modal, and the same argument
- * that gave localities and developers their own form applies here.
+ * A posting is a record with a page of its own, so it is edited on a page of
+ * its own, with an address: `/admin/jobs/add` and `/admin/jobs/edit/:id`
+ * (`JobFormPage`, QA-61). It used to be edited in place of this list, on this
+ * list's address, which Back, a reload and the sidebar all lost.
  *
  * The Applications column is a link, not a number: the reason to look at a
  * posting in this table is usually to read what came back from it, and the
@@ -54,17 +57,24 @@ const departmentsOf = (jobs) =>
  *
  * Deleting a posting that still has applications is refused by the API with a
  * 409 listing them (D88); `MasterDataPage` renders that list rather than a
- * toast, because "unlink these first" is an instruction, not an error.
+ * toast, and says what to do instead — switch the opening off, which keeps its
+ * applications on the desk.
  */
 export default function JobsPage() {
+  const navigate = useNavigate();
+
   // The filter's departments are whatever the openings say they are. They are
-  // re-read after every write, so a department invented in the form is offered
-  // by the filter without a reload.
+  // re-read after every write, so a department switched or deleted away leaves
+  // the filter without a reload.
   const [version, setVersion] = useState(0);
+  // Until the first answer the filter has no departments to judge the URL's
+  // by, and says so: `?department=Sales` is asked for as it stands rather than
+  // dropped as unknown (QA-61).
+  const [departmentsKnown, setDepartmentsKnown] = useState(false);
   const { data: allJobs } = useApi(
     (signal) => careerService.adminJobList({ perPage: 'all' }, { signal }),
     [version],
-    { initialData: [], keepPreviousData: true }
+    { initialData: [], keepPreviousData: true, onSuccess: () => setDepartmentsKnown(true) }
   );
 
   const onMutated = useCallback(() => setVersion((current) => current + 1), []);
@@ -76,15 +86,22 @@ export default function JobsPage() {
       title: 'Jobs',
       subtitle: 'The openings /careers lists, and the roles applications arrive against.',
       singular: 'opening',
+      // "2 jobs will be deleted" under "Delete the selected openings?" (QA-61).
+      plural: 'openings',
       service: jobsService,
       onMutated,
-      schema: schemas['job.update'],
-      createSchema: schemas['job.create'],
-      formMode: 'page',
+      onCreate: () => navigate(PATHS.adminJobNew),
+      onEdit: (row) => navigate(PATHS.adminJobEdit(row.id)),
       defaultSort: { field: 'postedAt', order: 'desc' },
       activeToggle: true,
       usageGuard: true,
-      slugBase: '/careers/',
+      // Four actions in a row of icons left the Role column a word wide, and
+      // a title ran to four lines at 1 440 px (QA-61).
+      rowActionsMenu: true,
+      guardHint: {
+        one: 'An opening keeps the applications it has received. To take it down, switch it off instead: it leaves /careers and stops taking applications, and its applications stay on the desk.',
+        many: 'Untick these to delete the rest, or switch them off instead — an opening keeps the applications it has received.',
+      },
 
       columns: [
         {
@@ -96,6 +113,11 @@ export default function JobsPage() {
             <span className={styles.nameCell}>
               <span className={styles.name}>{row.title}</span>
               <span className={styles.hint}>/careers/{row.slug}</span>
+              {/* In the cell every width shows, a phone's card included: the
+                  opening is off /careers and takes no applications (QA-61). */}
+              {row.isActive !== false && hasClosed(row) ? (
+                <Chip tone="neutral">Closed {formatDate(row.closesAt)}</Chip>
+              ) : null}
             </span>
           ),
         },
@@ -105,20 +127,24 @@ export default function JobsPage() {
           sortable: true,
           mobile: true,
           width: '150px',
-          render: (row) => row.department || '—',
+          render: (row) => <span className={styles.text}>{row.department || '—'}</span>,
         },
         {
           key: 'location',
           label: 'Location',
-          hideBelow: 'lg',
+          // Eight columns and the row's menu left the role a word wide at
+          // 1 440 px (QA-61); the role is what the row is read for.
+          hideBelow: 'xl',
           mobile: false,
-          render: (row) => row.location || '—',
+          render: (row) => <span className={styles.text}>{row.location || '—'}</span>,
         },
         {
           key: 'employmentType',
           label: 'Type',
           width: '140px',
-          mobile: true,
+          // A card has room for three: the department, the applications and
+          // the Active switch come before the type.
+          mobile: false,
           render: (row) =>
             row.employmentType ? (
               <Chip tone="info">{EMPLOYMENT_TYPES.labelOf(row.employmentType)}</Chip>
@@ -130,12 +156,18 @@ export default function JobsPage() {
           key: 'applicationCount',
           label: 'Applications',
           align: 'right',
-          width: '130px',
+          width: '120px',
+          // The count is what the phone's card is looked at for as well: it was
+          // left off it (QA-61).
+          mobile: true,
           render: (row) =>
             row.applicationCount > 0 ? (
               <Link
                 to={`${PATHS.adminJobApplications}?jobId=${row.id}`}
                 className={styles.countLink}
+                aria-label={`${formatNumber(row.applicationCount)} ${
+                  row.applicationCount === 1 ? 'application' : 'applications'
+                } for ${row.title}`}
                 onClick={(event) => event.stopPropagation()}
               >
                 {formatNumber(row.applicationCount)}
@@ -157,7 +189,7 @@ export default function JobsPage() {
           key: 'closesAt',
           label: 'Closes',
           width: '130px',
-          hideBelow: 'lg',
+          hideBelow: 'xl',
           mobile: false,
           render: (row) => (row.closesAt ? formatDate(row.closesAt) : 'Open-ended'),
         },
@@ -170,7 +202,7 @@ export default function JobsPage() {
           type: 'select',
           label: 'Department',
           placeholder: 'All departments',
-          options: departments,
+          options: departmentsKnown ? departments : null,
         },
         {
           key: 'employmentType',
@@ -199,8 +231,10 @@ export default function JobsPage() {
           danger: true,
           confirm: {
             title: 'Delete the selected openings?',
+            // "One that has already received applications is refused." — the
+            // API refuses the whole batch, not the one (QA-61, QA-59's rule).
             message:
-              '{count} will be deleted. One that has already received applications is refused. This cannot be undone.',
+              '{count} will be deleted. If any of them has received applications, none is deleted and you are told which. This cannot be undone.',
           },
         },
       ],
@@ -212,142 +246,26 @@ export default function JobsPage() {
           icon: 'mdi:account-multiple-outline',
           to: `${PATHS.adminJobApplications}?jobId=${row.id}`,
         },
-        {
-          key: 'view',
-          label: `View ${row.title} on the site`,
-          icon: 'mdi:open-in-new',
-          href: PATHS.job(row.slug),
-        },
+        // Only a live opening has a page: a switched-off one answers 404
+        // (QA-61, QA-60's rule for localities and developers).
+        ...(row.isActive !== false && row.slug
+          ? [
+              {
+                key: 'view',
+                label: `View ${row.title} on the site`,
+                icon: 'mdi:open-in-new',
+                href: PATHS.job(row.slug),
+              },
+            ]
+          : []),
       ],
-
-      formFields: [
-        { name: 'title', type: 'text', label: 'Role title', required: true, half: true },
-        {
-          name: 'slug',
-          type: 'slug',
-          label: 'URL',
-          source: 'title',
-          half: true,
-          base: '/careers/',
-        },
-        {
-          name: 'department',
-          type: 'text',
-          label: 'Department',
-          required: true,
-          half: true,
-          hint: 'Sales, Marketing, Research — whatever the team is called internally.',
-        },
-        {
-          name: 'location',
-          type: 'text',
-          label: 'Location',
-          required: true,
-          half: true,
-          hint: 'Where the role is based. "Bengaluru, Karnataka" or "Remote".',
-        },
-        {
-          name: 'employmentType',
-          type: 'select',
-          label: 'Employment type',
-          required: true,
-          options: EMPLOYMENT_TYPES.options,
-          half: true,
-        },
-        {
-          name: 'experience',
-          type: 'text',
-          label: 'Experience',
-          half: true,
-          hint: 'Optional, as a range — "2–5 years".',
-        },
-        {
-          name: 'description',
-          type: 'richtext',
-          label: 'About the role',
-          required: true,
-          variant: 'full',
-          minHeight: 280,
-          hint: 'What the role is and who it suits. The bullet lists below come after it.',
-        },
-        {
-          name: 'responsibilities',
-          type: 'list',
-          label: 'Responsibilities',
-          singular: 'responsibility',
-          addLabel: 'Add responsibility',
-          hint: 'One line each, in the order they matter. Drag, or press Alt + ↑ / ↓, to reorder.',
-        },
-        {
-          name: 'requirements',
-          type: 'list',
-          label: 'Requirements',
-          singular: 'requirement',
-          addLabel: 'Add requirement',
-          hint: 'What somebody needs to bring. One line each.',
-        },
-        {
-          name: 'salaryRange',
-          type: 'text',
-          label: 'Compensation',
-          half: true,
-          hint: 'Optional, and shown to applicants exactly as written.',
-        },
-        { name: 'isActive', type: 'switch', label: 'Active', half: true },
-        {
-          name: 'postedAt',
-          type: 'date',
-          label: 'Posted on',
-          half: true,
-          hint: 'The date the list sorts by.',
-        },
-        {
-          name: 'closesAt',
-          type: 'date',
-          label: 'Applications close',
-          half: true,
-          hint: 'Optional. On the day after this one the role stops accepting applications.',
-        },
-      ],
-
-      newValues: {
-        employmentType: 'full-time',
-        responsibilities: [],
-        requirements: [],
-        isActive: true,
-        postedAt: today(),
-        closesAt: null,
-      },
-
-      toPayload: (values) => ({
-        ...values,
-        experience: blankToNull(values.experience),
-        salaryRange: blankToNull(values.salaryRange),
-        postedAt: blankToNull(values.postedAt),
-        closesAt: blankToNull(values.closesAt),
-        responsibilities: (values.responsibilities ?? []).map((row) => row.trim()).filter(Boolean),
-        requirements: (values.requirements ?? []).map((row) => row.trim()).filter(Boolean),
-      }),
-
-      /** The one rule the storage contract has no opinion about. */
-      validate: (values) => {
-        const errors = {};
-        const posted = blankToNull(values.postedAt);
-        const closes = blankToNull(values.closesAt);
-
-        if (posted && closes && closes < posted) {
-          errors.closesAt = 'An opening cannot close before it was posted.';
-        }
-
-        return errors;
-      },
 
       emptyState: {
         title: 'No openings yet',
         text: 'Add a role and it appears on /careers with a page of its own that people can apply through.',
       },
     }),
-    [departments, onMutated]
+    [departments, departmentsKnown, onMutated, navigate]
   );
 
   return <MasterDataPage config={config} />;

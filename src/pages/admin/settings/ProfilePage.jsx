@@ -12,6 +12,7 @@ import {
   UrlField,
 } from '../../../components/ui';
 import { GENERIC_MESSAGE } from '../../../services/apiError';
+import { tidyPhone } from '../../../utils/validators';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
@@ -73,13 +74,17 @@ const ProfileCard = () => {
 
     setSaving(true);
     try {
-      // `PUT` states the whole profile (§5.8): an emptied field becomes null.
+      // `PUT` states the whole profile (§5.8): an emptied field becomes null,
+      // and a phone number is the ten digits every record stores, however it
+      // was typed (QA-61).
       const { data } = await authService.updateProfile({
         name,
-        phone: values.phone.trim() || null,
+        phone: tidyPhone(values.phone.trim()) || null,
         avatarUrl: values.avatarUrl.trim() || null,
       });
       updateUser(data);
+      // The box shows the number as it is stored, not as it was typed.
+      setValues((previous) => ({ ...previous, phone: data?.phone ?? '' }));
       toast.success(TOASTS.saved('Profile'));
     } catch (error) {
       if (error?.status === 422) {
@@ -124,6 +129,10 @@ const ProfileCard = () => {
           label="Phone"
           name="phone"
           hint="10 digits, without the country code."
+          // Room for a number as people write it — "98450 12345", "+91
+          // 98450-12345" — which is sent as its ten digits. Capped at ten,
+          // "98450 12345" was cut to "98450 1234" and refused (QA-61).
+          maxLength={18}
           value={values.phone}
           onChange={setField('phone')}
           error={errors.phone}

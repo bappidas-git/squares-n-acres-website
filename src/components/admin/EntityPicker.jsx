@@ -40,6 +40,10 @@ const sameId = (left, right) => String(left) === String(right);
  *   repeated as a chip under the box — the filter bar already lists it among its
  *   own chips, and one more line under one control put the row out of line — and
  *   a single choice reads in the empty box instead (QA-53)
+ * @param {(ids: Array<string|number>, opts: {signal: AbortSignal}) =>
+ *   Promise<{data: Array<object>}>} [props.resolveSelected] reads the chosen
+ *   records the picker has never been shown, so a value it opens with is named
+ *   rather than "#1" — a testimonial's listing, reopened (QA-61)
  */
 export default function EntityPicker({
   label = 'Records',
@@ -61,17 +65,20 @@ export default function EntityPicker({
   action,
   disabled = false,
   showChosen = true,
+  resolveSelected,
 }) {
   const id = useId();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [open, setOpen] = useState(false);
+  const [resolved, setResolved] = useState([]);
 
   // Every record this picker has ever shown, so a chosen id keeps its label
   // after the search box is cleared and the results are gone.
   const knownRef = useRef(new Map());
   selectedRecords.forEach((record) => knownRef.current.set(String(record.id), record));
+  resolved.forEach((record) => knownRef.current.set(String(record.id), record));
   results.forEach((record) => knownRef.current.set(String(record.id), record));
 
   const ids = useMemo(() => {
@@ -100,6 +107,24 @@ export default function EntityPicker({
   }, [multiple, value]);
 
   const full = typeof max === 'number' && ids.length >= max;
+
+  // The chosen ids nothing has named yet — the value a form opens with, of a
+  // record the picker was never shown — asked for once, by id (QA-61). An id
+  // the answer leaves out (a listing deleted since) keeps standing in.
+  const unknownKey = ids.filter((entry) => !knownRef.current.has(String(entry))).join(',');
+  useEffect(() => {
+    if (!resolveSelected || unknownKey === '') return undefined;
+    const controller = new AbortController();
+    resolveSelected(unknownKey.split(','), { signal: controller.signal })
+      .then((envelope) => {
+        const records = Array.isArray(envelope?.data) ? envelope.data : [];
+        if (records.length > 0) setResolved((current) => [...current, ...records]);
+      })
+      .catch(() => {
+        // The id stands in for the name, as it always did.
+      });
+    return () => controller.abort();
+  }, [resolveSelected, unknownKey]);
 
   useEffect(() => {
     if (!fetcher || query.trim().length === 0) {

@@ -142,6 +142,22 @@ describe('normalisation', () => {
     expect(payload.agent.phone).toBeNull();
   });
 
+  it('sends an agent’s numbers as their ten digits, however they were typed (QA-61)', () => {
+    const agent = {
+      ...createInitialState().agent,
+      phone: '+91 98450 12345',
+      whatsapp: '098450-67890',
+    };
+    const payload = toPayload(base({ agent }));
+
+    expect(payload.agent.phone).toBe('9845012345');
+    expect(payload.agent.whatsapp).toBe('9845067890');
+    // What is not a mobile number goes as typed, for the rules to refuse.
+    expect(toPayload(base({ agent: { ...agent, phone: '98450 1234' } })).agent.phone).toBe(
+      '98450 1234'
+    );
+  });
+
   it('keeps an empty string where the contract asks for a string', () => {
     const payload = toPayload(base());
 

@@ -271,6 +271,9 @@ export default function JobApplyForm({ job, closed = false, id = 'apply' }) {
           label="Phone"
           required
           autoComplete="tel"
+          // "98450 12345" was cut to "98450 1234" and refused (QA-61); the
+          // lead forms' room, and `normalizePhone` tidies it on submit.
+          maxLength={18}
           value={values.phone}
           error={errors.phone}
           disabled={submitting}

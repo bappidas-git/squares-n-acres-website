@@ -65,6 +65,16 @@
   outline-offset: 2px;
 }
 
+/* A select is as wide as its longest option: one long department name stretched
+   the jobs' Department filter across the whole row and pushed the rest onto a
+   second line (QA-61). In the row a select keeps to a filter's width and cuts
+   the rest short; in the phone's popover every control still takes the whole
+   width, since those are not children of the row. */
+.row > .control > select.input {
+  max-width: 260px;
+  text-overflow: ellipsis;
+}
+
 .searchBox {
   display: flex;
   align-items: center;
