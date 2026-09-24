@@ -148,6 +148,42 @@ function renumberOrder(list, { touchedId = null, tieBreak = [] } = {}) {
 }
 
 /**
+ * Puts one record at a position — 1 is first — and renumbers the collection
+ * `1..n` around it: what a form means by the number it saves (QA-59).
+ *
+ * The other records keep the order they read in, made dense first; the record
+ * then takes the position, clamped to `1..n`, and the ones from there on move
+ * down one. That is not {@link renumberOrder}'s tie: a record moved down from
+ * 1 to 3 by a form tied with the one holding 3 and went first, but leaving 1
+ * had already moved that one up to second place — so it landed second. A
+ * reorder `PATCH` keeps the tie, because its number is read off the list as it
+ * was before the move (`neighbour.order + 1` lands after the neighbour).
+ *
+ * @param {Array<object>} list the collection, mutated in place
+ * @param {number|string} placedId the record the write placed
+ * @param {object} [options]
+ * @param {Array<string>} [options.tieBreak] as for {@link renumberOrder}
+ * @returns {boolean} whether any record's `order` changed
+ */
+function placeOrder(list, placedId, { tieBreak = [] } = {}) {
+  const placed = list.find((record) => sameId(record?.id, placedId));
+  if (!placed) return renumberOrder(list, { tieBreak });
+
+  const before = new Map(list.map((record) => [record, record.order]));
+  const others = list.filter((record) => record !== placed);
+  renumberOrder(others, { tieBreak });
+
+  const wanted = Math.trunc(Number(placed.order));
+  const position = Math.min(Math.max(Number.isFinite(wanted) ? wanted : 1, 1), others.length + 1);
+  others.forEach((record) => {
+    if (record.order >= position) record.order += 1;
+  });
+  placed.order = position;
+
+  return list.some((record) => record.order !== before.get(record));
+}
+
+/**
  * The fields after `order` in a resource's own `order` sort — what orders a
  * tie on screen, and so what a renumber keeps a tie in (QA-59).
  *
@@ -255,10 +291,12 @@ function matchesFilter(record, descriptor, raw, context) {
  *   its separator (§6.10)
  * @param {boolean} [options.publicScoped] force the public active scope on/off
  * @param {boolean} [options.settleOrder] a `POST`, and a `PUT` that moves
- *   `order`, settle the collection `1..n` the way an `order` PATCH does, with
- *   the written record placed at the position it names (QA-59). Without it two
- *   records can share a number, and a reorder dropped next to them lands in
- *   the wrong place: "before the one holding 0" is before every one of them
+ *   `order`, put the written record at the position it names and renumber the
+ *   collection `1..n` around it ({@link placeOrder}, QA-59). Without it two
+ *   records can share a number — every form creates at 0 — and the Order
+ *   column repeats itself until a drag settles it. On for every master-data
+ *   and content collection with an `order` (`routes/masterData.js`); pages and
+ *   header menus keep §5.8's rule
  * @param {Array<string>} [options.routes] the subset to build — `list`,
  *   `bySlug`, `adminList`, `create`, `get`, `update`, `patch`, `remove`,
  *   `bulk`, `checkSlug`. All of them by default; a resource whose contract
@@ -320,12 +358,20 @@ function makeCrudRouter(options) {
         };
 
   /**
-   * Renumbers the collection `1..n` around the record a write just placed,
-   * keeping a tie in the order the list shows it (QA-59).
+   * Renumbers the collection `1..n` around the record a reorder `PATCH` just
+   * moved, keeping a tie in the order the list shows it (QA-59).
    *
    * @returns {boolean} whether anything was renumbered
    */
   const settle = (touchedId) => renumberOrder(rows(), { touchedId, tieBreak: tieBreakOf(sorts) });
+
+  /**
+   * Puts the record a `POST` or `PUT` wrote at the position its `order` names
+   * and renumbers the rest `1..n` around it (`settleOrder`, QA-59).
+   *
+   * @returns {boolean} whether anything was renumbered
+   */
+  const place = (placedId) => placeOrder(rows(), placedId, { tieBreak: tieBreakOf(sorts) });
 
   /** How this resource turns text into its slug (§5.9, §6.10). */
   const toSlug = pathSlug ? slugifyPath : slugify;
@@ -781,7 +827,7 @@ function makeCrudRouter(options) {
 
         store(record, null);
         // The new record takes the position it names, and nothing shares it.
-        if (settleOrder && hasField('order') && settle(record.id)) db.write();
+        if (settleOrder && hasField('order') && place(record.id)) db.write();
         if (afterSave) afterSave(record, { method: 'POST', user: req.user, db });
 
         res.created(present(record, { admin: true, query: req.query }));
@@ -828,8 +874,9 @@ function makeCrudRouter(options) {
 
         const moved = hasField('order') && Number(record.order) !== Number(existing.order);
         store(record, existing);
-        // A form that changes the number is moving the record to that position.
-        if (settleOrder && moved && settle(record.id)) db.write();
+        // A form that changes the number is moving the record to that position
+        // — up or down: saved at 3, it is third either way.
+        if (settleOrder && moved && place(record.id)) db.write();
         if (afterSave) afterSave(record, { existing, method: 'PUT', user: req.user, db });
 
         res.ok(present(record, { admin: true, query: req.query }));
@@ -929,4 +976,4 @@ function makeCrudRouter(options) {
   return router;
 }
 
-module.exports = { makeCrudRouter, parseSortEntry, matchesFilter, renumberOrder };
+module.exports = { makeCrudRouter, parseSortEntry, matchesFilter, renumberOrder, placeOrder };

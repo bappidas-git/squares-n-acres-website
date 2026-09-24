@@ -163,6 +163,14 @@ const refOf = (rows, id) => {
 /**
  * One resource's configuration, minus the wiring every one of them shares.
  *
+ * Every collection here whose `order` the admin drags settles on write
+ * (`settleOrder`, QA-59): a `POST`, and a `PUT` that changes the number, put
+ * the record at that position and renumber the rest `1..n`, so the Order
+ * column is a list of positions and no two records share one. Their seeds are
+ * `1..n` already, and the public lists read them in the same `order` sort the
+ * renumber breaks a tie by, so what a visitor sees does not move. Cities, tags
+ * and authors have no `order`.
+ *
  * @type {Array<object>}
  */
 const RESOURCES = [
@@ -187,6 +195,7 @@ const RESOURCES = [
     },
     sorts: { order: 'order,name', name: 'name', propertyCount: '-propertyCount' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -242,6 +251,7 @@ const RESOURCES = [
       propertyCount: '-propertyCount',
     },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -260,6 +270,7 @@ const RESOURCES = [
     publicFilters: { segment: { field: 'segment' } },
     sorts: { order: 'order,name', name: 'name', propertyCount: '-propertyCount' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -283,6 +294,7 @@ const RESOURCES = [
       propertyCount: '-propertyCount',
     },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -300,6 +312,7 @@ const RESOURCES = [
     }),
     sorts: { order: 'order,name', name: 'name', propertyCount: '-propertyCount' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -318,6 +331,7 @@ const RESOURCES = [
     publicFilters: { isFeatured: { field: 'isFeatured', type: 'bool' } },
     sorts: { order: 'order,name', name: 'name', propertyCount: '-propertyCount' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -330,6 +344,7 @@ const RESOURCES = [
     deleteGuard: false,
     sorts: { order: 'order,name', name: 'name', interestRateMin: 'interestRateMin' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -347,6 +362,7 @@ const RESOURCES = [
     }),
     sorts: { order: 'order,name', name: 'name', articleCount: '-articleCount' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -394,7 +410,6 @@ const RESOURCES = [
     deleteGuard: 'faq',
     beforeValidate: tidyFaq,
     beforeSave: checkFaq,
-    // A FAQ added at 3 is third, and no two FAQs share a number (QA-59).
     settleOrder: true,
     publicFilters: {
       category: { field: 'category' },
@@ -428,6 +443,7 @@ const RESOURCES = [
       updatedAt: '-updatedAt',
     },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -439,6 +455,7 @@ const RESOURCES = [
     publicFilters: { showOnAbout: { field: 'showOnAbout', type: 'bool' } },
     sorts: { order: 'order,name', name: 'name' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 
   {
@@ -450,6 +467,7 @@ const RESOURCES = [
     publicFilters: { category: { field: 'category' } },
     sorts: { order: 'order,name', name: 'name' },
     defaultSort: 'order',
+    settleOrder: true,
   },
 ];
 

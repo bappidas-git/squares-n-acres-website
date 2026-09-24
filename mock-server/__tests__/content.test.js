@@ -25,6 +25,7 @@ const {
 } = require('./helpers');
 const { resetPreviewTokens } = require('../lib/previewTokens');
 const { resetViews } = require('../lib/viewCounter');
+const { placeOrder } = require('../lib/crud');
 
 silenceRequestLog();
 
@@ -870,36 +871,34 @@ describe('master data', () => {
       });
     });
 
-    it('places a row by its neighbour in a collection that does not settle on create', async () => {
-      await withServer(async ({ request, login }) => {
+    it('places a row by its neighbour among records that share a number', async () => {
+      // Two testimonials stored at 0 before their collection settled on
+      // create — a database from before QA-59 — are tied, and read by name.
+      const seed = seedWith({
+        testimonials: (rows) => {
+          rows.push(
+            { ...rows[0], id: 11, name: 'Bravo Client', order: 0 },
+            { ...rows[0], id: 12, name: 'Alpha Client', order: 0 }
+          );
+        },
+      });
+
+      await withServer({ seed }, async ({ request, login }) => {
         const token = await login(ADMIN);
-        const make = async (name) =>
-          (
-            await request('POST', '/admin/testimonials', {
-              token,
-              body: { name, message: 'A long enough quote from a happy client.', rating: 5 },
-            })
-          ).body.data;
-
-        // Both created at 0, as the form creates them: tied, read by name.
-        const bravo = await make('Bravo Client');
-        const alpha = await make('Alpha Client');
-        assert.equal(bravo.order, 0);
-        assert.equal(alpha.order, 0);
-
         const list = async () =>
           (
             await request('GET', '/admin/testimonials?perPage=all&sort=order', { token })
           ).body.data.map((row) => row.id);
         const [first, second, third] = await list();
-        assert.deepEqual([first, second], [alpha.id, bravo.id]);
+        assert.deepEqual([first, second], [12, 11]);
 
-        // The third row is dropped between the two: after Alpha.
+        // The third row is dropped between the two: after Alpha. By number
+        // alone it could only land before both or after both.
         await request('PATCH', `/admin/testimonials/${third}`, {
           token,
-          body: { order: 1, after: alpha.id },
+          body: { order: 1, after: 12 },
         });
-        assert.deepEqual((await list()).slice(0, 3), [alpha.id, third, bravo.id]);
+        assert.deepEqual((await list()).slice(0, 3), [12, third, 11]);
       });
     });
 
@@ -994,6 +993,15 @@ describe('FAQs (QA-59)', () => {
         [1, 7, 2, 3, 4, 5, 6, 8]
       );
 
+      // Down, to 5: fifth. Tied with the FAQ holding 5 it came fourth — leaving
+      // 2 had already moved that one up a place.
+      const down = await request('PUT', '/admin/faqs/7', { token, body: { ...body, order: 5 } });
+      assert.equal(down.body.data.order, 5);
+      assert.deepEqual(
+        (await orders(request, token)).map(([id]) => id),
+        [1, 2, 3, 4, 7, 5, 6, 8]
+      );
+
       // A replace that keeps the number touches nobody else.
       await request('PUT', '/admin/faqs/3', {
         token,
@@ -1001,12 +1009,12 @@ describe('FAQs (QA-59)', () => {
           ...body,
           question: 'A reworded question about selling?',
           category: 'selling',
-          order: 4,
+          order: 3,
         },
       });
       assert.deepEqual(
         (await orders(request, token)).map(([id]) => id),
-        [1, 7, 2, 3, 4, 5, 6, 8]
+        [1, 2, 3, 4, 7, 5, 6, 8]
       );
     });
   });
@@ -1197,6 +1205,198 @@ describe('FAQs (QA-59)', () => {
       assert.equal(alone.body.message, 'This item is in use.');
     });
   });
+});
+
+describe('the other drag-ordered collections settle on write (QA-59)', () => {
+  /**
+   * Every master-data and content collection whose `order` the admin drags,
+   * each with the least a create needs. Their forms create at 0, the default,
+   * and until these settled every record added shared 0 with the last one.
+   */
+  const COLLECTIONS = [
+    {
+      path: 'testimonials',
+      create: (name) => ({ name, message: 'A long enough quote from a happy client.', rating: 5 }),
+    },
+    { path: 'team', create: (name) => ({ name, designation: 'Property advisor' }) },
+    {
+      path: 'partners',
+      create: (name) => ({ name, logoUrl: 'https://example.com/logo.png', category: 'bank' }),
+    },
+    { path: 'localities', create: (name) => ({ name, cityId: 1 }) },
+    { path: 'segments', create: (name) => ({ name, kind: 'commercial' }) },
+    {
+      path: 'property-types',
+      create: (name) => ({ name, segment: 'residential', icon: 'mdi:home-outline' }),
+    },
+    { path: 'amenities', create: (name) => ({ name, category: 'basic', icon: 'mdi:pool' }) },
+    { path: 'badges', create: (name) => ({ name }) },
+    { path: 'developers', create: (name) => ({ name }) },
+    {
+      path: 'banks',
+      create: (name) => ({
+        name,
+        interestRateMin: 8.5,
+        interestRateMax: 9.5,
+        maxTenureYears: 30,
+        maxLtvPercent: 80,
+      }),
+    },
+    { path: 'article-categories', create: (name) => ({ name }) },
+  ];
+
+  /** A collection as `[id, order]` pairs, in the order the admin list reads it. */
+  const listed = async (request, token, path) =>
+    (await request('GET', `/admin/${path}?perPage=all&sort=order`, { token })).body.data.map(
+      (row) => [row.id, row.order]
+    );
+
+  /** `ids` as the admin list should read them: each at its position, `1..n`. */
+  const atPositions = (ids) => ids.map((id, index) => [id, index + 1]);
+
+  describe('placeOrder', () => {
+    const rows = (...entries) => entries.map(([id, order, name]) => ({ id, order, name }));
+    /** `[id, order]` in the order the list reads. */
+    const read = (list) =>
+      [...list].sort((left, right) => left.order - right.order).map((row) => [row.id, row.order]);
+    const place = (list, id) => placeOrder(list, id, { tieBreak: ['name'] });
+
+    it('puts a record moved down at the position it names, not one short', () => {
+      const list = rows([1, 1, 'A'], [2, 2, 'B'], [3, 3, 'C'], [4, 4, 'D']);
+      list[0].order = 3;
+      assert.equal(place(list, 1), true);
+      assert.deepEqual(read(list), [
+        [2, 1],
+        [3, 2],
+        [1, 3],
+        [4, 4],
+      ]);
+    });
+
+    it('puts a record moved up at the position it names', () => {
+      const list = rows([1, 1, 'A'], [2, 2, 'B'], [3, 3, 'C'], [4, 4, 'D']);
+      list[3].order = 2;
+      place(list, 4);
+      assert.deepEqual(read(list), [
+        [1, 1],
+        [4, 2],
+        [2, 3],
+        [3, 4],
+      ]);
+    });
+
+    it('counts positions among records that share a number or skip one', () => {
+      // A database from before QA-59: two at 0, read by name, and gaps.
+      const list = rows([1, 0, 'Bravo'], [2, 0, 'Alpha'], [3, 5, 'C'], [4, 9, 'D'], [5, 3, 'New']);
+      place(list, 5);
+      assert.deepEqual(read(list), [
+        [2, 1],
+        [1, 2],
+        [5, 3],
+        [3, 4],
+        [4, 5],
+      ]);
+    });
+
+    it('reads 0 or no number as first and a number past the end as last', () => {
+      const first = rows([1, 1, 'A'], [2, 2, 'B'], [3, 0, 'New']);
+      place(first, 3);
+      assert.deepEqual(read(first)[0], [3, 1]);
+
+      const none = rows([1, 1, 'A'], [2, 2, 'B'], [3, undefined, 'New']);
+      place(none, 3);
+      assert.deepEqual(read(none)[0], [3, 1]);
+
+      const last = rows([1, 1, 'A'], [2, 2, 'B'], [3, 99, 'New']);
+      place(last, 3);
+      assert.deepEqual(read(last).at(-1), [3, 3]);
+    });
+
+    it('answers false when every record already holds its position', () => {
+      const list = rows([1, 1, 'A'], [2, 2, 'B'], [3, 3, 'C']);
+      assert.equal(place(list, 2), false);
+    });
+  });
+
+  for (const { path, create } of COLLECTIONS) {
+    describe(`/admin/${path}`, () => {
+      it('places a new record at the position it names, and no two share a number', async () => {
+        await withServer(async ({ request, login }) => {
+          const token = await login(ADMIN);
+          const seeded = (await listed(request, token, path)).map(([id]) => id);
+          const post = (name, order) =>
+            request('POST', `/admin/${path}`, { token, body: { ...create(name), order } });
+
+          // The form's default, 0: first, with everything else one place down.
+          const first = await post('Settle Alpha', 0);
+          assert.equal(first.status, 201);
+          assert.equal(first.body.data.order, 1);
+
+          // A second one at 0 is first in its turn — not tied with the first.
+          const second = await post('Settle Bravo', 0);
+          assert.equal(second.status, 201);
+          assert.equal(second.body.data.order, 1);
+
+          // One at 3 is third.
+          const third = await post('Settle Charlie', 3);
+          assert.equal(third.status, 201);
+          assert.equal(third.body.data.order, 3);
+
+          // The seeded rows follow in the order they had, and the numbers are
+          // positions: nothing shared, nothing skipped.
+          const settled = [second, first, third].map((response) => response.body.data.id);
+          assert.deepEqual(
+            await listed(request, token, path),
+            atPositions([...settled, ...seeded])
+          );
+
+          // What a visitor is shown reads the same way.
+          const visible = ids(await request('GET', `/${path}?perPage=all`));
+          assert.deepEqual(visible.slice(0, 3), settled);
+          assert.deepEqual(
+            visible,
+            [...settled, ...seeded].filter((id) => visible.includes(id))
+          );
+        });
+      });
+
+      it('moves a record to the position a replace names, down or up, and nothing otherwise', async () => {
+        await withServer(async ({ request, login }) => {
+          const token = await login(ADMIN);
+          const seeded = (await listed(request, token, path)).map(([id]) => id);
+          const [head, ...rest] = seeded;
+          const {
+            id: _id,
+            createdAt: _createdAt,
+            updatedAt: _updatedAt,
+            ...stored
+          } = (await request('GET', `/admin/${path}/${head}`, { token })).body.data;
+          // The whole record, as an edit form sends it.
+          const put = (fields) =>
+            request('PUT', `/admin/${path}/${head}`, { token, body: { ...stored, ...fields } });
+
+          // Down, from first to last: last — not one place short of it, where
+          // a tie with the record holding that number left it — and the answer
+          // carries the number the form reads back.
+          const down = await put({ order: seeded.length });
+          assert.equal(down.status, 200);
+          assert.equal(down.body.data.order, seeded.length);
+          assert.deepEqual(await listed(request, token, path), atPositions([...rest, head]));
+
+          // Up again, to 1: first, and the rest where they were.
+          const up = await put({ order: 1 });
+          assert.equal(up.body.data.order, 1);
+          assert.deepEqual(await listed(request, token, path), atPositions(seeded));
+
+          // Saved again at the number it has, renamed: nobody moves.
+          const renamed = await put({ name: `${stored.name} (renamed)`, order: 1 });
+          assert.equal(renamed.status, 200);
+          assert.equal(renamed.body.data.order, 1);
+          assert.deepEqual(await listed(request, token, path), atPositions(seeded));
+        });
+      });
+    });
+  }
 });
 
 /* ------------------------------------------------------------------ *
