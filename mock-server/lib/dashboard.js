@@ -12,12 +12,14 @@
  * and the ones nobody has taken. Property, article and SEO figures are the
  * whole site's: they are not somebody's to own.
  *
- * Dates are compared as **UTC calendar days**, the same rule the lead list's
- * `from`/`to` filters use (D96), so a tile and a filtered list agree.
+ * Dates are compared as **IST calendar days**, the same rule the lead list's
+ * `from`/`to` filters use (QA-53, superseding D96's UTC), so a tile and a
+ * filtered list agree — and a lead that arrived at 01:30 is one of today's.
  */
 
 const { LEAD_STATUS } = require('./enums');
 const { isLive } = require('./articleFilters');
+const { istClock, istDay } = require('./ist');
 const { scopeLeads } = require('./scope');
 
 /** How many days the `leadsByDay` and `viewsByDay` series cover (§6.16). */
@@ -42,26 +44,25 @@ const CLOSED_STATUSES = new Set(['lost', 'converted']);
 
 const rows = (state, name) => (Array.isArray(state?.[name]) ? state[name] : []);
 
-/** The UTC calendar day of a timestamp, `yyyy-mm-dd`. */
-const dayOf = (value) => {
-  const moment = value ? new Date(value) : null;
-  return moment && !Number.isNaN(moment.getTime()) ? moment.toISOString().slice(0, 10) : null;
-};
+/** The IST calendar day of a timestamp, `yyyy-mm-dd`. */
+const dayOf = (value) => (value || value === 0 ? istDay(value) : null);
 
-/** The UTC month of a timestamp, `yyyy-mm`. */
+/** The IST month of a timestamp, `yyyy-mm`. */
 const monthOf = (value) => dayOf(value)?.slice(0, 7) ?? null;
 
-/** The `yyyy-mm` that is `offset` months before `reference`. */
+/** The `yyyy-mm` that is `offset` months before `reference`, in IST. */
 function shiftMonth(reference, offset) {
-  const moment = new Date(reference);
+  const moment = istClock(reference);
   moment.setUTCDate(1);
   moment.setUTCMonth(moment.getUTCMonth() + offset);
   return moment.toISOString().slice(0, 7);
 }
 
-/** The last `days` UTC calendar days, oldest first, ending on `now`. */
+/** The last `days` IST calendar days, oldest first, ending on `now`. */
 function dayRange(now, days = TREND_DAYS) {
-  const end = new Date(now);
+  // The IST wall clock read through the UTC fields (`lib/ist.js`), so the
+  // day arithmetic below stays in UTC methods and still counts Indian days.
+  const end = istClock(now);
   end.setUTCHours(0, 0, 0, 0);
 
   return Array.from({ length: days }, (_, index) => {

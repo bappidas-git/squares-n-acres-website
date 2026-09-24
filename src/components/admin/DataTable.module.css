@@ -97,14 +97,20 @@
 
 /* A row that has not been dealt with yet — a `new` lead. The tint is faint on
    purpose: it marks the row without competing with a selected one, and the
-   left edge carries the signal for anyone who does not see the tint. */
+   left edge carries the signal for anyone who does not see the tint.
+
+   It is under half the info tint. At full strength it was the exact colour of
+   an `info` chip, so on the very rows that most needed reading the New status
+   and a Medium priority lost their pill and read as bare words (QA-53). */
 .rowHighlight {
-  background: var(--color-info-bg);
+  background: var(--color-bg);
+  background: color-mix(in srgb, var(--color-info-bg) 40%, var(--color-bg));
   box-shadow: inset 3px 0 0 0 var(--color-info);
 }
 
 .rowHighlight:hover {
-  background: var(--color-info-bg);
+  background: var(--color-surface);
+  background: color-mix(in srgb, var(--color-info-bg) 60%, var(--color-bg));
 }
 
 .rowSelected.rowHighlight,
@@ -156,7 +162,20 @@ th.actionsCell {
 }
 
 .rowHighlight td.actionsCell {
-  background: var(--color-info-bg);
+  background: var(--color-bg);
+  background: color-mix(in srgb, var(--color-info-bg) 40%, var(--color-bg));
+}
+
+.rowHighlight:hover td.actionsCell {
+  background: var(--color-surface);
+  background: color-mix(in srgb, var(--color-info-bg) 60%, var(--color-bg));
+}
+
+/* Ticked wins over new, in the pinned cell as on the row: the highlight rule
+   above came later and painted a selected new lead's actions blue. */
+.rowSelected.rowHighlight td.actionsCell,
+.rowSelected.rowHighlight:hover td.actionsCell {
+  background: var(--color-primary-light);
 }
 
 /* Only while columns are hidden under it: the edge that says "scroll". */
@@ -307,9 +326,11 @@ th.actionsCell {
   background: var(--color-primary-light);
 }
 
+/* The row's tint, for the same reason: an `info` chip keeps its pill. */
 .cardHighlight {
   border-color: var(--color-info);
-  background: var(--color-info-bg);
+  background: var(--color-bg);
+  background: color-mix(in srgb, var(--color-info-bg) 40%, var(--color-bg));
 }
 
 .cardSelected.cardHighlight {

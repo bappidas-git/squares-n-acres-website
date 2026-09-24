@@ -20,9 +20,10 @@ import PATHS from '../../../routes/paths';
 import PageHeader from '../../../components/admin/PageHeader';
 import leadService from '../../../services/leadService';
 import propertyService from '../../../services/propertyService';
+import useApi from '../../../hooks/useApi';
 import useApiList from '../../../hooks/useApiList';
 import { LeadPriorityDialog, LeadStatusDialog } from './LeadStatusMenu';
-import { buildLeadColumns, renderLeadCard } from './leadColumns';
+import { buildLeadColumns, leadTelLink, leadWhatsappLink, renderLeadCard } from './leadColumns';
 import {
   LEAD_LIST_DEFAULTS,
   LEAD_LIST_PARAM_KEYS,
@@ -31,7 +32,7 @@ import {
   hasActiveFilters,
   useAssignableUsers,
 } from './leadFilters';
-import { LEAD_STATUS } from '../../../config/enums';
+import { LEAD_PRIORITY, LEAD_STATUS } from '../../../config/enums';
 import { csvFileName } from '../../../utils/csv';
 import { downloadAuthenticated } from '../../../utils/download';
 import { endpoints } from '../../../services/endpoints';
@@ -62,6 +63,12 @@ const BULK_ACTIONS = [
   },
 ];
 
+const rowLabel = (row) => row.name;
+
+/** Whether the view is the "N new" chip's own: status New and nothing else. */
+const isNewOnly = (status) =>
+  Array.isArray(status) && status.length === 1 && String(status[0]) === 'new';
+
 /**
  * Admin → Leads (`/admin/leads`) — the CRM list.
  *
@@ -72,20 +79,29 @@ const BULK_ACTIONS = [
  * (BUG-19, NEW-22).
  *
  * The screen writes too. A status change is one press on the chip and patches
- * optimistically, rolling back if the API disagrees; "Lost" asks why first; an
+ * optimistically, rolling back only what the API refused and re-reading the
+ * page once it agrees; "Lost" asks why first — for one lead or for a batch; an
  * unassigned lead offers a sales user the "Claim" button (D89); the bulk bar
  * applies status, assignee, priority or a delete to the ticked rows; and the
- * CSV comes from the export endpoint with the filters that are on screen, so
- * the file and the table always say the same thing (D46).
+ * CSV comes from the export endpoint with the filters and the order that are
+ * on screen, so the file and the table always say the same thing (D46).
  *
  * The one poller in the panel (D45/D55) drives the "N new" chip and reloads
  * the table whenever it brings news — silently, keeping the scroll position,
  * because a list that jumps while it is being read is worse than a stale one.
+ * A write made here asks it straight away, so the chip, the sidebar badge and
+ * the bell agree with the table without waiting for the next tick (QA-53).
  */
 export default function LeadsListPage() {
   const { can } = useAdminAuth();
   const toast = useToast();
-  const { newLeadCount, refreshKey, markSeen } = useLeadNotifications();
+  const {
+    newLeadCount,
+    refreshKey,
+    hasUnseen,
+    markSeen,
+    refresh: refreshNotifications,
+  } = useLeadNotifications();
 
   const canAssign = can('leads', 'assign');
   const canDelete = can('leads', 'delete');
@@ -99,6 +115,7 @@ export default function LeadsListPage() {
     items,
     meta,
     loading,
+    refreshing,
     error,
     params,
     setPage,
@@ -112,8 +129,8 @@ export default function LeadsListPage() {
     defaults: LEAD_LIST_DEFAULTS,
   });
 
-  // An optimistic status change is shown from here until the fetch that
-  // follows it answers with the same thing; a refusal takes it back out.
+  // An optimistic change is shown from here until the fetch that follows it
+  // answers with the same thing; a refusal takes back the fields it refused.
   const [overrides, setOverrides] = useState({});
   const [busyIds, setBusyIds] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -148,30 +165,51 @@ export default function LeadsListPage() {
     [items, overrides]
   );
 
+  /** A write went through: the page and the poller both re-read. */
+  const afterWrite = useCallback(() => {
+    refetch();
+    refreshNotifications();
+  }, [refetch, refreshNotifications]);
+
   /* ---------------- writes ---------------- */
 
+  /**
+   * One lead's PATCH, shown before it is answered.
+   *
+   * `shown` is what the row displays meanwhile — the assignee's name as well
+   * as the id that is sent. On success the page is re-read (a status change
+   * that raced a background reload used to stay on screen as the old one); a
+   * refusal takes back only the fields this change put there, so a second
+   * change still in flight on the same row keeps its own.
+   */
   const patchLead = useCallback(
-    async (row, changes, message) => {
+    async (row, changes, message, shown = changes) => {
       const id = String(row.id);
-      setOverrides((current) => ({ ...current, [id]: { ...current[id], ...changes } }));
+      setOverrides((current) => ({ ...current, [id]: { ...current[id], ...shown } }));
       setBusyIds((current) => [...current, id]);
 
       try {
         await leadService.patch(row.id, changes);
         toast.success(message);
+        afterWrite();
         return true;
       } catch (thrown) {
         setOverrides((current) => {
-          const { [id]: _reverted, ...rest } = current;
-          return rest;
+          const { [id]: mine, ...rest } = current;
+          const kept = Object.fromEntries(
+            Object.entries(mine ?? {}).filter(([field]) => !(field in shown))
+          );
+          return Object.keys(kept).length > 0 ? { ...rest, [id]: kept } : rest;
         });
         toast.error(firstFieldMessage(thrown, 'The change could not be saved.'));
+        // Deleted, or taken out of this user's scope, by somebody else.
+        if (thrown?.status === 404) refetch();
         return false;
       } finally {
         setBusyIds((current) => current.filter((entry) => entry !== id));
       }
     },
-    [toast]
+    [afterWrite, refetch, toast]
   );
 
   const changeStatus = useCallback(
@@ -189,7 +227,7 @@ export default function LeadsListPage() {
         refetch();
       } catch (thrown) {
         toast.error(firstFieldMessage(thrown, 'This lead could not be claimed.'));
-        if (thrown?.status === 409) refetch();
+        if (thrown?.status === 409 || thrown?.status === 404) refetch();
       } finally {
         setClaimingId(null);
       }
@@ -204,14 +242,16 @@ export default function LeadsListPage() {
         const { message } = await leadService.bulk({ ids, action, payload });
         toast.success(message || TOASTS.updatedCount(ids.length, 'lead'));
         setSelectedIds([]);
-        refetch();
+        afterWrite();
+        return true;
       } catch (thrown) {
         toast.error(firstFieldMessage(thrown, 'The bulk action could not be applied.'));
+        return false;
       } finally {
         setDialogBusy(false);
       }
     },
-    [refetch, toast]
+    [afterWrite, toast]
   );
 
   const onBulkAction = useCallback(
@@ -235,23 +275,46 @@ export default function LeadsListPage() {
       toast.success(TOASTS.deleted(`“${deleting.name}”`));
       setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
       setDeleting(null);
-      refetch();
+      afterWrite();
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'The lead could not be deleted.'));
       // A refusal will not become an acceptance on a second press.
       if (thrown?.status >= 400 && thrown?.status < 500) setDeleting(null);
+      if (thrown?.status === 404) refetch();
     } finally {
       setDialogBusy(false);
     }
   };
 
+  /** "Lost", for the lead or the batch the reason dialog was opened for. */
+  const confirmLost = async (lostReason) => {
+    const target = lostDialog;
+    if (!target) return;
+
+    if (target.ids) {
+      if (await runBulk('status', target.ids, { status: 'lost', lostReason })) setLostDialog(null);
+      return;
+    }
+
+    // The dialog stays open until the API agrees, so a refused reason is
+    // still there to correct rather than typed again.
+    setDialogBusy(true);
+    const saved = await patchLead(
+      target.row,
+      { status: 'lost', lostReason },
+      `“${target.row.name}” was marked as lost.`
+    );
+    setDialogBusy(false);
+    if (saved) setLostDialog(null);
+  };
+
   /**
    * The export (D46).
    *
-   * `GET /admin/leads/export` repeats the filters that are on screen and
-   * writes every matching row — the browser builds nothing, which is how the
-   * Property column stopped being empty and a message with a newline in it
-   * stopped breaking the file (NEW-22).
+   * `GET /admin/leads/export` repeats the filters and the order that are on
+   * screen and writes every matching row — the browser builds nothing, which
+   * is how the Property column stopped being empty and a message with a
+   * newline in it stopped breaking the file (NEW-22).
    */
   const exportCsv = async () => {
     setExporting(true);
@@ -289,19 +352,29 @@ export default function LeadsListPage() {
 
   const rowActions = useCallback(
     (row) => {
-      const tel = row.phone ? `tel:${String(row.phone).replace(/[^\d+]/g, '')}` : null;
+      const tel = leadTelLink(row);
+      const wa = leadWhatsappLink(row);
       const actions = [
         { key: 'view', label: 'View', icon: 'mdi:open-in-new', to: PATHS.adminLead(row.id) },
       ];
 
       if (tel) actions.push({ key: 'call', label: 'Call', icon: 'mdi:phone-outline', href: tel });
+      if (wa) actions.push({ key: 'whatsapp', label: 'WhatsApp', icon: 'mdi:whatsapp', href: wa });
 
-      actions.push({
-        key: 'status',
-        label: 'Change status',
-        icon: 'mdi:flag-outline',
-        onClick: () => setStatusDialog({ row }),
-      });
+      actions.push(
+        {
+          key: 'status',
+          label: 'Change status',
+          icon: 'mdi:flag-outline',
+          onClick: () => setStatusDialog({ row }),
+        },
+        {
+          key: 'priority',
+          label: 'Set priority',
+          icon: 'mdi:alert-octagon-outline',
+          onClick: () => setPriorityDialog({ row }),
+        }
+      );
 
       if (canAssign) {
         actions.push({
@@ -327,11 +400,31 @@ export default function LeadsListPage() {
     [canAssign, canDelete]
   );
 
-  // A lead row carries its property, so the picker can name the one the URL
-  // filters by without a request of its own.
+  /* ---------------- the property filter ---------------- */
+
+  const propertyId = params.propertyId;
+
+  // A lead row carries its property, so the picker can usually name the one
+  // the URL filters by without a request of its own. When the page holds no
+  // such row — the other filters leave nothing — the listing is read once, so
+  // the filter still says "Lakeview Heights" rather than "#1" (QA-53).
+  const pageProperties = useMemo(() => items.map((item) => item.property).filter(Boolean), [items]);
+  const onPage = pageProperties.some((property) => String(property.id) === String(propertyId));
+
+  const { data: filteredProperty } = useApi(
+    (signal) => propertyService.adminGet(propertyId, { signal }),
+    [propertyId ?? null],
+    { enabled: Boolean(propertyId) && !loading && !onPage }
+  );
+
   const knownProperties = useMemo(
-    () => items.map((item) => item.property).filter(Boolean),
-    [items]
+    () => (filteredProperty ? [...pageProperties, filteredProperty] : pageProperties),
+    [pageProperties, filteredProperty]
+  );
+
+  const searchProperties = useCallback(
+    (query, options) => propertyService.adminList(query, options),
+    []
   );
 
   const filterFields = useMemo(
@@ -339,6 +432,8 @@ export default function LeadsListPage() {
       buildLeadFilterFields({
         users,
         canAssign,
+        propertyTitle: (id) =>
+          knownProperties.find((property) => String(property.id) === String(id))?.title ?? null,
         renderProperty: ({ values, onChange, labelClassName, fieldClassName }) => (
           <EntityPicker
             label="Property"
@@ -346,19 +441,23 @@ export default function LeadsListPage() {
             fieldClassName={fieldClassName}
             placeholder="Search listings…"
             multiple={false}
+            showChosen={false}
             labelKey="title"
             value={values.propertyId ?? null}
             selectedRecords={knownProperties}
-            fetcher={(query, options) => propertyService.adminList(query, options)}
+            fetcher={searchProperties}
             onChange={(value) => onChange({ propertyId: value ? String(value) : undefined })}
           />
         ),
       }),
-    [users, canAssign, knownProperties]
+    [users, canAssign, knownProperties, searchProperties]
   );
+
+  /* ---------------- states ---------------- */
 
   const filtered = hasActiveFilters(params);
   const total = meta?.total;
+  const inverted = Boolean(params.from && params.to && params.from > params.to);
 
   const emptyState = useMemo(() => {
     if (params.page > 1) {
@@ -368,6 +467,23 @@ export default function LeadsListPage() {
         action: (
           <Button variant="outline" onClick={() => setPage(1)}>
             {TABLES.firstPage}
+          </Button>
+        ),
+      };
+    }
+
+    // A link or a typed address can still carry a range the bar would not
+    // let anybody pick; say so, rather than "nothing matches".
+    if (inverted) {
+      return {
+        title: 'No leads match',
+        text: 'The Created range ends before it starts.',
+        action: (
+          <Button
+            variant="outline"
+            onClick={() => setFilters({ from: params.to, to: params.from })}
+          >
+            Swap the dates
           </Button>
         ),
       };
@@ -389,11 +505,14 @@ export default function LeadsListPage() {
       title: 'No leads yet',
       text: 'Every form on the site ends here. The first enquiry will open this list.',
     };
-  }, [params.page, filtered, resetFilters, setPage]);
+  }, [params.page, params.from, params.to, inverted, filtered, resetFilters, setFilters, setPage]);
+
+  /* ---------------- dialogs ---------------- */
 
   const bulkTarget = statusDialog ?? assignDialog ?? priorityDialog;
   const targetCount = bulkTarget?.ids?.length ?? 0;
   const targetLabel = `${targetCount} ${targetCount === 1 ? 'lead' : 'leads'}`;
+  const newOnly = isNewOnly(params.status);
 
   return (
     <>
@@ -405,12 +524,26 @@ export default function LeadsListPage() {
           <>
             {newLeadCount > 0 ? (
               <span className={styles.newGroup}>
-                <Chip tone="info" icon={<Icon icon="mdi:new-box" width="14" height="14" />}>
+                {/* The count is the way to the leads it counts: one press
+                    narrows the table to them, a second shows every lead again
+                    (QA-53). */}
+                <Chip
+                  tone="info"
+                  selected={newOnly}
+                  icon={<Icon icon="mdi:new-box" width="14" height="14" />}
+                  title={newOnly ? 'Show every lead' : 'Show only the new leads'}
+                  onClick={() => setFilters({ status: newOnly ? undefined : ['new'] })}
+                >
                   {`${formatNumber(newLeadCount)} new`}
                 </Chip>
-                <Button variant="ghost" size="sm" onClick={markSeen}>
-                  Mark all seen
-                </Button>
+                {/* "Seen" is the bell's dot, and the button stays only while
+                    there is something it has not been told about: it used to
+                    sit here doing nothing visible (QA-53). */}
+                {hasUnseen ? (
+                  <Button variant="ghost" size="sm" onClick={markSeen}>
+                    Mark all seen
+                  </Button>
+                ) : null}
               </span>
             ) : null}
             {canExport ? (
@@ -441,6 +574,7 @@ export default function LeadsListPage() {
           rows={rows}
           meta={meta}
           loading={loading}
+          refreshing={refreshing}
           error={error}
           onRetry={refetch}
           sort={{ field: params.sort, order: params.order }}
@@ -458,9 +592,11 @@ export default function LeadsListPage() {
           rowActions={rowActions}
           rowActionsMenu
           rowActionsLabel={(row) => `Actions for ${row.name}`}
+          rowLabel={rowLabel}
           rowHighlight={(row) => row.status === 'new'}
           mobileCard={mobileCard}
           emptyState={emptyState}
+          density="compact"
         />
       </div>
 
@@ -473,36 +609,53 @@ export default function LeadsListPage() {
           statusDialog?.ids ? `${targetLabel} will move to the status you choose.` : undefined
         }
         initialStatus={statusDialog?.row?.status ?? 'new'}
+        requireChange={Boolean(statusDialog?.row)}
         loading={dialogBusy}
         onClose={() => setStatusDialog(null)}
         onConfirm={async (status) => {
           const target = statusDialog;
           setStatusDialog(null);
+          // Lost asks why, one lead or twenty (QA-53).
+          if (status === 'lost') {
+            setLostDialog(target?.ids ? { ids: target.ids } : { row: target?.row });
+            return;
+          }
           if (target?.ids) {
             await runBulk('status', target.ids, { status });
             return;
           }
-          if (!target?.row) return;
-          if (status === 'lost') {
-            setLostDialog({ row: target.row });
-            return;
-          }
-          changeStatus(target.row, status);
+          if (target?.row) changeStatus(target.row, status);
         }}
       />
 
       <LeadPriorityDialog
         open={Boolean(priorityDialog)}
-        title="Set the priority"
+        title={
+          priorityDialog?.row
+            ? `Set the priority of “${priorityDialog.row.name}”`
+            : 'Set the priority'
+        }
         message={
           priorityDialog?.ids ? `${targetLabel} will take the priority you choose.` : undefined
         }
+        initialPriority={priorityDialog?.row?.priority ?? 'medium'}
+        requireChange={Boolean(priorityDialog?.row)}
         loading={dialogBusy}
         onClose={() => setPriorityDialog(null)}
         onConfirm={async (priority) => {
           const target = priorityDialog;
           setPriorityDialog(null);
-          if (target?.ids) await runBulk('priority', target.ids, { priority });
+          if (target?.ids) {
+            await runBulk('priority', target.ids, { priority });
+            return;
+          }
+          if (target?.row) {
+            await patchLead(
+              target.row,
+              { priority },
+              `“${target.row.name}” is now ${LEAD_PRIORITY.labelOf(priority)} priority.`
+            );
+          }
         }}
       />
 
@@ -514,6 +667,8 @@ export default function LeadsListPage() {
         message={assignDialog?.ids ? `${targetLabel} will be handed over.` : undefined}
         users={users}
         value={assignDialog?.row?.assignedTo ?? null}
+        current={assignDialog?.row?.assignedUser ?? null}
+        requireChange={Boolean(assignDialog?.row)}
         loading={dialogBusy}
         onClose={() => setAssignDialog(null)}
         onConfirm={async (assignedTo) => {
@@ -524,31 +679,27 @@ export default function LeadsListPage() {
             return;
           }
           if (!target?.row) return;
-          const name = users.find((entry) => String(entry.id) === String(assignedTo))?.name;
+          const owner = users.find((entry) => String(entry.id) === String(assignedTo)) ?? null;
+          // The row shows the new owner's name straight away, not the old one
+          // until the re-read comes back.
           await patchLead(
             target.row,
             { assignedTo },
-            name ? `“${target.row.name}” is now ${name}’s.` : `“${target.row.name}” is unassigned.`
+            owner
+              ? `“${target.row.name}” is now ${owner.name}’s.`
+              : `“${target.row.name}” is unassigned.`,
+            { assignedTo, assignedUser: owner ? { id: owner.id, name: owner.name } : null }
           );
-          refetch();
         }}
       />
 
       <LostReasonDialog
         open={Boolean(lostDialog)}
         name={lostDialog?.row?.name}
+        count={lostDialog?.ids?.length}
         loading={dialogBusy}
         onClose={() => setLostDialog(null)}
-        onConfirm={async (lostReason) => {
-          const target = lostDialog;
-          setLostDialog(null);
-          if (!target?.row) return;
-          await patchLead(
-            target.row,
-            { status: 'lost', lostReason },
-            `“${target.row.name}” was marked as lost.`
-          );
-        }}
+        onConfirm={confirmLost}
       />
 
       <ConfirmDialog

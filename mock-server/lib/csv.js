@@ -9,6 +9,17 @@
 
 const BOM = '﻿';
 
+/**
+ * What a spreadsheet would evaluate rather than display
+ * (`docs/backend-notes/05_business_rules.md` → "CSV export"). A lead's name
+ * and message are typed by the public, and `=HYPERLINK(…)` in either ran as a
+ * formula in the desk's Excel; a `+91…` number turned into `9.19877E+11`
+ * (QA-53). A plain negative number is left alone — the same rule as the
+ * browser's `utils/csv.js`.
+ */
+const FORMULA_START = /^[=+@\t\r-]/;
+const PLAIN_NUMBER = /^-?(\d+\.?\d*|\.\d+)$/;
+
 /** Reads a dotted path off an object; `undefined` when any step is missing. */
 function getPath(source, path) {
   return String(path)
@@ -20,8 +31,9 @@ function getPath(source, path) {
 }
 
 /**
- * One CSV field: quoted when it holds a comma, a quote, a newline or leading
- * or trailing whitespace; embedded quotes are doubled (RFC 4180).
+ * One CSV field: prefixed with an apostrophe when a spreadsheet would read it
+ * as a formula; quoted when it holds a comma, a quote, a newline or leading or
+ * trailing whitespace; embedded quotes are doubled (RFC 4180).
  *
  * @param {*} value arrays are joined with `; `, objects become JSON
  * @returns {string}
@@ -33,6 +45,8 @@ function escapeCell(value) {
   if (Array.isArray(value)) text = value.map((entry) => String(entry ?? '')).join('; ');
   else if (typeof value === 'object') text = JSON.stringify(value);
   else text = String(value);
+
+  if (FORMULA_START.test(text) && !PLAIN_NUMBER.test(text)) text = `'${text}`;
 
   if (/[",\r\n]/.test(text) || text !== text.trim()) {
     return `"${text.replace(/"/g, '""')}"`;

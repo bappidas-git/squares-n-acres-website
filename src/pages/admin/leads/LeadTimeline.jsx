@@ -14,6 +14,11 @@ import styles from './LeadDetailPage.module.css';
  * a reconstruction — the boilerplate's version invented three events from the
  * `createdAt` and `updatedAt` columns and called it a history (ADD-21).
  *
+ * Each entry is credited to `createdByName`, which the API reads from the
+ * directory; `nameOf` covers a response without it. A sales user cannot read
+ * the directory, so the manager's "Assigned to Sales User" used to show no
+ * author at all (QA-53).
+ *
  * @param {object} props
  * @param {Array<object>} props.activities
  * @param {(userId: number|string|null) => string|null} [props.nameOf] resolves
@@ -35,7 +40,7 @@ export default function LeadTimeline({ activities = [], nameOf }) {
       ) : (
         <ol className={styles.timeline}>
           {ordered.map((activity) => {
-            const author = nameOf?.(activity.createdBy) ?? null;
+            const author = activity.createdByName || nameOf?.(activity.createdBy) || null;
             return (
               <li key={activity.id} className={styles.event}>
                 <span className={styles.eventIcon} aria-hidden="true">

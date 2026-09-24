@@ -125,16 +125,25 @@ export function assigneeOptions({ users = [], canAssign = false } = {}) {
  *
  * The property filter is a `custom` one: a catalogue of listings is searched
  * rather than scrolled, so the screen hands in an `EntityPicker` instead of
- * the options for a `<select>` nobody could read (§6 of prompt 13).
+ * the options for a `<select>` nobody could read (§6 of prompt 13). Its chip is
+ * named by `propertyTitle`, since only the screen knows what the listing is
+ * called; without a chip the filter counted for nothing, so a list narrowed to
+ * one listing offered no Reset (QA-53).
  *
  * @param {object} [sources]
  * @param {Array<object>} [sources.users] the assignable colleagues
  * @param {boolean} [sources.canAssign] false for a sales user
  * @param {(api: {values: object, onChange: Function, labelClassName: string,
  *   fieldClassName: string}) => React.ReactNode} [sources.renderProperty]
+ * @param {(id: string) => string|null} [sources.propertyTitle] the chosen listing's title
  * @returns {Array<object>}
  */
-export function buildLeadFilterFields({ users = [], canAssign = false, renderProperty } = {}) {
+export function buildLeadFilterFields({
+  users = [],
+  canAssign = false,
+  renderProperty,
+  propertyTitle,
+} = {}) {
   return [
     {
       key: 'q',
@@ -184,6 +193,8 @@ export function buildLeadFilterFields({ users = [], canAssign = false, renderPro
             label: 'Property',
             width: '260px',
             render: renderProperty,
+            chipLabel: (values) =>
+              `Property: ${propertyTitle?.(values.propertyId) ?? `#${values.propertyId}`}`,
           },
         ]
       : []),

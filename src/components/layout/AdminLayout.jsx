@@ -41,9 +41,11 @@ const DRAWER_WIDTH = 280;
  * The content column stops at 1,400 px for the sake of forms, whose lines
  * would otherwise run the width of a 27-inch monitor. The property list is a
  * table of a dozen columns, and at 1920 px it was scrolling sideways between
- * 256 px margins; on these paths the column may take 1,760 px.
+ * 256 px margins; on these paths the column may take 1,760 px. The lead list is
+ * nine columns of chips and dates, and its Created column sat under the pinned
+ * actions at 1,536 px (QA-53).
  */
-const WIDE_PATHS = new Set([PATHS.adminProperties]);
+const WIDE_PATHS = new Set([PATHS.adminProperties, PATHS.adminLeads]);
 
 const isWide = (pathname) => WIDE_PATHS.has(String(pathname).replace(/\/+$/, ''));
 

@@ -29,11 +29,13 @@ import leadService from '../../../services/leadService';
 import propertyService from '../../../services/propertyService';
 import useApi from '../../../hooks/useApi';
 import userService from '../../../services/userService';
+import { DuplicateChip } from './leadColumns';
 import { LEAD_PRIORITY, LEAD_STATUS } from '../../../config/enums';
 import { SelectField } from '../../../components/ui';
 import { TableSkeleton } from '../../../components/common/SkeletonLoaders';
 import { firstFieldMessage } from '../../../services/apiError';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
+import { useLeadNotifications } from '../../../contexts/LeadNotificationsContext';
 import { useToast } from '../../../components/common/ToastProvider';
 import { viewUrlOf } from '../properties/publicUrl';
 
@@ -50,9 +52,15 @@ import { TOASTS } from '../../../config/adminCopy';
  * is what we decide: where the lead stands in the funnel, how urgent it is,
  * whose it is, and when we said we would call back.
  *
+ * Below 1 200 px the two become one column, and the decisions come straight
+ * after the contact card: they used to follow the notes and the whole
+ * timeline, the length of a phone screen away from the lead's name (QA-53).
+ *
  * Every decision is a `PATCH`, every `PATCH` appends an activity server-side,
  * and the lead is re-read afterwards — so the timeline on the left is always
- * the record of what the rail on the right was just used to do.
+ * the record of what the rail on the right was just used to do. The re-read
+ * keeps the page on screen: it used to blank the whole screen to a skeleton
+ * and throw the reader back to the top after every change (QA-53).
  *
  * A sales user opening somebody else's lead by its URL gets a 404 from the
  * API, and this page renders that as "not found" rather than as an error:
@@ -63,6 +71,7 @@ export default function LeadDetailPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { can, user } = useAdminAuth();
+  const { refresh: refreshNotifications } = useLeadNotifications();
 
   const canAssign = can('leads', 'assign');
   const canClaim = can('leads', 'claim');
@@ -70,12 +79,14 @@ export default function LeadDetailPage() {
 
   const { users } = useAssignableUsers({ enabled: canAssign });
 
-  const {
-    data: lead,
-    loading,
-    error,
-    refetch,
-  } = useApi((signal) => leadService.adminGet(id, { signal }), [id]);
+  const { data, error, refetch } = useApi((signal) => leadService.adminGet(id, { signal }), [id], {
+    keepPreviousData: true,
+  });
+
+  // The previous answer is kept while the next one loads, which is what stops
+  // a re-read from blanking the page — but a lead is only this page's lead
+  // while its id is the one in the address.
+  const lead = data && String(data.id) === String(id) ? data : null;
 
   const [busy, setBusy] = useState(false);
   const [lostOpen, setLostOpen] = useState(false);
@@ -95,6 +106,9 @@ export default function LeadDetailPage() {
         await leadService.patch(id, changes);
         toast.success(message);
         await refetch();
+        // The sidebar badge and the bell count new leads; a status change is
+        // news to them now, not at the poller's next tick.
+        refreshNotifications();
         return true;
       } catch (thrown) {
         toast.error(firstFieldMessage(thrown, 'The change could not be saved.'));
@@ -103,16 +117,20 @@ export default function LeadDetailPage() {
         setBusy(false);
       }
     },
-    [id, refetch, toast]
+    [id, refetch, refreshNotifications, toast]
   );
 
+  /** `true` once the note is saved; the box keeps its text until then. */
   const addNote = useCallback(
     async (text) => {
       try {
         await leadService.addNote(id, text);
+        toast.success('Note added.');
         await refetch();
+        return true;
       } catch (thrown) {
         toast.error(firstFieldMessage(thrown, 'The note could not be added.'));
+        return false;
       }
     },
     [id, refetch, toast]
@@ -123,6 +141,7 @@ export default function LeadDetailPage() {
       setBusy(true);
       try {
         await leadService.removeNote(id, noteId);
+        toast.success('Note deleted.');
         await refetch();
       } catch (thrown) {
         toast.error(firstFieldMessage(thrown, 'The note could not be deleted.'));
@@ -152,14 +171,16 @@ export default function LeadDetailPage() {
     try {
       await leadService.remove(id);
       toast.success(TOASTS.deleted('Lead'));
-      navigate(PATHS.adminLeads);
+      refreshNotifications();
+      // Replaced, not pushed: Back must not lead to "This lead does not exist".
+      navigate(PATHS.adminLeads, { replace: true });
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'The lead could not be deleted.'));
       setDeleteOpen(false);
     } finally {
       setBusy(false);
     }
-  }, [id, navigate, toast]);
+  }, [id, navigate, refreshNotifications, toast]);
 
   /** A note is the author's to withdraw; the record is an editor's (§7). */
   const canDeleteNote = useCallback(
@@ -182,16 +203,25 @@ export default function LeadDetailPage() {
     [lead?.assignedUser]
   );
 
-  if (loading && !lead) {
-    return (
-      <>
-        <PageHeader title="Lead" breadcrumbs={[{ label: 'Leads', to: PATHS.adminLeads }]} />
-        <TableSkeleton rows={6} columns={2} />
-      </>
-    );
-  }
+  // Active colleagues only: a deactivated account cannot sign in to work the
+  // lead, and the API refuses it as a new owner (QA-53).
+  const searchColleagues = useCallback(
+    (query, options) => userService.list({ ...query, isActive: true }, options),
+    []
+  );
 
-  if (error?.status === 404 || (!loading && !lead)) {
+  const assign = (value) => {
+    const assignedTo = value === null ? null : Number(value);
+    const owner = users.find((entry) => String(entry.id) === String(assignedTo));
+    patch(
+      { assignedTo },
+      assignedTo === null
+        ? 'The lead is unassigned.'
+        : `The lead is now ${owner?.name ? `${owner.name}’s` : 'handed over'}.`
+    );
+  };
+
+  if (error?.status === 404) {
     return (
       <>
         <PageHeader title="Lead" breadcrumbs={[{ label: 'Leads', to: PATHS.adminLeads }]} />
@@ -205,11 +235,22 @@ export default function LeadDetailPage() {
     );
   }
 
-  if (error) {
+  if (error && !lead) {
     return (
       <>
         <PageHeader title="Lead" breadcrumbs={[{ label: 'Leads', to: PATHS.adminLeads }]} />
         <ErrorState text={error.message} onRetry={refetch} />
+      </>
+    );
+  }
+
+  // The first answer, or another lead's page opened from this one (the bell,
+  // "Possible duplicate"): the skeleton, never the previous lead's details.
+  if (!lead) {
+    return (
+      <>
+        <PageHeader title="Lead" breadcrumbs={[{ label: 'Leads', to: PATHS.adminLeads }]} />
+        <TableSkeleton rows={6} columns={2} />
       </>
     );
   }
@@ -229,21 +270,96 @@ export default function LeadDetailPage() {
               icon={statusMeta.icon}
               label={LEAD_STATUS.labelOf(lead.status) || '—'}
             />
-            {lead.isPossibleDuplicate ? (
-              <StatusChip
-                tone="warning"
-                icon="mdi:content-duplicate"
-                label="Possible duplicate"
-                title="Another lead carries this number from the last 30 days."
-              />
-            ) : null}
+            {lead.isPossibleDuplicate ? <DuplicateChip lead={lead} /> : null}
           </>
         }
       />
 
       <div className={styles.layout}>
-        <div className={styles.main}>
+        <div className={styles.lead}>
           <LeadContactCard lead={lead} />
+        </div>
+
+        <aside className={styles.rail} aria-label="Lead controls">
+          <Card className={styles.railCard}>
+            <LeadPipeline
+              status={lead.status}
+              lostReason={lead.lostReason}
+              busy={busy}
+              onChange={(status) =>
+                patch({ status }, `The lead is now ${LEAD_STATUS.labelOf(status)}.`)
+              }
+              onLost={() => setLostOpen(true)}
+            />
+          </Card>
+
+          <Card className={styles.railCard}>
+            <div className={styles.railBlock}>
+              <h2 className={styles.railTitle} id="lead-priority-heading">
+                Priority
+              </h2>
+              <SelectField
+                aria-labelledby="lead-priority-heading"
+                value={lead.priority ?? 'medium'}
+                options={LEAD_PRIORITY.options}
+                disabled={busy}
+                onChange={(event) =>
+                  patch(
+                    { priority: event.target.value },
+                    `Priority set to ${LEAD_PRIORITY.labelOf(event.target.value)}.`
+                  )
+                }
+              />
+            </div>
+
+            <div className={styles.railBlock}>
+              <h2 className={styles.railTitle}>Assigned to</h2>
+              {canAssign ? (
+                <EntityPicker
+                  label="Assign to a colleague"
+                  labelClassName={styles.srOnly}
+                  placeholder={lead.assignedTo ? 'Hand it to…' : 'Unassigned — search colleagues…'}
+                  multiple={false}
+                  value={lead.assignedTo ?? null}
+                  selectedRecords={selectedUsers}
+                  disabled={busy}
+                  fetcher={searchColleagues}
+                  onChange={assign}
+                />
+              ) : (
+                <>
+                  <p className={styles.railValue}>
+                    {lead.assignedUser?.name ?? <span className={styles.muted}>Unassigned</span>}
+                  </p>
+                  {canClaim && !lead.assignedTo ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      loading={busy}
+                      icon={<Icon icon="mdi:hand-back-right-outline" width="16" height="16" />}
+                      onClick={claim}
+                    >
+                      Claim this lead
+                    </Button>
+                  ) : null}
+                </>
+              )}
+            </div>
+
+            <LeadFollowUp
+              lead={lead}
+              busy={busy}
+              onSave={(followUpAt) =>
+                patch(
+                  { followUpAt },
+                  followUpAt ? 'The follow-up is set.' : 'The follow-up was cleared.'
+                )
+              }
+            />
+          </Card>
+        </aside>
+
+        <div className={styles.main}>
           <LeadRequirementCard requirement={lead.requirement} />
 
           {lead.property ? (
@@ -292,7 +408,7 @@ export default function LeadDetailPage() {
             </Card>
           ) : null}
 
-          <LeadMetaCard meta={lead.meta} />
+          <LeadMetaCard meta={lead.meta} source={lead.source} />
 
           <LeadNotes
             notes={lead.notes}
@@ -303,98 +419,23 @@ export default function LeadDetailPage() {
           />
 
           <LeadTimeline activities={lead.activities} nameOf={nameOf} />
-        </div>
 
-        <aside className={styles.rail} aria-label="Lead controls">
-          <Card className={styles.railCard}>
-            <LeadPipeline
-              status={lead.status}
-              lostReason={lead.lostReason}
-              busy={busy}
-              onChange={(status) =>
-                patch({ status }, `The lead is now ${LEAD_STATUS.labelOf(status)}.`)
-              }
-              onLost={() => setLostOpen(true)}
-            />
-          </Card>
-
-          <Card className={styles.railCard}>
-            <div className={styles.railBlock}>
-              <h2 className={styles.railTitle}>Priority</h2>
-              <SelectField
-                label="Priority"
-                value={lead.priority ?? 'medium'}
-                options={LEAD_PRIORITY.options}
-                disabled={busy}
-                onChange={(event) =>
-                  patch(
-                    { priority: event.target.value },
-                    `Priority set to ${LEAD_PRIORITY.labelOf(event.target.value)}.`
-                  )
-                }
-              />
-            </div>
-
-            <div className={styles.railBlock}>
-              <h2 className={styles.railTitle}>Assigned to</h2>
-              {canAssign ? (
-                <EntityPicker
-                  label="Owner"
-                  placeholder="Search colleagues…"
-                  multiple={false}
-                  value={lead.assignedTo ?? null}
-                  selectedRecords={selectedUsers}
-                  disabled={busy}
-                  fetcher={(query, options) => userService.list(query, options)}
-                  onChange={(value) =>
-                    patch(
-                      { assignedTo: value === null ? null : Number(value) },
-                      value === null ? 'The lead is unassigned.' : 'The lead was handed over.'
-                    )
-                  }
-                />
-              ) : (
-                <>
-                  <p className={styles.railValue}>
-                    {lead.assignedUser?.name ?? <span className={styles.muted}>Unassigned</span>}
-                  </p>
-                  {canClaim && !lead.assignedTo ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      loading={busy}
-                      icon={<Icon icon="mdi:hand-back-right-outline" width="16" height="16" />}
-                      onClick={claim}
-                    >
-                      Claim this lead
-                    </Button>
-                  ) : null}
-                </>
-              )}
-            </div>
-
-            <LeadFollowUp
-              lead={lead}
-              busy={busy}
-              onSave={(followUpAt) =>
-                patch(
-                  { followUpAt },
-                  followUpAt ? 'The follow-up is set.' : 'The follow-up was cleared.'
-                )
-              }
-            />
-          </Card>
-
+          {/* At the end of the record rather than in the rail: on a phone the
+              rail follows the contact card, and "Delete lead" does not belong
+              between the follow-up and the requirement. */}
           {canDelete ? (
-            <Card className={styles.railCard}>
+            <Card as="section" className={styles.card} aria-labelledby="lead-danger-heading">
               <div className={styles.railBlock}>
-                <h2 className={styles.railTitle}>Danger zone</h2>
+                <h2 className={styles.railTitle} id="lead-danger-heading">
+                  Danger zone
+                </h2>
                 <p className={styles.emptyLine}>
                   Deleting a lead removes its notes and its timeline with it.
                 </p>
                 <Button
                   variant="danger"
                   size="sm"
+                  className={styles.dangerButton}
                   disabled={busy}
                   icon={<Icon icon="mdi:delete-outline" width="16" height="16" />}
                   onClick={() => setDeleteOpen(true)}
@@ -404,7 +445,7 @@ export default function LeadDetailPage() {
               </div>
             </Card>
           ) : null}
-        </aside>
+        </div>
       </div>
 
       <LostReasonDialog
@@ -413,8 +454,9 @@ export default function LeadDetailPage() {
         loading={busy}
         onClose={() => setLostOpen(false)}
         onConfirm={async (lostReason) => {
-          setLostOpen(false);
-          await patch({ status: 'lost', lostReason }, 'The lead was marked as lost.');
+          // Open until the API agrees, so a refused reason is not lost with it.
+          const saved = await patch({ status: 'lost', lostReason }, 'The lead was marked as lost.');
+          if (saved) setLostOpen(false);
         }}
       />
 

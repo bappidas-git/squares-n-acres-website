@@ -40,14 +40,22 @@ export const getRequiredErrorMessage = (label = 'This field') => `${label} is re
  * that is not a valid mobile number comes back unchanged, so the validator —
  * not this — is what reports it.
  *
+ * The country code comes off only when it is one — twelve digits starting 91 —
+ * and the trunk zero only from eleven. Taking `91` off the front of any number
+ * mangled every ten-digit mobile of the 91xxx series (`9123456780` read as
+ * `23456780`), which then went out as typed and never matched the same number
+ * sent with its `+91` (QA-53; `mock-server/lib/leadFilters.js` is the same
+ * rule).
+ *
  * @param {string} value
  * @returns {string} the normalised number, or `value` untouched
  */
 export function normalizePhone(value) {
   if (typeof value !== 'string') return value;
 
-  const digits = value.replace(/[\s()-]/g, '').replace(/^\+/, '');
-  const local = digits.replace(/^91/, '').replace(/^0/, '');
+  let local = value.replace(/[\s()-]/g, '').replace(/^\+/, '');
+  if (local.length === 12 && local.startsWith('91')) local = local.slice(2);
+  else if (local.length === 11 && local.startsWith('0')) local = local.slice(1);
   if (!/^[6-9]\d{9}$/.test(local)) return value;
 
   return `+91${local}`;

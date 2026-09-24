@@ -94,6 +94,11 @@ export default function LeadStatusMenu({ value, onChange, onLost, busy = false, 
 /**
  * One field of a lead, chosen in a dialog — what the row's kebab and the bulk
  * bar open, neither of which has a chip to hang a menu off.
+ *
+ * `requireChange` is for one lead: confirming the value it already has sent a
+ * PATCH that changed nothing and a toast that said "“Ananya Rao” is now New"
+ * about a lead that had been New all along (QA-53). A bulk choice has no one
+ * value to compare with, so it is always confirmable.
  */
 function ChoiceDialog({
   open,
@@ -106,6 +111,7 @@ function ChoiceDialog({
   onConfirm,
   onClose,
   loading = false,
+  requireChange = false,
 }) {
   const [value, setValue] = useState(initialValue);
 
@@ -128,7 +134,11 @@ function ChoiceDialog({
           <Button variant="ghost" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button loading={loading} onClick={() => onConfirm(value)}>
+          <Button
+            loading={loading}
+            disabled={requireChange && value === initialValue}
+            onClick={() => onConfirm(value)}
+          >
             {confirmLabel}
           </Button>
         </>
@@ -156,6 +166,7 @@ function ChoiceDialog({
  * @param {(status: string) => void} props.onConfirm
  * @param {() => void} props.onClose
  * @param {boolean} [props.loading]
+ * @param {boolean} [props.requireChange] one lead: confirmable only once changed
  */
 export function LeadStatusDialog({ initialStatus = 'new', ...rest }) {
   return (
@@ -170,7 +181,8 @@ export function LeadStatusDialog({ initialStatus = 'new', ...rest }) {
 }
 
 /**
- * The priority choice, which the bulk bar needs for the same reason.
+ * The priority choice, which the bulk bar and the row's kebab need for the
+ * same reason.
  *
  * @param {object} props
  * @param {boolean} props.open
@@ -180,6 +192,7 @@ export function LeadStatusDialog({ initialStatus = 'new', ...rest }) {
  * @param {(priority: string) => void} props.onConfirm
  * @param {() => void} props.onClose
  * @param {boolean} [props.loading]
+ * @param {boolean} [props.requireChange] one lead: confirmable only once changed
  */
 export function LeadPriorityDialog({ initialPriority = 'medium', ...rest }) {
   return (

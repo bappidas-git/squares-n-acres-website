@@ -8,8 +8,12 @@ import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import IconButton from '../../../components/ui/IconButton';
 import { TextareaField } from '../../../components/ui';
 import { formatDateTime, formatRelative } from '../../../utils/format';
+import { note as noteSchema } from '../../../services/schemas/lead';
 
 import styles from './LeadDetailPage.module.css';
+
+/** What `POST /admin/leads/:id/notes` stores; a longer note is not typed only to be refused. */
+const MAX_NOTE_LENGTH = noteSchema.text.maxLength;
 
 /**
  * What the desk has written about this lead (§6.7 `notes[]`).
@@ -20,11 +24,12 @@ import styles from './LeadDetailPage.module.css';
  * so a control that would be refused is not offered.
  *
  * Ctrl/⌘ + Enter posts, which is what anybody typing into a box beside a phone
- * call will reach for.
+ * call will reach for. The box empties only once the note is saved: a refused
+ * one used to take what had been typed with it (QA-53).
  *
  * @param {object} props
  * @param {Array<object>} props.notes
- * @param {(text: string) => Promise<void>} props.onAdd
+ * @param {(text: string) => Promise<boolean>} props.onAdd resolves `true` once saved
  * @param {(noteId: number|string) => Promise<void>} props.onDelete
  * @param {(note: object) => boolean} props.canDelete
  * @param {boolean} [props.busy]
@@ -43,8 +48,7 @@ export default function LeadNotes({ notes = [], onAdd, onDelete, canDelete, busy
     if (!trimmed || adding) return;
     setAdding(true);
     try {
-      await onAdd(trimmed);
-      setText('');
+      if ((await onAdd(trimmed)) !== false) setText('');
     } finally {
       setAdding(false);
     }
@@ -62,8 +66,9 @@ export default function LeadNotes({ notes = [], onAdd, onDelete, canDelete, busy
           label="Add a note"
           rows={3}
           value={text}
+          maxLength={MAX_NOTE_LENGTH}
           placeholder="What was said, what was promised, what happens next…"
-          hint="Ctrl + Enter posts it."
+          hint="Ctrl + Enter (⌘ + Enter on a Mac) posts it."
           disabled={busy}
           onChange={(event) => setText(event.target.value)}
           onKeyDown={(event) => {

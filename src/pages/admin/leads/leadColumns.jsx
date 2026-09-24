@@ -10,10 +10,12 @@ import { LEAD_PRIORITY, LEAD_SOURCES } from '../../../config/enums';
 import {
   formatDate,
   formatDateTime,
+  formatPhone,
   formatPhoneForTel,
   formatRelative,
   whatsappLink,
 } from '../../../utils/format';
+import { localPhoneDigits } from '../../../utils/validators';
 
 import styles from './LeadsListPage.module.css';
 
@@ -59,6 +61,50 @@ export const leadTelLink = (lead) => {
   return number ? `tel:${number}` : '';
 };
 
+/**
+ * The lead list searched for this lead's number — where "Possible duplicate"
+ * leads, so the other enquiry is one press away rather than a hunt (QA-53).
+ * The ten digits match however either lead stored the number.
+ *
+ * @param {object} lead
+ * @returns {string}
+ */
+export const duplicatesPathOf = (lead) => {
+  const digits = localPhoneDigits(lead?.phone);
+  return digits ? `${PATHS.adminLeads}?q=${encodeURIComponent(digits)}` : PATHS.adminLeads;
+};
+
+/**
+ * An e-mail address that breaks after its `@` rather than anywhere:
+ * `geetha.srinivasan@example.co` / `m` reads as `…@` / `example.com` (QA-53).
+ */
+function BreakableEmail({ email }) {
+  const text = String(email);
+  const at = text.lastIndexOf('@');
+  if (at < 0) return text;
+  return (
+    <>
+      {text.slice(0, at + 1)}
+      <wbr />
+      {text.slice(at + 1)}
+    </>
+  );
+}
+
+/** "Possible duplicate", as the way to the other enquiry. */
+export function DuplicateChip({ lead }) {
+  return (
+    <Link
+      className={styles.duplicateLink}
+      to={duplicatesPathOf(lead)}
+      title="Another lead carries this number from the last 30 days. Show every lead with it."
+      onClick={(event) => event.stopPropagation()}
+    >
+      <StatusChip tone="warning" icon="mdi:content-duplicate" label="Possible duplicate" />
+    </Link>
+  );
+}
+
 /** Name, contact details, and the warning that this may be the second time. */
 function NameCell({ row }) {
   return (
@@ -67,17 +113,14 @@ function NameCell({ row }) {
         {row.name}
       </Link>
       <span className={styles.contact}>
-        {row.phone ? <span className={styles.contactLine}>{row.phone}</span> : null}
-        {row.email ? <span className={styles.contactLine}>{row.email}</span> : null}
+        {row.phone ? <span className={styles.contactLine}>{formatPhone(row.phone)}</span> : null}
+        {row.email ? (
+          <span className={styles.contactLine}>
+            <BreakableEmail email={row.email} />
+          </span>
+        ) : null}
       </span>
-      {row.isPossibleDuplicate ? (
-        <StatusChip
-          tone="warning"
-          icon="mdi:content-duplicate"
-          label="Possible duplicate"
-          title="Another lead carries this number from the last 30 days."
-        />
-      ) : null}
+      {row.isPossibleDuplicate ? <DuplicateChip lead={row} /> : null}
     </span>
   );
 }
@@ -106,16 +149,65 @@ function AssignedCell({ row, canClaim, claiming, onClaim }) {
   return <span className={styles.muted}>Unassigned</span>;
 }
 
-/** The follow-up date, and whether it has already passed. */
+/** The follow-up date — its time on hover — and whether it has already passed. */
 function FollowUpCell({ row }) {
   if (!row.followUpAt) return <span className={styles.muted}>—</span>;
 
   return (
     <span className={styles.stack}>
-      <span>{formatDate(row.followUpAt)}</span>
+      <Tooltip title={formatDateTime(row.followUpAt)}>
+        <span className={styles.nowrap}>{formatDate(row.followUpAt)}</span>
+      </Tooltip>
       {isFollowUpOverdue(row) ? (
         <StatusChip tone="error" icon="mdi:alert-outline" label="Overdue" />
       ) : null}
+    </span>
+  );
+}
+
+/** How urgent the lead is, as its chip. */
+function PriorityChip({ priority }) {
+  return (
+    <StatusChip
+      tone={LEAD_PRIORITY.meta[priority]?.tone ?? 'neutral'}
+      label={LEAD_PRIORITY.labelOf(priority) || '—'}
+    />
+  );
+}
+
+/** The listing the enquiry was about. */
+function PropertyLink({ property }) {
+  return (
+    <Link
+      className={styles.propertyLink}
+      to={PATHS.adminPropertyEdit(property.id)}
+      title={property.title}
+      onClick={(event) => event.stopPropagation()}
+    >
+      {property.title}
+    </Link>
+  );
+}
+
+/**
+ * The listing, and — below 1 536 px, where the Source column is folded away —
+ * the form the enquiry came through, under it.
+ *
+ * Nine columns did not fit a laptop: the Created column slid under the pinned
+ * actions ("9 days agc") and Follow-up and Created sat past the scroller's
+ * edge at 1 280 px (QA-53). Where the enquiry came from and what it was about
+ * are one question, so they share a cell when the room runs out.
+ */
+function EnquiryCell({ row }) {
+  const source = LEAD_SOURCES.labelOfAny(row.source);
+  return (
+    <span className={styles.enquiry}>
+      {row.property ? (
+        <PropertyLink property={row.property} />
+      ) : (
+        <span className={[styles.muted, source ? styles.noProperty : ''].join(' ')}>—</span>
+      )}
+      {source ? <span className={styles.sourceInline}>{`via ${source}`}</span> : null}
     </span>
   );
 }
@@ -124,7 +216,8 @@ function FollowUpCell({ row }) {
  * The table's columns.
  *
  * The sortable keys are the five `GET /admin/leads` sorts by (§5.14) — a
- * header that cannot be answered is not offered.
+ * header that cannot be answered is not offered. Status and priority sort by
+ * rank (the funnel; Low to High), not alphabetically (QA-53).
  *
  * @param {object} [options]
  * @param {Array<string>} [options.busyIds] rows with a PATCH in flight
@@ -156,52 +249,44 @@ export function buildLeadColumns({
     {
       key: 'source',
       label: 'Source',
-      hideBelow: 'lg',
+      hideBelow: 'xl',
       render: (row) => <StatusChip label={LEAD_SOURCES.labelOfAny(row.source) || '—'} />,
     },
     {
       key: 'property',
       label: 'Property',
-      width: '18%',
+      width: '20%',
       hideBelow: 'lg',
-      render: (row) =>
-        row.property ? (
-          <Link
-            className={styles.propertyLink}
-            to={PATHS.adminPropertyEdit(row.property.id)}
-            onClick={(event) => event.stopPropagation()}
-          >
-            {row.property.title}
-          </Link>
-        ) : (
-          <span className={styles.muted}>—</span>
-        ),
+      render: (row) => <EnquiryCell row={row} />,
     },
     {
       key: 'status',
       label: 'Status',
       sortable: true,
       mobile: true,
+      // Below 1 200 px the Priority column is folded in here, under the status
+      // — two chips in one cell rather than a Created column cut in half.
       render: (row) => (
-        <LeadStatusMenu
-          value={row.status}
-          name={row.name}
-          busy={isBusy(row)}
-          onChange={onStatusChange ? (status) => onStatusChange(row, status) : undefined}
-          onLost={onLost ? () => onLost(row) : undefined}
-        />
+        <span className={styles.statusCell}>
+          <LeadStatusMenu
+            value={row.status}
+            name={row.name}
+            busy={isBusy(row)}
+            onChange={onStatusChange ? (status) => onStatusChange(row, status) : undefined}
+            onLost={onLost ? () => onLost(row) : undefined}
+          />
+          <span className={styles.priorityInline}>
+            <PriorityChip priority={row.priority} />
+          </span>
+        </span>
       ),
     },
     {
       key: 'priority',
       label: 'Priority',
       sortable: true,
-      render: (row) => (
-        <StatusChip
-          tone={LEAD_PRIORITY.meta[row.priority]?.tone ?? 'neutral'}
-          label={LEAD_PRIORITY.labelOf(row.priority) || '—'}
-        />
-      ),
+      hideBelow: 'lg',
+      render: (row) => <PriorityChip priority={row.priority} />,
     },
     {
       key: 'assignedTo',
@@ -237,8 +322,9 @@ export function buildLeadColumns({
 }
 
 /**
- * One lead as a phone card: who it is, where it stands, and the two things a
- * sales user does from a phone — call and message (§6 of prompt 29).
+ * One lead as a phone card: who it is, where it stands, what it is about, when
+ * somebody said they would call, and the two things a sales user does from a
+ * phone — call and message (§6 of prompt 29).
  *
  * @param {object} row
  * @param {object} [options] the same handlers `buildLeadColumns` takes
@@ -261,15 +347,18 @@ export function renderLeadCard(row, options = {}) {
           onChange={onStatusChange ? (status) => onStatusChange(row, status) : undefined}
           onLost={onLost ? () => onLost(row) : undefined}
         />
-        <StatusChip
-          tone={LEAD_PRIORITY.meta[row.priority]?.tone ?? 'neutral'}
-          label={LEAD_PRIORITY.labelOf(row.priority) || '—'}
-        />
+        <PriorityChip priority={row.priority} />
         <StatusChip label={LEAD_SOURCES.labelOfAny(row.source) || '—'} />
         {isFollowUpOverdue(row) ? (
           <StatusChip tone="error" icon="mdi:alert-outline" label="Overdue" />
         ) : null}
       </div>
+
+      {row.property ? (
+        <p className={styles.cardProperty}>
+          <PropertyLink property={row.property} />
+        </p>
+      ) : null}
 
       <dl className={styles.cardMeta}>
         <div>
@@ -282,6 +371,10 @@ export function renderLeadCard(row, options = {}) {
               onClaim={onClaim}
             />
           </dd>
+        </div>
+        <div>
+          <dt>Follow-up</dt>
+          <dd>{row.followUpAt ? formatDateTime(row.followUpAt) : '—'}</dd>
         </div>
         <div>
           <dt>Created</dt>

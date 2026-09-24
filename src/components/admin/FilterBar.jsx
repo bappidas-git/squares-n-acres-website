@@ -9,6 +9,7 @@ import Button from '../ui/Button';
 import Chip from '../ui/Chip';
 import IconButton from '../ui/IconButton';
 import useBreakpoint from '../../hooks/useBreakpoint';
+import { formatDate } from '../../utils/format';
 
 import styles from './FilterBar.module.css';
 
@@ -17,6 +18,10 @@ export const SEARCH_DEBOUNCE_MS = 400;
 
 const isSet = (value) =>
   value !== undefined && value !== null && value !== '' && !(Array.isArray(value) && !value.length);
+
+/** A `yyyy-mm-dd` a person finished typing — not a year still on its way. */
+const isWholeDate = (value) =>
+  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && value >= '1900-01-01';
 
 /**
  * The filter row above an admin table.
@@ -34,7 +39,10 @@ const isSet = (value) =>
  *   label: string, options?: Array<{value: string|number, label: string}>,
  *   placeholder?: string, width?: string,
  *   render?: (api: {values: object, onChange: (patch: object) => void,
- *     labelClassName: string, fieldClassName: string}) => React.ReactNode}>} props.fields
+ *     labelClassName: string, fieldClassName: string}) => React.ReactNode,
+ *   chipLabel?: (values: object) => string|null}>} props.fields `chipLabel` names a
+ *   `custom` filter's value — only the caller knows what the chosen record is
+ *   called — so it gets a chip and counts as active like every other filter
  * @param {object} props.values
  * @param {(patch: object) => void} props.onChange
  * @param {() => void} [props.onReset]
@@ -58,8 +66,16 @@ export default function FilterBar({
   const chips = useMemo(() => buildChips(fields, values), [fields, values]);
   const count = activeCount ?? chips.length;
 
+  // In the phone's popover every control takes the popover's width: a field's
+  // own width is for the row it sits in on a laptop.
   const controls = rest.map((field) => (
-    <FilterControl key={field.key} field={field} values={values} onChange={onChange} />
+    <FilterControl
+      key={field.key}
+      field={field}
+      values={values}
+      onChange={onChange}
+      stacked={isMobile}
+    />
   ));
 
   return (
@@ -193,9 +209,9 @@ function SearchInput({ field, value, onChange }) {
 }
 
 /** One non-search filter, by type. */
-function FilterControl({ field, values, onChange }) {
+function FilterControl({ field, values, onChange, stacked = false }) {
   const id = useId();
-  const style = field.width ? { width: field.width } : undefined;
+  const style = field.width && !stacked ? { width: field.width } : undefined;
 
   if (field.type === 'select') {
     return (
@@ -274,6 +290,24 @@ function FilterControl({ field, values, onChange }) {
   if (field.type === 'daterange' || field.type === 'number-range') {
     const isDate = field.type === 'daterange';
     const [fromKey, toKey] = field.keys ?? [`${field.key}From`, `${field.key}To`];
+    const from = values[fromKey] ?? '';
+    const to = values[toKey] ?? '';
+
+    // A range that ends before it starts matches nothing and says nothing
+    // about why. The picker greys out the days that would invert it, and a
+    // date typed past the other end moves that end along with it, so the
+    // range is always one the reader can see (QA-53). Only a finished date
+    // does: typing a year digit by digit passes through `0002-…`, which must
+    // not drag the other end back to the year 2.
+    const write = (key, value) => {
+      const patch = { [key]: value || undefined };
+      if (isDate && isWholeDate(value)) {
+        if (key === fromKey && isWholeDate(to) && value > to) patch[toKey] = value;
+        if (key === toKey && isWholeDate(from) && value < from) patch[fromKey] = value;
+      }
+      onChange?.(patch);
+    };
+
     return (
       <fieldset className={[styles.control, styles.range].filter(Boolean).join(' ')} style={style}>
         <legend className={styles.label}>{field.label}</legend>
@@ -282,16 +316,18 @@ function FilterControl({ field, values, onChange }) {
             type={isDate ? 'date' : 'number'}
             className={styles.input}
             aria-label={`${field.label} from`}
-            value={values[fromKey] ?? ''}
-            onChange={(event) => onChange?.({ [fromKey]: event.target.value || undefined })}
+            value={from}
+            max={isDate && to ? to : undefined}
+            onChange={(event) => write(fromKey, event.target.value)}
           />
           <span aria-hidden="true">–</span>
           <input
             type={isDate ? 'date' : 'number'}
             className={styles.input}
             aria-label={`${field.label} to`}
-            value={values[toKey] ?? ''}
-            onChange={(event) => onChange?.({ [toKey]: event.target.value || undefined })}
+            value={to}
+            min={isDate && from ? from : undefined}
+            onChange={(event) => write(toKey, event.target.value)}
           />
         </span>
       </fieldset>
@@ -406,7 +442,21 @@ function buildChips(fields, values) {
   const chips = [];
 
   for (const field of fields) {
-    if (field.type === 'custom') continue;
+    // A custom control's chip is the caller's to name. Without one, a lead
+    // list filtered to one listing showed no chip, counted no filter — so no
+    // Reset — and on a phone the filter was on and visible nowhere (QA-53).
+    if (field.type === 'custom') {
+      const label = isSet(values[field.key]) ? field.chipLabel?.(values) : null;
+      if (label) {
+        chips.push({
+          key: field.key,
+          value: values[field.key],
+          label,
+          clear: { [field.key]: undefined },
+        });
+      }
+      continue;
+    }
 
     if (field.type === 'search') {
       if (isSet(values[field.key])) {
@@ -424,10 +474,16 @@ function buildChips(fields, values) {
       const [fromKey, toKey] = field.keys ?? [`${field.key}From`, `${field.key}To`];
       [fromKey, toKey].forEach((key, index) => {
         if (!isSet(values[key])) return;
+        // "Created from 10 Sep 2026", in the house format rather than the
+        // `2026-09-10` the URL carries.
+        const shown =
+          field.type === 'daterange' && isWholeDate(values[key])
+            ? formatDate(values[key])
+            : values[key];
         chips.push({
           key,
           value: values[key],
-          label: `${field.label} ${index === 0 ? 'from' : 'to'} ${values[key]}`,
+          label: `${field.label} ${index === 0 ? 'from' : 'to'} ${shown}`,
           clear: { [key]: undefined },
         });
       });

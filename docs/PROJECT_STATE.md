@@ -1285,7 +1285,7 @@ rewrites"; the `/api/admin/*` row of that table is removed — it is done.
 | `mock-server/routes/leads.js`              | `POST /leads` and the CRM: list, detail, patch, delete, claim, notes, bulk, CSV export              |
 | `mock-server/lib/propertyFilters.js`       | Every §5.7 filter and the six sort options, with the price / area / bedrooms accessors              |
 | `mock-server/lib/facets.js`                | `meta.facets` — counted after the filters, before pagination                                        |
-| `mock-server/lib/leadFilters.js`           | The CRM's filters and sorting, with the UTC date comparison of D96                                  |
+| `mock-server/lib/leadFilters.js`           | The CRM's filters and sorting, with the IST date comparison of QA-53 (D96's UTC superseded)         |
 | `mock-server/lib/activities.js`            | The lead timeline: `addActivity` and the sentences it writes                                        |
 | `mock-server/lib/viewCounter.js`           | One counted view per IP per property per hour, in memory                                            |
 | `mock-server/__tests__/helpers.js`         | The shared harness: `createApp()` on an ephemeral port over a temp copy of the seed                 |

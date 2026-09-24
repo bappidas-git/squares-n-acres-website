@@ -461,6 +461,7 @@ none; `ipAddress` and `userAgent` are stored but returned to admins only.
         "type": "created",
         "description": "Lead created via Property Enquiry",
         "createdBy": null,
+        "createdByName": null,
         "createdAt": "2026-09-15T22:40:33.115Z",
       },
     ],
@@ -481,8 +482,10 @@ none; `ipAddress` and `userAgent` are stored but returned to admins only.
 //   "Assigned to Sales User" ]
 
 // GET /api/admin/leads/export → text/csv; charset=utf-8, a BOM, then
-// ID,Name,Phone,Email,Source,Status,Priority,Assigned To,Property,Requirement,Message,Follow-up,Created At
-// — the same filters as the list; with no matches the file is the header row alone.
+// ID,Name,Phone,Email,Source,Status,Lost Reason,Priority,Assigned To,Property,Requirement,Message,Follow-up (IST),Created At (IST)
+// — the same filters and the same order as the list; labels rather than stored
+// values, IST dates as `yyyy-mm-dd hh:mm`, formula-like cells prefixed with `'`;
+// with no matches the file is the header row alone.
 
 // GET /api/admin/leads?q=Ananya → the list rows, each with the duplicate flag
 // and without the timeline:
@@ -828,6 +831,13 @@ Every field of §6.7 including `notes[]` and `activities[]`, plus the embeds
 `property {id,title,slug}` and `assignedUser {id,name}`. `ipAddress` and
 `userAgent` are returned to admins only. `LeadList` rows carry the same shape
 without `activities`.
+
+Each activity also carries **`createdByName`** — the author's name, joined from
+the users on read (`null` for the system's own entries), as each note carries
+its author's. A sales user cannot list the directory, so an id alone left their
+timeline without authors (QA-53). A move to `lost` requires `lostReason`
+(3–300 characters) and a move away from it clears the reason; see
+`docs/backend-notes/05_business_rules.md` → Leads.
 
 **`pageSlug` is a page's whole slug *path*, not a single segment.** §6.10 types
 a CMS page's slug as a URL path and every lead-capture block passes `page.slug`
