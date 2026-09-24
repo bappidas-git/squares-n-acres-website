@@ -276,14 +276,28 @@ the property's `enquiryCount`. With `siteSettings.leads.autoAssign` set to
 The CRM list supports `q`, `status`, `source`, `assignedTo` (`me`,
 `unassigned` or an id), `propertyId`, `priority`, `from`/`to` and
 `sort=createdAt|updatedAt|followUpAt|status|priority`. `from` and `to` compare
-the **UTC date** of `createdAt` (D96). `GET /admin/leads/export` answers with
-the same rows as a UTF-8 CSV with a BOM and a
-`Content-Disposition: attachment; filename="leads-<yyyy-mm-dd>.csv"` header.
+the **IST date** of `createdAt` (QA-53, superseding D96's UTC), the day the
+panel prints. A status sorts along the funnel with Lost last and a priority from
+Low to High; rows that tie stay newest first. `q` also finds a phone number
+however it is typed — `98765 43210`, `+91 98765 43210`, `098765 43210`.
+`GET /admin/leads/export` answers with the same rows, in the same order, as a
+UTF-8 CSV with a BOM and a
+`Content-Disposition: attachment; filename="leads-<yyyy-mm-dd>.csv"` header:
+labels rather than stored values, IST dates, a Lost Reason column, and a cell a
+spreadsheet would run as a formula prefixed with an apostrophe.
 
 Every change that matters appends an activity — "Status changed from New to
-Contacted", "Assigned to Sales User", "Priority changed from Medium to High",
-"Follow-up set for 20 Sep 2026", "Note added" — so the lead detail can be read
-as a story. Notes carry their author (`createdBy`, `createdByName`).
+Contacted", "Status changed from Contacted to Lost — Bought elsewhere",
+"Assigned to Sales User", "Priority changed from Medium to High", "Follow-up set
+for 20 Sep 2026, 10:00 am", "Note added" — so the lead detail can be read as a
+story. Notes carry their author (`createdBy`, `createdByName`), and so does
+every activity in a response: `createdByName` is read from the directory, which
+a sales user cannot list. A change that changes nothing writes nothing.
+
+**Lost asks why.** Moving a lead to `lost` — by `PATCH` or by a bulk action —
+needs a `lostReason` of at least three characters (422 otherwise); reopening a
+lost lead clears it, and a reason on a lead that is not lost is a 422. A lead
+cannot be handed to a deactivated user.
 
 **The sales scope (D15)** applies to the list, the detail read, every write and
 the export: a sales user sees the leads assigned to them and the ones nobody

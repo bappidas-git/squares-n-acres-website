@@ -30,12 +30,15 @@
 const express = require('express');
 
 const schemas = require('../../src/services/schemas');
+const { formatBhk, formatPriceRange } = require('../../src/utils/format');
 const { toCsv } = require('../lib/csv');
 const {
   LEAD_PRIORITY,
   LEAD_SOURCES,
   LEAD_STATUS,
   LEGACY_LEAD_SOURCE_MAP,
+  LISTING_TYPES,
+  REQUIREMENT_TIMELINES,
 } = require('../lib/enums');
 const {
   applyLeadFilters,
@@ -49,6 +52,7 @@ const { clientIp, rateLimit } = require('../middleware/rateLimit');
 const { conflict, forbidden, notFound, validation } = require('../middleware/errors');
 const { embedLead } = require('../lib/embed');
 const { issueAccess } = require('../lib/fileAccess');
+const { istDateTime, istDay } = require('../lib/ist');
 const { nextId } = require('../lib/ids');
 const { paginate, toPositiveInt, DEFAULT_PER_PAGE_ADMIN } = require('../lib/paginate');
 const { validateBody } = require('../middleware/validate');
@@ -71,7 +75,19 @@ const SALES_PATCHABLE = ['status', 'priority', 'followUpAt', 'lostReason'];
 /** `POST /admin/leads/bulk` (§5.14). */
 const BULK_ACTIONS = ['status', 'assign', 'priority', 'delete'];
 
-/** The columns of `GET /admin/leads/export`, in order (§5.14). */
+/**
+ * A lost reason's length: three characters at least — the dialog's minimum
+ * (prompt 29 §7) — and at most what `lead.patch` stores.
+ */
+const LOST_REASON_MIN = 3;
+const LOST_REASON_MAX = schemas.getSchema('lead.patch').lostReason.maxLength;
+
+/**
+ * The columns of `GET /admin/leads/export`, in order (§5.14).
+ *
+ * The two dates are IST wall-clock times (`2026-09-14 18:00`), which a
+ * spreadsheet reads as dates; the header says so (QA-53).
+ */
 const CSV_COLUMNS = [
   { key: 'id', label: 'ID' },
   { key: 'name', label: 'Name' },
@@ -79,13 +95,14 @@ const CSV_COLUMNS = [
   { key: 'email', label: 'Email' },
   { key: 'source', label: 'Source' },
   { key: 'status', label: 'Status' },
+  { key: 'lostReason', label: 'Lost Reason' },
   { key: 'priority', label: 'Priority' },
   { key: 'assignedTo', label: 'Assigned To' },
   { key: 'property', label: 'Property' },
   { key: 'requirement', label: 'Requirement' },
   { key: 'message', label: 'Message' },
-  { key: 'followUpAt', label: 'Follow-up' },
-  { key: 'createdAt', label: 'Created At' },
+  { key: 'followUpAt', label: 'Follow-up (IST)' },
+  { key: 'createdAt', label: 'Created At (IST)' },
 ];
 
 /** The message every 403 of the admin API carries (§5.3). */
@@ -94,6 +111,74 @@ const FORBIDDEN = 'You do not have permission to perform this action.';
 const first = (value) => (Array.isArray(value) ? value[0] : value);
 
 const sameId = (left, right) => String(left) === String(right);
+
+const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+
+/** Two stored values are the same value — an id however it is typed, an object by content. */
+const sameValue = (left, right) => {
+  if ((left ?? null) === null || (right ?? null) === null)
+    return (left ?? null) === (right ?? null);
+  if (typeof left === 'object' || typeof right === 'object') {
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+  return String(left) === String(right);
+};
+
+/**
+ * The change set with the lost reason settled (prompt 29 §7, QA-53).
+ *
+ * - Marking a lead as lost asks why: a reason of three characters or more
+ *   comes with it, and so does rewriting the reason of a lead that is lost.
+ * - Reopening a lost lead clears the reason. The timeline entry of the move to
+ *   Lost keeps it, so nothing is forgotten; the lead just stops claiming it.
+ * - A reason on a lead that is not lost is refused rather than stored where
+ *   nothing reads it.
+ *
+ * @param {object} lead the stored lead
+ * @param {object} changes what the request would write
+ * @param {string} [field] the key a 422 names — `payload.lostReason` for a bulk action
+ * @returns {object} the change set to apply
+ */
+function settleLostReason(lead, changes, field = 'lostReason') {
+  const status = hasOwn(changes, 'status') ? changes.status : lead.status;
+  const sent = hasOwn(changes, 'lostReason');
+
+  if (status === 'lost') {
+    if (lead.status === 'lost' && !sent) return changes;
+    return { ...changes, lostReason: lostReasonOf(changes.lostReason, field) };
+  }
+
+  const reason = typeof changes.lostReason === 'string' ? changes.lostReason.trim() : null;
+  if (sent && reason) {
+    throw validation({ [field]: ['The lost reason applies to a lost lead only.'] });
+  }
+  return lead.status === 'lost' || sent ? { ...changes, lostReason: null } : changes;
+}
+
+/**
+ * A lost reason, trimmed, or a 422 naming `field`.
+ *
+ * @param {unknown} value
+ * @param {string} field
+ * @returns {string}
+ */
+function lostReasonOf(value, field) {
+  const reason = typeof value === 'string' ? value.trim() : '';
+  if (!reason) {
+    throw validation({ [field]: ['The lost reason is required when a lead is marked as lost.'] });
+  }
+  if (reason.length < LOST_REASON_MIN) {
+    throw validation({
+      [field]: [`The lost reason must be at least ${LOST_REASON_MIN} characters.`],
+    });
+  }
+  if (reason.length > LOST_REASON_MAX) {
+    throw validation({
+      [field]: [`The lost reason may not be greater than ${LOST_REASON_MAX} characters.`],
+    });
+  }
+  return reason;
+}
 
 /** The `utm_*` parameters of the page the form was submitted from. */
 function utmFromUrl(pageUrl) {
@@ -138,21 +223,53 @@ module.exports = ({ db, getModel }) => {
     duplicates: buildDuplicateIndex(rows()),
   });
 
-  const userName = (id) => users().find((user) => sameId(user.id, id))?.name ?? null;
+  const userName = (id) =>
+    id === null || id === undefined
+      ? null
+      : (users().find((user) => sameId(user.id, id))?.name ?? null);
 
   /**
    * A lead as a response returns it (`docs/API_CONTRACT.md`, `Lead`).
    *
    * `ipAddress` and `userAgent` are for the CRM, not for the visitor who filled
    * the form in; a list row drops the timeline, which only the detail renders.
+   *
+   * Each timeline entry carries its author's name, `createdByName`, read from
+   * the directory as the note does from its own record: a sales user cannot
+   * read the directory, so "Assigned to Sales User" by the manager used to
+   * render with no author at all (QA-53).
    */
   const present = (lead, { admin = true, list = false, collections = source() } = {}) => {
     const embedded = embedLead(lead, collections);
     const scoped = admin
       ? { ...embedded, isPossibleDuplicate: isPossibleDuplicate(lead, collections.duplicates) }
       : omit(embedded, ['ipAddress', 'userAgent']);
-    return list ? omit(scoped, ['activities']) : scoped;
+    if (list) return omit(scoped, ['activities']);
+
+    return Array.isArray(scoped.activities)
+      ? {
+          ...scoped,
+          activities: scoped.activities.map((activity) => ({
+            ...activity,
+            createdByName: userName(activity.createdBy),
+          })),
+        }
+      : scoped;
   };
+
+  /**
+   * The colleague a lead may be handed to, or a 422 naming `field`.
+   *
+   * A deactivated account cannot sign in to work the lead, so it is refused as
+   * a new owner (QA-53); a lead that already sits with one keeps it until it is
+   * reassigned.
+   */
+  function assertAssignable(assignee, field, current = null) {
+    if (assignee === null || sameId(assignee, current ?? '')) return;
+    const user = users().find((row) => sameId(row.id, assignee));
+    if (!user) throw validation({ [field]: ['The selected user does not exist.'] });
+    if (user.isActive === false) throw validation({ [field]: ['The selected user is inactive.'] });
+  }
 
   /** The lead a route addresses, or a 404 — including "not in your scope". */
   function findInScope(req) {
@@ -194,42 +311,48 @@ module.exports = ({ db, getModel }) => {
   /**
    * Applies a change set to a lead and records what it changed.
    *
+   * A change set that changes nothing writes nothing — not an activity and not
+   * `updatedAt` — which is also what `affected` of a bulk action counts.
+   *
    * @param {object} lead the stored lead, mutated in place
    * @param {object} changes only the fields the request actually sent
    * @param {object} user the signed-in user, credited on every entry
-   * @returns {object} the lead
+   * @returns {boolean} whether any field changed
    */
   function applyChanges(lead, changes, user) {
     const at = new Date().toISOString();
-    const has = (field) => Object.prototype.hasOwnProperty.call(changes, field);
+    const differs = (field) => hasOwn(changes, field) && !sameValue(changes[field], lead[field]);
     const entries = [];
 
-    if (has('status') && changes.status !== lead.status) {
+    if (differs('status')) {
       entries.push({
         type: 'status-changed',
-        description: describeStatusChange(lead.status, changes.status),
+        description: describeStatusChange(lead.status, changes.status, changes.lostReason),
       });
     }
-    if (has('priority') && changes.priority !== lead.priority) {
+    if (differs('priority')) {
       entries.push({
         type: 'priority-changed',
         description: describePriorityChange(lead.priority, changes.priority),
       });
     }
-    if (has('assignedTo') && !sameId(changes.assignedTo ?? '', lead.assignedTo ?? '')) {
+    if (differs('assignedTo')) {
       entries.push({
         type: 'assigned',
         description: describeAssignment(userName(changes.assignedTo)),
       });
     }
-    if (has('followUpAt') && changes.followUpAt !== lead.followUpAt) {
+    if (differs('followUpAt')) {
       entries.push({ type: 'follow-up-set', description: describeFollowUp(changes.followUpAt) });
     }
+
+    const changed = Object.keys(changes).some(differs);
+    if (!changed) return false;
 
     Object.assign(lead, changes, { updatedAt: at });
     for (const entry of entries) addActivity(lead, { ...entry, createdBy: user?.id ?? null, at });
 
-    return lead;
+    return true;
   }
 
   /** The leads a request may see, after scope, filters and sorting. */
@@ -341,23 +464,34 @@ module.exports = ({ db, getModel }) => {
 
   router.get('/admin/leads/export', (req, res) => {
     const collections = source();
-    const localityName = (id) =>
-      collections.localities.find((locality) => sameId(locality.id, id))?.name ?? null;
+    const nameIn = (records, id) =>
+      id === null || id === undefined
+        ? null
+        : (records.find((record) => sameId(record.id, id))?.name ?? null);
+    const propertyTypes = db.getCollection('propertyTypes');
 
-    /** The requirement as one readable cell, empty when nothing was captured. */
+    /**
+     * The requirement as one readable cell, empty when nothing was captured:
+     * "Buy · Apartments · 3 BHK · Whitefield · ₹1.1 Cr – ₹1.4 Cr · 1–3 months",
+     * in the words the lead's own page prints rather than the stored values
+     * ("sale · 3 BHK · Whitefield · 11000000–14000000 · 1-3-months", QA-53).
+     */
     const requirement = (lead) => {
       const wanted = lead.requirement ?? {};
       const budget =
         wanted.budgetMin || wanted.budgetMax
-          ? `${wanted.budgetMin ?? ''}–${wanted.budgetMax ?? ''}`
+          ? formatPriceRange(wanted.budgetMin, wanted.budgetMax, {
+              listingType: wanted.listingType,
+            })
           : null;
 
       return [
-        wanted.listingType,
-        Number.isFinite(wanted.bedrooms) ? `${wanted.bedrooms} BHK` : null,
-        localityName(wanted.localityId),
+        LISTING_TYPES.labelOf(wanted.listingType) || null,
+        nameIn(propertyTypes, wanted.propertyTypeId),
+        Number.isFinite(wanted.bedrooms) ? formatBhk(wanted.bedrooms) : null,
+        nameIn(collections.localities, wanted.localityId),
         budget,
-        wanted.timeline,
+        REQUIREMENT_TIMELINES.labelOf(wanted.timeline) || null,
       ]
         .filter(Boolean)
         .join(' · ');
@@ -369,22 +503,25 @@ module.exports = ({ db, getModel }) => {
         name: lead.name,
         phone: lead.phone,
         email: lead.email,
-        source: LEAD_SOURCES.labelOf(lead.source) ?? lead.source,
-        status: LEAD_STATUS.labelOf(lead.status) ?? lead.status,
-        priority: LEAD_PRIORITY.labelOf(lead.priority) ?? lead.priority,
+        source: LEAD_SOURCES.labelOf(lead.source) || lead.source,
+        status: LEAD_STATUS.labelOf(lead.status) || lead.status,
+        lostReason: lead.status === 'lost' ? lead.lostReason : null,
+        priority: LEAD_PRIORITY.labelOf(lead.priority) || lead.priority,
         assignedTo: userName(lead.assignedTo),
         property:
           collections.properties.find((property) => sameId(property.id, lead.propertyId))?.title ??
           null,
         requirement: requirement(lead),
         message: lead.message,
-        followUpAt: lead.followUpAt,
-        createdAt: lead.createdAt,
+        followUpAt: istDateTime(lead.followUpAt),
+        createdAt: istDateTime(lead.createdAt),
       })),
       CSV_COLUMNS
     );
 
-    const filename = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    // Named after the day it was taken, in IST — the browser names its copy
+    // the same way (`utils/csv.js`).
+    const filename = `leads-${istDay(Date.now())}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(csv);
@@ -407,6 +544,12 @@ module.exports = ({ db, getModel }) => {
           throw validation({ 'payload.status': ['The selected status is invalid.'] });
         }
         changes.status = payload.status;
+
+        // Closing leads in bulk asks why, as closing one does (QA-53): the
+        // reason is recorded on every lead the action closes.
+        if (payload.status === 'lost') {
+          changes.lostReason = lostReasonOf(payload.lostReason, 'payload.lostReason');
+        }
       }
 
       if (body.action === 'priority') {
@@ -418,23 +561,37 @@ module.exports = ({ db, getModel }) => {
 
       if (body.action === 'assign') {
         const assignee = payload.assignedTo ?? null;
-        if (assignee !== null && !users().some((user) => sameId(user.id, assignee))) {
-          throw validation({ 'payload.assignedTo': ['The selected user does not exist.'] });
+        // An id, as `PATCH` asks for one: a string "3" matched the user and was
+        // stored as a string (QA-53).
+        if (assignee !== null && !Number.isInteger(assignee)) {
+          throw validation({
+            'payload.assignedTo': ['The payload.assignedTo must be an integer.'],
+          });
         }
+        assertAssignable(assignee, 'payload.assignedTo');
         changes.assignedTo = assignee;
       }
 
       const ids = body.ids.map(String);
       const targets = rows().filter((lead) => ids.includes(String(lead.id)));
 
+      // `affected` counts what changed, not what was named: a lead already in
+      // the target state is neither an error nor news
+      // (`docs/backend-notes/05_business_rules.md` → "Bulk actions").
+      let affected = 0;
       if (body.action === 'delete') {
         for (const lead of targets) db.removeRecord('leads', lead.id);
+        affected = targets.length;
       } else {
-        for (const lead of targets) applyChanges(lead, { ...changes }, req.user);
+        for (const lead of targets) {
+          // A lead that is already lost keeps the reason it was closed with.
+          const own =
+            changes.status === 'lost' && lead.status === 'lost' ? { status: 'lost' } : changes;
+          if (applyChanges(lead, settleLostReason(lead, { ...own }), req.user)) affected += 1;
+        }
         db.write();
       }
 
-      const affected = targets.length;
       const noun = affected === 1 ? 'lead' : 'leads';
       const verb = body.action === 'delete' ? 'deleted' : 'updated';
       res.message(`${affected} ${noun} ${verb}.`, { affected });
@@ -467,16 +624,11 @@ module.exports = ({ db, getModel }) => {
         if (refused.length > 0) throw forbidden(FORBIDDEN);
       }
 
-      if (
-        Object.prototype.hasOwnProperty.call(changes, 'assignedTo') &&
-        changes.assignedTo !== null &&
-        !users().some((user) => sameId(user.id, changes.assignedTo))
-      ) {
-        throw validation({ assignedTo: ['The selected user does not exist.'] });
+      if (hasOwn(changes, 'assignedTo')) {
+        assertAssignable(changes.assignedTo, 'assignedTo', lead.assignedTo);
       }
 
-      applyChanges(lead, changes, req.user);
-      db.write();
+      if (applyChanges(lead, settleLostReason(lead, changes), req.user)) db.write();
 
       res.ok(present(lead));
     } catch (error) {

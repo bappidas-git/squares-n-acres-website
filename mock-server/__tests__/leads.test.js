@@ -278,7 +278,8 @@ describe('PATCH /admin/leads/:id', () => {
           'Status changed from New to Contacted',
           'Priority changed from High to Low',
           'Assigned to Sales User',
-          'Follow-up set for 20 Sep 2026',
+          // 10:00 UTC is 15:30 in Bengaluru, where the desk reads it (QA-53).
+          'Follow-up set for 20 Sep 2026, 03:30 pm',
         ]
       );
       assert.equal(patched.body.data.assignedUser.name, 'Sales User');
@@ -430,6 +431,249 @@ describe('claim, notes and bulk', () => {
   });
 });
 
+describe('the lost reason (QA-53)', () => {
+  it('asks why a lead is marked as lost, and records it in the timeline', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const none = await request('PATCH', '/admin/leads/1', { token, body: { status: 'lost' } });
+      assert.equal(none.status, 422);
+      assert.ok(none.body.errors.lostReason);
+
+      const short = await request('PATCH', '/admin/leads/1', {
+        token,
+        body: { status: 'lost', lostReason: ' ab ' },
+      });
+      assert.equal(short.status, 422);
+
+      const lost = await request('PATCH', '/admin/leads/1', {
+        token,
+        body: { status: 'lost', lostReason: '  Bought elsewhere ' },
+      });
+      assert.equal(lost.status, 200);
+      assert.equal(lost.body.data.lostReason, 'Bought elsewhere');
+      assert.equal(
+        lost.body.data.activities.at(-1).description,
+        'Status changed from New to Lost — Bought elsewhere'
+      );
+
+      // A lost lead's other fields change without the question being asked again.
+      const priority = await request('PATCH', '/admin/leads/1', {
+        token,
+        body: { priority: 'low' },
+      });
+      assert.equal(priority.status, 200);
+      assert.equal(priority.body.data.lostReason, 'Bought elsewhere');
+    });
+  });
+
+  it('clears the reason when a lead is reopened, and refuses one on an open lead', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const reopened = await request('PATCH', '/admin/leads/6', {
+        token,
+        body: { status: 'contacted' },
+      });
+      assert.equal(reopened.status, 200);
+      assert.equal(reopened.body.data.lostReason, null);
+      assert.equal(
+        reopened.body.data.activities.at(-1).description,
+        'Status changed from Lost to Contacted'
+      );
+
+      const stray = await request('PATCH', '/admin/leads/2', {
+        token,
+        body: { lostReason: 'Not a lost lead' },
+      });
+      assert.equal(stray.status, 422);
+      assert.ok(stray.body.errors.lostReason);
+    });
+  });
+
+  it('asks the bulk bar too, and leaves a lead that is already lost as it was', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const none = await request('POST', '/admin/leads/bulk', {
+        token,
+        body: { ids: [1, 6], action: 'status', payload: { status: 'lost' } },
+      });
+      assert.equal(none.status, 422);
+      assert.ok(none.body.errors['payload.lostReason']);
+
+      const closed = await request('POST', '/admin/leads/bulk', {
+        token,
+        body: {
+          ids: [1, 6],
+          action: 'status',
+          payload: { status: 'lost', lostReason: 'Duplicate enquiry' },
+        },
+      });
+      assert.deepEqual(closed.body, { data: { affected: 1 }, message: '1 lead updated.' });
+
+      assert.equal(
+        (await request('GET', '/admin/leads/1', { token })).body.data.lostReason,
+        'Duplicate enquiry'
+      );
+      assert.equal(
+        (await request('GET', '/admin/leads/6', { token })).body.data.lostReason,
+        'Signed a lease elsewhere before our shortlist was ready.'
+      );
+    });
+  });
+});
+
+describe('sorting, searching and dates (QA-53)', () => {
+  it('sorts a status along the funnel and a priority by rank', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const funnel = await request('GET', '/admin/leads?sort=status&order=asc&perPage=all', {
+        token,
+      });
+      assert.deepEqual(ids(funnel), [1, 2, 3, 4, 5, 6], 'New … Converted, then Lost');
+
+      const urgent = await request('GET', '/admin/leads?sort=priority&order=desc&perPage=all', {
+        token,
+      });
+      assert.deepEqual(
+        urgent.body.data.map((lead) => lead.priority),
+        ['high', 'high', 'high', 'medium', 'medium', 'low']
+      );
+    });
+  });
+
+  it('finds a phone number however it is typed', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      for (const q of ['9876500001', '98765 00001', '+91 98765 00001', '098765-00001']) {
+        const found = await request('GET', `/admin/leads?q=${encodeURIComponent(q)}`, { token });
+        assert.deepEqual(ids(found), [1], q);
+      }
+    });
+  });
+
+  it('stores a 91-series mobile in the one shape, so its second enquiry is a duplicate', async () => {
+    await withServer(async ({ request, login }) => {
+      const first = await request('POST', '/leads', {
+        body: { ...ENQUIRY, name: 'Kavya Rao', phone: '9123456780' },
+      });
+      assert.equal(first.body.data.phone, '+919123456780', 'the leading 91 is the number');
+
+      const second = await request('POST', '/leads', {
+        body: { ...ENQUIRY, name: 'Kavya R.', phone: '+91 91234 56780' },
+      });
+
+      const token = await login(ADMIN);
+      const detail = await request('GET', `/admin/leads/${second.body.data.id}`, { token });
+      assert.equal(detail.body.data.isPossibleDuplicate, true);
+    });
+  });
+
+  it('reads a created date in IST', () => {
+    const { applyLeadFilters } = require('../lib/leadFilters');
+    // 01:30 on 5 September in Bengaluru is still 4 September in UTC.
+    const night = { id: 1, createdAt: '2026-09-04T20:00:00.000Z' };
+
+    assert.equal(applyLeadFilters([night], { from: '2026-09-05', to: '2026-09-05' }).length, 1);
+    assert.equal(applyLeadFilters([night], { from: '2026-09-04', to: '2026-09-04' }).length, 0);
+  });
+
+  it('counts a night-time lead on the Indian day it arrived', () => {
+    const { buildDashboard } = require('../lib/dashboard');
+    const state = { leads: [{ id: 1, status: 'new', createdAt: '2026-09-04T20:00:00.000Z' }] };
+
+    // 07:30 on 5 September, IST.
+    const dashboard = buildDashboard(state, { now: Date.parse('2026-09-05T02:00:00.000Z') });
+    assert.equal(dashboard.stats.leadsToday, 1);
+    assert.deepEqual(dashboard.trends.leadsByDay.at(-1), { date: '2026-09-05', count: 1 });
+  });
+});
+
+describe('what a write changes (QA-53)', () => {
+  it('counts only the leads a bulk action changed, and assigns by id', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const same = await request('POST', '/admin/leads/bulk', {
+        token,
+        body: { ids: [1, 4], action: 'priority', payload: { priority: 'high' } },
+      });
+      assert.deepEqual(same.body, { data: { affected: 0 }, message: '0 leads updated.' });
+
+      const text = await request('POST', '/admin/leads/bulk', {
+        token,
+        body: { ids: [1], action: 'assign', payload: { assignedTo: '3' } },
+      });
+      assert.equal(text.status, 422);
+      assert.ok(text.body.errors['payload.assignedTo']);
+    });
+  });
+
+  it('refuses a deactivated colleague as a new owner', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const created = await request('POST', '/admin/users', {
+        token,
+        body: {
+          name: 'Former Sales',
+          email: 'former.sales@example.com',
+          password: 'Former@123',
+          role: 'sales',
+          isActive: false,
+        },
+      });
+      assert.equal(created.status, 201);
+      const formerId = created.body.data.id;
+
+      const single = await request('PATCH', '/admin/leads/1', {
+        token,
+        body: { assignedTo: formerId },
+      });
+      assert.equal(single.status, 422);
+      assert.deepEqual(single.body.errors.assignedTo, ['The selected user is inactive.']);
+
+      const bulk = await request('POST', '/admin/leads/bulk', {
+        token,
+        body: { ids: [1], action: 'assign', payload: { assignedTo: formerId } },
+      });
+      assert.equal(bulk.status, 422);
+    });
+  });
+
+  it('writes nothing for a change that changes nothing', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const before = (await request('GET', '/admin/leads/2', { token })).body.data;
+
+      const same = await request('PATCH', '/admin/leads/2', {
+        token,
+        body: { status: before.status, priority: before.priority },
+      });
+      assert.equal(same.body.data.updatedAt, before.updatedAt);
+      assert.equal(same.body.data.activities.length, before.activities.length);
+    });
+  });
+
+  it('names the author of every timeline entry', async () => {
+    await withServer(async ({ request, login }) => {
+      const admin = await login(ADMIN);
+      await request('PATCH', '/admin/leads/2', { token: admin, body: { priority: 'high' } });
+
+      // A sales user cannot read the directory; the lead names the author.
+      const token = await login(SALES);
+      const lead = (await request('GET', '/admin/leads/2', { token })).body.data;
+      const last = lead.activities.at(-1);
+
+      assert.equal(last.description, 'Priority changed from Medium to High');
+      assert.equal(last.createdByName, 'Admin User');
+    });
+  });
+});
+
 describe('GET /admin/leads/export', () => {
   it('writes a CSV with a BOM, the contract’s columns and the same filters', async () => {
     await withServer(async ({ request, login }) => {
@@ -447,7 +691,7 @@ describe('GET /admin/leads/export', () => {
       const [header, ...rows] = response.text.slice(1).trim().split('\r\n');
       assert.equal(
         header,
-        'ID,Name,Phone,Email,Source,Status,Priority,Assigned To,Property,Requirement,Message,Follow-up,Created At'
+        'ID,Name,Phone,Email,Source,Status,Lost Reason,Priority,Assigned To,Property,Requirement,Message,Follow-up (IST),Created At (IST)'
       );
       assert.equal(rows.length, 6);
       assert.match(rows[0], /^1,Ananya Rao,/);
@@ -455,6 +699,62 @@ describe('GET /admin/leads/export', () => {
 
       const empty = await request('GET', '/admin/leads/export?q=nobody-by-that-name', { token });
       assert.equal(empty.text.slice(1).trim().split('\r\n').length, 1, 'the header row alone');
+    });
+  });
+
+  it('writes the cells in the words and the timezone the desk reads (QA-53)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const response = await request('GET', '/admin/leads/export', { token });
+      const rows = response.text.slice(1).trim().split('\r\n').slice(1);
+      const row = (id) => rows.find((line) => line.startsWith(`${id},`));
+
+      // Labels and a lakh/crore budget, not "sale · 9000000–12000000 · 3-6-months".
+      assert.match(row(1), /,Buy · Apartments · 3 BHK · Whitefield · 1–3 months,/);
+      assert.match(
+        row(2),
+        /,Buy · Apartments · 3 BHK · Sarjapur Road · ₹90 L – ₹1\.2 Cr · 3–6 months,/
+      );
+
+      // IST wall-clock times: 11:20 UTC is 16:50, 05:30 UTC is 11:00.
+      assert.match(row(1), /,2026-09-08 16:50$/);
+      assert.match(row(2), /,2026-09-18 11:00,2026-09-05 13:30$/);
+
+      // Why a lost lead was lost is in the file; nobody else has a reason.
+      assert.match(row(6), /,Lost,Signed a lease elsewhere before our shortlist was ready\.,Low,/);
+      assert.match(row(5), /,Converted,,High,/);
+    });
+  });
+
+  it('keeps a cell a spreadsheet would run as a formula as text (QA-53)', async () => {
+    await withServer(async ({ request, login }) => {
+      await request('POST', '/leads', {
+        body: { ...ENQUIRY, name: '=HYPERLINK("https://evil.test","Open")', message: '@SUM(1)' },
+      });
+
+      const token = await login(ADMIN);
+      const response = await request('GET', '/admin/leads/export?q=HYPERLINK', { token });
+      const [row] = response.text.slice(1).trim().split('\r\n').slice(1);
+
+      assert.match(row, /,"'=HYPERLINK\(""https:\/\/evil\.test"",""Open""\)",/);
+      assert.match(row, /,'\+919876543210,/, 'a +91 number stays a number, not 9.19877E+11');
+      assert.match(row, /,'@SUM\(1\),/);
+    });
+  });
+
+  it('writes the rows in the order the table was sorted in (QA-53)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const response = await request('GET', '/admin/leads/export?sort=priority&order=asc', {
+        token,
+      });
+      const rows = response.text.slice(1).trim().split('\r\n').slice(1);
+
+      assert.deepEqual(
+        rows.map((line) => Number(line.split(',')[0])),
+        [6, 2, 3, 1, 4, 5],
+        'Low, then Medium, then High — newest first inside each'
+      );
     });
   });
 

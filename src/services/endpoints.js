@@ -1057,7 +1057,7 @@ const adminLeads = {
     description: 'Lead list for the CRM; scoped to own and unassigned leads for sales',
     query: {
       ...LIST_QUERY,
-      sort: 'enum:createdAt,updatedAt,followUpAt,status',
+      sort: 'enum:createdAt,updatedAt,followUpAt,status,priority',
       status: csvEnumOf(LEAD_STATUS),
       source: csvEnumOf(LEAD_SOURCES),
       priority: csvEnumOf(LEAD_PRIORITY),
@@ -1149,7 +1149,12 @@ const adminLeads = {
     auth: 'user',
     module: 'leads',
     description: 'CSV export of the filtered lead list, scoped like the list endpoint',
+    // The table's order too: `http.buildParams` drops a key the entry does not
+    // list, so without these the file came out newest first whatever the
+    // table was sorted by (QA-53).
     query: {
+      sort: 'enum:createdAt,updatedAt,followUpAt,status,priority',
+      order: 'enum:asc,desc',
       q: 'string',
       status: csvEnumOf(LEAD_STATUS),
       source: csvEnumOf(LEAD_SOURCES),

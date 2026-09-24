@@ -8,7 +8,7 @@ info:
     `src/services/endpoints.js`, `src/services/schemas/` and
     `mock-server/schemas/models.js`. Do not edit by hand.
 
-    generatedFrom: e85e09d
+    generatedFrom: e26e7d2
 
     Read `01_API_CONTRACT.md` first: the envelopes of §5.2, the error body
     of §5.3 and the pagination of §5.6 apply to every operation below and
@@ -5589,7 +5589,7 @@ paths:
                   trends:
                     leadsByDay:
                       - date: 2026-01-15
-                        count: 0
+                        count: 1
                       - date: 2026-01-15
                         count: 1
                       - …28 more (trimmed for this example)
@@ -8016,6 +8016,7 @@ paths:
               - updatedAt
               - followUpAt
               - status
+              - priority
         - name: source
           in: query
           required: false
@@ -8210,6 +8211,7 @@ paths:
                       description: Lead created via Property Enquiry
                       createdBy: null
                       createdAt: 2026-01-15T09:30:00.000Z
+                      createdByName: null
                   utm:
                     source: null
                     medium: null
@@ -8315,11 +8317,13 @@ paths:
                       description: Lead created via Property Enquiry
                       createdBy: null
                       createdAt: 2026-01-15T09:30:00.000Z
+                      createdByName: null
                     - id: 2
                       type: note-added
                       description: Note added
                       createdBy: 1
                       createdAt: 2026-01-15T09:30:00.000Z
+                      createdByName: Admin User
                   ipAddress: 127.0.0.1
                   userAgent: node
                   name: Priya Raghavan
@@ -8473,11 +8477,13 @@ paths:
                       description: Lead created via Property Enquiry
                       createdBy: null
                       createdAt: 2026-01-15T09:30:00.000Z
+                      createdByName: null
                     - id: 2
                       type: note-added
                       description: Note added
                       createdBy: 1
                       createdAt: 2026-01-15T09:30:00.000Z
+                      createdByName: Admin User
                     - …1 more (trimmed for this example)
                   ipAddress: 127.0.0.1
                   userAgent: node
@@ -8589,11 +8595,13 @@ paths:
                       description: Lead created via Property Enquiry
                       createdBy: null
                       createdAt: 2026-01-15T09:30:00.000Z
+                      createdByName: null
                     - id: 2
                       type: note-added
                       description: Note added
                       createdBy: 1
                       createdAt: 2026-01-15T09:30:00.000Z
+                      createdByName: Admin User
                     - …2 more (trimmed for this example)
                   ipAddress: 127.0.0.1
                   userAgent: node
@@ -8705,11 +8713,13 @@ paths:
                       description: Lead created via Property Enquiry
                       createdBy: null
                       createdAt: 2026-01-15T09:30:00.000Z
+                      createdByName: null
                     - id: 2
                       type: note-added
                       description: Note added
                       createdBy: 1
                       createdAt: 2026-01-15T09:30:00.000Z
+                      createdByName: Admin User
                     - …2 more (trimmed for this example)
                   ipAddress: 127.0.0.1
                   userAgent: node
@@ -8818,6 +8828,14 @@ paths:
           schema:
             type: string
             format: date
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
         - name: priority
           in: query
           required: false
@@ -8834,6 +8852,17 @@ paths:
           required: false
           schema:
             type: string
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - createdAt
+              - updatedAt
+              - followUpAt
+              - status
+              - priority
         - name: source
           in: query
           required: false
@@ -13624,7 +13653,7 @@ paths:
                   enquiryCount: 0
                   publishedAt: 2026-01-15T09:30:00.000Z
                   createdBy: 1
-                  updatedBy: 2
+                  updatedBy: 1
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
                   propertyType:
@@ -15083,7 +15112,7 @@ paths:
                   enquiryCount: 0
                   publishedAt: 2026-01-15T09:30:00.000Z
                   createdBy: 1
-                  updatedBy: 2
+                  updatedBy: 1
                   createdAt: 2026-01-15T09:30:00.000Z
                   updatedAt: 2026-01-15T09:30:00.000Z
                   propertyType:
@@ -17227,20 +17256,20 @@ paths:
                   - meta
               example:
                 data:
-                  - key: property:1
-                    id: 1
+                  - key: property:20
+                    id: 20
                     type: property
-                    title: Lakeview Heights – 3 BHK Apartment in Whitefield
-                    slug: lakeview-heights-3-bhk-whitefield
-                    url: https://www.squaresnacres.com/properties/lakeview-heights-3-bhk-whitefield
+                    title: Aurelia Court – 3 BHK Duplex in Koramangala
+                    slug: aurelia-court-duplex-koramangala
+                    url: https://www.squaresnacres.com/properties/aurelia-court-duplex-koramangala
                     seo:
-                      focusKeyword: 3 bhk apartment in whitefield
+                      focusKeyword: 3 bhk duplex in koramangala
                       secondaryKeywords:
-                        - lakeview heights whitefield
-                        - apartments in whitefield
-                      title: 3 BHK Apartment in Whitefield
-                      description: 3 BHK Apartment at Lakeview Heights, Whitefield, Bengaluru — 1,650 sq ft at ₹1.24 Cr. Ready-to-move 2 and 3 BHK apartments in a gated development off Whitefield
-                      slug: lakeview-heights-3-bhk-whitefield
+                        - aurelia court koramangala
+                        - duplexes in koramangala
+                      title: 3 BHK Duplex in Koramangala
+                      description: 3 BHK Duplex at Aurelia Court, Koramangala, Bengaluru — 2,250 sq ft at ₹3.6 Cr. A resale three-bedroom duplex across the fourth and fifth floors of a small
+                      slug: aurelia-court-duplex-koramangala
                       canonicalUrl: null
                       robots:
                         index: true
@@ -17290,20 +17319,20 @@ paths:
                       title: []
                       description: []
                       focusKeyword: []
-                  - key: property:20
-                    id: 20
+                  - key: property:37
+                    id: 37
                     type: property
-                    title: Aurelia Court – 3 BHK Duplex in Koramangala
-                    slug: aurelia-court-duplex-koramangala
-                    url: https://www.squaresnacres.com/properties/aurelia-court-duplex-koramangala
+                    title: Greenfield High Street – Retail Shop for Lease in Indiranagar
+                    slug: greenfield-high-street-retail-lease-indiranagar
+                    url: https://www.squaresnacres.com/properties/greenfield-high-street-retail-lease-indiranagar
                     seo:
-                      focusKeyword: 3 bhk duplex in koramangala
+                      focusKeyword: retail shop for lease in indiranagar
                       secondaryKeywords:
-                        - aurelia court koramangala
-                        - duplexes in koramangala
-                      title: 3 BHK Duplex in Koramangala
-                      description: 3 BHK Duplex at Aurelia Court, Koramangala, Bengaluru — 2,250 sq ft at ₹3.6 Cr. A resale three-bedroom duplex across the fourth and fifth floors of a small
-                      slug: aurelia-court-duplex-koramangala
+                        - greenfield high street indiranagar
+                        - retail shops in indiranagar
+                      title: Retail Shop for Lease in Indiranagar
+                      description: Retail Shop at Greenfield High Street, Indiranagar, Bengaluru — 1,800 sq ft at ₹3.96 L a month. An 1,800 sq ft ground-floor retail unit for lease on an
+                      slug: greenfield-high-street-retail-lease-indiranagar
                       canonicalUrl: null
                       robots:
                         index: true
