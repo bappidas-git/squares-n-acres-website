@@ -85,6 +85,71 @@ const scoreNow = () =>
       .match(/\d+/)[0]
   );
 
+/**
+ * The biggest record this application holds — twenty images, a forty-section
+ * body, eight FAQs — or `scale` times it.
+ *
+ * @param {number} scale
+ * @returns {object}
+ */
+const heavyListing = (scale) => ({
+  ...PROPERTY,
+  images: Array.from({ length: 20 * scale }, (_row, index) => ({
+    url: `https://example.com/${index}.jpg`,
+    alt: index % 3 === 0 ? 'Lakeview Heights apartment' : '',
+    isCover: index === 0,
+  })),
+  description: Array.from(
+    { length: 40 * scale },
+    (_row, index) =>
+      `<h2>Section ${index}</h2><p>A three bedroom apartment in Whitefield, Bengaluru with a lake view, covered parking, a clubhouse and a garden that the residents share. ${'The project is close to the tech parks of the eastern corridor. '.repeat(3)}</p>`
+  ).join(''),
+  faqs: Array.from({ length: 8 * scale }, (_row, index) => ({
+    question: `Question ${index}?`,
+    answer: 'An answer of a sentence or two.',
+  })),
+  seo: { focusKeyword: '3 bhk apartment in whitefield', title: 'Lakeview Heights' },
+});
+
+/**
+ * Milliseconds on the main thread's own CPU clock where Node has one
+ * (`process.threadCpuUsage`, in recent releases), so another process on the
+ * machine — a parallel test run, the e2e suite — cannot make the analysis look
+ * slow; the wall clock otherwise.
+ */
+const threadClock =
+  typeof process.threadCpuUsage === 'function'
+    ? () => {
+        const { user, system } = process.threadCpuUsage();
+        return (user + system) / 1000;
+      }
+    : () => performance.now();
+
+/**
+ * What analysing each record costs: the fastest of `runs` timings after a
+ * warm-up. The records take turns, so whatever else the machine is doing falls
+ * on each alike; a slower run measured that, and only a real regression makes
+ * every run slower.
+ *
+ * @param {Array<object>} records
+ * @param {number} [runs]
+ * @returns {Array<number>} milliseconds, one per record
+ */
+function fastestAnalyses(records, runs = 5) {
+  const context = { seoSettings: SETTINGS, siteIndex: INDEX };
+  records.forEach((record) => analyze('property', record, context)); // warm the parsers
+
+  const fastest = records.map(() => Infinity);
+  for (let run = 0; run < runs; run += 1) {
+    records.forEach((record, index) => {
+      const started = threadClock();
+      analyze('property', record, context);
+      fastest[index] = Math.min(fastest[index], threadClock() - started);
+    });
+  }
+  return fastest;
+}
+
 describe('SeoPanel', () => {
   it('analyses the record and re-analyses when a field changes', async () => {
     renderWith(<Host />);
@@ -252,33 +317,23 @@ describe('SeoPanel', () => {
   it('analyses a heavy listing fast enough to run on every keystroke', () => {
     // Twenty images and a long body is the biggest record this application
     // holds; the panel re-analyses 400 ms after the last keystroke, so this has
-    // to be over long before the next one lands (§7).
-    const heavy = {
-      ...PROPERTY,
-      images: Array.from({ length: 20 }, (_row, index) => ({
-        url: `https://example.com/${index}.jpg`,
-        alt: index % 3 === 0 ? 'Lakeview Heights apartment' : '',
-        isCover: index === 0,
-      })),
-      description: Array.from(
-        { length: 40 },
-        (_row, index) =>
-          `<h2>Section ${index}</h2><p>A three bedroom apartment in Whitefield, Bengaluru with a lake view, covered parking, a clubhouse and a garden that the residents share. ${'The project is close to the tech parks of the eastern corridor. '.repeat(3)}</p>`
-      ).join(''),
-      faqs: Array.from({ length: 8 }, (_row, index) => ({
-        question: `Question ${index}?`,
-        answer: 'An answer of a sentence or two.',
-      })),
-      seo: { focusKeyword: '3 bhk apartment in whitefield', title: 'Lakeview Heights' },
-    };
+    // to be over long before the next one lands (§7). It is timed on the main
+    // thread's own clock, as the fastest of several runs: one wall-clock
+    // reading failed at 101 ms while the e2e suite shared the machine, with
+    // nothing in the analysis changed (QA-61).
+    const [cost] = fastestAnalyses([heavyListing(1)]);
 
-    const context = { seoSettings: SETTINGS, siteIndex: INDEX };
-    analyze('property', heavy, context); // warm the parsers
+    expect(cost).toBeLessThan(100);
+  });
 
-    const started = performance.now();
-    analyze('property', heavy, context);
-    const elapsed = performance.now() - started;
+  it('grows in step with the listing, not faster', () => {
+    // Four times the listing is about four times the work: the analysis is
+    // linear. A pass over every pair of sections or images grows sixteen-fold
+    // instead, so once it is a fair share of the cost this fails — on any
+    // machine, however fast, while the heaviest listing is still inside the
+    // budget above (QA-61).
+    const [single, quadruple] = fastestAnalyses([heavyListing(1), heavyListing(4)]);
 
-    expect(elapsed).toBeLessThan(100);
+    expect(quadruple / single).toBeLessThan(8);
   });
 });
