@@ -16,6 +16,7 @@ import {
   TextField,
 } from '../../../../../components/ui';
 import { useTeamMembers } from '../../../../../hooks/useMasterData';
+import { tidyPhone } from '../../../../../utils/validators';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
@@ -37,6 +38,13 @@ const fromMember = (member) => ({
 });
 
 const filled = (value) => String(value ?? '').trim() !== '';
+
+/**
+ * Room for a number as people write it — "98450 12345", "+91 98450-12345" —
+ * which the listing stores as its ten digits (`toPayload`). Capped at ten,
+ * "98450 12345" was cut to "98450 1234" and refused (QA-61).
+ */
+const PHONE_LENGTH = 18;
 
 /**
  * Tab 15 — Agent.
@@ -233,6 +241,7 @@ export default function AgentTab() {
             error={errors['agent.phone']}
             disabled={disabled}
             hint="Ten digits, starting 6–9."
+            maxLength={PHONE_LENGTH}
             onChange={(event) => setField('agent.phone', event.target.value)}
           />
         </FormColumn>
@@ -244,6 +253,7 @@ export default function AgentTab() {
             error={errors['agent.whatsapp']}
             disabled={disabled}
             hint="Empty: the card has no WhatsApp button of its own, and “WhatsApp us” on the page reaches the office number."
+            maxLength={PHONE_LENGTH}
             onChange={(event) => setField('agent.whatsapp', event.target.value)}
           />
         </FormColumn>
@@ -279,17 +289,19 @@ export default function AgentTab() {
             <div className={styles.agentPreviewBody}>
               <p className={styles.agentPreviewName}>{agent.name || 'Squares N Acres'}</p>
               {agent.showOnListing && hasContact ? (
+                // Each number as the listing will store it: typed with its
+                // +91, it read "+91 +91 98450 12345" here (QA-61).
                 <ul className={styles.agentPreviewList}>
                   {filled(agent.phone) ? (
                     <li>
                       <Icon icon="mdi:phone-outline" width="14" height="14" aria-hidden="true" />
-                      +91 {agent.phone}
+                      +91 {tidyPhone(agent.phone)}
                     </li>
                   ) : null}
                   {filled(agent.whatsapp) ? (
                     <li>
                       <Icon icon="mdi:whatsapp" width="14" height="14" aria-hidden="true" />
-                      +91 {agent.whatsapp}
+                      +91 {tidyPhone(agent.whatsapp)}
                     </li>
                   ) : null}
                   {filled(agent.email) ? (

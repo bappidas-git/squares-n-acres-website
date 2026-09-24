@@ -24,6 +24,7 @@
 
 import { derivedPricePerSqft, isRentOrLease, showsAge, showsPossessionDate } from './fieldRules';
 import { isTmpId } from './initialState';
+import { tidyPhone } from '../../../../utils/validators';
 
 /** A trimmed string, `''` when there is nothing. */
 const str = (value) => (value === null || value === undefined ? '' : String(value).trim());
@@ -365,8 +366,10 @@ export default function toPayload(values = {}) {
     agent: {
       teamMemberId: int(values.agent?.teamMemberId),
       name: strOrNull(values.agent?.name),
-      phone: strOrNull(values.agent?.phone),
-      whatsapp: strOrNull(values.agent?.whatsapp),
+      // The ten digits every record stores, however the number was typed
+      // ("+91 98450 12345", "98450-12345") — QA-61.
+      phone: strOrNull(tidyPhone(str(values.agent?.phone))),
+      whatsapp: strOrNull(tidyPhone(str(values.agent?.whatsapp))),
       email: strOrNull(values.agent?.email),
       photoUrl: strOrNull(values.agent?.photoUrl),
       showOnListing: bool(values.agent?.showOnListing),

@@ -26,7 +26,7 @@ import { DIALOGS, FORMS, TABLES, TOASTS } from '../../config/adminCopy';
 import { applySeoSideEffects, validateSeoBranch } from '../seo/seoSideEffects';
 import ApiError, { firstFieldMessage } from '../../services/apiError';
 import { toSeoPayload, withSeoDefaults } from '../seo/seoValues';
-import { normalizePhone } from '../../utils/validators';
+import { tidyPhone } from '../../utils/validators';
 import { useToast } from '../common/ToastProvider';
 
 import styles from './MasterDataPage.module.css';
@@ -43,6 +43,10 @@ const PARAM_TYPE = {
 // applications and the newsletter (QA-61) — sanitise the same way without
 // bringing this one along; re-exported for the callers that read it here.
 export { sanitiseParams };
+// Beside `normalizePhone`, so the forms that are not built on this screen —
+// the profile page, the property form's Agent tab — tidy a number the same way
+// without bringing it along (QA-61); re-exported for the callers that read it here.
+export { tidyPhone };
 
 /** `{ key: type }` for `useApiList`, derived from the filters a config declares. */
 function paramKeysOf(filters = [], extra = {}) {
@@ -1468,23 +1472,6 @@ export function trimText(values, fields) {
     copy[field.name] = value.trim();
   }
   return copy ?? values;
-}
-
-/**
- * A mobile number as the ten digits the records store: "98450 12345", "+91
- * 98450-12345" and "098450 12345" are all 9845012345 (QA-61). Which prefixes
- * come off is `normalizePhone`'s rule (QA-53), less the `+91` it writes for a
- * lead. Anything that is not a mobile number is handed back as typed, for the
- * rules to refuse.
- *
- * @param {unknown} value
- * @returns {unknown}
- */
-export function tidyPhone(value) {
-  const normalised = normalizePhone(value);
-  return typeof normalised === 'string' && /^\+91[6-9]\d{9}$/.test(normalised)
-    ? normalised.slice(3)
-    : value;
 }
 
 /**

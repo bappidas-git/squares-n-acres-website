@@ -18,6 +18,7 @@ import {
   SLUG_PATTERN,
   URL_PATTERN,
 } from '../../../../../utils/validation';
+import { tidyPhone } from '../../../../../utils/validators';
 import { validateSeoBranch } from '../../../../../components/seo/seoSideEffects';
 import { isMapEmbedUrl } from '../../../../../utils/mapEmbed';
 
@@ -664,12 +665,14 @@ export function validateAgent(values) {
   const { errors, add } = collector();
   const agent = values.agent ?? {};
 
-  const phone = String(agent.phone ?? '').replace(/[\s-]/g, '');
+  // Read as it will be stored (`toPayload`): "098450 12345" and "(98450)
+  // 12345" are the ten digits the payload sends, and were refused (QA-61).
+  const phone = tidyPhone(String(agent.phone ?? '').trim());
   if (phone && !INDIAN_MOBILE_PATTERN.test(phone)) {
     add('agent.phone', 'Use a ten-digit Indian mobile number.');
   }
 
-  const whatsapp = String(agent.whatsapp ?? '').replace(/[\s-]/g, '');
+  const whatsapp = tidyPhone(String(agent.whatsapp ?? '').trim());
   if (whatsapp && !INDIAN_MOBILE_PATTERN.test(whatsapp)) {
     add('agent.whatsapp', 'Use a ten-digit Indian mobile number.');
   }

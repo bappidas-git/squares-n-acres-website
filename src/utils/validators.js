@@ -61,6 +61,23 @@ export function normalizePhone(value) {
   return `+91${local}`;
 }
 
+/**
+ * A mobile number as the ten digits the records store: "98450 12345", "+91
+ * 98450-12345" and "098450 12345" are all 9845012345 (QA-61). Which prefixes
+ * come off is {@link normalizePhone}'s rule, less the `+91` it writes for a
+ * lead. Anything that is not a mobile number is handed back as typed, for the
+ * rules to refuse.
+ *
+ * @param {unknown} value
+ * @returns {unknown}
+ */
+export function tidyPhone(value) {
+  const normalised = normalizePhone(value);
+  return typeof normalised === 'string' && /^\+91[6-9]\d{9}$/.test(normalised)
+    ? normalised.slice(3)
+    : value;
+}
+
 /** The last ten digits of a stored number, for prefilling a `+91` input. */
 export function localPhoneDigits(value) {
   if (value === null || value === undefined) return '';
