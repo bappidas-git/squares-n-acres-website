@@ -19,13 +19,21 @@ Every public entity has one, and the API owns it (§5.9).
   `…-2` never overflows.
 - A duplicate **explicit** slug is a conflict, not a silent rename: **409** with
   `errors.slug`.
+- **An empty slug is never stored** (QA-60). A title with no Latin letter or
+  digit in it — `"!!"`, `"北京 नगर"`, a listing titled in Devanagari alone —
+  makes no slug at all: it used to be stored as `""`, two such records shared
+  it and neither had a page. Such a record keeps the slug it already has, or is
+  given `<noun>-<id>` (`locality-21`, `property-type-18`, `property-45`),
+  de-duplicated like any other; the editor can replace it.
 - `GET /admin/<resource>/check-slug?slug=&excludeId=` answers
   `{ data: { available, suggestion } }`. `suggestion` is the de-duplicated form
   and is `null` when the slug is free.
 - `entity.slug` and `entity.seo.slug` are always the same value. The API writes
   both; a client that sends only one gets both updated.
 - Changing a slug does **not** create a redirect automatically. The admin offers
-  it; the API only stores what `/admin/redirects` is told.
+  it — a page (QA-56), and a locality, a developer and a property type (QA-60),
+  whose old addresses it sends to the new ones with a 301 — and the API only
+  stores what `/admin/redirects` is told.
 
 ## Property search
 
@@ -735,6 +743,41 @@ legitimately be replaced.
 At the database level this is `ON DELETE RESTRICT`, which makes the guard a
 belt-and-braces check rather than the only thing standing between a listing and
 a missing locality.
+
+## Master data writes and reads
+
+What a master-data write keeps, and what a public read shows of it (QA-60).
+
+- **Text is trimmed before it is checked.** Laravel's `TrimStrings` middleware
+  does this for every request; the mock does it for every collection of
+  `routes/masterData.js` (`trimStrings`): a `string` field, the strings of an
+  array of them (a locality's `highlights`) and the strings of an array of
+  objects (its `connectivity` rows). HTML, slugs and URLs are left as sent.
+  `"  Mysuru  "` was stored with its spaces and sorted above `"Bengaluru"`; and
+  `" A "` is one character, so it fails `min: 2`.
+- **A city lists a locality once.** `name` is unique within its city, case and
+  spacing aside (422 on `name`, "This locality is already in Bengaluru."), as
+  the data model has always said; another city may have a locality of the same
+  name. Asked of a create and of a write that changes the name or the city.
+  Laravel: `Rule::unique('localities', 'name')->where('city_id', $cityId)
+  ->ignore($id)`, under the case-insensitive collation the schema uses (the
+  mock also reads a run of spaces as one). A second "Whitefield" in Bengaluru
+  was stored, and every locality picker, the listing filters and `/localities`
+  offered two.
+- **`sort=category` on amenities orders the categories as the site groups
+  them** — `basic, lifestyle, safety, sports, kids, eco, convenience,
+  commercial` (`AMENITY_CATEGORIES`) — then by `order`. By the alphabet,
+  Commercial came second in the admin's grouped table and last everywhere else.
+  Laravel: `ORDER BY FIELD(category, 'basic', 'lifestyle', …), `order``.
+- **A public property read shows only the master data that is switched on.**
+  An inactive amenity or badge is left out of `amenities[]` and `badges[]` —
+  "Price Drop" switched off once the offer ended was still on every card. An
+  inactive locality or developer keeps its `id` and `name` in
+  `location.locality` / `project.developer` but answers `slug: null`: its page
+  answers 404, and every link the site draws from a listing (the locality guide,
+  the builder, the breadcrumb, the JSON-LD) is drawn only when there is a slug.
+  Admin reads are unchanged, so the property form never drops a tick it cannot
+  see.
 
 ## FAQs
 

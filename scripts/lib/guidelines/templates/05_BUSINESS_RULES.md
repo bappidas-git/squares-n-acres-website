@@ -126,6 +126,12 @@ poor specification.
 
 ---
 
+## Master data writes and reads
+
+{{masterDataWritesAndReads}}
+
+---
+
 ## FAQs
 
 {{faqs}}
