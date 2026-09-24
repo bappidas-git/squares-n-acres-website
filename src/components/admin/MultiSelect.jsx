@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useRef, useState } from 'react';
 import Autocomplete from '@mui/material/Autocomplete';
 import TextField from '@mui/material/TextField';
 
@@ -14,6 +14,13 @@ const sameValue = (left, right) => String(left) === String(right);
  * It speaks in **values**, not option objects: `value` is an array of ids and
  * `onChange` gives back an array of ids, so a form can hand what it holds
  * straight to the API (`amenityIds`, `badgeIds`, `tagIds`; §5.5).
+ *
+ * **The keyboard (QA-55).** Once something is typed, Enter takes the first
+ * option — the exact match when there is one, "Add …" when a creatable field
+ * has none — so "khata" + Enter picks Khata and "stamp act" + Enter creates
+ * it. Before, nothing was highlighted until an arrow key moved, so Enter did
+ * nothing; and a chosen option stayed in the list, where an Enter that landed
+ * on it took it back out. The list now offers only what is not chosen yet.
  *
  * @param {object} props
  * @param {string} [props.label]
@@ -47,20 +54,56 @@ export default function MultiSelect({
   const id = useId();
   const full = typeof max === 'number' && value.length >= max;
 
-  const selected = value.map(
+  // `onCreate` answers after a request: what it adds joins the value as it is
+  // then, not as it was when the option was picked — a chip chosen in the
+  // meantime used to disappear when the new tag arrived. One create at a time.
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const creating = useRef(false);
+
+  // Enter takes the first option only once something has been typed: an
+  // empty box opened by a click is not a choice of whatever happens to be
+  // first in the list.
+  const [typed, setTyped] = useState('');
+
+  // The chosen options, as the same array for as long as they are the same
+  // options. MUI's Autocomplete clears what has been typed whenever its
+  // `value` changes identity, and a list built afresh on every render changed
+  // it on every render: each keystroke re-renders this field (`typed`), and
+  // the article form re-renders around it on its own — the ten-second draft
+  // — so the box emptied itself under the editor's fingers (QA-55).
+  const selectedRef = useRef([]);
+  const nextSelected = value.map(
     (entry) =>
       options.find((option) => sameValue(option.value, entry)) ?? {
         value: entry,
         label: String(entry),
       }
   );
+  const unchanged =
+    nextSelected.length === selectedRef.current.length &&
+    nextSelected.every(
+      (option, index) =>
+        sameValue(option.value, selectedRef.current[index].value) &&
+        option.label === selectedRef.current[index].label
+    );
+  if (!unchanged) selectedRef.current = nextSelected;
+  const selected = selectedRef.current;
 
   const handleChange = async (_event, next) => {
     const created = next.find((option) => option?.isNew);
     if (created && onCreate) {
-      const made = await onCreate(created.inputValue);
-      if (!made) return;
-      onChange?.([...value, made.value]);
+      if (creating.current) return;
+      creating.current = true;
+      try {
+        const made = await onCreate(created.inputValue);
+        if (!made) return;
+        const current = valueRef.current;
+        if (current.some((entry) => sameValue(entry, made.value))) return;
+        onChange?.([...current, made.value]);
+      } finally {
+        creating.current = false;
+      }
       return;
     }
 
@@ -110,6 +153,9 @@ export default function MultiSelect({
         options={options}
         value={selected}
         onChange={handleChange}
+        onInputChange={(_event, next) => setTyped(next)}
+        autoHighlight={typed.trim() !== ''}
+        filterSelectedOptions
         getOptionLabel={(option) => option?.label ?? ''}
         isOptionEqualToValue={(option, current) => sameValue(option.value, current.value)}
         getOptionDisabled={(option) =>
@@ -117,15 +163,20 @@ export default function MultiSelect({
         }
         filterOptions={(list, state) => {
           const query = state.inputValue.trim();
+          const lower = query.toLowerCase();
           const filtered = searchable
-            ? list.filter((option) => option.label.toLowerCase().includes(query.toLowerCase()))
+            ? list.filter((option) => option.label.toLowerCase().includes(lower))
             : list;
 
-          const exists = list.some((option) => option.label.toLowerCase() === query.toLowerCase());
-          if (creatable && query && !exists) {
+          // `list` holds only what is not chosen yet; whether the typed name
+          // is already an option — chosen or not — is asked of all of them.
+          const exact = filtered.find((option) => option.label.toLowerCase() === lower);
+          const known = options.some((option) => option.label.toLowerCase() === lower);
+          if (exact) return [exact, ...filtered.filter((option) => option !== exact)];
+          if (creatable && query && !known) {
             return [
-              ...filtered,
               { value: `new:${query}`, label: `Add "${query}"`, isNew: true, inputValue: query },
+              ...filtered,
             ];
           }
           return filtered;

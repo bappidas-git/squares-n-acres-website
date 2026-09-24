@@ -100,10 +100,13 @@ export default function ArticleDetail() {
   const showToc = (article?.tableOfContents ?? true) && tocIds(toc).length >= MIN_TOC_HEADINGS;
   const activeHeading = useActiveHeading(showToc ? tocIds(toc) : []);
 
+  // Only a live piece has neighbours: the API answers 404 for one it would not
+  // show, so a preview of a draft asked for them and logged the refusal on
+  // every preview (QA-55).
   const { data: neighbours } = useApi(
     (signal) => articleService.prevNext(article, { signal }),
     [article?.id, article?.categoryId],
-    { enabled: Boolean(article?.id) }
+    { enabled: Boolean(article?.id) && article?.status === 'published' }
   );
 
   const onFaqItems = useCallback((items) => setBlockFaqs(items), []);

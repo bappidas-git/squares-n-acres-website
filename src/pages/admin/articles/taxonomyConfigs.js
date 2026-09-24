@@ -1,6 +1,5 @@
 import { Icon } from '@iconify/react';
 
-import Alert from '../../../components/ui/Alert';
 import Avatar from '../../../components/ui/Avatar';
 import {
   adminCrud,
@@ -18,10 +17,11 @@ import styles from './taxonomyConfigs.module.css';
  * configurations: categories, tags and authors (00_MASTER_CONTEXT.md §6.8).
  *
  * They differ from the property master data in one way that matters: the count
- * beside each row is the number of **published** articles pointing at it, which
- * is the number that decides whether a delete is refused (D88). A category with
- * four articles cannot be removed until they have been moved, and the guard
- * dialog lists them.
+ * beside each row is the number of **published** articles pointing at it — the
+ * number a reader sees on the archive. It is not what decides a delete: any
+ * article pointing at a record holds it, a draft included, and the guard
+ * dialog lists every one (D88). The column says "Published articles" so that a
+ * "0" whose delete is refused over a draft reads as the fact it is (QA-55).
  *
  * They are functions rather than constants so that a page can hand in what only
  * it knows, and every page memoises the call — a configuration rebuilt on every
@@ -50,16 +50,23 @@ const NameCell = ({ name, hint }) => (
   </span>
 );
 
-/** "4 articles" — the count the delete guard is decided on. */
-const countColumn = (label = 'Articles') => ({
+/** "4" published articles — what the archive shows, not what holds a delete. */
+const countColumn = (label = 'Published articles') => ({
   key: 'articleCount',
   label,
   sortable: true,
   align: 'right',
-  width: '110px',
+  width: '120px',
+  wrapHeader: true,
   mobile: true,
   render: (row) => formatNumber(row.articleCount ?? 0),
 });
+
+/** "3 published · inactive" — the second line of a row in the drag list. */
+const orderHint = (row) =>
+  [`${formatNumber(row.articleCount ?? 0)} published`, row.isActive === false ? 'inactive' : null]
+    .filter(Boolean)
+    .join(' · ');
 
 const updatedColumn = {
   key: 'updatedAt',
@@ -94,19 +101,6 @@ const bulkActions = (plural) => [
     },
   },
 ];
-
-/** The placeholder the full SEO panel replaces (D87). */
-const seoPlaceholder = (what) => (
-  <Alert
-    tone="info"
-    title="Search appearance"
-    icon={<Icon icon="mdi:magnify" width="20" height="20" />}
-  >
-    The SEO panel for {what} arrives in a later step. Until then the title and description of the
-    page are generated from the name above, and everything this record already holds — the keywords,
-    the canonical, the social cards — travels through every save untouched.
-  </Alert>
-);
 
 /**
  * `PUT` replaces the record (§5.8) and these forms do not edit `seo`; sending
@@ -150,6 +144,8 @@ export const categoriesConfig = ({ onMutated } = {}) => ({
   seoEntityType: 'articleCategory',
   reorderHint:
     'Sorted by Order the table becomes this list. Drag a row, or focus it and press Alt + ↑ / ↓, to change the order the archive lists the categories in.',
+  // What every other drag list shows: the name, and what it holds (QA-55).
+  renderOrderItem: (row) => <NameCell name={row.name} hint={orderHint(row)} />,
 
   columns: [
     {
@@ -201,6 +197,7 @@ export const categoriesConfig = ({ onMutated } = {}) => ({
       label: 'Name',
       required: true,
       half: true,
+      maxLength: 120,
       hint: 'Title case, two to four words — "Market Trends".',
     },
     { name: 'slug', type: 'slug', label: 'URL', source: 'name', half: true },
@@ -208,6 +205,7 @@ export const categoriesConfig = ({ onMutated } = {}) => ({
       name: 'description',
       type: 'textarea',
       label: 'Description',
+      maxLength: 500,
       hint: 'Up to 500 characters, printed under the heading of the category archive.',
     },
     {
@@ -220,8 +218,6 @@ export const categoriesConfig = ({ onMutated } = {}) => ({
     },
     { name: 'isActive', type: 'switch', label: 'Active', half: true },
   ],
-
-  formFooter: seoPlaceholder('article categories'),
 
   newValues: { order: 0, isActive: true, description: null },
 
@@ -307,6 +303,7 @@ export const tagsConfig = ({ onMutated } = {}) => ({
       label: 'Name',
       required: true,
       half: true,
+      maxLength: 60,
       hint: 'Lower case, one idea — "stamp duty", not "Stamp Duty & Registration".',
     },
     { name: 'slug', type: 'slug', label: 'URL', source: 'name', half: true },
@@ -385,13 +382,14 @@ export const authorsConfig = ({ onMutated } = {}) => ({
   bulkActions: bulkActions('authors'),
 
   formFields: [
-    { name: 'name', type: 'text', label: 'Name', required: true, half: true },
+    { name: 'name', type: 'text', label: 'Name', required: true, half: true, maxLength: 120 },
     { name: 'slug', type: 'slug', label: 'URL', source: 'name', half: true },
     {
       name: 'designation',
       type: 'text',
       label: 'Designation',
       half: true,
+      maxLength: 120,
       hint: 'The role printed under the byline — "Research desk".',
     },
     {
@@ -413,8 +411,6 @@ export const authorsConfig = ({ onMutated } = {}) => ({
     { name: 'socialLinks.website', type: 'url', label: 'Website', half: true },
     { name: 'isActive', type: 'switch', label: 'Active', half: true },
   ],
-
-  formFooter: seoPlaceholder('authors'),
 
   newValues: { socialLinks: {}, isActive: true },
 

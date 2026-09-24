@@ -46,9 +46,10 @@ const DRAWER_WIDTH = 280;
  * table of a dozen columns, and at 1920 px it was scrolling sideways between
  * 256 px margins; on these paths the column may take 1,760 px. The lead list is
  * nine columns of chips and dates, and its Created column sat under the pinned
- * actions at 1,536 px (QA-53).
+ * actions at 1,536 px (QA-53). The article list's Updated column — the order it
+ * opens in — sat there too (QA-55).
  */
-const WIDE_PATHS = new Set([PATHS.adminProperties, PATHS.adminLeads]);
+const WIDE_PATHS = new Set([PATHS.adminProperties, PATHS.adminLeads, PATHS.adminArticles]);
 
 const isWide = (pathname) => WIDE_PATHS.has(String(pathname).replace(/\/+$/, ''));
 

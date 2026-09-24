@@ -25,14 +25,15 @@ const {
   liveArticles,
   promoteScheduled,
 } = require('../lib/articleFilters');
+const { ApiError, notFound, validation } = require('../middleware/errors');
 const { clientIp } = require('../middleware/rateLimit');
 const { countView } = require('../lib/viewCounter');
 const { embedArticle } = require('../lib/embed');
+const { goesLive, publishGaps, publishProblems } = require('../../src/config/articleRules');
 const { issueToken, verifyToken } = require('../lib/previewTokens');
 const { makeCrudRouter } = require('../lib/crud');
-const { notFound, validation } = require('../middleware/errors');
 const { paginate, toPositiveInt, DEFAULT_PER_PAGE_PUBLIC } = require('../lib/paginate');
-const { readingTime, stripHtml, wordCount } = require('../lib/html');
+const { readingTime, stripHtml, unsafeMarkup, wordCount } = require('../lib/html');
 
 /** The collections the embeds of §5.5 resolve ids against. */
 const SOURCE_COLLECTIONS = ['articles', 'articleCategories', 'articleTags', 'authors'];
@@ -66,9 +67,30 @@ const BULK_ACTIONS = {
   archive: { status: 'archived' },
 };
 
+/**
+ * The records an article names by id, and the collection each lives in.
+ *
+ * `docs/backend-notes` hands Laravel these as `exists:<table>,id`; the mock
+ * never asked, so an article could be saved pointing at a category, an author
+ * or a tag that did not exist — a stale picker in a second tab was enough —
+ * and the public page drew it with no category and no byline (QA-55).
+ */
+const REFERENCES = [
+  { field: 'categoryId', collection: 'articleCategories' },
+  { field: 'authorId', collection: 'authors' },
+  { field: 'tagIds', collection: 'articleTags', many: true },
+  { field: 'relatedArticleIds', collection: 'articles', many: true },
+  { field: 'relatedPropertyIds', collection: 'properties', many: true },
+];
+
+/** The fields a `PATCH` has to touch before the publish rules are asked again. */
+const PUBLISH_FIELDS = ['status', 'publishedAt', 'excerpt', 'content', 'featuredImage'];
+
 const first = (value) => (Array.isArray(value) ? value[0] : value);
 
 const sameId = (left, right) => String(left) === String(right);
+
+const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object ?? {}, key);
 
 /**
  * The articles router.
@@ -296,12 +318,17 @@ module.exports = ({ db, getModel }) => {
       defaultSort: 'updatedAt',
       beforeSave: deriveFromContent,
       // A bulk `publish` never reaches `beforeSave`, and an article that has
-      // just gone live still needs the date it went live on (§6.8).
+      // just gone live still needs the date it went live on (§6.8) — now, if
+      // it was waiting for one: "Publish" on a scheduled piece used to leave
+      // it "published" with a date in the future, which the site does not show
+      // until that date comes (QA-55).
       afterSave: (article) => {
-        if (article.status === 'published' && !article.publishedAt) {
+        const moment = article.publishedAt ? Date.parse(article.publishedAt) : NaN;
+        if (article.status === 'published' && !(moment <= Date.now())) {
           article.publishedAt = new Date().toISOString();
         }
       },
+      beforeBulk: refuseUnpublishable,
       bulkActions: BULK_ACTIONS,
       noun: { one: 'article', many: 'articles' },
     })
@@ -325,27 +352,115 @@ function deriveText(record) {
   return record;
 }
 
+/** What an unsafe body or answer is told (QA-55). */
+const UNSAFE_MESSAGE =
+  'The text may not carry a script, an inline event handler or a javascript: link.';
+
 /**
- * What a save derives from the article itself (§6.8).
+ * The ids an article names that name nothing (QA-55), keyed like the schema's
+ * own 422.
+ *
+ * A `PATCH` is asked only about the references it sends: flipping `isFeatured`
+ * must not fail over a field nobody touched.
  *
  * @param {object} record the record about to be stored
- * @returns {object} the same record
- * @throws {import('../middleware/errors').ApiError} 422 when `scheduled` has
- *   no future moment to be scheduled for
+ * @param {{method?: string, body?: object, db?: object, existing?: object}} [context]
+ * @returns {Record<string, string[]>} `{}` when every reference holds
  */
-function deriveFromContent(record) {
+function referenceProblems(record, { method, body, db, existing } = {}) {
+  const found = {};
+
+  for (const { field, collection, many } of REFERENCES) {
+    if (method === 'PATCH' && !hasOwn(body, field)) continue;
+    const rows = db?.getCollection?.(collection);
+    if (!Array.isArray(rows)) continue;
+    const known = (id) => rows.some((row) => sameId(row?.id, id));
+
+    if (many) {
+      (Array.isArray(record[field]) ? record[field] : []).forEach((id, index) => {
+        if (!known(id)) found[`${field}.${index}`] = [`The selected ${field}.${index} is invalid.`];
+      });
+    } else if (record[field] !== null && record[field] !== undefined && !known(record[field])) {
+      found[field] = [`The selected ${field} is invalid.`];
+    }
+  }
+
+  // An article is not further reading for itself: the public page would list
+  // the piece the reader is already on.
+  const own = existing?.id;
+  if (own !== undefined && own !== null) {
+    (Array.isArray(record.relatedArticleIds) ? record.relatedArticleIds : []).forEach(
+      (id, index) => {
+        if (sameId(id, own)) {
+          found[`relatedArticleIds.${index}`] = ['An article cannot be related to itself.'];
+        }
+      }
+    );
+  }
+
+  return found;
+}
+
+/**
+ * What a save derives from the article itself (§6.8), and the rules a write
+ * must pass before it is stored.
+ *
+ * Every rule answers in the one 422: a body that breaks three of them hears
+ * about all three, the way Laravel's validator reports them.
+ *
+ * - `scheduled` needs a moment in the future (§6.8).
+ * - `published` may not carry one: the site reads the date, not the word, so
+ *   a "published" article dated next month is a 404 the admin calls live
+ *   (QA-55). A future date is what `scheduled` is for.
+ * - Going live needs an excerpt, a featured image and 300 words
+ *   (`src/config/articleRules.js`) — asked of every create and replace, and
+ *   of a `PATCH` that touches the status or what the rules read.
+ * - A body or an answer may not carry a script, an inline handler or a
+ *   `javascript:` link: the editor never writes one and `SafeHtml` would drop
+ *   it, so arriving here it came from somewhere else. The pages API refuses a
+ *   script the same way; this is the second line of defence, not the first.
+ *
+ * - Every id it names — category, author, tags, related pieces — names a
+ *   record that exists, and none of the related pieces is the article itself.
+ *
+ * @param {object} record the record about to be stored
+ * @param {{method?: string, body?: object, db?: object, existing?: object}} [context]
+ *   what `crud.js` hands `beforeSave`
+ * @returns {object} the same record
+ * @throws {import('../middleware/errors').ApiError} 422 with every rule it breaks
+ */
+function deriveFromContent(record, context = {}) {
+  const { method, body } = context;
   const now = new Date();
+  const found = { ...referenceProblems(record, context) };
+  const touches = (fields) => method !== 'PATCH' || fields.some((field) => hasOwn(body, field));
 
   deriveText(record);
 
-  if (record.status === 'scheduled') {
-    const moment = record.publishedAt ? Date.parse(record.publishedAt) : NaN;
-    if (!Number.isFinite(moment) || moment <= now.getTime()) {
-      throw validation({
-        publishedAt: ['A scheduled article needs a publication date in the future.'],
-      });
+  if (touches(['content']) && unsafeMarkup(record.content)) found.content = [UNSAFE_MESSAGE];
+  if (touches(['faqs'])) {
+    (Array.isArray(record.faqs) ? record.faqs : []).forEach((faq, index) => {
+      if (unsafeMarkup(faq?.answer)) found[`faqs.${index}.answer`] = [UNSAFE_MESSAGE];
+    });
+  }
+
+  const moment = record.publishedAt ? Date.parse(record.publishedAt) : NaN;
+  if (record.status === 'scheduled' && !(moment > now.getTime())) {
+    found.publishedAt = ['A scheduled article needs a publication date in the future.'];
+  }
+  if (record.status === 'published' && moment > now.getTime()) {
+    found.publishedAt = [
+      'A published article cannot carry a date in the future — schedule it instead.',
+    ];
+  }
+
+  if (goesLive(record.status) && touches(PUBLISH_FIELDS)) {
+    for (const [field, message] of Object.entries(publishProblems(record, record.wordCount))) {
+      found[field] = [message];
     }
   }
+
+  if (Object.keys(found).length > 0) throw validation(found);
 
   // The first time an article goes live it gets its date; switching it back to
   // a draft and publishing it again keeps the original (§6.8).
@@ -356,5 +471,54 @@ function deriveFromContent(record) {
   return record;
 }
 
+/**
+ * The bulk "publish" asks the publish rules too, of every article it would
+ * put on the site — all or nothing, like a bulk delete, so the editor sees one
+ * list of what is missing rather than half a batch published (QA-55).
+ *
+ * An article that is already published is not asked: publishing it again
+ * changes nothing.
+ *
+ * @param {string} action
+ * @param {Array<object>} targets the stored records the ids name
+ * @throws {ApiError} 422 naming each article and what it lacks
+ */
+function refuseUnpublishable(action, targets) {
+  if (action !== 'publish') return;
+
+  const refused = targets
+    .filter((article) => article.status !== 'published')
+    .map((article) => {
+      const words = Number.isFinite(article.wordCount)
+        ? article.wordCount
+        : wordCount(stripHtml(article.content));
+      return { article, gaps: publishGaps(publishProblems(article, words), words) };
+    })
+    .filter(({ gaps }) => gaps.length > 0);
+
+  if (refused.length === 0) return;
+
+  const lines = refused.map(({ article, gaps }) => `“${article.title}”: ${gaps.join(', ')}.`);
+  const message =
+    refused.length === 1
+      ? `“${refused[0].article.title}” is not ready to go live: ${refused[0].gaps.join(', ')}.`
+      : `${refused.length} of the selected articles are not ready to go live.`;
+
+  throw new ApiError(
+    422,
+    message,
+    { ids: lines },
+    {
+      notReady: refused.map(({ article, gaps }) => ({
+        id: article.id,
+        title: article.title,
+        gaps,
+      })),
+    }
+  );
+}
+
+module.exports.referenceProblems = referenceProblems;
 module.exports.deriveFromContent = deriveFromContent;
 module.exports.deriveText = deriveText;
+module.exports.refuseUnpublishable = refuseUnpublishable;

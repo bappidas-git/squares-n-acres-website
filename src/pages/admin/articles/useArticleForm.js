@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import ApiError from '../../../services/apiError';
 import PATHS from '../../../routes/paths';
 import articleService from '../../../services/articleService';
+import openInNewTab from '../../../utils/openInNewTab';
 import storage from '../../../utils/storage';
 import useForm from '../../../hooks/useForm';
 import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
+import { URL_PATTERN } from '../../../utils/validation';
 import {
   dateTimeLocalToIso,
   isFutureDateTime,
@@ -17,6 +19,12 @@ import {
 } from '../../../utils/articleUtils';
 import { applySeoSideEffects, validateSeoBranch } from '../../../components/seo/seoSideEffects';
 import { createSeo, toSeoPayload, withSeoDefaults } from '../../../components/seo/seoValues';
+import {
+  GOING_LIVE,
+  PUBLISH_MIN_WORDS,
+  RECOMMENDED_MIN_WORDS,
+  publishProblems,
+} from '../../../config/articleRules';
 import { schemas } from '../../../services/schemas';
 import { slugify } from '../../../utils/slug';
 import { useNavigationGuard } from '../../../contexts/NavigationGuardContext';
@@ -28,11 +36,11 @@ export const AUTOSAVE_INTERVAL_MS = 10000;
 /** `sna_article_draft:<id|new>` — one draft per article, per browser (§4.2). */
 export const draftKey = (articleId) => `sna_article_draft:${articleId ?? 'new'}`;
 
-/** An article needs this many words before it may be published (§2 of this prompt). */
-export const PUBLISH_MIN_WORDS = 300;
-
-/** Below this the rail says so, but the save goes through. */
-export const RECOMMENDED_MIN_WORDS = 600;
+/**
+ * The words an article needs to go live, and the length the rail recommends —
+ * `config/articleRules`, which the API reads too (QA-55).
+ */
+export { PUBLISH_MIN_WORDS, RECOMMENDED_MIN_WORDS };
 
 /** Two tags is the recommendation, not a rule. */
 export const RECOMMENDED_TAGS = 2;
@@ -49,8 +57,26 @@ const STATUS_FOR_MODE = {
   schedule: 'scheduled',
 };
 
-/** The two states whose article the public site will show (§6.8). */
-const GOING_LIVE = ['published', 'scheduled'];
+/**
+ * What the messages call the fields whose keys are not words (QA-55): the
+ * schema's "The categoryId field is required." reads "The category field is
+ * required.", and the API's own 422s read the same way.
+ */
+const FIELD_LABELS = {
+  title: 'headline',
+  slug: 'URL',
+  'seo.slug': 'URL',
+  content: 'body',
+  categoryId: 'category',
+  authorId: 'author',
+  'featuredImage.url': 'image address',
+  'featuredImage.alt': 'alt text',
+  'featuredImage.caption': 'caption',
+  publishedAt: 'publication date',
+  updatedAtDisplay: '"shown as updated" date',
+  relatedArticleIds: 'related articles',
+  relatedPropertyIds: 'related properties',
+};
 
 const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -332,9 +358,16 @@ export default function useArticleForm({ articleId = null, record = null, readOn
     const goingLive = GOING_LIVE.includes(values.status);
 
     if (title !== '' && title.length < TITLE_MIN_LENGTH) {
-      found.title = `The title must be at least ${TITLE_MIN_LENGTH} characters — headlines shorter than that rarely say what the piece is about.`;
+      found.title = `The headline must be at least ${TITLE_MIN_LENGTH} characters — headlines shorter than that rarely say what the piece is about.`;
     }
     if (!slug) found.slug = 'The URL is required.';
+
+    // The schema's "must be a valid URL" says what is wrong but not what is
+    // right; a picture address pasted without its scheme is the usual case.
+    const imageUrl = trimmed(values.featuredImage?.url);
+    if (imageUrl && !URL_PATTERN.test(imageUrl)) {
+      found['featuredImage.url'] = 'The image address must start with http:// or https://.';
+    }
 
     if (values.status === 'scheduled') {
       if (!trimmed(values.scheduledAt)) {
@@ -350,17 +383,9 @@ export default function useArticleForm({ articleId = null, record = null, readOn
       found['featuredImage.alt'] = 'Alt text is required — describe the image in a few words.';
     }
 
-    if (goingLive) {
-      if (!trimmed(values.excerpt)) {
-        found.excerpt = 'An excerpt is required before an article goes live.';
-      }
-      if (!trimmed(values.featuredImage?.url)) {
-        found['featuredImage.url'] = 'A featured image is required before an article goes live.';
-      }
-      if (words < PUBLISH_MIN_WORDS) {
-        found.content = `An article needs at least ${PUBLISH_MIN_WORDS} words to go live — this one has ${words}.`;
-      }
-    }
+    // The rules the API applies too (`config/articleRules`, QA-55), in the
+    // same words, so a refusal reads the same from either side.
+    if (goingLive) Object.assign(found, publishProblems(values, words));
 
     (Array.isArray(values.faqs) ? values.faqs : []).forEach((faq, index) => {
       const question = trimmed(faq.question);
@@ -381,6 +406,7 @@ export default function useArticleForm({ articleId = null, record = null, readOn
     schema: isNew ? schemas['article.create'] : schemas['article.update'],
     validate: extraValidation,
     normalize: toPayload,
+    labels: FIELD_LABELS,
     onSubmit: async (payload) => {
       try {
         const envelope = articleId
@@ -393,14 +419,54 @@ export default function useArticleForm({ articleId = null, record = null, readOn
     },
   });
 
-  const { errors, handleBlur, reset, setField, setValues, submit, validateAll, values } = form;
+  const {
+    errors,
+    handleBlur,
+    reset,
+    setErrors,
+    setField: setFormField,
+    setValues,
+    submit,
+    validateAll,
+    values,
+  } = form;
 
   // Read by the callbacks without becoming dependencies of them: a save must
   // see the values of the moment it runs, not of the render that created it.
   const latest = useRef({});
-  latest.current = { values, articleId, readOnly, isNew, record };
+  latest.current = { values, articleId, readOnly, isNew, record, dirty: form.dirty };
 
-  useUnsavedChanges(form.dirty && !readOnly);
+  /**
+   * `useForm.setField`, plus the one error it cannot know to clear: the slug
+   * and `seo.slug` are one URL (D34), so a 422 on either is answered by typing
+   * in the one box — and "The seo.slug may only contain lowercase letters"
+   * stayed under a slug that had long been fixed, hiding "This URL is
+   * available" (QA-55).
+   */
+  const setField = useCallback(
+    (path, value) => {
+      setFormField(path, value);
+      if (path === 'slug' || path === 'seo.slug') {
+        setErrors((current) =>
+          current.slug === undefined && current['seo.slug'] === undefined
+            ? current
+            : omitKeys(current, ['slug', 'seo.slug'])
+        );
+      }
+    },
+    [setErrors, setFormField]
+  );
+
+  // A copy autosaved to this browser is for a crash, a reload or a closed tab.
+  // Changes the editor chose to discard are not worth offering back next time
+  // (QA-55) — and the autosave stops, so none is written on the way out.
+  const discarded = useRef(false);
+  const forgetDraft = useCallback(() => {
+    discarded.current = true;
+    storage.removeItem(draftKey(latest.current.articleId));
+  }, []);
+
+  useUnsavedChanges(form.dirty && !readOnly, { onDiscard: forgetDraft });
 
   /* ---------------------------------------------------------------- *
    * Loading
@@ -452,12 +518,16 @@ export default function useArticleForm({ articleId = null, record = null, readOn
   dirtyRef.current = form.dirty;
   const savingRef = useRef(false);
   savingRef.current = form.submitting;
+  // The values the last autosave wrote, by identity: every edit makes a new
+  // object, so "changes since" is whether the form still holds that one.
+  const draftValues = useRef(null);
 
   useEffect(() => {
     if (readOnly) return undefined;
 
     const timer = setInterval(() => {
-      if (!dirtyRef.current || savingRef.current) return;
+      if (!dirtyRef.current || savingRef.current || discarded.current) return;
+      if (latest.current.values === draftValues.current) return;
       const savedAt = new Date().toISOString();
       if (
         storage.setItem(draftKey(latest.current.articleId), {
@@ -465,6 +535,7 @@ export default function useArticleForm({ articleId = null, record = null, readOn
           savedAt,
         })
       ) {
+        draftValues.current = latest.current.values;
         setDraftSavedAt(savedAt);
       }
     }, AUTOSAVE_INTERVAL_MS);
@@ -496,17 +567,40 @@ export default function useArticleForm({ articleId = null, record = null, readOn
 
   const runSave = useCallback(
     async (mode) => {
-      if (latest.current.readOnly) return false;
+      const current = latest.current;
+      if (current.readOnly) return false;
 
       if (!validateAll()) {
+        // "What is missing is listed under Content checks" only when that is
+        // where it is listed: a scheduled date in the past is not (QA-55).
+        const words = wordCount(current.values.content);
+        const refusedToGoLive =
+          GOING_LIVE.includes(current.values.status) &&
+          Object.keys(publishProblems(current.values, words)).length > 0;
         toast.error(
-          GOING_LIVE.includes(latest.current.values.status)
+          refusedToGoLive
             ? 'This article is not ready to go live. What is missing is listed under “Content checks”.'
             : 'Please fix the highlighted fields.'
         );
         return false;
       }
 
+      // Nothing has changed since the last save: say so rather than write the
+      // same record again — a rewrite moved it to the top of the list and
+      // changed the date its sitemap entry reports (QA-55). A stored record
+      // that breaks a rule still hears about it above: its errors are shown
+      // whether or not anything was typed.
+      //
+      // What is on screen is what is stored, so a copy autosaved before an
+      // edit was taken back is out of date — unless it is the one on offer,
+      // which waits for the editor's own answer.
+      if (mode === 'save' && !current.isNew && !current.dirty && current.record) {
+        if (!offerRef.current) clearDraft();
+        toast.info('No changes to save.');
+        return current.record;
+      }
+
+      const before = current.record?.status ?? null;
       const saved = await submit();
       if (!saved) return false;
 
@@ -518,11 +612,11 @@ export default function useArticleForm({ articleId = null, record = null, readOn
       // comes after the draft is cleared: the article is saved either way, and
       // a side effect must not hold up the state that says so.
       await applySeoSideEffects('article', saved);
-      toast.success(savedMessage(mode, saved));
+      toast.success(savedMessage(saved, before));
 
       // A created article moves to its own URL, replacing the add route so Back
       // does not offer to create it a second time.
-      if (!latest.current.articleId && saved.id) {
+      if (!current.articleId && saved.id) {
         setRedirect({ to: PATHS.adminArticleEdit(saved.id), replace: true });
       }
       return saved;
@@ -549,7 +643,7 @@ export default function useArticleForm({ articleId = null, record = null, readOn
 
       const target = STATUS_FOR_MODE[mode];
       if (target && target !== latest.current.values.status) {
-        setPending(mode);
+        setPending({ mode, from: latest.current.values.status });
         setField('status', target);
         return undefined;
       }
@@ -559,14 +653,23 @@ export default function useArticleForm({ articleId = null, record = null, readOn
   );
 
   // The second half of a status-changing save: the status is now in state, so
-  // the payload says so and the validation reads the new rules. A refusal
-  // leaves the radio where the editor can see what they were about to do.
+  // the payload says so and the validation reads the new rules.
+  //
+  // A refusal puts the status back. "Publish now" is a button, not a choice of
+  // radio: left on "Published" after a refusal, the rail said "Live now" over
+  // a draft, "Publish now" was gone, and the plain Save that followed a fix
+  // published the article (QA-55). What was wrong stays highlighted.
   useEffect(() => {
     if (!pending) return;
-    if (values.status !== STATUS_FOR_MODE[pending]) return;
+    const target = STATUS_FOR_MODE[pending.mode];
+    if (values.status !== target) return;
     setPending(null);
-    runSaveRef.current(pending);
-  }, [pending, values.status]);
+    Promise.resolve(runSaveRef.current(pending.mode)).then((saved) => {
+      if (!saved && latest.current.values.status === target) {
+        setField('status', pending.from);
+      }
+    });
+  }, [pending, setField, values.status]);
 
   // Ctrl/Cmd+S saves rather than offering to save the HTML of the page.
   //
@@ -588,6 +691,10 @@ export default function useArticleForm({ articleId = null, record = null, readOn
       if (event.altKey || event.shiftKey) return;
       event.preventDefault();
       if (event.repeat || busyRef.current) return;
+      // A dialog open over the form — a category being added, a link being
+      // edited — is where the keys belong; the article behind it is not saved
+      // from inside it (QA-55).
+      if (event.target?.closest?.('[role="dialog"], [aria-modal="true"]')) return;
       saveRef.current('save');
     };
 
@@ -599,34 +706,39 @@ export default function useArticleForm({ articleId = null, record = null, readOn
    * Save, then open the article in a new tab behind a 24-hour token (D28).
    *
    * The token is what the public route checks, so the link is built on this
-   * origin rather than on the absolute URL the API suggests. A pop-up blocker
-   * may refuse a tab opened after an `await`, so a refusal becomes a navigation
-   * in this one — by then the article is saved, so there is nothing to lose.
+   * origin rather than on the absolute URL the API suggests, and on the slug
+   * the save answered with — the API may have changed it.
+   *
+   * Only a tab the browser genuinely refused becomes a navigation in this one
+   * (`openInNewTab`): every preview used to take the editor's own tab to the
+   * public page as well (QA-55). A new article keeps its move to its own edit
+   * URL instead, and is told where the preview is.
    */
   const preview = useCallback(async () => {
     setPreviewing(true);
     try {
       const current = latest.current;
       let id = current.articleId;
+      let slug = current.values.slug || current.record?.slug || '';
 
-      if (!id || form.dirty) {
+      if (!id || current.dirty) {
         const saved = await runSaveRef.current('save');
         if (!saved) return;
         id = saved.id;
+        slug = saved.slug || slug;
       }
 
       const { data } = await articleService.previewToken(id);
-      const slug = latest.current.values.slug || latest.current.record?.slug || '';
       const path = `${PATHS.article(slug)}?preview=${data.token}`;
-      if (!window.open(path, '_blank', 'noopener,noreferrer')) {
-        setRedirect({ to: path, replace: false });
-      }
+      if (openInNewTab(path)) return;
+      if (current.articleId) setRedirect({ to: path, replace: false });
+      else toast.info(`Your browser blocked the new tab. The preview is at ${path}`);
     } catch (thrown) {
       toast.error(thrown?.message || 'The preview link could not be created.');
     } finally {
       setPreviewing(false);
     }
-  }, [form.dirty, toast]);
+  }, [toast]);
 
   // Leaving waits for the guard to let go, twice over: a saved form is clean,
   // but the provider learns that one render later and `useBlocker`
@@ -643,6 +755,37 @@ export default function useArticleForm({ articleId = null, record = null, readOn
 
   const keyCounter = useRef(0);
 
+  /**
+   * The row errors, moved with their rows (QA-55).
+   *
+   * A 422 keys a question by its position — `faqs.2.answer` — and the rows
+   * are keyed by identity, so removing or moving one used to leave its errors
+   * on whichever row took its place: the filled-in question under a removed
+   * empty one read "Write the question, or remove this row."
+   *
+   * @param {(index: number) => number|null} place where the row at `index`
+   *   now is, or `null` when it is gone
+   */
+  const moveFaqErrors = useCallback(
+    (place) =>
+      setErrors((current) => {
+        let changed = false;
+        const next = {};
+        for (const [key, message] of Object.entries(current)) {
+          const match = /^faqs\.(\d+)\.(.+)$/.exec(key);
+          if (!match) {
+            next[key] = message;
+            continue;
+          }
+          const to = place(Number(match[1]));
+          if (to !== Number(match[1])) changed = true;
+          if (to !== null) next[`faqs.${to}.${match[2]}`] = message;
+        }
+        return changed ? next : current;
+      }),
+    [setErrors]
+  );
+
   const addFaq = useCallback(() => {
     keyCounter.current += 1;
     setField('faqs', [
@@ -652,23 +795,39 @@ export default function useArticleForm({ articleId = null, record = null, readOn
   }, [setField]);
 
   const updateFaq = useCallback(
-    (key, patch) =>
+    (key, patch) => {
+      const list = latest.current.values.faqs ?? [];
+      const index = list.findIndex((faq) => faq._key === key);
       setField(
         'faqs',
-        (latest.current.values.faqs ?? []).map((faq) =>
-          faq._key === key ? { ...faq, ...patch } : faq
-        )
-      ),
-    [setField]
+        list.map((faq) => (faq._key === key ? { ...faq, ...patch } : faq))
+      );
+      // The row being corrected stops shouting, as every other field does.
+      if (index >= 0) {
+        setErrors((current) => {
+          const stale = Object.keys(patch).map((field) => `faqs.${index}.${field}`);
+          return stale.some((path) => current[path] !== undefined)
+            ? omitKeys(current, stale)
+            : current;
+        });
+      }
+    },
+    [setErrors, setField]
   );
 
   const removeFaq = useCallback(
-    (key) =>
+    (key) => {
+      const list = latest.current.values.faqs ?? [];
+      const removed = list.findIndex((faq) => faq._key === key);
       setField(
         'faqs',
-        (latest.current.values.faqs ?? []).filter((faq) => faq._key !== key)
-      ),
-    [setField]
+        list.filter((faq) => faq._key !== key)
+      );
+      if (removed >= 0) {
+        moveFaqErrors((index) => (index === removed ? null : index > removed ? index - 1 : index));
+      }
+    },
+    [moveFaqErrors, setField]
   );
 
   const moveFaq = useCallback(
@@ -678,8 +837,14 @@ export default function useArticleForm({ articleId = null, record = null, readOn
       if (!moved) return;
       list.splice(to, 0, moved);
       setField('faqs', list);
+      moveFaqErrors((index) => {
+        if (index === from) return to;
+        if (from < to && index > from && index <= to) return index - 1;
+        if (from > to && index >= to && index < from) return index + 1;
+        return index;
+      });
     },
-    [setField]
+    [moveFaqErrors, setField]
   );
 
   /* ---------------------------------------------------------------- *
@@ -742,6 +907,11 @@ export default function useArticleForm({ articleId = null, record = null, readOn
     moveFaq,
     draftOffer,
     draftSavedAt,
+    // Whether the form holds anything the last autosave did not write — not
+    // whether it differs from the server, which it always does while there is
+    // a draft at all (QA-55).
+    draftChanged: draftSavedAt !== null && values !== draftValues.current,
+    record,
     restoreDraft,
     discardDraft,
     clearDraft,
@@ -750,16 +920,34 @@ export default function useArticleForm({ articleId = null, record = null, readOn
 }
 
 /**
- * What a save says it did.
+ * What a save says it did — which is not always what the article now is: a
+ * plain Save on a live article used to announce "Article published." (QA-55).
  *
- * @param {'save'|'draft'|'publish'|'schedule'} mode
  * @param {object} saved the record the API returned
+ * @param {string|null} before the status the article had before this save;
+ *   `null` for one that did not exist yet
+ * @returns {string}
  */
-function savedMessage(mode, saved) {
-  if (saved?.status === 'scheduled') return 'Article scheduled.';
-  if (mode === 'publish' || saved?.status === 'published') return 'Article published.';
-  if (saved?.status === 'archived') return 'Article archived.';
+export function savedMessage(saved, before) {
+  const status = saved?.status ?? 'draft';
+  const kept = status === before;
+
+  if (status === 'scheduled') {
+    return kept ? 'Changes saved. The article is still scheduled.' : 'Article scheduled.';
+  }
+  if (status === 'published') {
+    return kept ? 'Changes saved. The article is live.' : 'Article published.';
+  }
+  if (status === 'archived') return kept ? 'Changes saved.' : 'Article archived.';
+  if (before === 'published' || before === 'scheduled') {
+    return 'Article unpublished and saved as a draft.';
+  }
   return 'Article saved as a draft.';
+}
+
+/** A copy of an object without the keys given. */
+function omitKeys(source, keys) {
+  return Object.fromEntries(Object.entries(source).filter(([key]) => !keys.includes(key)));
 }
 
 /**

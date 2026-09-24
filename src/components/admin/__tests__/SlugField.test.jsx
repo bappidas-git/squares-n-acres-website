@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { screen, waitFor } from '@testing-library/react';
+import { useEffect, useState } from 'react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import SlugField, { CHECK_DEBOUNCE_MS } from '../SlugField';
@@ -30,6 +30,53 @@ function Harness({
         }}
       />
       <output data-testid="value">{slug}</output>
+    </>
+  );
+}
+
+/**
+ * A render as long as a real form's. React commits it and then yields before
+ * running its effects — the gap a keystroke can land in.
+ */
+function Heavy({ busy }) {
+  if (busy) {
+    const until = Date.now() + 20;
+    while (Date.now() < until) {
+      // A long render, on purpose.
+    }
+  }
+  return null;
+}
+
+/**
+ * A form whose record arrives a moment after its fields mount, the way the
+ * article form's does: the field mounts over an empty slug, then the record's
+ * slug and title land together, in a render long enough to be yielded after.
+ */
+function LoadingHarness({ record }) {
+  const [values, setValues] = useState({ title: '', slug: '' });
+  useEffect(() => {
+    const timer = setTimeout(() => setValues(record), 20);
+    return () => clearTimeout(timer);
+  }, [record]);
+  return (
+    <>
+      <label>
+        Headline
+        <input
+          value={values.title}
+          onChange={(event) => setValues((current) => ({ ...current, title: event.target.value }))}
+        />
+      </label>
+      <SlugField
+        value={values.slug}
+        source={values.title}
+        base="/insights/articles/"
+        excludeId={7}
+        onChange={(next) => setValues((current) => ({ ...current, slug: next }))}
+      />
+      <output data-testid="value">{values.slug}</output>
+      <Heavy busy={values.slug === record.slug} />
     </>
   );
 }
@@ -68,6 +115,26 @@ describe('SlugField', () => {
 
     rerender(<Harness initialSlug="whitefield" title="Whitefield East" />);
     await waitFor(() => expect(screen.getByTestId('value')).toHaveTextContent('whitefield-east'));
+  });
+
+  it('keeps a loaded record’s URL when the title is typed straight after it arrives (QA-55)', async () => {
+    renderWith(
+      <LoadingHarness
+        record={{
+          title: 'Khata Transfer: The Complete Checklist',
+          slug: 'khata-transfer-checklist',
+        }}
+      />
+    );
+    // The first keystroke can land before the field has let go of the title:
+    // it used to write the title's slug over the live URL.
+    await screen.findByDisplayValue('khata-transfer-checklist');
+    fireEvent.change(screen.getByLabelText('Headline'), {
+      target: { value: 'Khata Transfer: The Complete Checklist (2026)' },
+    });
+
+    await waitFor(() => expect(screen.getByLabelText('Slug')).toBeEnabled());
+    expect(screen.getByTestId('value')).toHaveTextContent('khata-transfer-checklist');
   });
 
   it('starts unlocked on a new record whose slug was changed by hand', () => {

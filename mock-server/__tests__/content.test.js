@@ -215,6 +215,13 @@ describe('admin articles', () => {
     status: 'draft',
   };
 
+  /** Everything going live needs (`src/config/articleRules.js`): an image and 300 words. */
+  const READY = {
+    ...ARTICLE,
+    content: `<h2>Approvals</h2>${'<p>Start with the approving authority, then the khata, then the tax receipts and the encumbrance certificate.</p>'.repeat(20)}`,
+    featuredImage: { url: 'https://example.com/plot.jpg', alt: 'A fenced plot', caption: null },
+  };
+
   it('derives the plain text, the word count and the reading time on save', async () => {
     await withServer(async ({ request, login }) => {
       const token = await login(ADMIN);
@@ -235,7 +242,7 @@ describe('admin articles', () => {
   it('sets publishedAt the first time an article goes live and keeps it after', async () => {
     await withServer(async ({ request, login }) => {
       const token = await login(ADMIN);
-      const created = await request('POST', '/admin/articles', { token, body: ARTICLE });
+      const created = await request('POST', '/admin/articles', { token, body: READY });
       const id = created.body.data.id;
 
       const published = await request('PATCH', `/admin/articles/${id}`, {
@@ -260,16 +267,204 @@ describe('admin articles', () => {
 
       const past = await request('POST', '/admin/articles', {
         token,
-        body: { ...ARTICLE, status: 'scheduled', publishedAt: fromNow(-60) },
+        body: { ...READY, status: 'scheduled', publishedAt: fromNow(-60) },
       });
       assert.equal(past.status, 422);
-      assert.ok(past.body.errors.publishedAt);
+      assert.deepEqual(Object.keys(past.body.errors), ['publishedAt']);
 
       const future = await request('POST', '/admin/articles', {
         token,
-        body: { ...ARTICLE, status: 'scheduled', publishedAt: fromNow(60) },
+        body: { ...READY, status: 'scheduled', publishedAt: fromNow(60) },
       });
       assert.equal(future.status, 201);
+    });
+  });
+
+  it('refuses to put an article live without an excerpt, an image and 300 words (QA-55)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const thin = await request('POST', '/admin/articles', {
+        token,
+        body: { ...ARTICLE, excerpt: '', status: 'published' },
+      });
+      assert.equal(thin.status, 422);
+      assert.deepEqual(Object.keys(thin.body.errors).sort(), [
+        'content',
+        'excerpt',
+        'featuredImage.url',
+      ]);
+      assert.match(thin.body.errors.content[0], /at least 300 words .* this one has 9/);
+
+      // The same draft may be saved as a draft, and a PATCH that only makes it
+      // live is asked the rules again.
+      const draft = await request('POST', '/admin/articles', { token, body: ARTICLE });
+      assert.equal(draft.status, 201);
+      const promoted = await request('PATCH', `/admin/articles/${draft.body.data.id}`, {
+        token,
+        body: { status: 'scheduled', publishedAt: fromNow(60) },
+      });
+      assert.equal(promoted.status, 422);
+      assert.ok(promoted.body.errors['featuredImage.url']);
+
+      const ready = await request('POST', '/admin/articles', {
+        token,
+        body: { ...READY, status: 'published' },
+      });
+      assert.equal(ready.status, 201);
+    });
+  });
+
+  it('does not ask the publish rules of a PATCH that leaves them alone', async () => {
+    // A live article from before the rules — the only way one can be thin now.
+    const seed = seedWith({
+      articles: (articles) => {
+        articles[0].featuredImage = null;
+      },
+    });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const featured = await request('PATCH', '/admin/articles/1', {
+        token,
+        body: { isFeatured: false },
+      });
+      assert.equal(featured.status, 200);
+    });
+  });
+
+  it('refuses a published article dated in the future (QA-55)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const future = await request('POST', '/admin/articles', {
+        token,
+        body: { ...READY, status: 'published', publishedAt: fromNow(60 * 24) },
+      });
+      assert.equal(future.status, 422);
+      assert.match(future.body.errors.publishedAt[0], /schedule it instead/);
+    });
+  });
+
+  it('refuses ids that name nothing, and an article related to itself (QA-55)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const dangling = await request('POST', '/admin/articles', {
+        token,
+        body: {
+          ...ARTICLE,
+          categoryId: 999,
+          authorId: 999,
+          tagIds: [1, 999],
+          relatedArticleIds: [999],
+          relatedPropertyIds: [99999],
+        },
+      });
+      assert.equal(dangling.status, 422);
+      assert.deepEqual(Object.keys(dangling.body.errors).sort(), [
+        'authorId',
+        'categoryId',
+        'relatedArticleIds.0',
+        'relatedPropertyIds.0',
+        'tagIds.1',
+      ]);
+
+      const itself = await request('PATCH', '/admin/articles/2', {
+        token,
+        body: { relatedArticleIds: [1, 2] },
+      });
+      assert.equal(itself.status, 422);
+      assert.deepEqual(itself.body.errors['relatedArticleIds.1'], [
+        'An article cannot be related to itself.',
+      ]);
+
+      // A PATCH is asked only about what it sends.
+      const unrelated = await request('PATCH', '/admin/articles/2', {
+        token,
+        body: { isFeatured: false },
+      });
+      assert.equal(unrelated.status, 200);
+    });
+  });
+
+  it('refuses a body or an answer that carries a script, a handler or a javascript: link', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      for (const content of [
+        '<p>One</p><script>alert(1)</script>',
+        '<p>One <img src="x.png" alt="" onerror="alert(1)"></p>',
+        '<p><a href=" java\tscript:alert(1)">One</a></p>',
+        // Entities a browser decodes before it reads the scheme.
+        '<p><a href="&#106;avascript&colon;alert(1)">One</a></p>',
+        '<p><a href="&#x6A;ava&#x09;script:alert(1)">One</a></p>',
+      ]) {
+        const refused = await request('POST', '/admin/articles', {
+          token,
+          body: { ...ARTICLE, content },
+        });
+        assert.equal(refused.status, 422, content);
+        assert.ok(refused.body.errors.content, content);
+      }
+
+      const answer = await request('POST', '/admin/articles', {
+        token,
+        body: {
+          ...ARTICLE,
+          faqs: [{ question: 'Is it safe?', answer: '<p onclick="x()">Yes</p>' }],
+        },
+      });
+      assert.equal(answer.status, 422);
+      assert.ok(answer.body.errors['faqs.0.answer']);
+
+      // Prose and attribute values that merely read like one are prose.
+      const innocent = await request('POST', '/admin/articles', {
+        token,
+        body: {
+          ...ARTICLE,
+          content:
+            '<p>The onboarding = two visits.</p><figure><img src="https://example.com/a.png" alt="walk onward=fast"></figure><p><a href="https://example.com/javascript:guide">Guide</a></p>',
+        },
+      });
+      assert.equal(innocent.status, 201);
+    });
+  });
+
+  it('writes nothing for a save that changes nothing (QA-55)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const created = await request('POST', '/admin/articles', { token, body: ARTICLE });
+      const { id, updatedAt } = created.body.data;
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      const same = await request('PUT', `/admin/articles/${id}`, { token, body: ARTICLE });
+      assert.equal(same.status, 200);
+      assert.equal(same.body.data.updatedAt, updatedAt);
+
+      const renamed = await request('PUT', `/admin/articles/${id}`, {
+        token,
+        body: { ...ARTICLE, title: `${ARTICLE.title} Again` },
+      });
+      assert.notEqual(renamed.body.data.updatedAt, updatedAt);
+    });
+  });
+
+  it('sorts the articles with no publication date last, newest first or oldest (QA-55)', async () => {
+    const seed = seedWith({
+      articles: (articles) => {
+        articles[1].status = 'draft';
+        articles[1].publishedAt = null;
+      },
+    });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+      for (const order of ['desc', 'asc']) {
+        const list = await request('GET', `/admin/articles?sort=publishedAt&order=${order}`, {
+          token,
+        });
+        assert.equal(ids(list).at(-1), 2, `the draft sorts last (${order})`);
+      }
     });
   });
 
@@ -302,6 +497,52 @@ describe('admin articles', () => {
         body: { ids: [1], action: 'verify' },
       });
       assert.equal(nonsense.status, 422, 'an action this resource has no meaning for');
+    });
+  });
+
+  it('bulk-publishes a scheduled article now, and refuses a batch with one not ready (QA-55)', async () => {
+    const seed = seedWith({
+      articles: (articles) => {
+        articles[0].status = 'scheduled';
+        articles[0].publishedAt = fromNow(60 * 24);
+      },
+    });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const thin = (await request('POST', '/admin/articles', { token, body: ARTICLE })).body.data;
+
+      const refused = await request('POST', '/admin/articles/bulk', {
+        token,
+        body: { ids: [1, thin.id], action: 'publish' },
+      });
+      assert.equal(refused.status, 422);
+      assert.deepEqual(
+        refused.body.data.notReady.map((row) => [row.id, row.gaps]),
+        [[thin.id, ['no featured image', '9 of 300 words']]]
+      );
+      assert.equal(
+        (await request('GET', '/admin/articles/1', { token })).body.data.status,
+        'scheduled',
+        'all or nothing: the ready one waits for the batch'
+      );
+
+      const published = await request('POST', '/admin/articles/bulk', {
+        token,
+        body: { ids: [1], action: 'publish' },
+      });
+      assert.equal(published.body.data.affected, 1);
+      const article = (await request('GET', '/admin/articles/1', { token })).body.data;
+      assert.equal(article.status, 'published');
+      assert.ok(Date.parse(article.publishedAt) <= Date.now(), 'published now, not next week');
+      assert.equal((await request('GET', `/articles/slug/${article.slug}`)).status, 200);
+
+      const again = await request('POST', '/admin/articles/bulk', {
+        token,
+        body: { ids: [1], action: 'publish' },
+      });
+      assert.equal(again.body.data.affected, 0, 'an article already live does not change');
+      assert.equal(again.body.message, '0 articles updated.');
     });
   });
 });

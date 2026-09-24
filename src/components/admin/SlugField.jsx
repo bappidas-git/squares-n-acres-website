@@ -64,7 +64,7 @@ export default function SlugField({
   // A long form unmounts the field on every tab switch, and without this a new
   // listing's URL stopped following its title the first time the editor looked
   // at another tab.
-  const [locked, setLocked] = useState(
+  const [locked, setLockedState] = useState(
     () =>
       !value ||
       ((excludeId === undefined || excludeId === null || excludeId === '') &&
@@ -72,10 +72,22 @@ export default function SlugField({
   );
   const [status, setStatus] = useState({ state: 'idle' });
 
+  // The lock as the "follow the title" effect reads it. The state is what the
+  // field draws, and it reaches a render one render late: a keystroke in the
+  // title that landed between a record's arrival and that render was drawn
+  // with the lock still on, and wrote the title's slug over the live URL the
+  // record had just brought in (QA-55). The ref changes the moment the lock
+  // does.
+  const lockedRef = useRef(locked);
+  const setLocked = useCallback((next) => {
+    lockedRef.current = next;
+    setLockedState(next);
+  }, []);
+
   // Read by the "follow the title" effect without making it depend on them:
   // it must run when the title or the value changes and at no other time.
   const latest = useRef({});
-  latest.current = { locked, value, onChange };
+  latest.current = { value, onChange };
 
   // The last slug this field wrote. Anything else that turns up in `value`
   // arrived from outside — most often a record reaching a form whose fields
@@ -101,13 +113,13 @@ export default function SlugField({
       setLocked(false);
       return;
     }
-    if (!current.locked) return;
+    if (!lockedRef.current) return;
 
     const next = toSlug(source);
     if (next === current.value) return;
     written.current = next;
     current.onChange?.(next);
-  }, [source, value, toSlug]);
+  }, [source, value, toSlug, setLocked]);
 
   const check = useCallback(
     (slug) => {

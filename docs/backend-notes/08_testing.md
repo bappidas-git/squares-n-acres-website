@@ -147,7 +147,13 @@ Excel with the accents intact.
 **Articles** — a draft is 404 in public and 200 with a preview token; an article
 scheduled for five minutes' time is invisible, and visible five minutes later
 without anybody deploying; the RSS feed holds the latest 20; the taxonomy pages
-filter correctly.
+filter correctly. Publishing a draft with no excerpt, no featured image or fewer
+than 300 words is 422 by `PUT`, `PATCH` and the bulk action, and the bulk refusal
+names each article and leaves all of them as they were; `published` with a
+future `publishedAt` is 422; a bulk-published scheduled article is live at once;
+a category, author or tag id that does not exist is 422; a `<script>` or an
+`onerror=` in the body is 422; saving an article twice without a change leaves
+its `updatedAt` where it was.
 
 **CMS pages** — every block type renders; a page removed from the header menu
 disappears from the navigation; `showInFooter` moves it between footer columns.

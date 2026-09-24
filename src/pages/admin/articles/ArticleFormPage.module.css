@@ -277,8 +277,11 @@
   }
 
   /* Stacked above the body, the five cards read as a row of panels rather than
-     a column as tall as the article. */
+     a column as tall as the article — each as tall as what it holds: stretched
+     to the Status card beside it, the "Search engines" card was two thirds
+     empty (QA-55). */
   .rail {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    align-items: start;
   }
 }

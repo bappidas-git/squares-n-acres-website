@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 
 import ApiError from '../../services/apiError';
 import ToastProvider from '../../components/common/ToastProvider';
-import useForm, { getIn, setIn } from '../useForm';
+import useForm, { getIn, relabel, setIn } from '../useForm';
 
 /** `useForm` toasts what it cannot paint, so it needs the one toast system. */
 const wrapper = ({ children }) => <ToastProvider>{children}</ToastProvider>;
@@ -188,6 +188,46 @@ describe('useForm', () => {
     });
   });
 
+  describe('labels (QA-55)', () => {
+    const labelled = {
+      initialValues: { categoryId: null, title: '' },
+      schema: { categoryId: { type: 'int', required: true } },
+      labels: { categoryId: 'category', 'seo.slug': 'URL' },
+    };
+
+    it('names a field by its label in the messages the schema writes', () => {
+      const { result } = setup(labelled);
+
+      act(() => {
+        result.current.validateAll();
+      });
+
+      expect(result.current.errors.categoryId).toBe('The category field is required.');
+    });
+
+    it('names it the same way in the messages the API sends', () => {
+      const { result } = setup(labelled);
+
+      act(() =>
+        result.current.setServerErrors(
+          new ApiError({
+            status: 422,
+            errors: {
+              categoryId: ['The selected categoryId is invalid.'],
+              'seo.slug': ['The seo.slug may only contain lowercase letters.'],
+              title: ['The title field is required.'],
+            },
+          })
+        )
+      );
+
+      expect(result.current.errors.categoryId).toBe('The selected category is invalid.');
+      expect(result.current.errors['seo.slug']).toBe('The URL may only contain lowercase letters.');
+      // A field with no label keeps the words it was sent with.
+      expect(result.current.errors.title).toBe('The title field is required.');
+    });
+  });
+
   describe('submit', () => {
     it('refuses to call onSubmit while the form is invalid', async () => {
       const onSubmit = jest.fn();
@@ -263,6 +303,31 @@ describe('useForm', () => {
       expect(outcome).toBe(false);
       expect(result.current.errors).toEqual({});
     });
+  });
+});
+
+describe('relabel', () => {
+  it('replaces the key only where it stands as a word of its own', () => {
+    expect(
+      relabel(
+        {
+          slug: 'The slug has already been taken.',
+          'seo.slug': 'The seo.slug must be a string.',
+          authorId: 'Pick an author for this piece.',
+        },
+        { slug: 'URL', authorId: 'author' }
+      )
+    ).toEqual({
+      slug: 'The URL has already been taken.',
+      // `slug` inside `seo.slug` is not the word `slug`.
+      'seo.slug': 'The seo.slug must be a string.',
+      authorId: 'Pick an author for this piece.',
+    });
+  });
+
+  it('hands the errors back untouched when there are no labels', () => {
+    const errors = { name: 'The name field is required.' };
+    expect(relabel(errors, null)).toBe(errors);
   });
 });
 

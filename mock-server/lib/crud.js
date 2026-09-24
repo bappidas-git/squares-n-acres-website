@@ -53,6 +53,40 @@ const sameId = (left, right) => String(left) === String(right);
 const isPlainObject = (value) =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+/** A value as a string whatever order its keys were written in. */
+const canonical = (value) =>
+  JSON.stringify(value, (_key, entry) =>
+    isPlainObject(entry)
+      ? Object.fromEntries(
+          Object.keys(entry)
+            .sort()
+            .map((key) => [key, entry[key]])
+        )
+      : entry
+  );
+
+/** The two audit fields every write moves, and nothing else is. */
+const AUDIT_FIELDS = ['updatedAt', 'updatedBy'];
+
+/**
+ * Whether a write would store exactly what is already stored (QA-55).
+ *
+ * A save that changes nothing — the article form's Save pressed twice, a
+ * Ctrl+S out of habit — used to be written anyway, and moving `updatedAt`
+ * moved the record to the top of every list sorted by it and changed the
+ * `lastmod` its sitemap entry reports. Eloquent writes nothing for a model
+ * with no dirty attributes, and neither does this.
+ *
+ * @param {object} existing the stored record
+ * @param {object} record the record the write would store
+ * @returns {boolean}
+ */
+function unchanged(existing, record) {
+  const strip = (source) =>
+    Object.fromEntries(Object.entries(source ?? {}).filter(([key]) => !AUDIT_FIELDS.includes(key)));
+  return canonical(strip(existing)) === canonical(strip(record));
+}
+
 /**
  * Settles a collection's `order` after an `order` PATCH (§5.8, D98).
  *
@@ -160,6 +194,9 @@ function matchesFilter(record, descriptor, raw, context) {
  * @param {Function} [options.afterSave] `(record, ctx) => void`
  * @param {Function} [options.beforeDelete] `(record, ctx) => void`, where `ctx`
  *   is `{ user, db, query, collections }` — throw to refuse the delete
+ * @param {Function} [options.beforeBulk] `(action, targets, ctx) => void`, where
+ *   `ctx` is `{ user, db }` — throw to refuse a bulk action whole, before any
+ *   record is touched (an article's publish rules, QA-55)
  * @param {string|false} [options.deleteGuard] a `lib/usage.js` type
  * @param {(record: object) => string|null} [options.protect] why this record
  *   can never be deleted, or `null` — a built-in segment (QA-52). Checked
@@ -197,6 +234,7 @@ function makeCrudRouter(options) {
     beforeSave,
     afterSave,
     beforeDelete,
+    beforeBulk,
     deleteGuard = false,
     protect,
     bulkActions = {},
@@ -523,6 +561,9 @@ function makeCrudRouter(options) {
         const ids = body.ids.map(String);
         const targets = rows().filter((record) => ids.includes(String(record.id)));
 
+        if (beforeBulk) beforeBulk(body.action, targets, { user: req.user, db });
+
+        let affected = 0;
         if (body.action === 'delete') {
           // All or nothing: a bulk delete that would strand a reference is
           // refused whole, so the editor sees one list of what is in the way.
@@ -531,17 +572,26 @@ function makeCrudRouter(options) {
             if (beforeDelete) beforeDelete(record, { user: req.user, db });
             db.removeRecord(name, record.id);
           }
+          affected = targets.length;
         } else {
           const now = new Date().toISOString();
+          const changes = actions[body.action];
           for (const record of targets) {
-            Object.assign(record, actions[body.action], { updatedAt: now });
+            // `affected` is the records that changed (`05_business_rules.md`):
+            // featuring an article that is already featured is not an update,
+            // and it does not move `updatedAt` either (QA-55).
+            const differs = Object.entries(changes).some(
+              ([field, value]) => record[field] !== value
+            );
+            if (!differs) continue;
+            Object.assign(record, changes, { updatedAt: now });
             if (afterSave)
               afterSave(record, { method: 'BULK', action: body.action, user: req.user, db });
+            affected += 1;
           }
-          db.write();
+          if (affected > 0) db.write();
         }
 
-        const affected = targets.length;
         const label = affected === 1 ? noun.one : noun.many;
         res.message(`${affected} ${label} ${body.action === 'delete' ? 'deleted' : 'updated'}.`, {
           affected,
@@ -605,6 +655,11 @@ function makeCrudRouter(options) {
         const record = buildRecord(body, { existing, method: 'PUT', user: req.user });
         if (slugged) applySlug(record, resolveSlug(body, existing));
 
+        if (unchanged(existing, record)) {
+          res.ok(present(existing, { admin: true, query: req.query }));
+          return;
+        }
+
         store(record, existing);
         if (afterSave) afterSave(record, { existing, method: 'PUT', user: req.user, db });
 
@@ -635,6 +690,11 @@ function makeCrudRouter(options) {
         // silently move its public URL (§5.9).
         if (slugged && body[model.slugField] !== undefined) {
           applySlug(record, resolveSlug({ [model.slugField]: body[model.slugField] }, existing));
+        }
+
+        if (unchanged(existing, record)) {
+          res.ok(present(existing, { admin: true, query: req.query }));
+          return;
         }
 
         store(record, existing);

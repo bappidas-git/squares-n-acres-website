@@ -8,7 +8,7 @@
  * `onChange` has already been through the sanitiser.
  */
 
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 
 import RichTextEditor from '../RichTextEditor';
 
@@ -78,6 +78,94 @@ describe('RichTextEditor', () => {
     expect(emitted).toContain('data-sna-block="properties"');
     expect(emitted).toContain('data-ids="1,3"');
     jest.useRealTimers();
+  });
+
+  describe('a stored document nobody has edited (QA-55)', () => {
+    // A stored body keeps the newlines between its blocks; the editor never
+    // writes them, so the document read back is a different string.
+    const stored = '<h2>Guide</h2>\n<p>One two three.</p>\n<p>Four five six.</p>';
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('stays quiet while a save disables the form and enables it again', () => {
+      const onChange = jest.fn();
+      const { rerender } = render(
+        <RichTextEditor label="Body" value={stored} onChange={onChange} />
+      );
+
+      rerender(<RichTextEditor label="Body" value={stored} onChange={onChange} disabled />);
+      rerender(<RichTextEditor label="Body" value={stored} onChange={onChange} />);
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('stays quiet when the body is clicked into and left', () => {
+      const onChange = jest.fn();
+      render(<RichTextEditor label="Body" value={stored} onChange={onChange} />);
+      const box = screen.getByRole('textbox', { name: 'Body' });
+
+      fireEvent.focus(box);
+      fireEvent.blur(box);
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('hands back the stored string once an edit is undone', () => {
+      const onChange = jest.fn();
+      const ref = { current: null };
+      render(<RichTextEditor ref={ref} label="Body" value={stored} onChange={onChange} />);
+
+      act(() => {
+        ref.current.insertHtml('<p>Added.</p>');
+        jest.advanceTimersByTime(300);
+      });
+      expect(onChange.mock.calls.at(-1)[0]).toContain('Added.');
+
+      fireEvent.keyDown(screen.getByRole('textbox', { name: 'Body' }), {
+        key: 'z',
+        code: 'KeyZ',
+        ctrlKey: true,
+      });
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
+      expect(onChange.mock.calls.at(-1)[0]).toBe(stored);
+    });
+  });
+
+  describe('a value from outside (QA-55)', () => {
+    it('replaces the document with a record that arrives after the editor mounted', async () => {
+      const onChange = jest.fn();
+      const { rerender } = render(<RichTextEditor label="Body" value="" onChange={onChange} />);
+
+      rerender(
+        <RichTextEditor
+          label="Body"
+          value={'<h2>Khata</h2>\n<p>A khata is the record of a property.</p>'}
+          onChange={onChange}
+        />
+      );
+
+      expect(await screen.findByRole('heading', { name: 'Khata' })).toBeInTheDocument();
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('lands on the newest of two values that arrive together', async () => {
+      const { rerender } = render(<RichTextEditor label="Body" value="" onChange={() => {}} />);
+
+      rerender(<RichTextEditor label="Body" value="<h2>First</h2>" onChange={() => {}} />);
+      rerender(<RichTextEditor label="Body" value="<h2>Second</h2>" onChange={() => {}} />);
+
+      expect(await screen.findByRole('heading', { name: 'Second' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'First' })).not.toBeInTheDocument();
+    });
   });
 
   it('reports an outline and the counters through its ref', () => {

@@ -101,4 +101,22 @@ describe('FilterBar', () => {
     fireEvent.change(screen.getByLabelText('Created to'), { target: { value: '0002-09-10' } });
     expect(onChange).toHaveBeenLastCalledWith({ to: '0002-09-10' });
   });
+
+  it('gives the search box the width its field asks for on a laptop, and the row on a phone (QA-55)', () => {
+    const fields = [{ key: 'q', type: 'search', label: 'Search', width: '220px' }];
+    // The width sits on the control's box, which has no role of its own.
+    // eslint-disable-next-line testing-library/no-node-access
+    const box = () => screen.getByLabelText('Search').closest('.control');
+
+    const { unmount } = renderWith(
+      <FilterBar fields={fields} values={{}} onChange={jest.fn()} onReset={jest.fn()} />
+    );
+    // A laptop row of six filters has no room for the default 300 px.
+    expect(box()).toHaveStyle({ width: '220px' });
+    unmount();
+
+    setViewport(390);
+    renderWith(<FilterBar fields={fields} values={{}} onChange={jest.fn()} onReset={jest.fn()} />);
+    expect(box()).not.toHaveStyle({ width: '220px' });
+  });
 });

@@ -44,7 +44,15 @@ function parseSort(spec, order) {
     .filter((key) => key.field);
 }
 
-/** Compares two values of unknown type; `null`/`undefined` sort last. */
+/** Whether a value is the "nothing" that sorts after every value. */
+const isMissing = (value) => value === null || value === undefined || value === '';
+
+/**
+ * Compares two values of unknown type; `null`/`undefined` sort last.
+ *
+ * Ascending only — {@link sortItems} turns the answer round for `desc`, and
+ * keeps the missing values last whichever way it sorts.
+ */
 function compareValues(a, b) {
   const aMissing = a === null || a === undefined || a === '';
   const bMissing = b === null || b === undefined || b === '';
@@ -74,7 +82,17 @@ function sortItems(items, spec, order) {
 
   return items.slice().sort((left, right) => {
     for (const { field, order: direction } of keys) {
-      const result = compareValues(getPath(left, field), getPath(right, field));
+      const a = getPath(left, field);
+      const b = getPath(right, field);
+      // Nulls last in both directions (§5.6, `05_business_rules.md`): turning
+      // the whole comparison round for `desc` used to put every draft — an
+      // article with no `publishedAt` — at the top of "newest first" (QA-55).
+      if (isMissing(a) || isMissing(b)) {
+        const result = compareValues(a, b);
+        if (result !== 0) return result;
+        continue;
+      }
+      const result = compareValues(a, b);
       if (result !== 0) return direction === 'desc' ? -result : result;
     }
     return 0;

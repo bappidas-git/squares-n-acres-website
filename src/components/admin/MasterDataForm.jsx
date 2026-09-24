@@ -167,6 +167,7 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
           rows={field.rows ?? 4}
           value={value ?? ''}
           placeholder={field.placeholder}
+          maxLength={field.maxLength}
           onBlur={onBlur}
           onChange={(event) => set(event.target.value)}
         />

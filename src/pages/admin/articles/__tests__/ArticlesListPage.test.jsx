@@ -8,6 +8,7 @@
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Route, Routes } from 'react-router-dom';
 
 import ArticlesListPage from '../ArticlesListPage';
 import ToastProvider from '../../../../components/common/ToastProvider';
@@ -48,6 +49,7 @@ const ROWS = [
     publishedAt: '2026-05-27T06:30:00.000Z',
     isFeatured: true,
     viewCount: 412,
+    wordCount: 1154,
     seo: { score: 78, scoreBand: 'ok' },
     updatedAt: '2026-09-15T06:00:00.000Z',
   },
@@ -63,10 +65,23 @@ const ROWS = [
     publishedAt: '2026-10-12T03:30:00.000Z',
     isFeatured: false,
     viewCount: 0,
+    wordCount: 212,
     seo: { score: null, scoreBand: 'none' },
     updatedAt: '2026-09-14T06:00:00.000Z',
   },
 ];
+
+/** Two drafts with everything going live needs (`config/articleRules`). */
+const READY_DRAFTS = [3, 4].map((id) => ({
+  ...ROWS[0],
+  id,
+  slug: `ready-draft-${id}`,
+  title: `A Ready Draft Number ${id}`,
+  status: 'draft',
+  publishedAt: null,
+  isFeatured: false,
+  wordCount: 640,
+}));
 
 const envelope = (data = ROWS, meta = {}) => ({
   data,
@@ -113,7 +128,7 @@ const ADMIN = {
   avatarUrl: null,
 };
 
-const renderList = ({ url = '/admin/articles' } = {}) => {
+const renderList = ({ url = '/admin/articles', routes = false } = {}) => {
   storage.setItem(AUTH_STORAGE_KEYS.token, 'seeded-token');
   storage.setItem(AUTH_STORAGE_KEYS.user, ADMIN);
   storage.setItem(
@@ -122,11 +137,20 @@ const renderList = ({ url = '/admin/articles' } = {}) => {
   );
   authService.profile.mockResolvedValue({ data: ADMIN });
 
+  // `routes` puts the list beside the public article, so a test can see which
+  // of the two the tab ends up on.
+  const screenUnderTest = routes ? (
+    <Routes>
+      <Route path="/admin/articles" element={<ArticlesListPage />} />
+      <Route path="/insights/articles/:slug" element={<p>The public article</p>} />
+    </Routes>
+  ) : (
+    <ArticlesListPage />
+  );
+
   return renderWith(
     <ToastProvider>
-      <AdminAuthProvider>
-        <ArticlesListPage />
-      </AdminAuthProvider>
+      <AdminAuthProvider>{screenUnderTest}</AdminAuthProvider>
     </ToastProvider>,
     { initialEntries: [url] }
   );
@@ -180,10 +204,30 @@ describe('ArticlesListPage', () => {
       expect.objectContaining({
         status: ['draft', 'scheduled'],
         categoryId: '1',
-        isFeatured: 'true',
+        isFeatured: true,
       }),
       expect.anything()
     );
+  });
+
+  it('reads a featured flag that is not true or false as no filter at all (QA-55)', async () => {
+    renderList({ url: '/admin/articles?isFeatured=maybe' });
+    await screen.findByText('Karnataka RERA: A Complete Guide');
+
+    expect(articleService.adminList).toHaveBeenCalledWith(
+      expect.objectContaining({ isFeatured: undefined }),
+      expect.anything()
+    );
+    expect(screen.queryByRole('button', { name: /Remove filter Featured/ })).toBeNull();
+  });
+
+  it('names a category the address carries but the list does not know (QA-55)', async () => {
+    renderList({ url: '/admin/articles?categoryId=9' });
+    await screen.findByText('Karnataka RERA: A Complete Guide');
+
+    expect(
+      await screen.findByRole('button', { name: 'Remove filter Category: Unknown category' })
+    ).toBeInTheDocument();
   });
 
   it('shows a scheduled article with the moment it is waiting for', async () => {
@@ -194,29 +238,89 @@ describe('ArticlesListPage', () => {
     expect(table.getByText('Scheduled')).toBeInTheDocument();
     // 03:30 UTC is 09:00 in Bengaluru (D22).
     expect(table.getByText(/12 Oct 2026, 09:00 am/)).toBeInTheDocument();
-    expect(table.getByText('78 · Needs work')).toBeInTheDocument();
-    expect(table.getByText('Not analysed')).toBeInTheDocument();
+    // Its date is a promise, not a publication (QA-55).
+    expect(table.getByText('Due 12 Oct 2026')).toBeInTheDocument();
+    // The SEO column, and the copy that folds under the status below 1,536 px.
+    expect(table.getAllByText('78 · Needs work').length).toBeGreaterThan(0);
+    expect(table.getAllByText('Not analysed').length).toBeGreaterThan(0);
+  });
+
+  it('marks a featured article and names each row checkbox after its article (QA-55)', async () => {
+    renderList();
+    await screen.findByText('Karnataka RERA: A Complete Guide');
+
+    const table = within(screen.getByRole('table'));
+    expect(table.getAllByRole('img', { name: 'Featured' })).toHaveLength(1);
+    expect(
+      table.getByRole('checkbox', { name: 'Select Karnataka RERA: A Complete Guide' })
+    ).toBeInTheDocument();
   });
 
   describe('bulk actions', () => {
     it('publishes the ticked rows through one call (§5.8)', async () => {
+      articleService.adminList.mockResolvedValue(envelope(READY_DRAFTS));
       renderList();
-      await screen.findByText('Karnataka RERA: A Complete Guide');
+      await screen.findByText('A Ready Draft Number 3');
 
       await userEvent.click(screen.getByRole('checkbox', { name: 'Select all rows on this page' }));
       await userEvent.click(screen.getByRole('button', { name: 'Publish' }));
 
       await waitFor(() =>
-        expect(articleService.bulk).toHaveBeenCalledWith({ ids: [1, 2], action: 'publish' })
+        expect(articleService.bulk).toHaveBeenCalledWith({ ids: [3, 4], action: 'publish' })
       );
       expect(await screen.findByText('2 articles updated.')).toBeInTheDocument();
+    });
+
+    it('names what an article lacks before publishing it, and publishes the ready ones (QA-55)', async () => {
+      articleService.adminList.mockResolvedValue(envelope([...READY_DRAFTS, ROWS[1]]));
+      renderList();
+      await screen.findByText('A Ready Draft Number 3');
+
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Select all rows on this page' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Publish' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(
+        within(dialog).getByText('1 of the 3 selected articles is not ready to go live')
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByRole('link', { name: 'Khata Transfer: The Checklist' })
+      ).toHaveAttribute('href', '/admin/articles/edit/2');
+      expect(
+        within(dialog).getByText('no excerpt · no featured image · 212 of 300 words')
+      ).toBeInTheDocument();
+      expect(articleService.bulk).not.toHaveBeenCalled();
+
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Publish 2 articles' }));
+      await waitFor(() =>
+        expect(articleService.bulk).toHaveBeenCalledWith({ ids: [3, 4], action: 'publish' })
+      );
+    });
+
+    it('publishes nothing when nothing chosen is ready', async () => {
+      renderList();
+      await screen.findByText('Khata Transfer: The Checklist');
+
+      await userEvent.click(
+        screen.getByRole('checkbox', { name: 'Select Khata Transfer: The Checklist' })
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Publish' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(
+        within(dialog).getByText('“Khata Transfer: The Checklist” is not ready to go live')
+      ).toBeInTheDocument();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Got it' }));
+      expect(articleService.bulk).not.toHaveBeenCalled();
     });
 
     it('confirms before deleting, naming what it is about to remove', async () => {
       renderList();
       await screen.findByText('Karnataka RERA: A Complete Guide');
 
-      await userEvent.click(screen.getByRole('checkbox', { name: 'Select row 1' }));
+      await userEvent.click(
+        screen.getByRole('checkbox', { name: 'Select Karnataka RERA: A Complete Guide' })
+      );
       await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
       const dialog = await screen.findByRole('dialog');
@@ -227,6 +331,27 @@ describe('ArticlesListPage', () => {
       await waitFor(() =>
         expect(articleService.bulk).toHaveBeenCalledWith({ ids: [1], action: 'delete' })
       );
+    });
+
+    it('keeps its sentence while the confirmation fades out (QA-55)', async () => {
+      renderList();
+      await screen.findByText('Karnataka RERA: A Complete Guide');
+
+      await userEvent.click(
+        screen.getByRole('checkbox', { name: 'Select Karnataka RERA: A Complete Guide' })
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      const dialog = await screen.findByRole('dialog');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+      // Still on screen for its exit, and still saying what it asked.
+      expect(dialog).toBeInTheDocument();
+      expect(within(dialog).getByText(/1 article will be deleted/)).toBeInTheDocument();
+      expect(
+        within(dialog).getByRole('heading', { name: 'Delete the selected articles?' })
+      ).toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(articleService.bulk).not.toHaveBeenCalled();
     });
   });
 
@@ -243,9 +368,10 @@ describe('ArticlesListPage', () => {
       await waitFor(() => expect(articleService.duplicate).toHaveBeenCalledWith(1));
     });
 
-    it('asks for a preview token and opens the article behind it (D28)', async () => {
-      const open = jest.spyOn(window, 'open').mockImplementation(() => null);
-      renderList();
+    it('asks for a preview token and opens the article behind it in a new tab (D28)', async () => {
+      const tab = { opener: 'the list' };
+      const open = jest.spyOn(window, 'open').mockImplementation(() => tab);
+      renderList({ routes: true });
       await screen.findByText('Khata Transfer: The Checklist');
 
       await userEvent.click(
@@ -254,11 +380,30 @@ describe('ArticlesListPage', () => {
       await userEvent.click(await screen.findByRole('menuitem', { name: 'Preview' }));
 
       await waitFor(() => expect(articleService.previewToken).toHaveBeenCalledWith(2));
+      // Without `noopener`, which makes `window.open` answer `null` whether or
+      // not the tab opened; the opener is cut by hand (QA-55).
       expect(open).toHaveBeenCalledWith(
         '/insights/articles/khata-transfer-checklist?preview=tok-1',
-        '_blank',
-        'noopener,noreferrer'
+        '_blank'
       );
+      expect(tab.opener).toBeNull();
+      // The list stays where it was.
+      expect(screen.queryByText('The public article')).toBeNull();
+      expect(screen.getByText('Khata Transfer: The Checklist')).toBeInTheDocument();
+      open.mockRestore();
+    });
+
+    it('opens the preview here only when the browser refuses the new tab', async () => {
+      const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+      renderList({ routes: true });
+      await screen.findByText('Khata Transfer: The Checklist');
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Actions for Khata Transfer: The Checklist' })
+      );
+      await userEvent.click(await screen.findByRole('menuitem', { name: 'Preview' }));
+
+      expect(await screen.findByText('The public article')).toBeInTheDocument();
       open.mockRestore();
     });
 
@@ -283,6 +428,34 @@ describe('ArticlesListPage', () => {
 
       await waitFor(() =>
         expect(articleService.patch).toHaveBeenCalledWith(2, { isFeatured: true })
+      );
+      // Read again, so a list filtered by the flag loses the row (QA-55).
+      await waitFor(() => expect(articleService.adminList).toHaveBeenCalledTimes(2));
+    });
+
+    it('steps back a page when a delete empties the one on screen (QA-55)', async () => {
+      articleService.adminList.mockImplementation((params) =>
+        Promise.resolve(
+          params.page === 2
+            ? envelope([ROWS[1]], { page: 2, perPage: 1, total: 2, totalPages: 2 })
+            : envelope([ROWS[0]], { page: 1, perPage: 1, total: 2, totalPages: 2 })
+        )
+      );
+      renderList({ url: '/admin/articles?page=2&perPage=1' });
+      await screen.findByText('Khata Transfer: The Checklist');
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Actions for Khata Transfer: The Checklist' })
+      );
+      await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }));
+      const dialog = await screen.findByRole('dialog');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+      await waitFor(() => expect(articleService.remove).toHaveBeenCalledWith(2));
+      expect(await screen.findByText('Karnataka RERA: A Complete Guide')).toBeInTheDocument();
+      expect(articleService.adminList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 1 }),
+        expect.anything()
       );
     });
   });
