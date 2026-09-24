@@ -332,10 +332,8 @@ guidelines 12 / 12, env. `npm run e2e` 62 / 62 (59).
 - **CSV exports carry raw values** — ISO timestamps and enum keys (`subscribed`,
   `newsletter`) — which a spreadsheet user must read as they are. What the columns should
   say is a product decision.
-- **The public finance assessment form keeps the ten-character phone box**, the last
-  `PhoneField` on the kit's default: "98450 12345" is cut there and refused. Its lead is
-  normalised by `POST /leads`, so the box's room is all it lacks; outside this audit. (The
-  profile page and the Agent tab, listed here first, are fixed — §9.)
+- **The phone boxes left on the kit's ten characters** — the profile page, the property
+  form's Agent tab and the public finance questionnaire — are fixed as follow-ups (§9, §11).
 - **FAQs open a new question at 0** under "1 is first", as T7 was; outside this audit (QA-59
   kept 0 on purpose, and it places the question first either way).
 - **The kit's Alert, Chip and Toast still close with a text "×"** (S1 changed the dialog,
@@ -405,3 +403,31 @@ Both tests passed in four runs of the file during a concurrent `npm run test:ci`
 passed). With the analysis made four times slower throughout, the budget test fails (117 ms);
 with a quadratic pass worth about 25 ms added (55 ms in all, inside the budget), the shape
 test fails (8.85). The two tests take about 1.2 s together.
+
+## 11. Follow-up: the finance questionnaire's phone box
+
+The eligibility questionnaire on a property page (Finance & EMI, and the per-bank check;
+`AssessmentForm`) was the last `PhoneField` on the kit's ten characters. Reproduced on
+`/properties/skyline-crest-4-bhk-bellandur` before the fix:
+
+- **Typed "98450 12345"** → the box read "98450 1234", and "Check my eligibility" said
+  "Enter a valid 10-digit Indian mobile number" and sent nothing: the lead was lost.
+- **Prefilled from a visitor another lead form had saved** (`+919876543210`, the one shape
+  every lead form sends) → the box read "+91 | +919876543210" beside its own prefix.
+
+The fix, as the lead form and the job application already do it:
+
+- The box takes 18 characters.
+- `assessmentLead` sends `normalizePhone` of what was typed — `+919845012345` — so the body
+  is canonical whatever the backend does, and the form saves the visitor from that body.
+  The API normalised the number already (`normalizeLeadPhone`, QA-53); validation already
+  read it normalised.
+- `emptyAnswers` prefills the last ten digits of a saved number (`localPhoneDigits`).
+
+Browser pass after the fix: **6 / 6** — the box's cap, "98450 12345" kept whole, the lead
+filed (`POST /leads` → 201) and stored as `+919845012345` with source
+`financial-assessment`, the visitor saved as `+919845012345`, and the questionnaire opened
+again prefilled with `9845012345`. `AssessmentForm.test.jsx` gains five tests (the box's
+room and a spaced number filed as `+919845100121`, the canonical body, the ten-digit
+prefill on the form and in `emptyAnswers`, validation of "98451 00121" and
+"+91 98451-00121"), and its lead test now expects the canonical number.
