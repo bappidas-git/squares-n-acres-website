@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, waitForElementToBeRemoved, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import ApiError from '../../../services/apiError';
@@ -225,5 +225,82 @@ describe('MasterDataPage', () => {
 
     await waitFor(() => expect(service.list).toHaveBeenCalled());
     expect(await screen.findByText('No localities yet')).toBeInTheDocument();
+  });
+
+  /**
+   * `editing` is cleared the moment the dialog is asked to close, and the
+   * dialog then takes its exit transition to leave. MUI keeps it in the
+   * document until it has faded out, which is where these assertions run: a
+   * dialog drawn from `editing` read "New locality" there, with no fields and a
+   * "Create locality" button.
+   */
+  describe('the dialog as it closes', () => {
+    /** Opens a row's dialog and waits for its form to be filled in. */
+    const openEdit = async (name) => {
+      await userEvent.click(screen.getByRole('button', { name: `Edit ${name}` }));
+      const dialog = await screen.findByRole('dialog', { name: 'Edit locality' });
+      await waitFor(() => expect(within(dialog).getByLabelText(/Name/)).toHaveValue(name));
+      return dialog;
+    };
+
+    it('still reads "Edit …", with its fields, while it fades out after Cancel', async () => {
+      render(baseConfig(fakeService()));
+      await screen.findByText('Whitefield');
+
+      const dialog = await openEdit('Whitefield');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+      expect(within(dialog).getByRole('heading', { name: 'Edit locality' })).toBeInTheDocument();
+      expect(within(dialog).queryByText('New locality')).toBeNull();
+      expect(within(dialog).getByLabelText(/Name/)).toHaveValue('Whitefield');
+      expect(within(dialog).getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+
+      await waitForElementToBeRemoved(dialog);
+    });
+
+    it('still reads "Edit …" after Save changes, and a click that lands then creates nothing', async () => {
+      const service = fakeService();
+      render(baseConfig(service));
+      await screen.findByText('Whitefield');
+
+      const dialog = await openEdit('Whitefield');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+      // The toast is raised in the same moment the dialog is closed.
+      await screen.findByText('Locality saved');
+
+      expect(within(dialog).getByRole('heading', { name: 'Edit locality' })).toBeInTheDocument();
+      expect(within(dialog).queryByText('New locality')).toBeNull();
+      expect(within(dialog).getByLabelText(/Name/)).toHaveValue('Whitefield');
+
+      // The button is still under the pointer. With `editing` gone, a submit
+      // would have created a copy of the record just saved.
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+      expect(service.update).toHaveBeenCalledTimes(1);
+      expect(service.create).not.toHaveBeenCalled();
+
+      await waitForElementToBeRemoved(dialog);
+    });
+
+    it('opens a clean create form after an edit, and the right record after an add', async () => {
+      render(baseConfig(fakeService()));
+      await screen.findByText('Whitefield');
+
+      const edit = await openEdit('Whitefield');
+      await userEvent.click(within(edit).getByRole('button', { name: 'Cancel' }));
+      await waitForElementToBeRemoved(edit);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add locality' }));
+      const add = await screen.findByRole('dialog', { name: 'New locality' });
+      await waitFor(() => expect(within(add).getByLabelText(/Name/)).toHaveValue(''));
+
+      await userEvent.click(within(add).getByRole('button', { name: 'Cancel' }));
+      // A create form fades out as one too, not as an empty box.
+      expect(within(add).getByLabelText(/Name/)).toBeInTheDocument();
+      expect(within(add).getByRole('button', { name: 'Create locality' })).toBeInTheDocument();
+      await waitForElementToBeRemoved(add);
+
+      // `openEdit` waits for the form to read "Jayanagar".
+      await openEdit('Jayanagar');
+    });
   });
 });

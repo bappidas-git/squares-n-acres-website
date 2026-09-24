@@ -257,6 +257,8 @@ export default function MasterDataPage({ config }) {
   } = crud;
 
   const [editing, setEditing] = useState(null); // `{}` for a new record
+  // The record a closing dialog was showing, until its exit transition ends.
+  const [closing, setClosing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [deletingBusy, setDeletingBusy] = useState(false);
   const [guard, setGuard] = useState(null);
@@ -269,11 +271,17 @@ export default function MasterDataPage({ config }) {
   const isNew = Boolean(editing) && !editing.id;
   const activeSchema = isNew ? (createSchema ?? schema) : schema;
 
+  // What the form shows. `editing` is cleared the moment the dialog is asked
+  // to close, and the dialog then takes its exit transition to leave: drawn
+  // from `editing`, an edit faded out as an empty "New badge" with a "Create
+  // badge" button. So a closing dialog keeps the record it was showing.
+  const shown = editing ?? closing;
+
   // A screen whose fields depend on the record — the users form disables an
   // admin's own role select — passes a function instead of a list.
   const formFields = useMemo(
-    () => (typeof formFieldsProp === 'function' ? formFieldsProp(editing) : formFieldsProp),
-    [formFieldsProp, editing]
+    () => (typeof formFieldsProp === 'function' ? formFieldsProp(shown) : formFieldsProp),
+    [formFieldsProp, shown]
   );
 
   const initialValues = useMemo(() => {
@@ -338,12 +346,16 @@ export default function MasterDataPage({ config }) {
   const closeForm = () => {
     setConfirmDiscard(false);
     setSaveWarning(null);
+    // The dialog fades out as it was; its `onExited` lets go of the record. A
+    // page-mode form has no exit transition to wait for.
+    if (formMode === 'dialog') setClosing(editing);
     setEditing(null);
   };
 
   /** Escape, the backdrop and "Cancel" all ask first when there is work to lose. */
   const requestClose = () => {
-    if (form.submitting) return;
+    // A dialog that is fading out is already closed.
+    if (!editing || form.submitting) return;
     if (form.dirty) {
       setConfirmDiscard(true);
       return;
@@ -357,6 +369,10 @@ export default function MasterDataPage({ config }) {
    * @returns {Promise<boolean>} whether the record was saved
    */
   const persist = async () => {
+    // A closing dialog keeps its buttons where they were, under a pointer that
+    // may click again — and with `editing` gone, a submit would create a copy
+    // of the record just saved.
+    if (!editing) return false;
     const saved = await form.submit();
     if (!saved) return false;
     // The redirect this record's `seo` asks for, against the slug the API
@@ -380,6 +396,7 @@ export default function MasterDataPage({ config }) {
    * a refusal.
    */
   const save = async () => {
+    if (!editing) return;
     if (!confirmSave) {
       await persist();
       return;
@@ -636,13 +653,13 @@ export default function MasterDataPage({ config }) {
       form={form}
       disabled={form.submitting}
       checkSlug={service.checkSlug}
-      excludeId={editing?.id}
+      excludeId={shown?.id}
       slugBase={config.slugBase}
       seoPanel={seoPanel}
       seoEntityType={seoEntityType}
-      seoRecord={editing}
+      seoRecord={shown}
     >
-      {typeof formFooter === 'function' ? formFooter(editing) : formFooter}
+      {typeof formFooter === 'function' ? formFooter(shown) : formFooter}
     </MasterDataForm>
   );
 
@@ -809,19 +826,21 @@ export default function MasterDataPage({ config }) {
           onClose={requestClose}
           mobile="fullscreen"
           size="md"
-          title={editing?.id ? `Edit ${singular}` : `New ${singular}`}
+          title={shown?.id ? `Edit ${singular}` : `New ${singular}`}
           footer={
             <>
               <Button variant="ghost" onClick={requestClose} disabled={saving}>
                 Cancel
               </Button>
               <Button onClick={save} loading={saving}>
-                {editing?.id ? 'Save changes' : `Create ${singular}`}
+                {shown?.id ? 'Save changes' : `Create ${singular}`}
               </Button>
             </>
           }
+          // Faded out: nothing is on screen to keep any more.
+          slotProps={{ transition: { onExited: () => setClosing(null) } }}
         >
-          {editing ? formBody : null}
+          {shown ? formBody : null}
         </Modal>
       ) : null}
 
