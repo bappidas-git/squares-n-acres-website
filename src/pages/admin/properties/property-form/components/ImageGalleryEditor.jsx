@@ -104,7 +104,9 @@ export default function ImageGalleryEditor({
   const coverName = useId();
   const { configured } = useCloudinaryConfig();
   const [single, setSingle] = useState('');
+  const [singleError, setSingleError] = useState('');
   const [bulk, setBulk] = useState('');
+  const [bulkError, setBulkError] = useState('');
   const [bulkOpen, setBulkOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -153,20 +155,61 @@ export default function ImageGalleryEditor({
   /** A typed or pasted list of addresses, as gallery rows. */
   const asRows = (found) => found.map((url) => ({ url, alt: '', caption: '' }));
 
+  /**
+   * An address, or several pasted at once — but only addresses. Split on the
+   * spaces, "not a url" became three broken gallery rows; and an address
+   * already in the gallery did nothing at all, with the box still full and no
+   * word as to why (QA-62).
+   */
   const addSingle = () => {
+    const pieces = single.trim().split(/\s+/).filter(Boolean);
+    if (pieces.length === 0) return;
+    if (!pieces.every((piece) => URL_PATTERN.test(piece))) {
+      setSingleError(
+        pieces.length === 1
+          ? 'Enter the address of a photograph, starting with http:// or https://.'
+          : 'Enter one address, starting with http:// or https://. A list goes in “Add multiple URLs”.'
+      );
+      return;
+    }
     const found = parseUrlList(single, urls);
-    if (found.length === 0) return;
+    if (found.length === 0) {
+      setSingleError(
+        pieces.length === 1
+          ? 'That photograph is already in the gallery.'
+          : 'Those photographs are already in the gallery.'
+      );
+      return;
+    }
     onAdd?.(asRows(found));
     setSingle('');
+    setSingleError('');
+    setAnnouncement(`${found.length} ${found.length === 1 ? 'image' : 'images'} added.`);
   };
 
+  /**
+   * The pasted list: every address is added, and a line that is not one stays
+   * in the box to be fixed rather than becoming a broken row.
+   */
   const addBulk = () => {
-    const found = parseUrlList(bulk, urls);
-    if (found.length === 0) return;
-    onAdd?.(asRows(found));
+    const lines = bulk.split(/\s+/).filter(Boolean);
+    const rejected = lines.filter((line) => !URL_PATTERN.test(line));
+    const found = parseUrlList(lines.filter((line) => URL_PATTERN.test(line)).join('\n'), urls);
+    if (found.length > 0) onAdd?.(asRows(found));
+
+    const added = `${found.length} ${found.length === 1 ? 'image' : 'images'} added.`;
+    if (rejected.length > 0) {
+      setBulk(rejected.join('\n'));
+      setBulkError(
+        `${rejected.length === 1 ? 'This line is' : `These ${rejected.length} lines are`} not the address of a photograph — fix or remove ${rejected.length === 1 ? 'it' : 'them'}.`
+      );
+      if (found.length > 0) setAnnouncement(added);
+      return;
+    }
     setBulk('');
+    setBulkError('');
     setBulkOpen(false);
-    setAnnouncement(`${found.length} ${found.length === 1 ? 'image' : 'images'} added.`);
+    setAnnouncement(found.length > 0 ? added : 'Those photographs are already in the gallery.');
   };
 
   return (
@@ -330,9 +373,13 @@ export default function ImageGalleryEditor({
           label="Add an image"
           type="url"
           value={single}
+          error={singleError || undefined}
           disabled={disabled}
           placeholder="https://…"
-          onChange={(event) => setSingle(event.target.value)}
+          onChange={(event) => {
+            setSingle(event.target.value);
+            setSingleError('');
+          }}
           onKeyDown={(event) => {
             if (event.key !== 'Enter') return;
             event.preventDefault();
@@ -391,9 +438,13 @@ export default function ImageGalleryEditor({
             label="One URL per line"
             rows={5}
             value={bulk}
+            error={bulkError || undefined}
             disabled={disabled}
             hint="Paste a list from the photographer, one address per line. Anything already in the gallery is skipped."
-            onChange={(event) => setBulk(event.target.value)}
+            onChange={(event) => {
+              setBulk(event.target.value);
+              setBulkError('');
+            }}
           />
           <Button
             variant="outline"

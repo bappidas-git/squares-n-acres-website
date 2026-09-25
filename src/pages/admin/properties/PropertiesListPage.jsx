@@ -10,7 +10,10 @@ import PageHeader from '../../../components/admin/PageHeader';
 import PATHS from '../../../routes/paths';
 import propertyService from '../../../services/propertyService';
 import useApiList from '../../../hooks/useApiList';
+import useLingering from '../../../hooks/useLingering';
+import ActivationCheckDialog from './ActivationCheckDialog';
 import { CSV_MIME, csvFileName, toCsv } from '../../../utils/csv';
+import { publishGaps, publishProblems } from '../../../config/propertyRules';
 import { PROPERTY_CSV_COLUMNS, buildPropertyColumns, renderPropertyCard } from './propertyColumns';
 import {
   PROPERTY_LIST_DEFAULTS,
@@ -55,6 +58,12 @@ const BULK_ACTIONS = [
     },
   },
 ];
+
+/** A row the publish rules refuse, as the activation check lists it — or `null`. */
+function notReadyOf(row) {
+  const gaps = publishGaps(publishProblems(row), row);
+  return gaps.length > 0 ? { id: row.id, title: row.title, gaps } : null;
+}
 
 /**
  * Admin → Properties (`/admin/properties`).
@@ -121,6 +130,12 @@ export default function PropertiesListPage() {
   const [deletingBusy, setDeletingBusy] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState(null);
   const [exporting, setExporting] = useState(false);
+  // Listings an "Activate" would put on the site without what the publish
+  // rules ask for — the eye toggle's one row, or the bulk bar's several.
+  const [activationCheck, setActivationCheck] = useState(null);
+  const [shownCheck, releaseCheck] = useLingering(activationCheck);
+  // The delete confirmation keeps its sentence while it fades out (QA-54).
+  const [shownDeleting, releaseDeleting] = useLingering(deleting);
 
   // Read by the effect below without making it re-run on every busy change.
   const busyRef = useRef(new Set());
@@ -145,19 +160,58 @@ export default function PropertiesListPage() {
 
   /* ---------------- writes ---------------- */
 
+  // Read by `setFlag` at the moment it answers, so a filter changed while the
+  // `PATCH` was travelling is the one it asks about.
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
+
   const setFlag = useCallback(
     async (row, field, value) => {
       const id = String(row.id);
+
+      // Publishing asks the form's own rules first: the eye toggle and the row
+      // menu used to put a listing with no photograph, no description and no
+      // price on the site, because they never went through the form (QA-62).
+      if (field === 'isActive' && value === true) {
+        const refused = notReadyOf(row);
+        if (refused) {
+          setActivationCheck({ total: 1, notReady: [refused], readyIds: [] });
+          return;
+        }
+      }
+
       setOverrides((current) => ({ ...current, [id]: { ...current[id], [field]: value } }));
       setBusyIds((current) => [...current, id]);
 
       try {
-        await propertyService.patch(row.id, { [field]: value });
-        toast.success(TOASTS.flagged(`“${row.title}”`, field, value));
-        // The list is sorted and filtered by the server: a row that is no
-        // longer "featured" under a Featured filter, or that has just become
-        // the most recently updated, moves — so the page is asked again.
-        refetch();
+        const envelope = await propertyService.patch(row.id, { [field]: value });
+        const saved = envelope?.data ?? {};
+        toast.success(
+          field === 'isFeatured' && value === true && row.isActive !== true
+            ? TOASTS.featuredUnpublished(`“${row.title}”`)
+            : TOASTS.flagged(`“${row.title}”`, field, value)
+        );
+
+        // A view narrowed by this very flag no longer holds the row, so it is
+        // asked again. Any other view keeps the row where it is, with what the
+        // server answered: refetching re-sorted the default "Updated" order,
+        // the row just edited jumped to the top, and the toggle now under the
+        // pointer belonged to another listing — a second click changed that
+        // one instead (QA-62).
+        const narrowed = paramsRef.current?.[field];
+        if (narrowed !== undefined && narrowed !== null && narrowed !== '') {
+          refetch();
+        } else {
+          setOverrides((current) => ({
+            ...current,
+            [id]: {
+              ...current[id],
+              [field]: saved[field] ?? value,
+              ...(saved.updatedAt ? { updatedAt: saved.updatedAt } : null),
+              ...(saved.publishedAt !== undefined ? { publishedAt: saved.publishedAt } : null),
+            },
+          }));
+        }
       } catch (thrown) {
         // Only the field that was refused goes back. Taking the whole row's
         // override out used to undo an earlier chip on the same row that the
@@ -167,7 +221,19 @@ export default function PropertiesListPage() {
           const { [id]: _row, ...others } = current;
           return Object.keys(kept).length > 0 ? { ...others, [id]: kept } : others;
         });
-        toast.error(firstFieldMessage(thrown, 'The change could not be saved.'));
+        if (thrown?.status === 404) {
+          // Deleted in another tab or by another editor: "Not found" named
+          // nothing, and the row stayed on screen to fail again.
+          toast.error(TOASTS.gone(`“${row.title}”`));
+          refetch();
+        } else if (Array.isArray(thrown?.data?.notReady)) {
+          // The API's own refusal — the row was emptied in another tab since
+          // this page read it — says what is missing, in the same dialog.
+          setActivationCheck({ total: 1, notReady: thrown.data.notReady, readyIds: [] });
+          refetch();
+        } else {
+          toast.error(firstFieldMessage(thrown, 'The change could not be saved.'));
+        }
       } finally {
         setBusyIds((current) => current.filter((entry) => entry !== id));
       }
@@ -192,6 +258,18 @@ export default function PropertiesListPage() {
     [navigate, refetch, toast]
   );
 
+  /**
+   * After rows are deleted: the page they were on, or the one before it when
+   * they were all it held — deleting the last listings of page 2 used to leave
+   * "Page 2 of 1 — no rows on this page" behind (the articles list does the
+   * same, QA-55).
+   */
+  const afterRemoval = (removed) => {
+    const page = Number(params.page) || 1;
+    if (page > 1 && removed >= rows.length) setPage(page - 1);
+    else refetch();
+  };
+
   const confirmDelete = async () => {
     if (!deleting) return;
     setDeletingBusy(true);
@@ -200,7 +278,7 @@ export default function PropertiesListPage() {
       toast.success(`“${deleting.title}” deleted.`);
       setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
       setDeleting(null);
-      refetch();
+      afterRemoval(1);
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'The property could not be deleted.'));
       // A refusal will not become an acceptance on a second press.
@@ -213,18 +291,52 @@ export default function PropertiesListPage() {
     }
   };
 
-  const runBulk = async (action, ids) => {
+  const applyBulk = async (action, ids) => {
     setBulkBusy(true);
     try {
       const { message } = await propertyService.bulk({ ids, action });
       toast.success(message || `${ids.length} properties updated.`);
       setSelectedIds([]);
-      refetch();
+      if (action === 'delete') afterRemoval(ids.length);
+      else refetch();
     } catch (thrown) {
-      toast.error(firstFieldMessage(thrown, 'The bulk action could not be applied.'));
+      if (action === 'activate' && Array.isArray(thrown?.data?.notReady)) {
+        // Refused whole by the API: a row changed since this page read it.
+        setActivationCheck({ total: ids.length, notReady: thrown.data.notReady, readyIds: [] });
+        refetch();
+      } else {
+        toast.error(firstFieldMessage(thrown, 'The bulk action could not be applied.'));
+      }
     } finally {
       setBulkBusy(false);
     }
+  };
+
+  /**
+   * The bulk actions, with "Activate" asking first what the API would refuse:
+   * the rules the form enforces hold for a batch too (`config/propertyRules`,
+   * QA-62). The rows on screen carry what the rules read, so the editor hears
+   * which listing lacks what, and may activate the ones that are ready.
+   */
+  const runBulk = async (action, ids) => {
+    if (action === 'activate') {
+      const chosen = new Set(ids.map(String));
+      // A listing already live is left as it is — activating it again changes
+      // nothing — so only the others are asked the rules.
+      const candidates = rows.filter((row) => chosen.has(String(row.id)) && !row.isActive);
+      const notReady = candidates.map(notReadyOf).filter(Boolean);
+
+      if (notReady.length > 0) {
+        const refused = new Set(notReady.map((entry) => String(entry.id)));
+        setActivationCheck({
+          total: ids.length,
+          notReady,
+          readyIds: candidates.map((row) => row.id).filter((id) => !refused.has(String(id))),
+        });
+        return;
+      }
+    }
+    await applyBulk(action, ids);
   };
 
   /**
@@ -363,7 +475,10 @@ export default function PropertiesListPage() {
   );
 
   const filtered = hasActiveFilters(params);
-  const total = meta?.total;
+  // A request that failed leaves the last answer's `meta` behind: the header
+  // said "40" and the export offered forty rows over "Something went wrong"
+  // for a filter that had never been answered (QA-62).
+  const total = error ? undefined : meta?.total;
 
   const emptyState = useMemo(() => {
     if (params.page > 1) {
@@ -415,6 +530,9 @@ export default function PropertiesListPage() {
               variant="outline"
               icon={<Icon icon="mdi:file-delimited-outline" width="18" height="18" />}
               loading={exporting}
+              // Nothing to export is not an export: the button used to hand
+              // over a file of headings and say "0 properties exported".
+              disabled={total === 0}
               onClick={exportCsv}
             >
               Export CSV{typeof total === 'number' ? ` (${formatNumber(total)})` : ''}
@@ -474,8 +592,8 @@ export default function PropertiesListPage() {
         open={Boolean(deleting)}
         title="Delete this property?"
         message={
-          deleting
-            ? `“${deleting.title}” will be deleted, and its public page will answer 404. This cannot be undone.`
+          shownDeleting
+            ? `“${shownDeleting.title}” will be deleted, and its public page will answer 404. This cannot be undone.`
             : undefined
         }
         confirmLabel="Delete"
@@ -483,6 +601,19 @@ export default function PropertiesListPage() {
         loading={deletingBusy}
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
+        onExited={releaseDeleting}
+      />
+
+      <ActivationCheckDialog
+        open={Boolean(activationCheck)}
+        check={shownCheck}
+        onClose={() => setActivationCheck(null)}
+        onExited={releaseCheck}
+        onActivateReady={() => {
+          const ids = activationCheck?.readyIds ?? [];
+          setActivationCheck(null);
+          if (ids.length > 0) applyBulk('activate', ids);
+        }}
       />
     </>
   );

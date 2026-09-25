@@ -325,3 +325,34 @@ describe('reserveTmpIds', () => {
     expect(makeImage().id).toBe('tmp-13');
   });
 });
+
+describe('the version a save is made from (QA-62)', () => {
+  const record = { id: 5, title: 'Aurelia Court', updatedAt: 'v1' };
+
+  it('starts at the record, and moves with a load and a save', () => {
+    let state = createFormState({ propertyId: 5, record });
+    expect(state.version).toBe('v1');
+
+    state = reducer(state, actions.load({ ...record, updatedAt: 'v2' }));
+    expect(state.version).toBe('v2');
+
+    state = reducer(state, actions.markSaved({ ...record, updatedAt: 'v3' }));
+    expect(state.version).toBe('v3');
+  });
+
+  it('takes a restored draft’s own version, so a save over a newer one is refused', () => {
+    const state = reducer(
+      createFormState({ propertyId: 5, record: { ...record, updatedAt: 'v7' } }),
+      actions.restoreDraft({ values: { title: 'Drafted' }, savedAt: 'later', version: 'v6' })
+    );
+    expect(state.version).toBe('v6');
+  });
+
+  it('keeps the loaded version for a draft written before drafts carried one', () => {
+    const state = reducer(
+      createFormState({ propertyId: 5, record }),
+      actions.restoreDraft({ values: { title: 'Drafted' }, savedAt: 'later' })
+    );
+    expect(state.version).toBe('v1');
+  });
+});

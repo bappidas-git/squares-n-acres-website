@@ -217,11 +217,18 @@ const RichTextEditor = forwardRef(function RichTextEditor(
     [extensions]
   );
 
+  // The selector reads the editor `useEditor` holds now, not the one in the
+  // snapshot. Tiptap replaces its first instance when the mount effect runs
+  // later than its 1 ms destroy timer — a sixteen-tab form always does — and
+  // the snapshot kept the discarded, empty one until the next transaction. A
+  // stored description arrives in the replacement's own `content`, so there
+  // was no next transaction: the counter read "0 words · 0 characters" under
+  // 1,022 characters of text until the first keystroke (QA-62).
   const view = useEditorState({
     editor,
-    selector: ({ editor: instance }) =>
-      instance
-        ? { outline: outlineOf(instance), stats: statsOf(instance) }
+    selector: () =>
+      isLive(editor)
+        ? { outline: outlineOf(editor), stats: statsOf(editor) }
         : { outline: [], stats: { words: 0, characters: 0, readingTime: 0 } },
   });
 

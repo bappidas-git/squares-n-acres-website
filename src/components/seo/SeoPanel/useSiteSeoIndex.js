@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import seoService from '../../../services/seoService';
+import storage from '../../../utils/storage';
+import { AUTH_STORAGE_KEYS } from '../../../services/http';
 import { EVENTS, on } from '../../../utils/events';
+import { can } from '../../../config/rbac';
 import { isCanceled } from '../../../services/apiError';
 
 /**
@@ -36,10 +39,23 @@ export function resetSeoCaches() {
   settingsInFlight = null;
 }
 
+/**
+ * Whether the signed-in role may read the overview at all. A sales user opens
+ * a listing read-only and its SEO tab with it; the request was refused with a
+ * 403 — a console error — every time the tab opened, because a refusal is
+ * never cached (QA-62). Without the list the three tests skip, which is what
+ * the refusal led to anyway.
+ */
+const mayReadIndex = () => {
+  const role = storage.getItem(AUTH_STORAGE_KEYS.user, null)?.role;
+  return !role || can(role, 'seo', 'view');
+};
+
 /** The rows, from the cache or from the API — one request however many callers ask. */
 function loadIndex() {
   if (cache) return Promise.resolve(cache);
   if (inFlight) return inFlight;
+  if (!mayReadIndex()) return Promise.resolve([]);
 
   inFlight = seoService
     .overview({ perPage: 'all' })

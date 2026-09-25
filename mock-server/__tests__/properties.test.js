@@ -21,9 +21,15 @@ silenceRequestLog();
 
 after(cleanupTempFiles);
 
-/** A complete, valid create body — the form of prompt 18 posts this shape. */
+/**
+ * A complete, valid create body — the form of prompt 18 posts this shape. It
+ * is published, so it carries what the publish rules ask for (QA-62): a
+ * described photograph, a summary, 300 characters of description and a price.
+ */
 const NEW_PROPERTY = {
   title: 'Test Tower — 2 BHK Apartments in Hebbal',
+  shortDescription: 'Two-bedroom homes off Hebbal Main Road, ready to move.',
+  description: `<p>${'Test Tower is a ready-to-move block of two-bedroom homes off Hebbal Main Road. '.repeat(5)}</p>`,
   listingType: 'sale',
   segment: 'residential',
   propertyTypeId: 1,
@@ -204,6 +210,36 @@ describe('the remaining public property routes', () => {
       assert.equal(featured.status, 200);
       assert.deepEqual(ids(featured).sort(), [1, 2, 3]);
       assert.equal(featured.body.meta.perPage, 12);
+    });
+  });
+
+  it('narrows the featured listings by the filters it declares (QA-62)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      // The rental joins the featured stock, and the row is asked for it alone.
+      await request('PATCH', '/admin/properties/4', { token, body: { isFeatured: true } });
+
+      assert.deepEqual(ids(await request('GET', '/properties/featured?listingType=rent')), [4]);
+      assert.deepEqual(ids(await request('GET', '/properties/featured?propertyTypeId=2')), [3]);
+      // Never anything that is not featured, whatever the filter asks.
+      assert.equal(
+        (await request('GET', '/properties/featured?listingType=lease')).body.meta.total,
+        0
+      );
+    });
+  });
+
+  it('answers a newly featured listing in the featured row, in priority order (QA-62)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      await request('PATCH', '/admin/properties/6', { token, body: { isFeatured: true } });
+
+      // Priority 1: after the three the seed features, and in the answer.
+      assert.deepEqual(ids(await request('GET', '/properties/featured?perPage=24')), [1, 2, 3, 6]);
+
+      // Switched off, it leaves the row although it stays featured.
+      await request('PATCH', '/admin/properties/6', { token, body: { isActive: false } });
+      assert.deepEqual(ids(await request('GET', '/properties/featured?perPage=24')), [1, 2, 3]);
     });
   });
 
@@ -1190,6 +1226,208 @@ describe('/admin/properties', () => {
       );
       assert.equal((await request('DELETE', '/admin/properties/1', { token })).status, 403);
       assert.equal((await request('POST', '/admin/properties/1/duplicate', { token })).status, 403);
+    });
+  });
+});
+
+describe('the publish rules on every write (QA-62)', () => {
+  /** A draft with nothing a visitor could read: no photo, no text, no price. */
+  const BARE_DRAFT = {
+    ...NEW_PROPERTY,
+    title: 'Bare Draft — 2 BHK Apartment in Hebbal',
+    images: [],
+    description: '',
+    shortDescription: '',
+    pricing: {},
+    isActive: false,
+  };
+
+  it('stores a half-written listing as a draft, and refuses it live', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const draft = await request('POST', '/admin/properties', { token, body: BARE_DRAFT });
+      assert.equal(draft.status, 201);
+
+      const live = await request('POST', '/admin/properties', {
+        token,
+        body: { ...BARE_DRAFT, title: 'Bare Live — 2 BHK Apartment in Hebbal', isActive: true },
+      });
+      assert.equal(live.status, 422);
+      assert.deepEqual(Object.keys(live.body.errors).sort(), [
+        'description',
+        'images',
+        'pricing.price',
+        'shortDescription',
+      ]);
+      assert.equal(
+        live.body.errors.images[0],
+        'A published listing needs at least one image with a description.'
+      );
+    });
+  });
+
+  it('refuses the list’s eye toggle on a listing that is not ready, naming what it lacks', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const { id } = (await request('POST', '/admin/properties', { token, body: BARE_DRAFT })).body
+        .data;
+
+      const toggled = await request('PATCH', `/admin/properties/${id}`, {
+        token,
+        body: { isActive: true },
+      });
+      assert.equal(toggled.status, 422);
+      assert.equal(
+        toggled.body.message,
+        '“Bare Draft — 2 BHK Apartment in Hebbal” is not ready to go live: no photograph with a description, 0 of 300 characters of description, no one-line summary, no price.'
+      );
+      assert.deepEqual(toggled.body.data.notReady, [
+        {
+          id,
+          title: 'Bare Draft — 2 BHK Apartment in Hebbal',
+          gaps: [
+            'no photograph with a description',
+            '0 of 300 characters of description',
+            'no one-line summary',
+            'no price',
+          ],
+        },
+      ]);
+
+      // Still a draft, and its page is still a 404.
+      const stored = (await request('GET', `/admin/properties/${id}`, { token })).body.data;
+      assert.equal(stored.isActive, false);
+      assert.equal(
+        (await request('GET', `/properties/slug/${encodeURIComponent(stored.slug)}`)).status,
+        404
+      );
+    });
+  });
+
+  it('asks a rental for its rent, not a price', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const rental = await request('POST', '/admin/properties', {
+        token,
+        body: { ...NEW_PROPERTY, listingType: 'rent', pricing: { price: 9_500_000 } },
+      });
+
+      assert.equal(rental.status, 422);
+      assert.deepEqual(Object.keys(rental.body.errors), ['pricing.rentPerMonth']);
+    });
+  });
+
+  it('leaves a write that touches nothing the rules read alone', async () => {
+    await withServer(async ({ request, login, db }) => {
+      const token = await login(ADMIN);
+      // A live listing from before the rules — its description emptied behind
+      // the API's back — can still be featured or re-prioritised.
+      db.getCollection('properties').find((row) => row.id === 1).description = '';
+
+      const starred = await request('PATCH', '/admin/properties/1', {
+        token,
+        body: { isFeatured: true, priorityOrder: 3 },
+      });
+      assert.equal(starred.status, 200);
+
+      // Replacing it, or editing what the rules read, is asked.
+      const edited = await request('PATCH', '/admin/properties/1', {
+        token,
+        body: { shortDescription: 'Still no description.' },
+      });
+      assert.equal(edited.status, 422);
+      assert.ok(edited.body.errors.description);
+    });
+  });
+
+  it('refuses a bulk activate whole when one listing is not ready, and names it', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const bare = (await request('POST', '/admin/properties', { token, body: BARE_DRAFT })).body
+        .data;
+      await request('POST', '/admin/properties/bulk', {
+        token,
+        body: { action: 'deactivate', ids: [2] },
+      });
+
+      const refused = await request('POST', '/admin/properties/bulk', {
+        token,
+        body: { action: 'activate', ids: [bare.id, 2] },
+      });
+      assert.equal(refused.status, 422);
+      assert.match(refused.body.message, /^“Bare Draft — 2 BHK Apartment in Hebbal” is not ready/);
+      assert.deepEqual(
+        refused.body.data.notReady.map((entry) => entry.id),
+        [bare.id]
+      );
+      // All or nothing: the ready one was not activated either.
+      assert.equal(
+        (await request('GET', '/admin/properties/2', { token })).body.data.isActive,
+        false
+      );
+
+      const ready = await request('POST', '/admin/properties/bulk', {
+        token,
+        body: { action: 'activate', ids: [2] },
+      });
+      assert.equal(ready.status, 200);
+      assert.equal(
+        (await request('GET', '/admin/properties/2', { token })).body.data.isActive,
+        true
+      );
+    });
+  });
+});
+
+describe('a replace made from an older version (QA-62)', () => {
+  it('is refused with 409 and who saved in between, and changes nothing', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const read = (await request('GET', '/admin/properties/1', { token })).body.data;
+
+      // Somebody stars it from the list after the form read it…
+      const starred = await request('PATCH', '/admin/properties/1', {
+        token,
+        body: { isFeatured: false },
+      });
+      assert.equal(starred.status, 200);
+
+      // …and the form, still holding the old version, saves.
+      const stale = await request('PUT', '/admin/properties/1', {
+        token,
+        body: { ...NEW_PROPERTY, title: read.title, isFeatured: true, updatedAt: read.updatedAt },
+      });
+      assert.equal(stale.status, 409);
+      assert.equal(stale.body.data.conflict, 'stale');
+      assert.equal(stale.body.data.current.updatedAt, starred.body.data.updatedAt);
+      assert.equal(stale.body.data.current.updatedBy.name, 'Admin User');
+      assert.equal(stale.body.message, 'Admin User saved this listing after you opened it.');
+
+      const stored = (await request('GET', '/admin/properties/1', { token })).body.data;
+      assert.equal(stored.isFeatured, false, 'the refused replace wrote nothing');
+    });
+  });
+
+  it('goes through from the current version, and without one at all', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const read = (await request('GET', '/admin/properties/1', { token })).body.data;
+
+      const current = await request('PUT', '/admin/properties/1', {
+        token,
+        body: { ...NEW_PROPERTY, title: read.title, updatedAt: read.updatedAt },
+      });
+      assert.equal(current.status, 200);
+      assert.notEqual(current.body.data.updatedAt, read.updatedAt, 'a save moves the version');
+
+      // No version is "save over whatever is there" — what "Save mine anyway"
+      // sends, and what every client did before the check existed.
+      const unversioned = await request('PUT', '/admin/properties/1', {
+        token,
+        body: { ...NEW_PROPERTY, title: read.title },
+      });
+      assert.equal(unversioned.status, 200);
     });
   });
 });

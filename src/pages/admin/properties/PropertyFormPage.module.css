@@ -96,3 +96,11 @@
     position: static;
   }
 }
+
+/* "This listing no longer exists": keep the work, or leave it. */
+.goneActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+}

@@ -112,6 +112,16 @@
   }
 }
 
+/* More pages than dots fit: where the reader is, in one line. The slides
+   already say "3 of 24" to a screen reader, so this is for the eye only. */
+.counter {
+  margin: var(--space-5) 0 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
 /* WCAG 2.2.2: a way to stop moving content that does not need a pointer. */
 .pause {
   display: block;

@@ -21,12 +21,14 @@ import {
 import { tidyPhone } from '../../../../../utils/validators';
 import { validateSeoBranch } from '../../../../../components/seo/seoSideEffects';
 import { isMapEmbedUrl } from '../../../../../utils/mapEmbed';
+import { DESCRIPTION_MIN, plainText, publishProblems } from '../../../../../config/propertyRules';
 
 /** Title length the contract asks for (§6.1). */
 export const TITLE_MIN = 10;
 
-/** Characters of description a listing needs before it may go live (PROP-04). */
-export const DESCRIPTION_MIN = 300;
+// Characters of description a listing needs before it may go live, and the
+// HTML-to-text the rule is counted on: the API reads the same module (QA-62).
+export { DESCRIPTION_MIN, plainText };
 
 /** Words below which the rail warns, without blocking (PROP-04). */
 export const DESCRIPTION_WARN_WORDS = 300;
@@ -62,15 +64,6 @@ const isBlank = (value) => value === null || value === undefined || String(value
 
 const isNumber = (value) =>
   value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
-
-/** HTML → the text a reader actually sees, for the length rules. */
-export const plainText = (html) =>
-  String(html ?? '')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&[a-z]+;/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
 
 /** Words of a rich-text value. */
 export const wordCount = (html) => {
@@ -128,9 +121,9 @@ const checkRange = (add, path, value, label, { min = 0, max } = {}) => {
   }
   const number = Number(value);
   if (number < min) {
-    add(path, min === 0 ? `${label} cannot be negative.` : `${label} is at least ${min}.`);
+    add(path, min === 0 ? `${label} cannot be negative.` : `${label} must be at least ${min}.`);
   } else if (max !== undefined && number > max) {
-    add(path, `${label} is at most ${max}.`);
+    add(path, `${label} can be at most ${max}.`);
   }
 };
 
@@ -167,16 +160,6 @@ const NEEDS_POSSESSION_DATE = ['pre-launch', 'under-construction'];
 
 /** Rent and lease are quoted per month; a sale is quoted once (D90). */
 const rental = (values) => values.listingType === 'rent' || values.listingType === 'lease';
-
-/** Whether a visitor would find a number — of any of the three kinds — on the page. */
-const isPriced = (values) => {
-  const pricing = values.pricing ?? {};
-  if (pricing.priceOnRequest === true) return true;
-  if (rental(values)) return !isBlank(pricing.rentPerMonth);
-  return (
-    !isBlank(pricing.price) || (!isBlank(pricing.priceRangeMin) && !isBlank(pricing.priceRangeMax))
-  );
-};
 
 /* ------------------------------------------------------------------ *
  * Section validators
@@ -371,11 +354,13 @@ export function validateArea(values) {
   ].forEach(([key, label]) => checkNonNegative(add, `area.${key}`, area[key], label));
 
   [
-    ['bedrooms', 'The bedrooms'],
-    ['bathrooms', 'The bathrooms'],
-    ['balconies', 'The balconies'],
-    ['parkingCovered', 'The covered parking'],
-    ['parkingOpen', 'The open parking'],
+    // Counts, so the label says so: "The bedrooms is at most 20" read as a
+    // typo in a form that was otherwise careful with its words (QA-62).
+    ['bedrooms', 'The number of bedrooms'],
+    ['bathrooms', 'The number of bathrooms'],
+    ['balconies', 'The number of balconies'],
+    ['parkingCovered', 'The number of covered parking spaces'],
+    ['parkingOpen', 'The number of open parking spaces'],
   ].forEach(([key, label]) =>
     checkRange(add, `configuration.${key}`, configuration[key], label, { max: LIMITS.rooms })
   );
@@ -416,8 +401,12 @@ export function validateUnits(values) {
     checkNonNegative(add, `${path}.superBuiltUpArea`, unit.superBuiltUpArea, 'The area');
     checkNonNegative(add, `${path}.carpetArea`, unit.carpetArea, 'The carpet area');
     checkNonNegative(add, `${path}.price`, unit.price, 'The price');
-    checkRange(add, `${path}.bedrooms`, unit.bedrooms, 'The bedrooms', { max: LIMITS.rooms });
-    checkRange(add, `${path}.bathrooms`, unit.bathrooms, 'The bathrooms', { max: LIMITS.rooms });
+    checkRange(add, `${path}.bedrooms`, unit.bedrooms, 'The number of bedrooms', {
+      max: LIMITS.rooms,
+    });
+    checkRange(add, `${path}.bathrooms`, unit.bathrooms, 'The number of bathrooms', {
+      max: LIMITS.rooms,
+    });
     checkNonNegative(add, `${path}.availableUnits`, unit.availableUnits, 'The available units');
     checkUrl(add, `${path}.floorPlanImageUrl`, unit.floorPlanImageUrl, 'The floor-plan image');
     checkUrl(add, `${path}.floorPlanPdfUrl`, unit.floorPlanPdfUrl, 'The floor-plan PDF');
@@ -520,7 +509,9 @@ export function validateFloorPlans(values) {
     checkUrl(add, `${path}.pdfUrl`, plan.pdfUrl, 'The PDF address');
     checkNonNegative(add, `${path}.area`, plan.area, 'The area');
     checkNonNegative(add, `${path}.price`, plan.price, 'The price');
-    checkRange(add, `${path}.bedrooms`, plan.bedrooms, 'The bedrooms', { max: LIMITS.rooms });
+    checkRange(add, `${path}.bedrooms`, plan.bedrooms, 'The number of bedrooms', {
+      max: LIMITS.rooms,
+    });
   });
 
   return errors;
@@ -735,39 +726,16 @@ export function validateForActivation(values) {
   const { errors, add } = collector();
   const warnings = [];
 
-  const images = (values.images ?? []).filter((image) => !isBlank(image.url));
-  const described = images.filter((image) => !isBlank(image.alt));
-  const description = plainText(values.description);
   const amenities = values.amenityIds ?? [];
   const highlights = (values.highlights ?? []).filter((entry) => !isBlank(entry));
   const faqs = (values.faqs ?? []).filter((faq) => !isBlank(faq.question));
   const plans = (values.floorPlans ?? []).filter((plan) => !isBlank(plan.imageUrl));
   const units = (values.unitConfigurations ?? []).filter((unit) => !isBlank(unit.name));
 
+  // The blockers are the API's own (`config/propertyRules`): the list's
+  // toggles and bulk bar are refused by the same rules, in the same words.
   if (values.isActive === true) {
-    // The gallery as a whole: with no image there is no `images.0` to hang the
-    // message on, and the Media badge used to count one while showing nothing.
-    if (described.length === 0) {
-      add('images', 'A published listing needs at least one image with a description.');
-    }
-    if (description.length < DESCRIPTION_MIN) {
-      add(
-        'description',
-        `A published listing needs a description of at least ${DESCRIPTION_MIN} characters (this one has ${description.length}).`
-      );
-    }
-    if (isBlank(values.shortDescription)) {
-      add('shortDescription', 'A published listing needs a one-line summary.');
-    }
-    if (!isPriced(values)) {
-      const field = rental(values) ? 'pricing.rentPerMonth' : 'pricing.price';
-      add(
-        field,
-        rental(values)
-          ? 'A published rental needs a monthly rent, or “Price on request”.'
-          : 'A published listing needs a price, a price range, or “Price on request”.'
-      );
-    }
+    Object.entries(publishProblems(values)).forEach(([path, message]) => add(path, message));
   }
 
   const warn = (id, message) => warnings.push({ id, message });

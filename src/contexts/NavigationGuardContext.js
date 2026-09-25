@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useMemo, useRef, useStat
 import { useBlocker } from 'react-router-dom';
 
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import PATHS from '../routes/paths';
 
 /**
  * "You have unsaved changes" — for in-app navigation.
@@ -19,13 +20,32 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 export const UNSAVED_CHANGES_MESSAGE =
   'You have unsaved changes. Leave this page and discard them?';
 
-const FALLBACK = { register: () => () => {}, isBlocking: false };
+const FALLBACK = {
+  register: () => () => {},
+  isBlocking: false,
+  confirmDiscard: () => Promise.resolve(true),
+};
+
+/**
+ * A trip to the sign-in page that means to come back — `state.from`, which the
+ * session's end and `ProtectedRoute` both send — is not a navigation anybody
+ * chose, and there is no staying: the session is over. Asked about it, the
+ * editor saw a blank page behind "Discard unsaved changes?", and "Stay on this
+ * page" left them on it with no way out (QA-62). The forms that keep drafts
+ * write them as they go. Signing out on purpose carries no `from`, and is still
+ * asked.
+ *
+ * @param {{pathname: string, state?: object}} location
+ * @returns {boolean}
+ */
+const isSessionEnd = (location) =>
+  location?.pathname === PATHS.adminLogin && Boolean(location?.state?.from);
 
 const NavigationGuardContext = createContext(null);
 
 /**
  * @returns {{ register: (id: symbol, dirty: boolean, onDiscard?: () => void) => () => void,
- *   isBlocking: boolean }}
+ *   isBlocking: boolean, confirmDiscard: () => Promise<boolean> }}
  */
 export function useNavigationGuard() {
   return useContext(NavigationGuardContext) ?? FALLBACK;
@@ -62,35 +82,70 @@ export const NavigationGuardProvider = ({ children }) => {
   const blocker = useBlocker(
     useCallback(
       ({ currentLocation, nextLocation }) =>
-        blocking && currentLocation.pathname !== nextLocation.pathname,
+        blocking &&
+        currentLocation.pathname !== nextLocation.pathname &&
+        !isSessionEnd(nextLocation),
       [blocking]
     )
   );
 
-  const value = useMemo(() => ({ register, isBlocking: blocking }), [register, blocking]);
+  // The same question for something that is not a navigation — signing out,
+  // which ends the session before it moves anywhere, so the blocker only ever
+  // asked once there was nothing left to stay in (QA-62). Resolves `true` when
+  // there is nothing to lose or the editor discards, `false` when they stay.
+  const [asking, setAsking] = useState(null);
+  const confirmDiscard = useCallback(
+    () =>
+      dirtyRef.current.size === 0
+        ? Promise.resolve(true)
+        : new Promise((resolve) => setAsking(() => resolve)),
+    []
+  );
 
-  const leave = () => {
-    // The answer is "discard", so the forms that were dirty no longer are —
-    // and whatever they kept of those changes goes with them.
+  const value = useMemo(
+    () => ({ register, isBlocking: blocking, confirmDiscard }),
+    [register, blocking, confirmDiscard]
+  );
+
+  /** The answer is "discard": the dirty forms are not, and forget what they kept. */
+  const discardAll = () => {
     for (const id of dirtyRef.current) discardRef.current.get(id)?.();
     dirtyRef.current.clear();
     discardRef.current.clear();
     setBlocking(false);
+  };
+
+  const leave = () => {
+    discardAll();
+    if (asking) {
+      asking(true);
+      setAsking(null);
+      return;
+    }
     blocker.proceed?.();
+  };
+
+  const stay = () => {
+    if (asking) {
+      asking(false);
+      setAsking(null);
+      return;
+    }
+    blocker.reset?.();
   };
 
   return (
     <NavigationGuardContext.Provider value={value}>
       {children}
       <ConfirmDialog
-        open={blocker.state === 'blocked'}
+        open={blocker.state === 'blocked' || Boolean(asking)}
         title="Discard unsaved changes?"
         message={UNSAVED_CHANGES_MESSAGE}
         confirmLabel="Discard changes"
         cancelLabel="Stay on this page"
         danger
         onConfirm={leave}
-        onClose={() => blocker.reset?.()}
+        onClose={stay}
       />
     </NavigationGuardContext.Provider>
   );

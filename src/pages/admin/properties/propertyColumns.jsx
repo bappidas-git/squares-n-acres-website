@@ -226,9 +226,13 @@ function FlagToggle({ row, flag, canEdit, busy, onToggle }) {
         aria-pressed={on}
         aria-label={`${flag.on} — ${row.title}`}
         aria-busy={busy || undefined}
-        disabled={busy || undefined}
+        // Busy is `aria-disabled`, not `disabled`: a disabled button fires no
+        // events, so MUI's tooltip warned on every save, and the button lost
+        // the keyboard focus the press had just given it (QA-62).
+        aria-disabled={busy || undefined}
         onClick={(event) => {
           event.stopPropagation();
+          if (busy) return;
           onToggle(row, flag.field, !on);
         }}
       >

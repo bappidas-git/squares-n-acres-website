@@ -169,7 +169,15 @@ export default function DataTable({
   const wrapperRef = useRef(null);
   const scrollerRef = useRef(null);
 
-  const pageIds = useMemo(() => rows.map((row) => getRowId(row)), [rows, getRowId]);
+  // The rows a reader can see. A failed request keeps the last answer's rows
+  // in memory (`keepPreviousData`) behind the error panel: "Select all" ticked
+  // twenty of them — rows of the previous filter, invisible — and offered to
+  // delete them (QA-62).
+  const shownRows = error || loading ? null : rows;
+  const pageIds = useMemo(
+    () => (shownRows ?? []).map((row) => getRowId(row)),
+    [shownRows, getRowId]
+  );
   const selected = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
 
   // A selection never outlives the rows it was made on. Ticking twenty rows,
@@ -286,7 +294,9 @@ export default function DataTable({
     }
   };
 
-  const footer = (
+  // An unanswered request has no pages: the footer used to go on counting the
+  // last answer's — "Showing 1–20 of 40" under "Something went wrong".
+  const footer = error ? null : (
     <TableFooter
       meta={meta}
       rowCount={rows.length}
@@ -407,6 +417,7 @@ export default function DataTable({
                     disableRipple
                     checked={allSelected}
                     indeterminate={someSelected}
+                    disabled={pageIds.length === 0}
                     onChange={toggleAll}
                     slotProps={{ input: { 'aria-label': 'Select all rows on this page' } }}
                   />

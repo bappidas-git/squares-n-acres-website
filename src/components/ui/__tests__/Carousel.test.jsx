@@ -70,6 +70,36 @@ describe('Carousel', () => {
     expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
   });
 
+  it('counts the pages a scroll can reach, and lights the last dot at the end (QA-62)', () => {
+    // A phone's 1.15 cards a page: eight cards scroll 6.2 viewports, which is
+    // seven pages — "one card, one page" counted eight, and the eighth dot
+    // could never light.
+    mockOverflow({ scrollWidth: 400 * 7.2, clientWidth: 400 });
+    renderWith(
+      <Carousel label="Phone rail">
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i}>Item {i}</div>
+        ))}
+      </Carousel>
+    );
+
+    expect(screen.getAllByRole('button', { name: /Go to slide/ })).toHaveLength(7);
+  });
+
+  it('says "1 / 20" instead of drawing more dots than fit (QA-62)', () => {
+    mockOverflow({ scrollWidth: 400 * 20, clientWidth: 400 });
+    renderWith(
+      <Carousel label="Featured">
+        {Array.from({ length: 20 }, (_, i) => (
+          <div key={i}>Item {i}</div>
+        ))}
+      </Carousel>
+    );
+
+    expect(screen.queryByRole('button', { name: /Go to slide/ })).not.toBeInTheDocument();
+    expect(screen.getByText('1 / 20')).toHaveAttribute('aria-hidden', 'true');
+  });
+
   it('renders nothing without children', () => {
     const { container } = renderWith(<Carousel label="Empty">{null}</Carousel>);
     expect(container).toBeEmptyDOMElement();

@@ -339,3 +339,65 @@ describe('a read-only form (§7)', () => {
     expect(screen.getByRole('button', { name: 'Move image 1 later' })).toBeDisabled();
   });
 });
+
+describe('adding by address (QA-62)', () => {
+  it('refuses text that is not an address, rather than adding a broken row', async () => {
+    // Chrome keeps the spaces of "not a url" in a URL box, and the gallery used
+    // to split them into three rows; jsdom strips them, so the one-word case
+    // is what this test can type — the refusal is the same.
+    renderWith(<Harness initial={gallery()} />);
+
+    await userEvent.type(screen.getByLabelText('Add an image'), 'not-a-url');
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(stored()).toHaveLength(3);
+    expect(
+      screen.getByText('Enter the address of a photograph, starting with http:// or https://.')
+    ).toBeInTheDocument();
+  });
+
+  it('says so when the photograph is already in the gallery', async () => {
+    renderWith(<Harness initial={gallery()} />);
+
+    await userEvent.type(screen.getByLabelText('Add an image'), 'https://example.com/a.jpg');
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(stored()).toHaveLength(3);
+    expect(screen.getByText('That photograph is already in the gallery.')).toBeInTheDocument();
+  });
+
+  it('adds an address, empties the box and forgets the message', async () => {
+    renderWith(<Harness initial={gallery()} />);
+    const box = screen.getByLabelText('Add an image');
+
+    await userEvent.type(box, 'nope');
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await userEvent.clear(box);
+    await userEvent.type(box, 'https://example.com/d.jpg');
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(stored().map((image) => image.url)).toContain('https://example.com/d.jpg');
+    expect(box).toHaveValue('');
+    expect(screen.queryByText(/Enter the address of a photograph/)).not.toBeInTheDocument();
+  });
+
+  it('adds the addresses of a pasted list and keeps the lines that are not one', async () => {
+    renderWith(<Harness initial={gallery()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add multiple URLs' }));
+    await userEvent.type(
+      screen.getByLabelText('One URL per line'),
+      'https://example.com/e.jpg{enter}not-a-url{enter}https://example.com/f.jpg'
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Add these images' }));
+
+    expect(stored().map((image) => image.url)).toEqual(
+      expect.arrayContaining(['https://example.com/e.jpg', 'https://example.com/f.jpg'])
+    );
+    expect(stored()).toHaveLength(5);
+    expect(screen.getByLabelText('One URL per line')).toHaveValue('not-a-url');
+    expect(
+      screen.getByText('This line is not the address of a photograph — fix or remove it.')
+    ).toBeInTheDocument();
+  });
+});

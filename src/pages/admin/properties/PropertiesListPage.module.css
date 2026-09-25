@@ -113,7 +113,7 @@ button.flagToggle:focus-visible {
   outline-offset: 2px;
 }
 
-button.flagToggle:disabled {
+button.flagToggle[aria-disabled='true'] {
   cursor: progress;
 }
 
@@ -209,4 +209,30 @@ button.flagOff:hover {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+}
+
+/* The activation check: each listing that is not ready, and what it lacks. */
+.gapList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gapList li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gapTitle {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.gapTitle:hover,
+.gapTitle:focus-visible {
+  color: var(--color-primary-dark);
 }

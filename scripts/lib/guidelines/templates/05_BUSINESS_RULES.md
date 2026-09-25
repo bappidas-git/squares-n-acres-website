@@ -30,6 +30,12 @@ poor specification.
 
 ---
 
+## Property writes
+
+{{propertyWrites}}
+
+---
+
 ## View counting
 
 {{viewCounting}}

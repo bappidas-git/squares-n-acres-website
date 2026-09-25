@@ -34,6 +34,20 @@ import { PropertyCardSkeleton } from '../../common/SkeletonLoaders';
 /** The home rows show eight (D23). */
 const PER_PAGE = 8;
 
+/** The most any rail asks for: the §8.6 cap on the items of one page. */
+const MAX_PER_PAGE = 24;
+
+/**
+ * The featured row shows every featured listing, up to that cap.
+ *
+ * Featuring a listing is an editor asking for it on the home page. Cut at
+ * eight, the row showed the eight with the highest priority and nothing else:
+ * the seed already features ten, so a listing featured from the list's star or
+ * the form's switch was featured in the admin and under "View all", and never
+ * in the row itself (QA-62).
+ */
+export const FEATURED_PER_PAGE = MAX_PER_PAGE;
+
 /** Cards per view, by breakpoint (§8.1). */
 const ITEMS_PER_VIEW = { xs: 1.15, sm: 2, md: 3, lg: 4 };
 
@@ -54,13 +68,19 @@ export default function PropertyRow({
   viewAllHref,
   minItems = 3,
 }) {
-  const request = useMemo(() => ({ ...(params ?? {}), perPage: PER_PAGE }), [params]);
+  // A hand-picked set (the CMS block's `ids`) says how many it holds; eight
+  // used to override it, so the ninth pick and every one after it vanished.
+  const request = useMemo(() => {
+    const own = Number(params?.perPage);
+    const perPage = Number.isInteger(own) && own > 0 ? Math.min(own, MAX_PER_PAGE) : PER_PAGE;
+    return { ...(params ?? {}), perPage };
+  }, [params]);
   const { ref, ready } = useDeferredSection();
 
   const { data, loading, error } = useApi(
     (signal) =>
       featured
-        ? propertyService.featured({ perPage: PER_PAGE }, { signal })
+        ? propertyService.featured({ perPage: FEATURED_PER_PAGE }, { signal })
         : propertyService.list(request, { signal }),
     [featured, request],
     { enabled: ready, initialData: [] }

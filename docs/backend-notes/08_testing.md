@@ -135,7 +135,17 @@ puts them last; an inactive listing is 404 by slug; `POST …/view` moves the
 counter once an hour and not twice; `similar` returns the editor's picks first;
 create, edit, publish and duplicate a listing from the admin and find the copy
 inactive with a `-copy` slug; two listings titled in Devanagari alone are given
-`property-<id>` each, never `''`, and a replace keeps it (QA-60).
+`property-<id>` each, never `''`, and a replace keeps it (QA-60). A `PATCH
+{ "isActive": true }` on a draft with no image, a 120-character description, no
+summary and no price is 422 with `images`, `description`, `shortDescription` and
+`pricing.price` in `errors` and the four gaps in `data.notReady[0].gaps`, while
+`PATCH { "isFeatured": true }` on a live listing is 200 without being asked; a bulk
+`activate` of one ready and one unready draft is 422 and activates neither; a `PUT`
+carrying an `updatedAt` other than the stored one is 409 with `data.conflict:
+'stale'` and writes nothing, and the same `PUT` without `updatedAt` is 200;
+`GET /properties/featured?listingType=rent` answers only featured rentals; and a
+listing featured and published from the admin is in the home page's Featured row
+with ten others featured before it (QA-62).
 
 **Leads** — submit every public form and check the source lands as the documented
 value; a legacy source value is mapped, not rejected; the honeypot answers 200 and
