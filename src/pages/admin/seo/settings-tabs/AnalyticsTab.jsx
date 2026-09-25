@@ -29,10 +29,10 @@ export default function AnalyticsTab() {
         </p>
         <Button
           variant="outline"
-          to={PATHS.adminSettings}
+          to={PATHS.adminSettingsTab('integrations')}
           icon={<Icon icon="mdi:open-in-new" width="18" height="18" />}
         >
-          Open Site settings
+          Open Site settings → Integrations
         </Button>
       </FormSection>
 

@@ -18,8 +18,9 @@
  *     again with a 403.
  */
 
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useLocation } from 'react-router-dom';
 
 import SettingsPage from '../SettingsPage';
 import ToastProvider from '../../../../components/common/ToastProvider';
@@ -151,8 +152,14 @@ const siteSettings = {
   getWhatsappLink: () => '',
 };
 
+/** Prints the address, so a test can read what the screen put in it. */
+function Location() {
+  const location = useLocation();
+  return <output data-testid="location">{`${location.pathname}${location.search}`}</output>;
+}
+
 /** Renders the screen with a signed-in session of the given role (§7). */
-const renderAs = (role) => {
+const renderAs = (role, { at = '/admin/settings' } = {}) => {
   const user = userOf(role);
   storage.setItem(AUTH_STORAGE_KEYS.token, 'seeded-token');
   storage.setItem(AUTH_STORAGE_KEYS.user, user);
@@ -167,10 +174,11 @@ const renderAs = (role) => {
       <AdminAuthProvider>
         <SiteSettingsContext.Provider value={siteSettings}>
           <SettingsPage />
+          <Location />
         </SiteSettingsContext.Provider>
       </AdminAuthProvider>
     </ToastProvider>,
-    { initialEntries: ['/admin/settings'] }
+    { initialEntries: [at] }
   );
 };
 
@@ -215,29 +223,25 @@ it('loads the singleton into the form and shows every panel', async () => {
 
   expect(screen.getAllByRole('tab')).toHaveLength(7);
   expect(screen.getByRole('tab', { name: /lead notifications/i })).toBeInTheDocument();
-  // Nothing is dirty yet, so there is nothing to save.
-  expect(screen.getByRole('button', { name: /save settings/i })).toBeDisabled();
+  // Nothing is dirty yet, so there is nothing to save — and Save says so
+  // rather than being a button that does nothing (QA-64).
+  await save();
+  expect(await screen.findByText('No changes to save.')).toBeInTheDocument();
+  expect(settingsService.update).not.toHaveBeenCalled();
 });
 
-it('sends the whole record when one nested field changes', async () => {
+it('sends what changed, and nothing it did not (QA-64)', async () => {
   renderAs('admin');
 
   await type(await screen.findByLabelText(/tagline/i), 'Bengaluru property, plainly explained');
   await save();
 
   await waitFor(() => expect(settingsService.update).toHaveBeenCalled());
-  const body = settingsService.update.mock.calls[0][0];
-
-  expect(body.general.tagline).toBe('Bengaluru property, plainly explained');
-  // The panels nobody opened travel back untouched — the merge on the API is a
-  // safety net, not what this screen relies on.
-  expect(body.footer.columns).toEqual(RECORD.footer.columns);
-  expect(body.hero.searchTabs).toEqual(['sale', 'rent']);
-  expect(body.leads.notificationEmails).toEqual(['info@squaresnacres.com']);
-  // An empty optional box is `null`, the way the contract describes it.
-  expect(body.general.alternatePhone).toBeNull();
-  // Nothing the model does not declare is sent.
-  expect(body).not.toHaveProperty('updatedAt');
+  // The API deep-merges (§5.14): the panels nobody touched are not sent, so a
+  // colleague's change to them is not sent back over.
+  expect(settingsService.update.mock.calls[0][0]).toEqual({
+    general: { tagline: 'Bengaluru property, plainly explained' },
+  });
 
   // The public site is reading this record through the context.
   await waitFor(() => expect(siteSettings.updateLocal).toHaveBeenCalled());
@@ -299,4 +303,261 @@ it('is read-only for a manager, with no way to save (§7)', async () => {
   // Users belongs to administrators; the profile link is for everyone.
   expect(screen.queryByRole('link', { name: /^users$/i })).not.toBeInTheDocument();
   expect(screen.getByRole('link', { name: /my profile/i })).toBeInTheDocument();
+});
+
+describe('QA-64', () => {
+  const serverAfter = (body, patch = {}) => ({
+    data: {
+      ...RECORD,
+      ...patch,
+      general: { ...RECORD.general, ...(patch.general ?? {}), ...(body.general ?? {}) },
+      updatedAt: '2026-09-25T09:00:00.000Z',
+    },
+  });
+
+  it('does not put back what a colleague saved after the form was opened', async () => {
+    // The server's record, after a colleague changed the hero title elsewhere.
+    settingsService.update.mockImplementation(async (body) =>
+      serverAfter(body, { hero: { ...RECORD.hero, title: 'Saved by a colleague' } })
+    );
+    renderAs('admin');
+
+    await type(await screen.findByLabelText(/tagline/i), 'A tagline of my own');
+    await save();
+
+    await waitFor(() => expect(settingsService.update).toHaveBeenCalled());
+    expect(settingsService.update.mock.calls[0][0]).not.toHaveProperty('hero');
+
+    // The form now shows the server's copy — the colleague's title included —
+    // and has nothing left to save.
+    await openTab('hero');
+    expect(screen.getByLabelText(/^title$/i)).toHaveValue('Saved by a colleague');
+    expect(screen.queryByText(/you have unsaved changes/i)).not.toBeInTheDocument();
+  });
+
+  it('leaves the form clean when a phone box is visited and left', async () => {
+    settingsService.admin.mockResolvedValue({
+      data: { ...RECORD, general: { ...RECORD.general, contactPhone: '+919800000001' } },
+    });
+    renderAs('admin');
+    await screen.findByLabelText(/site name/i);
+
+    await openTab('contact');
+    const phone = screen.getByLabelText(/^phone/i);
+    expect(phone).toHaveValue('+91 98000 00001');
+    await click(phone);
+    // The alternate number is empty — `null` in the record.
+    await click(screen.getByLabelText(/^alternate phone/i));
+    await click(screen.getByLabelText(/^whatsapp number/i));
+    await click(screen.getByLabelText(/^contact e-mail/i));
+
+    expect(screen.queryByText(/you have unsaved changes/i)).not.toBeInTheDocument();
+  });
+
+  it('takes a WhatsApp number typed with 91 or 0 in front, and sends it readable', async () => {
+    renderAs('admin');
+    await screen.findByLabelText(/site name/i);
+    await openTab('contact');
+
+    await type(screen.getByLabelText(/^whatsapp number/i), '919876543210');
+    await save();
+
+    await waitFor(() => expect(settingsService.update).toHaveBeenCalled());
+    expect(settingsService.update.mock.calls[0][0].general.whatsappNumber).toBe('+91 98765 43210');
+  });
+
+  it('names the field a message is about, not its key', async () => {
+    renderAs('admin');
+
+    await type(await screen.findByLabelText(/site name/i), 'A'.repeat(121));
+    await save();
+
+    expect(
+      await screen.findByText('The site name may not be greater than 120 characters.')
+    ).toBeInTheDocument();
+    expect(settingsService.update).not.toHaveBeenCalled();
+  });
+
+  it('names an API message in the same words', async () => {
+    settingsService.update.mockRejectedValue(
+      Object.assign(new Error('The given data was invalid.'), {
+        status: 422,
+        errors: {
+          'general.tagline': ['The general.tagline may not be greater than 200 characters.'],
+        },
+      })
+    );
+    renderAs('admin');
+
+    await type(await screen.findByLabelText(/tagline/i), 'Accepted here, refused there');
+    await save();
+
+    expect(
+      await screen.findByText('The tagline may not be greater than 200 characters.')
+    ).toBeInTheDocument();
+  });
+
+  it('refuses a latitude without its longitude', async () => {
+    renderAs('admin');
+    await screen.findByLabelText(/site name/i);
+    await openTab('contact');
+
+    await act(async () => {
+      await userEvent.clear(screen.getByLabelText(/^longitude/i));
+    });
+    await save();
+
+    expect(
+      await screen.findByText('Add the longitude too — the map needs both, or neither.')
+    ).toBeInTheDocument();
+    expect(settingsService.update).not.toHaveBeenCalled();
+    expect(screen.getByLabelText(/^latitude/i)).toHaveAttribute('inputmode', 'decimal');
+  });
+
+  it('keeps the six digits of a PIN code pasted with a space', async () => {
+    renderAs('admin');
+    await screen.findByLabelText(/site name/i);
+    await openTab('contact');
+
+    fireEvent.change(screen.getByLabelText(/^pin code/i), { target: { value: ' 560 034' } });
+    expect(screen.getByLabelText(/^pin code/i)).toHaveValue('560034');
+  });
+
+  it('keeps the open panel in the address, and opens the panel an address names', async () => {
+    renderAs('admin', { at: '/admin/settings?tab=integrations' });
+
+    expect(await screen.findByRole('tab', { name: /integrations/i })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+
+    await openTab('hero');
+    expect(screen.getByTestId('location')).toHaveTextContent('/admin/settings?tab=hero');
+
+    await openTab('general');
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/admin\/settings$/);
+  });
+
+  it('opens General for an address that names no panel it has', async () => {
+    renderAs('admin', { at: '/admin/settings?tab=nonsense' });
+
+    expect(await screen.findByRole('tab', { name: /general/i })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+  });
+
+  it('saves on Ctrl+S, and says there is nothing to save when there is not', async () => {
+    renderAs('admin');
+    await screen.findByLabelText(/site name/i);
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 's', ctrlKey: true });
+    });
+    expect(await screen.findByText('No changes to save.')).toBeInTheDocument();
+    expect(settingsService.update).not.toHaveBeenCalled();
+
+    await type(screen.getByLabelText(/tagline/i), 'Saved from the keyboard');
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 's', metaKey: true });
+    });
+    await waitFor(() => expect(settingsService.update).toHaveBeenCalledTimes(1));
+  });
+
+  it('opens the panel of a refused field and puts the cursor in it', async () => {
+    renderAs('admin');
+    await screen.findByLabelText(/site name/i);
+
+    await openTab('contact');
+    fireEvent.change(screen.getByLabelText(/^pin code/i), { target: { value: '12' } });
+    await openTab('hero');
+    await save();
+
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: /contact/i })).toHaveAttribute('aria-selected', 'true')
+    );
+    await waitFor(() => expect(screen.getByLabelText(/^pin code/i)).toHaveFocus());
+    expect(settingsService.update).not.toHaveBeenCalled();
+  });
+
+  it('sends nothing when the change was only spaces', async () => {
+    renderAs('admin');
+    const tagline = await screen.findByLabelText(/tagline/i);
+
+    await act(async () => {
+      await userEvent.type(tagline, '   ');
+    });
+    await save();
+
+    expect(await screen.findByText('No changes to save.')).toBeInTheDocument();
+    expect(settingsService.update).not.toHaveBeenCalled();
+    expect(screen.queryByText(/you have unsaved changes/i)).not.toBeInTheDocument();
+  });
+
+  it('adds a notification address typed and left, and says why one is refused', async () => {
+    renderAs('admin');
+    await screen.findByLabelText(/site name/i);
+    await openTab('lead notifications');
+
+    const box = screen.getByLabelText(/notification e-mails/i);
+    await act(async () => {
+      fireEvent.change(box, { target: { value: 'not-an-email' } });
+    });
+    expect(await screen.findByText('“not-an-email” is not an e-mail address')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.change(box, { target: { value: 'Ops@SquaresNAcres.com' } });
+    });
+    expect(await screen.findByText('Add "Ops@SquaresNAcres.com"')).toBeInTheDocument();
+    // Leaving the box — a click on Save — adds what was typed, as Enter would.
+    await act(async () => {
+      fireEvent.blur(box);
+    });
+
+    await save();
+    await waitFor(() => expect(settingsService.update).toHaveBeenCalled());
+    expect(settingsService.update.mock.calls[0][0].leads.notificationEmails).toEqual([
+      'info@squaresnacres.com',
+      'ops@squaresnacres.com',
+    ]);
+  });
+
+  it('saves an address typed and followed straight away by a click on Save', async () => {
+    renderAs('admin');
+    await screen.findByLabelText(/site name/i);
+    await openTab('lead notifications');
+
+    const box = screen.getByLabelText(/notification e-mails/i);
+    await act(async () => {
+      box.focus();
+      fireEvent.change(box, { target: { value: 'ops@squaresnacres.com' } });
+    });
+    await screen.findByText('Add "ops@squaresnacres.com"');
+
+    // The only change is the one still in the box: the click that leaves it
+    // is the click that saves it. A browser moves the focus on the press and
+    // runs the page's microtasks before the click lands; user-event 13 runs the
+    // two back to back, so the press is written out.
+    await act(async () => {
+      box.blur();
+    });
+    await save();
+
+    await waitFor(() => expect(settingsService.update).toHaveBeenCalled());
+    expect(settingsService.update.mock.calls[0][0]).toEqual({
+      leads: { notificationEmails: ['info@squaresnacres.com', 'ops@squaresnacres.com'] },
+    });
+  });
+
+  it('refuses a badge the hero cannot hold as it is typed', async () => {
+    renderAs('admin');
+    await screen.findByLabelText(/site name/i);
+    await openTab('hero');
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/^badges/i), { target: { value: 'B'.repeat(61) } });
+    });
+    expect(await screen.findByText('Too long — keep a badge to 60 characters')).toBeInTheDocument();
+    expect(screen.queryByText(/^Add "/)).not.toBeInTheDocument();
+  });
 });

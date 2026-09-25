@@ -8,6 +8,12 @@ import { MAP_EMBED_PREFIX, formatIndianPhone } from '../settingsSchema';
 import { NumberField, TextField, TextareaField } from '../../../../components/ui/FormField';
 import { whatsappLink } from '../../../../utils/format';
 
+/** A PIN code as typed or pasted, reduced to its digits — six at most. */
+export const pinDigits = (value) =>
+  String(value ?? '')
+    .replace(/\D/g, '')
+    .slice(0, 6);
+
 /**
  * Contact — everything a visitor dials, writes to or drives to (§6.13
  * `general`, the half that is not identity).
@@ -34,8 +40,12 @@ export default function ContactTab({ form, disabled = false }) {
 
   /** Rewrites a phone box to the readable form once the editor leaves it. */
   const normalisePhone = (path) => {
-    const next = formatIndianPhone(general[path] ?? '');
-    if (next !== general[path]) set(path, next);
+    // An empty box is `null` in the record and `''` on the screen: leaving one
+    // untouched rewrote the first as the second, and the form said it had
+    // unsaved changes (QA-64).
+    const current = general[path] ?? '';
+    const next = formatIndianPhone(current);
+    if (next !== current) set(path, next);
   };
 
   const waLink = whatsappLink(general.whatsappNumber, general.whatsappDefaultMessage);
@@ -101,7 +111,7 @@ export default function ContactTab({ form, disabled = false }) {
             onChange={(event) => set('whatsappNumber', event.target.value)}
             onBlur={() => normalisePhone('whatsappNumber')}
             error={error('whatsappNumber')}
-            hint="Digits with the country code — 10 to 15 of them."
+            hint="An Indian mobile number, with or without +91 — the chat opens on it."
             disabled={disabled}
           />
         </FormColumn>
@@ -185,9 +195,11 @@ export default function ContactTab({ form, disabled = false }) {
           <TextField
             label="PIN code"
             inputMode="numeric"
-            maxLength={6}
+            autoComplete="postal-code"
             value={address.pincode ?? ''}
-            onChange={(event) => set('address.pincode', event.target.value)}
+            // Digits only, six at most. A cap of six characters cut a pasted
+            // " 560001" to " 56000", which was then refused (QA-64).
+            onChange={(event) => set('address.pincode', pinDigits(event.target.value))}
             error={error('address.pincode')}
             hint="Six digits."
             disabled={disabled}
@@ -224,6 +236,8 @@ export default function ContactTab({ form, disabled = false }) {
           <NumberField
             label="Latitude"
             step={0.000001}
+            // A phone's numeric keypad has no decimal point (QA-64).
+            inputMode="decimal"
             value={general.latitude ?? ''}
             onChange={(event) =>
               set('latitude', event.target.value === '' ? null : Number(event.target.value))
@@ -237,6 +251,7 @@ export default function ContactTab({ form, disabled = false }) {
           <NumberField
             label="Longitude"
             step={0.000001}
+            inputMode="decimal"
             value={general.longitude ?? ''}
             onChange={(event) =>
               set('longitude', event.target.value === '' ? null : Number(event.target.value))

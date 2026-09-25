@@ -5,7 +5,7 @@ import SortableList from '../../../../components/admin/SortableList';
 import StatsEditor from '../parts/StatsEditor';
 import styles from '../SettingsPage.module.css';
 import { HERO_SEARCH_TABS } from '../../../../config/enums';
-import { LIMITS } from '../settingsSchema';
+import { BADGE_MAX_LENGTH, LIMITS, listError } from '../settingsSchema';
 import { TextField, TextareaField } from '../../../../components/ui/FormField';
 
 /**
@@ -26,11 +26,14 @@ import { TextField, TextareaField } from '../../../../components/ui/FormField';
  * @param {boolean} [props.disabled]
  */
 export default function HeroTab({ form, disabled = false }) {
-  const { values, setField, getError } = form;
+  const { values, errors, setField, getError } = form;
   const hero = values.hero ?? {};
 
   const set = (path, value) => setField(`hero.${path}`, value);
   const error = (path) => getError(`hero.${path}`);
+  // The chips and the checkboxes show one message for the whole list, whether
+  // it is about the list or about one of its entries (QA-64).
+  const listMessage = (path) => listError(errors, `hero.${path}`);
 
   const chosen = (Array.isArray(hero.searchTabs) ? hero.searchTabs : []).filter((tab) =>
     HERO_SEARCH_TABS.has(tab)
@@ -154,7 +157,7 @@ export default function HeroTab({ form, disabled = false }) {
             />
           ) : (
             <p className={styles.repeaterEmpty}>
-              No tab chosen — the hero offers all five, in the order above.
+              No tab chosen — the hero offers all five, in the order listed below.
             </p>
           )}
 
@@ -174,9 +177,9 @@ export default function HeroTab({ form, disabled = false }) {
             </div>
           ) : null}
 
-          {error('searchTabs') ? (
+          {listMessage('searchTabs') ? (
             <span role="alert" className={styles.warning}>
-              {error('searchTabs')}
+              {listMessage('searchTabs')}
             </span>
           ) : null}
         </FormColumn>
@@ -205,9 +208,17 @@ export default function HeroTab({ form, disabled = false }) {
             onChange={(next) => set('badges', next)}
             creatable
             onCreate={(label) => ({ value: label.trim(), label: label.trim() })}
+            // A badge the layout cannot hold is refused as it is typed, rather
+            // than taken and then reported on Save (QA-64).
+            checkNew={(label) =>
+              label.trim().length > BADGE_MAX_LENGTH
+                ? `Too long — keep a badge to ${BADGE_MAX_LENGTH} characters`
+                : null
+            }
+            commitOnBlur
             max={LIMITS.heroBadges}
-            hint="Short claims above the headline — “RERA-registered”, “Site visits in 24 hours”."
-            error={error('badges')}
+            hint="Short claims above the headline — “RERA-registered”, “Site visits in 24 hours”. Type one and press Enter."
+            error={listMessage('badges')}
             disabled={disabled}
           />
         </FormColumn>

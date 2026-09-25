@@ -6,6 +6,7 @@ import { EMAIL_PATTERN } from '../../../../utils/validation';
 import { LEAD_PRIORITY } from '../../../../config/enums';
 import { Link } from 'react-router-dom';
 import { SelectField } from '../../../../components/ui/FormField';
+import { listError } from '../settingsSchema';
 
 /** What each rotation does to a lead the moment it arrives. */
 export const AUTO_ASSIGN_OPTIONS = [
@@ -30,7 +31,7 @@ export const AUTO_ASSIGN_OPTIONS = [
  * @param {boolean} [props.disabled]
  */
 export default function LeadNotificationsTab({ form, disabled = false }) {
-  const { values, setField, getError } = form;
+  const { values, errors, setField, getError } = form;
   const leads = values.leads ?? {};
   const emails = Array.isArray(leads.notificationEmails) ? leads.notificationEmails : [];
 
@@ -58,8 +59,18 @@ export default function LeadNotificationsTab({ form, disabled = false }) {
               // reported: the chip would look exactly like a working one.
               return EMAIL_PATTERN.test(email) ? { value: email, label: email } : undefined;
             }}
+            // …and the list says so as it is typed. Refused silently, the
+            // address vanished from the box and nothing said why (QA-64).
+            checkNew={(label) =>
+              EMAIL_PATTERN.test(String(label).trim())
+                ? null
+                : `“${String(label).trim()}” is not an e-mail address`
+            }
+            // An address typed and followed by a click on Save was dropped,
+            // and the settings saved without it (QA-64).
+            commitOnBlur
             hint="Leave it empty and nobody is e-mailed; the leads screen still records everything."
-            error={getError('leads.notificationEmails')}
+            error={listError(errors, 'leads.notificationEmails')}
             disabled={disabled}
           />
         </FormColumn>

@@ -143,6 +143,8 @@ const adminPaths = {
   adminSeoGuide: '/admin/seo/guide',
 
   adminSettings: '/admin/settings',
+  /** One panel of Site settings — `adminSettingsTab('integrations')` (QA-64). */
+  adminSettingsTab: (tab) => `/admin/settings?tab=${encodeURIComponent(tab)}`,
   adminUsers: '/admin/settings/users',
 };
 

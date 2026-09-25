@@ -8,6 +8,17 @@ import styles from './SortableList.module.css';
 const defaultId = (item, index) => item?.id ?? index;
 
 /**
+ * The children of `parent` that carry `attribute` — its own rows, or a row's
+ * own arrows, and never those of a list nested inside it (QA-64).
+ *
+ * @param {Element|null|undefined} parent
+ * @param {string} attribute
+ * @returns {Element[]}
+ */
+const ownChildren = (parent, attribute) =>
+  [...(parent?.children ?? [])].filter((element) => element.hasAttribute(attribute));
+
+/**
  * A list the admin can reorder.
  *
  * Dragging is the fast path; the ↑/↓ buttons are the real one. They are always
@@ -82,16 +93,26 @@ export default function SortableList({
     // The row is found by its id, not by the index it moved to: a list that
     // re-reads itself between the move and the next frame has put something
     // else at that index, and the focus went to the neighbour (QA-59).
-    const movedId = String(getId(moved, from));
+    //
+    // The id is asked for at the row's new place. A list keyed by position —
+    // the settings' opening hours, counters and footer columns — has no other
+    // id, and asked at the old place it named the neighbour that had moved in
+    // there: the focus went to that row's arrow, and a second Enter put the
+    // row straight back (QA-64). A list with real ids answers the same either
+    // way. Only this list's own rows are searched: a footer column holds a
+    // list of links whose rows carry ids too, and the focus fell into it.
+    const movedId = String(getId(moved, to));
     window.requestAnimationFrame(() => {
-      const row = [...(listRef.current?.querySelectorAll('[data-sortable-row]') ?? [])].find(
+      const row = ownChildren(listRef.current, 'data-sortable-row').find(
         (element) => element.getAttribute('data-sortable-id') === movedId
       );
       if (!row) return;
       const arrow =
         focus === 'row'
           ? null
-          : row.querySelector(`[data-sortable-move="${focus}"]:not(:disabled)`);
+          : ownChildren(row, 'data-sortable-moves')[0]?.querySelector(
+              `[data-sortable-move="${focus}"]:not(:disabled)`
+            );
       (arrow ?? row).focus();
     });
   };
@@ -168,7 +189,7 @@ export default function SortableList({
 
               <div className={styles.body}>{renderItem?.(item, index)}</div>
 
-              <span className={styles.moves}>
+              <span className={styles.moves} data-sortable-moves>
                 <IconButton
                   label={`Move ${nameOf(item, index)} up`}
                   size="sm"
