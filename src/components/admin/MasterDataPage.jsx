@@ -482,7 +482,7 @@ export default function MasterDataPage({ config }) {
   );
 
   /**
-   * The screen's own rules, plus the panel's two blockers when it is on.
+   * The screen's own rules, plus the panel's blockers when it is on.
    *
    * A number box's own bounds come first: the bank form declared 5–20 % a
    * year and 50–95 % of the value, and took 25 % and 99 %, because a form

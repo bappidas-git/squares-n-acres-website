@@ -41,9 +41,28 @@ A complete 422 body:
 }
 ```
 
+**Every URL is at most 500 characters** (QA-65) — every field the schemas type `url`, at
+any depth, the items of a list of them included: its column is a `VARCHAR(500)`, and the
+addresses kept inside JSON columns (a record's `seo` and `socialLinks`, the two settings
+records) are held to the same. A longer
+one is 422 under its key — `"The logoUrl may not be greater than 500 characters."`,
+`"footer.galleryImageUrls.1"` — and Laravel's rule for it is `url|max:500`. A descriptor
+may name a different `maxLength`, and its column is then that wide; none does today. The
+lead forms keep the page address they send (`pageUrl`) within the limit, dropping the
+fragment and then the query of a longer one — the `utm_*` values travel separately.
+
 ### 5.4 Auth
 
 Header `Authorization: Bearer <token>`. `POST /auth/login { email, password }` → `{ data: { token, expiresAt, user: { id, name, email, role, avatarUrl, phone } } }`; `POST /auth/logout` revokes (200 `{data:null,message}`); `GET /auth/profile` → `{ data: user }` (401 when the token is missing/expired/revoked); `PUT /auth/profile { name, phone, avatarUrl }`; `PUT /auth/password { currentPassword, newPassword }` (422 `currentPassword` when wrong; `newPassword` min 8). Tokens expire after `MOCK_TOKEN_TTL_HOURS` (default 24) on the mock and per Sanctum config on Laravel. Client storage: `sna_auth_token`, `sna_auth_user`, `sna_auth_expires_at` (localStorage); expiry enforced client-side (timer + check on every route change → auto-logout with toast "Your session has expired. Please sign in again.") and server-side (401).
+
+**An account may be signed in on several devices at once** (QA-65). Each `POST /auth/login`
+issues a new token and revokes none of the account's others, so a second sign-in — a phone
+beside a desk — leaves the first working. A session ends when it signs out (`POST /auth/logout`
+revokes only the token that made the call) or its token expires; the account's other sessions
+end when its password changes (`PUT /auth/password` keeps the caller's token), and every one of
+them when an administrator resets its password — the administrator's own session excepted, when
+the account is theirs — deactivates it or deletes it. The admin says so: "Password changed. Your
+other sessions have been signed out."
 
 ### 5.5 IDs & timestamps
 
@@ -244,7 +263,7 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 | POST   | `/auth/logout`   | any role  | Revoke the current token                                              | —     | —               | `Null`         | Revokes the presented token                         |
 | GET    | `/auth/profile`  | any role  | The signed-in user; 401 when the token is missing, expired or revoked | —     | —               | `User`         | —                                                   |
 | PUT    | `/auth/profile`  | any role  | Update the signed-in user’s own name, phone and avatar                | —     | `auth.profile`  | `User`         | —                                                   |
-| PUT    | `/auth/password` | any role  | Change the signed-in user’s own password                              | —     | `auth.password` | `Null`         | Revokes every other token of the user               |
+| PUT    | `/auth/password` | any role  | Change the signed-in user’s own password                              | —     | `auth.password` | `Null`         | Revokes other tokens; 5 tries a minute/account      |
 
 ##### Auth — worked examples
 
@@ -315,7 +334,9 @@ revoked one, the answer is `401 { "message": "Unauthenticated." }` — and
 
 A `PUT /auth/profile` replaces the three fields it owns, so an omitted `phone` or
 `avatarUrl` is stored as `null` (§5.8). `name` is 2–80 characters; a shorter one answers
-`422 { "errors": { "name": ["The name must be at least 2 characters."] } }`.
+`422 { "errors": { "name": ["The name must be at least 2 characters."] } }`. `avatarUrl` is
+at most 500 characters — the `admin_users.avatar_url` column (QA-65); a longer one answers
+`422` on `avatarUrl`.
 
 ```jsonc
 // PUT /api/auth/password  { "currentPassword": "Wrong@123", "newPassword": "Str0ngPass" } → 422
@@ -333,6 +354,12 @@ A `PUT /auth/profile` replaces the three fields it owns, so an omitted `phone` o
 
 `newPassword` is at least 8 characters with at least one letter and one digit; a weaker one
 answers `422 { "errors": { "newPassword": [ … ] } }`.
+
+`PUT /auth/password` is throttled to **five attempts a minute per account** (QA-65): it asks
+for the current password, so without a limit it was a second door to guessing it, open where
+the login form stops at ten a minute. The sixth answers
+`429 { "message": "Too many attempts to change the password. Try again in a minute." }` with
+`Retry-After`; every session of the account shares the count.
 
 #### Admin — dashboard, properties and leads
 

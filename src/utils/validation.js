@@ -15,6 +15,8 @@
  * it is the thing to fix.
  */
 
+import { maxLengthOf } from '../services/schemas/limits';
+
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export const INDIAN_MOBILE_PATTERN = /^(\+91)?[6-9]\d{9}$/;
 export const SLUG_PATTERN = /^[a-z0-9-]+$/;
@@ -110,9 +112,14 @@ function typeError(key, value, descriptor) {
   }
 }
 
-/** `min` / `max` / `maxLength` / `pattern`, whose meaning depends on the type. */
+/**
+ * `min` / `max` / `maxLength` / `pattern`, whose meaning depends on the type —
+ * and a `url`'s 500 characters when it names no `maxLength` of its own, the
+ * limit the API keeps (`services/schemas/limits.js`, QA-65).
+ */
 function boundsError(key, value, descriptor) {
-  const { min, max, maxLength, pattern } = descriptor;
+  const { min, max, pattern } = descriptor;
+  const maxLength = maxLengthOf(descriptor);
 
   if (typeof value === 'number') {
     if (min !== undefined && value < min) return `The ${key} must be at least ${min}.`;

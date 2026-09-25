@@ -132,6 +132,11 @@ Two more rules that belong with it:
 e-mail address plus the IP — and that limit is the only one allowed to answer
 429 to a signed-out human.
 
+`PUT /auth/password` has one too (QA-65): five attempts a minute **per account**,
+keyed on the user id, because it takes the current password and would otherwise
+let any open session guess it at full speed. Over the limit: `429`, `Retry-After`,
+"Too many attempts to change the password. Try again in a minute.".
+
 ## Planned additions
 
 One endpoint is specified but not yet in the registry, so it is not in

@@ -7,6 +7,8 @@ const login = {
   password: { type: 'string', required: true, min: 6, maxLength: 100 },
 };
 
+// `avatarUrl`, like every `url`, is at most 500 characters — the width of its
+// column (`./limits.js`, QA-65).
 const profile = {
   name: { type: 'string', required: true, min: 2, maxLength: 80 },
   phone: { type: 'phone', nullable: true, default: null },

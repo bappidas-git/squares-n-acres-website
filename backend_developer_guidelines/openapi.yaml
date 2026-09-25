@@ -8,7 +8,7 @@ info:
     `src/services/endpoints.js`, `src/services/schemas/` and
     `mock-server/schemas/models.js`. Do not edit by hand.
 
-    generatedFrom: dfe0f41
+    generatedFrom: e411792
 
     Read `01_API_CONTRACT.md` first: the envelopes of §5.2, the error body
     of §5.3 and the pagination of §5.6 apply to every operation below and
@@ -27350,6 +27350,7 @@ components:
             url:
               type: string
               format: uri
+              maxLength: 500
             alt:
               type: string
               maxLength: 200
@@ -27460,6 +27461,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -27530,6 +27532,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -27561,6 +27564,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -27837,6 +27841,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
             designation:
               type: string
               maxLength: 120
@@ -27932,6 +27937,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -28002,6 +28008,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -28033,6 +28040,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -28324,6 +28332,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -28394,6 +28403,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -28425,6 +28435,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -28706,6 +28717,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -28776,6 +28788,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -28807,6 +28820,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -29086,6 +29100,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -29156,6 +29171,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -29187,6 +29203,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -29445,6 +29462,7 @@ components:
             url:
               type: string
               format: uri
+              maxLength: 500
             alt:
               type: string
               maxLength: 200
@@ -29555,6 +29573,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -29625,6 +29644,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -29656,6 +29676,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -29911,6 +29932,7 @@ components:
             url:
               type: string
               format: uri
+              maxLength: 500
             alt:
               type: string
               maxLength: 200
@@ -30021,6 +30043,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -30091,6 +30114,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -30122,6 +30146,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -30441,6 +30466,7 @@ components:
             url:
               type: string
               format: uri
+              maxLength: 500
             alt:
               type: string
               maxLength: 200
@@ -30551,6 +30577,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -30621,6 +30648,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -30652,6 +30680,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -30923,6 +30952,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         email:
           type:
@@ -30938,30 +30968,35 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             twitter:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             facebook:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             instagram:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             website:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
           default: {}
         isActive:
@@ -30999,6 +31034,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -31069,6 +31105,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -31100,6 +31137,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -31361,6 +31399,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         email:
           type:
@@ -31376,30 +31415,35 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             twitter:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             facebook:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             instagram:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             website:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
           default: {}
         isActive:
@@ -31437,6 +31481,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -31507,6 +31552,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -31538,6 +31584,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -31789,6 +31836,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         email:
           type:
@@ -31804,30 +31852,35 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             twitter:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             facebook:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             instagram:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             website:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
           default: {}
         isActive:
@@ -31865,6 +31918,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -31935,6 +31989,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -31966,6 +32021,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -32215,6 +32271,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         email:
           type:
@@ -32230,30 +32287,35 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             twitter:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             facebook:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             instagram:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             website:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
           default: {}
         isActive:
@@ -32291,6 +32353,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -32361,6 +32424,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -32392,6 +32456,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -32648,6 +32713,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
       required:
         - name
@@ -32844,6 +32910,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         interestRateMin:
           type: number
@@ -32890,6 +32957,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         isActive:
           type: boolean
@@ -32922,6 +32990,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         interestRateMin:
           type: number
@@ -32968,6 +33037,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         isActive:
           type: boolean
@@ -33000,6 +33070,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         interestRateMin:
           type: number
@@ -33046,6 +33117,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         isActive:
           type: boolean
@@ -33072,6 +33144,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         interestRateMin:
           type: number
@@ -33118,6 +33191,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         isActive:
           type: boolean
@@ -33323,12 +33397,14 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         coverImageUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         description:
           type: string
@@ -33355,6 +33431,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         totalProjects:
           type:
@@ -33428,6 +33505,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -33498,6 +33576,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -33529,6 +33608,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -33780,12 +33860,14 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         coverImageUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         description:
           type: string
@@ -33812,6 +33894,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         totalProjects:
           type:
@@ -33885,6 +33968,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -33955,6 +34039,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -33986,6 +34071,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -34227,12 +34313,14 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         coverImageUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         description:
           type: string
@@ -34259,6 +34347,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         totalProjects:
           type:
@@ -34332,6 +34421,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -34402,6 +34492,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -34433,6 +34524,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -34672,12 +34764,14 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         coverImageUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         description:
           type: string
@@ -34704,6 +34798,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         totalProjects:
           type:
@@ -34777,6 +34872,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -34847,6 +34943,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -34878,6 +34975,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -35829,6 +35927,7 @@ components:
         resumeUrl:
           type: string
           format: uri
+          maxLength: 500
         coverLetter:
           type:
             - string
@@ -35840,6 +35939,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         status:
           type: string
@@ -35879,6 +35979,7 @@ components:
         resumeUrl:
           type: string
           format: uri
+          maxLength: 500
         coverLetter:
           type:
             - string
@@ -35890,6 +35991,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         website:
           type:
@@ -36217,6 +36319,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         requirement:
           type:
@@ -36555,6 +36658,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         requirement:
           type:
@@ -36881,6 +36985,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         latitude:
           type:
@@ -36975,6 +37080,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -37045,6 +37151,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -37076,6 +37183,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -37367,6 +37475,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         latitude:
           type:
@@ -37461,6 +37570,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -37531,6 +37641,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -37562,6 +37673,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -37826,6 +37938,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         latitude:
           type:
@@ -37920,6 +38033,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -37990,6 +38104,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -38021,6 +38136,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -38282,6 +38398,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         latitude:
           type:
@@ -38376,6 +38493,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -38446,6 +38564,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -38477,6 +38596,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -39181,6 +39301,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         blocks:
           type: array
@@ -39295,6 +39416,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -39365,6 +39487,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -39396,6 +39519,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -39692,6 +39816,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         blocks:
           type: array
@@ -39806,6 +39931,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -39876,6 +40002,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -39907,6 +40034,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -40225,6 +40353,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         blocks:
           type: array
@@ -40339,6 +40468,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -40409,6 +40539,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -40440,6 +40571,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -40730,6 +40862,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         blocks:
           type: array
@@ -40844,6 +40977,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -40914,6 +41048,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -40945,6 +41080,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -41216,11 +41352,13 @@ components:
         logoUrl:
           type: string
           format: uri
+          maxLength: 500
         websiteUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         category:
           type: string
@@ -41255,11 +41393,13 @@ components:
         logoUrl:
           type: string
           format: uri
+          maxLength: 500
         websiteUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         category:
           type: string
@@ -41292,11 +41432,13 @@ components:
         logoUrl:
           type: string
           format: uri
+          maxLength: 500
         websiteUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         category:
           type: string
@@ -41325,11 +41467,13 @@ components:
         logoUrl:
           type: string
           format: uri
+          maxLength: 500
         websiteUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         category:
           type: string
@@ -41630,12 +41774,14 @@ components:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               floorPlanPdfUrl:
                 type:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               availableUnits:
                 type:
@@ -41663,11 +41809,13 @@ components:
               imageUrl:
                 type: string
                 format: uri
+                maxLength: 500
               pdfUrl:
                 type:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               area:
                 type:
@@ -41716,6 +41864,7 @@ components:
               url:
                 type: string
                 format: uri
+                maxLength: 500
               alt:
                 type: string
                 maxLength: 200
@@ -41742,18 +41891,21 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         virtualTourUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         brochureUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         brochureLeadGated:
           type: boolean
@@ -41771,6 +41923,7 @@ components:
               url:
                 type: string
                 format: uri
+                maxLength: 500
               type:
                 type: string
                 enum:
@@ -41834,6 +41987,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             showExactLocation:
               type: boolean
@@ -42198,6 +42352,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
               required:
                 - id
               default: null
@@ -42230,6 +42385,7 @@ components:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               note:
                 type:
@@ -42393,6 +42549,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             showOnListing:
               type: boolean
@@ -42431,6 +42588,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -42501,6 +42659,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -42532,6 +42691,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -43130,12 +43290,14 @@ components:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               floorPlanPdfUrl:
                 type:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               availableUnits:
                 type:
@@ -43163,11 +43325,13 @@ components:
               imageUrl:
                 type: string
                 format: uri
+                maxLength: 500
               pdfUrl:
                 type:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               area:
                 type:
@@ -43216,6 +43380,7 @@ components:
               url:
                 type: string
                 format: uri
+                maxLength: 500
               alt:
                 type: string
                 maxLength: 200
@@ -43242,18 +43407,21 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         virtualTourUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         brochureUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         brochureLeadGated:
           type: boolean
@@ -43271,6 +43439,7 @@ components:
               url:
                 type: string
                 format: uri
+                maxLength: 500
               type:
                 type: string
                 enum:
@@ -43334,6 +43503,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             showExactLocation:
               type: boolean
@@ -43671,6 +43841,7 @@ components:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               note:
                 type:
@@ -43834,6 +44005,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             showOnListing:
               type: boolean
@@ -43872,6 +44044,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -43942,6 +44115,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -43973,6 +44147,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -44493,12 +44668,14 @@ components:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               floorPlanPdfUrl:
                 type:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               availableUnits:
                 type:
@@ -44526,11 +44703,13 @@ components:
               imageUrl:
                 type: string
                 format: uri
+                maxLength: 500
               pdfUrl:
                 type:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               area:
                 type:
@@ -44579,6 +44758,7 @@ components:
               url:
                 type: string
                 format: uri
+                maxLength: 500
               alt:
                 type: string
                 maxLength: 200
@@ -44605,18 +44785,21 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         virtualTourUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         brochureUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         brochureLeadGated:
           type: boolean
@@ -44634,6 +44817,7 @@ components:
               url:
                 type: string
                 format: uri
+                maxLength: 500
               type:
                 type: string
                 enum:
@@ -44697,6 +44881,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             showExactLocation:
               type: boolean
@@ -45034,6 +45219,7 @@ components:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               note:
                 type:
@@ -45197,6 +45383,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             showOnListing:
               type: boolean
@@ -45235,6 +45422,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -45305,6 +45493,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -45336,6 +45525,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -45637,6 +45827,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -45707,6 +45898,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -45738,6 +45930,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -46036,6 +46229,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -46106,6 +46300,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -46137,6 +46332,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -46427,6 +46623,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -46497,6 +46694,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -46528,6 +46726,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -46814,6 +47013,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -46884,6 +47084,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -46915,6 +47116,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -47405,12 +47607,14 @@ components:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               floorPlanPdfUrl:
                 type:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               availableUnits:
                 type:
@@ -47438,11 +47642,13 @@ components:
               imageUrl:
                 type: string
                 format: uri
+                maxLength: 500
               pdfUrl:
                 type:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               area:
                 type:
@@ -47491,6 +47697,7 @@ components:
               url:
                 type: string
                 format: uri
+                maxLength: 500
               alt:
                 type: string
                 maxLength: 200
@@ -47517,18 +47724,21 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         virtualTourUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         brochureUrl:
           type:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         brochureLeadGated:
           type: boolean
@@ -47546,6 +47756,7 @@ components:
               url:
                 type: string
                 format: uri
+                maxLength: 500
               type:
                 type: string
                 enum:
@@ -47609,6 +47820,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             showExactLocation:
               type: boolean
@@ -47946,6 +48158,7 @@ components:
                   - string
                   - 'null'
                 format: uri
+                maxLength: 500
                 default: null
               note:
                 type:
@@ -48109,6 +48322,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             showOnListing:
               type: boolean
@@ -48147,6 +48361,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             robots:
               type: object
@@ -48217,6 +48432,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 title: null
@@ -48248,6 +48464,7 @@ components:
                     - string
                     - 'null'
                   format: uri
+                  maxLength: 500
                   default: null
               default:
                 card: summary_large_image
@@ -48815,6 +49032,7 @@ components:
         siteUrl:
           type: string
           format: uri
+          maxLength: 500
         separator:
           type: string
           maxLength: 3
@@ -48878,6 +49096,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             twitterCard:
               type: string
@@ -48919,6 +49138,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             description:
               type: string
@@ -48997,6 +49217,7 @@ components:
               items:
                 type: string
                 format: uri
+                maxLength: 500
               default: []
         verification:
           type: object
@@ -49193,6 +49414,7 @@ components:
         siteUrl:
           type: string
           format: uri
+          maxLength: 500
         separator:
           type: string
           maxLength: 3
@@ -49256,6 +49478,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             twitterCard:
               type: string
@@ -49297,6 +49520,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             description:
               type: string
@@ -49375,6 +49599,7 @@ components:
               items:
                 type: string
                 format: uri
+                maxLength: 500
               default: []
         verification:
           type: object
@@ -49583,16 +49808,19 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             iconUrl:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             siteUrl:
               type: string
               format: uri
+              maxLength: 500
             defaultLanguage:
               type: string
               maxLength: 10
@@ -49659,6 +49887,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             latitude:
               type:
@@ -49726,18 +49955,21 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             backgroundVideoUrl:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             mobileImageUrl:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             searchTabs:
               type: array
@@ -49804,36 +50036,42 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             instagram:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             linkedin:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             youtube:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             x:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             pinterest:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
         footer:
           type: object
@@ -49890,6 +50128,7 @@ components:
               items:
                 type: string
                 format: uri
+                maxLength: 500
               default: []
         newsletter:
           type: object
@@ -49999,16 +50238,19 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             iconUrl:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             siteUrl:
               type: string
               format: uri
+              maxLength: 500
             defaultLanguage:
               type: string
               maxLength: 10
@@ -50075,6 +50317,7 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             latitude:
               type:
@@ -50142,18 +50385,21 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             backgroundVideoUrl:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             mobileImageUrl:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             searchTabs:
               type: array
@@ -50220,36 +50466,42 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             instagram:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             linkedin:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             youtube:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             x:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             pinterest:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
         footer:
           type: object
@@ -50306,6 +50558,7 @@ components:
               items:
                 type: string
                 format: uri
+                maxLength: 500
               default: []
         newsletter:
           type: object
@@ -50465,6 +50718,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         bio:
           type:
@@ -50486,30 +50740,35 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             twitter:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             facebook:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             instagram:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             website:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
           default: {}
         order:
@@ -50567,6 +50826,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         bio:
           type:
@@ -50588,30 +50848,35 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             twitter:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             facebook:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             instagram:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             website:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
           default: {}
         order:
@@ -50666,6 +50931,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         bio:
           type:
@@ -50687,30 +50953,35 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             twitter:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             facebook:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             instagram:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             website:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
           default: {}
         order:
@@ -50762,6 +51033,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         bio:
           type:
@@ -50783,30 +51055,35 @@ components:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             twitter:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             facebook:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             instagram:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
             website:
               type:
                 - string
                 - 'null'
               format: uri
+              maxLength: 500
               default: null
           default: {}
         order:
@@ -50858,6 +51135,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         propertyId:
           type:
@@ -50917,6 +51195,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         propertyId:
           type:
@@ -50974,6 +51253,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         propertyId:
           type:
@@ -51027,6 +51307,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         propertyId:
           type:
@@ -51085,6 +51366,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         isActive:
           type: boolean
@@ -51134,6 +51416,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         isActive:
           type: boolean
@@ -51176,6 +51459,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         isActive:
           type: boolean
@@ -51213,6 +51497,7 @@ components:
             - string
             - 'null'
           format: uri
+          maxLength: 500
           default: null
         isActive:
           type: boolean

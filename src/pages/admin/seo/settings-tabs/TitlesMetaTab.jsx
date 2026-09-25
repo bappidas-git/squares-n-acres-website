@@ -260,7 +260,7 @@ export default function TitlesMetaTab({ form, rows = [], context = {}, disabled 
 }
 
 /** The four rules of §6.14 `noindex`, with what each one costs if switched off. */
-const NOINDEX_RULES = [
+export const NOINDEX_RULES = [
   {
     key: 'searchResults',
     label: 'Search result pages',

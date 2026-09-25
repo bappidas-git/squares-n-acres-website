@@ -18,6 +18,7 @@ import {
   SLUG_PATTERN,
   URL_PATTERN,
 } from '../../../../../utils/validation';
+import { URL_MAX_LENGTH } from '../../../../../services/schemas/limits';
 import { tidyPhone } from '../../../../../utils/validators';
 import { validateSeoBranch } from '../../../../../components/seo/seoSideEffects';
 import { isMapEmbedUrl } from '../../../../../utils/mapEmbed';
@@ -99,9 +100,18 @@ const checkNonNegative = (add, path, value, label) => {
   if (Number(value) < 0) add(path, `${label} cannot be negative.`);
 };
 
+/**
+ * `value` must be an address the API takes: `http(s)://`, and no longer than
+ * the 500 characters of its column (QA-65). A signed CDN link can be longer,
+ * and the API's refusal would name the key — "The images.0.url may not be
+ * greater than 500 characters." — after the round trip.
+ */
 const checkUrl = (add, path, value, label) => {
   if (isBlank(value)) return;
   if (!isUrl(value)) add(path, `${label} must start with http:// or https://.`);
+  else if (String(value).trim().length > URL_MAX_LENGTH) {
+    add(path, `${label} can be at most ${URL_MAX_LENGTH} characters.`);
+  }
 };
 
 /**
@@ -686,9 +696,10 @@ export function validateAgent(values) {
  * The 50–60 character guide the panel draws its meters against is **advice**,
  * not a rule: a long title is cut in a result, not refused, and a listing whose
  * title is sixty-eight characters must still be savable. The only lengths here
- * are the API's own, and the only two things that genuinely block a save are
- * shared with every other form through `validateSeoBranch` — a custom schema
- * that would invalidate the page's JSON-LD, and a redirect with nowhere to go.
+ * are the API's own, and what genuinely blocks a save is shared with every
+ * other form through `validateSeoBranch` — a custom schema that would
+ * invalidate the page's JSON-LD, a redirect with nowhere to go, and an address
+ * past 500 characters.
  */
 export function validateSeo(values) {
   const { errors, add } = collector();

@@ -20,10 +20,14 @@ function clientIp(req) {
 /**
  * Builds a rate-limiting middleware.
  *
- * @param {{windowMs?: number, max?: number, key?: (req: import('express').Request) => string}} [options]
+ * `message` words the 429 for the route it guards — the password change says
+ * what is being refused (QA-65); left out, it is the contract's default.
+ *
+ * @param {{windowMs?: number, max?: number, key?: (req: import('express').Request) => string,
+ *   message?: string}} [options]
  * @returns {import('express').RequestHandler}
  */
-function rateLimit({ windowMs = 60_000, max = 10, key = clientIp } = {}) {
+function rateLimit({ windowMs = 60_000, max = 10, key = clientIp, message } = {}) {
   /** @type {Map<string, {count: number, resetAt: number}>} */
   const hits = new Map();
 
@@ -41,7 +45,7 @@ function rateLimit({ windowMs = 60_000, max = 10, key = clientIp } = {}) {
     bucket.count += 1;
     if (bucket.count > max) {
       res.setHeader('Retry-After', Math.ceil((bucket.resetAt - now) / 1000));
-      next(tooManyRequests());
+      next(tooManyRequests(message));
       return;
     }
 

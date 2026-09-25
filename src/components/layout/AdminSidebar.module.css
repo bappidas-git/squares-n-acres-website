@@ -55,6 +55,29 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* The page's pale scrollbar ran down the charcoal rail as a light stripe
+     once a few groups were open (QA-65). */
+  scrollbar-color: var(--color-on-dark-border) transparent;
+}
+
+.nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nav::-webkit-scrollbar-thumb {
+  background: var(--color-on-dark-border);
+}
+
+.nav::-webkit-scrollbar-thumb:hover {
+  background: var(--color-on-dark);
+}
+
+/* The keyboard's ring of the light surfaces is blue: on the charcoal rail it
+   measured 2.1:1, the ring around the red current item — "Profile" on its own
+   page — as good as invisible (QA-65). White, as on every dark band of the
+   design system (the `onDark` rule of `global.css`). */
+.sidebar :focus-visible {
+  outline-color: var(--color-text-inverse);
 }
 
 .group {

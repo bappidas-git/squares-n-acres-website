@@ -28,7 +28,18 @@
   color: var(--color-text-muted);
 }
 
+/* A long address wrapped and squeezed the shield beside it to a speck (QA-65). */
+.subtitleIcon {
+  flex-shrink: 0;
+}
+
+.email {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .role {
+  flex-shrink: 0;
   padding: 2px var(--space-2);
   border-radius: var(--radius-full);
   background: var(--color-primary-light);
@@ -40,7 +51,9 @@
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  /* Never wider than the column: at 320px the column is 288px, and a 320px
+     minimum pushed both cards 32px past the edge of the screen (QA-65). */
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: var(--space-6);
   align-items: start;
 }
@@ -75,10 +88,11 @@
   gap: var(--space-3);
 }
 
-.previewImage {
-  width: 72px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
+.previewText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
 .previewLabel {
@@ -86,7 +100,15 @@
   color: var(--color-text-muted);
 }
 
+.previewWarning {
+  font-size: var(--font-size-xs);
+  color: var(--color-warning-dark);
+}
+
 .actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-start;
+  gap: var(--space-3);
 }

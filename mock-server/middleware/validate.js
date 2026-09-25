@@ -26,6 +26,7 @@
  */
 
 const { validation } = require('./errors');
+const { maxLengthOf } = require('../../src/services/schemas/limits');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const INDIAN_MOBILE_RE = /^(\+91)?[6-9]\d{9}$/;
@@ -125,10 +126,15 @@ function typeError(key, value, descriptor) {
   }
 }
 
-/** Checks `min` / `max` / `maxLength`, whose meaning depends on the type. */
+/**
+ * Checks `min` / `max` / `maxLength`, whose meaning depends on the type. A
+ * `url` without a `maxLength` of its own is held to its column's 500
+ * characters (`src/services/schemas/limits.js`, QA-65).
+ */
 function boundsErrors(key, value, descriptor) {
   const messages = [];
-  const { min, max, maxLength, pattern } = descriptor;
+  const { min, max, pattern } = descriptor;
+  const maxLength = maxLengthOf(descriptor);
 
   if (typeof value === 'number') {
     if (min !== undefined && value < min) messages.push(`The ${key} must be at least ${min}.`);

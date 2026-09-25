@@ -14,7 +14,8 @@
  *   enum      allowed values (with `type: 'enum'`)
  *   accepts   extra values the API tolerates and normalises (legacy input)
  *   min/max   numeric bounds, string minimum length, array length bounds
- *   maxLength string maximum length
+ *   maxLength string maximum length — a `url` without one is held to 500,
+ *             the width of its column (`./limits.js`, QA-65)
  *   pattern   regular expression source the value must match
  *   items     descriptor for each element of an `array`
  *   shape     `{ field: descriptor }` for an `object`

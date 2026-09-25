@@ -4,6 +4,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 
 import { BRAND } from '../../config/site';
 import { Logo } from '../ui';
+import { findAdminRoute } from '../../routes/adminRouteConfig';
 import { getItem, setItem } from '../../utils/storage';
 import { getNavItemsForRole } from '../../config/rbac';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
@@ -66,15 +67,22 @@ export default function AdminSidebar({ collapsed = false, mobile = false, onNavi
   // The rail shows icons only; inside the drawer everything is always labelled.
   const compact = collapsed && !mobile;
 
+  // An address the panel has no screen for is the admin's 404, and no item of
+  // the navigation is that page: /admin/profile/extra said "There is no such
+  // screen" under a sidebar marking "Profile" as the current page (QA-65).
+  const known = Boolean(findAdminRoute(pathname));
+
   // The group the page belongs to opens on the way in. Arriving on
   // /admin/properties from a bookmark used to leave "Properties" folded, with
   // nothing in the sidebar saying where the reader was; it can still be
   // folded by hand afterwards.
   const currentGroup = useMemo(
     () =>
-      navItems.find((item) => item.children && activeChildPath(item.children, pathname))?.label ??
+      (known &&
+        navItems.find((item) => item.children && activeChildPath(item.children, pathname))
+          ?.label) ||
       null,
-    [navItems, pathname]
+    [navItems, pathname, known]
   );
 
   useEffect(() => {
@@ -108,7 +116,7 @@ export default function AdminSidebar({ collapsed = false, mobile = false, onNavi
   );
 
   const itemClass = ({ isActive }) =>
-    [styles.navItem, isActive ? styles.navItemActive : ''].filter(Boolean).join(' ');
+    [styles.navItem, isActive && known ? styles.navItemActive : ''].filter(Boolean).join(' ');
 
   const subItemClass = ({ isActive }) =>
     [styles.navSubItem, isActive ? styles.navSubItemActive : ''].filter(Boolean).join(' ');
@@ -133,6 +141,7 @@ export default function AdminSidebar({ collapsed = false, mobile = false, onNavi
                 key={item.label}
                 to={item.path}
                 className={itemClass}
+                aria-current={known ? 'page' : false}
                 onClick={onNavigate}
                 title={compact ? item.label : undefined}
               >
@@ -152,7 +161,7 @@ export default function AdminSidebar({ collapsed = false, mobile = false, onNavi
 
           const groupId = `admin-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`;
           const open = Boolean(openGroups[item.label]) && !compact;
-          const activePath = activeChildPath(item.children, pathname);
+          const activePath = known ? activeChildPath(item.children, pathname) : null;
 
           return (
             <div key={item.label} className={styles.group}>

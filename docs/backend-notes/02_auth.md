@@ -17,11 +17,10 @@ cookie domain.
 POST /api/auth/login  { email, password }
         │
         ├─ user not found, inactive, or password mismatch
-        │     └─→ 422  { message, errors: { email: ['These credentials do not match our records.'] } }
+        │     └─→ 401  { message: 'Invalid email or password.' }
         │
         └─ match
-              ├─ $user->tokens()->where('name', 'admin-panel')->delete()   // one session per account
-              ├─ $token = $user->createToken('admin-panel', ['*'], now()->addHours(24))
+              ├─ $token = $user->createToken('admin-panel', ['*'], now()->addHours(24))   // beside the others
               ├─ $user->forceFill(['last_login_at' => now()])->save()
               └─→ 200 { data: { token, expiresAt, user: { id, name, email, role, avatarUrl, phone } } }
 
@@ -33,10 +32,21 @@ Every later call
         └─ known token, role allowed          →  the handler runs, with $request->user() set
 
 POST /api/auth/logout
-        └─ $request->user()->currentAccessToken()->delete()  →  200 { data: null, message: 'Signed out.' }
+        └─ $request->user()->currentAccessToken()->delete()  →  200 { data: null, message: 'Logged out.' }
 ```
 
 Notes that matter:
+
+- **An account may be signed in on several devices at once** — a desk and a
+  phone (QA-65). A login creates a token beside the account's others and deletes
+  none of them: a second sign-in must leave the first working. A session ends
+  when it signs out (only `currentAccessToken()` is deleted), when its token
+  expires, and when the account's password is changed or reset or the account
+  is deactivated or deleted — each of which deletes every token of the account
+  but the caller's own (below). The admin tells the user so — "Password changed.
+  Your other sessions have been signed out." — and
+  `mock-server/__tests__/auth.test.js` checks that a first token still answers
+  200 after a second login.
 
 - `expiresAt` is part of the login response because the client enforces expiry
   too: it stores `sna_auth_token`, `sna_auth_user` and `sna_auth_expires_at`, sets
@@ -52,6 +62,14 @@ Notes that matter:
   and a digit** for the new one (`errors.newPassword`: "The newPassword must
   contain at least one letter and one digit."). Revoke every other token of that
   user on success.
+- `PUT /auth/password` is throttled per **account**, five attempts a minute
+  (QA-65) — it takes the current password, so it is a way to guess it — and the
+  sixth answers `429` with `Retry-After` and "Too many attempts to change the
+  password. Try again in a minute.". In Laravel, a named limiter keyed on the
+  user id — `Limit::perMinute(5)->by($request->user()->id)`.
+- `PUT /auth/profile` takes an `avatarUrl` of at most 500 characters, the
+  width of `admin_users.avatar_url` (`nullable|url|max:500`); longer answers
+  `422` on `avatarUrl` instead of failing the write (QA-65).
 - The same rule holds wherever a password is set (QA-64): `POST /admin/users`
   and a `PUT` or `PATCH /admin/users/:id` that carries `password` answer `422`
   on `password` ("The password must contain at least one letter and one

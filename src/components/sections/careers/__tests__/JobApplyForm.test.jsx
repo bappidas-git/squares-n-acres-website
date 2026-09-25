@@ -90,6 +90,18 @@ describe('validateApplication', () => {
     );
   });
 
+  it('refuses a pasted link longer than the API’s 500 characters (QA-65)', () => {
+    const link = (length) => `https://files.example.com/${'a'.repeat(length - 30)}.pdf`;
+
+    expect(validateApplication({ ...valid, resumeUrl: link(500) }).resumeUrl).toBeUndefined();
+    expect(validateApplication({ ...valid, resumeUrl: link(501) }).resumeUrl).toBe(
+      'The résumé link is too long — attach the file, or use a sharing link of at most 500 characters'
+    );
+    expect(validateApplication({ ...valid, linkedinUrl: link(501) }).linkedinUrl).toBe(
+      'The LinkedIn address is too long — keep it to 500 characters'
+    );
+  });
+
   it('applies the Indian mobile rule and the e-mail rule', () => {
     expect(validateApplication({ ...valid, phone: '12345' }).phone).toBeTruthy();
     expect(validateApplication({ ...valid, email: 'asha@' }).email).toBeTruthy();

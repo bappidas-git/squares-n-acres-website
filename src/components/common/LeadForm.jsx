@@ -6,6 +6,7 @@ import Honeypot from './Honeypot';
 import LeadFormField, { optionsOf } from './LeadFormField';
 import LeadSuccess, { DEFAULT_SUCCESS_MESSAGE } from './LeadSuccess';
 import RequirementFields, { useRequirementFields } from './RequirementFields';
+import leadPageUrl from '../../utils/leadPageUrl';
 import leadService from '../../services/leadService';
 import { Button } from '../ui';
 import { DEFAULT_FIELDS } from '../../utils/leadSources';
@@ -105,7 +106,11 @@ export function buildLeadBody({
     body.articleId = Number(articleId);
   }
   if (pageSlug) body.pageSlug = pageSlug;
-  if (typeof window !== 'undefined') body.pageUrl = window.location.href;
+  // Within the 500 characters the API takes: an advertisement's tracking tags
+  // can make the address longer, and the enquiry would be refused over it
+  // (QA-65).
+  const pageUrl = leadPageUrl();
+  if (pageUrl) body.pageUrl = pageUrl;
 
   if (Object.keys(requirement).length > 0) body.requirement = requirement;
 

@@ -260,9 +260,9 @@ export default function LocalityFormPage() {
     schema: isEdit ? UPDATE_SCHEMA : CREATE_SCHEMA,
     normalize: toPayload,
     labels: LABELS,
-    // A connectivity row with one half, and the SEO panel's own two blockers:
-    // JSON-LD that would invalidate the page's script tag, and a redirect with
-    // nowhere to send anybody.
+    // A connectivity row with one half, and the SEO panel's own blockers:
+    // JSON-LD that would invalidate the page's script tag, a redirect with
+    // nowhere to send anybody, and an address past 500 characters.
     validate: (candidate) => ({
       ...connectivityRules(candidate),
       ...validateSeoBranch(candidate.seo),

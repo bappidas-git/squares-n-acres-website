@@ -663,13 +663,13 @@ export default function DeveloperFormPage() {
 }
 
 /**
- * The rules the schema is deliberately wider than, and the SEO panel's own two.
+ * The rules the schema is deliberately wider than, and the SEO panel's own.
  *
  * §6.5 allows any year from 1800 and any URL the `url` type accepts; an
  * editor typing into this form wants to hear "1950 to this year" and
  * "include https://" rather than the generic refusals those produce. The panel
- * adds JSON-LD that would invalidate the page's script tag, and a redirect with
- * nowhere to send anybody.
+ * adds JSON-LD that would invalidate the page's script tag, a redirect with
+ * nowhere to send anybody, and an address past 500 characters.
  */
 function extraRules(values) {
   const errors = { ...validateSeoBranch(values.seo) };

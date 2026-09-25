@@ -324,9 +324,15 @@ const SIDE_EFFECTS = {
     'Re-subscribes an address that had unsubscribed, rather than adding a row.',
   ],
   'jobs.apply': ['Creates a job application with `status: "new"`.'],
-  'auth.login': ['Revokes the account’s previous token and stamps `lastLoginAt`.'],
+  'auth.login': [
+    'Stamps `lastLoginAt`.',
+    'Issues a new token and revokes none: an account may be signed in on several devices, and its other sessions keep working until they sign out or expire, or a password change, a reset or a deactivation ends them.',
+  ],
   'auth.logout': ['Revokes the token the call was made with.'],
-  'auth.updatePassword': ['Revokes every other token of the account.'],
+  'auth.updatePassword': [
+    'Revokes every other token of the account.',
+    'Throttled to five attempts a minute per account (429, QA-65).',
+  ],
   'adminSettings.update': [
     'Deep-merges the known keys and stamps `updatedAt`; the admin sends only what changed (QA-64).',
   ],

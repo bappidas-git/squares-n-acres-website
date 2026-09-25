@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Divider, Menu, MenuItem } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import NotificationsMenu from './NotificationsMenu';
 import PATHS from '../../routes/paths';
@@ -35,6 +35,7 @@ export default function AdminTopbar({
   onOpenDrawer,
 }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { user, role, logout } = useAdminAuth();
   const { confirmDiscard } = useNavigationGuard();
   const [anchor, setAnchor] = useState(null);
@@ -42,9 +43,13 @@ export default function AdminTopbar({
 
   const close = () => setAnchor(null);
 
+  // Already there, it is the same page: a second entry for it made Back land
+  // on "My profile" again — and with an edit in hand, leave without asking,
+  // since the guard only stops a move to another page (QA-65). The sidebar's
+  // links behave the same way on their own.
   const goToProfile = () => {
     close();
-    navigate(PATHS.adminProfile);
+    navigate(PATHS.adminProfile, { replace: pathname === PATHS.adminProfile });
   };
 
   // Unsaved changes are asked about before the session ends, while there is
@@ -119,9 +124,15 @@ export default function AdminTopbar({
         >
           <li className={styles.identity}>
             <Avatar src={user?.avatarUrl} name={user?.name || 'Admin'} size={40} />
+            {/* One line each, the rest in the tooltip: a long name or address
+                broke into four lines with an ellipsis on each (QA-65). */}
             <span className={styles.identityText}>
-              <span className={styles.identityName}>{user?.name || 'Admin'}</span>
-              <span className={styles.identityEmail}>{user?.email}</span>
+              <span className={styles.identityName} title={user?.name || 'Admin'}>
+                {user?.name || 'Admin'}
+              </span>
+              <span className={styles.identityEmail} title={user?.email}>
+                {user?.email}
+              </span>
             </span>
             {role ? (
               <Chip tone="primary" size="sm">

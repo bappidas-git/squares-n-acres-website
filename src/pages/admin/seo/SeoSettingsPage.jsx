@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import AdminTabs, { AdminTabPanel } from '../../../components/admin/AdminTabs';
@@ -21,6 +21,7 @@ import RobotsTab from './settings-tabs/RobotsTab';
 import SitemapTab from './settings-tabs/SitemapTab';
 import Skeleton from '../../../components/ui/Skeleton';
 import VerificationTab from './settings-tabs/VerificationTab';
+import { displayedAt, fieldError, seoSettingsLabel } from './seoSettingsFields';
 import seoService from '../../../services/seoService';
 import useApi from '../../../hooks/useApi';
 import useForm from '../../../hooks/useForm';
@@ -32,6 +33,7 @@ import { useMasterData } from '../../../contexts/MasterDataContext';
 import { useSeoOverviewAll } from './useSeoOverview';
 import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import { useToast } from '../../../components/common/ToastProvider';
+import { validate } from '../../../utils/validation';
 
 import styles from './SeoSettingsPage.module.css';
 import { SEO } from '../../../config/adminCopy';
@@ -106,11 +108,25 @@ export default function SeoSettingsPage() {
     []
   );
 
+  // The field a refused save's 422 names first, so the tab that holds it can be
+  // opened even though `form.errors` is painted a render later than the `await`
+  // that fails.
+  const serverFieldRef = useRef(null);
+
   const form = useForm({
     initialValues: data ?? {},
     schema: schemas['seoSettings.update'],
     partial: true,
-    onSubmit: (values) => seoService.updateSettings(values),
+    // The messages name the field as its tab labels it, not by its key.
+    labels: seoSettingsLabel,
+    onSubmit: async (values) => {
+      try {
+        return await seoService.updateSettings(values);
+      } catch (thrown) {
+        serverFieldRef.current = Object.keys(thrown?.errors ?? {})[0] ?? null;
+        throw thrown;
+      }
+    },
   });
 
   // `useApi` answers after the first render, and `useForm` keeps the values it
@@ -135,12 +151,19 @@ export default function SeoSettingsPage() {
   );
 
   const save = useCallback(async () => {
+    serverFieldRef.current = null;
+    // Computed before the submit rather than read after it: `form.errors` in
+    // this closure is a render behind the validation the submit runs, so the
+    // first refused save opened no tab at all.
+    const firstProblem =
+      Object.keys(validate(form.values, schemas['seoSettings.update'], { partial: true }))[0] ??
+      null;
+
     const saved = await form.submit();
     if (saved === false) {
-      // A 422 paints the fields; open the tab that holds the first of them, or
-      // the messages sit on a panel nobody has looked at.
-      const first = Object.keys(form.errors)[0];
-      const owner = first ? tabOfSettingsField(first) : null;
+      // The messages are painted; open the tab that holds the first of them, or
+      // they sit on a panel nobody has looked at.
+      const owner = tabOfSettingsField(firstProblem ?? serverFieldRef.current ?? '');
       if (owner) setTab(owner);
       return;
     }
@@ -151,9 +174,12 @@ export default function SeoSettingsPage() {
     siteSettings.refresh();
   }, [form, siteSettings, toast]);
 
+  // One message per field the editor can see: two refused profiles are one
+  // line under the list, and were counted as two.
   const errorsByTab = useMemo(() => {
     const counts = {};
-    for (const path of Object.keys(form.errors ?? {})) {
+    const shown = new Set(Object.keys(form.errors ?? {}).map(displayedAt));
+    for (const path of shown) {
       const owner = tabOfSettingsField(path);
       if (owner) counts[owner] = (counts[owner] ?? 0) + 1;
     }
@@ -198,6 +224,10 @@ export default function SeoSettingsPage() {
 
   const disabled = !canEdit || form.submitting;
 
+  // What the tabs read: a list shows the first message about any of its
+  // entries, since a chip has no message of its own (`fieldError`).
+  const tabForm = { ...form, getError: (path) => fieldError(form.errors, path) };
+
   return (
     <div className={styles.page}>
       <PageHeader
@@ -225,36 +255,36 @@ export default function SeoSettingsPage() {
       <AdminTabs label="SEO settings sections" tabs={tabs} value={tab} onChange={setTab} />
 
       <AdminTabPanel tabKey="titles" value={tab}>
-        <TitlesMetaTab form={form} rows={rows} context={context} disabled={disabled} />
+        <TitlesMetaTab form={tabForm} rows={rows} context={context} disabled={disabled} />
       </AdminTabPanel>
       <AdminTabPanel tabKey="knowledge" value={tab}>
-        <KnowledgeGraphTab form={form} context={context} disabled={disabled} />
+        <KnowledgeGraphTab form={tabForm} context={context} disabled={disabled} />
       </AdminTabPanel>
       <AdminTabPanel tabKey="verification" value={tab}>
-        <VerificationTab form={form} disabled={disabled} />
+        <VerificationTab form={tabForm} disabled={disabled} />
       </AdminTabPanel>
       <AdminTabPanel tabKey="analytics" value={tab}>
         <AnalyticsTab />
       </AdminTabPanel>
       <AdminTabPanel tabKey="sitemap" value={tab}>
-        <SitemapTab form={form} disabled={disabled} />
+        <SitemapTab form={tabForm} disabled={disabled} />
       </AdminTabPanel>
       <AdminTabPanel tabKey="robots" value={tab}>
-        <RobotsTab form={form} disabled={disabled} />
+        <RobotsTab form={tabForm} disabled={disabled} />
       </AdminTabPanel>
       <AdminTabPanel tabKey="llms" value={tab}>
-        <LlmsTab form={form} disabled={disabled} />
+        <LlmsTab form={tabForm} disabled={disabled} />
       </AdminTabPanel>
       <AdminTabPanel tabKey="breadcrumbs" value={tab}>
-        <BreadcrumbsTab form={form} disabled={disabled} />
+        <BreadcrumbsTab form={tabForm} disabled={disabled} />
       </AdminTabPanel>
       {isAdmin ? (
         <AdminTabPanel tabKey="customHtml" value={tab}>
-          <CustomHtmlTab form={form} disabled={disabled} />
+          <CustomHtmlTab form={tabForm} disabled={disabled} />
         </AdminTabPanel>
       ) : null}
       <AdminTabPanel tabKey="preview" value={tab}>
-        <HeadPreviewTab form={form} context={context} homePage={null} />
+        <HeadPreviewTab form={tabForm} context={context} homePage={null} />
       </AdminTabPanel>
 
       {form.dirty ? (

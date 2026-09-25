@@ -14,6 +14,7 @@
  * consequence to report and no state to roll back.
  */
 
+import leadPageUrl from './leadPageUrl';
 import leadService from '../services/leadService';
 import { getUtm } from './leadStorage';
 
@@ -36,7 +37,7 @@ export function recordClickLead({ visitor, source, propertyId = null, message = 
     source,
     consent: true,
     website: '',
-    pageUrl: typeof window === 'undefined' ? null : window.location.href,
+    pageUrl: leadPageUrl(),
   };
 
   if (visitor.email) body.email = visitor.email;
