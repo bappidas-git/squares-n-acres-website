@@ -58,6 +58,30 @@ describe('AdminSidebar', () => {
     expect(storage.getItem(NAV_OPEN_STORAGE_KEY, {})).toMatchObject({ Properties: true });
   });
 
+  it('marks "Profile" on My profile', () => {
+    renderWith(<AdminSidebar />, { initialEntries: ['/admin/profile'] });
+
+    expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('marks nothing on an address the panel has no screen for (QA-65)', () => {
+    renderWith(<AdminSidebar />, { initialEntries: ['/admin/profile/extra'] });
+
+    expect(screen.getByRole('link', { name: 'Profile' })).not.toHaveAttribute(
+      'aria-current',
+      'page'
+    );
+    expect(screen.getByRole('link', { name: 'Profile' }).className).not.toMatch(/navItemActive/);
+  });
+
+  it('marks no child of a group on an address below it that is no screen (QA-65)', () => {
+    renderWith(<AdminSidebar />, { initialEntries: ['/admin/properties/add/extra'] });
+
+    expect(screen.getByRole('link', { name: 'Add property', hidden: true })).not.toHaveAttribute(
+      'aria-current'
+    );
+  });
+
   it('marks "Add property", and only it, on the add screen', () => {
     renderWith(<AdminSidebar />, { initialEntries: ['/admin/properties/add'] });
 

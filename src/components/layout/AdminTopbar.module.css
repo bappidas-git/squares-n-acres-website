@@ -107,6 +107,7 @@
   color: var(--color-charcoal);
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .identityEmail {
@@ -114,6 +115,7 @@
   color: var(--color-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .menuItem {
