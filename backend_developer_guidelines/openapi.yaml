@@ -8,7 +8,7 @@ info:
     `src/services/endpoints.js`, `src/services/schemas/` and
     `mock-server/schemas/models.js`. Do not edit by hand.
 
-    generatedFrom: 7033f6f
+    generatedFrom: 285f05c
 
     Read `01_API_CONTRACT.md` first: the envelopes of §5.2, the error body
     of §5.3 and the pagination of §5.6 apply to every operation below and
@@ -10413,7 +10413,7 @@ paths:
       operationId: adminMedia.list
       tags:
         - media
-      summary: List media items for the admin table
+      summary: List media items for the library grid; `meta.folders` names every folder in the library, and `q` also reads the address and the tags
       description: 'Minimum role: `manager` (§7). Registry key `adminMedia.list`.'
       security:
         - bearerAuth: []
@@ -10550,6 +10550,10 @@ paths:
                   perPage: 2
                   total: 389
                   totalPages: 195
+                  folders:
+                    - articles
+                    - authors
+                    - …9 more (trimmed for this example)
         '401':
           description: the token is missing, expired or revoked (§5.4)
           content:
@@ -10938,10 +10942,19 @@ paths:
       operationId: adminMedia.bulk
       tags:
         - media
-      summary: Apply one action to several media items
+      summary: Apply one action to several media items; a delete is all or nothing — a 409 naming every file still in use (`data.refused`), unless `force=true`
       description: 'Minimum role: `manager` (§7). Registry key `adminMedia.bulk`.'
       security:
         - bearerAuth: []
+      parameters:
+        - name: force
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - 'true'
+              - 'false'
       requestBody:
         required: true
         content:
@@ -38697,6 +38710,7 @@ components:
         url:
           type: string
           format: uri
+          maxLength: 500
         publicId:
           type:
             - string
@@ -38796,6 +38810,7 @@ components:
         url:
           type: string
           format: uri
+          maxLength: 500
         publicId:
           type:
             - string
@@ -38872,6 +38887,7 @@ components:
         url:
           type: string
           format: uri
+          maxLength: 500
         publicId:
           type:
             - string
@@ -38943,6 +38959,7 @@ components:
         url:
           type: string
           format: uri
+          maxLength: 500
         publicId:
           type:
             - string

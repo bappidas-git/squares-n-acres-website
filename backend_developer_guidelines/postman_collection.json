@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "3fc3a194-d939-44aa-8997-e0af3ffe473f",
     "name": "Squares N Acres API",
-    "description": "Every endpoint of the contract, generated from `src/services/endpoints.js`.\n\n**Start here:** select the *Squares N Acres — Local mock* environment, open\n`auth › auth › POST /auth/login` and send it. Its test script writes\n`{{token}}` into the environment and every other request inherits it.\nTo work as another role, change `email` and `password` in the environment\n(the manager and sales values are there, disabled) and sign in again.\n\nRunning the whole collection is the parity check of `08_TESTING_AND_PARITY.md`:\npoint `{{baseUrl}}` at the Laravel API and every test that passes against\nthe mock must pass against it.\n\ngeneratedFrom: 7033f6f",
+    "description": "Every endpoint of the contract, generated from `src/services/endpoints.js`.\n\n**Start here:** select the *Squares N Acres — Local mock* environment, open\n`auth › auth › POST /auth/login` and send it. Its test script writes\n`{{token}}` into the environment and every other request inherits it.\nTo work as another role, change `email` and `password` in the environment\n(the manager and sales values are there, disabled) and sign in again.\n\nRunning the whole collection is the parity check of `08_TESTING_AND_PARITY.md`:\npoint `{{baseUrl}}` at the Laravel API and every test that passes against\nthe mock must pass against it.\n\ngeneratedFrom: 285f05c",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -18144,7 +18144,7 @@
           "item": [
             {
               "id": "aa0fd90c-6174-4ce2-8a59-f9543435de72",
-              "name": "GET /admin/media — List media items for the admin table",
+              "name": "GET /admin/media — List media items for the library grid; `meta.folders` names every folder in the library, and `q` also reads the address and the tags",
               "request": {
                 "method": "GET",
                 "header": [
@@ -18229,7 +18229,7 @@
                     }
                   ]
                 },
-                "description": "List media items for the admin table\n\n- **Registry key** `adminMedia.list`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `MediaList` — see `01_API_CONTRACT.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
+                "description": "List media items for the library grid; `meta.folders` names every folder in the library, and `q` also reads the address and the tags\n\n- **Registry key** `adminMedia.list`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `MediaList` — see `01_API_CONTRACT.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
               },
               "event": [
                 {
@@ -18277,7 +18277,7 @@
                     }
                   ],
                   "cookie": [],
-                  "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"url\": \"https://picsum.photos/seed/sna-locality-whitefield/1600/900\",\n      \"publicId\": null,\n      \"provider\": \"external\",\n      \"type\": \"image\",\n      \"width\": 1600,\n      \"height\": 900,\n      \"bytes\": null,\n      \"format\": \"jpg\",\n      \"alt\": \"Whitefield, Bengaluru\",\n      \"title\": null,\n      \"folder\": \"localities\",\n      \"tags\": [\n        \"locality\",\n        \"east\"\n      ],\n      \"createdBy\": 1,\n      \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n      \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n    },\n    {\n      \"id\": 2,\n      \"url\": \"https://picsum.photos/seed/sna-locality-sarjapur-road/1600/900\",\n      \"publicId\": null,\n      \"provider\": \"external\",\n      \"type\": \"image\",\n      \"width\": 1600,\n      \"height\": 900,\n      \"bytes\": null,\n      \"format\": \"jpg\",\n      \"alt\": \"Sarjapur Road, Bengaluru\",\n      \"title\": null,\n      \"folder\": \"localities\",\n      \"tags\": [\n        \"locality\",\n        \"east\"\n      ],\n      \"createdBy\": 1,\n      \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n      \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n    }\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"perPage\": 2,\n    \"total\": 389,\n    \"totalPages\": 195\n  }\n}"
+                  "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"url\": \"https://picsum.photos/seed/sna-locality-whitefield/1600/900\",\n      \"publicId\": null,\n      \"provider\": \"external\",\n      \"type\": \"image\",\n      \"width\": 1600,\n      \"height\": 900,\n      \"bytes\": null,\n      \"format\": \"jpg\",\n      \"alt\": \"Whitefield, Bengaluru\",\n      \"title\": null,\n      \"folder\": \"localities\",\n      \"tags\": [\n        \"locality\",\n        \"east\"\n      ],\n      \"createdBy\": 1,\n      \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n      \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n    },\n    {\n      \"id\": 2,\n      \"url\": \"https://picsum.photos/seed/sna-locality-sarjapur-road/1600/900\",\n      \"publicId\": null,\n      \"provider\": \"external\",\n      \"type\": \"image\",\n      \"width\": 1600,\n      \"height\": 900,\n      \"bytes\": null,\n      \"format\": \"jpg\",\n      \"alt\": \"Sarjapur Road, Bengaluru\",\n      \"title\": null,\n      \"folder\": \"localities\",\n      \"tags\": [\n        \"locality\",\n        \"east\"\n      ],\n      \"createdBy\": 1,\n      \"createdAt\": \"2026-01-15T09:30:00.000Z\",\n      \"updatedAt\": \"2026-01-15T09:30:00.000Z\"\n    }\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"perPage\": 2,\n    \"total\": 389,\n    \"totalPages\": 195,\n    \"folders\": [\n      \"articles\",\n      \"authors\",\n      \"…9 more (trimmed for this example)\"\n    ]\n  }\n}"
                 }
               ]
             },
@@ -18693,7 +18693,7 @@
             },
             {
               "id": "615b1edb-9d25-4708-83b6-4b2551858501",
-              "name": "POST /admin/media/bulk — Apply one action to several media items",
+              "name": "POST /admin/media/bulk — Apply one action to several media items; a delete is all or nothing — a 409 naming every file still in use (`data.refused`), unless `force=true`",
               "request": {
                 "method": "POST",
                 "header": [
@@ -18724,9 +18724,17 @@
                     "admin",
                     "media",
                     "bulk"
+                  ],
+                  "query": [
+                    {
+                      "key": "force",
+                      "value": "",
+                      "disabled": true,
+                      "description": "bool"
+                    }
                   ]
                 },
-                "description": "Apply one action to several media items\n\n- **Registry key** `adminMedia.bulk`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `BulkResult` — see `01_API_CONTRACT.md`\n- **Body schema** `bulk` — see `03_ENDPOINTS.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
+                "description": "Apply one action to several media items; a delete is all or nothing — a 409 naming every file still in use (`data.refused`), unless `force=true`\n\n- **Registry key** `adminMedia.bulk`\n- **Auth** bearer token, minimum role `manager`\n- **Response shape** `BulkResult` — see `01_API_CONTRACT.md`\n- **Body schema** `bulk` — see `03_ENDPOINTS.md`\n- Sign in as **manager** first to see this as the least privileged role that may call it."
               },
               "event": [
                 {
