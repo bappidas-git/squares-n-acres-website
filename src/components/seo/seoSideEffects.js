@@ -18,6 +18,7 @@
  */
 
 import redirectService from '../../services/redirectService';
+import { URL_MAX_LENGTH } from '../../services/schemas/limits';
 import { EVENTS, emit } from '../../utils/events';
 import { parseCustom } from '../../seo/schema/graph';
 import { publicPathFor } from '../../seo/urls';
@@ -97,9 +98,16 @@ export function validateSeoSideEffects(seo = {}) {
   return {};
 }
 
+/** The branch's addresses, by the words a sentence uses for the panel's fields. */
+const SEO_URLS = [
+  ['canonicalUrl', 'The canonical URL'],
+  ['og.imageUrl', 'The share image address'],
+  ['twitter.imageUrl', 'The X image address'],
+];
+
 /**
- * The two rules of the `seo` branch that stop a save, whatever form is doing
- * the saving.
+ * The rules of the `seo` branch that stop a save, whatever form is doing the
+ * saving.
  *
  * **Custom schema.** Invalid JSON-LD in a page is worse than none: it
  * invalidates the whole `<script type="application/ld+json">`, generated nodes
@@ -109,6 +117,11 @@ export function validateSeoSideEffects(seo = {}) {
  * **A redirect with nowhere to go.** The switch is on and the target is blank:
  * the rule cannot be written, and saving it would leave an editor believing the
  * page had moved.
+ *
+ * **An address past 500 characters.** The API refuses it (QA-65), and its
+ * sentence names the key — "The seo.og.imageUrl may not be greater than 500
+ * characters." — as does the schema's, which every host form but the property
+ * form and the SEO dialog checks too; this one, run after it, names the field.
  *
  * Everything else about the branch is advice. A title of eighty characters is
  * cut in a result, not refused; the panel says so and the save goes through.
@@ -126,6 +139,13 @@ export function validateSeoBranch(seo = {}) {
       errors['seo.schema.custom'] = found[0]?.message
         ? `The custom schema cannot be published: ${found[0].message}`
         : 'The custom schema is not valid JSON-LD.';
+    }
+  }
+
+  for (const [path, label] of SEO_URLS) {
+    const value = path.split('.').reduce((node, key) => node?.[key], seo);
+    if (typeof value === 'string' && value.trim().length > URL_MAX_LENGTH) {
+      errors[`seo.${path}`] = `${label} can be at most ${URL_MAX_LENGTH} characters.`;
     }
   }
 

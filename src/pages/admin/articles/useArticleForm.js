@@ -394,8 +394,9 @@ export default function useArticleForm({ articleId = null, record = null, readOn
       if (!answer) found[`faqs.${index}.answer`] = 'Write the answer, or remove this row.';
     });
 
-    // The SEO panel's own two blockers: JSON-LD that would invalidate the
-    // page's script tag, and a redirect with nowhere to send anybody.
+    // The SEO panel's own blockers: JSON-LD that would invalidate the page's
+    // script tag, a redirect with nowhere to send anybody, and an address past
+    // 500 characters.
     Object.assign(found, validateSeoBranch(values.seo));
 
     return found;

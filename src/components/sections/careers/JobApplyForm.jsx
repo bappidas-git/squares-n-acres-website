@@ -7,6 +7,7 @@ import ResumeUpload from './ResumeUpload';
 import careerService from '../../../services/careerService';
 import { Button, PhoneField, TextField, TextareaField, UrlField } from '../../ui';
 import { EVENTS, track } from '../../../utils/analytics';
+import { URL_MAX_LENGTH } from '../../../services/schemas/limits';
 import { URL_PATTERN } from '../../../utils/validation';
 import { leadStorage } from '../../../utils/leadStorage';
 import { useToast } from '../../common/ToastProvider';
@@ -54,14 +55,21 @@ export function validateApplication(values) {
   const phone = getMobileErrorMessage(values.phone, { required: true, label: 'Phone' });
   if (phone) errors.phone = phone;
 
+  // A pasted link is held to the 500 characters the API takes (QA-65); an
+  // expiring download link from a cloud drive can be longer than that.
   const resumeUrl = String(values.resumeUrl ?? '').trim();
   if (!resumeUrl) errors.resumeUrl = 'Attach your résumé, or paste a link to it';
   else if (!URL_PATTERN.test(resumeUrl))
     errors.resumeUrl = 'The résumé link must start with https://';
+  else if (resumeUrl.length > URL_MAX_LENGTH) {
+    errors.resumeUrl = `The résumé link is too long — attach the file, or use a sharing link of at most ${URL_MAX_LENGTH} characters`;
+  }
 
   const linkedinUrl = String(values.linkedinUrl ?? '').trim();
   if (linkedinUrl && !URL_PATTERN.test(linkedinUrl)) {
     errors.linkedinUrl = 'The LinkedIn address must start with https://';
+  } else if (linkedinUrl.length > URL_MAX_LENGTH) {
+    errors.linkedinUrl = `The LinkedIn address is too long — keep it to ${URL_MAX_LENGTH} characters`;
   }
 
   if (String(values.coverLetter ?? '').length > COVER_LETTER_MAX) {

@@ -18,6 +18,7 @@ import {
   validateMedia,
   validatePricing,
   validateProject,
+  validateSeo,
   validateSimilar,
   validateUnits,
 } from '../validators';
@@ -239,6 +240,85 @@ describe('validateAgent', () => {
     expect(
       validateAgent(base({ agent: { ...agent, phone: '98450 1234' } }))['agent.phone']
     ).toMatch(/Indian mobile/);
+  });
+});
+
+describe('an address is at most 500 characters, as the API takes it (QA-65)', () => {
+  /** An address of exactly `length` characters. */
+  const address = (length, start = 'https://cdn.example.com/') =>
+    `${start}${'a'.repeat(length - start.length - 4)}.jpg`;
+
+  it('refuses a longer one by the field’s name, before the round trip', () => {
+    const location = {
+      ...createInitialState().location,
+      localityId: 1,
+      cityId: 1,
+      mapEmbedUrl: address(501, 'https://www.google.com/maps/embed?pb='),
+    };
+    const values = base({
+      location,
+      videoUrl: address(501),
+      images: [makeImage({ url: address(501), alt: 'The living room', isCover: true })],
+      agent: { ...createInitialState().agent, photoUrl: address(501) },
+    });
+
+    expect(validateLocation(values)['location.mapEmbedUrl']).toBe(
+      'The map URL can be at most 500 characters.'
+    );
+    expect(validateMedia(values)).toEqual({
+      videoUrl: 'The video URL can be at most 500 characters.',
+      'images.0.url': 'The image address can be at most 500 characters.',
+    });
+    expect(validateAgent(values)['agent.photoUrl']).toBe(
+      'The photo address can be at most 500 characters.'
+    );
+  });
+
+  it('takes 500', () => {
+    const values = base({
+      videoUrl: address(500),
+      images: [makeImage({ url: address(500), alt: 'The living room', isCover: true })],
+    });
+    expect(validateMedia(values)).toEqual({});
+  });
+
+  it('refuses the SEO tab’s three addresses in the panel’s words', () => {
+    const seo = (patch) => ({ ...createInitialState().seo, ...patch });
+    const errors = validateSeo(
+      base({
+        seo: seo({
+          canonicalUrl: address(501),
+          og: { ...createInitialState().seo.og, imageUrl: address(501) },
+          twitter: { ...createInitialState().seo.twitter, imageUrl: address(501) },
+        }),
+      })
+    );
+
+    expect(errors).toEqual({
+      'seo.canonicalUrl': 'The canonical URL can be at most 500 characters.',
+      'seo.og.imageUrl': 'The share image address can be at most 500 characters.',
+      'seo.twitter.imageUrl': 'The X image address can be at most 500 characters.',
+    });
+    // 500, and 500 once trimmed — the panel sends the address without its spaces.
+    expect(
+      validateSeo(
+        base({
+          seo: seo({
+            canonicalUrl: address(500),
+            og: { ...createInitialState().seo.og, imageUrl: `${address(500)}  ` },
+          }),
+        })
+      )
+    ).toEqual({});
+  });
+
+  it('stops the save: validateAll carries the refusal', () => {
+    const values = saveable({
+      images: [makeImage({ url: address(501), alt: 'The pool', isCover: true })],
+    });
+    expect(validateAll(values)).toEqual({
+      'images.0.url': 'The image address can be at most 500 characters.',
+    });
   });
 });
 
