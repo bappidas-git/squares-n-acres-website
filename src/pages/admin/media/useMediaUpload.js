@@ -112,6 +112,46 @@ export function altFromFileName(name) {
   return base.charAt(0).toUpperCase() + base.slice(1);
 }
 
+/** The longest title the library keeps (`media.title`, §6.12). */
+export const TITLE_MAX_LENGTH = 200;
+
+/**
+ * The title an upload is filed under: its file name, shortened to what the
+ * library keeps with its extension left on (QA-63).
+ *
+ * A 240-character name went to Cloudinary and was then refused by the API —
+ * "The title may not be greater than 200 characters." — about a title the
+ * editor never typed, on a row whose Retry could never succeed, with the file
+ * left on Cloudinary.
+ *
+ * @param {string} name
+ * @param {number} [max]
+ * @returns {string}
+ */
+export function titleFromFileName(name, max = TITLE_MAX_LENGTH) {
+  const full = String(name ?? '').trim();
+  if (full.length <= max) return full;
+  const extension = extensionOf(full);
+  const tail = extension ? `.${extension}` : '';
+  return `${full.slice(0, max - tail.length - 1).trimEnd()}…${tail}`;
+}
+
+/**
+ * A folder as the library files it: its segments trimmed, no slash at either
+ * end and none doubled — "/projects//aurelia/ " is `projects/aurelia` (QA-63).
+ * The record and Cloudinary's `sna/<folder>` then name the same folder; the
+ * record used to keep the slashes, and the Folder filter listed it twice.
+ *
+ * @param {string} folder
+ * @returns {string} `''` for no folder
+ */
+export const cleanFolder = (folder) =>
+  String(folder ?? '')
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .join('/');
+
 /**
  * What is wrong with a file, before a byte of it is sent.
  *
@@ -140,9 +180,7 @@ export function fileError(file, accept = 'any') {
 
 /** The Cloudinary folder a logical folder maps to (D-media, `sna/<folder>`). */
 export const cloudinaryFolder = (folder) => {
-  const clean = String(folder ?? '')
-    .trim()
-    .replace(/^\/+|\/+$/g, '');
+  const clean = cleanFolder(folder);
   return clean ? `sna/${clean}` : 'sna';
 };
 
@@ -254,8 +292,8 @@ export default function useMediaUpload({ folder = '', accept = 'any', onUploaded
           bytes: uploaded.bytes ?? item.size,
           format: uploaded.format ?? extensionOf(item.name),
           alt: item.alt,
-          title: item.name,
-          folder: String(item.folder ?? target ?? '').trim() || null,
+          title: titleFromFileName(item.name),
+          folder: cleanFolder(item.folder ?? target) || null,
           tags: [],
         });
 

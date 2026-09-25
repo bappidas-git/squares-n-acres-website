@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -8,7 +9,7 @@ import { MediaUrlForm, URL_MAX_LENGTH, fieldErrorsOf } from '../MediaAddUrlDialo
 
 jest.mock('../../../../services/mediaService', () => ({
   __esModule: true,
-  default: { create: jest.fn() },
+  default: { create: jest.fn(), list: jest.fn() },
 }));
 
 /**
@@ -40,6 +41,24 @@ it('adds the file when Enter is pressed in a box', async () => {
     type: 'image',
     format: 'jpg',
   });
+});
+
+it('does not submit the form of the field that opened it (QA-63)', async () => {
+  // The picker is a portal inside, say, the property form: React bubbles the
+  // inner form's submit to the outer one, which then saved the listing.
+  const outer = jest.fn((event) => event.preventDefault());
+  const onCreated = jest.fn();
+  renderWith(
+    <form onSubmit={outer}>
+      {createPortal(<MediaUrlForm onCreated={onCreated} />, document.body)}
+    </form>
+  );
+
+  await fill({ url: 'https://example.com/lobby.jpg', alt: 'The lobby{enter}' });
+  await waitFor(() => expect(onCreated).toHaveBeenCalled());
+  await userEvent.click(screen.getByRole('button', { name: /add to library/i }));
+
+  expect(outer).not.toHaveBeenCalled();
 });
 
 it('says an address is already in the library, under the address', async () => {
@@ -112,6 +131,96 @@ describe('a picture’s size', () => {
     });
     expect(mediaService.create.mock.calls[0][0]).toMatchObject({ width: 1600, height: 900 });
   });
+});
+
+describe('a field that takes one kind of file (QA-63)', () => {
+  it('refuses an address that is plainly another kind, and files the rest as its own', async () => {
+    const onCreated = jest.fn();
+    renderWith(<MediaUrlForm accept="document" onCreated={onCreated} />);
+
+    // The Type is the field's, not the address's.
+    expect(screen.getByLabelText('Type')).toBeDisabled();
+    expect(screen.getByLabelText('Type')).toHaveValue('document');
+
+    await fill({ url: 'https://picsum.photos/seed/not-a-brochure/800/600', alt: 'A photograph' });
+    expect(
+      screen.getByText('That address is a picture, and this field takes a document.')
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /add to library/i }));
+    expect(mediaService.create).not.toHaveBeenCalled();
+
+    // An address that says nothing about itself is trusted, as a document.
+    fireEvent.change(screen.getByLabelText(/file address/i), {
+      target: { value: 'https://example.com/download?id=5' },
+    });
+    await userEvent.click(screen.getByRole('button', { name: /add to library/i }));
+    await waitFor(() => expect(onCreated).toHaveBeenCalled());
+    expect(mediaService.create.mock.calls[0][0]).toMatchObject({ type: 'document' });
+  });
+});
+
+describe('an address already in the library (QA-63)', () => {
+  const EXISTING = {
+    id: 7,
+    url: 'https://picsum.photos/seed/sna-locality-whitefield/1600/900',
+    type: 'image',
+    alt: 'Whitefield, Bengaluru',
+    title: null,
+    usedIn: [],
+  };
+
+  beforeEach(() => {
+    mediaService.create.mockRejectedValue(
+      new ApiError({
+        status: 422,
+        message: 'The given data was invalid.',
+        errors: { url: ['The url has already been taken.'] },
+      })
+    );
+    mediaService.list.mockResolvedValue({ data: [EXISTING], meta: {} });
+  });
+
+  it('offers the file it belongs to', async () => {
+    const onExisting = jest.fn();
+    renderWith(<MediaUrlForm onCreated={() => {}} onExisting={onExisting} />);
+
+    await fill({ url: EXISTING.url });
+    await userEvent.click(screen.getByRole('button', { name: /add to library/i }));
+
+    expect(await screen.findByText(/It is filed as “Whitefield, Bengaluru”/)).toBeInTheDocument();
+    expect(mediaService.list).toHaveBeenCalledWith(
+      expect.objectContaining({ q: EXISTING.url, withUsage: true })
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Use that file' }));
+    expect(onExisting).toHaveBeenCalledWith(EXISTING);
+  });
+
+  it('does not offer a file of another kind to a field that takes one kind', async () => {
+    renderWith(<MediaUrlForm accept="video" onCreated={() => {}} onExisting={jest.fn()} />);
+
+    await fill({ url: 'https://example.com/download?id=7' });
+    mediaService.list.mockResolvedValue({
+      data: [{ ...EXISTING, url: 'https://example.com/download?id=7' }],
+      meta: {},
+    });
+    await userEvent.click(screen.getByRole('button', { name: /add to library/i }));
+
+    expect(
+      await screen.findByText(/which is a picture — this field takes a video/)
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Use that file' })).not.toBeInTheDocument();
+  });
+});
+
+it('files the folder as the library names it', async () => {
+  renderWith(<MediaUrlForm onCreated={() => {}} />);
+
+  await fill({ url: 'https://example.com/lobby.jpg' });
+  fireEvent.change(screen.getByLabelText('Folder'), { target: { value: ' /projects//aurelia/ ' } });
+  await userEvent.click(screen.getByRole('button', { name: /add to library/i }));
+
+  await waitFor(() => expect(mediaService.create).toHaveBeenCalled());
+  expect(mediaService.create.mock.calls[0][0]).toMatchObject({ folder: 'projects/aurelia' });
 });
 
 describe('fieldErrorsOf', () => {

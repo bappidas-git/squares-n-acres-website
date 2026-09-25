@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 
 import ApiError from '../../../../services/apiError';
 import mediaService from '../../../../services/mediaService';
-import useMediaUpload from '../useMediaUpload';
+import useMediaUpload, { cleanFolder, titleFromFileName } from '../useMediaUpload';
 import { uploadToCloudinary } from '../../../../utils/cloudinary';
 
 jest.mock('../../../../services/mediaService', () => ({
@@ -125,4 +125,30 @@ it('still cancels a file on its way to Cloudinary', async () => {
   act(() => result.current.cancel(rowOf(result).id));
   await waitFor(() => expect(rowOf(result).status).toBe('cancelled'));
   expect(mediaService.create).not.toHaveBeenCalled();
+});
+
+it('files a long file name under a title the library keeps, and the folder cleaned (QA-63)', async () => {
+  mediaService.create.mockImplementation((body) => Promise.resolve({ data: { id: 3, ...body } }));
+  const name = `${'aerial-view-of-the-clubhouse-'.repeat(9)}.jpg`;
+  const { result } = renderHook(() => useMediaUpload({ folder: ' /projects//aurelia/ ' }));
+
+  act(() => {
+    result.current.enqueue([jpeg(name)]);
+  });
+  await waitFor(() => expect(rowOf(result).status).toBe('done'));
+
+  const body = mediaService.create.mock.calls[0][0];
+  expect(name.length).toBeGreaterThan(200);
+  expect(body.title).toHaveLength(200);
+  expect(body.title.endsWith('….jpg')).toBe(true);
+  expect(body.folder).toBe('projects/aurelia');
+  expect(uploadToCloudinary.mock.calls[0][1]).toMatchObject({ folder: 'sna/projects/aurelia' });
+});
+
+it('shortens only what is too long, and cleans only what needs it', () => {
+  expect(titleFromFileName('lobby.jpg')).toBe('lobby.jpg');
+  expect(titleFromFileName('x'.repeat(250))).toHaveLength(200);
+  expect(cleanFolder('  ')).toBe('');
+  expect(cleanFolder('properties')).toBe('properties');
+  expect(cleanFolder('/a / b//c/')).toBe('a/b/c');
 });

@@ -263,6 +263,22 @@ describe('the drawer', () => {
     );
   });
 
+  it('sends only the fields it changed, so another editor’s tags survive', async () => {
+    mediaService.list.mockResolvedValue(
+      envelope([file(1, { tags: ['lobby'], folder: 'properties' })])
+    );
+    render();
+    const drawer = await openDrawer('Photograph 1');
+
+    const alt = within(drawer).getByLabelText(/alt text/i);
+    await userEvent.clear(alt);
+    await userEvent.type(alt, 'The lobby at night');
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(mediaService.patch).toHaveBeenCalled());
+    expect(mediaService.patch.mock.calls[0][1]).toEqual({ alt: 'The lobby at night' });
+  });
+
   it('says there is nothing to save rather than writing the same record', async () => {
     render();
     const drawer = await openDrawer('Photograph 1');

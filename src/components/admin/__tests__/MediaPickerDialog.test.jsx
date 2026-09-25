@@ -271,3 +271,21 @@ describe('browsing (QA-63)', () => {
     expect(screen.queryByRole('navigation', { name: 'Pages of files' })).not.toBeInTheDocument();
   });
 });
+
+describe('an empty folder (QA-63)', () => {
+  it('says the folder is empty, and shows every file on request', async () => {
+    mediaService.list.mockImplementation((params) =>
+      Promise.resolve(params.folder ? envelope([]) : envelope(FILES))
+    );
+    render({ accept: 'document', folder: 'brochures' });
+
+    expect(await screen.findByText('No files match')).toBeInTheDocument();
+    expect(screen.getByText(/Nothing in “brochures” answers/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show every file' }));
+    expect(await tile('lobby\\.jpg')).toBeInTheDocument();
+    expect(mediaService.list.mock.calls.at(-1)[0].folder).toBeUndefined();
+    // The field's own kind of file is still the only kind asked for.
+    expect(mediaService.list.mock.calls.at(-1)[0]).toMatchObject({ type: 'document' });
+  });
+});

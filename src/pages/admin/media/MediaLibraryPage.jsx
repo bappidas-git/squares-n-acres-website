@@ -365,6 +365,8 @@ export default function MediaLibraryPage() {
           toast.success(`“${nameOf(record)}” is in the library.`);
           refetch();
         }}
+        // An address already in the library opens the file it belongs to.
+        onExisting={setEditing}
       />
 
       <MediaEditDrawer

@@ -11,6 +11,7 @@ import { Alert, Button, ConfirmDialog, Drawer, TextField } from '../../../compon
 import { DIALOGS, FORMS } from '../../../config/adminCopy';
 import { MEDIA_TYPES } from '../../../config/enums';
 import { cloudinaryUrl } from '../../../utils/cloudinary';
+import { cleanFolder } from './useMediaUpload';
 import { describeSize } from './MediaCard';
 import { firstFieldMessage } from '../../../services/apiError';
 import { formatDate } from '../../../utils/format';
@@ -70,18 +71,32 @@ const formOf = (item) => ({
   tags: Array.isArray(item?.tags) ? item.tags : [],
 });
 
-/** What a save sends for a form: text trimmed, an empty optional field `null`. */
-const payloadOf = (form) => ({
-  alt: form.alt.trim(),
-  title: form.title.trim() || null,
-  folder: form.folder.trim() || null,
-  tags: form.tags,
+/**
+ * A record's editable fields as a save would send them: text trimmed, the
+ * folder cleaned as the library files it, an empty optional field `null`.
+ */
+const storedOf = (source) => ({
+  alt: String(source?.alt ?? '').trim(),
+  title: String(source?.title ?? '').trim() || null,
+  folder: cleanFolder(source?.folder) || null,
+  tags: Array.isArray(source?.tags) ? source.tags : [],
 });
 
+const sameValue = (left, right) =>
+  Array.isArray(left) && Array.isArray(right)
+    ? left.length === right.length && left.every((entry, index) => entry === right[index])
+    : left === right;
+
 /**
- * The changes a form would write over a record, or `null` when there are none
- * — which is what makes the drawer "dirty", and what a save of nothing is
- * answered with (QA-63).
+ * The fields a form changed on a record, and only those — `null` when there
+ * are none, which is what makes the drawer "dirty" and what a save of nothing
+ * is answered with (QA-63).
+ *
+ * Only the changed fields are sent (QA-63): the drawer used to send all four,
+ * so of two editors — or two tabs — the later save undid whatever the earlier
+ * one had changed in the fields it had not touched (a tag added in one tab was
+ * gone when the other fixed the alt text). A `PATCH` writes only what it
+ * sends.
  *
  * @param {object|null} item
  * @param {typeof EMPTY_FORM} form
@@ -89,20 +104,12 @@ const payloadOf = (form) => ({
  */
 export function changesOf(item, form) {
   if (!item) return null;
-  const next = payloadOf(form);
-  const stored = {
-    alt: (item.alt ?? '').trim(),
-    title: (item.title ?? '').trim() || null,
-    folder: (item.folder ?? '').trim() || null,
-    tags: Array.isArray(item.tags) ? item.tags : [],
-  };
-  const same =
-    next.alt === stored.alt &&
-    next.title === stored.title &&
-    next.folder === stored.folder &&
-    next.tags.length === stored.tags.length &&
-    next.tags.every((tag, index) => tag === stored.tags[index]);
-  return same ? null : next;
+  const next = storedOf(form);
+  const stored = storedOf(item);
+  const changed = Object.fromEntries(
+    Object.entries(next).filter(([key, value]) => !sameValue(value, stored[key]))
+  );
+  return Object.keys(changed).length > 0 ? changed : null;
 }
 
 /** Where a file is hosted, in words: "Cloudinary", or the address's host. */

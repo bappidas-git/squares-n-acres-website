@@ -7,6 +7,7 @@ import { Alert, Button, Modal, SelectField, TextField } from '../../../component
 import { MEDIA_TYPES } from '../../../config/enums';
 import { URL_PATTERN } from '../../../utils/validation';
 import { firstFieldMessage } from '../../../services/apiError';
+import { cleanFolder } from './useMediaUpload';
 import { parseCloudinary } from '../../../utils/cloudinary';
 
 import styles from './MediaLibraryPage.module.css';
@@ -23,6 +24,15 @@ const IMAGE_HOSTS = [/(^|\.)picsum\.photos$/i, /(^|\.)images\.unsplash\.com$/i];
 
 /** Hosts that serve video players rather than files. */
 const VIDEO_HOSTS = [/(^|\.)youtube\.com$/i, /(^|\.)youtu\.be$/i, /(^|\.)vimeo\.com$/i];
+
+/** What a Cloudinary resource type says a file is. */
+const CLOUDINARY_RESOURCE_TYPES = { image: 'image', video: 'video', raw: 'document' };
+
+/** A kind of file, as a sentence names it. */
+const KIND_WORDS = { image: 'a picture', video: 'a video', document: 'a document' };
+
+/** What the API's unique rule on `url` is called to an editor. */
+export const DUPLICATE_MESSAGE = 'This address is already in the library.';
 
 /** The longest address the library stores (`media.url`, `VARCHAR(500)`; QA-63). */
 export const URL_MAX_LENGTH = 500;
@@ -46,7 +56,7 @@ export function fieldErrorsOf(thrown) {
   };
   const url = first('url');
   return {
-    url: url && /already been taken/i.test(url) ? 'This address is already in the library.' : url,
+    url: url && /already been taken/i.test(url) ? DUPLICATE_MESSAGE : url,
     alt: first('alt'),
     title: first('title'),
     folder: first('folder'),
@@ -63,9 +73,14 @@ export function fieldErrorsOf(thrown) {
  *
  * Exported for the unit test.
  *
+ * `certain` says whether the address itself decided — an extension, a known
+ * host, a Cloudinary resource type — or the type is only the fallback guess of
+ * a picture. A field that takes one kind of file refuses a certain mismatch,
+ * and trusts the editor with an uncertain one (QA-63).
+ *
  * @param {string} url
  * @returns {{type: 'image'|'video'|'document', provider: 'cloudinary'|'external',
- *            format: string|null}}
+ *            format: string|null, certain: boolean}}
  */
 export function describeUrl(url) {
   const value = String(url ?? '').trim();
@@ -91,9 +106,16 @@ export function describeUrl(url) {
   let type = byExtension?.[0] ?? null;
   if (!type && VIDEO_HOSTS.some((pattern) => pattern.test(host))) type = 'video';
   if (!type && IMAGE_HOSTS.some((pattern) => pattern.test(host))) type = 'image';
-  if (!type) type = cloudinary?.resourceType === 'video' ? 'video' : 'image';
+  // Cloudinary files a PDF or a Word file as `raw`.
+  if (!type) type = CLOUDINARY_RESOURCE_TYPES[cloudinary?.resourceType] ?? null;
 
-  return { type, provider: cloudinary ? 'cloudinary' : 'external', format };
+  const certain = type !== null;
+  return {
+    type: type ?? 'image',
+    provider: cloudinary ? 'cloudinary' : 'external',
+    format,
+    certain,
+  };
 }
 
 /**
@@ -112,14 +134,22 @@ export function describeUrl(url) {
  * @param {object} props
  * @param {string} [props.folder] pre-filled, and offered as a datalist
  * @param {string[]} [props.folders] the folders that already exist
+ * @param {'image'|'video'|'document'|'any'} [props.accept] the one kind of file
+ *   the field takes — the Type is then fixed, and a certain mismatch refused
  * @param {(record: object) => void} props.onCreated
+ * @param {(record: object) => void} [props.onExisting] offered for an address
+ *   already in the library, with the record it belongs to
+ * @param {string} [props.existingLabel] the button that offers it
  * @param {() => void} [props.onCancel]
  * @param {string} [props.submitLabel]
  */
 export function MediaUrlForm({
   folder = '',
   folders = [],
+  accept = 'any',
   onCreated,
+  onExisting,
+  existingLabel = 'Use that file',
   onCancel,
   submitLabel = 'Add to library',
 }) {
@@ -132,6 +162,8 @@ export function MediaUrlForm({
   const [failure, setFailure] = useState('');
   // What the API said about each field, until that field changes (QA-63).
   const [refused, setRefused] = useState({});
+  // The record an address already in the library belongs to (QA-63).
+  const [existing, setExisting] = useState(null);
 
   const [lastFolder, setLastFolder] = useState(folder);
   if (folder !== lastFolder) {
@@ -148,7 +180,12 @@ export function MediaUrlForm({
   // it, at which point their choice is the state and the address stops
   // speaking for them.
   const [chosenType, setChosenType] = useState(null);
-  const type = chosenType ?? described?.type ?? 'image';
+  // A field that takes one kind of file files every address as that kind
+  // (QA-63): the brochure's picker filed a photograph as an image and put it
+  // in "Brochure (PDF)", and the hero's video took a picture.
+  const fixed = accept !== 'any' && KIND_WORDS[accept] ? accept : null;
+  const type = fixed ?? chosenType ?? described?.type ?? 'image';
+  const mismatch = fixed && described?.certain && described.type !== fixed ? described.type : null;
 
   // A picture is looked at before it is filed (QA-63): the editor sees what
   // the address shows — or that it shows nothing — and the record gets the
@@ -184,6 +221,8 @@ export function MediaUrlForm({
 
   const urlError = (() => {
     if (refused.url) return refused.url;
+    if (mismatch)
+      return `That address is ${KIND_WORDS[mismatch]}, and this field takes ${KIND_WORDS[fixed]}.`;
     if (!touched) return '';
     if (!URL_PATTERN.test(trimmed)) return 'Paste a complete https:// link.';
     if (trimmed.length > URL_MAX_LENGTH) {
@@ -194,16 +233,42 @@ export function MediaUrlForm({
   const altError =
     refused.alt || (touched && alt.trim() === '' ? 'Describe the file — this is required.' : '');
 
+  /**
+   * The record an address already in the library belongs to, so the editor
+   * can use it — or open it — instead of being told only "no" (QA-63). The
+   * unique address would otherwise leave a picker with nothing to offer for a
+   * file it already has.
+   */
+  const findExisting = async (address) => {
+    try {
+      const { data } = await mediaService.list({ q: address, perPage: 10, withUsage: true });
+      const found = (Array.isArray(data) ? data : []).find(
+        (record) => String(record?.url ?? '').toLowerCase() === address.toLowerCase()
+      );
+      if (found) setExisting(found);
+    } catch (_thrown) {
+      // The refusal under the box already says what happened.
+    }
+  };
+  const shownExisting =
+    existing && String(existing.url).toLowerCase() === trimmed.toLowerCase() ? existing : null;
+
   const submit = async (event) => {
     event?.preventDefault?.();
+    // The picker renders this form in a portal inside the form of the field
+    // that opened it, and React bubbles a portal's events through the tree it
+    // was rendered in: without this, every "Use this file" also submitted the
+    // property, article or settings form around it — and saved it (QA-63).
+    event?.stopPropagation?.();
     // One request at a time: Enter held down, or pressed beside a click.
     if (busy) return;
     setTouched(true);
-    if (!valid || alt.trim() === '') return;
+    if (!valid || mismatch || alt.trim() === '') return;
 
     setBusy(true);
     setFailure('');
     setRefused({});
+    setExisting(null);
     try {
       const { data } = await mediaService.create({
         url: trimmed,
@@ -215,7 +280,7 @@ export function MediaUrlForm({
           : null),
         alt: alt.trim(),
         title: title.trim() || null,
-        folder: target.trim() || null,
+        folder: cleanFolder(target) || null,
         tags: [],
       });
       onCreated?.(data);
@@ -226,6 +291,7 @@ export function MediaUrlForm({
       setChosenType(null);
     } catch (thrown) {
       const fields = fieldErrorsOf(thrown);
+      if (fields.url === DUPLICATE_MESSAGE && onExisting) findExisting(trimmed);
       if (Object.values(fields).some(Boolean)) {
         setRefused(fields);
         setFailure(
@@ -263,6 +329,22 @@ export function MediaUrlForm({
           if (refused.url) setRefused((state) => ({ ...state, url: undefined }));
         }}
       />
+
+      {shownExisting && onExisting ? (
+        <div className={styles.urlFormExisting}>
+          <span>
+            It is filed as “{shownExisting.title || shownExisting.alt}”
+            {fixed && shownExisting.type !== fixed
+              ? `, which is ${KIND_WORDS[shownExisting.type] ?? 'another kind of file'} — this field takes ${KIND_WORDS[fixed]}.`
+              : '.'}
+          </span>
+          {!fixed || shownExisting.type === fixed ? (
+            <Button variant="outline" size="sm" onClick={() => onExisting(shownExisting)}>
+              {existingLabel}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       {seen && seen.status !== 'idle' ? (
         <div className={styles.urlFormPreview} aria-live="polite">
@@ -315,10 +397,13 @@ export function MediaUrlForm({
           label="Type"
           options={MEDIA_TYPES.options}
           value={type}
+          disabled={Boolean(fixed)}
           hint={
-            described
-              ? `Worked out from the address — change it if that is wrong.`
-              : 'Worked out from the address once you paste one.'
+            fixed
+              ? `This field takes ${KIND_WORDS[fixed]}.`
+              : described
+                ? `Worked out from the address — change it if that is wrong.`
+                : 'Worked out from the address once you paste one.'
           }
           onChange={(event) => setChosenType(event.target.value)}
         />
@@ -375,10 +460,19 @@ export function MediaUrlForm({
  * @param {boolean} props.open
  * @param {() => void} props.onClose
  * @param {(record: object) => void} props.onCreated
+ * @param {(record: object) => void} [props.onExisting] opens the file an
+ *   address already in the library belongs to
  * @param {string} [props.folder]
  * @param {string[]} [props.folders]
  */
-export default function MediaAddUrlDialog({ open, onClose, onCreated, folder, folders }) {
+export default function MediaAddUrlDialog({
+  open,
+  onClose,
+  onCreated,
+  onExisting,
+  folder,
+  folders,
+}) {
   return (
     <Modal
       open={open}
@@ -396,6 +490,15 @@ export default function MediaAddUrlDialog({ open, onClose, onCreated, folder, fo
           onCreated?.(record);
           onClose?.();
         }}
+        existingLabel="Open that file"
+        onExisting={
+          onExisting
+            ? (record) => {
+                onClose?.();
+                onExisting(record);
+              }
+            : undefined
+        }
       />
     </Modal>
   );

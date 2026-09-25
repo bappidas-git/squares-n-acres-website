@@ -567,3 +567,14 @@
 .gridTop {
   scroll-margin-top: var(--space-4);
 }
+
+/* An address already in the library, and the file it belongs to (QA-63). */
+.urlFormExisting {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  margin-top: calc(-1 * var(--space-2));
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}

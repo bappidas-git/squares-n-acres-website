@@ -211,6 +211,42 @@ export default function MediaPickerDialog({
   // An unanswered request has no pages to offer (QA-63).
   const totalPages = error ? 1 : (meta?.totalPages ?? 1);
 
+  // An empty grid says why (QA-63). The picker opens in its field's folder —
+  // "brochures", "hero" — and a folder with nothing in it yet read "Nothing to
+  // choose from" over a library that had the file one folder away.
+  const narrowed = Boolean(params.q || params.folder || (accept === 'any' && params.type));
+  const narrowedEmpty = {
+    title: 'No files match',
+    text: params.folder
+      ? `Nothing in “${params.folder}” answers — the rest of the library may have it.`
+      : 'Nothing in the library answers the search.',
+    action: (
+      <Button
+        variant="outline"
+        onClick={() =>
+          setFilters({
+            q: undefined,
+            folder: undefined,
+            ...(accept === 'any' ? { type: undefined } : null),
+          })
+        }
+      >
+        Show every file
+      </Button>
+    ),
+  };
+  const libraryEmpty = {
+    title: 'Nothing to choose from',
+    text: configured
+      ? 'Upload a file, or add one by its address, on the tabs above.'
+      : 'Add a file by its address on the tab above.',
+    action: (
+      <Button variant="outline" onClick={() => setTab(configured ? 'upload' : 'url')}>
+        {configured ? 'Upload a file' : 'Add by URL'}
+      </Button>
+    ),
+  };
+
   const tabs = [
     { value: 'library', label: 'Library' },
     ...(configured ? [{ value: 'upload', label: 'Upload' }] : []),
@@ -267,17 +303,7 @@ export default function MediaPickerDialog({
                 selectedIds={picked.map((one) => one.id)}
                 onOpen={toggle}
                 label="Files you can choose"
-                emptyState={{
-                  title: 'Nothing to choose from',
-                  text: configured
-                    ? 'Upload a file, or add one by its address, on the tabs above.'
-                    : 'Add a file by its address on the tab above.',
-                  action: (
-                    <Button variant="outline" onClick={() => setTab(configured ? 'upload' : 'url')}>
-                      {configured ? 'Upload a file' : 'Add by URL'}
-                    </Button>
-                  ),
-                }}
+                emptyState={narrowed ? narrowedEmpty : libraryEmpty}
               />
             </div>
 
@@ -306,8 +332,14 @@ export default function MediaPickerDialog({
           <MediaUrlForm
             folder={uploadFolder}
             folders={folders}
+            // The field's own kind of file, whatever the address suggests,
+            // and the file already in the library for an address it has
+            // (QA-63).
+            accept={accept}
             submitLabel={multiple ? 'Add and select' : 'Use this file'}
             onCreated={(record) => onUploaded([record])}
+            existingLabel={multiple ? 'Select that file' : 'Use that file'}
+            onExisting={(record) => onUploaded([record])}
           />
         ) : null}
 

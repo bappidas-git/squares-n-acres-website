@@ -240,7 +240,7 @@ describe('deleting', () => {
   });
 });
 
-it('saves the alt text, the folder and the tags from the drawer', async () => {
+it('saves the alt text from the drawer, and only what changed', async () => {
   render();
   await openDrawer('spare\\.png');
 
@@ -251,8 +251,7 @@ it('saves the alt text, the folder and the tags from the drawer', async () => {
   await userEvent.click(screen.getByRole('button', { name: /save changes/i }));
 
   await waitFor(() => expect(mediaService.patch).toHaveBeenCalled());
-  expect(mediaService.patch.mock.calls[0][1]).toMatchObject({
-    alt: 'A spare picture of the lobby',
-    folder: 'misc',
-  });
+  // Only what changed (QA-63): a field left alone is not written back over
+  // whatever somebody else has saved in it since the drawer opened.
+  expect(mediaService.patch.mock.calls[0][1]).toEqual({ alt: 'A spare picture of the lobby' });
 });
