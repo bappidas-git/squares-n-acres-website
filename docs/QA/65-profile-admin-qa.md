@@ -287,9 +287,19 @@ A new password over the API's 100 characters is also refused before the request
 **C1 · Medium — `avatarUrl` had no length limit, and its column holds 500
 characters.** A 3 000-character address was taken by the mock with a 200; Laravel
 (`admin_users.avatar_url VARCHAR(500)`, rule `nullable|url`) would fail the write with
-a 500, or cut the address short. **Fix:** `maxLength: 500` on `auth.profile` and
-`user.*` — the mock answers 422, the form says "The avatar URL may not be greater than
-500 characters.", the generated rules read `nullable|url|max:500`.
+a 500, or cut the address short. **Fix:** every `url` of the contract is at most 500
+characters unless its descriptor names its own `maxLength` — the 56 `type: 'url'`
+descriptors of `src/services/schemas/` that name none, `avatarUrl` and a partner's
+`logoUrl` among them (`src/services/schemas/limits.js`, read by the mock's validator,
+the forms' `validate()`, the seed's validator and the guidelines' rules, columns and
+OpenAPI schemas). The mock answers 422, the form says "The avatar URL may not be
+greater than 500 characters.", the generated rules read `url|max:500`. The two admin
+checks that do not read the descriptors say so in their own words before sending: the
+property form's addresses ("The video URL can be at most 500 characters.") and the SEO
+panel's canonical URL and share images, in every form that has the panel and in the
+SEO dashboard's dialog. The lead forms keep the page address they send within the
+limit (an advertisement's tracking tags can make it longer), and the job application
+says so of a pasted résumé or LinkedIn link before sending it.
 
 ### D. The account menu, the sidebar and the layout
 
@@ -370,8 +380,9 @@ marking anything current.
 | Browser (Playwright, dev server)                                                                                                                                                     | every scenario of §1 re-run after the fixes: the edge values (no request for any refusal, no 422 in the console), the phone forms, the slow save, 500 / reset / 429 / both 422s / HTML 200 / empty 200, leaving during both saves (the right question, the save landing, a failure toasted), the slow session check, two tabs, the API change seen on an in-app visit, the avatar broken then corrected, history and guards, odd addresses, every width, the ring's contrast, the rail's computed scrollbar colour, the header icon at 18 px beside a 71-character address at 320 and 375 px, the account menu, the session ending, the late save after signing in as someone else — console clean apart from the failures asked for                       |
 | Jest                                                                                                                                                                                 | the five changed suites 60 / 60 — new: `Avatar.test.jsx` (3), `AdminTopbar.test.jsx` (3), 8 cases in `AdminAuthContext.test.js`, 23 in `ProfilePage.test.jsx` (and 3 changed for the new behaviour), 3 in `AdminSidebar.test.jsx`; run against the code before the fixes, 36 fail — all 23 new profile cases and 1 changed one, 6 of the 8 context cases, 2 of the 3 avatar, 2 of the 3 topbar and 2 of the 3 sidebar cases (the others guard against over-correcting). The new cases add no `act()` warnings (the older `user-event` cases of `ProfilePage.test.jsx` print theirs, as they did before; the topbar's menu prints MUI's jsdom `anchorEl` notice, as the Site settings and Media suites' menus do). The whole run: 211 suites, 4 241 tests ✓ |
 | `test:mock`                                                                                                                                                                          | 2 new cases in `auth.test.js` (the 500-character avatar, the per-account throttle); both fail on the route before the fix                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| Playwright e2e                                                                                                                                                                       | new `profile.spec.js`, 8 / 8 ✓: two tabs, the slow session check, the avatar broken then corrected, leaving during a slow save, a late save after signing in as someone else, 320 px, the white ring, the throttle; all 8 fail against the code before the fixes. The whole suite: 82 / 82 ✓                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `npm run check:all` (`lint`, `test:ci`, `test:mock`, `test:scripts`, `build:ci`, `check:traces`, `validate:seed`, `check:contrast`, `check:guidelines`, `check:env`), `format:check` | ✓ — Jest 211 suites / 4 241 tests, `test:mock` 339 / 339, `test:scripts` 53 / 53 (one skipped, as before), the CI build, `check:guidelines` 12 / 12, `check:env` 8 / 8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Playwright e2e                                                                                                                                                                       | new `profile.spec.js`, 8 / 8 ✓: two tabs, the slow session check, the avatar broken then corrected, leaving during a slow save, a late save after signing in as someone else, 320 px, the white ring, the throttle; all 8 fail against the code before the fixes. The whole suite: 82 / 82 ✓, and again after the URL follow-up                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| URL limit (C1 widened)                                                                                                                                                               | new `urls.test.js`, 7 / 7: a partner's logo, a lead's page, a résumé link, a listing's video, an article's image, a settings address and gallery item, the SEO share image — 501 is 422 under its dotted key, 500 is taken. Jest: `validation.test.js` +2 (every `url` of the registry), `JobApplyForm` +1, the property `validators` +4, new `seoSideEffects` (4) and `leadPageUrl` (5); `guidelines.test.js` 3. On the code before, the 7 mock, 3 guidelines and 7 of the 11 Jest cases on existing code fail. Browser: the property form refuses a 501-character video address under the field and in the summary, focuses it and sends nothing, then saves 500; the SEO dialog refuses a 501-character share image in its own words                    |
+| `npm run check:all` (`lint`, `test:ci`, `test:mock`, `test:scripts`, `build:ci`, `check:traces`, `validate:seed`, `check:contrast`, `check:guidelines`, `check:env`), `format:check` | ✓ — Jest 213 suites / 4 257 tests, `test:mock` 346 / 346, `test:scripts` 54 / 54 (one skipped, as before), the CI build, `check:guidelines` 12 / 12, `check:env` 8 / 8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 ---
 
@@ -407,13 +418,18 @@ marking anything current.
 
 ## 7. Risks to watch
 
-- **Laravel must throttle `PUT /auth/password` per account** and cap `avatarUrl` at 500
-  characters, or the form's promises are the only guard.
+- **Laravel must throttle `PUT /auth/password` per account** and cap every URL at 500
+  characters (`url|max:500`, as the regenerated rules read), or the forms' promises are
+  the only guard.
 - **A password of emoji counts differently on the two backends.** The mock (and the
   form) count UTF-16 units — `ab😀😀😀1` is 9 — while Laravel's `min:8` counts
   characters (6). Such a password passes here and would be refused there.
-- **Every other `url` field of the contract** has a `VARCHAR(500)` column and no
-  `max:500` rule, as `avatarUrl` had; only this one was in scope.
+- **A Google Maps embed address is held to 500 characters** with every other URL.
+  The addresses Google's "Embed a map" dialog produces for a place run to about
+  300–450; one that carries a long place name or a route can pass 500, and is then
+  refused by name rather than stored — "The map embed URL may not be greater than 500
+  characters." in Site settings, "The map URL can be at most 500 characters." on a
+  listing.
 - **The login's side effect "Revokes the account's previous token"** in the generated
   endpoint notes is not what the mock does (a second sign-in leaves the first session
   working until a password change); worth settling before the Laravel build.

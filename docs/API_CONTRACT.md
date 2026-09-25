@@ -41,6 +41,16 @@ A complete 422 body:
 }
 ```
 
+**Every URL is at most 500 characters** (QA-65) — every field the schemas type `url`, at
+any depth, the items of a list of them included: its column is a `VARCHAR(500)`, and the
+addresses kept inside JSON columns (a record's `seo` and `socialLinks`, the two settings
+records) are held to the same. A longer
+one is 422 under its key — `"The logoUrl may not be greater than 500 characters."`,
+`"footer.galleryImageUrls.1"` — and Laravel's rule for it is `url|max:500`. A descriptor
+may name a different `maxLength`, and its column is then that wide; none does today. The
+lead forms keep the page address they send (`pageUrl`) within the limit, dropping the
+fragment and then the query of a longer one — the `utm_*` values travel separately.
+
 ### 5.4 Auth
 
 Header `Authorization: Bearer <token>`. `POST /auth/login { email, password }` → `{ data: { token, expiresAt, user: { id, name, email, role, avatarUrl, phone } } }`; `POST /auth/logout` revokes (200 `{data:null,message}`); `GET /auth/profile` → `{ data: user }` (401 when the token is missing/expired/revoked); `PUT /auth/profile { name, phone, avatarUrl }`; `PUT /auth/password { currentPassword, newPassword }` (422 `currentPassword` when wrong; `newPassword` min 8). Tokens expire after `MOCK_TOKEN_TTL_HOURS` (default 24) on the mock and per Sanctum config on Laravel. Client storage: `sna_auth_token`, `sna_auth_user`, `sna_auth_expires_at` (localStorage); expiry enforced client-side (timer + check on every route change → auto-logout with toast "Your session has expired. Please sign in again.") and server-side (401).

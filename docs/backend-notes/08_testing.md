@@ -256,6 +256,12 @@ taken; six wrong current passwords in a minute on `PUT /auth/password` answer
 422 five times and then 429, for every session of that account and for no other
 account (QA-65).
 
+**URLs** — any `url` of 501 characters is 422 under its key and 500 is taken: a
+partner's `logoUrl`, a lead's `pageUrl`, an application's `resumeUrl`, a
+listing's `videoUrl`, an article's `featuredImage.url`, the settings'
+`general.logoUrl` and `footer.galleryImageUrls.1`, the SEO settings'
+`defaults.ogImageUrl` (QA-65).
+
 **Media** — a record whose URL a listing uses refuses to delete with 409 and its
 `usedIn` list, and `?force=true` deletes it anyway. A bank's logo, an author's
 photograph and the SEO settings' share image count as uses too; `meta.folders`

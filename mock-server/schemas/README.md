@@ -68,11 +68,18 @@ Three consumers read these descriptors:
 | `datetime` | ISO-8601 UTC                                | `date`                                |
 | `email`    | e-mail address                              | `email`                               |
 | `phone`    | Indian mobile, 10 digits starting 6–9       | `regex:/^(\+91)?[6-9]\d{9}$/`         |
-| `url`      | absolute URL                                | `url`                                 |
+| `url`      | absolute URL, ≤ 500 chars¹                  | `url\|max:500`                        |
 | `html`     | sanitised HTML                              | `string`                              |
 | `slug`     | `[a-z0-9-]`, ≤ 75 chars                     | `regex:/^[a-z0-9-]+$/`                |
 | `array`    | list of `items`                             | `array`                               |
 | `object`   | map of `shape`                              | `array` (associative)                 |
+
+¹ A `url` column is a `VARCHAR(500)`, so a `url` — at any depth, the ones kept in a
+JSON column too — is at most 500 characters without its descriptor saying so; a
+descriptor that names its own `maxLength` is held to that, and its column is that wide. Every reader of the descriptors asks
+`maxLengthOf()` of `src/services/schemas/limits.js` for the limit — the mock's
+validator, the forms' `validate()`, the seed's validator, and the rules, columns and
+OpenAPI schemas of the guidelines (QA-65).
 
 ## Rendering a descriptor as Laravel rules
 
@@ -91,6 +98,7 @@ Rules are assembled in this order: presence → nullability → type → bounds 
 | `{ type: 'object', shape: { … } }` on `location`                   | `array` + one rule per `location.<key>`        |
 | `{ type: 'slug', maxLength: 75 }`                                  | `nullable\|regex:/^[a-z0-9-]+$/\|max:75\|unique:<table>,slug` |
 | `{ type: 'date', nullable: true }`                                 | `nullable\|date_format:Y-m-d`                 |
+| `{ type: 'url', nullable: true }` on `logoUrl`                     | `nullable\|url\|max:500`                      |
 | `{ read: true }` / `{ serverManaged: true }`                        | not validated — stripped from the request      |
 
 A field name ending in `Id` (or `Ids` for an array's items) maps to `exists:<collection>,id`

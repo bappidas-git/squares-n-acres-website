@@ -581,6 +581,28 @@ dirty attributes issues no `UPDATE`.
 The same holds per record in a bulk action: a record already in the target
 state is not written, keeps its `updated_at`, and is not counted in `affected`.
 
+## URLs
+
+Every field the request schemas type `url` is at most **500 characters**, at any
+depth and in any list of them — `logoUrl`, `featuredImage.url`,
+`footer.galleryImageUrls.*`, `pageUrl` (QA-65). Its column is a `VARCHAR(500)`,
+and the addresses kept inside JSON columns — every record's `seo`, the
+`social_links` of authors and team members, `site_settings` and `seo_settings` —
+are held to the same; the rule is `url|max:500`. A longer address
+answers **422** under its dotted key — "The logoUrl may not be greater than 500
+characters." — rather than failing the write or being cut short by the
+database. A descriptor may name its own `maxLength`, and its column is then that
+wide; none names a different one today.
+
+Two public writes carry an address the visitor may not have chosen. The lead
+forms send the page the visitor was on as `pageUrl`: past 500 characters — an
+advertisement's `gclid`, `gbraid` and `_gl` tags — the frontend sends it without
+its fragment, then without its query (the `utm_*` values travel in `utm`), so an
+enquiry is never refused over it. A job application's `resumeUrl` is the
+address of the uploaded file, well under 500, or a link the applicant pasted —
+an expiring cloud-drive link can be longer — and the form says a pasted link is
+too long before it is sent.
+
 ## Gated files
 
 An editor can keep a listing's brochure (`brochure_lead_gated`, default on) and
@@ -768,8 +790,8 @@ duplicateOf, isActive, status, updatedAt }`. `perPage=all` is allowed.
   ([Bulk actions](#bulk-actions)): an account already active is not written, not
   counted and keeps its tokens.
 - E-mail addresses are unique case-insensitively (409 on `email`).
-- `avatarUrl` is at most 500 characters — the width of `admin_users.avatar_url`
-  — on `PUT /auth/profile` and on the users routes alike (QA-65).
+- `avatarUrl`, like every URL, is at most 500 characters ([URLs](#urls)), on
+  `PUT /auth/profile` and on the users routes alike (QA-65).
 - `PUT /auth/password` allows five attempts a minute per account, every session
   of it counted together; the sixth is `429` with `Retry-After` (QA-65).
 
