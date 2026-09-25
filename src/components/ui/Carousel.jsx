@@ -9,6 +9,16 @@ import styles from './Carousel.module.css';
 const DEFAULT_ITEMS_PER_VIEW = { xs: 1.15, sm: 2, md: 3, lg: 4 };
 
 /**
+ * The most dots a row holds at each width before a counter replaces it.
+ *
+ * Below 900 px a dot's hit area is 44 px (§8.1) and the row does not wrap, so
+ * past eight on a phone the dots shrank to fit — a featured row of 24 cards
+ * would have drawn 24 targets of 15 px, the active one wider than its own
+ * button. "3 / 24" says the same thing in one line (QA-62).
+ */
+const MAX_DOTS = { xs: 8, sm: 12, md: 12, lg: 12 };
+
+/**
  * A scroll-snap carousel — the replacement for `react-slick` (D2).
  *
  * Scrolling is native (touch, trackpad, scrollbar), so it keeps working without
@@ -48,20 +58,30 @@ export default function Carousel({
 
   const [page, setPage] = useState(0);
   const [scrollable, setScrollable] = useState(false);
+  const [measuredPages, setMeasuredPages] = useState(null);
   const [paused, setPaused] = useState(false);
   // Hover and focus pause it while they last; this one is the visitor saying
   // "stop", and it outlives both.
   const [stopped, setStopped] = useState(false);
 
   const perView = itemsPerView[width] ?? itemsPerView.md ?? DEFAULT_ITEMS_PER_VIEW.md ?? 1;
-  const pages = Math.max(1, Math.ceil(items.length / Math.floor(perView || 1)));
+  // The pages a scroll can actually reach, once the rail has been measured. A
+  // phone shows 1.15 cards a page, so "one card, one page" counted pages past
+  // the end of the rail: the last dot never lit, whatever the visitor did.
+  const pages = measuredPages ?? Math.max(1, Math.ceil(items.length / Math.floor(perView || 1)));
 
   const measure = useCallback(() => {
     const node = viewportRef.current;
     if (!node) return;
     const overflow = node.scrollWidth - node.clientWidth;
     setScrollable(overflow > 4);
-    setPage(node.clientWidth > 0 ? Math.round(node.scrollLeft / node.clientWidth) : 0);
+    if (node.clientWidth > 0) {
+      setPage(Math.round(node.scrollLeft / node.clientWidth));
+      setMeasuredPages(Math.round(Math.max(overflow, 0) / node.clientWidth) + 1);
+    } else {
+      setPage(0);
+      setMeasuredPages(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -192,7 +212,11 @@ export default function Carousel({
         </button>
       ) : null}
 
-      {dots && showControls && pages > 1 ? (
+      {dots && showControls && pages > (MAX_DOTS[width] ?? MAX_DOTS.md) ? (
+        <p className={styles.counter} aria-hidden="true">
+          {Math.min(page + 1, pages)} / {pages}
+        </p>
+      ) : dots && showControls && pages > 1 ? (
         <div className={styles.dots}>
           {Array.from({ length: pages }, (_, index) => (
             <button

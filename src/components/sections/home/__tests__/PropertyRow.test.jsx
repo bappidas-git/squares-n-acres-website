@@ -4,7 +4,7 @@
 
 import { screen, waitFor } from '@testing-library/react';
 
-import PropertyRow from '../PropertyRow';
+import PropertyRow, { FEATURED_PER_PAGE } from '../PropertyRow';
 import propertyService from '../../../../services/propertyService';
 import renderWith from '../../../../test-utils';
 
@@ -62,6 +62,30 @@ describe('PropertyRow', () => {
     await waitFor(() => expect(propertyService.featured).toHaveBeenCalled());
     expect(propertyService.list).not.toHaveBeenCalled();
     expect(await screen.findByText('Featured properties')).toBeInTheDocument();
+  });
+
+  it('asks for every featured listing, up to a page of 24 — not the top eight (QA-62)', async () => {
+    propertyService.featured.mockResolvedValue(answer(11));
+    row({ featured: true });
+
+    await waitFor(() =>
+      expect(propertyService.featured).toHaveBeenCalledWith({ perPage: 24 }, expect.anything())
+    );
+    // The ninth, tenth and eleventh are on the row: featured from the list's
+    // star or the form's switch, a listing past the eighth was never shown.
+    expect(await screen.findAllByText(/^Listing \d+$/)).toHaveLength(11);
+    expect(FEATURED_PER_PAGE).toBe(24);
+  });
+
+  it('asks for as many as a hand-picked set holds, up to the same cap (QA-62)', async () => {
+    propertyService.list.mockResolvedValue(answer(10));
+    row({ params: { ids: '1,2,3,4,5,6,7,8,9,10', perPage: 10 } });
+
+    expect(await screen.findAllByText(/^Listing \d+$/)).toHaveLength(10);
+    expect(propertyService.list).toHaveBeenCalledWith(
+      { ids: '1,2,3,4,5,6,7,8,9,10', perPage: 10 },
+      expect.anything()
+    );
   });
 
   it('renders the heading, the cards and a "View all" that carries the filter', async () => {
