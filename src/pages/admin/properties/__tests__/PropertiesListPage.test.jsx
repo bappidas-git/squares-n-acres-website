@@ -91,6 +91,20 @@ const ROWS = [
   },
 ];
 
+/** An inactive listing with everything the publish rules ask for (QA-62). */
+const READY_DRAFT = {
+  ...ROWS[0],
+  id: 3,
+  slug: 'aurelia-court-2-bhk-koramangala',
+  title: 'Aurelia Court',
+  images: [{ id: 1, url: 'https://images.test/court.jpg', alt: 'The court', isCover: true }],
+  shortDescription: 'Two bedrooms over the Koramangala park.',
+  description: `<p>${'A two-bedroom apartment over the park in Koramangala. '.repeat(8)}</p>`,
+  isActive: false,
+  isFeatured: false,
+  publishedAt: null,
+};
+
 const envelope = (data = ROWS, meta = {}) => ({
   data,
   meta: { page: 1, perPage: 20, total: data.length, totalPages: 1, ...meta },
@@ -227,8 +241,11 @@ describe('PropertiesListPage', () => {
   });
 
   describe('the flag toggles', () => {
-    it('patch the record they belong to, and ask for the page again', async () => {
-      renderAs('admin');
+    it('patch the record they belong to, and keep the row where it is (QA-62)', async () => {
+      propertyService.patch.mockResolvedValue({
+        data: { ...ROWS[0], isFeatured: true, updatedAt: '2026-09-25T06:00:00.000Z' },
+      });
+      renderAs('admin', { url: '/admin/properties?sort=title&order=asc' });
       await screen.findByText('Lakeview Heights');
 
       const featured = await screen.findByRole('button', { name: 'Featured — Lakeview Heights' });
@@ -243,8 +260,72 @@ describe('PropertiesListPage', () => {
       expect(
         await screen.findByRole('button', { name: 'Featured — Lakeview Heights', pressed: true })
       ).toBeInTheDocument();
-      // A row that stops matching a Featured filter, or that has just become the
-      // most recently updated, moves: the list is asked again after a write.
+      expect(await screen.findByText('“Lakeview Heights” is now featured')).toBeInTheDocument();
+      // Asked again, the page re-sorted: under "Updated" the row jumped to the
+      // top and the toggle under the pointer was another listing's. It stays,
+      // with what the server answered.
+      expect(propertyService.adminList.mock.calls.length).toBe(listCalls);
+      expect(within(screen.getByRole('table')).getByText('25 Sep 2026')).toBeInTheDocument();
+    });
+
+    it('ask for the page again when the view is narrowed by the flag they change', async () => {
+      renderAs('admin', { url: '/admin/properties?isFeatured=false' });
+      await screen.findByText('Lakeview Heights');
+      const listCalls = propertyService.adminList.mock.calls.length;
+
+      await userEvent.click(screen.getByRole('button', { name: 'Featured — Lakeview Heights' }));
+
+      // Featured now, it no longer belongs in "Not featured".
+      await waitFor(() =>
+        expect(propertyService.adminList.mock.calls.length).toBeGreaterThan(listCalls)
+      );
+    });
+
+    it('say a listing featured while unpublished is not on the home page yet (QA-62)', async () => {
+      propertyService.adminList.mockResolvedValue(envelope([READY_DRAFT]));
+      propertyService.patch.mockResolvedValue({ data: { ...READY_DRAFT, isFeatured: true } });
+      renderAs('admin');
+      await screen.findByText('Aurelia Court');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Featured — Aurelia Court' }));
+
+      expect(
+        await screen.findByText(
+          '“Aurelia Court” is now featured. It is not published, so the home page shows it once it is.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('refuse to publish a listing that is not ready, and say what it lacks (QA-62)', async () => {
+      renderAs('admin');
+      await screen.findByText('Nandi Ridge Plot');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Active — Nandi Ridge Plot' }));
+
+      const dialog = await screen.findByRole('dialog', {
+        name: '“Nandi Ridge Plot” is not ready to go live',
+      });
+      expect(
+        within(dialog).getByText(
+          'no photograph with a description · 0 of 300 characters of description · no one-line summary'
+        )
+      ).toBeInTheDocument();
+      expect(within(dialog).getByRole('link', { name: 'Nandi Ridge Plot' })).toHaveAttribute(
+        'href',
+        '/admin/properties/edit/2'
+      );
+      expect(propertyService.patch).not.toHaveBeenCalled();
+    });
+
+    it('say a listing deleted elsewhere is gone, and refresh the page', async () => {
+      propertyService.patch.mockRejectedValue(new ApiError({ status: 404, message: 'Not found' }));
+      renderAs('admin');
+      await screen.findByText('Lakeview Heights');
+      const listCalls = propertyService.adminList.mock.calls.length;
+
+      await userEvent.click(screen.getByRole('button', { name: 'Verified — Lakeview Heights' }));
+
+      expect(await screen.findByText(/“Lakeview Heights” is no longer here/)).toBeInTheDocument();
       await waitFor(() =>
         expect(propertyService.adminList.mock.calls.length).toBeGreaterThan(listCalls)
       );
@@ -291,7 +372,9 @@ describe('PropertiesListPage', () => {
 
       // A row's toggles wait for its write in flight before taking another.
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: 'Active — Lakeview Heights' })).toBeEnabled()
+        expect(
+          screen.getByRole('button', { name: 'Active — Lakeview Heights' })
+        ).not.toHaveAttribute('aria-disabled')
       );
       await userEvent.click(screen.getByRole('button', { name: 'Active — Lakeview Heights' }));
       expect(await screen.findByText('Server error')).toBeInTheDocument();
@@ -476,6 +559,96 @@ describe('PropertiesListPage', () => {
       expect(await screen.findByText('No properties yet')).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Add your first property' })).toBeInTheDocument();
     });
+  });
+
+  describe('the publish rules in the bulk bar (QA-62)', () => {
+    it('names the listings that are not ready, and activates the ones that are', async () => {
+      propertyService.adminList.mockResolvedValue(envelope([...ROWS, READY_DRAFT]));
+      renderAs('admin');
+      await screen.findByText('Aurelia Court');
+
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Select Nandi Ridge Plot' }));
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Select Aurelia Court' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Activate' }));
+
+      const dialog = await screen.findByRole('dialog', {
+        name: '1 of the 2 selected properties is not ready to go live',
+      });
+      expect(within(dialog).getByRole('link', { name: 'Nandi Ridge Plot' })).toBeInTheDocument();
+      expect(propertyService.bulk).not.toHaveBeenCalled();
+
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Activate 1 property' }));
+      await waitFor(() =>
+        expect(propertyService.bulk).toHaveBeenCalledWith({ ids: [3], action: 'activate' })
+      );
+    });
+
+    it('shows the API’s own refusal in the same dialog', async () => {
+      propertyService.adminList.mockResolvedValue(envelope([READY_DRAFT]));
+      propertyService.bulk.mockRejectedValue(
+        new ApiError({
+          status: 422,
+          message: '“Aurelia Court” is not ready to go live: no price.',
+          errors: { ids: ['“Aurelia Court”: no price.'] },
+          data: { notReady: [{ id: 3, title: 'Aurelia Court', gaps: ['no price'] }] },
+        })
+      );
+      renderAs('admin');
+      await screen.findByText('Aurelia Court');
+
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Select Aurelia Court' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Activate' }));
+
+      const dialog = await screen.findByRole('dialog', {
+        name: '“Aurelia Court” is not ready to go live',
+      });
+      expect(within(dialog).getByText('no price')).toBeInTheDocument();
+    });
+  });
+
+  it('disables the export when nothing matches (QA-62)', async () => {
+    propertyService.adminList.mockResolvedValue(envelope([], { total: 0, totalPages: 0 }));
+    renderAs('admin', { url: '/admin/properties?q=nothing' });
+    await screen.findByText('No properties match');
+
+    expect(screen.getByRole('button', { name: /Export CSV/ })).toBeDisabled();
+  });
+
+  it('shows no count, no pages and nothing to select once a request fails (QA-62)', async () => {
+    renderAs('admin');
+    await screen.findByText('Lakeview Heights');
+
+    propertyService.adminList.mockRejectedValue(
+      new ApiError({ status: 0, message: 'Unable to reach the server.', isNetworkError: true })
+    );
+    await userEvent.selectOptions(screen.getByLabelText('Listing'), 'rent');
+
+    expect(await screen.findByText('Unable to reach the server.')).toBeInTheDocument();
+    // The last answer's "2", its pager and its rows behind the error panel
+    // said nothing true about a filter that was never answered.
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeInTheDocument();
+    expect(screen.queryByText(/Showing 1–2 of 2/)).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Select all rows on this page' })).toBeDisabled();
+  });
+
+  it('steps back a page once its last rows are deleted (QA-62)', async () => {
+    propertyService.adminList.mockResolvedValue(
+      envelope([ROWS[0]], { page: 2, perPage: 20, total: 21, totalPages: 2 })
+    );
+    renderAs('admin', { url: '/admin/properties?page=2' });
+    await screen.findByText('Lakeview Heights');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for Lakeview Heights' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Delete this property?' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() =>
+      expect(propertyService.adminList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 1 }),
+        expect.anything()
+      )
+    );
   });
 
   describe('a sales user (§7)', () => {

@@ -151,6 +151,15 @@ const TOASTS = {
   flagged: (entity, field, on) => `${entity} ${(FLAG_STATES[field] ?? FLAG_STATES.default)(on)}`,
 
   /**
+   * A listing featured while it is switched off: the star is on, and the home
+   * page's Featured row — which reads published listings only — will not show
+   * it until it is published, which the plain "is now featured" never said
+   * (QA-62).
+   */
+  featuredUnpublished: (entity) =>
+    `${entity} is now featured. It is not published, so the home page shows it once it is.`,
+
+  /**
    * The failure half of the vocabulary: `failed('save', 'the lead')` →
    * `'The lead could not be saved.'` Used as the fallback of
    * `firstFieldMessage`, which puts the API's own reason in front of it when
