@@ -251,6 +251,11 @@ as a reset (422 on `password`); a reset signs that account out of every session;
 a bulk deactivate of an account that is already inactive reports `affected: 0`
 (QA-64).
 
+**My profile** — a 501-character `avatarUrl` is 422 on `avatarUrl` and 500 is
+taken; six wrong current passwords in a minute on `PUT /auth/password` answer
+422 five times and then 429, for every session of that account and for no other
+account (QA-65).
+
 **Media** — a record whose URL a listing uses refuses to delete with 409 and its
 `usedIn` list, and `?force=true` deletes it anyway. A bank's logo, an author's
 photograph and the SEO settings' share image count as uses too; `meta.folders`

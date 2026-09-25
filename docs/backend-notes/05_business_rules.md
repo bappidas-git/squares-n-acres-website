@@ -768,6 +768,10 @@ duplicateOf, isActive, status, updatedAt }`. `perPage=all` is allowed.
   ([Bulk actions](#bulk-actions)): an account already active is not written, not
   counted and keeps its tokens.
 - E-mail addresses are unique case-insensitively (409 on `email`).
+- `avatarUrl` is at most 500 characters — the width of `admin_users.avatar_url`
+  — on `PUT /auth/profile` and on the users routes alike (QA-65).
+- `PUT /auth/password` allows five attempts a minute per account, every session
+  of it counted together; the sixth is `429` with `Retry-After` (QA-65).
 
 ## Bulk actions
 

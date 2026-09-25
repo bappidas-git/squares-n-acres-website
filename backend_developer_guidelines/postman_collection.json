@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "3fc3a194-d939-44aa-8997-e0af3ffe473f",
     "name": "Squares N Acres API",
-    "description": "Every endpoint of the contract, generated from `src/services/endpoints.js`.\n\n**Start here:** select the *Squares N Acres — Local mock* environment, open\n`auth › auth › POST /auth/login` and send it. Its test script writes\n`{{token}}` into the environment and every other request inherits it.\nTo work as another role, change `email` and `password` in the environment\n(the manager and sales values are there, disabled) and sign in again.\n\nRunning the whole collection is the parity check of `08_TESTING_AND_PARITY.md`:\npoint `{{baseUrl}}` at the Laravel API and every test that passes against\nthe mock must pass against it.\n\ngeneratedFrom: dfe0f41",
+    "description": "Every endpoint of the contract, generated from `src/services/endpoints.js`.\n\n**Start here:** select the *Squares N Acres — Local mock* environment, open\n`auth › auth › POST /auth/login` and send it. Its test script writes\n`{{token}}` into the environment and every other request inherits it.\nTo work as another role, change `email` and `password` in the environment\n(the manager and sales values are there, disabled) and sign in again.\n\nRunning the whole collection is the parity check of `08_TESTING_AND_PARITY.md`:\npoint `{{baseUrl}}` at the Laravel API and every test that passes against\nthe mock must pass against it.\n\ngeneratedFrom: 0339713",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {

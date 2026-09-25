@@ -244,7 +244,7 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 | POST   | `/auth/logout`   | any role  | Revoke the current token                                              | —     | —               | `Null`         | Revokes the presented token                         |
 | GET    | `/auth/profile`  | any role  | The signed-in user; 401 when the token is missing, expired or revoked | —     | —               | `User`         | —                                                   |
 | PUT    | `/auth/profile`  | any role  | Update the signed-in user’s own name, phone and avatar                | —     | `auth.profile`  | `User`         | —                                                   |
-| PUT    | `/auth/password` | any role  | Change the signed-in user’s own password                              | —     | `auth.password` | `Null`         | Revokes every other token of the user               |
+| PUT    | `/auth/password` | any role  | Change the signed-in user’s own password                              | —     | `auth.password` | `Null`         | Revokes other tokens; 5 tries a minute/account      |
 
 ##### Auth — worked examples
 
@@ -315,7 +315,9 @@ revoked one, the answer is `401 { "message": "Unauthenticated." }` — and
 
 A `PUT /auth/profile` replaces the three fields it owns, so an omitted `phone` or
 `avatarUrl` is stored as `null` (§5.8). `name` is 2–80 characters; a shorter one answers
-`422 { "errors": { "name": ["The name must be at least 2 characters."] } }`.
+`422 { "errors": { "name": ["The name must be at least 2 characters."] } }`. `avatarUrl` is
+at most 500 characters — the `admin_users.avatar_url` column (QA-65); a longer one answers
+`422` on `avatarUrl`.
 
 ```jsonc
 // PUT /api/auth/password  { "currentPassword": "Wrong@123", "newPassword": "Str0ngPass" } → 422
@@ -333,6 +335,12 @@ A `PUT /auth/profile` replaces the three fields it owns, so an omitted `phone` o
 
 `newPassword` is at least 8 characters with at least one letter and one digit; a weaker one
 answers `422 { "errors": { "newPassword": [ … ] } }`.
+
+`PUT /auth/password` is throttled to **five attempts a minute per account** (QA-65): it asks
+for the current password, so without a limit it was a second door to guessing it, open where
+the login form stops at ten a minute. The sixth answers
+`429 { "message": "Too many attempts to change the password. Try again in a minute." }` with
+`Retry-After`; every session of the account shares the count.
 
 #### Admin — dashboard, properties and leads
 

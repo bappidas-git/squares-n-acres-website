@@ -326,7 +326,10 @@ const SIDE_EFFECTS = {
   'jobs.apply': ['Creates a job application with `status: "new"`.'],
   'auth.login': ['Revokes the account’s previous token and stamps `lastLoginAt`.'],
   'auth.logout': ['Revokes the token the call was made with.'],
-  'auth.updatePassword': ['Revokes every other token of the account.'],
+  'auth.updatePassword': [
+    'Revokes every other token of the account.',
+    'Throttled to five attempts a minute per account (429, QA-65).',
+  ],
   'adminSettings.update': [
     'Deep-merges the known keys and stamps `updatedAt`; the admin sends only what changed (QA-64).',
   ],

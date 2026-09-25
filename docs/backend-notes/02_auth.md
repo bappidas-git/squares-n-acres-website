@@ -52,6 +52,14 @@ Notes that matter:
   and a digit** for the new one (`errors.newPassword`: "The newPassword must
   contain at least one letter and one digit."). Revoke every other token of that
   user on success.
+- `PUT /auth/password` is throttled per **account**, five attempts a minute
+  (QA-65) — it takes the current password, so it is a way to guess it — and the
+  sixth answers `429` with `Retry-After` and "Too many attempts to change the
+  password. Try again in a minute.". In Laravel, a named limiter keyed on the
+  user id — `Limit::perMinute(5)->by($request->user()->id)`.
+- `PUT /auth/profile` takes an `avatarUrl` of at most 500 characters, the
+  width of `admin_users.avatar_url` (`nullable|url|max:500`); longer answers
+  `422` on `avatarUrl` instead of failing the write (QA-65).
 - The same rule holds wherever a password is set (QA-64): `POST /admin/users`
   and a `PUT` or `PATCH /admin/users/:id` that carries `password` answer `422`
   on `password` ("The password must contain at least one letter and one
