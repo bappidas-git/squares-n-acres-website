@@ -871,9 +871,18 @@ What the library's endpoints owe the admin's Media screen and its picker (QA-63)
   paging: nothing filters or sorts on it. Working it out for every file before
   paging cost the mock a second per page of the grid. Laravel should load the
   page, then search for its twenty-four addresses — not the library's.
-- **`meta.folders`.** The list's `meta` carries every folder in the library,
-  sorted, whatever the filters and the page: the Folder filter's options.
-  `SELECT DISTINCT folder FROM media WHERE folder IS NOT NULL ORDER BY folder`.
+- **`meta.folders`.** The list's `meta` carries the folders that hold a file
+  every _other_ filter lets through — the list's own query with its `folder`
+  condition left out — sorted, whatever the page: the Folder filter's options.
+  Nothing chosen, that is every folder; under `type=document` (a brochure's
+  picker), only the folders that hold documents, so no option leads to "Nothing
+  to choose from". `SELECT DISTINCT folder … WHERE <every filter but folder> AND
+  folder IS NOT NULL ORDER BY folder`.
+- **Folders are filed clean.** A `folder` is stored with its segments trimmed,
+  no slash at either end and none doubled — `" /projects//aurelia/ "` is
+  `projects/aurelia`, the name the upload gives Cloudinary (`sna/projects/aurelia`)
+  — and a blank one as `null`. The record used to keep the slashes: one folder
+  under two names.
 - **Search.** `q` reads `alt`, `title`, `folder`, `public_id`, `url` and the
   tags (`JSON_SEARCH(tags, 'one', CONCAT('%', ?, '%'))`, or a `LIKE` over the
   column).
