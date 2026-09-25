@@ -122,11 +122,12 @@ them to see what a field is called and how it nests, not to assert a value.
 Per module, and each line is a thing a person clicks or a command someone runs.
 Work through it with the site pointed at the API under test.
 
-**Auth and roles** — sign in as each of the three roles; a wrong password is 422
-on `email`; the token expires and the site signs itself out with a toast;
-`GET /auth/profile` matches the login response; changing the password revokes the
-other sessions; a sales token on an admin-only route is **403**, and a manager on
-`PUT /admin/settings` is **403**.
+**Auth and roles** — sign in as each of the three roles; a wrong password is 401
+"Invalid email or password."; the token expires and the site signs itself out
+with a toast; `GET /auth/profile` matches the login response; sign in as the same
+account in a second browser and the first stays signed in (QA-65); changing the
+password revokes the other sessions; a sales token on an admin-only route is
+**403**, and a manager on `PUT /admin/settings` is **403**.
 
 **Properties** — the public list paginates and its `meta.facets` counts match the
 filter rail; `bedrooms=3` returns only 3-BHK listings, and `bedrooms=5` returns

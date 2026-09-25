@@ -430,9 +430,14 @@ marking anything current.
   refused by name rather than stored — "The map embed URL may not be greater than 500
   characters." in Site settings, "The map URL can be at most 500 characters." on a
   listing.
-- **The login's side effect "Revokes the account's previous token"** in the generated
-  endpoint notes is not what the mock does (a second sign-in leaves the first session
-  working until a password change); worth settling before the Laravel build.
+- **Laravel must let an account keep several sessions.** A login creates a token beside
+  the account's others and deletes none. The generated endpoint notes said the opposite —
+  "Revokes the account's previous token", from a `tokens()->delete()` line in the backend
+  notes' sketch — which the mock never did; the follow-up settled it for several sessions,
+  as the spec (prompts 07, 12 and 45) and the admin's "Your other sessions have been signed
+  out." assume, and `auth.test.js` pins it on the mock. The same sketch had a failed login
+  as 422 and logout as "Signed out."; it now says 401 "Invalid email or password." and
+  "Logged out.", as the contract and the mock do.
 - **The cross-tab user is trusted as written.** A tab writes `sna_auth_user` only for
   the account signed in, and an older copy is refused when both carry `updatedAt`; a
   copy without it (the login answer's six fields) is taken.

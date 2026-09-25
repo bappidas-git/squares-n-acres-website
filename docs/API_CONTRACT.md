@@ -55,6 +55,15 @@ fragment and then the query of a longer one — the `utm_*` values travel separa
 
 Header `Authorization: Bearer <token>`. `POST /auth/login { email, password }` → `{ data: { token, expiresAt, user: { id, name, email, role, avatarUrl, phone } } }`; `POST /auth/logout` revokes (200 `{data:null,message}`); `GET /auth/profile` → `{ data: user }` (401 when the token is missing/expired/revoked); `PUT /auth/profile { name, phone, avatarUrl }`; `PUT /auth/password { currentPassword, newPassword }` (422 `currentPassword` when wrong; `newPassword` min 8). Tokens expire after `MOCK_TOKEN_TTL_HOURS` (default 24) on the mock and per Sanctum config on Laravel. Client storage: `sna_auth_token`, `sna_auth_user`, `sna_auth_expires_at` (localStorage); expiry enforced client-side (timer + check on every route change → auto-logout with toast "Your session has expired. Please sign in again.") and server-side (401).
 
+**An account may be signed in on several devices at once** (QA-65). Each `POST /auth/login`
+issues a new token and revokes none of the account's others, so a second sign-in — a phone
+beside a desk — leaves the first working. A session ends when it signs out (`POST /auth/logout`
+revokes only the token that made the call) or its token expires; the account's other sessions
+end when its password changes (`PUT /auth/password` keeps the caller's token), and every one of
+them when an administrator resets its password — the administrator's own session excepted, when
+the account is theirs — deactivates it or deletes it. The admin says so: "Password changed. Your
+other sessions have been signed out."
+
 ### 5.5 IDs & timestamps
 
 Integer auto-increment `id` (the mock uses `max(id)+1` per collection). ISO-8601 UTC strings `createdAt`, `updatedAt` on every record (and `publishedAt`, `deletedAt`, `lastLoginAt` where relevant); the API sets them, the client never sends them (ignored if sent). Foreign keys `xxxId`. Reads embed denormalised display objects (`property.locality = {id,name,slug}`, `property.location.city = {id,name,slug}`, `property.propertyType = {id,name,slug,segment}`, `property.developer = {id,name,slug,logoUrl}`, `property.amenities[] = {id,name,slug,icon,category}`, `property.badges[] = {id,name,slug,color,icon}`, `lead.property = {id,title,slug}`, `lead.assignedUser = {id,name}`, `article.category/author/tags`, `jobApplication.job = {id,title,slug}`); writes send only the ids (`localityId`, `cityId`, `propertyTypeId`, `developerId`, `amenityIds[]`, `badgeIds[]`, `categoryId`, `authorId`, `tagIds[]`, `assignedTo`). Read-only embedded/computed fields sent by a client are ignored.

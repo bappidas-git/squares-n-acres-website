@@ -17,11 +17,10 @@ cookie domain.
 POST /api/auth/login  { email, password }
         │
         ├─ user not found, inactive, or password mismatch
-        │     └─→ 422  { message, errors: { email: ['These credentials do not match our records.'] } }
+        │     └─→ 401  { message: 'Invalid email or password.' }
         │
         └─ match
-              ├─ $user->tokens()->where('name', 'admin-panel')->delete()   // one session per account
-              ├─ $token = $user->createToken('admin-panel', ['*'], now()->addHours(24))
+              ├─ $token = $user->createToken('admin-panel', ['*'], now()->addHours(24))   // beside the others
               ├─ $user->forceFill(['last_login_at' => now()])->save()
               └─→ 200 { data: { token, expiresAt, user: { id, name, email, role, avatarUrl, phone } } }
 
@@ -33,10 +32,21 @@ Every later call
         └─ known token, role allowed          →  the handler runs, with $request->user() set
 
 POST /api/auth/logout
-        └─ $request->user()->currentAccessToken()->delete()  →  200 { data: null, message: 'Signed out.' }
+        └─ $request->user()->currentAccessToken()->delete()  →  200 { data: null, message: 'Logged out.' }
 ```
 
 Notes that matter:
+
+- **An account may be signed in on several devices at once** — a desk and a
+  phone (QA-65). A login creates a token beside the account's others and deletes
+  none of them: a second sign-in must leave the first working. A session ends
+  when it signs out (only `currentAccessToken()` is deleted), when its token
+  expires, and when the account's password is changed or reset or the account
+  is deactivated or deleted — each of which deletes every token of the account
+  but the caller's own (below). The admin tells the user so — "Password changed.
+  Your other sessions have been signed out." — and
+  `mock-server/__tests__/auth.test.js` checks that a first token still answers
+  200 after a second login.
 
 - `expiresAt` is part of the login response because the client enforces expiry
   too: it stores `sna_auth_token`, `sna_auth_user` and `sna_auth_expires_at`, sets
