@@ -12,6 +12,10 @@
  *   without a word; the dialog now says so under the address.
  * - **A request that failed** left the last answer on screen — photographs
  *   under "Type: Document". The grid now says it could not be loaded.
+ * - **The picker of a document field** (the brochure) took a photograph by its
+ *   address, and — once "Add by URL" was a form — submitted the listing's form
+ *   around it, saving the listing. It now takes documents only, offers the file
+ *   an address already belongs to, and saves nothing but the file.
  *
  * What it creates it removes again through the API; the tag it adds to a seed
  * file is taken off again.
@@ -105,6 +109,53 @@ test.describe('the media library', () => {
     const after = (await (await adminApi.get(`${API_URL}/admin/media?perPage=1`)).json()).meta
       .total;
     expect(after).toBe(before);
+  });
+
+  test('the brochure picker takes documents only, offers the one already filed, and saves nothing else', async ({
+    signIn,
+    page,
+    adminApi,
+  }) => {
+    const pdf = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
+    const listing = async () =>
+      (await (await adminApi.get(`${API_URL}/admin/properties/1`)).json()).data;
+    const before = await listing();
+
+    await signIn('admin');
+    await page.goto('/admin/properties/edit/1');
+    await page.getByRole('tab', { name: 'Media' }).click();
+    const brochure = page.getByLabel('Brochure (PDF)', { exact: true });
+    await brochure.fill('');
+    await brochure.locator('xpath=..').getByRole('button', { name: 'Media library' }).click();
+
+    const picker = page.getByRole('dialog', { name: /Brochure \(PDF\)/ });
+    // It opens in the field's own folder, which is empty — and says so.
+    await expect(picker.getByText('No files match')).toBeVisible();
+    await picker.getByRole('button', { name: 'Show every file' }).click();
+    await expect(picker.getByRole('list', { name: 'Files you can choose' })).toContainText(
+      'Placeholder floor plan document'
+    );
+
+    await picker.getByRole('tab', { name: 'By URL' }).click();
+    await picker
+      .getByLabel('File address')
+      .fill('https://picsum.photos/seed/sna-e2e-photo/800/600');
+    await expect(
+      picker.getByText('That address is a picture, and this field takes a document.')
+    ).toBeVisible();
+    await expect(picker.getByLabel('Type')).toBeDisabled();
+
+    await picker.getByLabel('File address').fill(pdf);
+    await picker.getByLabel('Alt text').fill(`The floor plan ${STAMP}`);
+    await picker.getByRole('button', { name: 'Use this file' }).click();
+    await expect(picker.getByText('This address is already in the library.')).toBeVisible();
+    await picker.getByRole('button', { name: 'Use that file' }).click();
+
+    await expect(picker).toBeHidden();
+    await expect(brochure).toHaveValue(pdf);
+    // The picker's own form never submitted the listing's around it.
+    await expect(page.getByText('Property saved.')).toHaveCount(0);
+    expect((await listing()).updatedAt).toBe(before.updatedAt);
   });
 
   test('says a failed request failed, rather than showing the last answer', async ({
