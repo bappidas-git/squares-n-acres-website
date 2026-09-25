@@ -187,6 +187,58 @@ describe('PUT /auth/profile and PUT /auth/password', () => {
     });
   });
 
+  it('refuses an avatar address longer than its 500-character column (QA-65)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(SALES);
+      const address = (length) => `https://cdn.example.com/${'a'.repeat(length - 28)}.png`;
+
+      const fits = await request('PUT', '/auth/profile', {
+        token,
+        body: { name: 'Sales User', phone: null, avatarUrl: address(500) },
+      });
+      assert.equal(fits.status, 200);
+      assert.equal(fits.body.data.avatarUrl.length, 500);
+
+      const long = await request('PUT', '/auth/profile', {
+        token,
+        body: { name: 'Sales User', phone: null, avatarUrl: address(501) },
+      });
+      assert.equal(long.status, 422);
+      assert.deepEqual(long.body.errors.avatarUrl, [
+        'The avatarUrl may not be greater than 500 characters.',
+      ]);
+    });
+  });
+
+  it('stops guessing the current password after five tries a minute, per account (QA-65)', async () => {
+    await withServer(async ({ request, login }) => {
+      const manager = await login(MANAGER);
+      const guess = (token, attempt) =>
+        request('PUT', '/auth/password', {
+          token,
+          body: { currentPassword: `guess-${attempt}`, newPassword: 'Str0ngPass' },
+        });
+
+      for (let attempt = 1; attempt <= 5; attempt += 1) {
+        assert.equal((await guess(manager, attempt)).status, 422, `attempt ${attempt}`);
+      }
+      const sixth = await guess(manager, 6);
+      assert.equal(sixth.status, 429);
+      assert.equal(
+        sixth.body.message,
+        'Too many attempts to change the password. Try again in a minute.'
+      );
+      assert.ok(Number(sixth.headers.get('retry-after')) > 0);
+
+      // A second session of the same account shares the count …
+      const again = await login(MANAGER);
+      assert.equal((await guess(again, 7)).status, 429);
+      // … and another account does not.
+      const sales = await login(SALES);
+      assert.equal((await guess(sales, 1)).status, 422);
+    });
+  });
+
   it('changes the password and revokes every other token of the user', async () => {
     await withServer(async ({ request, login }) => {
       const first = await login(MANAGER);

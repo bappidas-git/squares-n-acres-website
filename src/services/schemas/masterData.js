@@ -23,6 +23,7 @@ const {
 } = require('../../config/enums');
 const { segmentRef } = require('./refs');
 const { seo } = require('./seo');
+const { AVATAR_URL_MAX_LENGTH } = require('./auth');
 
 const socialLinks = {
   type: 'object',
@@ -339,7 +340,8 @@ const user = {
   password: { type: 'string', required: true, min: 8, maxLength: 100 },
   role: { type: 'enum', enum: ROLES.values, required: true, default: 'sales' },
   phone: { type: 'phone', nullable: true, default: null },
-  avatarUrl: { type: 'url', nullable: true, default: null },
+  // The same column "My profile" writes, and the same limit (QA-65).
+  avatarUrl: { type: 'url', nullable: true, default: null, maxLength: AVATAR_URL_MAX_LENGTH },
   isActive: { type: 'bool', default: true },
 };
 

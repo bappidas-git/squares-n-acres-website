@@ -28,6 +28,15 @@ const { validateBody } = require('../middleware/validate');
 /** §5.11's throttle, applied to the login form: 10 attempts per minute per IP. */
 const LOGIN_ATTEMPTS_PER_MINUTE = 10;
 
+/**
+ * The password change asks for the current password, which makes it a second
+ * door to guessing it — one that stood open: thirty wrong guesses in a row were
+ * thirty 422s, where the login form stops at ten a minute (QA-65). Counted per
+ * account, not per IP, so a session cannot spread its guesses over addresses;
+ * a person who mistypes their password five times in a minute is told to wait.
+ */
+const PASSWORD_ATTEMPTS_PER_MINUTE = 5;
+
 /** The same answer for an unknown address and for a wrong password. */
 const INVALID_CREDENTIALS = 'Invalid email or password.';
 
@@ -129,35 +138,43 @@ module.exports = ({ db, config }) => {
     }
   });
 
-  router.put('/auth/password', (req, res, next) => {
-    try {
-      const body = { ...(req.body ?? {}) };
-      validateBody(authSchemas.password, body);
+  router.put(
+    '/auth/password',
+    rateLimit({
+      max: PASSWORD_ATTEMPTS_PER_MINUTE,
+      key: (req) => `user:${req.user?.id}`,
+      message: 'Too many attempts to change the password. Try again in a minute.',
+    }),
+    (req, res, next) => {
+      try {
+        const body = { ...(req.body ?? {}) };
+        validateBody(authSchemas.password, body);
 
-      const user = currentUser(req);
-      const errors = {};
-      if (!verify(body.currentPassword, user.password)) {
-        errors.currentPassword = ['Current password is incorrect.'];
+        const user = currentUser(req);
+        const errors = {};
+        if (!verify(body.currentPassword, user.password)) {
+          errors.currentPassword = ['Current password is incorrect.'];
+        }
+        // A new password must not be eight letters or eight digits (§5.4).
+        if (!authSchemas.PASSWORD_PATTERN.test(body.newPassword)) {
+          errors.newPassword = [authSchemas.passwordMessage('newPassword')];
+        }
+        if (Object.keys(errors).length > 0) throw validation(errors);
+
+        user.password = store(body.newPassword);
+        user.updatedAt = new Date().toISOString();
+        db.write();
+
+        // The session that changed the password stays signed in; every other
+        // device the account was left signed in on does not.
+        tokens.revokeUserTokens(user.id, { except: req.token?.token });
+
+        res.message('Password updated.');
+      } catch (error) {
+        next(error);
       }
-      // A new password must not be eight letters or eight digits (§5.4).
-      if (!authSchemas.PASSWORD_PATTERN.test(body.newPassword)) {
-        errors.newPassword = [authSchemas.passwordMessage('newPassword')];
-      }
-      if (Object.keys(errors).length > 0) throw validation(errors);
-
-      user.password = store(body.newPassword);
-      user.updatedAt = new Date().toISOString();
-      db.write();
-
-      // The session that changed the password stays signed in; every other
-      // device the account was left signed in on does not.
-      tokens.revokeUserTokens(user.id, { except: req.token?.token });
-
-      res.message('Password updated.');
-    } catch (error) {
-      next(error);
     }
-  });
+  );
 
   return router;
 };
