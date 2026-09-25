@@ -138,6 +138,194 @@ describe('AdminAuthContext', () => {
     expect(storage.getItem(AUTH_STORAGE_KEYS.expiresAt, null)).toBe(expiresAt);
   });
 
+  describe('the signed-in user, written from more than one place (QA-65)', () => {
+    /** A promise the test settles when it chooses. */
+    const deferred = () => {
+      let resolve;
+      const promise = new Promise((done) => {
+        resolve = done;
+      });
+      return { promise, resolve };
+    };
+
+    const storageEvent = (key, value) =>
+      new StorageEvent('storage', {
+        key,
+        newValue: value === null ? null : JSON.stringify(value),
+      });
+
+    it('keeps a profile saved while the session confirmation was still on its way', async () => {
+      seedSession(userOf(), hoursFromNow(6));
+      const confirmation = deferred();
+      authService.profile.mockReturnValue(confirmation.promise);
+
+      const { getValue } = renderProvider('/admin/profile');
+      await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'));
+
+      act(() => {
+        getValue().updateUser({ ...userOf(), name: 'Saved Meanwhile' });
+      });
+      // The confirmation was asked before the save and describes the old name.
+      await act(async () => {
+        confirmation.resolve({ data: userOf() });
+        await confirmation.promise;
+      });
+
+      expect(screen.getByTestId('name')).toHaveTextContent('Saved Meanwhile');
+      expect(storage.getItem(AUTH_STORAGE_KEYS.user, null).name).toBe('Saved Meanwhile');
+    });
+
+    it('drops a refresh that a save overtook, and answers with the session', async () => {
+      seedSession(userOf(), hoursFromNow(6));
+      authService.profile.mockResolvedValue({ data: userOf() });
+      const { getValue } = renderProvider('/admin/profile');
+      await waitFor(() => expect(authService.profile).toHaveBeenCalledTimes(1));
+
+      const late = deferred();
+      authService.profile.mockReturnValue(late.promise);
+      let answer;
+      const refreshing = getValue()
+        .refreshProfile()
+        .then((user) => (answer = user));
+
+      act(() => {
+        getValue().updateUser({ name: 'Saved Meanwhile' });
+      });
+      await act(async () => {
+        late.resolve({ data: userOf() });
+        await refreshing;
+      });
+
+      expect(answer.name).toBe('Saved Meanwhile');
+      expect(screen.getByTestId('name')).toHaveTextContent('Saved Meanwhile');
+    });
+
+    it('takes a refresh that nothing overtook', async () => {
+      seedSession(userOf(), hoursFromNow(6));
+      authService.profile.mockResolvedValue({ data: userOf() });
+      const { getValue } = renderProvider('/admin/profile');
+      await waitFor(() => expect(authService.profile).toHaveBeenCalledTimes(1));
+
+      authService.profile.mockResolvedValue({ data: userOf('admin', 'Renamed Elsewhere') });
+      await act(async () => {
+        await getValue().refreshProfile();
+      });
+
+      expect(screen.getByTestId('name')).toHaveTextContent('Renamed Elsewhere');
+      expect(storage.getItem(AUTH_STORAGE_KEYS.user, null).name).toBe('Renamed Elsewhere');
+    });
+
+    it('follows a profile saved in another tab, for this account only', async () => {
+      seedSession(userOf(), hoursFromNow(6));
+      authService.profile.mockResolvedValue({ data: userOf() });
+      renderProvider('/admin/profile');
+      await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Admin User'));
+
+      act(() => {
+        window.dispatchEvent(
+          storageEvent(AUTH_STORAGE_KEYS.user, userOf('admin', 'Renamed In Another Tab'))
+        );
+      });
+      expect(screen.getByTestId('name')).toHaveTextContent('Renamed In Another Tab');
+
+      // Somebody else's record, and a value that is not one, change nothing.
+      act(() => {
+        window.dispatchEvent(
+          storageEvent(AUTH_STORAGE_KEYS.user, { ...userOf('sales', 'Sales User'), id: 3 })
+        );
+        window.dispatchEvent(
+          new StorageEvent('storage', { key: AUTH_STORAGE_KEYS.user, newValue: '{not json' })
+        );
+      });
+      expect(screen.getByTestId('name')).toHaveTextContent('Renamed In Another Tab');
+      expect(screen.getByTestId('role')).toHaveTextContent('admin');
+    });
+
+    it('ignores an older copy of the account written by another tab', async () => {
+      const saved = { ...userOf('admin', 'Saved Here'), updatedAt: '2026-09-25T10:00:05.000Z' };
+      seedSession(saved, hoursFromNow(6));
+      authService.profile.mockResolvedValue({ data: saved });
+      renderProvider('/admin/profile');
+      await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Saved Here'));
+
+      // Another tab's read, asked before this tab's save, lands afterwards.
+      act(() => {
+        window.dispatchEvent(
+          storageEvent(AUTH_STORAGE_KEYS.user, {
+            ...userOf('admin', 'Before The Save'),
+            updatedAt: '2026-09-25T10:00:01.000Z',
+          })
+        );
+      });
+
+      expect(screen.getByTestId('name')).toHaveTextContent('Saved Here');
+    });
+
+    it('does not put a save that answers after the sign-out on the next session', async () => {
+      seedSession(userOf(), hoursFromNow(6));
+      authService.profile.mockResolvedValue({ data: userOf() });
+      const { getValue } = renderProvider('/admin/profile');
+      await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'));
+
+      await act(async () => {
+        await getValue().logout({ silent: true });
+      });
+      act(() => {
+        getValue().updateUser({ ...userOf(), name: 'Too Late' });
+      });
+
+      expect(screen.getByTestId('status')).toHaveTextContent('anonymous');
+      expect(screen.getByTestId('name')).toHaveTextContent('');
+      expect(storage.getItem(AUTH_STORAGE_KEYS.user, null)).toBeNull();
+    });
+
+    it('keeps a late save of one account off the next account’s session', async () => {
+      seedSession(userOf(), hoursFromNow(6));
+      authService.profile.mockResolvedValue({ data: userOf() });
+      const { getValue } = renderProvider('/admin/profile');
+      await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'));
+      // What the admin's profile form holds while its save is on the way.
+      const updateUserOfTheForm = getValue().updateUser;
+
+      await act(async () => {
+        await getValue().logout({ silent: true });
+      });
+      authService.login.mockResolvedValue({
+        data: {
+          token: 'sales-token',
+          expiresAt: hoursFromNow(24),
+          user: { ...userOf('sales', 'Sales User'), id: 3 },
+        },
+      });
+      await act(async () => {
+        await getValue().login('sales@squaresnacres.com', 'Sales@123');
+      });
+
+      // The admin's save answers now.
+      act(() => {
+        updateUserOfTheForm({ ...userOf('admin', 'Admin Late Save') });
+      });
+
+      expect(screen.getByTestId('name')).toHaveTextContent('Sales User');
+      expect(screen.getByTestId('role')).toHaveTextContent('sales');
+      expect(storage.getItem(AUTH_STORAGE_KEYS.user, null).role).toBe('sales');
+    });
+
+    it('ignores a record of another account', async () => {
+      seedSession(userOf(), hoursFromNow(6));
+      authService.profile.mockResolvedValue({ data: userOf() });
+      const { getValue } = renderProvider('/admin/profile');
+      await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Admin User'));
+
+      act(() => {
+        getValue().updateUser({ ...userOf('sales', 'Sales User'), id: 3 });
+      });
+
+      expect(screen.getByTestId('name')).toHaveTextContent('Admin User');
+      expect(screen.getByTestId('role')).toHaveTextContent('admin');
+    });
+  });
+
   it('delegates can() to the §7 matrix', async () => {
     seedSession(userOf('sales', 'Sales User'), hoursFromNow(6));
     authService.profile.mockResolvedValue({ data: userOf('sales', 'Sales User') });

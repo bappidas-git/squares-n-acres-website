@@ -64,12 +64,34 @@ const readStoredSession = () => {
 
 const ANONYMOUS = { user: null, token: null, expiresAt: null, status: 'anonymous' };
 
+/** Whether `user` is the account `session` is signed in as. */
+const isSameAccount = (session, user) =>
+  session?.status === 'authenticated' &&
+  user?.id !== undefined &&
+  String(session.user?.id) === String(user.id);
+
+/**
+ * Whether `next` is an older copy of the account than `held`, going by the
+ * server's own `updatedAt` on both — a late read in another tab, written to
+ * storage after this tab's save, would otherwise travel back here (QA-65).
+ * A copy without the stamp (the login answer's six fields) cannot be judged,
+ * and is not refused for it.
+ */
+const isOlderCopy = (next, held) => {
+  const incoming = Date.parse(next?.updatedAt ?? '');
+  const current = Date.parse(held?.updatedAt ?? '');
+  return Number.isFinite(incoming) && Number.isFinite(current) && incoming < current;
+};
+
 export const AdminAuthProvider = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
 
   const [state, setState] = useState({ ...ANONYMOUS, status: 'loading' });
+  /** The session as last rendered, for the listeners registered once. */
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   /**
    * True from the moment a session is torn down until the next sign-in.
@@ -85,7 +107,20 @@ export const AdminAuthProvider = ({ children }) => {
     locationRef.current = location;
   }, [location]);
 
+  /**
+   * How many times the signed-in user has been written since the page opened:
+   * a sign-in, a save of "My profile" or of your own row on the Users screen, a
+   * save in another tab. A profile read carries the count it was asked at, and
+   * one that lands after a newer write is older than what the session holds.
+   * Taken as it came, the session confirmation of a reload — slow to answer —
+   * put the name saved in the meantime back to the old one, in the header, in
+   * storage and in the form, and the next save wrote it back (QA-65).
+   */
+  const userWritesRef = useRef(0);
+
   const clearState = useCallback(() => {
+    // A profile read still on its way belongs to the session that just ended.
+    userWritesRef.current += 1;
     clearSession();
     setState(ANONYMOUS);
   }, []);
@@ -145,10 +180,12 @@ export const AdminAuthProvider = ({ children }) => {
     setState({ ...stored, status: 'authenticated' });
 
     let active = true;
+    const asked = userWritesRef.current;
     authService
       .profile()
       .then(({ data }) => {
-        if (!active || !data) return;
+        if (!active || !data || asked !== userWritesRef.current) return;
+        if (isOlderCopy(data, stateRef.current.user)) return;
         storage.setItem(AUTH_STORAGE_KEYS.user, data);
         setState((previous) => ({ ...previous, user: data }));
       })
@@ -186,8 +223,29 @@ export const AdminAuthProvider = ({ children }) => {
 
   // Signing out in one tab signs out the others: the token key disappearing is
   // the signal, a new token (a sign-in elsewhere) is not.
+  //
+  // A profile saved in one tab reaches the others through the stored user: the
+  // header of a tab left open went on showing the old name, and its "My
+  // profile", saved, put the old name back over the new one (QA-65). Only the
+  // same account is taken — a user written for anybody else is not this
+  // session's business.
   useEffect(() => {
     const handleStorage = (event) => {
+      if (event.key === AUTH_STORAGE_KEYS.user) {
+        let next = null;
+        try {
+          next = JSON.parse(event.newValue ?? 'null');
+        } catch {
+          return;
+        }
+        if (!next?.email || !next?.role || !isSameAccount(stateRef.current, next)) return;
+        if (isOlderCopy(next, stateRef.current.user)) return;
+        userWritesRef.current += 1;
+        setState((previous) =>
+          isSameAccount(previous, next) ? { ...previous, user: next } : previous
+        );
+        return;
+      }
       if (event.key !== AUTH_STORAGE_KEYS.token || event.newValue) return;
       torndownRef.current = true;
       clearState();
@@ -202,6 +260,7 @@ export const AdminAuthProvider = ({ children }) => {
   const login = useCallback(async (email, password) => {
     const { data } = await authService.login({ email, password });
     torndownRef.current = false;
+    userWritesRef.current += 1;
     setAuthToken(data.token);
     storage.setItem(AUTH_STORAGE_KEYS.user, data.user);
     storage.setItem(AUTH_STORAGE_KEYS.expiresAt, data.expiresAt ?? null);
@@ -214,24 +273,46 @@ export const AdminAuthProvider = ({ children }) => {
     return data.user;
   }, []);
 
+  /**
+   * Reads the signed-in user again. An answer that is no longer news — a write
+   * landed while it was on its way, or the session has ended or changed hands
+   * since — is dropped, and the session's user is what comes back.
+   */
   const refreshProfile = useCallback(async () => {
+    const asked = userWritesRef.current;
     const { data } = await authService.profile();
     if (!data) return null;
+    const current = stateRef.current;
+    if (asked !== userWritesRef.current || !isSameAccount(current, data)) return current.user;
+    if (isOlderCopy(data, current.user)) return current.user;
     storage.setItem(AUTH_STORAGE_KEYS.user, data);
-    setState((previous) => ({ ...previous, user: data }));
+    setState((previous) =>
+      isSameAccount(previous, data) ? { ...previous, user: data } : previous
+    );
     return data;
   }, []);
 
-  /** Keeps the cached user in step after a profile save. */
-  const updateUser = useCallback(
-    (patch) => {
-      const next = { ...(state.user ?? {}), ...patch };
-      storage.setItem(AUTH_STORAGE_KEYS.user, next);
-      setState((previous) => ({ ...previous, user: next }));
-      return next;
-    },
-    [state.user]
-  );
+  /**
+   * Keeps the cached user in step after a profile save.
+   *
+   * Only while the session it belongs to is the one signed in: a save sent
+   * before signing out that answers after the next sign-in is somebody else's,
+   * and merged in it put the previous account's name — and role — on the new
+   * session (QA-65).
+   */
+  const updateUser = useCallback((patch) => {
+    const current = stateRef.current;
+    if (current.status !== 'authenticated' || !current.user) return current.user;
+    if (patch?.id !== undefined && !isSameAccount(current, patch)) return current.user;
+
+    const next = { ...current.user, ...patch };
+    userWritesRef.current += 1;
+    // Two writes in one tick must build on each other, not on the same render.
+    stateRef.current = { ...current, user: next };
+    storage.setItem(AUTH_STORAGE_KEYS.user, next);
+    setState((previous) => ({ ...previous, user: next }));
+    return next;
+  }, []);
 
   const role = state.user?.role ?? null;
 
