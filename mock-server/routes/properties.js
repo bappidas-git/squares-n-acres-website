@@ -26,6 +26,13 @@
 const express = require('express');
 
 const schemas = require('../../src/services/schemas');
+const {
+  PUBLISH_FIELDS,
+  notReadyMessage,
+  publishGaps,
+  publishProblems,
+} = require('../../src/config/propertyRules');
+const { ApiError } = require('../middleware/errors');
 const { applyPropertyFilters, applyPropertySort, priceOf } = require('../lib/propertyFilters');
 const { checkSlug, ensureUniqueSlug, slugify } = require('../lib/slug');
 const { computeFacets } = require('../lib/facets');
@@ -88,6 +95,79 @@ const BULK_ACTIONS = {
 
 /** How many listings `/properties/:id/similar` answers with (§5.14). */
 const SIMILAR_LIMIT = 6;
+
+const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object ?? {}, key);
+
+/**
+ * The publish rules (`src/config/propertyRules.js`), asked of a write that
+ * leaves a listing live: every create and replace, and a `PATCH` that
+ * publishes it or touches what the rules read (QA-62).
+ *
+ * The form refused a half-written listing all along; the list's eye toggle,
+ * its row menu and its bulk bar never went through the form, and put one on
+ * the site with no photograph, no description and no price.
+ *
+ * @param {object} record the record about to be stored
+ * @param {{method: string, body: object}} context
+ * @throws {ApiError} 422 keyed by field, the message naming what is missing
+ */
+function refuseUnready(record, { method, body }) {
+  if (record?.isActive !== true) return;
+  if (method === 'PATCH' && !PUBLISH_FIELDS.some((field) => hasOwn(body, field))) return;
+
+  const problems = publishProblems(record);
+  if (Object.keys(problems).length === 0) return;
+
+  const gaps = publishGaps(problems, record);
+  throw new ApiError(
+    422,
+    notReadyMessage(record, gaps),
+    Object.fromEntries(Object.entries(problems).map(([field, message]) => [field, [message]])),
+    { notReady: [{ id: record.id ?? null, title: record.title, gaps }] }
+  );
+}
+
+/**
+ * The bulk "activate" asks the same rules of every listing it would put on the
+ * site — all or nothing, like the articles' bulk "publish" (QA-55), so the
+ * editor sees one list of what is missing rather than half a batch published.
+ * A listing that is already live is not asked: activating it changes nothing.
+ *
+ * @param {string} action
+ * @param {Array<object>} targets the stored records the ids name
+ * @throws {ApiError} 422 naming each listing and what it lacks
+ */
+function refuseUnreadyBatch(action, targets) {
+  if (action !== 'activate') return;
+
+  const refused = targets
+    .filter((property) => property.isActive !== true)
+    .map((property) => ({
+      property,
+      gaps: publishGaps(publishProblems(property), property),
+    }))
+    .filter(({ gaps }) => gaps.length > 0);
+
+  if (refused.length === 0) return;
+
+  const message =
+    refused.length === 1
+      ? notReadyMessage(refused[0].property, refused[0].gaps)
+      : `${refused.length} of the selected properties are not ready to go live, so none was activated.`;
+
+  throw new ApiError(
+    422,
+    message,
+    { ids: refused.map(({ property, gaps }) => `“${property.title}”: ${gaps.join(', ')}.`) },
+    {
+      notReady: refused.map(({ property, gaps }) => ({
+        id: property.id,
+        title: property.title,
+        gaps,
+      })),
+    }
+  );
+}
 
 /** How many entries each group of `/properties/suggestions` holds (§5.14). */
 const SUGGESTION_LIMIT = 5;
@@ -275,6 +355,42 @@ module.exports = ({ db, getModel }) => {
     return ensureUniqueSlug(rows(), `property-${id ?? existing?.id ?? ''}`, excludeId);
   }
 
+  /**
+   * A replace that names the version it was made from — the `updatedAt` its
+   * client read — is refused when the listing has been saved since (QA-62).
+   *
+   * `PUT` sends the whole record, so a form opened before somebody else's save
+   * wrote every field back as it had read it: the other editor's changes went,
+   * silently — a form left open un-featured a listing starred from the list
+   * meanwhile. The check is optional: a body without `updatedAt` replaces as
+   * before, which is also how the form's "Save mine anyway" goes through.
+   *
+   * @param {object} existing the stored record
+   * @param {object} body the request body
+   * @throws {ApiError} 409 with `data.conflict: 'stale'` and who saved it last
+   */
+  function refuseStaleReplace(existing, body) {
+    const expected = typeof body?.updatedAt === 'string' ? body.updatedAt : null;
+    if (!expected || !existing.updatedAt || expected === existing.updatedAt) return;
+
+    const editor = db
+      .getCollection('adminUsers')
+      .find((user) => sameId(user?.id, existing.updatedBy));
+    throw conflict(
+      editor?.name
+        ? `${editor.name} saved this listing after you opened it.`
+        : 'This listing was saved by somebody else after you opened it.',
+      undefined,
+      {
+        conflict: 'stale',
+        current: {
+          updatedAt: existing.updatedAt,
+          updatedBy: editor ? { id: editor.id, name: editor.name } : null,
+        },
+      }
+    );
+  }
+
   /** The entity slug and `seo.slug` are always the same string (§5.9). */
   function applySlug(record, slug) {
     record.slug = slug;
@@ -292,7 +408,14 @@ module.exports = ({ db, getModel }) => {
   });
 
   router.get('/properties/featured', (req, res) => {
-    const featured = active().filter((property) => property.isFeatured);
+    // The registry and the contract give this route the §5.7 filters, and it
+    // used to ignore every one of them: `?listingType=rent` answered with the
+    // featured sales too (QA-62).
+    const featured = applyPropertyFilters(
+      active().filter((property) => property.isFeatured),
+      req.query,
+      { source: source() }
+    );
     const sorted = applyPropertySort(featured, 'relevance');
     const { data, meta } = paginate(sorted, {
       page: first(req.query.page),
@@ -483,6 +606,7 @@ module.exports = ({ db, getModel }) => {
       });
 
       const built = buildRecord(body, { method: 'POST', user: req.user });
+      refuseUnready(built, { method: 'POST', body });
       const record = applySlug(built, resolveSlug(body, { id: built.id }));
 
       rows().push(record);
@@ -522,6 +646,7 @@ module.exports = ({ db, getModel }) => {
       const ids = body.ids.map(String);
       const targets = rows().filter((property) => ids.includes(String(property.id)));
       const now = new Date().toISOString();
+      refuseUnreadyBatch(body.action, targets);
 
       if (body.action === 'delete') {
         for (const property of targets) removeProperty(property);
@@ -558,6 +683,7 @@ module.exports = ({ db, getModel }) => {
       if (!existing) throw notFound();
 
       const body = assignNestedIds({ ...(req.body ?? {}) });
+      refuseStaleReplace(existing, body);
       validateBody(schemas.getSchema('property.update'), body, { lookup: db.getCollection });
 
       const slug = resolveSlug(body, { existing });
@@ -565,6 +691,7 @@ module.exports = ({ db, getModel }) => {
         buildRecord(body, { existing, method: 'PUT', user: req.user }),
         slug
       );
+      refuseUnready(record, { method: 'PUT', body });
 
       const list = rows();
       list[list.indexOf(existing)] = record;
@@ -598,6 +725,7 @@ module.exports = ({ db, getModel }) => {
         buildRecord(body, { existing, method: 'PATCH', user: req.user }),
         slugged
       );
+      refuseUnready(record, { method: 'PATCH', body });
 
       const list = rows();
       list[list.indexOf(existing)] = record;
