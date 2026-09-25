@@ -551,11 +551,12 @@ async function captureExamples({ baseUrl, accounts, log = () => {} }) {
       if (collection?.fields?.isActive) {
         // `affected` counts the records that change (QA-55): activating an
         // active record is "0 updated", which documents nothing. The record is
-        // switched off first, uncaptured, and the example switches it back on.
+        // switched off first, uncaptured, and the example switches it back on —
+        // given, on the way, whatever its group asks of a record going live.
         const id = fixtures[group]?.id ?? 1;
         await api('PATCH', `${endpoint.path.replace(/\/bulk$/, '')}/${id}`, {
           token: tokens.admin,
-          body: { isActive: false },
+          body: { ...(spec?.ready ?? {}), isActive: false },
         });
         base.body = { ids: [id], action: 'activate' };
       } else {

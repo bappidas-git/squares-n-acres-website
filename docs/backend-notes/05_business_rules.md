@@ -104,6 +104,113 @@ count descending, then by label, so ties do not shuffle between requests.
 
 An inactive property has no similar list at all: the endpoint is 404.
 
+## Property writes
+
+What a listing must be before it is stored live, and what a replace made from an
+older version of it is answered with (QA-62). The form had refused a
+half-written listing since prompt 21; the API had not, so the list's eye toggle,
+its row menu and its bulk "Activate" — none of which goes through the form — put
+a listing with no photograph, no description and no price on the site, and,
+featured, into the home page's Featured row.
+
+**Going live.** A listing whose stored result is `isActive: true` needs, each
+refused under its own 422 key:
+
+- an image with both a `url` and an `alt` — `images`: "A published listing needs
+  at least one image with a description."
+- at least 300 characters of text in `description`, tags stripped and entities
+  read as spaces — `description`: "A published listing needs a description of at
+  least 300 characters (this one has _n_)."
+- a non-empty `shortDescription` — `shortDescription`: "A published listing needs
+  a one-line summary."
+- a price: for a sale `price`, or both ends of the range; for a rent or a lease
+  `rentPerMonth`; or `priceOnRequest` either way — `pricing.price`: "A published
+  listing needs a price, a price range, or “Price on request”." /
+  `pricing.rentPerMonth`: "A published rental needs a monthly rent, or “Price on
+  request”."
+
+The rules and the sentences live in `src/config/propertyRules.js`, which the form
+and the mock both read. They are asked of every `POST` and `PUT` that leaves the
+listing live, and of a `PATCH` that sends `isActive`, `listingType`, `images`,
+`description`, `shortDescription` or `pricing` — a featured star or a priority on
+a live listing is not a publish, and is not asked. A draft (`isActive: false`)
+may be anything. The refusal also names what is missing in one sentence, so a
+client that is not a form can say it:
+
+```jsonc
+// 422 — PATCH /admin/properties/41 { "isActive": true }
+{
+  "message": "“Bare Draft” is not ready to go live: no photograph with a description, 0 of 300 characters of description, no one-line summary, no price.",
+  "errors": { "images": ["…"], "description": ["…"], "shortDescription": ["…"], "pricing.price": ["…"] },
+  "data": {
+    "notReady": [
+      {
+        "id": 41,
+        "title": "Bare Draft",
+        "gaps": ["no photograph with a description", "0 of 300 characters of description", "no one-line summary", "no price"],
+      },
+    ],
+  },
+}
+```
+
+**Bulk activate.** `POST /admin/properties/bulk { action: 'activate' }` asks the
+same rules of every listing it would put live, **all or nothing**, like the
+articles' bulk "publish": one refusal lists every listing in the way — `message`
+"2 of the selected properties are not ready to go live, so none was activated."
+(or the single sentence above for one), `errors.ids` one line per listing,
+`data.notReady` as above. A listing already live is not asked. The admin list
+asks the rules before it calls, names each listing and what it lacks, and offers
+to activate the ones that are ready.
+
+**A replace made from an older version.** `PUT /admin/properties/:id` may carry
+`updatedAt` — the value the client read. When the stored `updatedAt` differs,
+the listing was saved by somebody else in between, and the replace is refused
+rather than written: a `PUT` sends every field, so the older copy would silently
+undo the other save (a form left open un-featured a listing starred from the
+list meanwhile).
+
+```jsonc
+// 409
+{
+  "message": "Admin User saved this listing after you opened it.",
+  "data": {
+    "conflict": "stale",
+    "current": { "updatedAt": "2026-09-25T06:12:03.412Z", "updatedBy": { "id": 1, "name": "Admin User" } },
+  },
+}
+```
+
+Compare the value byte for byte with what this API itself serialises for
+`updatedAt` — the client only ever echoes it. A body without `updatedAt` replaces
+as before: that is every client written before the check, and the form's "Save
+mine anyway". The slug's 409 is told apart by `errors.slug`; this one carries
+`data.conflict`. `PATCH` is not checked — it writes only the keys it sends.
+
+```php
+// app/Http/Controllers/Admin/PropertyController.php
+public function update(PropertyRequest $request, Property $property)
+{
+    $readAt = $request->input('updatedAt');
+    if ($readAt !== null && $readAt !== $property->updated_at?->toJSON()) {
+        return response()->json([
+            'message' => ($property->updatedBy?->name ?? 'Somebody else').' saved this listing after you opened it.',
+            'data' => ['conflict' => 'stale', 'current' => [
+                'updatedAt' => $property->updated_at?->toJSON(),
+                'updatedBy' => $property->updatedBy?->only(['id', 'name']),
+            ]],
+        ], 409);
+    }
+    // …the replace, which PropertyRequest has already asked the publish rules of.
+}
+```
+
+**The featured row.** `GET /properties/featured` honours the §5.7 filters its
+registry entry declares (it answered every featured listing whatever was asked).
+The home page's Featured row asks for up to 24 — the §8.6 cap on a page — rather
+than 8, so featuring a listing puts it in the row; the order is still `relevance`
+(priority, then the latest edit).
+
 ## View counting
 
 `POST /properties/:id/view` increments `view_count` and answers

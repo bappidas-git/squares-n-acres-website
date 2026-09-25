@@ -98,6 +98,12 @@ function sampleBody(shape, seed, options = {}) {
  *
  * `overrides` carries the values a generic sample cannot invent — a foreign key
  * that has to exist, a path that has to start with a slash.
+ *
+ * `ready` is what a record needs before it may be switched on, where the API
+ * asks (QA-62: a listing goes live with a described photograph, 300 characters
+ * of description, a summary and a price — `src/config/propertyRules.js`). A
+ * sample body has none of it, so a bulk "activate" of the bare fixture would be
+ * documented as its 422.
  */
 const WRITABLE = {
   adminProperties: {
@@ -105,6 +111,17 @@ const WRITABLE = {
     schema: 'property.create',
     overrides: () => ({ propertyTypeId: 1, location: { localityId: 1, cityId: 1 } }),
     patch: { isFeatured: true },
+    ready: {
+      images: [
+        {
+          url: 'https://picsum.photos/seed/sna-contract-example/1200/800',
+          alt: 'The example listing from the street',
+        },
+      ],
+      shortDescription: 'Three bedrooms, ready to move in.',
+      description: `<p>${'The example listing of the contract, written long enough to publish. '.repeat(5).trim()}</p>`,
+      pricing: { price: 12500000 },
+    },
   },
   adminLocalities: {
     path: '/admin/localities',

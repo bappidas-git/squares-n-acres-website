@@ -359,6 +359,22 @@ answers `422 { "errors": { "newPassword": [ … ] } }`.
 | GET    | `/admin/leads/export`             | any role        | CSV export of the filtered lead list, scoped like the list endpoint  | `q`, `status`, `source`, `priority`, `assignedTo`, `propertyId`, `from`, `to`                                                                                                                                                                                                                                                                                                                          | —                 | `Csv`           | UTF-8 BOM CSV, `Content-Disposition: attachment; filename="leads-<yyyy-mm-dd>.csv"`                                                               |
 | POST   | `/admin/leads/bulk`               | admin · manager | Change status, priority or assignee of several leads, or delete them | —                                                                                                                                                                                                                                                                                                                                                                                                      | `bulk`            | `BulkResult`    | status · assign · priority · delete                                                                                                               |
 
+**Property writes (QA-62).** Three rules the table has no room for; the formulas
+are in the business rules, "Property writes":
+
+- **The publish rules.** A `POST` or `PUT` that leaves a listing live, a `PATCH`
+  that publishes it or sends `listingType`, `images`, `description`,
+  `shortDescription` or `pricing`, and the bulk `activate` answer 422 when the
+  listing lacks a described image, 300 characters of description, a one-line
+  summary or a price — keyed by field, with `data.notReady` naming the listings
+  and what each lacks. The bulk refusal is all or nothing.
+- **A replace from an older version.** `PUT /admin/properties/:id` may carry the
+  `updatedAt` its client read; when the stored one differs the replace is refused
+  with 409 and `data: { conflict: 'stale', current: { updatedAt, updatedBy } }`.
+  A body without it replaces as before.
+- **`GET /properties/featured`** narrows the featured listings by the §5.7
+  filters its registry entry declares.
+
 ##### Properties and leads — worked examples
 
 From the mock (`npm run mock`) over the starter seed of prompt 06.
