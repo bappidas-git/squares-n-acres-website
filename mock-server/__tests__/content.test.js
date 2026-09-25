@@ -3317,8 +3317,33 @@ describe('/admin/media', () => {
     });
   });
 
-  it('lists every folder in the library, whatever the page and the filters (QA-63)', async () => {
-    await withServer(async ({ request, login, db }) => {
+  it('lists the folders the other filters leave something in, whatever the page (QA-63)', async () => {
+    const seed = seedWith({
+      media: (rows) => {
+        rows.push(
+          {
+            ...rows[0],
+            id: 9201,
+            url: 'https://example.com/qa-63/price-list.pdf',
+            type: 'document',
+            format: 'pdf',
+            folder: 'brochures',
+            alt: 'Price list',
+          },
+          {
+            ...rows[0],
+            id: 9202,
+            url: 'https://example.com/qa-63/walkthrough.mp4',
+            type: 'video',
+            format: 'mp4',
+            folder: 'films',
+            alt: 'Walkthrough',
+          }
+        );
+      },
+    });
+
+    await withServer({ seed }, async ({ request, login, db }) => {
       const token = await login(ADMIN);
       const every = [
         ...new Set(
@@ -3329,14 +3354,46 @@ describe('/admin/media', () => {
         ),
       ].sort((a, b) => a.localeCompare(b));
 
+      // Unfiltered, every folder — on the first page as on any.
       const first = await request('GET', '/admin/media?perPage=2', { token });
       assert.deepEqual(first.body.meta.folders, every);
+      const later = await request('GET', '/admin/media?perPage=2&page=5', { token });
+      assert.deepEqual(later.body.meta.folders, every);
 
-      const narrowed = await request('GET', '/admin/media?folder=banks&type=image&page=1', {
-        token,
-      });
+      // The folder filter itself narrows the files, not the folders offered.
+      const narrowed = await request('GET', '/admin/media?folder=banks', { token });
       assert.ok(narrowed.body.data.every((row) => row.folder === 'banks'));
       assert.deepEqual(narrowed.body.meta.folders, every);
+
+      // Every other filter does: a picker of documents is offered the folders
+      // that hold documents.
+      const documents = await request('GET', '/admin/media?type=document', { token });
+      assert.deepEqual(documents.body.meta.folders, ['brochures']);
+      const searched = await request('GET', '/admin/media?q=walkthrough', { token });
+      assert.deepEqual(searched.body.meta.folders, ['films']);
+    });
+  });
+
+  it('files a folder without stray slashes or spaces (QA-63)', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const created = await request('POST', '/admin/media', {
+        token,
+        body: {
+          url: 'https://example.com/qa-63/folder.jpg',
+          alt: 'A folder test',
+          folder: ' /projects// aurelia / ',
+        },
+      });
+      assert.equal(created.status, 201);
+      assert.equal(created.body.data.folder, 'projects/aurelia');
+
+      const cleared = await request('PATCH', `/admin/media/${created.body.data.id}`, {
+        token,
+        body: { folder: ' / ' },
+      });
+      assert.equal(cleared.body.data.folder, null);
     });
   });
 

@@ -2,7 +2,8 @@
  * Media library (00_MASTER_CONTEXT.md §5.14, §6.12).
  *
  *   GET    /api/admin/media          filters `type`, `folder`, `q`, `provider`;
- *                                    `meta.folders` lists every folder
+ *                                    `meta.folders` lists the folders the
+ *                                    other filters leave something in
  *   POST   /api/admin/media          a metadata record — no binary crosses here
  *   GET    /api/admin/media/:id      with `usedIn`
  *   PUT, PATCH, DELETE, bulk
@@ -126,8 +127,28 @@ function normaliseTags(body) {
 }
 
 /**
+ * A folder as the library files it: its segments trimmed, with no slash at
+ * either end and none doubled (QA-63). The upload sends Cloudinary
+ * `sna/projects/aurelia` for "/projects/aurelia/", and the record used to keep
+ * the slashes — one folder under two names in the Folder filter.
+ *
+ * @param {object} body
+ * @returns {object} the same body
+ */
+function normaliseFolder(body) {
+  if (typeof body.folder !== 'string') return body;
+  const clean = body.folder
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .join('/');
+  body.folder = clean === '' ? null : clean;
+  return body;
+}
+
+/**
  * What every write passes through: the inferred fields on a create or a
- * replace, and the tags always.
+ * replace, and the tags and the folder always.
  *
  * A `PATCH` infers nothing (QA-63). It writes only what it sends, and a patch
  * of the address alone used to re-infer the rest from it: an extension-less
@@ -138,7 +159,7 @@ function normaliseTags(body) {
  * @returns {object}
  */
 const prepareBody = (body, { method } = {}) =>
-  normaliseTags(method === 'PATCH' ? body : inferFromUrl(body));
+  normaliseFolder(normaliseTags(method === 'PATCH' ? body : inferFromUrl(body)));
 
 /**
  * Refuses a delete that would strand a picture somebody is still showing
@@ -228,11 +249,14 @@ function guardMediaBulkDelete(action, targets, { db, query }) {
 }
 
 /**
- * Every folder in the library, sorted — the Folder filter's options (QA-63).
+ * The folders of a set of files, sorted — the Folder filter's options (QA-63).
  *
  * The screens used to list the folders of the page they had loaded: the 24
  * newest files named two folders of the eleven, and a library filtered to one
  * folder offered only that one, so moving to another meant resetting first.
+ * The list is given the files every *other* filter lets through, so each folder
+ * it names holds something to show — a picker of documents offers the folders
+ * that hold documents, not eleven that lead to "Nothing to choose from".
  *
  * @param {Array<object>} rows every file the request may see
  * @returns {Array<string>}
@@ -279,7 +303,7 @@ module.exports = ({ db, getModel }) =>
       const usagesOf = mediaUsageIndex(collections);
       return records.map((record) => ({ ...record, usedIn: usagesOf(record.url) }));
     },
-    listMeta: ({ rows }) => ({ folders: foldersOf(rows) }),
+    listMeta: ({ facet }) => ({ folders: foldersOf(facet('folder')) }),
     adminFilters: {
       type: { field: 'type', type: 'csv' },
       provider: { field: 'provider', type: 'csv' },
@@ -292,6 +316,7 @@ module.exports = ({ db, getModel }) =>
 
 module.exports.inferFromUrl = inferFromUrl;
 module.exports.normaliseTags = normaliseTags;
+module.exports.normaliseFolder = normaliseFolder;
 module.exports.extensionOf = extensionOf;
 module.exports.guardMediaDelete = guardMediaDelete;
 module.exports.guardMediaBulkDelete = guardMediaBulkDelete;

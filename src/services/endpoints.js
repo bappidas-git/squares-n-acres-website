@@ -1560,16 +1560,17 @@ const adminMediaBase = adminResource({
  * asset was never ours to delete. A bulk delete is all or nothing and reads
  * `force` the same way (QA-63).
  *
- * The list's `meta.folders` names every folder in the library, whatever the
- * filters and the page — the Folder filter's options (QA-63). `q` reads the
- * alt text, the title, the folder, the public id, the address and the tags.
+ * The list's `meta.folders` names the folders that hold a file every other
+ * filter lets through, whatever the page — the Folder filter's options, none of
+ * them leading nowhere (QA-63). `q` reads the alt text, the title, the folder,
+ * the public id, the address and the tags.
  */
 const adminMedia = {
   ...adminMediaBase,
   list: {
     ...adminMediaBase.list,
     description:
-      'List media items for the library grid; `meta.folders` names every folder in the library, and `q` also reads the address and the tags',
+      'List media items for the library grid; `meta.folders` names the folders the other filters leave something in, and `q` also reads the address and the tags',
   },
   remove: {
     ...adminMediaBase.remove,

@@ -329,9 +329,11 @@ function matchesFilter(record, descriptor, raw, context) {
  *   — what a list adds to the rows of the page it answers, after paging:
  *   a value nothing filters or sorts on, too dear to work out for every row
  *   of the collection (media's `usedIn`, QA-63)
- * @param {Function} [options.listMeta] `({rows, admin, query}) => object` —
- *   extra keys for a list's `meta`, from every row the request may see
- *   before any filter (media's `folders`, QA-63)
+ * @param {Function} [options.listMeta] `({rows, facet, admin, query}) => object` —
+ *   extra keys for a list's `meta`: `rows` is every row the request may see
+ *   before any filter, and `facet(param)` the rows every filter but `param`
+ *   lets through — the choices a filter can offer without leading nowhere
+ *   (media's `folders`, QA-63)
  * @param {Function} [options.publicTransform] `(record) => record`
  * @param {Function} [options.listShape] `(record, {admin}) => record` — the
  *   trimmed row a list returns
@@ -610,7 +612,10 @@ function makeCrudRouter(options) {
     });
 
     const page = decoratePage ? decoratePage(data, { admin, collections, query: req.query }) : data;
-    const extra = listMeta ? listMeta({ rows: visible, admin, query: req.query }) : null;
+    // The rows every filter but one lets through: what that filter may offer.
+    const facet = (param) =>
+      applyFilters(visible, { ...req.query, [param]: undefined }, { admin, collections });
+    const extra = listMeta ? listMeta({ rows: visible, facet, admin, query: req.query }) : null;
 
     res.ok(
       page.map((record) => scope(record, { admin, list: true })),
