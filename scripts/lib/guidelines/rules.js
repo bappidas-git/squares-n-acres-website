@@ -9,6 +9,8 @@
  * `images.*.alt`, `location.localityId`.
  */
 
+const { maxLengthOf } = require('../../../src/services/schemas/limits');
+
 /** `db.json` collection → MySQL table (§4.2 of prompt 47: snake_case, plural). */
 const snakeCase = (name) =>
   String(name)
@@ -133,7 +135,9 @@ function laravelRule(descriptor, context = {}) {
   if (typeof descriptor.min === 'number') parts.push(`min:${descriptor.min}`);
   if (typeof descriptor.max === 'number' && isLength) parts.push(`max:${descriptor.max}`);
   else if (typeof descriptor.max === 'number') parts.push(`max:${descriptor.max}`);
-  if (typeof descriptor.maxLength === 'number') parts.push(`max:${descriptor.maxLength}`);
+  // A `url` names no `maxLength` and still has one: its column's (QA-65).
+  const maxLength = maxLengthOf(descriptor);
+  if (typeof maxLength === 'number') parts.push(`max:${maxLength}`);
   if (descriptor.pattern && descriptor.type !== 'slug') parts.push(`regex:/${descriptor.pattern}/`);
 
   const references = referencedCollection(field);

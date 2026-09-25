@@ -73,6 +73,14 @@ describe('Laravel rules from field descriptors', () => {
         { field: 'slug', collection: 'properties' },
         'nullable|regex:/^[a-z0-9-]+$/|max:75|unique:properties,slug',
       ],
+      // A url is held to its column's 500 without saying so, and to its own
+      // limit when it names one (QA-65).
+      [{ type: 'url', nullable: true }, { field: 'logoUrl' }, 'nullable|url|max:500'],
+      [
+        { type: 'url', required: true, maxLength: 1000 },
+        { field: 'wideUrl' },
+        'required|url|max:1000',
+      ],
     ];
 
     for (const [descriptor, context, expected] of cases) {
@@ -207,6 +215,8 @@ describe('MySQL schema from the model descriptors', () => {
     assert.equal(columnType({ type: 'object' }, 'seo'), 'JSON');
     assert.equal(columnType({ type: 'string', maxLength: 40 }, 'name'), 'VARCHAR(40)');
     assert.equal(columnType({ type: 'string', maxLength: 4000 }, 'note'), 'TEXT');
+    assert.equal(columnType({ type: 'url' }, 'logo_url'), 'VARCHAR(500)');
+    assert.equal(columnType({ type: 'url', maxLength: 1000 }, 'wide_url'), 'VARCHAR(1000)');
   });
 
   it('writes DDL a reader can check, with the soft deletes and the indexes', () => {
@@ -325,6 +335,15 @@ describe('JSON Schema from the descriptors', () => {
       minLength: 10,
     });
     assert.equal(toJsonSchema({ type: 'int', read: true }).readOnly, true);
+  });
+
+  it('gives a url the 500 characters of its column (QA-65)', () => {
+    assert.deepEqual(toJsonSchema({ type: 'url', nullable: true }), {
+      type: ['string', 'null'],
+      format: 'uri',
+      maxLength: 500,
+    });
+    assert.equal(toJsonSchema({ type: 'array', items: { type: 'url' } }).items.maxLength, 500);
   });
 });
 

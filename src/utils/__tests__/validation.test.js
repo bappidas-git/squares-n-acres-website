@@ -1,3 +1,4 @@
+import { schemas } from '../../services/schemas';
 import { validate } from '../validation';
 
 /**
@@ -132,6 +133,48 @@ describe('validate', () => {
       const schema = { code: { type: 'string', pattern: '^[A-Z]{3}$' } };
       expect(validate({ code: 'abc' }, schema).code).toBe('The code format is invalid.');
       expect(validate({ code: 'BLR' }, schema)).toEqual({});
+    });
+
+    it('holds a url to its column’s 500 characters unless it names its own limit (QA-65)', () => {
+      const address = (length) => `https://cdn.example.com/${'a'.repeat(length - 28)}.png`;
+      const schema = {
+        logoUrl: { type: 'url', nullable: true },
+        gallery: { type: 'array', items: { type: 'url' } },
+        wideUrl: { type: 'url', maxLength: 1000 },
+      };
+
+      expect(validate({ logoUrl: address(500), gallery: [address(500)] }, schema)).toEqual({});
+      expect(validate({ logoUrl: address(501), gallery: [address(501)] }, schema)).toEqual({
+        logoUrl: 'The logoUrl may not be greater than 500 characters.',
+        'gallery.0': 'The gallery.0 may not be greater than 500 characters.',
+      });
+      // A descriptor's own `maxLength` still decides.
+      expect(validate({ wideUrl: address(900) }, schema)).toEqual({});
+    });
+
+    it('holds every url of the contract to 500 characters (QA-65)', () => {
+      // Every `url` descriptor the registry holds, at any depth, refuses 501.
+      const urls = [];
+      const walk = (descriptor, key) => {
+        if (!descriptor || typeof descriptor !== 'object') return;
+        if (descriptor.type === 'url') urls.push([key, descriptor]);
+        if (descriptor.items) walk(descriptor.items, `${key}.*`);
+        for (const [field, child] of Object.entries(descriptor.shape ?? {})) {
+          walk(child, `${key}.${field}`);
+        }
+      };
+      for (const [schemaKey, shape] of Object.entries(schemas)) {
+        for (const [field, descriptor] of Object.entries(shape)) {
+          walk(descriptor, `${schemaKey}:${field}`);
+        }
+      }
+
+      expect(urls.length).toBeGreaterThan(50);
+      const tooLong = `https://cdn.example.com/${'a'.repeat(473)}.png`;
+      for (const [key, descriptor] of urls) {
+        const found = validate({ value: tooLong }, { value: descriptor }).value;
+        expect([key, found]).toEqual([key, 'The value may not be greater than 500 characters.']);
+      }
     });
 
     it('checks array length', () => {

@@ -7,17 +7,12 @@ const login = {
   password: { type: 'string', required: true, min: 6, maxLength: 100 },
 };
 
-/**
- * The column is `VARCHAR(500)` (`admin_users.avatar_url`); without the limit
- * here a 3 000-character address was taken by the mock with a 200, and would
- * have failed Laravel's write or been cut short in the database (QA-65).
- */
-const AVATAR_URL_MAX_LENGTH = 500;
-
+// `avatarUrl`, like every `url`, is at most 500 characters — the width of its
+// column (`./limits.js`, QA-65).
 const profile = {
   name: { type: 'string', required: true, min: 2, maxLength: 80 },
   phone: { type: 'phone', nullable: true, default: null },
-  avatarUrl: { type: 'url', nullable: true, default: null, maxLength: AVATAR_URL_MAX_LENGTH },
+  avatarUrl: { type: 'url', nullable: true, default: null },
 };
 
 const password = {
@@ -38,11 +33,4 @@ const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d)/;
 const passwordMessage = (field = 'password') =>
   `The ${field} must contain at least one letter and one digit.`;
 
-module.exports = {
-  login,
-  profile,
-  password,
-  PASSWORD_PATTERN,
-  passwordMessage,
-  AVATAR_URL_MAX_LENGTH,
-};
+module.exports = { login, profile, password, PASSWORD_PATTERN, passwordMessage };

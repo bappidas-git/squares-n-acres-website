@@ -13,6 +13,7 @@
 
 const { MODELS } = require('../../../mock-server/schemas/models');
 const { snakeCase, tableOf, referencedCollection } = require('./rules');
+const { maxLengthOf } = require('../../../src/services/schemas/limits');
 
 /** `ON DELETE` for a reference into master data a property depends on. */
 const RESTRICT = 'RESTRICT';
@@ -214,7 +215,8 @@ function columnType(descriptor, column, { references = null } = {}) {
     case 'phone':
       return 'VARCHAR(20)';
     case 'url':
-      return 'VARCHAR(500)';
+      // The rules and the validators read the same width (QA-65).
+      return `VARCHAR(${maxLengthOf(descriptor)})`;
     case 'slug':
       return `VARCHAR(${descriptor.maxLength ?? 75})`;
     case 'enum':

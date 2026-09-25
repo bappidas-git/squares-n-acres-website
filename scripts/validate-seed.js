@@ -34,6 +34,7 @@ const path = require('path');
 const { TRACE_PATTERNS, ALLOW_LIST } = require('./check-traces');
 const { wordCount } = require('../mock-server/lib/html');
 const { MODELS } = require('../mock-server/schemas/models');
+const { maxLengthOf } = require('../src/services/schemas/limits');
 const { BUILT_IN_SEGMENT_SLUGS, segmentKind } = require('../src/config/segments');
 const { SYSTEM_PAGES, isSystemPage } = require('../src/config/pages');
 const { SECTION_VISIBILITY_KEYS } = require('../src/config/enums');
@@ -299,7 +300,9 @@ function typeMessage(key, value, descriptor, allowPathSlug = false) {
 
 function boundsMessages(key, value, descriptor) {
   const messages = [];
-  const { min, max, maxLength, pattern } = descriptor;
+  const { min, max, pattern } = descriptor;
+  // A `url` names no `maxLength` and is still held to its column's 500 (QA-65).
+  const maxLength = maxLengthOf(descriptor);
 
   if (typeof value === 'number') {
     if (min !== undefined && value < min) messages.push(`${key}: must be at least ${min}`);

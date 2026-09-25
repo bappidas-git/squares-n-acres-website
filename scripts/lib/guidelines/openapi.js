@@ -14,6 +14,7 @@ const { MODELS } = require('../../../mock-server/schemas/models');
 const { allEndpoints } = require('../../../src/services/endpoints');
 const schemas = require('../../../src/services/schemas');
 const { document } = require('./yaml');
+const { maxLengthOf } = require('../../../src/services/schemas/limits');
 
 /** The response shape names that are a collection of §6. */
 const SHAPE_COLLECTIONS = {
@@ -332,7 +333,8 @@ function toJsonSchema(descriptor) {
       node.type = withNull('string');
   }
 
-  if (typeof descriptor.maxLength === 'number') node.maxLength = descriptor.maxLength;
+  const maxLength = maxLengthOf(descriptor);
+  if (typeof maxLength === 'number') node.maxLength = maxLength;
   if (typeof descriptor.min === 'number') {
     if (node.type === 'integer' || node.type === 'number') node.minimum = descriptor.min;
     else if (descriptor.type === 'array') node.minItems = descriptor.min;
