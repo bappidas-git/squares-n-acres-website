@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import Button from '../ui/Button';
 import FilterBar, { SEARCH_DEBOUNCE_MS } from './FilterBar';
-import MediaGrid, { foldersOf } from '../../pages/admin/media/MediaGrid';
+import MediaGrid, { libraryFolders } from '../../pages/admin/media/MediaGrid';
 import MediaUploadZone from '../../pages/admin/media/MediaUploadZone';
 import Modal from '../ui/Modal';
 import Pagination from '../ui/Pagination';
@@ -91,15 +91,25 @@ export default function MediaPickerDialog({
     [accept]
   );
 
-  const { items, meta, loading, error, params, setPage, setFilters, resetFilters, refetch } =
-    useApiList((query, options) => mediaService.list(query, options), {
-      // Never the URL: the dialog's filters are not the page's filters, and a
-      // picker opened over a half-filled form must not rewrite its address.
-      syncToUrl: false,
-      defaults: { page: 1, q: '', folder },
-      fixedParams,
-      debounceMs: SEARCH_DEBOUNCE_MS,
-    });
+  const {
+    items,
+    meta,
+    loading,
+    refreshing,
+    error,
+    params,
+    setPage,
+    setFilters,
+    resetFilters,
+    refetch,
+  } = useApiList((query, options) => mediaService.list(query, options), {
+    // Never the URL: the dialog's filters are not the page's filters, and a
+    // picker opened over a half-filled form must not rewrite its address.
+    syncToUrl: false,
+    defaults: { page: 1, q: '', folder },
+    fixedParams,
+    debounceMs: SEARCH_DEBOUNCE_MS,
+  });
 
   // A dialog that reopens is a fresh choice, not the last one continued — and
   // it opens on the tab its trigger asked for, so "Upload" lands on Upload in
@@ -113,7 +123,22 @@ export default function MediaPickerDialog({
     else setPicked([]);
   }
 
-  const folders = useMemo(() => foldersOf(items), [items]);
+  // Every folder in the library, not the page's (QA-63).
+  const folders = useMemo(
+    () => libraryFolders(meta, items, params.folder),
+    [meta, items, params.folder]
+  );
+
+  // The grid scrolls inside the dialog, and the pager sits under it: the next
+  // page used to open where the last one ended (QA-63).
+  const gridScrollRef = useRef(null);
+  const changePage = useCallback(
+    (next) => {
+      setPage(next);
+      if (gridScrollRef.current) gridScrollRef.current.scrollTop = 0;
+    },
+    [setPage]
+  );
 
   const toggle = useCallback(
     (record) => {
@@ -183,7 +208,8 @@ export default function MediaPickerDialog({
     return fields;
   }, [folders, accept]);
 
-  const totalPages = meta?.totalPages ?? 1;
+  // An unanswered request has no pages to offer (QA-63).
+  const totalPages = error ? 1 : (meta?.totalPages ?? 1);
 
   const tabs = [
     { value: 'library', label: 'Library' },
@@ -230,10 +256,11 @@ export default function MediaPickerDialog({
               onReset={resetFilters}
             />
 
-            <div className={styles.gridScroll}>
+            <div className={styles.gridScroll} ref={gridScrollRef}>
               <MediaGrid
                 items={items}
                 loading={loading}
+                refreshing={refreshing}
                 error={error}
                 onRetry={refetch}
                 selectable
@@ -258,7 +285,7 @@ export default function MediaPickerDialog({
               <Pagination
                 page={params.page ?? 1}
                 totalPages={totalPages}
-                onChange={setPage}
+                onChange={changePage}
                 label="Pages of files"
               />
             ) : null}

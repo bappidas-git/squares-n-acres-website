@@ -26,6 +26,28 @@ export const foldersOf = (items = []) =>
   );
 
 /**
+ * The folders a screen offers: every folder in the library, as the list's
+ * `meta.folders` names them, plus the one being filtered on (QA-63).
+ *
+ * They used to be the folders of the page on screen — two of the eleven on the
+ * first page, and once a folder was chosen, that folder alone, so moving to
+ * another one meant resetting the filter first. An API that does not send
+ * `meta.folders` still gets the old answer rather than none.
+ *
+ * @param {object|null} meta the list's `meta`
+ * @param {object[]} items the page on screen, the fallback
+ * @param {string} [selected] the folder filter's value, always offered
+ * @returns {string[]}
+ */
+export function libraryFolders(meta, items = [], selected = '') {
+  const listed = Array.isArray(meta?.folders)
+    ? meta.folders.filter((name) => typeof name === 'string' && name !== '')
+    : foldersOf(items);
+  if (!selected || listed.includes(selected)) return listed;
+  return [...listed, selected].sort((left, right) => left.localeCompare(right));
+}
+
+/**
  * The grid of files — six columns on a desktop, four on a tablet, two on a
  * phone (§6), with square thumbnails so a row never goes ragged.
  *
@@ -34,9 +56,16 @@ export const foldersOf = (items = []) =>
  * state its caller words (a filtered library says something different from an
  * empty one), and the grid itself.
  *
+ * A failed request shows its error whatever was on screen before (QA-63). The
+ * last answer's tiles used to stay under the new filter — twenty-four
+ * photographs under "Type: Document", page one's files under "page 2" — with
+ * nothing to say the request had failed. A request on its way dims the grid
+ * it is about to replace.
+ *
  * @param {object} props
  * @param {object[]} props.items
- * @param {boolean} [props.loading]
+ * @param {boolean} [props.loading] the first answer is on its way
+ * @param {boolean} [props.refreshing] a later answer is on its way
  * @param {object} [props.error]
  * @param {() => void} [props.onRetry]
  * @param {{title: string, text?: string, action?: React.ReactNode}} [props.emptyState]
@@ -49,6 +78,7 @@ export const foldersOf = (items = []) =>
 export default function MediaGrid({
   items = [],
   loading = false,
+  refreshing = false,
   error = null,
   onRetry,
   emptyState,
@@ -58,7 +88,7 @@ export default function MediaGrid({
   selectable = false,
   label = 'Media library',
 }) {
-  if (error && items.length === 0) {
+  if (error) {
     return (
       <ErrorState
         title="The library could not be loaded"
@@ -68,7 +98,9 @@ export default function MediaGrid({
     );
   }
 
-  if (loading && items.length === 0) {
+  const busy = loading || refreshing;
+
+  if (busy && items.length === 0) {
     return (
       <ul className={styles.grid} aria-busy="true" aria-label={`${label}, loading`}>
         {Array.from({ length: SKELETON_COUNT }, (_unused, index) => (
@@ -99,9 +131,9 @@ export default function MediaGrid({
 
   return (
     <ul
-      className={[styles.grid, loading ? styles.gridStale : ''].filter(Boolean).join(' ')}
+      className={[styles.grid, busy ? styles.gridStale : ''].filter(Boolean).join(' ')}
       aria-label={label}
-      aria-busy={loading || undefined}
+      aria-busy={busy || undefined}
     >
       {items.map((item) => (
         <MediaCard

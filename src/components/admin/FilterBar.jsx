@@ -179,7 +179,9 @@ function SearchInput({ field, value, onChange, stacked = false }) {
     if (text === committed.current) return undefined;
     const timer = setTimeout(() => {
       committed.current = text;
-      onChange?.({ [field.key]: text || undefined });
+      // Spaces alone are no search: they made an empty "Search:" chip, a
+      // Reset and a history entry for a list that did not change (QA-63).
+      onChange?.({ [field.key]: text.trim() ? text : undefined });
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [text, field.key, onChange]);
@@ -465,7 +467,8 @@ function buildChips(fields, values) {
     }
 
     if (field.type === 'search') {
-      if (isSet(values[field.key])) {
+      // An address carrying spaces alone searches for nothing (QA-63).
+      if (isSet(values[field.key]) && String(values[field.key]).trim() !== '') {
         chips.push({
           key: field.key,
           value: values[field.key],

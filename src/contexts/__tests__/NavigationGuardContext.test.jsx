@@ -17,9 +17,9 @@ import useUnsavedChanges from '../../hooks/useUnsavedChanges';
  * exactly when the copy is worth keeping.
  */
 
-function Form({ onDiscard }) {
+function Form({ onDiscard, question }) {
   const [text, setText] = useState('');
-  useUnsavedChanges(text !== '', { onDiscard });
+  useUnsavedChanges(text !== '', { onDiscard, question });
   return (
     <label>
       Headline
@@ -43,7 +43,7 @@ function SignOut({ onSignedOut }) {
   );
 }
 
-function renderGuarded(onDiscard, { onSignedOut = () => {} } = {}) {
+function renderGuarded(onDiscard, { onSignedOut = () => {}, question } = {}) {
   const router = createMemoryRouter(
     [
       {
@@ -61,7 +61,7 @@ function renderGuarded(onDiscard, { onSignedOut = () => {} } = {}) {
           </NavigationGuardProvider>
         ),
         children: [
-          { path: 'form', element: <Form onDiscard={onDiscard} /> },
+          { path: 'form', element: <Form onDiscard={onDiscard} question={question} /> },
           { path: 'elsewhere', element: <p>Somewhere else</p> },
           { path: 'admin/login', element: <p>Sign in</p> },
         ],
@@ -143,6 +143,28 @@ describe('NavigationGuardProvider', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Discard changes' }));
     await waitFor(() => expect(onSignedOut).toHaveBeenCalledTimes(1));
     expect(onDiscard).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks the question a screen words for itself (QA-63)', async () => {
+    const onDiscard = jest.fn();
+    renderGuarded(onDiscard, {
+      question: {
+        title: 'Leave while files are uploading?',
+        message: 'Leaving this page stops the files that are still uploading.',
+        confirmLabel: 'Leave and stop them',
+      },
+    });
+
+    fireEvent.change(screen.getByLabelText('Headline'), { target: { value: 'Khata' } });
+    fireEvent.click(screen.getByRole('link', { name: 'Elsewhere' }));
+
+    expect(await screen.findByText('Leave while files are uploading?')).toBeInTheDocument();
+    expect(screen.getByText(/stops the files that are still uploading/)).toBeInTheDocument();
+    // What it does not word keeps the house's words.
+    expect(screen.getByRole('button', { name: 'Stay on this page' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Leave and stop them' }));
+    expect(await screen.findByText('Somewhere else')).toBeInTheDocument();
   });
 
   it('signs out of a clean form without a question', async () => {

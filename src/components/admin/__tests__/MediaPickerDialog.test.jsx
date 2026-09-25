@@ -222,3 +222,52 @@ describe('toSelection', () => {
     });
   });
 });
+
+describe('browsing (QA-63)', () => {
+  it('offers every folder in the library, and pages back to the top of the grid', async () => {
+    mediaService.list.mockResolvedValue({
+      data: FILES,
+      meta: {
+        page: 1,
+        perPage: 18,
+        total: 40,
+        totalPages: 3,
+        folders: ['authors', 'banks', 'properties'],
+      },
+    });
+    render();
+    await tile('lobby\\.jpg');
+
+    const folder = screen.getByLabelText('Folder', { selector: 'select' });
+    expect([...folder.options].map((option) => option.value)).toEqual([
+      '',
+      'authors',
+      'banks',
+      'properties',
+    ]);
+
+    // eslint-disable-next-line testing-library/no-node-access -- the scroller has no role
+    const grid = screen.getByRole('list', { name: 'Files you can choose' }).parentElement;
+    grid.scrollTop = 300;
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
+
+    expect(grid.scrollTop).toBe(0);
+    await waitFor(() => expect(mediaService.list.mock.calls.at(-1)[0]).toMatchObject({ page: 2 }));
+  });
+
+  it('shows a failed request as one, not as the last answer', async () => {
+    mediaService.list.mockResolvedValueOnce({
+      data: FILES,
+      meta: { page: 1, perPage: 18, total: 40, totalPages: 3 },
+    });
+    render();
+    await tile('lobby\\.jpg');
+
+    mediaService.list.mockRejectedValueOnce(new Error('offline'));
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
+
+    expect(await screen.findByText('The library could not be loaded')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^lobby\.jpg/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Pages of files' })).not.toBeInTheDocument();
+  });
+});

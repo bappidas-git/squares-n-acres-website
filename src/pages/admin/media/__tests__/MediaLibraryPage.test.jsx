@@ -214,18 +214,29 @@ describe('deleting', () => {
     await openDrawer('lakeview-1\\.jpg');
 
     await userEvent.click(await screen.findByRole('button', { name: /remove from the library/i }));
-    await userEvent.click(screen.getByLabelText(/force delete metadata/i));
+    await userEvent.click(screen.getByLabelText(/even though it is in use/i));
     await userEvent.click(screen.getByRole('button', { name: /remove from the library/i }));
 
     await waitFor(() => expect(mediaService.remove).toHaveBeenCalledWith(1, { force: true }));
   });
 
-  it('is explicit that the file itself survives', async () => {
+  it('is explicit that the file itself survives — where it actually is (QA-63)', async () => {
     render();
     await openDrawer('lakeview-1\\.jpg');
 
     await userEvent.click(await screen.findByRole('button', { name: /remove from the library/i }));
+    // A picsum photograph is not on Cloudinary, and the drawer used to say it was.
+    expect(screen.getByText(/stays on picsum\.photos/i)).toBeInTheDocument();
+    expect(screen.queryByText(/stays on Cloudinary/i)).not.toBeInTheDocument();
+  });
+
+  it('says Cloudinary for a Cloudinary file, and offers no force for a file nobody uses', async () => {
+    render();
+    await openDrawer('spare\\.png');
+
+    await userEvent.click(await screen.findByRole('button', { name: /remove from the library/i }));
     expect(screen.getByText(/stays on Cloudinary/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/even though it is in use/i)).not.toBeInTheDocument();
   });
 });
 

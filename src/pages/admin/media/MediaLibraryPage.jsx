@@ -1,16 +1,18 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import FilterBar, { SEARCH_DEBOUNCE_MS } from '../../../components/admin/FilterBar';
 import MediaAddUrlDialog from './MediaAddUrlDialog';
 import MediaEditDrawer from './MediaEditDrawer';
-import MediaGrid, { foldersOf } from './MediaGrid';
+import MediaGrid, { libraryFolders } from './MediaGrid';
 import MediaUploadZone from './MediaUploadZone';
 import PageHeader from '../../../components/admin/PageHeader';
 import mediaService from '../../../services/mediaService';
 import useApiList from '../../../hooks/useApiList';
 import useCloudinaryConfig from '../../../hooks/useCloudinaryConfig';
+import useLingering from '../../../hooks/useLingering';
 import useMediaUpload from './useMediaUpload';
+import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 import { Alert, Button, Pagination } from '../../../components/ui';
 import { MEDIA_PROVIDERS, MEDIA_TYPES } from '../../../config/enums';
 import { formatNumber } from '../../../utils/format';
@@ -47,6 +49,18 @@ const PARAM_KEYS = {
 export const NOT_CONFIGURED_HINT =
   'Configure Cloudinary in Settings → Integrations to enable uploads.';
 
+/** What leaving asks while files are still on their way (QA-63). */
+const UPLOADING_QUESTION = {
+  title: 'Leave while files are uploading?',
+  message:
+    'Leaving this page stops the files that are still uploading. The ones that have finished are already in the library.',
+  confirmLabel: 'Leave and stop them',
+  cancelLabel: 'Stay on this page',
+};
+
+/** The name a toast gives a file. */
+const nameOf = (record) => record?.title || record?.alt || record?.url || 'The file';
+
 /**
  * Admin → Media (`/admin/media`) — every picture, video and document the site
  * points at (§6.12).
@@ -58,25 +72,53 @@ export const NOT_CONFIGURED_HINT =
  * client has given us a cloud name, and it is what every seed picture uses —
  * so "Add by URL" is never hidden and the upload half simply is not offered
  * until it can work.
+ *
+ * What QA-63 settled here: the Folder filter offers every folder in the
+ * library (`meta.folders`), not the page's; a request that fails says so
+ * instead of leaving the last answer on screen, and one on its way dims the
+ * grid; paging brings the top of the new page into view; a removal that
+ * empties a page steps back one; a batch of uploads is announced once, and
+ * leaving while it runs asks first.
  */
 export default function MediaLibraryPage() {
   const toast = useToast();
   const { configured } = useCloudinaryConfig();
 
-  const { items, meta, loading, error, params, setPage, setFilters, resetFilters, refetch } =
-    useApiList((query, options) => mediaService.list(query, options), {
-      syncToUrl: true,
-      paramKeys: PARAM_KEYS,
-      defaults: LIST_DEFAULTS,
-      debounceMs: SEARCH_DEBOUNCE_MS,
-    });
+  const {
+    items,
+    meta,
+    loading,
+    refreshing,
+    error,
+    params,
+    setPage,
+    setFilters,
+    resetFilters,
+    refetch,
+  } = useApiList((query, options) => mediaService.list(query, options), {
+    syncToUrl: true,
+    paramKeys: PARAM_KEYS,
+    defaults: LIST_DEFAULTS,
+    debounceMs: SEARCH_DEBOUNCE_MS,
+  });
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [urlOpen, setUrlOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  // The drawer keeps its file while it slides away (QA-63).
+  const [shownEditing, releaseEditing] = useLingering(editing);
   const [folder, setFolder] = useState('');
 
-  const folders = useMemo(() => foldersOf(items), [items]);
+  const gridTopRef = useRef(null);
+
+  // The page as last rendered, for the answers that land after it changed.
+  const latest = useRef({ items, page: params.page ?? 1 });
+  latest.current = { items, page: params.page ?? 1 };
+
+  const folders = useMemo(
+    () => libraryFolders(meta, items, params.folder),
+    [meta, items, params.folder]
+  );
 
   const copy = useCallback(
     async (url) => {
@@ -90,19 +132,49 @@ export default function MediaLibraryPage() {
     [toast]
   );
 
-  const onUploaded = useCallback(
-    (records) => {
-      toast.success(
-        records.length === 1
-          ? `“${records[0].title || records[0].alt}” is in the library.`
-          : `${records.length} files are in the library.`
-      );
-      refetch();
-    },
-    [toast, refetch]
-  );
+  // A batch of uploads is announced once, and the grid read once, when the
+  // last of it has finished (QA-63). Each file used to raise its own toast and
+  // its own reload — eight files, eight toasts, eight reads of the library —
+  // while each row of the queue already said "Added" on its own.
+  const finished = useRef([]);
+  const onUploaded = useCallback((records) => {
+    finished.current.push(...records);
+  }, []);
 
   const queue = useMediaUpload({ folder, onUploaded });
+
+  useEffect(() => {
+    if (queue.busy || finished.current.length === 0) return;
+    const records = finished.current;
+    finished.current = [];
+    toast.success(
+      records.length === 1
+        ? `“${nameOf(records[0])}” is in the library.`
+        : `${records.length} files are in the library.`
+    );
+    refetch();
+  }, [queue.busy, toast, refetch]);
+
+  // Leaving the page stops what is still uploading, so it asks first — and so
+  // does closing or reloading the tab (QA-63).
+  useUnsavedChanges(queue.busy, { question: UPLOADING_QUESTION });
+
+  /** Pages, bringing the top of the grid back into view when it has scrolled away. */
+  const changePage = useCallback(
+    (next) => {
+      setPage(next);
+      const element = gridTopRef.current;
+      if (!element) return;
+      // The admin scrolls inside its canvas, under a sticky bar, so "out of
+      // view" is measured against the canvas rather than the window.
+      const canvas = element.closest('main');
+      const top = canvas ? canvas.getBoundingClientRect().top : 0;
+      if (element.getBoundingClientRect().top < top) {
+        element.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+      }
+    },
+    [setPage]
+  );
 
   const filterFields = useMemo(
     () => [
@@ -133,14 +205,22 @@ export default function MediaLibraryPage() {
   );
 
   const filtered = Boolean(params.q || params.type || params.folder || params.provider);
-  const total = meta?.total;
-  const totalPages = meta?.totalPages ?? 1;
+  // An unanswered request has no count and no pages: the header and the pager
+  // used to go on reading the last answer under an error (QA-63).
+  const total = error ? undefined : meta?.total;
+  const totalPages = error ? 1 : (meta?.totalPages ?? 1);
 
   const emptyState = useMemo(() => {
     if (params.page > 1) {
       return {
         title: TABLES.emptyPage,
         text: TABLES.emptyPageText,
+        // With a single page left there is no pager to go back with (QA-63).
+        action: (
+          <Button variant="outline" onClick={() => changePage(1)}>
+            {TABLES.firstPage}
+          </Button>
+        ),
       };
     }
     if (filtered) {
@@ -165,7 +245,30 @@ export default function MediaLibraryPage() {
         </Button>
       ),
     };
-  }, [params.page, filtered, resetFilters, configured]);
+  }, [params.page, filtered, resetFilters, configured, changePage]);
+
+  /** Closes the drawer when it still shows `record` — not another file opened since. */
+  const closeIfShowing = useCallback((record) => {
+    setEditing((current) =>
+      current && record && String(current.id) === String(record.id) ? null : current
+    );
+  }, []);
+
+  /**
+   * Reads the grid again after `record` left it, a page back when it was the
+   * last file on a page after the first (QA-63): the list used to stay on
+   * "Nothing on this page", page 17 of 16.
+   */
+  const refreshAfterRemoving = useCallback(
+    (record) => {
+      const { items: shown, page } = latest.current;
+      const emptied =
+        page > 1 && shown.length > 0 && shown.every((one) => String(one.id) === String(record.id));
+      if (emptied) changePage(page - 1);
+      else refetch();
+    },
+    [changePage, refetch]
+  );
 
   return (
     <>
@@ -213,16 +316,19 @@ export default function MediaLibraryPage() {
           />
         ) : null}
 
-        <FilterBar
-          fields={filterFields}
-          values={params}
-          onChange={setFilters}
-          onReset={resetFilters}
-        />
+        <div ref={gridTopRef} className={styles.gridTop}>
+          <FilterBar
+            fields={filterFields}
+            values={params}
+            onChange={setFilters}
+            onReset={resetFilters}
+          />
+        </div>
 
         <MediaGrid
           items={items}
           loading={loading}
+          refreshing={refreshing}
           error={error}
           onRetry={refetch}
           emptyState={emptyState}
@@ -241,7 +347,7 @@ export default function MediaLibraryPage() {
             <Pagination
               page={params.page ?? 1}
               totalPages={totalPages}
-              onChange={setPage}
+              onChange={changePage}
               label="Media library pages"
             />
           </div>
@@ -250,31 +356,40 @@ export default function MediaLibraryPage() {
 
       <MediaAddUrlDialog
         open={urlOpen}
-        folder={folder}
+        // A file added while one folder is on screen is filed there, so it
+        // does not vanish from the view it was added in (QA-63).
+        folder={folder || params.folder || ''}
         folders={folders}
         onClose={() => setUrlOpen(false)}
         onCreated={(record) => {
-          toast.success(`“${record.title || record.alt}” is in the library.`);
+          toast.success(`“${nameOf(record)}” is in the library.`);
           refetch();
         }}
       />
 
       <MediaEditDrawer
-        item={editing}
+        open={Boolean(editing)}
+        item={shownEditing}
         folders={folders}
         onCopy={copy}
         onClose={() => setEditing(null)}
-        onSaved={() => {
+        onExited={releaseEditing}
+        onSaved={(record) => {
           toast.success(TOASTS.saved('File'));
-          setEditing(null);
+          closeIfShowing(record);
           refetch();
         }}
         onDeleted={(record) => {
-          toast.success(
-            `“${record.title || record.alt}” is out of the library. The file itself is untouched.`
-          );
-          setEditing(null);
-          refetch();
+          toast.success(`“${nameOf(record)}” is out of the library. The file itself is untouched.`);
+          closeIfShowing(record);
+          refreshAfterRemoving(record);
+        }}
+        onGone={(record, action) => {
+          const name = `“${nameOf(record)}”`;
+          if (action === 'delete') toast.info(TOASTS.alreadyDeleted(name));
+          else toast.error(TOASTS.gone(name));
+          closeIfShowing(record);
+          refreshAfterRemoving(record);
         }}
       />
     </>

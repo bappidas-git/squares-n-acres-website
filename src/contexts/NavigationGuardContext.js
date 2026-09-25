@@ -44,7 +44,23 @@ const isSessionEnd = (location) =>
 const NavigationGuardContext = createContext(null);
 
 /**
- * @returns {{ register: (id: symbol, dirty: boolean, onDiscard?: () => void) => () => void,
+ * What the dialog asks when nothing more particular was registered.
+ *
+ * A screen whose work in hand is not a form can word its own question — the
+ * media library's uploads, which leaving stops (QA-63). It is used when that
+ * screen is the only one with something to lose; two at once get this one.
+ */
+const DEFAULT_QUESTION = {
+  title: 'Discard unsaved changes?',
+  message: UNSAVED_CHANGES_MESSAGE,
+  confirmLabel: 'Discard changes',
+  cancelLabel: 'Stay on this page',
+};
+
+/**
+ * @returns {{ register: (id: symbol, dirty: boolean, onDiscard?: () => void,
+ *   question?: {title?: string, message?: string, confirmLabel?: string,
+ *   cancelLabel?: string}) => () => void,
  *   isBlocking: boolean, confirmDiscard: () => Promise<boolean> }}
  */
 export function useNavigationGuard() {
@@ -58,21 +74,36 @@ export const NavigationGuardProvider = ({ children }) => {
   // What each dirty form does once its changes are discarded — the article
   // form forgets the copy it autosaved to this browser (QA-55).
   const discardRef = useRef(new Map());
+  // The question a registration words for itself, when it words one (QA-63).
+  const questionRef = useRef(new Map());
   const [blocking, setBlocking] = useState(false);
+  const [question, setQuestion] = useState(DEFAULT_QUESTION);
 
-  const sync = useCallback(() => setBlocking(dirtyRef.current.size > 0), []);
+  const sync = useCallback(() => {
+    const size = dirtyRef.current.size;
+    setBlocking(size > 0);
+    // Nothing left to lose keeps the last question, so a dialog fading out
+    // after "Leave" does not change its words on the way out.
+    if (size === 0) return;
+    const [only] = dirtyRef.current;
+    const own = size === 1 ? questionRef.current.get(only) : null;
+    setQuestion(own ? { ...DEFAULT_QUESTION, ...own } : DEFAULT_QUESTION);
+  }, []);
 
   const register = useCallback(
-    (id, dirty, onDiscard) => {
+    (id, dirty, onDiscard, asked) => {
       if (dirty) dirtyRef.current.add(id);
       else dirtyRef.current.delete(id);
       if (dirty && onDiscard) discardRef.current.set(id, onDiscard);
       else discardRef.current.delete(id);
+      if (dirty && asked) questionRef.current.set(id, asked);
+      else questionRef.current.delete(id);
       sync();
 
       return () => {
         dirtyRef.current.delete(id);
         discardRef.current.delete(id);
+        questionRef.current.delete(id);
         sync();
       };
     },
@@ -112,6 +143,7 @@ export const NavigationGuardProvider = ({ children }) => {
     for (const id of dirtyRef.current) discardRef.current.get(id)?.();
     dirtyRef.current.clear();
     discardRef.current.clear();
+    questionRef.current.clear();
     setBlocking(false);
   };
 
@@ -139,10 +171,10 @@ export const NavigationGuardProvider = ({ children }) => {
       {children}
       <ConfirmDialog
         open={blocker.state === 'blocked' || Boolean(asking)}
-        title="Discard unsaved changes?"
-        message={UNSAVED_CHANGES_MESSAGE}
-        confirmLabel="Discard changes"
-        cancelLabel="Stay on this page"
+        title={question.title}
+        message={question.message}
+        confirmLabel={question.confirmLabel}
+        cancelLabel={question.cancelLabel}
         danger
         onConfirm={leave}
         onClose={stay}
