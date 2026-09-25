@@ -66,6 +66,10 @@ export function createFormState({ propertyId = null, record = null } = {}) {
     touched: {},
     saving: false,
     lastSavedAt: record?.updatedAt ?? null,
+    // The version of the record these values were made from — its `updatedAt`
+    // — sent with the next save so that one made by somebody else in between
+    // is refused rather than silently overwritten (QA-62).
+    version: record?.updatedAt ?? null,
     isNew: !propertyId,
     restoredDraft: false,
   };
@@ -140,6 +144,7 @@ export default function reducer(state, action) {
         touched: {},
         saving: false,
         lastSavedAt: action.record?.updatedAt ?? state.lastSavedAt,
+        version: action.record?.updatedAt ?? null,
         isNew: false,
         restoredDraft: false,
       };
@@ -291,6 +296,7 @@ export default function reducer(state, action) {
         errors: {},
         saving: false,
         lastSavedAt: action.record?.updatedAt ?? new Date().toISOString(),
+        version: action.record?.updatedAt ?? state.version,
         isNew: false,
         restoredDraft: false,
       };
@@ -305,6 +311,9 @@ export default function reducer(state, action) {
         ...state,
         values: { ...createInitialState(), ...draft },
         errors: {},
+        // The draft was made from the version it recorded; saved on top of a
+        // newer one, it would undo whatever that save changed.
+        version: action.draft?.version ?? state.version,
         restoredDraft: true,
       };
     }

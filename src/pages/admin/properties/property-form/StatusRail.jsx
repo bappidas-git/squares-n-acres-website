@@ -176,7 +176,11 @@ export default function StatusRail({ form, collapsible = false }) {
           label="Featured"
           checked={values.isFeatured === true}
           disabled={readOnly || working}
-          hint="Featured listings fill the row on the home page."
+          hint={
+            values.isFeatured === true && !published
+              ? 'Featured, but not published: the home page’s Featured row shows it once it is.'
+              : 'Shown in the home page’s Featured row, highest priority first.'
+          }
           onChange={(next) => setField('isFeatured', next)}
         />
         <SwitchField

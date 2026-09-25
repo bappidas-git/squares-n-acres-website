@@ -187,6 +187,30 @@ describe('RichTextEditor', () => {
     expect(stats.readingTime).toBeGreaterThanOrEqual(1);
   });
 
+  it('counts the document it shows when its editor is replaced (QA-62)', () => {
+    // Tiptap replaces its editor after mount — on a heavy form its 1 ms destroy
+    // timer beats the mount effect; here, a new placeholder rebuilds the
+    // extensions. The replacement is created holding the new value, so no
+    // transaction follows, and the counter kept reading the first instance:
+    // "0 words · 0 characters" under a stored description.
+    const { rerender } = render(
+      <RichTextEditor label="Body" value="" placeholder="Start" onChange={() => {}} />
+    );
+    expect(screen.getByText('0 words')).toBeInTheDocument();
+
+    rerender(
+      <RichTextEditor
+        label="Body"
+        value="<p>Three words here.</p>"
+        placeholder="Continue"
+        onChange={() => {}}
+      />
+    );
+
+    expect(screen.getByText('3 words')).toBeInTheDocument();
+    expect(screen.getByText('17 characters')).toBeInTheDocument();
+  });
+
   it('drops the block inserts in the compact variant', () => {
     draw({ variant: 'compact' });
 

@@ -9,6 +9,7 @@ import { Avatar, Chip, IconButton } from '../ui';
 import { ROLES as ROLE_LABELS } from '../../config/enums';
 import { SITE } from '../../config/site';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
+import { useNavigationGuard } from '../../contexts/NavigationGuardContext';
 
 import styles from './AdminTopbar.module.css';
 
@@ -35,6 +36,7 @@ export default function AdminTopbar({
 }) {
   const navigate = useNavigate();
   const { user, role, logout } = useAdminAuth();
+  const { confirmDiscard } = useNavigationGuard();
   const [anchor, setAnchor] = useState(null);
   const triggerRef = useRef(null);
 
@@ -45,8 +47,11 @@ export default function AdminTopbar({
     navigate(PATHS.adminProfile);
   };
 
-  const signOut = () => {
+  // Unsaved changes are asked about before the session ends, while there is
+  // still a session to stay in (QA-62).
+  const signOut = async () => {
     close();
+    if (!(await confirmDiscard())) return;
     logout();
   };
 

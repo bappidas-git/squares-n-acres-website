@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import AdminTabs, { AdminTabPanel } from '../../../../components/admin/AdminTabs';
 import { Button, ConfirmDialog } from '../../../../components/ui';
 import useBreakpoint from '../../../../hooks/useBreakpoint';
+import ConflictDialog from './ConflictDialog';
 import DraftBanner from './DraftBanner';
 import ErrorSummary from './ErrorSummary';
 import StatusRail from './StatusRail';
@@ -59,6 +60,10 @@ export default function PropertyFormShell({ form }) {
     draftOffer,
     restoreDraft,
     discardDraft,
+    conflict,
+    dismissConflict,
+    overwriteConflict,
+    reloadConflict,
   } = form;
 
   const strip = TABS.map((tab) => ({
@@ -181,6 +186,14 @@ export default function PropertyFormShell({ form }) {
           </Button>
         </div>
       )}
+
+      <ConflictDialog
+        conflict={conflict}
+        busy={saving || busy}
+        onKeepEditing={dismissConflict}
+        onReload={reloadConflict}
+        onOverwrite={overwriteConflict}
+      />
 
       <ConfirmDialog
         open={confirmInactive}

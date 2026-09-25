@@ -81,6 +81,32 @@ export default function PropertyFormPage() {
     );
   }
 
+  // A save found the listing deleted elsewhere while this page was open. The
+  // work on screen is still here — "Not found" left it in a form that could
+  // never be saved again (QA-62) — so it can become a new listing.
+  if (isEdit && form.gone) {
+    return (
+      <>
+        <PageHeader title="Edit property" breadcrumbs={breadcrumbs} />
+        <EmptyState
+          icon={<Icon icon="mdi:home-remove-outline" width="40" height="40" />}
+          title="This listing no longer exists"
+          text="It was deleted elsewhere while this page was open, so the changes had nowhere to go. They are still here: save them as a new listing, or leave them."
+          action={
+            <div className={styles.goneActions}>
+              <Button loading={form.busy} onClick={form.saveAsNew}>
+                Save as a new listing
+              </Button>
+              <Button variant="outline" to={PATHS.adminProperties}>
+                Back to properties
+              </Button>
+            </div>
+          }
+        />
+      </>
+    );
+  }
+
   if (isEdit && (error || !record)) {
     return (
       <>
