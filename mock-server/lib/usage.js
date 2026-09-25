@@ -154,16 +154,32 @@ function findUsages(type, id, source) {
   return finder(id, resolveSource(source));
 }
 
-/** The plural noun a 409 message uses for a usage type. */
+/**
+ * The plural noun a 409 message uses for a usage type.
+ *
+ * Every type a media usage can report is here too (QA-63): the media 409 read
+ * "Used by 1 teamMember" — the model's own spelling, in a sentence meant for
+ * an editor.
+ */
 const NOUNS = {
   property: ['property', 'properties'],
   propertyType: ['property type', 'property types'],
   lead: ['lead', 'leads'],
   locality: ['locality', 'localities'],
+  developer: ['developer', 'developers'],
+  bank: ['bank', 'banks'],
   faq: ['FAQ', 'FAQs'],
   article: ['article', 'articles'],
+  author: ['author', 'authors'],
   page: ['page', 'pages'],
+  teamMember: ['team member', 'team members'],
+  partner: ['partner', 'partners'],
+  testimonial: ['testimonial', 'testimonials'],
+  job: ['job opening', 'job openings'],
   jobApplication: ['application', 'applications'],
+  // There is one of each, so they are named rather than counted.
+  settings: 'the site settings',
+  seoSettings: 'the SEO settings',
 };
 
 /**
@@ -177,6 +193,7 @@ function describeUsages(usages) {
   for (const entry of usages) counts.set(entry.type, (counts.get(entry.type) ?? 0) + 1);
 
   const parts = [...counts].map(([type, count]) => {
+    if (typeof NOUNS[type] === 'string') return NOUNS[type];
     const [one, many] = NOUNS[type] ?? [type, `${type}s`];
     return `${count} ${count === 1 ? one : many}`;
   });
@@ -185,26 +202,114 @@ function describeUsages(usages) {
   return `Used by ${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
 }
 
-/** The collections a media URL can appear in, with the type name each reports. */
+/**
+ * The collections a media URL can appear in, with the type name each reports.
+ *
+ * Every record a visitor can see a file on (QA-63). The list stopped at seven,
+ * so a bank's logo, an author's photograph, a testimonial's avatar, a picture
+ * in a FAQ answer or a job opening, and the default share image of the SEO
+ * settings all read "Not used anywhere yet — removing it here changes nothing
+ * a visitor sees", and their delete was never refused.
+ */
 const MEDIA_HAYSTACKS = [
   ['properties', 'property'],
   ['articles', 'article'],
   ['pages', 'page'],
   ['localities', 'locality'],
   ['developers', 'developer'],
+  ['banks', 'bank'],
+  ['authors', 'author'],
   ['teamMembers', 'teamMember'],
   ['partners', 'partner'],
+  ['testimonials', 'testimonial'],
+  ['faqs', 'faq'],
+  ['jobOpenings', 'job'],
+];
+
+/** The single records a media URL can appear in, and how each is named. */
+const MEDIA_SINGLETONS = [
+  ['siteSettings', { type: 'settings', id: 0, title: 'Site settings' }],
+  ['seoSettings', { type: 'seoSettings', id: 0, title: 'SEO settings' }],
+];
+
+/** Every collection and singleton {@link findMediaUsages} reads. */
+const MEDIA_USAGE_COLLECTIONS = [
+  ...MEDIA_HAYSTACKS.map(([collection]) => collection),
+  ...MEDIA_SINGLETONS.map(([name]) => name),
 ];
 
 /**
- * Where a media URL appears — best effort, by searching the stored JSON
- * (§6.12).
+ * A character that carries a URL's path on. An address followed by one is a
+ * longer address, not this one: `…/villa.jpg` is not used by a page showing
+ * `…/villa.jpg.webp`, nor `…/seed/sna-1` by `…/seed/sna-10`. Anything else — a
+ * closing quote, `?`, `#`, `)`, a space, the end — ends it.
+ */
+const PATH_CHARACTER = /[A-Za-z0-9\-._~/%]/;
+
+/**
+ * Whether `text` holds `url` as a whole address rather than as the start of a
+ * longer one (QA-63).
+ *
+ * @param {string} text a record, as JSON
+ * @param {string} url
+ * @returns {boolean}
+ */
+function holdsUrl(text, url) {
+  let from = text.indexOf(url);
+  while (from !== -1) {
+    const next = text.charAt(from + url.length);
+    if (next === '' || !PATH_CHARACTER.test(next)) return true;
+    from = text.indexOf(url, from + 1);
+  }
+  return false;
+}
+
+/**
+ * A reusable "where is this address used?" for many addresses at once.
+ *
+ * Each record is turned into JSON once, however many addresses are asked
+ * about (QA-63). The library asks for the page of files it shows, and asking
+ * per file cost a full serialisation of every property, article and page per
+ * file — about a second for each page of the grid.
  *
  * A picture is referenced from a dozen differently-shaped places (a property's
  * `images[].url`, an article's `featuredImage.url`, a page block's `data`, the
  * site logo), and the model has no join table for any of them, so the honest
- * implementation is a string search. It is used to warn an editor before they
- * delete, never to refuse the delete.
+ * implementation is a string search. It warns an editor before they delete,
+ * and a delete asked for with `force` goes ahead regardless.
+ *
+ * @param {object} [source] the collections to search; the runtime database by default
+ * @returns {(url: string) => Array<{type: string, id: number, title: string}>}
+ */
+function mediaUsageIndex(source) {
+  const db = resolveSource(source);
+
+  const entries = [];
+  for (const [collection, type] of MEDIA_HAYSTACKS) {
+    for (const record of rows(db, collection)) {
+      entries.push({ text: JSON.stringify(record), usage: () => usage(type, record) });
+    }
+  }
+  for (const [name, found] of MEDIA_SINGLETONS) {
+    const record = db?.[name];
+    if (record && typeof record === 'object') {
+      entries.push({ text: JSON.stringify(record), usage: () => ({ ...found }) });
+    }
+  }
+
+  return (url) => {
+    if (typeof url !== 'string' || url === '') return [];
+    // The address as it sits inside a JSON string, so one with a `"` or a `\`
+    // in it is still found.
+    const needle = JSON.stringify(url).slice(1, -1);
+    return entries.filter((entry) => holdsUrl(entry.text, needle)).map((entry) => entry.usage());
+  };
+}
+
+/**
+ * Where one media URL appears — best effort, by searching the stored JSON
+ * (§6.12). {@link mediaUsageIndex} answers the same question for many
+ * addresses at the cost of one.
  *
  * @param {string} url
  * @param {object} [source]
@@ -212,21 +317,7 @@ const MEDIA_HAYSTACKS = [
  */
 function findMediaUsages(url, source) {
   if (typeof url !== 'string' || url === '') return [];
-  const db = resolveSource(source);
-  const found = [];
-
-  for (const [collection, type] of MEDIA_HAYSTACKS) {
-    for (const record of rows(db, collection)) {
-      if (JSON.stringify(record).includes(url)) found.push(usage(type, record));
-    }
-  }
-
-  const settings = db.siteSettings;
-  if (settings && JSON.stringify(settings).includes(url)) {
-    found.push({ type: 'settings', id: 0, title: 'Site settings' });
-  }
-
-  return found;
+  return mediaUsageIndex(source)(url);
 }
 
 /**
@@ -255,7 +346,10 @@ const USAGE_COLLECTIONS = [
 module.exports = {
   findUsages,
   findMediaUsages,
+  mediaUsageIndex,
+  holdsUrl,
   describeUsages,
   FINDERS,
   USAGE_COLLECTIONS,
+  MEDIA_USAGE_COLLECTIONS,
 };

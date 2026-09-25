@@ -308,8 +308,13 @@ const redirectImport = {
   },
 };
 
+/**
+ * A media record. The address is the record, so it is unique — a second
+ * record for the same file listed the picture twice and split its usages
+ * between them — and it fits the `VARCHAR(500)` it is stored in (QA-63).
+ */
 const media = {
-  url: { type: 'url', required: true },
+  url: { type: 'url', required: true, maxLength: 500, unique: true },
   publicId: { type: 'string', nullable: true, maxLength: 200, default: null },
   provider: {
     type: 'enum',

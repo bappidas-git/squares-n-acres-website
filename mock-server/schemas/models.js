@@ -546,7 +546,10 @@ const media = {
   collection: 'media',
   slugField: null,
   publicRead: false,
-  searchable: ['alt', 'title', 'folder', 'publicId'],
+  // The address and the tags too (QA-63): the search box reads "Alt text,
+  // title or address", and the drawer calls tags "your own words for finding
+  // this file again" — neither was searched.
+  searchable: ['alt', 'title', 'folder', 'publicId', 'url', 'tags'],
   sortable: ['createdAt', 'bytes', 'alt'],
   defaultSort: { field: 'createdAt', order: 'desc' },
   publicScope: null,

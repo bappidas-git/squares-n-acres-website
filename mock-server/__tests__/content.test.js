@@ -3235,4 +3235,247 @@ describe('/admin/media', () => {
       assert.equal((await request('GET', '/media')).status, 404);
     });
   });
+  /* ---------------------------------------------------------------- *
+   * QA-63
+   * ---------------------------------------------------------------- */
+
+  /** The address of a seeded media record in `folder`. */
+  const urlIn = (db, folder) => db.getCollection('media').find((row) => row.folder === folder).url;
+
+  it('says where a file is used wherever the site can show it (QA-63)', async () => {
+    const shown = 'https://picsum.photos/seed/qa-63-everywhere/800/600';
+    const seed = seedWith({
+      banks: (rows) => {
+        rows[0].logoUrl = shown;
+      },
+      authors: (rows) => {
+        rows[0].avatarUrl = shown;
+      },
+      testimonials: (rows) => {
+        rows[0].avatarUrl = shown;
+      },
+      faqs: (rows) => {
+        rows[0].answer = `<p>See <img src="${shown}" alt="The plan"></p>`;
+      },
+      jobOpenings: (rows) => {
+        rows[0].description = `<p><img src="${shown}" alt="The office"></p>`;
+      },
+      seoSettings: (settings) => {
+        settings.defaults = { ...(settings.defaults ?? {}), ogImageUrl: shown };
+      },
+      media: (rows) => {
+        rows.push({ ...rows[0], id: 9001, url: shown, alt: 'Shown everywhere' });
+      },
+    });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+
+      const one = await request('GET', '/admin/media/9001', { token });
+      const types = one.body.data.usedIn.map((usage) => usage.type).sort();
+      assert.deepEqual(types, ['author', 'bank', 'faq', 'job', 'seoSettings', 'testimonial']);
+
+      // The list says the same for the page it answers.
+      const list = await request('GET', '/admin/media?withUsage=true&q=Shown%20everywhere', {
+        token,
+      });
+      assert.deepEqual(list.body.data[0].usedIn.map((usage) => usage.type).sort(), [
+        'author',
+        'bank',
+        'faq',
+        'job',
+        'seoSettings',
+        'testimonial',
+      ]);
+
+      // And a delete is refused in words an editor reads.
+      const refused = await request('DELETE', '/admin/media/9001', { token });
+      assert.equal(refused.status, 409);
+      assert.match(refused.body.errors.id[0], /1 bank/);
+      assert.match(refused.body.errors.id[0], /the SEO settings/);
+      assert.doesNotMatch(refused.body.errors.id[0], /seoSettings|teamMember/);
+    });
+  });
+
+  it('does not count a longer address that merely starts with this one (QA-63)', async () => {
+    const short = 'https://picsum.photos/seed/qa-63-prefix';
+    const seed = seedWith({
+      // A listing's gallery, which the search has always read: a plain
+      // substring search counted this as a use of the shorter address.
+      properties: (rows) => {
+        rows[0].images.push({ ...rows[0].images[0], url: `${short}0/800/600` });
+      },
+      media: (rows) => {
+        rows.push({ ...rows[0], id: 9002, url: short, alt: 'The shorter address' });
+      },
+    });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const one = await request('GET', '/admin/media/9002', { token });
+      assert.deepEqual(one.body.data.usedIn, []);
+    });
+  });
+
+  it('lists every folder in the library, whatever the page and the filters (QA-63)', async () => {
+    await withServer(async ({ request, login, db }) => {
+      const token = await login(ADMIN);
+      const every = [
+        ...new Set(
+          db
+            .getCollection('media')
+            .map((row) => row.folder)
+            .filter(Boolean)
+        ),
+      ].sort((a, b) => a.localeCompare(b));
+
+      const first = await request('GET', '/admin/media?perPage=2', { token });
+      assert.deepEqual(first.body.meta.folders, every);
+
+      const narrowed = await request('GET', '/admin/media?folder=banks&type=image&page=1', {
+        token,
+      });
+      assert.ok(narrowed.body.data.every((row) => row.folder === 'banks'));
+      assert.deepEqual(narrowed.body.meta.folders, every);
+    });
+  });
+
+  it('finds a file by its address and by its tags (QA-63)', async () => {
+    await withServer(async ({ request, login, db }) => {
+      const token = await login(ADMIN);
+      const record = db.getCollection('media').find((row) => row.folder === 'banks');
+
+      const created = await request('POST', '/admin/media', {
+        token,
+        body: {
+          url: 'https://images.example.com/qa-63/aerial-view.jpg',
+          alt: 'From above',
+          tags: ['drone-shot'],
+        },
+      });
+      assert.equal(created.status, 201);
+
+      const byAddress = await request('GET', `/admin/media?q=${encodeURIComponent(record.url)}`, {
+        token,
+      });
+      assert.deepEqual(ids(byAddress), [record.id]);
+
+      const byHost = await request('GET', '/admin/media?q=images.example.com', { token });
+      assert.deepEqual(ids(byHost), [created.body.data.id]);
+
+      const byTag = await request('GET', '/admin/media?q=drone', { token });
+      assert.deepEqual(ids(byTag), [created.body.data.id]);
+    });
+  });
+
+  it('keeps one record per address, and one that fits its column (QA-63)', async () => {
+    await withServer(async ({ request, login, db }) => {
+      const token = await login(ADMIN);
+      const url = urlIn(db, 'localities');
+      const before = db.getCollection('media').length;
+
+      const twice = await request('POST', '/admin/media', {
+        token,
+        body: { url, alt: 'The same picture again', type: 'image' },
+      });
+      assert.equal(twice.status, 422);
+      assert.match(twice.body.errors.url[0], /already been taken/);
+
+      const long = await request('POST', '/admin/media', {
+        token,
+        body: { url: `https://example.com/${'x'.repeat(490)}.jpg`, alt: 'Too long' },
+      });
+      assert.equal(long.status, 422);
+      assert.match(long.body.errors.url[0], /500/);
+      assert.equal(db.getCollection('media').length, before);
+
+      // A record keeps its own address through a save.
+      const record = db.getCollection('media').find((row) => row.url === url);
+      const saved = await request('PATCH', `/admin/media/${record.id}`, {
+        token,
+        body: { url, alt: 'Re-described' },
+      });
+      assert.equal(saved.status, 200);
+    });
+  });
+
+  it('keeps tags trimmed, without blanks, each once (QA-63)', async () => {
+    await withServer(async ({ request, login, db }) => {
+      const token = await login(ADMIN);
+      const record = db.getCollection('media')[0];
+
+      const saved = await request('PATCH', `/admin/media/${record.id}`, {
+        token,
+        body: { tags: [' Aerial ', 'aerial', '  ', '', 'dusk'], folder: '  localities  ' },
+      });
+
+      assert.equal(saved.status, 200);
+      assert.deepEqual(saved.body.data.tags, ['Aerial', 'dusk']);
+      assert.equal(saved.body.data.folder, 'localities');
+    });
+  });
+
+  it('changes nothing but the address when a PATCH sends only that (QA-63)', async () => {
+    await withServer(async ({ request, login, db }) => {
+      const token = await login(ADMIN);
+      const record = db.getCollection('media').find((row) => row.type === 'image');
+
+      const moved = await request('PATCH', `/admin/media/${record.id}`, {
+        token,
+        body: { url: 'https://picsum.photos/seed/qa-63-moved/1600/900' },
+      });
+
+      assert.equal(moved.status, 200);
+      // An extension-less address used to turn the image into a "document".
+      assert.equal(moved.body.data.type, 'image');
+      assert.equal(moved.body.data.provider, record.provider);
+    });
+  });
+
+  it('deletes in bulk all or nothing, naming every file still in use (QA-63)', async () => {
+    const seed = seedWith({
+      media: (rows) => {
+        rows.push(
+          { ...rows[0], id: 9101, url: 'https://example.com/qa-63/free-1.jpg', alt: 'Free one' },
+          { ...rows[0], id: 9102, url: 'https://example.com/qa-63/free-2.jpg', alt: 'Free two' }
+        );
+      },
+    });
+
+    await withServer({ seed }, async ({ request, login, db }) => {
+      const token = await login(ADMIN);
+      const used = db.getCollection('properties')[0].images[0].url;
+      const usedRecord = db.getCollection('media').find((row) => row.url === used);
+      const selected = [9101, usedRecord.id, 9102];
+
+      const refused = await request('POST', '/admin/media/bulk', {
+        token,
+        body: { action: 'delete', ids: selected },
+      });
+
+      assert.equal(refused.status, 409);
+      assert.match(refused.body.message, /still in use, so none was removed/);
+      assert.deepEqual(
+        refused.body.data.refused.map((entry) => entry.id),
+        [usedRecord.id]
+      );
+      // Nothing went — the free files before and after the used one included.
+      for (const id of selected) {
+        assert.ok(
+          db.getCollection('media').some((row) => row.id === id),
+          `#${id} kept`
+        );
+      }
+
+      const forced = await request('POST', '/admin/media/bulk?force=true', {
+        token,
+        body: { action: 'delete', ids: selected },
+      });
+      assert.equal(forced.status, 200);
+      assert.equal(forced.body.data.affected, 3);
+      for (const id of selected) {
+        assert.ok(!db.getCollection('media').some((row) => row.id === id), `#${id} removed`);
+      }
+    });
+  });
 });
