@@ -108,6 +108,12 @@ poor specification.
 
 ---
 
+## Admin users
+
+{{adminUsers}}
+
+---
+
 ## Bulk actions
 
 {{bulkActions}}

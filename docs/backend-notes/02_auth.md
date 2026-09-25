@@ -48,8 +48,16 @@ Notes that matter:
 - The user object of the login response and of `GET /auth/profile` is the same
   shape. Return it from one API resource so the two cannot drift.
 - `PUT /auth/password` answers `422` with `errors.currentPassword` when the
-  current password is wrong, and requires at least 8 characters for the new one.
-  Revoke every other token of that user on success.
+  current password is wrong, and requires at least 8 characters **with a letter
+  and a digit** for the new one (`errors.newPassword`: "The newPassword must
+  contain at least one letter and one digit."). Revoke every other token of that
+  user on success.
+- The same rule holds wherever a password is set (QA-64): `POST /admin/users`
+  and a `PUT` or `PATCH /admin/users/:id` that carries `password` answer `422`
+  on `password` ("The password must contain at least one letter and one
+  digit.") for eight letters or eight digits. A password set that way — an
+  administrator's reset — revokes **every** token of that account, except the
+  caller's own when an administrator resets their own password.
 
 ## Token lifetime
 

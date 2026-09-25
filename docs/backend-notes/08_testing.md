@@ -242,7 +242,14 @@ resolves; `/sitemap.xml`, `/robots.txt`, `/rss.xml` and `/llms.txt` all answer
 with the right content type and absolute URLs.
 
 **Settings** — a partial `PUT` changes one key and leaves the group alone; the
-public `GET /settings` omits `leads`; a manager sees the form read-only.
+public `GET /settings` omits `leads`; a manager sees the form read-only. Open the
+settings in two tabs, save the hero title in one and the tagline in the other:
+both survive (QA-64).
+
+**Users** — `aaaaaaaa` and `12345678` are refused as a new account's password and
+as a reset (422 on `password`); a reset signs that account out of every session;
+a bulk deactivate of an account that is already inactive reports `affected: 0`
+(QA-64).
 
 **Media** — a record whose URL a listing uses refuses to delete with 409 and its
 `usedIn` list, and `?force=true` deletes it anyway. A bank's logo, an author's
