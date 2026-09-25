@@ -19,10 +19,18 @@ addresses.** Ten files the site shows read "Not used anywhere yet". And the API'
 bulk delete answered "409 — still in use" after deleting the files ahead of the one
 in use.
 
-**33 defects were found — 3 High, 10 Medium, 20 Low. All 33 are fixed.** Every one
-was reproduced in the browser or against the API before it was fixed (A2 was found
-while verifying the fix of N1), and each is held by a unit, API or end-to-end test or
-by the final browser pass (§4).
+**The first pass found 33 defects — 3 High, 10 Medium, 20 Low.** A second pass
+took the library to the forms that open it — a listing's gallery and brochure, the
+home page's hero video, a locality's hero image, an article's pictures — and to two
+editors at once and the edges of the upload queue. It found **5 more that predate
+this work (2 Medium, 3 Low)** — the picker filed a photograph as a listing's
+"Brochure (PDF)", and of two editors saving the same file the later undid the
+earlier's tags — and **3 regressions of the first pass's own fixes, before they
+were merged (1 High, 1 Medium, 1 Low)**: the worst, "Use this file" in the picker
+saved the listing around it. **All 41 are fixed.** Every one was reproduced in the
+browser or against the API before it was fixed (A2 was found while verifying the fix
+of N1), and each is held by a unit, API or end-to-end test or by the final browser
+pass (§4).
 
 ---
 
@@ -71,6 +79,17 @@ image (Library, Upload and By URL tabs). The API behind them:
 - Rapid input: double clicks on Add, Save and Remove; Enter held in the dialog.
 - Roles: admin and manager (full), sales (403 and no sidebar entry).
 
+**Second pass.** The picker where editors meet it — a listing's Media tab (the
+gallery's "Add from library" choosing several, its upload, "Brochure (PDF)"), the
+home page hero's "Background video", a locality's hero image and an article's
+inline picture — through Library, Upload and By URL, with a file of the wrong kind,
+an address already in the library, Enter and the button, and the form around it
+watched for writes. The Folder filter against every other filter. Two tabs editing
+the same file. The clipboard refused. The session expiring during a save. A
+240-character file name, and the folder " /projects//aurelia/ ". The phone flows at
+390 px: the "More filters" popover, the removal's confirmation, the full-screen Add
+dialog.
+
 **What held up.** The URL as the list's single source of truth (Back, Forward and
 reload restore page and filters exactly; every odd URL above degrades to a sane
 view), the race between a slow and a fast filter (the later answer wins), the 401
@@ -86,7 +105,12 @@ tab), usage links, the upload zone's refusals, automatic retry, Cancel and Retry
 while uploading, cancelling the picker mid-upload (nothing filed, the field
 untouched), the three roles, and the layout at every width (2, 4 and 6 columns, no
 sideways scroll, a full-screen dialog and a full-height drawer on a phone, the copy
-button always visible on touch).
+button always visible on touch). In the second pass: the gallery's multi-select
+(numbered in the order chosen, "Select 3", then "4 images added."), a refused
+clipboard ("Your browser did not allow copying. Select the address and copy it
+instead."), a session expiring during a save (the sign-in page, "Your session has
+expired"), and the phone flows (the popover's filters, a confirmation that fits the
+screen, the Add dialog full screen with its folder carried in).
 
 ---
 
@@ -137,9 +161,10 @@ browser showed; "Cause" is the root cause found; "Fix" is what was changed.
   library has eleven) → choose "localities" → only "localities" is left; moving to
   "banks" means resetting first.
 - **Cause:** the options were `foldersOf(items)` — the 24 rows of the current page.
-- **Fix:** the list answers `meta.folders`, every folder in the library whatever
-  the filters and the page; the screens use it (the page's own folders for an API
-  that does not send it), and the folder being filtered on is always an option.
+- **Fix:** the list answers `meta.folders` — whatever the page, the folders the
+  other filters leave something in (first every folder whatever the filters; the
+  second pass narrowed it, S8); the screens use it (the page's own folders for an
+  API that does not send it), and the folder being filtered on is always an option.
 
 **G4 · Medium — The search box promised addresses and searched none; tags neither.**
 
@@ -191,7 +216,8 @@ browser showed; "Cause" is the root cause found; "Fix" is what was changed.
   the picture twice, each "Used in 1".
 - **Cause:** nothing made the address unique.
 - **Fix:** `url` is `unique` (`unique:media,url`, 422 on `url`); the dialog says
-  "This address is already in the library." under the address box.
+  "This address is already in the library." under the address box, and offers the
+  file it belongs to (S7).
 
 **N2 · Low — The API took addresses longer than the column that stores them.**
 A 5 000-character address was stored; `schema.sql` has `url VARCHAR(500)`. **Fix:**
@@ -200,7 +226,7 @@ The library takes up to 500." before sending it.
 
 **N3 · Low — Enter did nothing in the dialog.** **Fix:** the fields are a form;
 Enter adds the file, as in every other dialog of the admin (one request, whatever
-the key repeat does).
+the key repeat does). Its submit stays inside the dialog (S6).
 
 **N4 · Low — A file added while a folder was on screen vanished from it.** Viewing
 `?folder=banks`, a file added by address was filed nowhere and did not appear.
@@ -351,6 +377,136 @@ still fill in what they omit.
 as sent. **Fix:** tags are trimmed, blanks dropped, each kept once (Laravel's
 `TrimStrings` is on for media too: alt, title and folder are trimmed).
 
+### G. Found in the second pass
+
+**S1 · Medium — The picker's By URL tab filed any kind of file into a field that
+takes one kind.**
+
+- **Where:** the media picker's By URL tab (`MediaUrlForm`), opened from a field
+  that takes one kind of file: a listing's "Brochure (PDF)", floor plans and
+  documents; the home page hero's "Background video"; by the same path, every image
+  field.
+- **Steps:** Properties → edit a listing → Media → Brochure (PDF) → Media library →
+  By URL → `https://picsum.photos/seed/qa-63-not-a-pdf/800/600` and an alt text →
+  Use this file.
+- **Expected:** the brochure field takes documents only: a photograph's address is
+  refused, and the file's type is the field's own.
+- **Actual:** Type read "Image", and all three types could be chosen. The record
+  was filed as an image, and "Brochure (PDF)" now held the photograph. The hero
+  video's picker also read "Image".
+- **Console / network:** none — `POST /admin/media` 201.
+- **Cause:** the picker filtered its Library tab by the field's `accept` but never
+  passed it to the URL form, which took the type from the address alone.
+- **Fix:** the form takes the field's `accept`. The Type is fixed to it, disabled,
+  with the hint "This field takes a document." An address that is plainly another
+  kind — by its extension, a video host, or a Cloudinary resource type (`raw` is a
+  document) — is refused under the box: "That address is a picture, and this field
+  takes a document." An address that says nothing, such as a picsum link, is filed
+  as the field's kind.
+
+**S2 · Medium — Of two editors saving the same file, the later undid the earlier.**
+
+- **Where:** the File details drawer's save (`PATCH /admin/media/:id`).
+- **Steps:** open "Hebbal" in two tabs → in the second, add the tag "lakeside" and
+  save → in the first, change only the alt text and save.
+- **Expected:** the alt text changes; the tag stays.
+- **Actual:** the tags are back to `["locality","north"]`: "lakeside" is gone, and
+  neither tab says so.
+- **Cause:** the drawer sent all four fields — alt, title, folder, tags — whatever
+  had changed, so every save wrote back the values its tab had loaded.
+- **Fix:** a save sends only the fields the editor changed (`changesOf`), and a
+  `PATCH` writes only what it is sent. Two editors changing the _same_ field still
+  meet last-write-wins (§5).
+
+**S3 · Low — A picker opened on an empty folder said "Nothing to choose from".**
+
+- **Steps:** Brochure (PDF) → Media library. The picker opens in the field's folder,
+  "brochures", which holds nothing yet. It reads "Nothing to choose from" and points
+  to adding a file, while the library has a PDF in "properties". The hero video's
+  "hero" folder behaved the same.
+- **Cause:** an empty library and an empty filter shared one empty state.
+- **Fix:** a filtered picker says "No files match — Nothing in “brochures” answers —
+  the rest of the library may have it." and offers "Show every file", which keeps
+  the field's type.
+
+**S4 · Low — A file with a long name was uploaded, then refused.**
+
+- **Where:** the upload queue (`useMediaUpload`): the library, the picker's Upload
+  tab and the listing gallery's upload.
+- **Steps:** upload a JPEG whose name is 240 characters long.
+- **Expected:** the file is filed.
+- **Actual:** the file reaches Cloudinary, then `POST /admin/media` answers 422 twice
+  (the second is the automatic retry): "The title may not be greater than 200
+  characters." The row fails, a Retry sends the same title again, and the copy on
+  Cloudinary is left behind.
+- **Console / network:** `POST /api/admin/media` → 422, twice.
+- **Cause:** a new file's title is its file name, and `title` is at most 200
+  characters.
+- **Fix:** a longer name is shortened for the title to 200 characters, keeping its
+  extension ("…the-clubhouse-….jpg").
+
+**S5 · Low — A folder typed with slashes was filed under a second name.**
+
+- **Steps:** upload with the folder " /projects//aurelia/ " — or type that folder in
+  the drawer or in Add by URL.
+- **Actual:** Cloudinary gets `sna/projects/aurelia`; the record keeps
+  "/projects/aurelia/", and the Folder filter lists it as a folder of its own beside
+  "projects/aurelia".
+- **Fix:** the screens and the API file a folder clean: each segment trimmed, no
+  slash at either end, none doubled, and a blank folder as none (`cleanFolder` in
+  the screens, `normaliseFolder` in the API).
+
+### H. Regressions of this work's own fixes, found in the second pass
+
+These three came from fixes above. None of them reached `main`, but each would have
+merged with the fix that caused it.
+
+**S6 · High — "Use this file" in the picker saved the form around it** (from N3).
+
+- **Where:** the picker's By URL tab, opened from any form: a listing, a locality,
+  a developer, an article, the settings.
+- **Steps:** edit a listing → Media → Brochure (PDF) → Media library → By URL → an
+  address and an alt text → Use this file, or Enter.
+- **Expected:** the brochure field is filled; the listing is saved when its own Save
+  is pressed.
+- **Actual:** "Property saved." appeared once per press, even when the file was
+  refused. Each press wrote the listing, half-finished edits and all.
+- **Console / network:** `PUT /api/admin/properties/1` → 200, once per press.
+- **Cause:** N3 made the fields a `<form>`. The picker renders in a portal, but React
+  bubbles a portal's events through the component tree, not the DOM, so the URL
+  form's submit reached the listing's `<form onSubmit>`.
+- **Fix:** the URL form stops its submit from propagating. With the fix, using the
+  picker writes nothing to a listing, a locality, an article or the settings (0
+  writes each in the browser). A portal test fails without the fix. No other admin
+  dialog renders a form inside another form's tree.
+
+**S7 · Medium — An address already in the library left the picker nothing to use**
+(from N1).
+
+- **Steps:** Brochure (PDF) → Media library → By URL → the address of the PDF the
+  library already has → Use this file.
+- **Expected:** the field gets that file.
+- **Actual:** "This address is already in the library.", and nothing else. Before
+  N1 the picker filed a second record and used it; now the editor had to go back to
+  Library and look for the file.
+- **Fix:** the form looks the address up and says "It is filed as “Placeholder floor
+  plan document”." with a "Use that file" button ("Select that file" in a picker
+  that takes several). In the library's own dialog the button is "Open that file",
+  which opens the file's details. A file of another kind is named but not offered.
+
+**S8 · Low — The Folder filter offered folders that lead to nothing** (from G3).
+
+- **Steps:** the brochure's picker, which shows documents only → Folder offers all
+  eleven folders and "brochures" → "banks" → "Nothing to choose from". In the
+  library, Type = Video → eleven folders, and only one of them holds a video.
+- **Cause:** G3 made `meta.folders` every folder in the library whatever the
+  filters. The page's own folders, before G3, at least held something of the right
+  type.
+- **Fix:** `meta.folders` names the folders the other filters leave something in:
+  every filter is applied except the folder. The brochure's picker now offers
+  "properties", plus "brochures" because it is selected. Type = Video offers
+  "properties". A search narrows the list too.
+
 ---
 
 ## 3. Notes on the fixes
@@ -363,6 +519,22 @@ earlier kinds; the two settings report `id: 0`.
 
 **`meta.folders`** is additive: a client that does not read it sees the same list
 as before, and the screens fall back to the page's own folders when it is absent.
+It is a facet — the folders of the rows every filter except `folder` lets through —
+so choosing a folder never takes the others away, and a type or a search narrows
+the list to folders that hold a match. The CRUD factory hands `listMeta` a
+`facet(param)` for this.
+
+**A save sends what changed.** The drawer's `PATCH` carries only the edited fields.
+The dirty flag, "No changes to save." and the request all compare the same cleaned
+values: text trimmed, the folder as the library files it.
+
+**A field's kind.** `describeUrl` now says whether the address decided the type
+(`certain`): an extension, a known host, a Cloudinary resource type. A picker
+refuses only a certain mismatch, so an address that says nothing is trusted to be
+what the field takes.
+
+**Folders are filed clean** by the screens and the API alike. A record written by
+another client is cleaned on the way in; the seed has no folder that needs it.
 
 **The unique address** applies to create, replace and patch (a record keeps its own
 address). The seed has no duplicate addresses (`validate:seed`).
@@ -385,10 +557,11 @@ Laravel rule is now `required|url|max:500|unique:media,url`, `schema.sql` carrie
 | Pass                                                                                                                                                                                         | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Browser (Playwright, dev server)                                                                                                                                                             | every defect above re-run as a scenario after the fix: the error state and Try again, the dimmed grid, all eleven folders before and after choosing one, search by address, host and tag, paging back to the top, "Go to first page", the step back after emptying a page, no blank chip; the duplicate refused under the box (by Enter), the long address, the preview measuring 1200 × 800 and the record carrying it, the folder carried in; a tag added and saved, a 61-character tag refused, "No changes to save.", Escape / backdrop / Close / a usage link asking first, the same file reopened clean, the drawer held open during its save, the content kept while it slides away, the gone file, the error in view; bank logos "Used in 1", "stays on picsum.photos", no force box for an unused file, the warning cleared by Keep it; one toast and one read per batch of four uploads, no Retry for a refused file, one Cloudinary upload for three record attempts, no Cancel while filing, the leave question and `beforeunload` — console clean apart from the refusals asked for (422, 409) |
+| Second pass (browser)                                                                                                                                                                        | the brochure's picker opening on "No files match" with "Show every file", its folders "brochures, properties", a photograph refused with the Type fixed to Document, the PDF already filed offered and used; the library's "Open that file" opening the bank logo's details ("Used in 1 place"); 0 writes to a listing, a locality, an article and the settings while their pickers were used (Enter and the button), the article's picker refusing a document; the tag added in the other tab kept after an alt-only save; the 240-character name "Added" with one upload; " /projects//aurelia/ " filed as "projects/aurelia"; the Folder options following Type, a folder and a search — console clean                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Regression (browser)                                                                                                                                                                         | paging, Back/Forward/reload and the odd URLs of §1, the picker (all folders, grid scroll, error), keyboard and Copy, usage links, documents and videos, the three roles, 390–1 920 px — unchanged or better                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Jest                                                                                                                                                                                         | 207 suites, 4 114 tests ✓ — new: `MediaLibraryQa63.test.jsx`, `useMediaUpload.test.js`, `MediaUrlForm.test.jsx`, and cases in the picker, `FilterBar` and navigation-guard suites; run against the code before the fixes, 30 of the new and changed cases fail                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `test:mock`                                                                                                                                                                                  | 332 / 332 ✓ — the 8 new cases all fail on the API layer before the fixes (new: usage across banks, authors, testimonials, FAQs, job openings and the SEO settings; whole-address matching; `meta.folders`; search by address and tag; the unique and 500-character address; tags normalised; `PATCH` inferring nothing; bulk delete all or nothing, and with force)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Playwright e2e (`e2e/`)                                                                                                                                                                      | 69 / 69 ✓ — new: `media-library.spec.js` (every folder offered and switched between; a tag added, saved and searched for; a duplicate address refused under the box; a failed request shown as one)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Jest                                                                                                                                                                                         | 207 suites, 4 123 tests ✓ — new: `MediaLibraryQa63.test.jsx`, `useMediaUpload.test.js`, `MediaUrlForm.test.jsx`, and cases in the picker, `FilterBar` and navigation-guard suites; run against the code before the fixes, 30 of the first pass's new and changed cases fail, and all 10 of the second pass's fail against the first pass's code (among them the form in a portal submitting the form around it)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `test:mock`                                                                                                                                                                                  | 333 / 333 ✓ — the 8 new cases all fail on the API layer before the fixes (new: usage across banks, authors, testimonials, FAQs, job openings and the SEO settings; whole-address matching; `meta.folders`; search by address and tag; the unique and 500-character address; tags normalised; `PATCH` inferring nothing; bulk delete all or nothing, and with force); the second pass's two — `meta.folders` as a facet, a folder filed clean — fail against the first pass's                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Playwright e2e (`e2e/`)                                                                                                                                                                      | 70 / 70 ✓ — new: `media-library.spec.js` (every folder offered and switched between; a tag added, saved and searched for; a duplicate address refused under the box; the brochure's picker taking documents only, offering the file already filed and saving nothing else; a failed request shown as one)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | API timing                                                                                                                                                                                   | `GET /admin/media?perPage=24&withUsage=true`: 0.97–1.14 s before, 14–22 ms after                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `npm run check:all` (`lint`, `test:ci`, `test:mock`, `test:scripts`, `build:ci`, `check:traces`, `validate:seed`, `check:contrast`, `check:guidelines` 12 / 12, `check:env`), `format:check` | ✓                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
@@ -415,6 +588,18 @@ Laravel rule is now `required|url|max:500|unique:media,url`, `schema.sql` carrie
   design (a button inside the tile's button is not valid HTML).
 - **Jest's `act(...)` warnings** around the library's asynchronous updates predate
   this pass (441 lines for the one media suite before it) and fail nothing.
+- **Two editors changing the same field: the later save wins.** S2 stopped saves
+  of _different_ fields from colliding. The admin has no version check anywhere (no
+  `If-Match`, no `updatedAt` precondition), and adding one is a cross-cutting
+  change for every form, not a Media fix.
+- **A session that expires during an edit loses the edit.** A save that answers
+  401 goes to the sign-in page ("Your session has expired"), as on every admin
+  screen, and the drawer's text is not kept. Keeping drafts across a sign-in would
+  be a feature for every form.
+- **Closing the picker during an upload stops the upload without asking.** Nothing
+  is filed and the field is left as it was. The library asks before leaving (U1)
+  because leaving it can be incidental; closing the picker is always the editor's
+  own act.
 
 ## 6. Could not be fully tested
 
@@ -434,12 +619,17 @@ Laravel rule is now `required|url|max:500|unique:media,url`, `schema.sql` carrie
 
 ## 7. Risks to watch
 
-- **The Laravel backend must implement** `meta.folders`, `q` over the address and
-  the tags, the unique address (a production table may already hold duplicates:
-  de-duplicate before adding the index), the usage search over every collection
-  listed in the business rules, the all-or-nothing bulk delete with `force`, and a
-  `PATCH` that infers nothing. The admin degrades without `meta.folders` (the
-  page's folders) but not without the rest.
+- **The Laravel backend must implement** `meta.folders` as a facet (every filter
+  but the folder), `q` over the address and the tags, the unique address (a
+  production table may already hold duplicates: de-duplicate before adding the
+  index), folders filed clean, the usage search over every collection listed in
+  the business rules, the all-or-nothing bulk delete with `force`, and a `PATCH`
+  that infers nothing and writes only what it is sent. The admin degrades without
+  `meta.folders` (the page's folders) but not without the rest.
+- **A form inside a dialog inside a form.** S6 came from a `<form>` rendered in a
+  portal within another form's React tree. Only `MediaUrlForm` does that today; a
+  new dialog that holds a form and can open from inside one must stop its submit
+  the same way.
 - **The usage search reads addresses as written.** A picture referenced through a
   different Cloudinary transformation, or inside HTML that escaped its `&` as
   `&amp;`, is not counted: "Not used anywhere yet" is a hint, which is why force
