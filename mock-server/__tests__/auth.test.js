@@ -491,11 +491,13 @@ describe('/admin/users', () => {
       assert.equal(others.status, 200);
       assert.deepEqual(others.body, { data: { affected: 1 }, message: '1 user updated.' });
 
+      // Only the account that was switched off is switched on: the manager was
+      // active already, and is neither written nor counted (§5.8, QA-64).
       const reactivated = await request('POST', '/admin/users/bulk', {
         token,
         body: { ids: [id, 2], action: 'activate' },
       });
-      assert.deepEqual(reactivated.body, { data: { affected: 2 }, message: '2 users updated.' });
+      assert.deepEqual(reactivated.body, { data: { affected: 1 }, message: '1 user updated.' });
 
       const unsupported = await request('POST', '/admin/users/bulk', {
         token,
@@ -535,6 +537,151 @@ describe('/admin/users', () => {
 
       assert.equal((await request('GET', '/auth/profile', { token: salesToken })).status, 401);
       assert.equal((await request('GET', '/admin/users/3', { token: adminToken })).status, 404);
+    });
+  });
+});
+
+describe('/admin/users — QA-64', () => {
+  const WEAK = ['aaaaaaaa', '12345678', '        ', 'abcdefghij'];
+  const RULE = 'The password must contain at least one letter and one digit.';
+
+  it('refuses a password of letters only or digits only, as /auth/password does', async () => {
+    await withServer(async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const base = { name: 'Weak Password', email: 'weak@squaresnacres.com', role: 'sales' };
+
+      for (const password of WEAK) {
+        const created = await request('POST', '/admin/users', {
+          token,
+          body: { ...base, password },
+        });
+        assert.equal(created.status, 422, `POST with ${JSON.stringify(password)}`);
+        // Spaces alone are no password at all on a create ("…is required").
+        assert.deepEqual(
+          created.body.errors.password,
+          password.trim() === '' ? ['The password field is required.'] : [RULE]
+        );
+
+        const reset = await request('PATCH', '/admin/users/3', { token, body: { password } });
+        assert.equal(reset.status, 422, `PATCH with ${JSON.stringify(password)}`);
+        assert.deepEqual(reset.body.errors.password, [RULE]);
+      }
+
+      const replaced = await request('PUT', '/admin/users/3', {
+        token,
+        body: {
+          name: 'Sales User',
+          email: SALES.email,
+          role: 'sales',
+          password: '12345678',
+          isActive: true,
+        },
+      });
+      assert.equal(replaced.status, 422);
+      assert.deepEqual(replaced.body.errors.password, [RULE]);
+
+      // A PUT that leaves the password out keeps it, as before.
+      const kept = await request('PUT', '/admin/users/3', {
+        token,
+        body: { name: 'Sales User', email: SALES.email, role: 'sales', isActive: true },
+      });
+      assert.equal(kept.status, 200);
+      assert.equal((await request('POST', '/auth/login', { body: SALES })).status, 200);
+
+      assert.equal(
+        (
+          await request('POST', '/admin/users', {
+            token,
+            body: { ...base, password: 'Str0ngPass' },
+          })
+        ).status,
+        201
+      );
+    });
+  });
+
+  it('signs the account out everywhere when an administrator sets its password', async () => {
+    await withServer(async ({ request, login }) => {
+      const adminToken = await login(ADMIN);
+      const salesToken = await login(SALES);
+      const salesPhone = await login(SALES);
+
+      const reset = await request('PATCH', '/admin/users/3', {
+        token: adminToken,
+        body: { password: 'N3wSales!' },
+      });
+      assert.equal(reset.status, 200);
+
+      assert.equal((await request('GET', '/auth/profile', { token: salesToken })).status, 401);
+      assert.equal((await request('GET', '/auth/profile', { token: salesPhone })).status, 401);
+      // The administrator who reset it is still signed in.
+      assert.equal((await request('GET', '/auth/profile', { token: adminToken })).status, 200);
+      assert.equal(
+        (
+          await request('POST', '/auth/login', {
+            body: { email: SALES.email, password: 'N3wSales!' },
+          })
+        ).status,
+        200
+      );
+
+      // The same through the edit form's PUT.
+      const again = await login({ email: SALES.email, password: 'N3wSales!' });
+      const replaced = await request('PUT', '/admin/users/3', {
+        token: adminToken,
+        body: {
+          name: 'Sales User',
+          email: SALES.email,
+          role: 'sales',
+          password: 'Th1rdOne',
+          isActive: true,
+        },
+      });
+      assert.equal(replaced.status, 200);
+      assert.equal((await request('GET', '/auth/profile', { token: again })).status, 401);
+    });
+  });
+
+  it('keeps the session an administrator resets their own password from, and ends the others', async () => {
+    await withServer(async ({ request, login }) => {
+      const here = await login(ADMIN);
+      const elsewhere = await login(ADMIN);
+
+      const reset = await request('PATCH', '/admin/users/1', {
+        token: here,
+        body: { password: 'Admin@456' },
+      });
+      assert.equal(reset.status, 200);
+
+      assert.equal((await request('GET', '/auth/profile', { token: here })).status, 200);
+      assert.equal((await request('GET', '/auth/profile', { token: elsewhere })).status, 401);
+    });
+  });
+
+  it('does not count, or write, an account already in the state asked for', async () => {
+    await withServer(async ({ request, login, db }) => {
+      const token = await login(ADMIN);
+      const before = db.getCollection('adminUsers').find((user) => user.id === 3).updatedAt;
+
+      const unchanged = await request('POST', '/admin/users/bulk', {
+        token,
+        body: { ids: [2, 3], action: 'activate' },
+      });
+      assert.equal(unchanged.status, 200);
+      assert.equal(unchanged.body.data.affected, 0);
+      assert.equal(db.getCollection('adminUsers').find((user) => user.id === 3).updatedAt, before);
+
+      const once = await request('POST', '/admin/users/bulk', {
+        token,
+        body: { ids: [3], action: 'deactivate' },
+      });
+      assert.deepEqual(once.body, { data: { affected: 1 }, message: '1 user updated.' });
+
+      const twice = await request('POST', '/admin/users/bulk', {
+        token,
+        body: { ids: [3], action: 'deactivate' },
+      });
+      assert.equal(twice.body.data.affected, 0);
     });
   });
 });

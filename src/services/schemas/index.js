@@ -56,7 +56,7 @@ const groups = {
   // Only the write shapes: the two modules also export their constants.
   page: { create: page.create, update: page.update, patch: page.patch },
   headerMenu: { create: headerMenu.create, update: headerMenu.update, patch: headerMenu.patch },
-  auth,
+  auth: { login: auth.login, profile: auth.profile, password: auth.password },
   newsletter,
   jobApplication,
   settings: settings.siteSettings,

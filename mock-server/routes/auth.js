@@ -28,9 +28,6 @@ const { validateBody } = require('../middleware/validate');
 /** §5.11's throttle, applied to the login form: 10 attempts per minute per IP. */
 const LOGIN_ATTEMPTS_PER_MINUTE = 10;
 
-/** A new password must not be eight letters or eight digits (§5.4). */
-const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).+$/;
-
 /** The same answer for an unknown address and for a wrong password. */
 const INVALID_CREDENTIALS = 'Invalid email or password.';
 
@@ -142,8 +139,9 @@ module.exports = ({ db, config }) => {
       if (!verify(body.currentPassword, user.password)) {
         errors.currentPassword = ['Current password is incorrect.'];
       }
-      if (!PASSWORD_RE.test(body.newPassword)) {
-        errors.newPassword = ['The newPassword must contain at least one letter and one digit.'];
+      // A new password must not be eight letters or eight digits (§5.4).
+      if (!authSchemas.PASSWORD_PATTERN.test(body.newPassword)) {
+        errors.newPassword = [authSchemas.passwordMessage('newPassword')];
       }
       if (Object.keys(errors).length > 0) throw validation(errors);
 
