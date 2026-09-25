@@ -132,6 +132,12 @@ poor specification.
 
 ---
 
+## Media library
+
+{{mediaLibrary}}
+
+---
+
 ## Master data writes and reads
 
 {{masterDataWritesAndReads}}

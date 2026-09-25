@@ -112,6 +112,46 @@ export function altFromFileName(name) {
   return base.charAt(0).toUpperCase() + base.slice(1);
 }
 
+/** The longest title the library keeps (`media.title`, §6.12). */
+export const TITLE_MAX_LENGTH = 200;
+
+/**
+ * The title an upload is filed under: its file name, shortened to what the
+ * library keeps with its extension left on (QA-63).
+ *
+ * A 240-character name went to Cloudinary and was then refused by the API —
+ * "The title may not be greater than 200 characters." — about a title the
+ * editor never typed, on a row whose Retry could never succeed, with the file
+ * left on Cloudinary.
+ *
+ * @param {string} name
+ * @param {number} [max]
+ * @returns {string}
+ */
+export function titleFromFileName(name, max = TITLE_MAX_LENGTH) {
+  const full = String(name ?? '').trim();
+  if (full.length <= max) return full;
+  const extension = extensionOf(full);
+  const tail = extension ? `.${extension}` : '';
+  return `${full.slice(0, max - tail.length - 1).trimEnd()}…${tail}`;
+}
+
+/**
+ * A folder as the library files it: its segments trimmed, no slash at either
+ * end and none doubled — "/projects//aurelia/ " is `projects/aurelia` (QA-63).
+ * The record and Cloudinary's `sna/<folder>` then name the same folder; the
+ * record used to keep the slashes, and the Folder filter listed it twice.
+ *
+ * @param {string} folder
+ * @returns {string} `''` for no folder
+ */
+export const cleanFolder = (folder) =>
+  String(folder ?? '')
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .join('/');
+
 /**
  * What is wrong with a file, before a byte of it is sent.
  *
@@ -140,9 +180,7 @@ export function fileError(file, accept = 'any') {
 
 /** The Cloudinary folder a logical folder maps to (D-media, `sna/<folder>`). */
 export const cloudinaryFolder = (folder) => {
-  const clean = String(folder ?? '')
-    .trim()
-    .replace(/^\/+|\/+$/g, '');
+  const clean = cleanFolder(folder);
   return clean ? `sna/${clean}` : 'sna';
 };
 
@@ -166,6 +204,14 @@ const nextId = () => {
  * retries itself once and then waits for the editor, and the files behind it in
  * the queue carry on regardless (§7).
  *
+ * A row remembers what Cloudinary answered (QA-63). When the upload worked and
+ * the record did not, a retry — the automatic one and the editor's — files the
+ * record again; it used to send the file to Cloudinary again, and every retry
+ * left one more copy there that nothing pointed at. For the same reason a file
+ * already on Cloudinary cannot be cancelled: the row said "Cancelled" and then
+ * "Added", because filing it is the only way not to strand it. A file the
+ * library does not take (`invalid`) offers no retry — it can never succeed.
+ *
  * @param {object} [options]
  * @param {string} [options.folder] the logical folder — `sna/<folder>` on Cloudinary
  * @param {'image'|'video'|'document'|'any'} [options.accept]
@@ -179,6 +225,10 @@ export default function useMediaUpload({ folder = '', accept = 'any', onUploaded
   const { configured, settings } = useCloudinaryConfig();
 
   const [items, setItems] = useState([]);
+  // The rows as last rendered, for the handlers that must know a row's state
+  // before they touch its request.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
   const controllers = useRef(new Map());
   const running = useRef(new Set());
   const mounted = useRef(true);
@@ -212,21 +262,25 @@ export default function useMediaUpload({ folder = '', accept = 'any', onUploaded
       const controller = new AbortController();
       controllers.current.set(item.id, controller);
 
-      update(item.id, { status: 'uploading', progress: 0, error: '' });
-
       let outcome;
       let record = null;
+      // What Cloudinary answered for this row, now or on an earlier attempt.
+      let uploaded = item.uploaded ?? null;
 
       try {
-        const uploaded = await uploadToCloudinary(item.file, {
-          resourceType: MEDIA_LIMITS[item.kind]?.resourceType ?? 'auto',
-          folder: cloudinaryFolder(item.folder ?? target),
-          settings: current,
-          signal: controller.signal,
-          onProgress: (progress) => update(item.id, { progress }),
-        });
-
-        update(item.id, { status: 'saving', progress: 100 });
+        if (uploaded) {
+          update(item.id, { status: 'saving', progress: 100, error: '' });
+        } else {
+          update(item.id, { status: 'uploading', progress: 0, error: '' });
+          uploaded = await uploadToCloudinary(item.file, {
+            resourceType: MEDIA_LIMITS[item.kind]?.resourceType ?? 'auto',
+            folder: cloudinaryFolder(item.folder ?? target),
+            settings: current,
+            signal: controller.signal,
+            onProgress: (progress) => update(item.id, { progress }),
+          });
+          update(item.id, { status: 'saving', progress: 100, uploaded });
+        }
 
         const created = await mediaService.create({
           url: uploaded.url,
@@ -238,8 +292,8 @@ export default function useMediaUpload({ folder = '', accept = 'any', onUploaded
           bytes: uploaded.bytes ?? item.size,
           format: uploaded.format ?? extensionOf(item.name),
           alt: item.alt,
-          title: item.name,
-          folder: String(item.folder ?? target ?? '').trim() || null,
+          title: titleFromFileName(item.name),
+          folder: cleanFolder(item.folder ?? target) || null,
           tags: [],
         });
 
@@ -305,7 +359,10 @@ export default function useMediaUpload({ folder = '', accept = 'any', onUploaded
           attempts: 1,
           progress: 0,
           record: null,
+          uploaded: null,
           error: problem,
+          // Refused before a byte was sent: no retry can change the answer.
+          invalid: Boolean(problem),
           status: problem ? 'error' : 'queued',
         };
       });
@@ -316,8 +373,13 @@ export default function useMediaUpload({ folder = '', accept = 'any', onUploaded
     [] // `latest` is a ref: the newest folder and accept are read on use.
   );
 
+  /** Whether a row may still be stopped: not once its file is on Cloudinary. */
+  const cancellable = (item) => item?.status === 'queued' || item?.status === 'uploading';
+
   const cancel = useCallback(
     (id) => {
+      const row = itemsRef.current.find((item) => item.id === id);
+      if (!cancellable(row)) return;
       controllers.current.get(id)?.abort();
       update(id, { status: 'cancelled', progress: 0 });
     },
@@ -325,12 +387,11 @@ export default function useMediaUpload({ folder = '', accept = 'any', onUploaded
   );
 
   const cancelAll = useCallback(() => {
-    controllers.current.forEach((controller) => controller.abort());
+    const stoppable = new Set(itemsRef.current.filter(cancellable).map((item) => item.id));
+    stoppable.forEach((id) => controllers.current.get(id)?.abort());
     setItems((list) =>
       list.map((item) =>
-        item.status === 'queued' || item.status === 'uploading' || item.status === 'saving'
-          ? { ...item, status: 'cancelled', progress: 0 }
-          : item
+        stoppable.has(item.id) ? { ...item, status: 'cancelled', progress: 0 } : item
       )
     );
   }, []);
@@ -338,7 +399,10 @@ export default function useMediaUpload({ folder = '', accept = 'any', onUploaded
   const retry = useCallback((id) => {
     setItems((list) =>
       list.map((item) =>
-        item.id === id && item.file && !fileError(item.file, latest.current.accept)
+        item.id === id &&
+        (item.status === 'error' || item.status === 'cancelled') &&
+        item.file &&
+        !fileError(item.file, latest.current.accept)
           ? { ...item, status: 'queued', attempts: 1, progress: 0, error: '' }
           : item
       )

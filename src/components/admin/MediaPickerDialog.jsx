@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import Button from '../ui/Button';
 import FilterBar, { SEARCH_DEBOUNCE_MS } from './FilterBar';
-import MediaGrid, { foldersOf } from '../../pages/admin/media/MediaGrid';
+import MediaGrid, { libraryFolders } from '../../pages/admin/media/MediaGrid';
 import MediaUploadZone from '../../pages/admin/media/MediaUploadZone';
 import Modal from '../ui/Modal';
 import Pagination from '../ui/Pagination';
@@ -91,15 +91,25 @@ export default function MediaPickerDialog({
     [accept]
   );
 
-  const { items, meta, loading, error, params, setPage, setFilters, resetFilters, refetch } =
-    useApiList((query, options) => mediaService.list(query, options), {
-      // Never the URL: the dialog's filters are not the page's filters, and a
-      // picker opened over a half-filled form must not rewrite its address.
-      syncToUrl: false,
-      defaults: { page: 1, q: '', folder },
-      fixedParams,
-      debounceMs: SEARCH_DEBOUNCE_MS,
-    });
+  const {
+    items,
+    meta,
+    loading,
+    refreshing,
+    error,
+    params,
+    setPage,
+    setFilters,
+    resetFilters,
+    refetch,
+  } = useApiList((query, options) => mediaService.list(query, options), {
+    // Never the URL: the dialog's filters are not the page's filters, and a
+    // picker opened over a half-filled form must not rewrite its address.
+    syncToUrl: false,
+    defaults: { page: 1, q: '', folder },
+    fixedParams,
+    debounceMs: SEARCH_DEBOUNCE_MS,
+  });
 
   // A dialog that reopens is a fresh choice, not the last one continued — and
   // it opens on the tab its trigger asked for, so "Upload" lands on Upload in
@@ -113,7 +123,22 @@ export default function MediaPickerDialog({
     else setPicked([]);
   }
 
-  const folders = useMemo(() => foldersOf(items), [items]);
+  // Every folder in the library, not the page's (QA-63).
+  const folders = useMemo(
+    () => libraryFolders(meta, items, params.folder),
+    [meta, items, params.folder]
+  );
+
+  // The grid scrolls inside the dialog, and the pager sits under it: the next
+  // page used to open where the last one ended (QA-63).
+  const gridScrollRef = useRef(null);
+  const changePage = useCallback(
+    (next) => {
+      setPage(next);
+      if (gridScrollRef.current) gridScrollRef.current.scrollTop = 0;
+    },
+    [setPage]
+  );
 
   const toggle = useCallback(
     (record) => {
@@ -183,7 +208,44 @@ export default function MediaPickerDialog({
     return fields;
   }, [folders, accept]);
 
-  const totalPages = meta?.totalPages ?? 1;
+  // An unanswered request has no pages to offer (QA-63).
+  const totalPages = error ? 1 : (meta?.totalPages ?? 1);
+
+  // An empty grid says why (QA-63). The picker opens in its field's folder —
+  // "brochures", "hero" — and a folder with nothing in it yet read "Nothing to
+  // choose from" over a library that had the file one folder away.
+  const narrowed = Boolean(params.q || params.folder || (accept === 'any' && params.type));
+  const narrowedEmpty = {
+    title: 'No files match',
+    text: params.folder
+      ? `Nothing in “${params.folder}” answers — the rest of the library may have it.`
+      : 'Nothing in the library answers the search.',
+    action: (
+      <Button
+        variant="outline"
+        onClick={() =>
+          setFilters({
+            q: undefined,
+            folder: undefined,
+            ...(accept === 'any' ? { type: undefined } : null),
+          })
+        }
+      >
+        Show every file
+      </Button>
+    ),
+  };
+  const libraryEmpty = {
+    title: 'Nothing to choose from',
+    text: configured
+      ? 'Upload a file, or add one by its address, on the tabs above.'
+      : 'Add a file by its address on the tab above.',
+    action: (
+      <Button variant="outline" onClick={() => setTab(configured ? 'upload' : 'url')}>
+        {configured ? 'Upload a file' : 'Add by URL'}
+      </Button>
+    ),
+  };
 
   const tabs = [
     { value: 'library', label: 'Library' },
@@ -230,27 +292,18 @@ export default function MediaPickerDialog({
               onReset={resetFilters}
             />
 
-            <div className={styles.gridScroll}>
+            <div className={styles.gridScroll} ref={gridScrollRef}>
               <MediaGrid
                 items={items}
                 loading={loading}
+                refreshing={refreshing}
                 error={error}
                 onRetry={refetch}
                 selectable
                 selectedIds={picked.map((one) => one.id)}
                 onOpen={toggle}
                 label="Files you can choose"
-                emptyState={{
-                  title: 'Nothing to choose from',
-                  text: configured
-                    ? 'Upload a file, or add one by its address, on the tabs above.'
-                    : 'Add a file by its address on the tab above.',
-                  action: (
-                    <Button variant="outline" onClick={() => setTab(configured ? 'upload' : 'url')}>
-                      {configured ? 'Upload a file' : 'Add by URL'}
-                    </Button>
-                  ),
-                }}
+                emptyState={narrowed ? narrowedEmpty : libraryEmpty}
               />
             </div>
 
@@ -258,7 +311,7 @@ export default function MediaPickerDialog({
               <Pagination
                 page={params.page ?? 1}
                 totalPages={totalPages}
-                onChange={setPage}
+                onChange={changePage}
                 label="Pages of files"
               />
             ) : null}
@@ -279,8 +332,14 @@ export default function MediaPickerDialog({
           <MediaUrlForm
             folder={uploadFolder}
             folders={folders}
+            // The field's own kind of file, whatever the address suggests,
+            // and the file already in the library for an address it has
+            // (QA-63).
+            accept={accept}
             submitLabel={multiple ? 'Add and select' : 'Use this file'}
             onCreated={(record) => onUploaded([record])}
+            existingLabel={multiple ? 'Select that file' : 'Use that file'}
+            onExisting={(record) => onUploaded([record])}
           />
         ) : null}
 

@@ -851,6 +851,62 @@ At the database level this is `ON DELETE RESTRICT`, which makes the guard a
 belt-and-braces check rather than the only thing standing between a listing and
 a missing locality.
 
+## Media library
+
+What the library's endpoints owe the admin's Media screen and its picker (QA-63).
+
+- **Where a file is used.** `usedIn` is found by looking for the file's address
+  in every record a visitor can see it on: properties, articles, pages,
+  localities, developers, banks, authors, team members, partners, testimonials,
+  FAQs, job openings, the site settings and the SEO settings. It is a match of
+  the **whole** address — one followed by more of a path (`…/villa.jpg.webp`,
+  `…/seed/sna-1` inside `…/seed/sna-10`) is another file. A usage is
+  `{ type, id, title }`, `type` one of `property`, `article`, `page`,
+  `locality`, `developer`, `bank`, `author`, `teamMember`, `partner`,
+  `testimonial`, `faq`, `job`, `settings`, `seoSettings`; the two settings
+  report `id: 0`. The 409 of a delete says it in words
+  (`"Used by 1 bank and the SEO settings"`), never in these keys.
+- **The list asks it for its page only.** `withUsage=true` on
+  `GET /admin/media` fills `usedIn` for the rows of the page it answers, after
+  paging: nothing filters or sorts on it. Working it out for every file before
+  paging cost the mock a second per page of the grid. Laravel should load the
+  page, then search for its twenty-four addresses — not the library's.
+- **`meta.folders`.** The list's `meta` carries the folders that hold a file
+  every _other_ filter lets through — the list's own query with its `folder`
+  condition left out — sorted, whatever the page: the Folder filter's options.
+  Nothing chosen, that is every folder; under `type=document` (a brochure's
+  picker), only the folders that hold documents, so no option leads to "Nothing
+  to choose from". `SELECT DISTINCT folder … WHERE <every filter but folder> AND
+  folder IS NOT NULL ORDER BY folder`.
+- **Folders are filed clean.** A `folder` is stored with its segments trimmed,
+  no slash at either end and none doubled — `" /projects//aurelia/ "` is
+  `projects/aurelia`, the name the upload gives Cloudinary (`sna/projects/aurelia`)
+  — and a blank one as `null`. The record used to keep the slashes: one folder
+  under two names.
+- **Search.** `q` reads `alt`, `title`, `folder`, `public_id`, `url` and the
+  tags (`JSON_SEARCH(tags, 'one', CONCAT('%', ?, '%'))`, or a `LIKE` over the
+  column).
+- **One record per address.** `url` is `unique:media,url` and `max:500` (the
+  column is `VARCHAR(500)`): a second record for the same file answers 422 on
+  `url` with "The url has already been taken."; the dialog tells the editor the
+  address is already in the library. A record keeps its own address through a
+  save.
+- **Tags** are trimmed, blank ones dropped, and each kept once whatever its
+  case, the first spelling winning: `[" Aerial ", "aerial", "  ", "dusk"]` is
+  stored `["Aerial", "dusk"]`.
+- **`PATCH` infers nothing.** `provider`, `type` and `format` are worked out
+  from the address on a `POST` or `PUT` that omits them; a `PATCH` writes only
+  what it sends. A patch of the address alone used to re-infer the type from
+  it, and an extension-less photograph's address turned the image into a
+  "document".
+- **Bulk delete is all or nothing.** `POST /admin/media/bulk { action: 'delete' }`
+  refuses the whole batch with 409 when any selected file is still in use —
+  `message` counts them ("2 of the selected files are still in use, so none was
+  removed."), `data.refused[]` is `{ id, label, reason, usedBy[] }` per file and
+  `data.usedIn` the union — and `?force=true` removes them all, as on a single
+  delete. It used to remove file by file and stop at the first in use, answering
+  409 with the files before it already gone.
+
 ## Master data writes and reads
 
 What a master-data write keeps, and what a public read shows of it (QA-60).

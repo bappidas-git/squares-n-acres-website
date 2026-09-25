@@ -1,11 +1,12 @@
 # End-to-end suite (Playwright)
 
-Fourteen specs that drive the real application in a real browser, against the
+Fifteen specs that drive the real application in a real browser, against the
 real mock API: **login**, **create a property**, **view a property**, **submit
 a lead**, **filter the listing** and **shortlist** (prompt 44), plus **publish
 an article**, **the SEO panel**, **publish a CMS page** and **site settings**
 (prompt 45), **the header menus** (QA-56), **the FAQ screen** (QA-59), **the
-Content screens** (QA-61) and **featuring and publishing a property** (QA-62).
+Content screens** (QA-61), **featuring and publishing a property** (QA-62) and
+**the media library** (QA-63).
 They are the only tests in the repository that exercise the browser; everything
 else is Jest in jsdom.
 
@@ -19,11 +20,11 @@ npx playwright show-report        # the HTML report of the last CI run
 
 ## What it needs
 
-| Requirement    | Why                                                                     |
-| -------------- | ----------------------------------------------------------------------- |
-| **Node ≥ 20**  | `@playwright/test@1.63.0` does not support Node 18 (D6).                 |
-| **A browser**  | `npx playwright install chromium` — about 150 MB, downloaded once. A machine that already has Chrome can point `CHROME_PATH` at it instead (below). |
-| **Ports 3000 and 4000 free** | The suite starts `npm run mock` and `npm start` itself. |
+| Requirement                  | Why                                                                                                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Node ≥ 20**                | `@playwright/test@1.63.0` does not support Node 18 (D6).                                                                                            |
+| **A browser**                | `npx playwright install chromium` — about 150 MB, downloaded once. A machine that already has Chrome can point `CHROME_PATH` at it instead (below). |
+| **Ports 3000 and 4000 free** | The suite starts `npm run mock` and `npm start` itself.                                                                                             |
 
 ### `CHROME_PATH`
 
@@ -83,6 +84,6 @@ memory).
   page are the one exception: they carry `data-section`, which is the key
   `sectionVisibility` uses.
 - Assert what a visitor can see, not what the store holds — except for the
-  shortlist, which *is* browser storage and is checked both ways.
+  shortlist, which _is_ browser storage and is checked both ways.
 - A first navigation to a route is slow: the development server compiles its
   lazy chunk on demand. The timeouts in the configuration allow for it.

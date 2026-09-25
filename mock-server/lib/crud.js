@@ -325,6 +325,15 @@ function matchesFilter(record, descriptor, raw, context) {
  * @param {Array<string>} [options.collections] collections `afterRead` needs
  * @param {Function} [options.afterRead] `(record, {admin, collections, query, list}) => record`
  *   — the embeds and computed counters of §5.5
+ * @param {Function} [options.decoratePage] `(records, {admin, collections, query}) => records`
+ *   — what a list adds to the rows of the page it answers, after paging:
+ *   a value nothing filters or sorts on, too dear to work out for every row
+ *   of the collection (media's `usedIn`, QA-63)
+ * @param {Function} [options.listMeta] `({rows, facet, admin, query}) => object` —
+ *   extra keys for a list's `meta`: `rows` is every row the request may see
+ *   before any filter, and `facet(param)` the rows every filter but `param`
+ *   lets through — the choices a filter can offer without leading nowhere
+ *   (media's `folders`, QA-63)
  * @param {Function} [options.publicTransform] `(record) => record`
  * @param {Function} [options.listShape] `(record, {admin}) => record` — the
  *   trimmed row a list returns
@@ -341,8 +350,9 @@ function matchesFilter(record, descriptor, raw, context) {
  * @param {Function} [options.beforeDelete] `(record, ctx) => void`, where `ctx`
  *   is `{ user, db, query, collections }` — throw to refuse the delete
  * @param {Function} [options.beforeBulk] `(action, targets, ctx) => void`, where
- *   `ctx` is `{ user, db }` — throw to refuse a bulk action whole, before any
- *   record is touched (an article's publish rules, QA-55)
+ *   `ctx` is `{ user, db, query }` — throw to refuse a bulk action whole, before
+ *   any record is touched (an article's publish rules, QA-55; the media files
+ *   still in use, QA-63)
  * @param {string|false} [options.deleteGuard] a `lib/usage.js` type
  * @param {(record: object) => string|null} [options.protect] why this record
  *   can never be deleted, or `null` — a built-in segment (QA-52). Checked
@@ -380,6 +390,8 @@ function makeCrudRouter(options) {
     slugged = Boolean(model.slugField),
     collections: needed = [],
     afterRead,
+    decoratePage,
+    listMeta,
     publicTransform,
     listShape,
     publicFilters = {},
@@ -588,23 +600,26 @@ function makeCrudRouter(options) {
   /** The `{ data, meta }` of a list response. */
   function listResponse(req, res, { admin }) {
     const collections = source();
-    const filtered = applyFilters(
-      decoratedRows({ admin, collections, query: req.query }),
-      req.query,
-      {
-        admin,
-        collections,
-      }
-    );
+    const visible = decoratedRows({ admin, collections, query: req.query });
+    const filtered = applyFilters(visible, req.query, {
+      admin,
+      collections,
+    });
     const sorted = applySort(filtered, req.query, { admin });
     const { data, meta } = paginate(sorted, {
       page: first(req.query.page),
       perPage: pageSize(req.query, admin),
     });
 
+    const page = decoratePage ? decoratePage(data, { admin, collections, query: req.query }) : data;
+    // The rows every filter but one lets through: what that filter may offer.
+    const facet = (param) =>
+      applyFilters(visible, { ...req.query, [param]: undefined }, { admin, collections });
+    const extra = listMeta ? listMeta({ rows: visible, facet, admin, query: req.query }) : null;
+
     res.ok(
-      data.map((record) => scope(record, { admin, list: true })),
-      meta
+      page.map((record) => scope(record, { admin, list: true })),
+      extra ? { ...meta, ...extra } : meta
     );
   }
 
@@ -888,17 +903,23 @@ function makeCrudRouter(options) {
         const ids = body.ids.map(String);
         const targets = rows().filter((record) => ids.includes(String(record.id)));
 
-        if (beforeBulk) beforeBulk(body.action, targets, { user: req.user, db });
+        if (beforeBulk) beforeBulk(body.action, targets, { user: req.user, db, query: req.query });
 
         let affected = 0;
         if (body.action === 'delete') {
           // All or nothing: a bulk delete that would strand a reference is
           // refused whole, so the editor sees one list of what is in the way.
           guardBulkDelete(targets);
-          for (const record of targets) {
-            if (beforeDelete) beforeDelete(record, { user: req.user, db });
-            db.removeRecord(name, record.id);
+          // A resource's own delete rule is asked of every record before any
+          // is removed, with the context a single delete gets (QA-63). It was
+          // asked record by record between the removals, and without the
+          // query: a refusal of the third file answered 409 "still in use"
+          // with the first two already gone, and `force` was never read.
+          if (beforeDelete) {
+            const context = { user: req.user, db, query: req.query, collections: source() };
+            for (const record of targets) beforeDelete(record, context);
           }
+          for (const record of targets) db.removeRecord(name, record.id);
           affected = targets.length;
           closeGap();
         } else {

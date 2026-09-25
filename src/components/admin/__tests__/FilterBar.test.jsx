@@ -8,7 +8,7 @@
  * end before it starts, and its chips speak in dates rather than ISO strings.
  */
 
-import { fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import FilterBar from '../FilterBar';
@@ -51,6 +51,33 @@ const setup = (values = {}, onChange = jest.fn(), onReset = jest.fn()) => {
 beforeEach(() => setViewport(1280));
 
 describe('FilterBar', () => {
+  it('reads spaces alone as no search at all (QA-63)', () => {
+    jest.useFakeTimers();
+    try {
+      const { onChange } = setup();
+
+      fireEvent.change(screen.getByRole('searchbox'), { target: { value: '   ' } });
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(onChange).toHaveBeenLastCalledWith({ q: undefined });
+
+      fireEvent.change(screen.getByRole('searchbox'), { target: { value: ' lobby ' } });
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(onChange).toHaveBeenLastCalledWith({ q: ' lobby ' });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('gives a search of spaces alone, arriving in the address, no chip (QA-63)', () => {
+    setup({ q: '   ' });
+    expect(screen.queryByRole('button', { name: /Remove filter Search/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reset' })).not.toBeInTheDocument();
+  });
+
   it('gives a custom filter a chip, and counts it for Reset', async () => {
     const { onChange, onReset } = setup({ propertyId: '12' });
 

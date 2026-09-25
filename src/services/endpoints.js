@@ -1552,20 +1552,37 @@ const adminMediaBase = adminResource({
 });
 
 /**
- * Media, with the two parameters the library needs beyond the usual CRUD.
+ * Media, with the parameters the library needs beyond the usual CRUD.
  *
  * `force` is the one rule this resource adds to §5.8: a `DELETE` of a file
  * something still shows is a 409 listing the usages, and `force=true` is the
  * editor's answer to that list (prompt 39 §5). The record goes; the Cloudinary
- * asset was never ours to delete.
+ * asset was never ours to delete. A bulk delete is all or nothing and reads
+ * `force` the same way (QA-63).
+ *
+ * The list's `meta.folders` names the folders that hold a file every other
+ * filter lets through, whatever the page — the Folder filter's options, none of
+ * them leading nowhere (QA-63). `q` reads the alt text, the title, the folder,
+ * the public id, the address and the tags.
  */
 const adminMedia = {
   ...adminMediaBase,
+  list: {
+    ...adminMediaBase.list,
+    description:
+      'List media items for the library grid; `meta.folders` names the folders the other filters leave something in, and `q` also reads the address and the tags',
+  },
   remove: {
     ...adminMediaBase.remove,
     query: { force: 'bool' },
     description:
       'Delete a media record; 409 listing `usedIn` when the file is still in use, unless `force=true`',
+  },
+  bulk: {
+    ...adminMediaBase.bulk,
+    query: { force: 'bool' },
+    description:
+      'Apply one action to several media items; a delete is all or nothing — a 409 naming every file still in use (`data.refused`), unless `force=true`',
   },
 };
 

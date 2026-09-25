@@ -122,6 +122,12 @@ export default function MediaUploadZone({
           {items.map((item) => {
             const active =
               item.status === 'uploading' || item.status === 'saving' || item.status === 'queued';
+            // Once the file is on Cloudinary it is filed either way, and a file
+            // the library does not take can never succeed: neither offers a
+            // button that does nothing (QA-63).
+            const cancellable = item.status === 'uploading' || item.status === 'queued';
+            const retryable =
+              (item.status === 'error' && !item.invalid) || item.status === 'cancelled';
 
             return (
               <li key={item.id} className={styles.queueRow}>
@@ -166,12 +172,12 @@ export default function MediaUploadZone({
                       className={styles.queueDone}
                     />
                   ) : null}
-                  {active ? (
+                  {cancellable ? (
                     <Button variant="ghost" size="sm" onClick={() => cancel(item.id)}>
                       Cancel
                     </Button>
                   ) : null}
-                  {item.status === 'error' || item.status === 'cancelled' ? (
+                  {retryable ? (
                     <Button variant="outline" size="sm" onClick={() => retry(item.id)}>
                       Retry
                     </Button>

@@ -16,10 +16,16 @@ import { useNavigationGuard } from '../contexts/NavigationGuardContext';
  * changes" — never on a reload or a closed tab, which is exactly when a copy
  * kept for recovery must survive.
  *
+ * `question` words the in-app dialog for work that is not an edit — the
+ * uploads of the media library, which leaving stops (QA-63):
+ *
+ *   useUnsavedChanges(queue.busy, { question: { title: 'Leave while files are uploading?', … } });
+ *
  * @param {boolean} dirty
- * @param {{onDiscard?: () => void}} [options]
+ * @param {{onDiscard?: () => void, question?: {title?: string, message?: string,
+ *   confirmLabel?: string, cancelLabel?: string}}} [options]
  */
-export default function useUnsavedChanges(dirty, { onDiscard } = {}) {
+export default function useUnsavedChanges(dirty, { onDiscard, question } = {}) {
   const { register } = useNavigationGuard();
   // One identity per mounted form, so two open forms cannot clear each other.
   const idRef = useRef(null);
@@ -31,7 +37,16 @@ export default function useUnsavedChanges(dirty, { onDiscard } = {}) {
   discardRef.current = onDiscard;
   const discard = useCallback(() => discardRef.current?.(), []);
 
-  useEffect(() => register(idRef.current, dirty, discard), [register, dirty, discard]);
+  // The question is read by its words, so an object written inline in the
+  // caller's render does not re-register the screen on every render.
+  const questionKey = question ? JSON.stringify(question) : '';
+  const questionRef = useRef(question);
+  questionRef.current = question;
+
+  useEffect(
+    () => register(idRef.current, dirty, discard, questionKey ? questionRef.current : undefined),
+    [register, dirty, discard, questionKey]
+  );
 
   useEffect(() => {
     if (!dirty) return undefined;
