@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
+import { useSearchParams } from 'react-router-dom';
 
 import AdminTabs, { AdminTabPanel } from '../../../components/admin/AdminTabs';
 import Alert from '../../../components/ui/Alert';
@@ -15,6 +16,7 @@ import NewsletterTab from './tabs/NewsletterTab';
 import PATHS from '../../../routes/paths';
 import PageHeader from '../../../components/admin/PageHeader';
 import Skeleton from '../../../components/ui/Skeleton';
+import focusFirstError from '../../../components/admin/focusFirstError';
 import settingsService from '../../../services/settingsService';
 import useApi from '../../../hooks/useApi';
 import useForm from '../../../hooks/useForm';
@@ -22,8 +24,12 @@ import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 import { EVENTS, emit } from '../../../utils/events';
 import { firstFieldMessage } from '../../../services/apiError';
 import {
+  changedSettings,
+  displayedAt,
   normalizeSettings,
+  prepareSettings,
   settingsErrors,
+  settingsLabel,
   settingsSchema,
   validateSettings,
 } from './settingsSchema';
@@ -32,7 +38,7 @@ import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './SettingsPage.module.css';
-import { TOASTS } from '../../../config/adminCopy';
+import { FORMS, TOASTS } from '../../../config/adminCopy';
 
 /** The seven panels of §6.13, in the order an editor meets them. */
 export const SETTINGS_TABS = [
@@ -44,6 +50,11 @@ export const SETTINGS_TABS = [
   { key: 'integrations', label: 'Integrations', icon: 'mdi:puzzle-outline' },
   { key: 'leads', label: 'Lead notifications', icon: 'mdi:bell-ring-outline' },
 ];
+
+/** The panel the screen opens on when the address names none. */
+const DEFAULT_TAB = 'general';
+
+const isSettingsTab = (key) => SETTINGS_TABS.some((entry) => entry.key === key);
 
 /**
  * Which tab owns a dotted path — so a message lands on a panel an editor can
@@ -89,12 +100,34 @@ export function tabOfSettingsField(path) {
 }
 
 /**
+ * What leaving asks while a save is still on its way (QA-64). "Discard unsaved
+ * changes?" was the question, and "Discard changes" discarded nothing: the save
+ * went on and landed after the editor had left.
+ */
+export const SAVING_QUESTION = {
+  title: 'Leave while the settings are saving?',
+  message:
+    'The save carries on after you leave, and a message says if it fails — the changes would then have to be made again.',
+  confirmLabel: 'Leave',
+  cancelLabel: 'Stay until it is saved',
+};
+
+/** What a save that found nothing to send answers, instead of a request. */
+const NOTHING_TO_SEND = Symbol('nothing to send');
+
+/**
  * Admin → Site settings (`/admin/settings`, §6.13).
  *
  * One singleton behind seven panels and one `PUT`. The form holds the whole
- * record and sends the whole record; the API's deep merge (§5.14) is a safety
- * net rather than something this screen leans on, and `normalizeSettings`
- * already drops anything the model does not declare.
+ * record and validates the whole record, but a save **sends what changed**
+ * (QA-64): the API deep-merges what it receives (§5.14), so a panel this
+ * editor did not touch is left as it is on the server — including a change a
+ * colleague saved after this form was opened, which the whole record used to
+ * put back. After a save the form takes the server's own copy, so it shows
+ * that colleague's change too.
+ *
+ * The open panel is part of the address (`?tab=integrations`, QA-64): it
+ * survives a reload, and other screens can link to the panel they mean.
  *
  * What makes it more than a form is the last three lines of a save: the public
  * site reads every one of these values through `SiteSettingsContext`, so the
@@ -112,9 +145,28 @@ export default function SettingsPage() {
   const siteSettings = useSiteSettings();
 
   const canEdit = can('settings', 'edit');
-  const [tab, setTab] = useState('general');
 
-  const { data, loading, error, refetch } = useApi(
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const tab = isSettingsTab(requestedTab) ? requestedTab : DEFAULT_TAB;
+
+  // Replacing, not pushing: Back leaves the screen rather than walking back
+  // through every panel that was opened on the way.
+  const setTab = useCallback(
+    (key) =>
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (key === DEFAULT_TAB) next.delete('tab');
+          else next.set('tab', key);
+          return next;
+        },
+        { replace: true }
+      ),
+    [setSearchParams]
+  );
+
+  const { data, loading, error, refetch, setData } = useApi(
     (signal) => settingsService.admin({ signal }),
     []
   );
@@ -123,33 +175,63 @@ export default function SettingsPage() {
   // that holds it can be opened even though `form.errors` is painted a render
   // later than the `await` that fails.
   const serverFieldRef = useRef(null);
+  // What the form started from, for the save to diff against. Read by
+  // `onSubmit`, which `useForm` calls from its own closure.
+  const baselineRef = useRef(null);
 
   const form = useForm({
-    initialValues: data ?? {},
+    initialValues: {},
     schema: settingsSchema,
     validate: validateSettings,
     normalize: normalizeSettings,
+    labels: settingsLabel,
     onSubmit: async (payload) => {
+      const changes = changedSettings(payload, normalizeSettings(baselineRef.current ?? {}));
+      // Nothing left once the spaces are trimmed: nothing to write.
+      if (Object.keys(changes).length === 0) return NOTHING_TO_SEND;
       try {
-        return await settingsService.update(payload);
+        return await settingsService.update(changes);
       } catch (thrown) {
         serverFieldRef.current = Object.keys(thrown?.errors ?? {})[0] ?? null;
         throw thrown;
       }
     },
   });
+  baselineRef.current = form.baseline;
 
   // `useApi` answers after the first render and `useForm` keeps the values it
-  // was created with, so the record is moved into the form once, when it lands.
-  const [loadedAt, setLoadedAt] = useState(null);
-  if (data && data.updatedAt !== loadedAt) {
-    setLoadedAt(data.updatedAt ?? 'loaded');
-    form.reset(data);
+  // was created with, so a record is moved into the form when it lands — the
+  // first one, a retry's, and the server's copy after a save. Keyed on the
+  // record itself rather than on its `updatedAt`: an API that sent none put
+  // this in a loop.
+  const [loaded, setLoaded] = useState(null);
+  if (data && data !== loaded) {
+    setLoaded(data);
+    form.reset(prepareSettings(data));
   }
 
-  useUnsavedChanges(form.dirty);
+  useUnsavedChanges(form.dirty, { question: form.submitting ? SAVING_QUESTION : undefined });
+
+  // A refused save opens the tab of the first problem and, once its messages
+  // are drawn, puts the cursor in that field. Pressed from the header with the
+  // field below the fold, Save did nothing that could be seen (QA-64).
+  const panelRef = useRef(null);
+  const [refusal, setRefusal] = useState(null);
+  useEffect(() => {
+    if (!refusal || refusal.tab !== tab) return;
+    focusFirstError(panelRef.current);
+    // Once: coming back to this tab later is not another refusal.
+    setRefusal(null);
+  }, [refusal, tab]);
 
   const save = useCallback(async () => {
+    // Save is always pressable: disabled until something changed, a click on
+    // it could not add the address typed into Lead notifications, which the
+    // same click commits on its way (QA-64). A clean form says so instead.
+    if (!form.dirty) {
+      toast.info(FORMS.noChanges);
+      return;
+    }
     serverFieldRef.current = null;
     // Computed before the submit rather than read after it: `form.errors` in
     // this closure is a render behind the validation the submit runs.
@@ -157,21 +239,55 @@ export default function SettingsPage() {
 
     const saved = await form.submit();
     if (saved === false) {
-      const owner = tabOfSettingsField(firstProblem ?? serverFieldRef.current ?? '');
-      if (owner) setTab(owner);
+      const owner = tabOfSettingsField(firstProblem ?? serverFieldRef.current ?? '') ?? tab;
+      if (owner !== tab) setTab(owner);
+      setRefusal({ tab: owner });
+      return;
+    }
+
+    if (saved === NOTHING_TO_SEND) {
+      form.reset(prepareSettings(data));
+      toast.info(FORMS.noChanges);
       return;
     }
 
     const record = saved?.data ?? saved;
+    // The form takes the server's copy — the record, not whatever an API
+    // answered without one, which would have emptied every panel.
+    if (record && typeof record === 'object' && record.general) setData(record);
     siteSettings.updateLocal(record);
     siteSettings.refresh();
     emit(EVENTS.settingsChanged, record);
     toast.success(TOASTS.saved('Site settings'));
-  }, [form, siteSettings, toast]);
+  }, [data, form, setData, setTab, siteSettings, tab, toast]);
 
+  // Ctrl/Cmd+S saves, as it does on every other editor of the panel — here it
+  // opened the browser's "Save page as" (QA-64). Not from a dialog (the media
+  // picker), not twice for a held key, not while a save is on its way.
+  const shortcut = useRef({});
+  shortcut.current = { save, busy: form.submitting };
+  useEffect(() => {
+    if (!canEdit) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key !== 's' && event.key !== 'S') return;
+      if (!event.ctrlKey && !event.metaKey) return;
+      if (event.altKey || event.shiftKey) return;
+      if (event.target?.closest?.('[role="dialog"]')) return;
+      event.preventDefault();
+      const current = shortcut.current;
+      if (event.repeat || current.busy) return;
+      current.save();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [canEdit]);
+
+  // One message per field the editor can see: a badge's own message and the
+  // list's are the same line on the screen, and were counted as two (QA-64).
   const errorsByTab = useMemo(() => {
     const counts = {};
-    for (const path of Object.keys(form.errors ?? {})) {
+    const shown = new Set(Object.keys(form.errors ?? {}).map(displayedAt));
+    for (const path of shown) {
       const owner = tabOfSettingsField(path);
       if (owner) counts[owner] = (counts[owner] ?? 0) + 1;
     }
@@ -237,7 +353,7 @@ export default function SettingsPage() {
               My profile
             </Button>
             {canEdit ? (
-              <Button onClick={save} loading={form.submitting} disabled={!form.dirty}>
+              <Button onClick={save} loading={form.submitting}>
                 Save settings
               </Button>
             ) : null}
@@ -257,27 +373,29 @@ export default function SettingsPage() {
 
       <AdminTabs label="Site settings sections" tabs={tabs} value={tab} onChange={setTab} />
 
-      <AdminTabPanel tabKey="general" value={tab}>
-        <GeneralTab form={form} disabled={disabled} />
-      </AdminTabPanel>
-      <AdminTabPanel tabKey="contact" value={tab}>
-        <ContactTab form={form} disabled={disabled} />
-      </AdminTabPanel>
-      <AdminTabPanel tabKey="hero" value={tab}>
-        <HeroTab form={form} disabled={disabled} />
-      </AdminTabPanel>
-      <AdminTabPanel tabKey="navigation" value={tab}>
-        <NavigationFooterTab form={form} disabled={disabled} />
-      </AdminTabPanel>
-      <AdminTabPanel tabKey="newsletter" value={tab}>
-        <NewsletterTab form={form} disabled={disabled} />
-      </AdminTabPanel>
-      <AdminTabPanel tabKey="integrations" value={tab}>
-        <IntegrationsTab form={form} disabled={disabled} />
-      </AdminTabPanel>
-      <AdminTabPanel tabKey="leads" value={tab}>
-        <LeadNotificationsTab form={form} disabled={disabled} />
-      </AdminTabPanel>
+      <div ref={panelRef}>
+        <AdminTabPanel tabKey="general" value={tab}>
+          <GeneralTab form={form} disabled={disabled} />
+        </AdminTabPanel>
+        <AdminTabPanel tabKey="contact" value={tab}>
+          <ContactTab form={form} disabled={disabled} />
+        </AdminTabPanel>
+        <AdminTabPanel tabKey="hero" value={tab}>
+          <HeroTab form={form} disabled={disabled} />
+        </AdminTabPanel>
+        <AdminTabPanel tabKey="navigation" value={tab}>
+          <NavigationFooterTab form={form} disabled={disabled} />
+        </AdminTabPanel>
+        <AdminTabPanel tabKey="newsletter" value={tab}>
+          <NewsletterTab form={form} disabled={disabled} />
+        </AdminTabPanel>
+        <AdminTabPanel tabKey="integrations" value={tab}>
+          <IntegrationsTab form={form} disabled={disabled} />
+        </AdminTabPanel>
+        <AdminTabPanel tabKey="leads" value={tab}>
+          <LeadNotificationsTab form={form} disabled={disabled} />
+        </AdminTabPanel>
+      </div>
 
       {canEdit && form.dirty ? (
         <div className={styles.saveBar}>

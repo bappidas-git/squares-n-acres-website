@@ -84,6 +84,7 @@ export function useMasterDataCrud(config) {
     defaultSort = { field: 'createdAt', order: 'desc' },
     paramKeys: extraParamKeys,
     onMutated,
+    flagMessage,
   } = config;
 
   const toast = useToast();
@@ -183,7 +184,8 @@ export function useMasterDataCrud(config) {
         onMutated?.(collectionKey);
         // The switch moved before the request went out; this is the receipt
         // that it landed, in the same words every other list uses (§8.2).
-        toast.success(TOASTS.flagged(`“${labelOf(row, columns)}”`, field, value));
+        const label = `“${labelOf(row, columns)}”`;
+        toast.success(flagMessage?.(label, field, value) ?? TOASTS.flagged(label, field, value));
         // The list is read again: a FAQ switched off under "Status: Active"
         // stayed in that list, unticked, and the count above it did not move
         // (QA-59). The new value stays on screen until the answer lands.
@@ -205,7 +207,7 @@ export function useMasterDataCrud(config) {
         setBusyIds((current) => current.filter((entry) => entry !== id));
       }
     },
-    [service, toast, onMutated, collectionKey, columns, refetch]
+    [service, toast, onMutated, collectionKey, columns, refetch, flagMessage]
   );
 
   return {
@@ -304,6 +306,15 @@ export function labelsOf(fields) {
  * @param {boolean} [props.config.canEdit] false renders the screen read-only
  * @param {(row: object) => boolean} [props.config.canDelete] false leaves a
  *   row's delete action out — a built-in segment the API would refuse anyway
+ * @param {(row: object) => boolean} [props.config.canToggleActive] false locks a
+ *   row's Active switch — your own account on the Users screen, which the API
+ *   refuses to switch off (QA-64)
+ * @param {(row: object) => string} [props.config.deleteMessage] the delete
+ *   confirmation's sentence when removing the record does more than remove it —
+ *   a user's leads are unassigned (QA-64)
+ * @param {(label: string, field: string, value: boolean) => string|undefined}
+ *   [props.config.flagMessage] what a toggle's toast says instead of the house
+ *   wording — an account "can no longer sign in", not "is no longer live" (QA-64)
  * @param {(collection: string) => void} [props.config.onMutated] after every
  *   successful write, with `config.key` — `MasterDataContext.refresh` for the
  *   collections the public site caches
@@ -365,6 +376,8 @@ export default function MasterDataPage({ config }) {
     guardHint,
     canEdit = true,
     canDelete,
+    canToggleActive,
+    deleteMessage,
     emptyState,
     newValues = {},
     extraRowActions,
@@ -928,7 +941,11 @@ export default function MasterDataPage({ config }) {
             size="small"
             disableRipple
             checked={row.isActive !== false}
-            disabled={!canEdit || busyIds.includes(String(row.id))}
+            disabled={
+              !canEdit ||
+              busyIds.includes(String(row.id)) ||
+              (canToggleActive ? !canToggleActive(row) : false)
+            }
             onClick={(event) => event.stopPropagation()}
             onChange={() => patchField(row, 'isActive', row.isActive === false)}
             // `slotProps.input` replaces MUI's own defaults for that slot, and
@@ -962,7 +979,7 @@ export default function MasterDataPage({ config }) {
     );
 
     return [...declared, ...extra];
-  }, [columns, activeToggle, featuredToggle, canEdit, busyIds, patchField]);
+  }, [columns, activeToggle, featuredToggle, canEdit, canToggleActive, busyIds, patchField]);
 
   const rowActions = useCallback(
     (row) => [
@@ -1339,7 +1356,12 @@ export default function MasterDataPage({ config }) {
       <ConfirmDialog
         open={Boolean(deleting)}
         title={DIALOGS.deleteTitle(singular)}
-        message={shownDeleting ? DIALOGS.deleteMessage(labelOf(shownDeleting, columns)) : ''}
+        message={
+          shownDeleting
+            ? (deleteMessage?.(shownDeleting) ??
+              DIALOGS.deleteMessage(labelOf(shownDeleting, columns)))
+            : ''
+        }
         confirmLabel={DIALOGS.deleteConfirm}
         danger
         loading={deletingBusy}

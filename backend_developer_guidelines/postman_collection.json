@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "3fc3a194-d939-44aa-8997-e0af3ffe473f",
     "name": "Squares N Acres API",
-    "description": "Every endpoint of the contract, generated from `src/services/endpoints.js`.\n\n**Start here:** select the *Squares N Acres — Local mock* environment, open\n`auth › auth › POST /auth/login` and send it. Its test script writes\n`{{token}}` into the environment and every other request inherits it.\nTo work as another role, change `email` and `password` in the environment\n(the manager and sales values are there, disabled) and sign in again.\n\nRunning the whole collection is the parity check of `08_TESTING_AND_PARITY.md`:\npoint `{{baseUrl}}` at the Laravel API and every test that passes against\nthe mock must pass against it.\n\ngeneratedFrom: 6123ecd",
+    "description": "Every endpoint of the contract, generated from `src/services/endpoints.js`.\n\n**Start here:** select the *Squares N Acres — Local mock* environment, open\n`auth › auth › POST /auth/login` and send it. Its test script writes\n`{{token}}` into the environment and every other request inherits it.\nTo work as another role, change `email` and `password` in the environment\n(the manager and sales values are there, disabled) and sign in again.\n\nRunning the whole collection is the parity check of `08_TESTING_AND_PARITY.md`:\npoint `{{baseUrl}}` at the Laravel API and every test that passes against\nthe mock must pass against it.\n\ngeneratedFrom: dfe0f41",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -23283,7 +23283,7 @@
             },
             {
               "id": "b00bfe0d-f9fc-4707-88bd-0dd9f1960ada",
-              "name": "PATCH /admin/users/:id — Update the given fields of a user (toggles, order, SEO panel)",
+              "name": "PATCH /admin/users/:id — Update the given fields of a user (the Active switch, a password reset)",
               "request": {
                 "method": "PATCH",
                 "header": [
@@ -23316,7 +23316,7 @@
                     "4"
                   ]
                 },
-                "description": "Update the given fields of a user (toggles, order, SEO panel)\n\n- **Registry key** `adminUsers.patch`\n- **Auth** bearer token, minimum role `admin`\n- **Response shape** `User` — see `01_API_CONTRACT.md`\n- **Body schema** `user.patch` — see `03_ENDPOINTS.md`"
+                "description": "Update the given fields of a user (the Active switch, a password reset)\n\n- **Registry key** `adminUsers.patch`\n- **Auth** bearer token, minimum role `admin`\n- **Response shape** `User` — see `01_API_CONTRACT.md`\n- **Body schema** `user.patch` — see `03_ENDPOINTS.md`"
               },
               "event": [
                 {
@@ -23367,7 +23367,7 @@
             },
             {
               "id": "2bc2a718-d44d-48c7-83a4-0e383471612b",
-              "name": "DELETE /admin/users/:id — Delete a user; 409 when it is still in use",
+              "name": "DELETE /admin/users/:id — Delete a user; their leads are unassigned",
               "request": {
                 "method": "DELETE",
                 "header": [
@@ -23387,7 +23387,7 @@
                     "6"
                   ]
                 },
-                "description": "Delete a user; 409 when it is still in use\n\n- **Registry key** `adminUsers.remove`\n- **Auth** bearer token, minimum role `admin`\n- **Response shape** `Null` — see `01_API_CONTRACT.md`"
+                "description": "Delete a user; their leads are unassigned\n\n- **Registry key** `adminUsers.remove`\n- **Auth** bearer token, minimum role `admin`\n- **Response shape** `Null` — see `01_API_CONTRACT.md`"
               },
               "event": [
                 {

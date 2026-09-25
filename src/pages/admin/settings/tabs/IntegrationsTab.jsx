@@ -5,45 +5,41 @@ import { INTEGRATION_PATTERNS } from '../settingsSchema';
 import { Link } from 'react-router-dom';
 import { TextField } from '../../../../components/ui/FormField';
 
-/** What each id is, and what stops working without it. */
+/**
+ * What stops working without each id. Their names live with their formats in
+ * `INTEGRATION_PATTERNS`, where the messages that name them read them too.
+ */
 const FIELDS = [
   {
     key: 'googleAnalyticsId',
-    label: 'GA4 measurement ID',
     hint: 'Loads GA4 on the public site; page views and the web-vitals report go to this property.',
   },
   {
     key: 'googleTagManagerId',
-    label: 'Tag Manager container ID',
     hint: 'Loads GTM instead of — or beside — GA4, for tags managed outside this admin.',
   },
   {
     key: 'facebookPixelId',
-    label: 'Meta pixel ID',
     hint: 'Loads the Meta pixel. Leave empty and no Meta script is served at all.',
   },
   {
     key: 'googleMapsApiKey',
-    label: 'Google Maps browser key',
     hint: 'Only the property form’s draggable pin needs it (D42); every public map is key-free.',
   },
   {
     key: 'cloudinaryCloudName',
-    label: 'Cloudinary cloud name',
     hint: 'With the preset below, this turns on uploading across the admin.',
     to: PATHS.adminMedia,
     toLabel: 'Media library',
   },
   {
     key: 'cloudinaryUploadPreset',
-    label: 'Cloudinary unsigned upload preset',
     hint: 'An unsigned preset — the browser uploads directly, so nothing here can sign a request.',
     to: PATHS.adminMedia,
     toLabel: 'Media library',
   },
   {
     key: 'recaptchaSiteKey',
-    label: 'reCAPTCHA site key',
     hint: 'The public half of the pair. The secret half belongs to the server and is never stored here.',
   },
 ];
@@ -111,7 +107,7 @@ function IntegrationField({ field, values, setField, getError, disabled }) {
   return (
     <>
       <TextField
-        label={field.label}
+        label={rule?.label}
         value={values[field.key] ?? ''}
         onChange={(event) =>
           setField(

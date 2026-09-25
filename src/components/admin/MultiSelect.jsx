@@ -32,6 +32,14 @@ const sameValue = (left, right) => String(left) === String(right);
  * @param {boolean} [props.searchable]
  * @param {boolean} [props.creatable] offers "Add …" for an unknown entry
  * @param {(label: string) => Promise<{value: string|number, label: string}>|void} [props.onCreate]
+ * @param {(label: string) => string|null|undefined} [props.checkNew] why a typed
+ *   entry cannot be added — "“x” is not an e-mail address" — shown in the list
+ *   in place of "Add …", which it cannot then be picked as (QA-64). An address
+ *   refused by `onCreate` alone vanished from the box with no word of why.
+ * @param {boolean} [props.commitOnBlur] a creatable field adds what was typed
+ *   when it loses focus, as Enter would (QA-64): an address typed and followed
+ *   by a click on Save was dropped without a word, and saved without it. What
+ *   cannot be added stays in the box instead of being cleared.
  * @param {number} [props.max] refuses further picks once reached
  * @param {string} [props.error]
  */
@@ -44,6 +52,8 @@ export default function MultiSelect({
   searchable = true,
   creatable = false,
   onCreate,
+  checkNew,
+  commitOnBlur = false,
   max,
   placeholder,
   hint,
@@ -91,16 +101,29 @@ export default function MultiSelect({
   const selected = selectedRef.current;
 
   const handleChange = async (_event, next) => {
+    // A line that only explains why nothing can be added is not a choice.
+    if (next.some((option) => option?.refused)) return;
     const created = next.find((option) => option?.isNew);
     if (created && onCreate) {
       if (creating.current) return;
-      creating.current = true;
-      try {
-        const made = await onCreate(created.inputValue);
+      const add = (made) => {
         if (!made) return;
         const current = valueRef.current;
         if (current.some((entry) => sameValue(entry, made.value))) return;
         onChange?.([...current, made.value]);
+      };
+      const answer = onCreate(created.inputValue);
+      // A create that answers at once is added at once, inside the event that
+      // asked for it: the blur of a click on Save is followed by the click, and
+      // an entry added a microtask later missed the save it was typed for
+      // (QA-64).
+      if (typeof answer?.then !== 'function') {
+        add(answer);
+        return;
+      }
+      creating.current = true;
+      try {
+        add(await answer);
       } finally {
         creating.current = false;
       }
@@ -155,11 +178,17 @@ export default function MultiSelect({
         onChange={handleChange}
         onInputChange={(_event, next) => setTyped(next)}
         autoHighlight={typed.trim() !== ''}
+        // On blur the highlighted option — "Add …" once something is typed —
+        // is taken, as Enter would take it; what cannot be taken is left in
+        // the box rather than cleared.
+        autoSelect={creatable && commitOnBlur}
+        clearOnBlur={!(creatable && commitOnBlur)}
         filterSelectedOptions
         getOptionLabel={(option) => option?.label ?? ''}
         isOptionEqualToValue={(option, current) => sameValue(option.value, current.value)}
         getOptionDisabled={(option) =>
-          full && !value.some((entry) => sameValue(entry, option.value))
+          Boolean(option?.refused) ||
+          (full && !value.some((entry) => sameValue(entry, option.value)))
         }
         filterOptions={(list, state) => {
           const query = state.inputValue.trim();
@@ -174,8 +203,24 @@ export default function MultiSelect({
           const known = options.some((option) => option.label.toLowerCase() === lower);
           if (exact) return [exact, ...filtered.filter((option) => option !== exact)];
           if (creatable && query && !known) {
+            const problem = checkNew?.(query);
             return [
-              { value: `new:${query}`, label: `Add "${query}"`, isNew: true, inputValue: query },
+              problem
+                ? { value: `refused:${query}`, label: problem, refused: true }
+                : {
+                    value: `new:${query}`,
+                    label: `Add "${query}"`,
+                    isNew: true,
+                    inputValue: query,
+                  },
+              ...filtered,
+            ];
+          }
+          // Known but not offered: it is chosen already. Enter did nothing, and
+          // nothing said why (QA-64).
+          if (creatable && query && known) {
+            return [
+              { value: `refused:${query}`, label: `“${query}” is already added`, refused: true },
               ...filtered,
             ];
           }

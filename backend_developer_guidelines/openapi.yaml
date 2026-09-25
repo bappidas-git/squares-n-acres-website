@@ -8,7 +8,7 @@ info:
     `src/services/endpoints.js`, `src/services/schemas/` and
     `mock-server/schemas/models.js`. Do not edit by hand.
 
-    generatedFrom: 6123ecd
+    generatedFrom: dfe0f41
 
     Read `01_API_CONTRACT.md` first: the envelopes of §5.2, the error body
     of §5.3 and the pagination of §5.6 apply to every operation below and
@@ -19959,7 +19959,7 @@ paths:
       operationId: adminUsers.patch
       tags:
         - users
-      summary: Update the given fields of a user (toggles, order, SEO panel)
+      summary: Update the given fields of a user (the Active switch, a password reset)
       description: 'Minimum role: `admin` (§7). Registry key `adminUsers.patch`.'
       security:
         - bearerAuth: []
@@ -20031,7 +20031,7 @@ paths:
       operationId: adminUsers.remove
       tags:
         - users
-      summary: Delete a user; 409 when it is still in use
+      summary: Delete a user; their leads are unassigned
       description: 'Minimum role: `admin` (§7). Registry key `adminUsers.remove`.'
       security:
         - bearerAuth: []

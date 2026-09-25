@@ -1725,6 +1725,10 @@ const adminUsers = adminResource({
   readAuth: 'manager',
   query: { role: enumOf(ROLES) },
 });
+// A user has no slug and no delete guard; what a write does to one is its own.
+adminUsers.patch.description =
+  'Update the given fields of a user (the Active switch, a password reset)';
+adminUsers.remove.description = 'Delete a user; their leads are unassigned';
 
 /* ------------------------------------------------------------------ *
  * Registry

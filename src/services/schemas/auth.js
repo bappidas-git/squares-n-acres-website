@@ -18,4 +18,17 @@ const password = {
   newPassword: { type: 'string', required: true, min: 8, maxLength: 100 },
 };
 
-module.exports = { login, profile, password };
+/**
+ * A password holds a letter and a digit as well as its eight characters: "not
+ * eight letters or eight digits" (§5.4). One rule for every place a password is
+ * set — the owner changing their own, an administrator creating an account or
+ * resetting one — and QA-64 found it kept by the first alone: the Users screen
+ * created and reset accounts with `aaaaaaaa` and `12345678`.
+ */
+const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d)/;
+
+/** The API's sentence for a password that breaks the rule, naming its field. */
+const passwordMessage = (field = 'password') =>
+  `The ${field} must contain at least one letter and one digit.`;
+
+module.exports = { login, profile, password, PASSWORD_PATTERN, passwordMessage };

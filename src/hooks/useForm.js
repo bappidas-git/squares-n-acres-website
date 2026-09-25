@@ -27,11 +27,13 @@ import { validate as validateSchema } from '../utils/validation';
  *   receive; it is what gets validated, so the form checks what it sends
  * @param {boolean} [options.partial] validate as a PATCH (no `required` checks)
  * @param {string} [options.successMessage] toasted when `submit()` resolves
- * @param {Record<string, string>} [options.labels] what the messages call a
- *   field whose key is not a word — `categoryId` → "category",
- *   `socialLinks.linkedin` → "LinkedIn". The schema and the API both name the
- *   key ("The categoryId field is required."), which is the contract's
- *   sentence but not one an editor should read (QA-55).
+ * @param {Record<string, string>|((key: string) => string|undefined)} [options.labels]
+ *   what the messages call a field whose key is not a word — `categoryId` →
+ *   "category", `socialLinks.linkedin` → "LinkedIn". The schema and the API
+ *   both name the key ("The categoryId field is required."), which is the
+ *   contract's sentence but not one an editor should read (QA-55). A function
+ *   names keys a map cannot list: the rows of a repeater, `hero.stats.2.label`
+ *   (QA-64).
  */
 export default function useForm({
   initialValues = {},
@@ -222,6 +224,9 @@ export default function useForm({
 
   return {
     values,
+    // What `dirty` compares against — the values last loaded or saved. A form
+    // that sends only what changed diffs its values against this (QA-64).
+    baseline,
     errors,
     touched,
     dirty,
@@ -302,14 +307,16 @@ const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
  * "email address" read "…a valid email address address." (QA-61).
  *
  * @param {Record<string, string>} errors `{ key: message }`
- * @param {Record<string, string>|null} labels `{ key: label }`
+ * @param {Record<string, string>|((key: string) => string|undefined)|null} labels
+ *   `{ key: label }`, or a function answering the label of a key
  * @returns {Record<string, string>}
  */
 export function relabel(errors, labels) {
   if (!labels) return errors;
+  const labelOf = typeof labels === 'function' ? labels : (key) => labels[key];
   return Object.fromEntries(
     Object.entries(errors).map(([key, message]) => {
-      const label = labels[key];
+      const label = labelOf(key);
       if (!label || typeof message !== 'string') return [key, message];
       const pattern = new RegExp(`(^|\\s)${escapeRegExp(key)}(?=[\\s.,]|$)`);
       return [key, message.replace(pattern, `$1${label}`)];

@@ -6,6 +6,7 @@ import MasterDataPage from '../../../components/admin/MasterDataPage';
 import Modal from '../../../components/ui/Modal';
 import StatusChip from '../../../components/admin/StatusChip';
 import userService from '../../../services/userService';
+import { PASSWORD_PATTERN } from '../../../services/schemas/auth';
 import { ROLES } from '../../../config/enums';
 import { TextField } from '../../../components/ui/FormField';
 import { firstFieldMessage } from '../../../services/apiError';
@@ -22,7 +23,35 @@ const ROLE_TONE = { admin: 'primary', manager: 'info', sales: 'success' };
 /** The API refuses a password under 8 characters (§5.4, `user.create`). */
 const PASSWORD_MIN = 8;
 
+/**
+ * What a password must be — eight characters, a letter and a digit — the rule
+ * "My profile" and `PUT /auth/password` already kept, and the one the API now
+ * keeps for an account created or reset here (QA-64).
+ */
+export const PASSWORD_RULE = `Use at least ${PASSWORD_MIN} characters, with a letter and a digit.`;
+
+/**
+ * Whether a password is one the API accepts.
+ *
+ * @param {string} password
+ * @returns {string|null} the sentence to show, or `null` when it is fine
+ */
+export function passwordProblem(password) {
+  const value = String(password ?? '');
+  if (value.length < PASSWORD_MIN || !PASSWORD_PATTERN.test(value)) return PASSWORD_RULE;
+  return null;
+}
+
 const sameId = (left, right) => String(left) === String(right);
+
+/** The fields of an account the admin header and "My profile" read. */
+const sessionFields = (record) => ({
+  name: record.name,
+  email: record.email,
+  role: record.role,
+  phone: record.phone ?? null,
+  avatarUrl: record.avatarUrl ?? null,
+});
 
 /**
  * Admin → Settings → Users (`/admin/settings/users`, admins only, §7).
@@ -32,13 +61,20 @@ const sameId = (left, right) => String(left) === String(right);
  * what is specific to users lives here — the "(You)" marker, the role chip, the
  * password rules and the reset-password action.
  *
- * The safety rules are **not** re-implemented here. The API owns them — you
- * cannot deactivate, demote or delete yourself, and the last active admin
- * cannot be removed — and answers 422 with the sentence to show. A rule that
- * lives in two places is a rule that disagrees with itself.
+ * The safety rules are owned by the API — you cannot deactivate, demote or
+ * delete yourself, and the last active admin cannot be removed — which answers
+ * 422 with the sentence to show. The screen only stops offering what is
+ * certain to be refused for your own row: its role select, its Delete (which
+ * asked "This cannot be undone." and was then refused, QA-64) and its Active
+ * switch.
+ *
+ * Your own row is also the signed-in session: a name, an e-mail or an avatar
+ * saved here is handed to the session, so the header and "My profile" show it
+ * at once — "My profile" used to open on the old name and, saved, put it back
+ * (QA-64).
  */
 export default function UsersPage() {
-  const { user: currentUser } = useAdminAuth();
+  const { user: currentUser, updateUser } = useAdminAuth();
   const toast = useToast();
   const [resetting, setResetting] = useState(null);
 
@@ -53,6 +89,14 @@ export default function UsersPage() {
       defaultSort: { field: 'name', order: 'asc' },
       activeToggle: true,
       usageGuard: false,
+      canDelete: (row) => !sameId(row.id, currentUser?.id),
+      canToggleActive: (row) => !sameId(row.id, currentUser?.id),
+      deleteMessage: (row) =>
+        `“${row.name}” will be removed and their leads left unassigned. This cannot be undone.`,
+      flagMessage: (label, field, on) =>
+        field === 'isActive'
+          ? `${label} ${on ? 'can sign in again' : 'can no longer sign in'}`
+          : undefined,
 
       columns: [
         {
@@ -148,8 +192,8 @@ export default function UsersPage() {
             required: !record?.id,
             half: true,
             hint: record?.id
-              ? 'Leave blank to keep the current password.'
-              : `At least ${PASSWORD_MIN} characters.`,
+              ? `Leave blank to keep the current password. ${PASSWORD_RULE}`
+              : PASSWORD_RULE,
           },
           {
             name: 'role',
@@ -168,6 +212,20 @@ export default function UsersPage() {
       },
 
       newValues: { role: 'sales', isActive: true },
+
+      // The API's rule, before the request: a new account's password, and a
+      // new one typed into an existing account's form.
+      validate: (values) => {
+        if (!values.password) return {};
+        const problem = passwordProblem(values.password);
+        return problem ? { password: problem } : {};
+      },
+
+      afterSave: (saved) => {
+        if (saved?.id !== undefined && sameId(saved.id, currentUser?.id)) {
+          updateUser(sessionFields(saved));
+        }
+      },
 
       toFormValues: (record) => ({
         name: record.name ?? '',
@@ -205,7 +263,7 @@ export default function UsersPage() {
         text: 'Add the people who will work in this panel.',
       },
     }),
-    [currentUser]
+    [currentUser, updateUser]
   );
 
   return (
@@ -213,6 +271,7 @@ export default function UsersPage() {
       <MasterDataPage config={config} />
       <ResetPasswordDialog
         user={resetting}
+        isSelf={Boolean(resetting) && sameId(resetting.id, currentUser?.id)}
         onClose={() => setResetting(null)}
         onDone={(name) => {
           setResetting(null);
@@ -224,14 +283,16 @@ export default function UsersPage() {
 }
 
 /** Sets a new password for one account, without touching anything else. */
-function ResetPasswordDialog({ user, onClose, onDone }) {
+function ResetPasswordDialog({ user, isSelf = false, onClose, onDone }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
-    if (password.length < PASSWORD_MIN) {
-      setError(`The password must be at least ${PASSWORD_MIN} characters.`);
+    if (saving) return;
+    const problem = passwordProblem(password);
+    if (problem) {
+      setError(problem);
       return;
     }
 
@@ -273,19 +334,34 @@ function ResetPasswordDialog({ user, onClose, onDone }) {
         </>
       }
     >
-      <TextField
-        label="New password"
-        type="password"
-        autoComplete="new-password"
-        required
-        value={password}
-        error={error}
-        hint={`At least ${PASSWORD_MIN} characters. The user is signed out of their other sessions.`}
-        onChange={(event) => {
-          setPassword(event.target.value);
-          setError('');
+      {/* A form, so Enter in the box resets the password as the button does;
+          it did nothing (QA-64). */}
+      <form
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          submit();
         }}
-      />
+      >
+        <TextField
+          label="New password"
+          type="password"
+          autoComplete="new-password"
+          required
+          value={password}
+          error={error}
+          hint={
+            isSelf
+              ? `${PASSWORD_RULE} Your other sessions are signed out; this one stays.`
+              : `${PASSWORD_RULE} ${user?.name ?? 'The user'} is signed out everywhere.`
+          }
+          onChange={(event) => {
+            setPassword(event.target.value);
+            setError('');
+          }}
+        />
+      </form>
     </Modal>
   );
 }

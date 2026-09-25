@@ -171,3 +171,88 @@ describe('MultiSelect', () => {
     expect(onChange).toHaveBeenLastCalledWith([1, 9]);
   });
 });
+
+/*
+ * QA-64: an entry `onCreate` would refuse vanished from the box with no word of
+ * why, a chosen one pressed again did nothing silently, and an entry typed and
+ * followed by a click elsewhere — the Save button — was dropped.
+ */
+describe('MultiSelect — saying why, and keeping what was typed (QA-64)', () => {
+  const isEmail = (label) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(label);
+  const emailProps = (onChange, onCreate = jest.fn((label) => ({ value: label, label }))) => ({
+    onChange,
+    creatable: true,
+    onCreate,
+    checkNew: (label) => (isEmail(label) ? null : `“${label}” is not an e-mail address`),
+  });
+
+  it('says why a typed entry cannot be added, and does not add it on Enter', async () => {
+    const onChange = jest.fn();
+    const onCreate = jest.fn();
+    renderSelect(emailProps(onChange, onCreate));
+
+    fireEvent.focus(input());
+    fireEvent.change(input(), { target: { value: 'not-an-email' } });
+
+    const refusal = await screen.findByRole('option', {
+      name: '“not-an-email” is not an e-mail address',
+    });
+    expect(refusal).toHaveAttribute('aria-disabled', 'true');
+
+    fireEvent.keyDown(input(), { key: 'Enter' });
+    expect(onCreate).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+    // The text stays, to be corrected.
+    expect(input()).toHaveValue('not-an-email');
+  });
+
+  it('says an entry is already chosen instead of doing nothing', async () => {
+    renderSelect({ initial: [1], creatable: true, onCreate: jest.fn() });
+
+    fireEvent.focus(input());
+    fireEvent.change(input(), { target: { value: 'RERA' } });
+
+    expect(await screen.findByRole('option', { name: '“RERA” is already added' })).toHaveAttribute(
+      'aria-disabled',
+      'true'
+    );
+  });
+
+  it('adds what was typed when the box is left, with commitOnBlur', async () => {
+    const onChange = jest.fn();
+    const onCreate = jest.fn((label) => ({ value: label.toLowerCase(), label }));
+    renderSelect({ ...emailProps(onChange, onCreate), commitOnBlur: true });
+
+    fireEvent.focus(input());
+    fireEvent.change(input(), { target: { value: 'Ops@SquaresNAcres.com' } });
+    await screen.findByRole('option', { name: 'Add "Ops@SquaresNAcres.com"' });
+    fireEvent.blur(input());
+
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(['ops@squaresnacres.com']));
+  });
+
+  it('leaves what cannot be added in the box when it is left', async () => {
+    const onChange = jest.fn();
+    renderSelect({ ...emailProps(onChange), commitOnBlur: true });
+
+    fireEvent.focus(input());
+    fireEvent.change(input(), { target: { value: 'ops@' } });
+    await screen.findByRole('option', { name: '“ops@” is not an e-mail address' });
+    fireEvent.blur(input());
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(input()).toHaveValue('ops@');
+  });
+
+  it('still clears a half-typed search when the box is left, without commitOnBlur', async () => {
+    const onChange = jest.fn();
+    renderSelect({ onChange, creatable: true, onCreate: jest.fn() });
+
+    fireEvent.focus(input());
+    fireEvent.change(input(), { target: { value: 'stamp' } });
+    fireEvent.blur(input());
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(input()).toHaveValue('');
+  });
+});

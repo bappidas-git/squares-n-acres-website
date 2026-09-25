@@ -327,7 +327,23 @@ const SIDE_EFFECTS = {
   'auth.login': ['Revokes the account’s previous token and stamps `lastLoginAt`.'],
   'auth.logout': ['Revokes the token the call was made with.'],
   'auth.updatePassword': ['Revokes every other token of the account.'],
-  'adminSettings.update': ['Deep-merges the known keys and stamps `updatedAt`.'],
+  'adminSettings.update': [
+    'Deep-merges the known keys and stamps `updatedAt`; the admin sends only what changed (QA-64).',
+  ],
+  'adminUsers.create': ['Refuses a password of letters only or digits only (422 on `password`).'],
+  'adminUsers.update': [
+    'Keeps the caller’s own role, whatever the body says.',
+    'A `password` revokes every token of the account — the caller’s own excepted, when it is theirs.',
+    'Deactivating the account revokes its tokens.',
+  ],
+  'adminUsers.patch': [
+    'A `password` revokes every token of the account — the caller’s own excepted, when it is theirs.',
+    'Deactivating the account revokes its tokens.',
+  ],
+  'adminUsers.remove': [
+    'Unassigns the user’s leads, each with an `assigned` activity "Unassigned (user deleted)".',
+    'Revokes every token of the account.',
+  ],
   'adminSeo.updateSettings': ['Deep-merges the known keys and stamps `updatedAt`.'],
   'redirects.resolve': ['Increments the redirect’s `hits`.'],
 };

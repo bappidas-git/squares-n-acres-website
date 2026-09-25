@@ -22,7 +22,13 @@
  *     when both apply;
  *   - e-mail addresses are unique, case-insensitively;
  *   - deleting a user unassigns their leads (with an activity entry saying so)
- *     and revokes their tokens; deactivating one revokes their tokens too.
+ *     and revokes their tokens; deactivating one revokes their tokens too;
+ *   - a password holds a letter and a digit as well as eight characters —
+ *     the rule `PUT /auth/password` keeps, kept here too (QA-64) — and setting
+ *     one (a reset) signs the account out everywhere but the session that set
+ *     it, as the reset dialog tells the administrator it will;
+ *   - a bulk activate or deactivate counts, and writes, only the accounts it
+ *     changes: one already in that state is left alone (QA-64).
  *
  * `password` is never part of a response: every record leaves through
  * `publicUser()`.
@@ -31,6 +37,7 @@
 const express = require('express');
 
 const { bulk: bulkSchema } = require('../../src/services/schemas');
+const { PASSWORD_PATTERN, passwordMessage } = require('../../src/services/schemas/auth');
 const { user: userSchema } = require('../../src/services/schemas/masterData');
 const { conflict, notFound, validation } = require('../middleware/errors');
 const { createTokenStore } = require('../lib/tokens');
@@ -70,6 +77,17 @@ const sameEmail = (left, right) =>
     .trim()
     .toLowerCase();
 
+/**
+ * Refuses a password that is eight letters or eight digits (§5.4). Checked
+ * after the schema, which has already asked for the eight characters.
+ *
+ * @param {unknown} password the body's password, when it carries one
+ */
+function assertStrongPassword(password) {
+  if (typeof password !== 'string' || password === '') return;
+  if (!PASSWORD_PATTERN.test(password)) throw validation({ password: [passwordMessage()] });
+}
+
 /** Trims the string fields a form sends, so ` Ada ` and `ADA@x.io ` behave. */
 function normalize(body) {
   const clean = { ...(body ?? {}) };
@@ -92,6 +110,21 @@ module.exports = ({ db, config, getModel }) => {
 
   const rows = () => db.getCollection('adminUsers');
   const find = (id) => rows().find((user) => sameId(user?.id, id));
+
+  /**
+   * A password set by an administrator — a reset, or a new one in the edit
+   * form — ends every session of that account (QA-64): the reset dialog says
+   * "the user is signed out of their other sessions", and every one of them
+   * went on working. An administrator resetting their own keeps the session
+   * they did it from, as `PUT /auth/password` does.
+   *
+   * @param {number|string} userId
+   * @param {import('express').Request} req
+   */
+  function signOutElsewhere(userId, req) {
+    const own = sameId(userId, req.user.id) ? req.token?.token : undefined;
+    tokens.revokeUserTokens(userId, { except: own });
+  }
 
   /** 409 when another record already holds the address (§5.3). */
   function assertEmailFree(email, excludeId) {
@@ -199,6 +232,7 @@ module.exports = ({ db, config, getModel }) => {
       }
 
       const now = new Date().toISOString();
+      let affected = targets.length;
 
       if (body.action === 'delete') {
         for (const user of targets) {
@@ -208,15 +242,19 @@ module.exports = ({ db, config, getModel }) => {
         }
       } else {
         const isActive = body.action === 'activate';
-        for (const user of targets) {
+        // An account already in that state is not written and not counted
+        // (§5.8): "1 user updated." over one that was already inactive read
+        // as a change, and the screen could not say "Nothing to change".
+        const changing = targets.filter((user) => (user.isActive !== false) !== isActive);
+        for (const user of changing) {
           user.isActive = isActive;
           user.updatedAt = now;
           if (!isActive) tokens.revokeUserTokens(user.id);
         }
-        db.write();
+        if (changing.length > 0) db.write();
+        affected = changing.length;
       }
 
-      const affected = targets.length;
       const noun = affected === 1 ? 'user' : 'users';
       const verb = body.action === 'delete' ? 'deleted' : 'updated';
       res.message(`${affected} ${noun} ${verb}.`, { affected });
@@ -229,6 +267,7 @@ module.exports = ({ db, config, getModel }) => {
     try {
       const body = normalize(req.body);
       validateBody(userSchema.create, body, { fillDefaults: true });
+      assertStrongPassword(body.password);
       assertEmailFree(body.email, null);
 
       const now = new Date().toISOString();
@@ -267,6 +306,7 @@ module.exports = ({ db, config, getModel }) => {
 
       const body = normalize(req.body);
       validateBody(userSchema.update, body);
+      assertStrongPassword(body.password);
       assertEmailFree(body.email, existing.id);
 
       const isSelf = sameId(existing.id, req.user.id);
@@ -298,6 +338,7 @@ module.exports = ({ db, config, getModel }) => {
       db.write();
 
       if (record.isActive === false) tokens.revokeUserTokens(record.id);
+      else if (clean.password) signOutElsewhere(record.id, req);
 
       res.ok(publicUser(record));
     } catch (error) {
@@ -312,6 +353,7 @@ module.exports = ({ db, config, getModel }) => {
 
       const body = normalize(req.body);
       validateBody(userSchema.update, body, { partial: true });
+      assertStrongPassword(body.password);
 
       const isSelf = sameId(existing.id, req.user.id);
       const clean = sanitize(body, model.fields);
@@ -330,6 +372,7 @@ module.exports = ({ db, config, getModel }) => {
       db.write();
 
       if (existing.isActive === false) tokens.revokeUserTokens(existing.id);
+      else if (clean.password) signOutElsewhere(existing.id, req);
 
       res.ok(publicUser(existing));
     } catch (error) {
