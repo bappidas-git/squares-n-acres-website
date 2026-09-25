@@ -102,6 +102,9 @@ module.exports = ({ db, config }) => {
       user.lastLoginAt = new Date().toISOString();
       db.write();
 
+      // A session beside the account's others, not in place of them: an account
+      // may be signed in on a desk and a phone at once. Only a password change,
+      // a reset, a deactivation or a delete ends the others (QA-65).
       const issued = tokens.issueToken(user.id);
       res.ok({ token: issued.token, expiresAt: issued.expiresAt, user: sessionUser(user) });
     } catch (error) {

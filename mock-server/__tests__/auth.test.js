@@ -54,6 +54,22 @@ describe('POST /auth/login', () => {
     });
   });
 
+  it('leaves the account’s other sessions working — a desk and a phone (QA-65)', async () => {
+    await withServer(async ({ request, login }) => {
+      const desk = await login(SALES);
+      const phone = await login(SALES);
+
+      assert.notEqual(desk, phone);
+      assert.equal((await request('GET', '/auth/profile', { token: desk })).status, 200);
+      assert.equal((await request('GET', '/auth/profile', { token: phone })).status, 200);
+
+      // Signing one of them out ends that one, not the other.
+      assert.equal((await request('POST', '/auth/logout', { token: phone })).status, 200);
+      assert.equal((await request('GET', '/auth/profile', { token: phone })).status, 401);
+      assert.equal((await request('GET', '/auth/profile', { token: desk })).status, 200);
+    });
+  });
+
   it('matches the e-mail case-insensitively and ignores surrounding spaces', async () => {
     await withServer(async ({ request }) => {
       const response = await request('POST', '/auth/login', {
