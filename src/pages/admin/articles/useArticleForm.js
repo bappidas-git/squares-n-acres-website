@@ -17,7 +17,11 @@ import {
   toDateTimeLocal,
   wordCount,
 } from '../../../utils/articleUtils';
-import { applySeoSideEffects, validateSeoBranch } from '../../../components/seo/seoSideEffects';
+import {
+  applySeoSideEffects,
+  redirectWarning,
+  validateSeoBranch,
+} from '../../../components/seo/seoSideEffects';
 import { createSeo, toSeoPayload, withSeoDefaults } from '../../../components/seo/seoValues';
 import {
   GOING_LIVE,
@@ -612,8 +616,9 @@ export default function useArticleForm({ articleId = null, record = null, readOn
       // the API answered with — a new article has none until now (§9.6). It
       // comes after the draft is cleared: the article is saved either way, and
       // a side effect must not hold up the state that says so.
-      await applySeoSideEffects('article', saved);
-      toast.success(savedMessage(saved, before));
+      const effects = await applySeoSideEffects('article', saved);
+      if (effects.ok) toast.success(savedMessage(saved, before));
+      else toast.warning(redirectWarning(effects.error));
 
       // A created article moves to its own URL, replacing the add route so Back
       // does not offer to create it a second time.

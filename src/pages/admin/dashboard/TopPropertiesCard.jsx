@@ -49,18 +49,39 @@ export default function TopPropertiesCard({ properties = [], canEdit = false }) 
                   <span className={styles.rowLink}>{property.title}</span>
                 )}
                 <span className={styles.rowMeta}>
-                  {`${formatNumber(property.viewCount)} views · ${formatNumber(property.enquiryCount)} enquiries`}
+                  {`${formatNumber(property.viewCount)} views · `}
+                  {/* The enquiries are leads: the count opens them (prompt 51). */}
+                  <Link
+                    className={styles.countLink}
+                    to={`${PATHS.adminLeads}?propertyId=${property.id}`}
+                  >
+                    {`${formatNumber(property.enquiryCount)} enquiries`}
+                  </Link>
                 </span>
               </div>
-              <IconButton
-                label={`View ${property.title} on the site`}
-                size="sm"
-                href={publicUrlOf(property.slug)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Icon icon="mdi:open-in-new" width="18" height="18" />
-              </IconButton>
+              {property.isActive === false ? (
+                // An inactive listing's public page answers 404: its form is
+                // where it can be looked at and switched back on.
+                canEdit ? (
+                  <IconButton
+                    label={`${property.title} is not live — open its form`}
+                    size="sm"
+                    to={PATHS.adminPropertyEdit(property.id)}
+                  >
+                    <Icon icon="mdi:pencil-outline" width="18" height="18" />
+                  </IconButton>
+                ) : null
+              ) : (
+                <IconButton
+                  label={`View ${property.title} on the site`}
+                  size="sm"
+                  href={publicUrlOf(property.slug)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Icon icon="mdi:open-in-new" width="18" height="18" />
+                </IconButton>
+              )}
             </li>
           ))}
         </ul>

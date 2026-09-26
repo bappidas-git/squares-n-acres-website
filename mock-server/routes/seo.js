@@ -68,10 +68,16 @@ const ENTITY_SOURCES = {
 /** The sorts the overview accepts. */
 const OVERVIEW_SORTS = {
   updatedAt: { spec: 'updatedAt', order: 'desc' },
+  // When the panel last measured the record — what the desk's "Last analysed"
+  // column shows (prompt 51; it used to sort by the last save).
+  lastAnalyzedAt: { spec: 'seo.lastAnalyzedAt', order: 'desc' },
   title: { spec: 'title', order: 'asc' },
   score: { spec: 'seo.score', order: 'desc' },
   type: { spec: 'type,title', order: 'asc' },
 };
+
+/** The `seo` fields `?missing=` can ask about. */
+const MISSING_FIELDS = ['focusKeyword', 'description', 'title'];
 
 /** The collections `llms-preview` reads. */
 const LLMS_SOURCES = ['properties', 'localities', 'propertyTypes', 'articles'];
@@ -260,6 +266,16 @@ module.exports = ({ db, getModel }) => {
     const bands = inCsv(req.query.scoreBand);
     if (bands.length > 0) {
       rows = rows.filter((row) => bands.includes(row.seo?.scoreBand ?? 'none'));
+    }
+
+    // "No focus keyword" / "No meta description" on the overview cards: the
+    // records without one, analysed or not (prompt 51) — the cards used to open
+    // the Issues tab, which lists analysed records only.
+    const missing = inCsv(req.query.missing).filter((field) => MISSING_FIELDS.includes(field));
+    if (missing.length > 0) {
+      rows = rows.filter((row) =>
+        missing.some((field) => String(row.seo?.[field] ?? '').trim() === '')
+      );
     }
 
     // `index` reads as the SEO panel labels it — `indexed` or `noindex` — and

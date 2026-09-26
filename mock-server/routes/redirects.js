@@ -136,11 +136,27 @@ module.exports = ({ db, getModel }) => {
    * Admin
    * ---------------------------------------------------------------- */
 
+  // The list's own filters (prompt 51): an export pressed over "Inactive" or a
+  // search used to carry every redirect whatever the screen showed.
   router.get('/admin/redirects/export', (req, res) => {
+    const q = String(first(req.query.q) ?? '')
+      .trim()
+      .toLowerCase();
+    const active = first(req.query.isActive);
+    const selected = rows().filter((row) => {
+      if (active === 'true' && !row.isActive) return false;
+      if (active === 'false' && row.isActive) return false;
+      if (!q) return true;
+      return [row.fromPath, row.toPath, row.note].some((value) =>
+        String(value ?? '')
+          .toLowerCase()
+          .includes(q)
+      );
+    });
     const filename = `redirects-${new Date().toISOString().slice(0, 10)}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(toCsv(rows(), CSV_COLUMNS));
+    res.send(toCsv(selected, CSV_COLUMNS));
   });
 
   router.post('/admin/redirects/import', (req, res, next) => {
@@ -171,7 +187,16 @@ module.exports = ({ db, getModel }) => {
 
         const existing = rows().find((record) => normalizePath(record.fromPath) === fromPath);
         if (existing) {
-          Object.assign(existing, { toPath, statusCode, updatedAt: now });
+          // A row of the file is a rule the editor wants in force, as it
+          // reads: an updated rule that had been switched off stays off no
+          // longer, and the file's note replaces the old one (prompt 51).
+          Object.assign(existing, {
+            toPath,
+            statusCode,
+            isActive: true,
+            ...(typeof row?.note === 'string' ? { note: row.note.trim() || null } : null),
+            updatedAt: now,
+          });
           summary.updated += 1;
           continue;
         }

@@ -170,7 +170,7 @@ describe('the cap of six', () => {
       screen.getByText('Six is the most a page shows. Remove one before choosing another.')
     ).toBeInTheDocument();
 
-    expect(await search('Prakriti')).toBeDisabled();
+    expect(await search('Prakriti')).toHaveAttribute('aria-disabled', 'true');
 
     await userEvent.click(screen.getByRole('button', { name: 'Remove Nandi Ridge Villa' }));
     expect(stored()).toHaveLength(5);

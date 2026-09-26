@@ -207,7 +207,12 @@ module.exports = ({ db, getModel }) => {
               ).length,
             }
           : { ...job },
-      adminFilters: { department: { field: 'department' } },
+      // The list screen's "Type" select sent `employmentType`, and an
+      // undeclared filter is ignored — so it filtered nothing (prompt 51).
+      adminFilters: {
+        department: { field: 'department' },
+        employmentType: { field: 'employmentType', type: 'csv' },
+      },
       sorts: { postedAt: '-postedAt', title: 'title', department: 'department,title' },
       defaultSort: 'postedAt',
       deleteGuard: 'job',

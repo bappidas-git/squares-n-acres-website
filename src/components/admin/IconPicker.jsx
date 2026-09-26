@@ -443,6 +443,7 @@ export default function IconPicker({ open, onClose, onSelect, currentIcon = '' }
               key={entry}
               tone={entry === category ? 'primary' : 'neutral'}
               selected={entry === category}
+              pressed={entry === category}
               onClick={() => {
                 setCategory(entry);
                 setVisibleCount(ICONS_PER_PAGE);

@@ -1,5 +1,6 @@
 import { Icon } from '@iconify/react';
 
+import { formatPhone, formatPhoneForTel } from '../../../utils/format';
 import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 
 import styles from './ContactMethods.module.css';
@@ -30,6 +31,17 @@ export default function ContactMethods({ whatsappMessage, layout = 'row', classN
           label: 'Call us',
           value: contact.phone,
           href: contact.phoneHref,
+        }
+      : null,
+    // Site settings → Contact promises "a second number for the contact page";
+    // it is a second way in, beside the first (prompt 51).
+    contact.alternatePhone && contact.alternatePhone !== contact.phone
+      ? {
+          key: 'alternatePhone',
+          icon: 'mdi:phone-plus-outline',
+          label: 'Or call',
+          value: formatPhone(contact.alternatePhone),
+          href: `tel:${formatPhoneForTel(contact.alternatePhone)}`,
         }
       : null,
     contact.email

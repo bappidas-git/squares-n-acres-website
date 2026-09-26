@@ -24,7 +24,7 @@ const FIELDS = [
   },
   {
     key: 'googleMapsApiKey',
-    hint: 'Only the property form’s draggable pin needs it (D42); every public map is key-free.',
+    hint: 'Only the property form’s draggable pin needs it; every public map is key-free.',
   },
   {
     key: 'cloudinaryCloudName',
@@ -40,7 +40,7 @@ const FIELDS = [
   },
   {
     key: 'recaptchaSiteKey',
-    hint: 'The public half of the pair. The secret half belongs to the server and is never stored here.',
+    hint: 'Stored for the backend’s form-verification step — nothing on the site reads it yet.',
   },
 ];
 

@@ -54,7 +54,7 @@ export default function ContactTab({ form, disabled = false }) {
     <div className={styles.tab}>
       <FormSection
         title="How to reach the firm"
-        description="These are the only contact details the site knows; nothing is hardcoded anywhere (D83)."
+        description="These are the only contact details the site knows; nothing is hardcoded anywhere."
       >
         <FormColumn half>
           <TextField

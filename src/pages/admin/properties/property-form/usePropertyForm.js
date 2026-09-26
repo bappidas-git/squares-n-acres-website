@@ -15,7 +15,7 @@ import { useToast } from '../../../../components/common/ToastProvider';
 import { PREVIEW_QUERY, publicUrlOf, viewPathOf, viewUrlOf } from '../publicUrl';
 import { DEFAULT_TAB, firstTabWithErrors, groupErrorsByTab, tabByKey, tabOfPath } from './tabs';
 import { focusFieldElement, resolveFieldPath } from './fieldFocus';
-import { applySeoSideEffects } from '../../../../components/seo/seoSideEffects';
+import { applySeoSideEffects, redirectWarning } from '../../../../components/seo/seoSideEffects';
 import { computeCompleteness } from './completeness';
 import { validateAll as runAllValidators, validateForActivation } from './validators';
 import fromRecord from './fromRecord';
@@ -499,8 +499,9 @@ export default function usePropertyForm({
         // the slug the API answered with — a new listing has none until this
         // point (§9.6). It comes after the state that says the listing is
         // saved, because it never throws and never changes that answer.
-        await applySeoSideEffects('property', saved);
-        toast.success(savedMessage(mode, saved, wasPublished));
+        const effects = await applySeoSideEffects('property', saved);
+        if (effects.ok) toast.success(savedMessage(mode, saved, wasPublished));
+        else toast.warning(redirectWarning(effects.error));
 
         // A created listing moves to its own URL, replacing the add route so
         // Back does not offer to create it a second time.
@@ -813,8 +814,19 @@ export default function usePropertyForm({
     gone,
     saveAsNew,
     publicUrl: values.slug ? publicUrlOf(values.slug) : null,
-    /** Where "View on site" / "Preview" goes — the preview link while unpublished. */
-    viewUrl: values.slug ? viewUrlOf(values.slug, values.isActive === true) : null,
+    /**
+     * Where "View on site" / "Preview" goes — the preview link while
+     * unpublished. Built from the **saved** listing: an unsaved slug or status
+     * made the link a 404 (prompt 51).
+     */
+    viewUrl: state.initial?.slug
+      ? viewUrlOf(state.initial.slug, state.initial.isActive === true)
+      : null,
+    /** The address or the status differs from the saved listing's. */
+    viewStale:
+      Boolean(state.initial?.slug) &&
+      (values.slug !== state.initial.slug ||
+        (values.isActive === true) !== (state.initial.isActive === true)),
   };
 }
 

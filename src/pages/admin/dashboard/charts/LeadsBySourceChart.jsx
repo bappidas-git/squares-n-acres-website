@@ -1,4 +1,7 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useNavigate } from 'react-router-dom';
+
+import PATHS from '../../../../routes/paths';
 
 import ChartFrame, { useAxisTick } from './ChartFrame';
 import useCssVar from '../../../../hooks/useCssVar';
@@ -22,6 +25,9 @@ export default function LeadsBySourceChart({ data = [] }) {
   const fill = useCssVar('--color-primary', 'currentColor');
   const grid = useCssVar('--color-border', 'currentColor');
   const tick = useAxisTick();
+  const navigate = useNavigate();
+  // A bar opens the leads it counts (prompt 51).
+  const leadsOf = (source) => `${PATHS.adminLeads}?source=${encodeURIComponent(source)}`;
 
   const bars = data
     .slice(0, MAX_BARS)
@@ -32,7 +38,11 @@ export default function LeadsBySourceChart({ data = [] }) {
       title="Leads by source"
       description="A bar chart of how many enquiries each form on the site produced."
       columns={['Source', 'Leads']}
-      rows={bars.map((entry) => ({ label: entry.label, value: entry.count }))}
+      rows={bars.map((entry) => ({
+        label: entry.label,
+        value: entry.count,
+        to: leadsOf(entry.source),
+      }))}
     >
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <BarChart data={bars} layout="vertical" margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
@@ -59,6 +69,11 @@ export default function LeadsBySourceChart({ data = [] }) {
             fill={fill}
             radius={[0, 4, 4, 0]}
             isAnimationActive={false}
+            cursor="pointer"
+            onClick={(entry) => {
+              const source = entry?.source ?? entry?.payload?.source;
+              if (source) navigate(leadsOf(source));
+            }}
           />
         </BarChart>
       </ResponsiveContainer>

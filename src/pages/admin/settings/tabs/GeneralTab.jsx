@@ -61,7 +61,7 @@ export default function GeneralTab({ form, disabled = false }) {
 
       <FormSection
         title="Brand assets"
-        description="The wordmark sits on light surfaces only (D3); the monogram is the favicon, the app icon and the loading mark."
+        description="The wordmark sits on light surfaces only; the monogram is the favicon, the app icon and the loading mark."
         action={
           <Button
             variant="outline"

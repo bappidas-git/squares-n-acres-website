@@ -707,7 +707,7 @@ export default function LocalityFormPage() {
 
         <FormSection
           title="Search engines"
-          description="The phrase this page targets, what a result prints, and the share cards. The robots directives, the redirect and the structured data are in the sections below it (§9)."
+          description="The phrase this page targets, what a result prints, and the share cards. The robots directives, the redirect and the structured data are in the sections below it."
         >
           <FormColumn>
             <SeoPanel

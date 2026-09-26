@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 import Card from '../../../components/ui/Card';
 import PATHS from '../../../routes/paths';
 import StatusChip from '../../../components/admin/StatusChip';
@@ -67,16 +69,40 @@ export default function SeoHealthCard({ health = {} }) {
                 <dt>
                   <StatusChip tone={entry.tone ?? 'neutral'} label={entry.label} />
                 </dt>
-                <dd>{formatNumber(health[entry.value])}</dd>
+                <dd>
+                  <Link
+                    className={styles.countLink}
+                    to={`${PATHS.adminSeo}?scoreBand=${entry.value}`}
+                    aria-label={`${formatNumber(health[entry.value])} records scoring ${entry.label}`}
+                  >
+                    {formatNumber(health[entry.value])}
+                  </Link>
+                </dd>
               </div>
             ))}
           <div>
             <dt>No focus keyword</dt>
-            <dd>{formatNumber(health.missingFocusKeyword)}</dd>
+            <dd>
+              <Link
+                className={styles.countLink}
+                to={`${PATHS.adminSeo}?missing=focusKeyword`}
+                aria-label={`${formatNumber(health.missingFocusKeyword)} records without a focus keyword`}
+              >
+                {formatNumber(health.missingFocusKeyword)}
+              </Link>
+            </dd>
           </div>
           <div>
             <dt>No meta description</dt>
-            <dd>{formatNumber(health.missingMetaDescription)}</dd>
+            <dd>
+              <Link
+                className={styles.countLink}
+                to={`${PATHS.adminSeo}?missing=description`}
+                aria-label={`${formatNumber(health.missingMetaDescription)} records without a meta description`}
+              >
+                {formatNumber(health.missingMetaDescription)}
+              </Link>
+            </dd>
           </div>
         </dl>
       </div>

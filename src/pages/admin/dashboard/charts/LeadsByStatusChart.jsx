@@ -1,4 +1,7 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { useNavigate } from 'react-router-dom';
+
+import PATHS from '../../../../routes/paths';
 
 import ChartFrame, { TONE_TOKENS } from './ChartFrame';
 import { CHART_HEIGHT } from './LeadsByDayChart';
@@ -25,6 +28,9 @@ const STATUS_TOKENS = LEAD_STATUS.values.map(
  */
 export default function LeadsByStatusChart({ data = [] }) {
   const colours = useCssVars(STATUS_TOKENS);
+  const navigate = useNavigate();
+  // A slice opens the leads at that stage (prompt 51).
+  const leadsAt = (status) => `${PATHS.adminLeads}?status=${encodeURIComponent(status)}`;
 
   const slices = data.map((entry) => ({
     ...entry,
@@ -39,7 +45,11 @@ export default function LeadsByStatusChart({ data = [] }) {
       title="Leads by status"
       description="A donut chart of how many leads stand at each stage of the pipeline."
       columns={['Status', 'Leads']}
-      rows={slices.map((slice) => ({ label: slice.label, value: slice.count }))}
+      rows={slices.map((slice) => ({
+        label: slice.label,
+        value: slice.count,
+        to: leadsAt(slice.status),
+      }))}
     >
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <PieChart>
@@ -51,6 +61,11 @@ export default function LeadsByStatusChart({ data = [] }) {
             outerRadius="80%"
             paddingAngle={1}
             isAnimationActive={false}
+            cursor="pointer"
+            onClick={(entry) => {
+              const status = entry?.status ?? entry?.payload?.status;
+              if (status) navigate(leadsAt(status));
+            }}
           >
             {slices.map((slice) => (
               <Cell key={slice.status} fill={slice.colour} />

@@ -232,6 +232,9 @@ function buildDashboard(state, { user = null, now = Date.now() } = {}) {
       id: property.id,
       title: property.title,
       slug: property.slug,
+      // Whether the public page exists: the card links an inactive listing
+      // to its form rather than to a 404 (prompt 51).
+      isActive: property.isActive === true,
       viewCount: property.viewCount ?? 0,
       enquiryCount: property.enquiryCount ?? 0,
     }));

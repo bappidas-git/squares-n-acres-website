@@ -246,6 +246,53 @@ beforeEach(() => {
 });
 
 describe('PageFormPage', () => {
+  describe('a save the rules refuse (prompt 51)', () => {
+    it('says so instead of doing nothing, and writes nothing', async () => {
+      renderForm({
+        record: {
+          ...RECORD,
+          // A features block with a card that has no title: the message lands
+          // inside the block, which used to be collapsed and silent.
+          blocks: [
+            {
+              id: 1,
+              type: 'features',
+              order: 1,
+              data: {
+                title: 'Why us',
+                items: [{ id: 'a', icon: 'mdi:star', title: '', text: '' }],
+              },
+            },
+          ],
+        },
+      });
+      const title = await loaded();
+
+      fireEvent.change(title, { target: { value: 'About Squares N Acres' } });
+      await userEvent.click(actionBar());
+
+      expect(
+        await screen.findByText('Fix the highlighted fields before saving.')
+      ).toBeInTheDocument();
+      expect(pageService.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses a block type the API does not know, and says so', async () => {
+      renderForm({
+        record: { ...RECORD, blocks: [{ id: 1, type: 'retired', order: 1, data: {} }] },
+      });
+      const title = await loaded();
+
+      fireEvent.change(title, { target: { value: 'About Squares N Acres' } });
+      await userEvent.click(actionBar());
+
+      expect(
+        await screen.findByText('Fix the highlighted fields before saving.')
+      ).toBeInTheDocument();
+      expect(pageService.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('saving', () => {
     it('does not write a page nothing has changed on (QA-56)', async () => {
       renderForm();

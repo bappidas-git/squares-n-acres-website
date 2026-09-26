@@ -990,10 +990,12 @@ async function setup() {
 /**
  * Media's delete guard, both ways round.
  *
- * A record is made pointing at a picture a seeded listing already shows, so the
- * usage search finds it: the plain `DELETE` must refuse with the list, and the
- * same call with `?force=true` must go through. The Cloudinary asset is never
- * touched either way — this API has never held it (D12).
+ * The library's record of a picture a seeded listing already shows is looked
+ * up — an address is unique in the library (QA-63), so a second record of it
+ * cannot be made — and the plain `DELETE` must refuse it with the list, which
+ * removes nothing. `?force=true` is then proved on a record the run makes
+ * itself, so the seed keeps every file it shipped with. The Cloudinary asset
+ * is never touched either way — this API has never held it (D12).
  *
  * @param {string} admin the admin token
  */
@@ -1001,13 +1003,31 @@ async function checkMediaForceDelete(admin) {
   const listing = await api('GET', '/properties?perPage=1');
   const url = listing.json?.data?.[0]?.images?.[0]?.url;
   if (!url) {
-    check('media.force-delete', false, 'no seeded listing image to point at');
+    check('media.delete-guard-409', false, 'no seeded listing image to point at');
     return;
+  }
+
+  const library = await api('GET', `/admin/media?perPage=all&q=${encodeURIComponent(url)}`, {
+    token: admin,
+  });
+  const used = (library.json?.data ?? []).find((row) => row.url === url);
+  if (!used) {
+    check('media.delete-guard-409', false, 'the library holds no record of that picture');
+  } else {
+    const refused = await api('DELETE', `/admin/media/${used.id}`, { token: admin });
+    check(
+      'media.delete-guard-409',
+      refused.status === 409 && Array.isArray(refused.json?.data?.usedIn),
+      `got ${refused.status}`
+    );
   }
 
   const record = await api('POST', '/admin/media', {
     token: admin,
-    body: { url, alt: 'Smoke — a picture a listing already uses' },
+    body: {
+      url: `https://images.example.com/smoke-force-${Date.now()}.jpg`,
+      alt: 'Smoke — a record made to be removed',
+    },
   });
   if (record.status !== 201) {
     check('media.force-delete', false, `could not create the record (${record.status})`);
@@ -1015,13 +1035,6 @@ async function checkMediaForceDelete(admin) {
   }
 
   const id = record.json.data.id;
-  const refused = await api('DELETE', `/admin/media/${id}`, { token: admin });
-  check(
-    'media.delete-guard-409',
-    refused.status === 409 && Array.isArray(refused.json?.data?.usedIn),
-    `got ${refused.status}`
-  );
-
   const forced = await api('DELETE', `/admin/media/${id}?force=true`, { token: admin });
   check('media.force-delete', forced.status === 200, `got ${forced.status}`);
 

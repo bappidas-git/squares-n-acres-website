@@ -112,6 +112,25 @@ export default function Header() {
               );
             }
 
+            // A target other than the requirement form (Site settings →
+            // Navigation): a plain link, so "/contact navigates" is true.
+            if (action.kind === 'link') {
+              return action.internal ? (
+                <Link key={action.key} to={action.href} className={styles.cta}>
+                  {action.label}
+                </Link>
+              ) : (
+                <a
+                  key={action.key}
+                  href={action.href}
+                  className={styles.cta}
+                  {...(action.external ? { target: '_blank', rel: 'noopener noreferrer' } : null)}
+                >
+                  {action.label}
+                </a>
+              );
+            }
+
             // Both glyphs are the shared buttons: one tracked click, and a
             // `whatsapp-click` / `call-click` lead for a visitor we already
             // know (§6.17).

@@ -16,9 +16,9 @@ import styles from './BlockEditor.module.css';
  * list of twelve lines, not twelve open forms.
  *
  * A block whose `type` this build does not know is not thrown away. It is shown
- * as "Unsupported block" with its raw type and a delete button, because the
- * data is still on the server and a browser that does not understand it is not
- * a reason to silently drop it on the next save.
+ * as "Unsupported block" with its raw type and a delete button: the API refuses
+ * a page that holds it (`blocks.N.type`), so the card says so and the refusal
+ * lands on it, rather than on no card at all.
  *
  * @param {object} props
  * @param {{id: string|number, type: string, data: object}} props.block
@@ -30,6 +30,8 @@ import styles from './BlockEditor.module.css';
  * @param {() => void} props.onDelete
  * @param {Record<string, string>} [props.errors] keyed inside `data`
  * @param {boolean} [props.disabled]
+ * @param {boolean} [props.canDuplicate] `false` where a second one would never be
+ *   shown — the home page's Features and Steps
  */
 export default function BlockCard({
   block,
@@ -41,6 +43,7 @@ export default function BlockCard({
   onDelete,
   errors = {},
   disabled = false,
+  canDuplicate = true,
 }) {
   const panelId = useId();
   const schema = blockSchema(block.type);
@@ -86,7 +89,7 @@ export default function BlockCard({
         ) : null}
 
         <span className={styles.cardActions}>
-          {schema ? (
+          {schema && canDuplicate ? (
             <IconButton
               label={`Duplicate ${subject}`}
               size="sm"
@@ -109,6 +112,11 @@ export default function BlockCard({
       </div>
 
       <div id={panelId} className={styles.cardBody} hidden={!open}>
+        {errors.type ? (
+          <p className={styles.cardError} role="alert">
+            {errors.type}
+          </p>
+        ) : null}
         {schema ? (
           <BlockForm
             schema={schema}
@@ -120,8 +128,8 @@ export default function BlockCard({
         ) : (
           <p className={styles.unsupported}>
             This page carries a block of type <code>{block.type}</code>, which this version of the
-            panel cannot edit. It is left exactly as it is when the page is saved; delete it if it
-            no longer belongs here.
+            panel cannot edit — and a page holding it cannot be saved, because the API refuses a
+            block type it does not know. Delete the block to save the page.
           </p>
         )}
       </div>

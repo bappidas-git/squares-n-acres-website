@@ -32,6 +32,17 @@ jest.mock('../../../../services/seoService', () => ({
 jest.mock('../useSeoOverview', () => ({
   useSeoOverviewAll: () => ({ rows: [], loading: false, error: null }),
 }));
+// The head preview resolves the home page's own record (prompt 51).
+jest.mock('../../../../services/pageService', () => ({
+  __esModule: true,
+  default: {
+    getBySlug: jest.fn(() =>
+      Promise.resolve({
+        data: { id: 1, slug: 'home', title: 'Home', status: 'published', blocks: [], seo: {} },
+      })
+    ),
+  },
+}));
 
 /** The seed's record, as the API serves it. */
 const RECORD = JSON.parse(

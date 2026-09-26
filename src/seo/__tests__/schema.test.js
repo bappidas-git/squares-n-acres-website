@@ -66,6 +66,22 @@ describe('the organisation and the site', () => {
     expect(valid(organization).valid).toBe(true);
   });
 
+  it('list the alternate phone of Site settings beside the knowledge graph’s (prompt 51)', () => {
+    const withSecond = organizationNode(
+      {},
+      { ...context, siteSettings: { general: { alternatePhone: '9845012345' } } }
+    );
+    expect(withSecond.telephone).toEqual([organization.telephone, '+919845012345']);
+    expect(valid(withSecond).valid).toBe(true);
+
+    // The same number twice is one number.
+    const same = organizationNode(
+      {},
+      { ...context, siteSettings: { general: { alternatePhone: organization.telephone } } }
+    );
+    expect(same.telephone).toBe(organization.telephone);
+  });
+
   it('publish the site with a search action pointing at the listings', () => {
     expect(website['@id']).toBe(`${SITE}/#website`);
     expect(website.publisher).toEqual({ '@id': `${SITE}/#organization` });

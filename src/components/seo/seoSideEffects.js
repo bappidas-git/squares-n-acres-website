@@ -12,9 +12,12 @@
  *   const saved = await propertyService.update(id, payload);
  *   await applySeoSideEffects('property', saved.data);
  *
- * It never throws. A redirect that could not be written is worth a warning in
- * the console and nothing else: the listing is saved, and a failed side effect
- * must not be reported to an editor as a failed save.
+ * It never throws: the listing is saved, and a failed side effect must not be
+ * reported to an editor as a failed save. It answers `{ ok, error }` instead,
+ * and every host turns `ok: false` into "Saved, but the redirect was not
+ * created: <reason>" (`redirectWarning`) — a redirect the API refused (a
+ * self-target, a chain) used to be dropped while the save said "Saved"
+ * (prompt 51).
  */
 
 import redirectService from '../../services/redirectService';
@@ -31,7 +34,7 @@ import { publicPathFor } from '../../seo/urls';
  * @param {object} entity the record **as the API answered it** — its slug is
  *   the path the redirect comes from
  * @param {{signal?: AbortSignal}} [opts]
- * @returns {Promise<{redirect: 'created'|'updated'|'disabled'|'none',
+ * @returns {Promise<{ok: boolean, redirect: 'created'|'updated'|'disabled'|'none',
  *   error: Error|null}>}
  */
 export async function applySeoSideEffects(entityType, entity, opts) {
@@ -42,13 +45,13 @@ export async function applySeoSideEffects(entityType, entity, opts) {
 
   // No page, no redirect from it. A record saved without a slug — which the API
   // does not allow, but a form may attempt — has nothing to redirect.
-  if (!fromPath) return { redirect: 'none', error: null };
+  if (!fromPath) return { ok: true, redirect: 'none', error: null };
 
   // Nothing to write and nothing to switch off: a record that has never asked
   // for a redirect keeps its target empty, and looking one up on every save of
   // every listing would be a request nobody needs.
   if (!redirect.enabled && !String(redirect.toPath ?? '').trim()) {
-    return { redirect: 'none', error: null };
+    return { ok: true, redirect: 'none', error: null };
   }
 
   try {
@@ -63,15 +66,31 @@ export async function applySeoSideEffects(entityType, entity, opts) {
         },
         opts
       );
-      return { redirect: existing ? 'updated' : 'created', error: null };
+      return { ok: true, redirect: existing ? 'updated' : 'created', error: null };
     }
 
     const stopped = await redirectService.deactivateByFromPath(fromPath, opts);
-    return { redirect: stopped ? 'disabled' : 'none', error: null };
+    return { ok: true, redirect: stopped ? 'disabled' : 'none', error: null };
   } catch (thrown) {
     console.warn('The redirect for this record could not be saved.', thrown);
-    return { redirect: 'none', error: thrown };
+    return { ok: false, redirect: 'none', error: thrown };
   }
+}
+
+/**
+ * What a host says when the save landed and its redirect did not: the API's
+ * own reason when it gave one ("The destination cannot be the page itself.").
+ *
+ * @param {Error|null} error
+ * @returns {string}
+ */
+export function redirectWarning(error) {
+  const fields = error?.errors ?? {};
+  const first = Object.values(fields)
+    .flat()
+    .find((message) => typeof message === 'string' && message.trim());
+  const reason = first || error?.message || 'the redirect was refused';
+  return `Saved, but the redirect was not created: ${String(reason).replace(/\.$/, '')}.`;
 }
 
 /**
@@ -152,6 +171,11 @@ export function validateSeoBranch(seo = {}) {
   return errors;
 }
 
-const seoSideEffects = { applySeoSideEffects, validateSeoBranch, validateSeoSideEffects };
+const seoSideEffects = {
+  applySeoSideEffects,
+  redirectWarning,
+  validateSeoBranch,
+  validateSeoSideEffects,
+};
 
 export default seoSideEffects;

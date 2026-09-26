@@ -270,3 +270,15 @@ a.rowLink:focus-visible {
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/* A count that opens the list it counts (prompt 51). */
+.countLink {
+  color: var(--color-primary-dark);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.countLink:hover {
+  text-decoration-thickness: 2px;
+}

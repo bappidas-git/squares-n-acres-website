@@ -164,9 +164,13 @@ export default function RedirectsPage() {
   const exportCsv = async () => {
     setExporting(true);
     try {
+      // What the list is showing, not every rule there is (prompt 51).
+      const filters = Object.fromEntries(
+        ['q', 'isActive'].filter((key) => isSet(params[key])).map((key) => [key, params[key]])
+      );
       await downloadAuthenticated(
         endpoints.adminRedirects.exportCsv,
-        {},
+        filters,
         csvFileName('redirects'),
         { type: 'text/csv;charset=utf-8' }
       );
@@ -452,7 +456,7 @@ export default function RedirectsPage() {
         size="md"
         mobile="fullscreen"
         title="Nginx redirects"
-        description="Server-level 301s, for the deployment that fronts this build. The app performs the same rules in the browser (D30)."
+        description="Server-level 301s, for the deployment that fronts this build. The app performs the same rules in the browser."
         footer={
           <>
             <Button variant="outline" onClick={() => setSnippet(null)}>

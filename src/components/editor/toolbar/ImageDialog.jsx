@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import Alert from '../../ui/Alert';
 import Button from '../../ui/Button';
 import Modal from '../../ui/Modal';
 import { FIGURE_ALIGNMENTS, FIGURE_WIDTHS } from '../nodes/FigureImage';
@@ -14,9 +15,10 @@ import styles from '../RichTextEditor.module.css';
  * inserting an undescribed picture: every image on this site carries `alt` from
  * data (§4.3), and an article body is the one place that rule is easy to break.
  *
- * Until the media library lands, the picture comes from a URL; a host that
- * provides one — `onRequestImage` — takes over the "Choose from library"
- * button without this dialog changing.
+ * The picture comes from the media library (`onRequestImage`, which every
+ * form supplies through `RichTextField`), from an address, or from a file
+ * dropped on the editor and uploaded. `value.note` is a line the editor has for
+ * the person — why a dropped file did not arrive.
  *
  * @param {object} props
  * @param {boolean} props.open
@@ -93,6 +95,7 @@ export default function ImageDialog({
       }
     >
       <div className={styles.dialogGrid}>
+        {value?.note ? <Alert tone="info">{value.note}</Alert> : null}
         <TextField
           label="Image address"
           required

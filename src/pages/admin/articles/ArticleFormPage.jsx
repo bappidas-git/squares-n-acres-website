@@ -419,7 +419,7 @@ export default function ArticleFormPage() {
                   disabled={readOnly || saving}
                   focusKeyword={values.seo?.focusKeyword ?? ''}
                   placeholder="Open with the answer, then explain it."
-                  helper="Images are added by address until the media library arrives; every one needs alt text."
+                  helper="Images come from the media library, an address or a file dropped on the editor; every one needs alt text."
                   onChange={(html) => setField('content', html)}
                 />
               </FormColumn>

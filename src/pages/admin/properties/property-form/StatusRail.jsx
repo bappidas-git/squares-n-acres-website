@@ -36,6 +36,9 @@ import { useToast } from '../../../../components/common/ToastProvider';
  * @param {ReturnType<import('./usePropertyForm').default>} props.form
  * @param {boolean} [props.collapsible] renders as an accordion (the phone layout)
  */
+/** Why the page link is off while the address or the status is unsaved. */
+const SAVE_FIRST = 'Save first — the link reflects the saved listing.';
+
 export default function StatusRail({ form, collapsible = false }) {
   const {
     state,
@@ -51,6 +54,7 @@ export default function StatusRail({ form, collapsible = false }) {
     completeness,
     warnings,
     viewUrl,
+    viewStale,
     setField,
     setActive,
     focusField,
@@ -86,7 +90,8 @@ export default function StatusRail({ form, collapsible = false }) {
     save('inactive');
   };
   const tone = completenessTone(completeness.percent);
-  const published = values.isActive === true;
+  // The link follows the saved listing, so "published" is its saved state too.
+  const published = (state?.initial?.isActive ?? values.isActive) === true;
   // An unpublished listing has no public page, so the link is the admin
   // preview of it instead — and it exists only once the record has been saved.
   const openUrl = isNew ? null : viewUrl;
@@ -297,23 +302,31 @@ export default function StatusRail({ form, collapsible = false }) {
         </p>
         {openUrl ? (
           <>
-            <Button
-              variant="outline"
-              size="sm"
-              href={openUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              icon={
-                <Icon
-                  icon={published ? 'mdi:open-in-new' : 'mdi:eye-outline'}
-                  width="16"
-                  height="16"
-                />
-              }
-            >
-              {published ? 'View on site' : 'Preview'}
-            </Button>
-            {published ? null : (
+            <span title={viewStale ? SAVE_FIRST : undefined} className={styles.linkWrap}>
+              <Button
+                variant="outline"
+                size="sm"
+                href={openUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                disabled={viewStale}
+                aria-describedby={viewStale ? 'rail-url-stale' : undefined}
+                icon={
+                  <Icon
+                    icon={published ? 'mdi:open-in-new' : 'mdi:eye-outline'}
+                    width="16"
+                    height="16"
+                  />
+                }
+              >
+                {published ? 'View on site' : 'Preview'}
+              </Button>
+            </span>
+            {viewStale ? (
+              <p className={styles.note} id="rail-url-stale">
+                {SAVE_FIRST}
+              </p>
+            ) : published ? null : (
               <p className={styles.note}>
                 Only you see this — the page answers 404 to everybody else until it is published.
               </p>
@@ -445,8 +458,8 @@ function SaveMenu({ save, onSaveInactive, working, isNew, published }) {
 
       <Button
         variant="outline"
-        aria-haspopup="menu"
         aria-expanded={open}
+        aria-controls={open ? 'rail-save-more' : undefined}
         aria-label="More ways to save"
         disabled={working}
         className={styles.saveToggle}
@@ -456,13 +469,15 @@ function SaveMenu({ save, onSaveInactive, working, isNew, published }) {
       </Button>
 
       {open ? (
-        <div className={styles.menu} role="menu">
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.menuItem}
-            onClick={() => run('view')}
-          >
+        // A disclosure of two ordinary buttons (prompt 51): `role="menu"`
+        // promised arrow keys the list never answered.
+        <div
+          className={styles.menu}
+          role="group"
+          aria-label="More ways to save"
+          id="rail-save-more"
+        >
+          <button type="button" className={styles.menuItem} onClick={() => run('view')}>
             <Icon
               icon={published ? 'mdi:open-in-new' : 'mdi:eye-outline'}
               width="16"
@@ -471,12 +486,7 @@ function SaveMenu({ save, onSaveInactive, working, isNew, published }) {
             />
             {published ? 'Save & view on site' : 'Save & preview'}
           </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.menuItem}
-            onClick={() => run('inactive')}
-          >
+          <button type="button" className={styles.menuItem} onClick={() => run('inactive')}>
             <Icon icon="mdi:eye-off-outline" width="16" height="16" aria-hidden="true" />
             Save as inactive
           </button>

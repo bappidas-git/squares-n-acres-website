@@ -11,8 +11,10 @@ import styles from './NewsletterSection.module.css';
  * `website` honeypot and the ten-second throttle every form on the site has
  * (§5.11, D43, ADD-09).
  *
- * The reCAPTCHA notice only appears when a site key is actually configured;
- * the boilerplate showed it unconditionally, which was untrue (BUG-15).
+ * There is no reCAPTCHA notice: nothing on the site loads reCAPTCHA, so
+ * "protected by reCAPTCHA" was a claim a stored site key made true in name only
+ * (prompt 51; the boilerplate showed it unconditionally, BUG-15). The honeypot
+ * and the ten-a-minute throttle are what defend the form, on the server.
  *
  * `compact` is the same band as a sidebar card: no gradient, no centring and a
  * heading at the size the cards around it use. The copy, the form and the
@@ -26,7 +28,6 @@ const NewsletterSection = ({ compact = false, className = '' }) => {
   const { settings } = useSiteSettings();
 
   const section = settings?.newsletter ?? {};
-  const hasRecaptcha = Boolean(settings?.integrations?.recaptchaSiteKey);
 
   return (
     <section
@@ -42,20 +43,6 @@ const NewsletterSection = ({ compact = false, className = '' }) => {
           className={styles.form}
           successMessage={section.successMessage || undefined}
         />
-
-        {hasRecaptcha ? (
-          <p className={styles.disclaimer}>
-            This site is protected by reCAPTCHA and the Google{' '}
-            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">
-              Privacy Notice
-            </a>{' '}
-            and{' '}
-            <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">
-              Terms of Service
-            </a>{' '}
-            apply.
-          </p>
-        ) : null}
       </div>
     </section>
   );

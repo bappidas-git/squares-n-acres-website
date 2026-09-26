@@ -5,6 +5,7 @@ import TagCloud from './TagCloud';
 import TrendingList from './TrendingList';
 import { Button } from '../../ui';
 import { useLeadCapture } from '../../../contexts/LeadCaptureContext';
+import { useSiteSettings } from '../../../contexts/SiteSettingsContext';
 
 import styles from './BlogSidebar.module.css';
 import { BLOG } from '../../../config/copy';
@@ -23,6 +24,10 @@ import { BLOG } from '../../../config/copy';
  */
 export default function BlogSidebar({ tags, activeTagSlug = '', className = '' }) {
   const { openLeadModal, leadTriggerProps } = useLeadCapture();
+  const { settings } = useSiteSettings();
+  // Site settings → Newsletter → "Collect subscriptions": off, the footer
+  // stood down and this card went on asking (prompt 51).
+  const collecting = settings?.newsletter?.enabled !== false;
 
   return (
     <aside className={[styles.sidebar, className].filter(Boolean).join(' ')}>
@@ -30,7 +35,7 @@ export default function BlogSidebar({ tags, activeTagSlug = '', className = '' }
 
       <TagCloud tags={tags} activeSlug={activeTagSlug} className={styles.card} />
 
-      <NewsletterSection compact className={styles.newsletter} />
+      {collecting ? <NewsletterSection compact className={styles.newsletter} /> : null}
 
       <section className={[styles.card, styles.lead].filter(Boolean).join(' ')}>
         <Icon

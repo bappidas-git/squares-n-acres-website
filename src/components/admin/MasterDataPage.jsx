@@ -23,7 +23,7 @@ import focusFirstError from './focusFirstError';
 import sanitiseParams from './sanitiseParams';
 import withSlugSuggestion from './slugSuggestion';
 import { DIALOGS, FORMS, TABLES, TOASTS } from '../../config/adminCopy';
-import { applySeoSideEffects, validateSeoBranch } from '../seo/seoSideEffects';
+import { applySeoSideEffects, redirectWarning, validateSeoBranch } from '../seo/seoSideEffects';
 import ApiError, { firstFieldMessage } from '../../services/apiError';
 import { toSeoPayload, withSeoDefaults } from '../seo/seoValues';
 import { tidyPhone } from '../../utils/validators';
@@ -604,7 +604,10 @@ export default function MasterDataPage({ config }) {
     const saved = answer?.data ?? answer;
     // The redirect this record's `seo` asks for, against the slug the API
     // answered with — a new record has none until now (§9.6).
-    if (seoPanel && seoEntityType) await applySeoSideEffects(seoEntityType, saved);
+    const effects =
+      seoPanel && seoEntityType
+        ? await applySeoSideEffects(seoEntityType, saved)
+        : { ok: true, error: null };
     if (afterSave) {
       try {
         await afterSave(saved, editing, { toast });
@@ -613,9 +616,13 @@ export default function MasterDataPage({ config }) {
         console.warn('A step after the save did not complete.', thrown);
       }
     }
-    toast.success(
-      editing?.id ? TOASTS.saved(capitalise(singular)) : TOASTS.created(capitalise(singular))
-    );
+    if (effects.ok) {
+      toast.success(
+        editing?.id ? TOASTS.saved(capitalise(singular)) : TOASTS.created(capitalise(singular))
+      );
+    } else {
+      toast.warning(redirectWarning(effects.error));
+    }
     closeForm();
     onMutated?.(collectionKey);
     refetch();
@@ -1042,16 +1049,27 @@ export default function MasterDataPage({ config }) {
   // The way into the drag list from the table: on a phone the table is cards,
   // with no "Order" header to press, and after "Table view" there was no way
   // back but the address bar (QA-59).
+  // Already in display order with nothing to drag (an empty or refused list):
+  // the press changed nothing and said nothing, so it is off and says why
+  // (prompt 51).
+  const alreadyOrdered = params.sort === 'order' && params.order !== 'desc';
   const reorderButton =
     orderable && canEdit && !reordering ? (
-      <Button
-        variant="outline"
-        size="sm"
-        icon={<Icon icon="mdi:swap-vertical" width="18" height="18" />}
-        onClick={() => setParams({ sort: 'order', order: 'asc' })}
+      <span
+        title={
+          alreadyOrdered ? 'Already in display order — there are no rows here to drag.' : undefined
+        }
       >
-        {TABLES.reorder}
-      </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={alreadyOrdered}
+          icon={<Icon icon="mdi:swap-vertical" width="18" height="18" />}
+          onClick={() => setParams({ sort: 'order', order: 'asc' })}
+        >
+          {TABLES.reorder}
+        </Button>
+      </span>
     ) : null;
 
   // The group headings belong to one sort — the rows have to arrive grouped for

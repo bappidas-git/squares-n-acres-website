@@ -86,7 +86,9 @@ export function buildSeoColumns() {
         ),
     },
     {
-      key: 'updatedAt',
+      // Sorted by when the panel last measured the record, which is what the
+      // column shows — it sorted by the last save (prompt 51).
+      key: 'lastAnalyzedAt',
       label: 'Last analysed',
       sortable: true,
       hideBelow: 'md',

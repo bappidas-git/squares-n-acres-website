@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import focusFirstError from '../../../components/admin/focusFirstError';
 import redirectMoves, { describeMoves } from '../../../components/admin/redirectMoves';
 import { FORMS, TOASTS } from '../../../config/adminCopy';
-import { applySeoSideEffects } from '../../../components/seo/seoSideEffects';
+import { applySeoSideEffects, redirectWarning } from '../../../components/seo/seoSideEffects';
 import { slugify } from '../../../utils/slug';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import { useNavigationGuard } from '../../../contexts/NavigationGuardContext';
@@ -141,7 +141,9 @@ export default function useRecordPage({
 
         // The redirect this record's `seo` asks for, against the slug the API
         // answered with — a new record has none until now (§9.6).
-        if (entityType) await applySeoSideEffects(entityType, saved);
+        const effects = entityType
+          ? await applySeoSideEffects(entityType, saved)
+          : { ok: true, error: null };
         if (leaving && saved.slug && saved.slug !== leaving) {
           const result = await redirectMoves(
             [[publicPath(leaving), publicPath(saved.slug)]],
@@ -152,7 +154,8 @@ export default function useRecordPage({
           if (error) toast.error(error);
         }
 
-        toast.success(isEdit ? TOASTS.saved(noun) : TOASTS.created(noun));
+        if (effects.ok) toast.success(isEdit ? TOASTS.saved(noun) : TOASTS.created(noun));
+        else toast.warning(redirectWarning(effects.error));
         onSaved?.();
 
         if (after === 'view' && saved.slug) {

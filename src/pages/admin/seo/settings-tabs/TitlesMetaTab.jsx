@@ -241,7 +241,7 @@ export default function TitlesMetaTab({ form, rows = [], context = {}, disabled 
 
       <FormSection
         title="Automatic noindex rules"
-        description="Pages that exist for visitors but have nothing to index (§9.4)."
+        description="Pages that exist for visitors but have nothing to index."
       >
         {NOINDEX_RULES.map((rule) => (
           <FormColumn key={rule.key} half>

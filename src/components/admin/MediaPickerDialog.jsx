@@ -65,6 +65,9 @@ export const toSelection = (record) => ({
  * @param {string} [props.folder] pre-selects the folder filter and files uploads there
  * @param {'library'|'upload'|'url'} [props.defaultTab] where it opens
  * @param {string} [props.title]
+ * @param {Array<string>} [props.excludeUrls] addresses the field already holds —
+ *   a gallery's photographs: badged `excludeLabel` in the grid, never selected
+ * @param {string} [props.excludeLabel]
  */
 export default function MediaPickerDialog({
   open,
@@ -75,6 +78,8 @@ export default function MediaPickerDialog({
   folder = '',
   defaultTab = 'library',
   title,
+  excludeUrls = [],
+  excludeLabel = 'Already added',
 }) {
   const { configured } = useCloudinaryConfig();
   const [tab, setTab] = useState(defaultTab);
@@ -142,6 +147,7 @@ export default function MediaPickerDialog({
 
   const toggle = useCallback(
     (record) => {
+      if (excludeUrls.includes(record.url)) return;
       const selection = toSelection(record);
       if (!multiple) {
         onSelect?.([selection]);
@@ -154,7 +160,7 @@ export default function MediaPickerDialog({
           : [...current, selection]
       );
     },
-    [multiple, onSelect, onClose]
+    [multiple, onSelect, onClose, excludeUrls]
   );
 
   const onUploaded = useCallback(
@@ -304,6 +310,8 @@ export default function MediaPickerDialog({
                 onOpen={toggle}
                 label="Files you can choose"
                 emptyState={narrowed ? narrowedEmpty : libraryEmpty}
+                unavailableUrls={excludeUrls}
+                unavailableLabel={excludeLabel}
               />
             </div>
 

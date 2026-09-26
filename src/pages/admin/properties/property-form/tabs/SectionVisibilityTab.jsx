@@ -117,7 +117,7 @@ export default function SectionVisibilityTab() {
 
         <Alert tone="info" icon={<Icon icon="mdi:information-outline" width="20" height="20" />}>
           Switching the enquiry section off hides the block inside the page only — the sticky bar
-          and every “Enquire” button stay, so a visitor can always reach you (D86).
+          and every “Enquire” button stay, so a visitor can always reach you.
         </Alert>
       </FormColumn>
     </FormSection>

@@ -467,15 +467,40 @@ export function buildHeaderActions({ settings } = {}) {
     });
   }
 
-  actions.push({
-    key: 'cta',
-    kind: 'lead',
-    label: navigation.headerCtaLabel || NAV.postRequirement,
-    title: navigation.headerCtaLabel || NAV.postRequirement,
-    icon: 'mdi:clipboard-text-outline',
-  });
+  actions.push(headerCta(settings));
 
   return actions;
+}
+
+/** The anchor that means "open the requirement form" rather than "go somewhere". */
+export const LEAD_FORM_ANCHOR = '#post-requirement';
+
+/**
+ * The header's call to action, as Site settings → Navigation describes it: the
+ * default target (`#post-requirement`, or nothing) opens the requirement form;
+ * any other target — a path such as `/contact`, a full address, `tel:` — is a
+ * plain link, the same in the header, the drawer and the bottom bar.
+ *
+ * @param {object|null} [settings] the public settings object
+ * @returns {{key: 'cta', kind: 'lead'|'link', label: string, title: string,
+ *   icon: string, href?: string, external?: boolean, internal?: boolean}}
+ */
+export function headerCta(settings) {
+  const navigation = settings?.navigation ?? {};
+  const label = navigation.headerCtaLabel || NAV.postRequirement;
+  const href = String(navigation.headerCtaHref ?? '').trim();
+  const base = { key: 'cta', label, title: label, icon: 'mdi:clipboard-text-outline' };
+
+  if (!href || href === LEAD_FORM_ANCHOR) return { ...base, kind: 'lead' };
+  return {
+    ...base,
+    kind: 'link',
+    href,
+    // A site path goes through the router; anything else is an ordinary anchor,
+    // and another site opens in its own tab.
+    internal: /^\/(?!\/)/.test(href),
+    external: /^https?:\/\//i.test(href),
+  };
 }
 
 /**
@@ -688,6 +713,7 @@ export function buildBottomNav() {
 
 const navigation = {
   buildHeaderNav,
+  headerCta,
   collapseMenus,
   buildHeaderMenus,
   buildHeaderActions,

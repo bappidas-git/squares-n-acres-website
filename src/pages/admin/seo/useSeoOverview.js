@@ -51,6 +51,7 @@ export const SEO_OVERVIEW_PARAM_KEYS = {
   type: 'csv',
   scoreBand: 'csv',
   index: 'string',
+  missing: 'csv',
   sort: 'string',
   order: 'string',
   page: 'int',
@@ -58,7 +59,7 @@ export const SEO_OVERVIEW_PARAM_KEYS = {
 };
 
 /** The keys that narrow the list, as opposed to paging or ordering it. */
-export const SEO_FILTER_KEYS = ['q', 'type', 'scoreBand', 'index'];
+export const SEO_FILTER_KEYS = ['q', 'type', 'scoreBand', 'index', 'missing'];
 
 /* ------------------------------------------------------------------ *
  * One page

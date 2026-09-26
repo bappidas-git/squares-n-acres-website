@@ -20,8 +20,12 @@ import styles from './BlockEditor.module.css';
  * @param {boolean} props.open
  * @param {() => void} props.onClose
  * @param {(type: string) => void} props.onPick
+ * @param {Array<string>} [props.types] the block types this page can show — the
+ *   home page renders one Features and one Steps block and nothing else, so it
+ *   offers nothing else (prompt 51)
+ * @param {string} [props.note] why the list is shorter than every type
  */
-export default function BlockPicker({ open, onClose, onPick }) {
+export default function BlockPicker({ open, onClose, onPick, types, note }) {
   const [query, setQuery] = useState('');
 
   const groups = useMemo(() => {
@@ -32,11 +36,13 @@ export default function BlockPicker({ open, onClose, onPick }) {
       schema.description.toLowerCase().includes(needle) ||
       schema.type.toLowerCase().includes(needle);
 
+    const allowed = (schema) => !types || types.includes(schema.type);
+
     return BLOCK_GROUPS.map((group) => ({
       ...group,
-      blocks: blocksInGroup(group.key).filter(matches),
+      blocks: blocksInGroup(group.key).filter((schema) => allowed(schema) && matches(schema)),
     })).filter((group) => group.blocks.length > 0);
-  }, [query]);
+  }, [query, types]);
 
   const pick = (type) => {
     onPick(type);
@@ -49,7 +55,7 @@ export default function BlockPicker({ open, onClose, onPick }) {
       open={open}
       onClose={onClose}
       title="Add a block"
-      description="Every band a page can be built from."
+      description={note ?? 'Every band a page can be built from.'}
       size="lg"
       mobile="fullscreen"
     >

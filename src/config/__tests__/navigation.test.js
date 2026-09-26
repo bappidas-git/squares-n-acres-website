@@ -14,7 +14,9 @@ import {
   buildHeaderNav,
   buildLegalLinks,
   FOOTER_COLUMN_LIMIT,
+  headerCta,
 } from '../navigation';
+import { NAV } from '../copy';
 import { PRICE_BUCKETS_SALE } from '../enums';
 import { setKnownSegments } from '../segments';
 
@@ -559,6 +561,52 @@ describe('buildHeaderActions', () => {
 
   it('always keeps the CTA, even with no settings at all', () => {
     expect(buildHeaderNav().actions.map((action) => action.key)).toEqual(['cta']);
+  });
+});
+
+describe('headerCta — the "Call-to-action target" setting', () => {
+  const withTarget = (headerCtaHref) => ({
+    navigation: { headerCtaLabel: 'Talk to us', headerCtaHref },
+  });
+
+  it('opens the requirement form for #post-requirement and for no target', () => {
+    expect(headerCta(withTarget('#post-requirement'))).toMatchObject({ kind: 'lead' });
+    expect(headerCta(withTarget(''))).toMatchObject({ kind: 'lead' });
+    expect(headerCta(null)).toMatchObject({ kind: 'lead', label: NAV.postRequirement });
+  });
+
+  it('is a router link for a path such as /contact', () => {
+    expect(headerCta(withTarget('/contact'))).toMatchObject({
+      kind: 'link',
+      href: '/contact',
+      internal: true,
+      external: false,
+      label: 'Talk to us',
+    });
+  });
+
+  it('is an ordinary link, in a new tab, for another site', () => {
+    expect(headerCta(withTarget('https://example.com/book'))).toMatchObject({
+      kind: 'link',
+      internal: false,
+      external: true,
+    });
+  });
+
+  it('is an ordinary link for tel:, mailto: and another anchor', () => {
+    for (const href of ['tel:+919845000000', 'mailto:info@example.com', '#contact-form']) {
+      expect(headerCta(withTarget(href))).toMatchObject({
+        kind: 'link',
+        href,
+        internal: false,
+        external: false,
+      });
+    }
+  });
+
+  it('is what buildHeaderActions puts last', () => {
+    const actions = buildHeaderActions({ settings: withTarget('/contact') });
+    expect(actions[actions.length - 1]).toMatchObject({ key: 'cta', kind: 'link' });
   });
 });
 

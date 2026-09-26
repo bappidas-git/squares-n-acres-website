@@ -31,6 +31,7 @@ const {
   AVAILABILITY,
   ARTICLE_STATUS,
   CONSTRUCTION_STATUS,
+  EMPLOYMENT_TYPES,
   FACING,
   FAQ_CATEGORIES,
   FURNISHING,
@@ -1446,7 +1447,7 @@ const adminJobs = adminResource({
   plural: 'job postings',
   schema: 'job',
   response: 'Job',
-  query: { department: 'string' },
+  query: { department: 'string', employmentType: csvEnumOf(EMPLOYMENT_TYPES) },
 });
 
 const adminJobApplications = {
@@ -1618,8 +1619,8 @@ const adminRedirects = {
     path: '/admin/redirects/export',
     auth: 'manager',
     module: 'seo',
-    description: 'Every redirect as a CSV file',
-    query: {},
+    description: 'The redirects the list filters select, as a CSV file',
+    query: { q: 'string', isActive: 'bool' },
     body: null,
     response: 'Csv',
     example: null,
@@ -1672,9 +1673,11 @@ const adminSeo = {
     description: 'Lightweight SEO rows for the dashboard and the uniqueness checks',
     query: {
       ...LIST_QUERY,
+      sort: 'enum:updatedAt,lastAnalyzedAt,title,score,type',
       type: enumOf(SEO_ENTITY_TYPES),
       scoreBand: enumOf(SEO_SCORE_BANDS),
       index: 'bool',
+      missing: 'csv:enum:focusKeyword,description,title',
     },
     body: null,
     response: 'SeoOverviewRowList',

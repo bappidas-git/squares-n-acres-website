@@ -421,3 +421,18 @@
     padding: var(--space-3) var(--space-2);
   }
 }
+
+.cardError {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-error-bg);
+  color: var(--color-error-dark);
+  font-size: var(--font-size-sm);
+}
+
+.addNote {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}

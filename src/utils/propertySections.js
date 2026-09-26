@@ -93,7 +93,7 @@ export const SECTION_DEFINITIONS = [
   {
     key: 'specifications',
     label: 'Specifications',
-    description: 'The specification sheet and the construction specifications below it (D39).',
+    description: 'The specification sheet and the construction specifications below it.',
     anchor: 'specifications',
     hasData: (property) =>
       list(property.specifications).length > 0 || list(property.constructionSpecs).length > 0,
@@ -213,7 +213,7 @@ export const SECTION_DEFINITIONS = [
     key: 'enquiry',
     label: 'Enquiry form',
     description:
-      'The enquiry block inside the page. The sticky bar and the enquire buttons stay either way (D86).',
+      'The enquiry block inside the page. The sticky bar and the enquire buttons stay either way.',
     anchor: 'enquiry',
     hasData: () => true,
   },

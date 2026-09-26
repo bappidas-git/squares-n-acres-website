@@ -119,8 +119,60 @@ describe('EntityPicker', () => {
 
     await userEvent.type(screen.getByRole('combobox'), 'RERA');
     const option = await screen.findByRole('option', { name: /Karnataka RERA/i });
-    expect(option).toBeDisabled();
+    expect(option).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.click(option);
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  describe('from the keyboard (prompt 51)', () => {
+    it('moves through the results with the arrows and picks with Enter', async () => {
+      const onChange = jest.fn();
+      setup({ value: [], onChange });
+
+      const box = screen.getByRole('combobox');
+      await userEvent.type(box, 'a');
+      await screen.findAllByRole('option');
+
+      await userEvent.type(box, '{arrowdown}');
+      const first = screen.getAllByRole('option')[0];
+      expect(box).toHaveAttribute('aria-activedescendant', first.id);
+
+      await userEvent.type(box, '{arrowdown}');
+      const second = screen.getAllByRole('option')[1];
+      expect(box).toHaveAttribute('aria-activedescendant', second.id);
+
+      await userEvent.type(box, '{enter}');
+      await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1));
+      expect(onChange.mock.calls[0][0]).toHaveLength(1);
+      // The cursor never left the box.
+      expect(box).toHaveFocus();
+    });
+
+    it('skips a result that is already chosen', async () => {
+      const onChange = jest.fn();
+      setup({ value: [1], onChange });
+
+      const box = screen.getByRole('combobox');
+      await userEvent.type(box, 'Karnataka');
+      const options = await screen.findAllByRole('option');
+      expect(options[0]).toHaveAttribute('aria-disabled', 'true');
+
+      await userEvent.type(box, '{arrowdown}');
+      expect(box).toHaveAttribute('aria-activedescendant', options[1].id);
+    });
+
+    it('closes the list with Escape and keeps the box focused', async () => {
+      setup({ value: [], onChange: jest.fn() });
+
+      const box = screen.getByRole('combobox');
+      await userEvent.type(box, 'khata');
+      await screen.findByRole('listbox');
+
+      await userEvent.type(box, '{esc}');
+      await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+      expect(box).toHaveFocus();
+      expect(box).toHaveAttribute('aria-expanded', 'false');
+    });
   });
 
   it('removes the row the editor asked to remove', async () => {

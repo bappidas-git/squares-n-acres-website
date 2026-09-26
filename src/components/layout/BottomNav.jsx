@@ -5,9 +5,10 @@ import { Link, matchPath, useLocation } from 'react-router-dom';
 import MobileDrawer from './MobileDrawer';
 import styles from './BottomNav.module.css';
 import useScrollDirection from '../../hooks/useScrollDirection';
-import { buildBottomNav } from '../../config/navigation';
+import { buildBottomNav, headerCta } from '../../config/navigation';
 import { useLeadCapture } from '../../contexts/LeadCaptureContext';
 import { useShortlist } from '../../contexts/ShortlistContext';
+import { useSiteSettings } from '../../contexts/SiteSettingsContext';
 
 /**
  * The phone's bottom bar: Home · Search · Shortlist · Enquire · Menu.
@@ -38,6 +39,8 @@ export default function BottomNav() {
   const { direction } = useScrollDirection();
   const { count } = useShortlist();
   const { openLeadModal, leadTriggerProps } = useLeadCapture();
+  const { settings } = useSiteSettings();
+  const cta = headerCta(settings);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -72,6 +75,27 @@ export default function BottomNav() {
       >
         {ITEMS.map((item) => {
           const active = isActive(item);
+
+          // "Enquire" follows the header's call to action: the requirement form,
+          // or — when Site settings point it elsewhere — a plain link there.
+          if (item.kind === 'lead' && cta.kind === 'link') {
+            return cta.internal ? (
+              <Link key={item.key} to={cta.href} className={styles.item}>
+                {iconOf(item, false)}
+                <span className={styles.label}>{item.label}</span>
+              </Link>
+            ) : (
+              <a
+                key={item.key}
+                href={cta.href}
+                className={styles.item}
+                {...(cta.external ? { target: '_blank', rel: 'noopener noreferrer' } : null)}
+              >
+                {iconOf(item, false)}
+                <span className={styles.label}>{item.label}</span>
+              </a>
+            );
+          }
 
           if (item.kind === 'lead' || item.kind === 'menu') {
             const onClick =

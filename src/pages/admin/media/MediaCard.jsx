@@ -44,8 +44,18 @@ export function describeSize(item) {
  * @param {number} [props.selectionIndex] 1-based; shown in the ring when multiple
  * @param {(item: object) => void} props.onOpen
  * @param {(item: object) => void} [props.onCopy]
+ * @param {string} [props.unavailable] a file the picker's field already holds —
+ *   "In the gallery": shown with that badge and never toggled (prompt 51)
  */
-function MediaCard({ item, selectable = false, selected = false, selectionIndex, onOpen, onCopy }) {
+function MediaCard({
+  item,
+  selectable = false,
+  selected = false,
+  selectionIndex,
+  onOpen,
+  onCopy,
+  unavailable = '',
+}) {
   const usedIn = Array.isArray(item.usedIn) ? item.usedIn.length : null;
   const name = item.title || item.alt || item.url;
   const size = describeSize(item);
@@ -55,9 +65,18 @@ function MediaCard({ item, selectable = false, selected = false, selectionIndex,
     <li className={styles.cardItem}>
       <button
         type="button"
-        className={[styles.card, selected ? styles.cardSelected : ''].filter(Boolean).join(' ')}
-        aria-pressed={selectable ? selected : undefined}
-        onClick={() => onOpen?.(item)}
+        className={[
+          styles.card,
+          selected ? styles.cardSelected : '',
+          unavailable ? styles.cardUnavailable : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        aria-pressed={selectable && !unavailable ? selected : undefined}
+        aria-disabled={unavailable ? true : undefined}
+        onClick={() => {
+          if (!unavailable) onOpen?.(item);
+        }}
       >
         <span className={styles.thumb}>
           {isImage ? (
@@ -93,6 +112,7 @@ function MediaCard({ item, selectable = false, selected = false, selectionIndex,
             {name}
           </span>
           {size ? <span className={styles.cardMeta}>{size}</span> : null}
+          {unavailable ? <span className={styles.inField}>{unavailable}</span> : null}
           {usedIn !== null ? (
             <span
               className={[styles.usedBadge, usedIn === 0 ? styles.usedBadgeIdle : '']

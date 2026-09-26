@@ -7,7 +7,11 @@ import Modal from '../../../components/ui/Modal';
 import SeoPanel from '../../../components/seo/SeoPanel';
 import Skeleton from '../../../components/ui/Skeleton';
 import ErrorState from '../../../components/ui/ErrorState';
-import { applySeoSideEffects, validateSeoBranch } from '../../../components/seo/seoSideEffects';
+import {
+  applySeoSideEffects,
+  redirectWarning,
+  validateSeoBranch,
+} from '../../../components/seo/seoSideEffects';
 import { entityLabel, serviceFor } from './seoEntityServices';
 import { firstFieldMessage } from '../../../services/apiError';
 import { toSeoPayload, withSeoDefaults } from '../../../components/seo/seoValues';
@@ -143,7 +147,7 @@ export default function SeoEditDialog({
       const { data } = await service.patch(entity.id, { seo: payload });
       const saved = data ?? { ...entity, seo: payload };
 
-      await applySeoSideEffects(rowType, saved);
+      const effects = await applySeoSideEffects(rowType, saved);
 
       if (alive.current) {
         setEntity(saved);
@@ -151,7 +155,8 @@ export default function SeoEditDialog({
         setDirty(false);
       }
       onSaved?.({ id: saved.id, type: rowType, seo: saved.seo ?? payload });
-      toast.success(SEO.saved);
+      if (effects.ok) toast.success(SEO.saved);
+      else toast.warning(redirectWarning(effects.error));
       onClose?.();
     } catch (thrown) {
       const fields = thrown?.errors ?? {};

@@ -6,6 +6,7 @@ import renderWith from '../../../../../test-utils';
 import ImageGalleryEditor, {
   coverAfterRemoval,
   parseUrlList,
+  galleryAddMessage,
 } from '../components/ImageGalleryEditor';
 import { makeImage, resetTmpIds } from '../initialState';
 
@@ -399,5 +400,18 @@ describe('adding by address (QA-62)', () => {
     expect(
       screen.getByText('This line is not the address of a photograph — fix or remove it.')
     ).toBeInTheDocument();
+  });
+});
+
+describe('galleryAddMessage — what "Add from library" says (prompt 51)', () => {
+  it('names what was added and what the gallery already held', () => {
+    expect(galleryAddMessage(2, 3)).toBe('Added 2 — 3 were already in the gallery.');
+    expect(galleryAddMessage(1, 1)).toBe('Added 1 — 1 was already in the gallery.');
+    expect(galleryAddMessage(4, 0)).toBe('Added 4.');
+  });
+
+  it('says so when every pick was already there', () => {
+    expect(galleryAddMessage(0, 1)).toBe('That photograph is already in the gallery.');
+    expect(galleryAddMessage(0, 3)).toBe('Those photographs are already in the gallery.');
   });
 });

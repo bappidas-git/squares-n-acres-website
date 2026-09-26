@@ -187,7 +187,7 @@ export default function HeroTab({ form, disabled = false }) {
 
       <FormSection
         title="Counters"
-        description="Numbers the firm can stand behind. An empty list hides the strip (§14)."
+        description="Numbers the firm can stand behind. An empty list hides the strip."
       >
         <FormColumn>
           <StatsEditor

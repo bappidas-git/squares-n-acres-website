@@ -76,6 +76,7 @@ export default function LeadDetailPage() {
   const canAssign = can('leads', 'assign');
   const canClaim = can('leads', 'claim');
   const canDelete = can('leads', 'delete');
+  const canEditListing = can('properties', 'edit');
 
   const { users } = useAssignableUsers({ enabled: canAssign });
 
@@ -398,9 +399,16 @@ export default function LeadDetailPage() {
                       size="sm"
                       variant="ghost"
                       to={PATHS.adminPropertyEdit(lead.property.id)}
-                      icon={<Icon icon="mdi:pencil-outline" width="16" height="16" />}
+                      icon={
+                        <Icon
+                          icon={canEditListing ? 'mdi:pencil-outline' : 'mdi:eye-outline'}
+                          width="16"
+                          height="16"
+                        />
+                      }
                     >
-                      Edit listing
+                      {/* A sales user opens the form read-only (§7). */}
+                      {canEditListing ? 'Edit listing' : 'View listing'}
                     </Button>
                   </div>
                 </div>

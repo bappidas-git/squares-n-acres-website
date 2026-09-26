@@ -29,6 +29,12 @@ import styles from './BlockEditor.module.css';
  * @param {(blocks: Array<object>) => void} props.onChange
  * @param {Record<string, Record<string, string>>} [props.errors] `{ [blockId]: { field: message } }`
  * @param {boolean} [props.disabled]
+ * @param {number} [props.revealErrors] a counter: each new value opens every block
+ *   that holds a message
+ * @param {Array<string>} [props.allowedTypes] the types "Add block" offers — every
+ *   type when absent; an empty list turns the button off
+ * @param {string} [props.addNote] why the choice is narrowed, said beside the button
+ *   and in the picker
  */
 
 /** New blocks are `tmp-1`, `tmp-2`… within one editing session. */
@@ -44,12 +50,34 @@ export const isTemporaryId = (id) => typeof id === 'string' && id.startsWith('tm
 /** `order` as `1…n`, in array order — the shape the API stores (§6.10). */
 export const renumber = (blocks) => blocks.map((block, index) => ({ ...block, order: index + 1 }));
 
-export default function BlockEditor({ blocks = [], onChange, errors = {}, disabled = false }) {
+export default function BlockEditor({
+  blocks = [],
+  onChange,
+  errors = {},
+  disabled = false,
+  revealErrors = 0,
+  allowedTypes,
+  addNote,
+}) {
   const [openIds, setOpenIds] = useState(() => new Set());
   const [picking, setPicking] = useState(false);
   const [deleting, setDeleting] = useState(null);
 
+  // A refused save asks for the blocks that hold its messages to be opened: a
+  // problem inside a collapsed card made Save and Publish look dead (prompt 51).
+  // Opened in the render the request arrives in, so the host's effect that puts
+  // the cursor in the first message already finds the card open.
+  const [revealed, setRevealed] = useState(revealErrors);
+  if (revealErrors !== revealed) {
+    setRevealed(revealErrors);
+    const withErrors = Object.keys(errors).filter((id) => Object.keys(errors[id] ?? {}).length);
+    if (withErrors.length > 0) {
+      setOpenIds((current) => new Set([...current, ...withErrors]));
+    }
+  }
+
   const emit = useCallback((next) => onChange?.(renumber(next)), [onChange]);
+  const nothingToAdd = Array.isArray(allowedTypes) && allowedTypes.length === 0;
 
   const toggle = (id) =>
     setOpenIds((current) => {
@@ -128,7 +156,7 @@ export default function BlockEditor({ blocks = [], onChange, errors = {}, disabl
           title="This page has no blocks"
           text="A page is a stack of bands — a hero, some words, a form. Add the first one."
           action={
-            <Button disabled={disabled} onClick={() => setPicking(true)}>
+            <Button disabled={disabled || nothingToAdd} onClick={() => setPicking(true)}>
               Add block
             </Button>
           }
@@ -149,6 +177,7 @@ export default function BlockEditor({ blocks = [], onChange, errors = {}, disabl
               open={openIds.has(String(block.id))}
               errors={errors[String(block.id)] ?? {}}
               disabled={disabled}
+              canDuplicate={!Array.isArray(allowedTypes) || allowedTypes.includes(block.type)}
               onToggle={() => toggle(block.id)}
               onChange={(data) => update(block.id, data)}
               onDuplicate={() => duplicate(index)}
@@ -161,15 +190,22 @@ export default function BlockEditor({ blocks = [], onChange, errors = {}, disabl
       {blocks.length > 0 ? (
         <Button
           variant="outline"
-          disabled={disabled}
+          disabled={disabled || nothingToAdd}
           icon={<Icon icon="mdi:plus" width="18" height="18" />}
           onClick={() => setPicking(true)}
         >
           Add block
         </Button>
       ) : null}
+      {addNote ? <p className={styles.addNote}>{addNote}</p> : null}
 
-      <BlockPicker open={picking} onClose={() => setPicking(false)} onPick={add} />
+      <BlockPicker
+        open={picking}
+        onClose={() => setPicking(false)}
+        onPick={add}
+        types={allowedTypes}
+        note={addNote}
+      />
 
       <ConfirmDialog
         open={Boolean(deleting)}

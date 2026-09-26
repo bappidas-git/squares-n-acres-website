@@ -239,8 +239,11 @@ export default function LeadsListPage() {
     async (action, ids, payload) => {
       setDialogBusy(true);
       try {
-        const { message } = await leadService.bulk({ ids, action, payload });
-        toast.success(message || TOASTS.updatedCount(ids.length, 'lead'));
+        const { data, message } = await leadService.bulk({ ids, action, payload });
+        // Nothing needed changing — every selected lead already had that
+        // status or owner — is not a green "0 leads updated." (prompt 51).
+        if (data?.affected === 0) toast.info('No leads needed changing.');
+        else toast.success(message || TOASTS.updatedCount(ids.length, 'lead'));
         setSelectedIds([]);
         afterWrite();
         return true;
@@ -530,6 +533,7 @@ export default function LeadsListPage() {
                 <Chip
                   tone="info"
                   selected={newOnly}
+                  pressed={newOnly}
                   icon={<Icon icon="mdi:new-box" width="14" height="14" />}
                   title={newOnly ? 'Show every lead' : 'Show only the new leads'}
                   onClick={() => setFilters({ status: newOnly ? undefined : ['new'] })}

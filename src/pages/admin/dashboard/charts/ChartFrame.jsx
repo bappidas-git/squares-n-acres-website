@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+
 import useBreakpoint from '../../../../hooks/useBreakpoint';
 import { useCssVar } from '../../../../hooks/useCssVar';
 
@@ -25,6 +28,18 @@ const SR_ONLY = {
   clip: 'rect(0 0 0 0)',
   whiteSpace: 'nowrap',
   border: 0,
+};
+
+/**
+ * The same table, shown while a keyboard is inside it: a row that links to the
+ * leads it counts is a link a keyboard can reach, and a focused link must be
+ * seen (§8.3).
+ */
+const SHOWN_TABLE = {
+  marginTop: 'var(--space-3)',
+  width: '100%',
+  fontSize: 'var(--font-size-sm)',
+  borderCollapse: 'collapse',
 };
 
 /**
@@ -58,8 +73,9 @@ export const TONE_TOKENS = {
  * @param {string} props.title the chart's accessible name
  * @param {string} [props.description] what the shapes mean, for the SVG's
  *   `aria-describedby`
- * @param {Array<{label: string, value: React.ReactNode}>} props.rows the data,
- *   as the hidden table renders it
+ * @param {Array<{label: string, value: React.ReactNode, to?: string}>} props.rows the
+ *   data, as the hidden table renders it; a row with `to` links its value to the
+ *   list behind it — what a click on the chart's shape opens (prompt 51)
  * @param {[string, string]} [props.columns] the hidden table's two headers
  * @param {React.ReactNode} props.children the chart itself
  */
@@ -70,13 +86,21 @@ export default function ChartFrame({
   columns = ['Label', 'Value'],
   children,
 }) {
+  const [focused, setFocused] = useState(false);
+
   return (
     <figure style={{ margin: 0 }}>
       <figcaption style={SR_ONLY}>{description ? `${title}. ${description}` : title}</figcaption>
       <div role="img" aria-label={title}>
         {children}
       </div>
-      <table style={SR_ONLY}>
+      <table
+        style={focused ? SHOWN_TABLE : SR_ONLY}
+        onFocus={() => setFocused(true)}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+        }}
+      >
         <caption>{`${title} — the data behind the chart`}</caption>
         <thead>
           <tr>
@@ -87,8 +111,10 @@ export default function ChartFrame({
         <tbody>
           {rows.map((row) => (
             <tr key={row.label}>
-              <th scope="row">{row.label}</th>
-              <td>{row.value}</td>
+              <th scope="row" style={{ textAlign: 'left', fontWeight: 'inherit' }}>
+                {row.label}
+              </th>
+              <td>{row.to ? <Link to={row.to}>{row.value}</Link> : row.value}</td>
             </tr>
           ))}
         </tbody>

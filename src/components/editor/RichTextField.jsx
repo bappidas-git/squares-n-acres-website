@@ -1,6 +1,7 @@
-import { Suspense, forwardRef, lazy, useCallback, useRef, useState } from 'react';
+import { Suspense, forwardRef, lazy, useCallback, useEffect, useRef, useState } from 'react';
 
 import Skeleton from '../ui/Skeleton';
+import useMediaUpload, { kindOf } from '../../pages/admin/media/useMediaUpload';
 
 /**
  * `RichTextEditor`, loaded only when a form actually shows one.
@@ -23,6 +24,12 @@ import Skeleton from '../ui/Skeleton';
  * block, a property's overview — rather than nine forms each remembering to.
  * A host may still pass its own `onRequestImage` and this one stands aside.
  *
+ * And since prompt 51, a picture **dropped** on the editor is uploaded into the
+ * form's folder when Cloudinary is configured (the same queue as the media
+ * library) and then described in the image dialog; before, the dialog opened
+ * empty and the file was thrown away. The upload's progress, or why it failed,
+ * is the line under the editor.
+ *
  * The placeholder is drawn with the design system's skeleton rather than a
  * stylesheet of its own: this wrapper sits in the panel's bundle while
  * everything it stands in for sits in the lazy one, and a stylesheet spanning
@@ -33,6 +40,15 @@ import Skeleton from '../ui/Skeleton';
 
 const RichTextEditor = lazy(() => import('./RichTextEditor'));
 const MediaPickerDialog = lazy(() => import('../admin/MediaPickerDialog'));
+
+/** The drop's status line, styled inline for the reason the skeleton is (above). */
+const STATUS_STYLE = {
+  margin: 'var(--space-2) 0 0',
+  fontSize: 'var(--font-size-sm)',
+  color: 'var(--color-text-muted)',
+};
+const ERROR_STYLE = { ...STATUS_STYLE, color: 'var(--color-error-dark)' };
+const SILENT_STYLE = { margin: 0 };
 
 const RichTextField = forwardRef(function RichTextField(
   { minHeight, onRequestImage, folder = 'articles', ...props },
@@ -59,6 +75,50 @@ const RichTextField = forwardRef(function RichTextField(
     });
   }, []);
 
+  /* ---------------- a dropped picture ---------------- */
+
+  const queue = useMediaUpload({ folder, accept: 'image' });
+  const [dropId, setDropId] = useState(null);
+  const dropResolve = useRef(null);
+  const dropped = dropId ? (queue.items.find((item) => item.id === dropId) ?? null) : null;
+
+  const onDropFiles = useCallback(
+    (files) => {
+      if (!queue.configured) return null;
+      const image = Array.from(files ?? []).find((file) => kindOf(file) === 'image');
+      if (!image) return null;
+      dropResolve.current?.(null);
+      const [item] = queue.enqueue([image]);
+      setDropId(item?.id ?? null);
+      return new Promise((resolve) => {
+        dropResolve.current = resolve;
+      });
+    },
+    [queue]
+  );
+
+  // The upload settles the drop: done hands the address to the image dialog,
+  // a failure leaves its reason on the line under the editor.
+  const { dismiss } = queue;
+  useEffect(() => {
+    if (!dropped) return;
+    if (dropped.status === 'done' && dropped.record) {
+      const resolve = dropResolve.current;
+      dropResolve.current = null;
+      resolve?.({ src: dropped.record.url, alt: dropped.record.alt ?? '' });
+      dismiss(dropped.id);
+      setDropId(null);
+    } else if (dropped.status === 'error' || dropped.status === 'cancelled') {
+      const resolve = dropResolve.current;
+      dropResolve.current = null;
+      resolve?.(null);
+    }
+  }, [dropped, dismiss]);
+
+  const uploading =
+    dropped && ['queued', 'uploading', 'saving'].includes(dropped.status) ? dropped : null;
+  const failed = dropped && dropped.status === 'error' ? dropped : null;
+
   return (
     <>
       <Suspense
@@ -73,9 +133,23 @@ const RichTextField = forwardRef(function RichTextField(
           ref={ref}
           minHeight={minHeight}
           onRequestImage={onRequestImage ?? request}
+          onDropFiles={onDropFiles}
           {...props}
         />
       </Suspense>
+
+      {/* The live region is always there, so the first message is announced. */}
+      <p
+        role="status"
+        aria-live="polite"
+        style={failed ? ERROR_STYLE : uploading ? STATUS_STYLE : SILENT_STYLE}
+      >
+        {uploading
+          ? `Uploading ${uploading.name}… ${Math.round(uploading.progress ?? 0)}%`
+          : failed
+            ? `${failed.name} could not be uploaded: ${failed.error}`
+            : null}
+      </p>
 
       {picking ? (
         <Suspense fallback={null}>
@@ -83,7 +157,7 @@ const RichTextField = forwardRef(function RichTextField(
             open
             accept="image"
             folder={folder}
-            title="Choose a picture for this article"
+            title="Insert an image"
             onClose={() => settle(null)}
             onSelect={(items) => {
               const [first] = items;

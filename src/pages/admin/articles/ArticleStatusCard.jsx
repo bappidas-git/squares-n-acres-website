@@ -52,6 +52,9 @@ export default function ArticleStatusCard({ form }) {
         options={STATUS_CHOICES}
         value={status}
         error={errors.status}
+        // Off while a save is out: a status chosen then was silently put back
+        // when the answer landed (prompt 51).
+        disabled={readOnly || saving}
         onChange={(next) => setField('status', next)}
       />
       <p className={styles.cardNote}>{STATUS_HINT[status]}</p>

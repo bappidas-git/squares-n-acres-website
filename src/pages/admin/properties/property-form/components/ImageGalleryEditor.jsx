@@ -13,6 +13,7 @@ import {
   TextareaField,
 } from '../../../../../components/ui';
 import { URL_PATTERN } from '../../../../../utils/validation';
+import { useToast } from '../../../../../components/common/ToastProvider';
 import { LIMITS } from '../validators/property';
 
 import styles from './ImageGalleryEditor.module.css';
@@ -45,6 +46,24 @@ export function parseUrlList(text, existing = []) {
       found.push(url);
     });
   return found;
+}
+
+/**
+ * What adding files from the library says: how many were added and how many
+ * the gallery already held.
+ *
+ * @param {number} added
+ * @param {number} skipped
+ * @returns {string}
+ */
+export function galleryAddMessage(added, skipped) {
+  const held = `${skipped} ${skipped === 1 ? 'was' : 'were'} already in the gallery`;
+  if (added === 0) {
+    return skipped === 1
+      ? 'That photograph is already in the gallery.'
+      : 'Those photographs are already in the gallery.';
+  }
+  return skipped > 0 ? `Added ${added} — ${held}.` : `Added ${added}.`;
 }
 
 /**
@@ -102,6 +121,7 @@ export default function ImageGalleryEditor({
   onSetCover,
 }) {
   const coverName = useId();
+  const toast = useToast();
   const { configured } = useCloudinaryConfig();
   const [single, setSingle] = useState('');
   const [singleError, setSingleError] = useState('');
@@ -128,13 +148,21 @@ export default function ImageGalleryEditor({
     const fresh = items
       .filter((item) => item?.url && !known.has(item.url))
       .map((item) => ({ url: item.url, alt: item.alt ?? '', caption: '' }));
+    const skipped = items.length - fresh.length;
 
+    // Said where it is seen (prompt 51): the only message used to go to a
+    // visually hidden region, so a pick of files the gallery already held
+    // looked like a button that did nothing.
+    const message = galleryAddMessage(fresh.length, skipped);
     if (fresh.length === 0) {
-      setAnnouncement('Those photographs are already in the gallery.');
-      return;
+      toast.info(message);
+      setAnnouncement(message);
+      return { added: 0, skipped };
     }
     onAdd?.(fresh);
-    setAnnouncement(`${fresh.length} ${fresh.length === 1 ? 'image' : 'images'} added.`);
+    toast.success(message);
+    setAnnouncement(message);
+    return { added: fresh.length, skipped };
   };
 
   const queue = useMediaUpload({
@@ -470,6 +498,8 @@ export default function ImageGalleryEditor({
             accept="image"
             folder={GALLERY_FOLDER}
             title="Add photographs to this listing"
+            excludeUrls={urls}
+            excludeLabel="In the gallery"
             onClose={() => setPickerOpen(false)}
             onSelect={addPicked}
           />

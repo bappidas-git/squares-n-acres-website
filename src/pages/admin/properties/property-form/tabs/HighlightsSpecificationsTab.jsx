@@ -294,7 +294,7 @@ export default function HighlightsSpecificationsTab() {
 
       <FormSection
         title="Construction specifications"
-        description="What the building is made of, group by group. It renders inside the Specifications section of the listing as a second block (D39)."
+        description="What the building is made of, group by group. It renders inside the Specifications section of the listing as a second block."
         action={
           standardLeft > 0 ? (
             <Button

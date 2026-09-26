@@ -74,6 +74,9 @@ export function libraryFolders(meta, items = [], selected = '') {
  * @param {Array<string|number>} [props.selectedIds] in selection order
  * @param {boolean} [props.selectable]
  * @param {string} props.label the accessible name of the list
+ * @param {Array<string>} [props.unavailableUrls] files the caller's field already
+ *   holds, badged `unavailableLabel` and not selectable
+ * @param {string} [props.unavailableLabel]
  */
 export default function MediaGrid({
   items = [],
@@ -87,6 +90,8 @@ export default function MediaGrid({
   selectedIds = [],
   selectable = false,
   label = 'Media library',
+  unavailableUrls = [],
+  unavailableLabel = 'Already added',
 }) {
   if (error) {
     return (
@@ -128,6 +133,7 @@ export default function MediaGrid({
   }
 
   const order = new Map(selectedIds.map((id, index) => [String(id), index + 1]));
+  const held = new Set(unavailableUrls);
 
   return (
     <ul
@@ -144,6 +150,7 @@ export default function MediaGrid({
           selectionIndex={selectedIds.length > 1 ? order.get(String(item.id)) : undefined}
           onOpen={onOpen}
           onCopy={onCopy}
+          unavailable={held.has(item.url) ? unavailableLabel : ''}
         />
       ))}
     </ul>

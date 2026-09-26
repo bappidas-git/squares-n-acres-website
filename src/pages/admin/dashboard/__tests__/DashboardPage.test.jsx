@@ -216,7 +216,12 @@ describe('DashboardPage', () => {
     );
 
     const listings = screen.getByRole('region', { name: 'Top listings' });
-    expect(within(listings).getByText('120 views · 4 enquiries')).toBeInTheDocument();
+    expect(within(listings).getByText(/120 views/)).toBeInTheDocument();
+    // The enquiry count opens the leads that name the listing (prompt 51).
+    expect(within(listings).getByRole('link', { name: '4 enquiries' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/admin/leads?propertyId=')
+    );
 
     const seo = screen.getByRole('region', { name: 'SEO health' });
     expect(within(seo).getByText('72.4')).toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import Button from '../../../components/ui/Button';
@@ -115,6 +115,9 @@ export function planGeneration(entityType, entity, seoSettings, options = {}) {
  * @param {object} [props.context] what `analyze` and the templates read
  * @param {boolean} [props.disabled]
  * @param {(summary: object) => void} [props.onFinished] the desk refreshes here
+ * @param {boolean} [props.autoStart] "Re-analyse all" pressed somewhere else on the
+ *   desk — the Issues tab's empty state, the table's — starts the run here, once
+ * @param {() => void} [props.onAutoStarted] the request is spent
  */
 export default function SeoBulkTools({
   rows = [],
@@ -122,6 +125,8 @@ export default function SeoBulkTools({
   context,
   disabled = false,
   onFinished,
+  autoStart = false,
+  onAutoStarted,
 }) {
   const toast = useToast();
   const [mode, setMode] = useState(null);
@@ -206,6 +211,22 @@ export default function SeoBulkTools({
     },
     [rows, total, context, seoSettings, toast, onFinished]
   );
+
+  // A "Re-analyse all" pressed elsewhere on the desk runs here, where the
+  // progress dialog is — once the rows it runs over have arrived.
+  const runRef = useRef(run);
+  runRef.current = run;
+  const autoStartedRef = useRef(onAutoStarted);
+  autoStartedRef.current = onAutoStarted;
+  useEffect(() => {
+    if (!autoStart || disabled) return;
+    autoStartedRef.current?.();
+    if (total === 0) {
+      toast.info('There is nothing to analyse yet — the site has no records the desk can score.');
+      return;
+    }
+    runRef.current('reanalyse', false);
+  }, [autoStart, disabled, total, toast]);
 
   const start = (kind) => {
     // Overwriting what an editor wrote is the one irreversible thing here, so

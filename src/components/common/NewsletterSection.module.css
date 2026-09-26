@@ -38,17 +38,6 @@
   text-align: left;
 }
 
-.disclaimer {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  line-height: var(--line-height-normal);
-}
-
-.disclaimer a {
-  color: var(--color-primary-dark);
-  text-decoration: underline;
-}
-
 @media (max-width: 599.98px) {
   .newsletter {
     padding: var(--space-12) var(--space-5);

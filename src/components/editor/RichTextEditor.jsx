@@ -110,6 +110,8 @@ function statsOf(editor) {
  * @param {string} [props.focusKeyword] hinted in the image dialog's alt-text help
  * @param {() => Promise<{url: string, alt?: string, caption?: string}|null>} [props.onRequestImage]
  *   the media library, once there is one; without it images come from a URL
+ * @param {(files: FileList) => Promise<{src: string, alt?: string}|null>|null} [props.onDropFiles]
+ *   a picture dropped on the editor, uploaded; `null` when uploads are off
  * @param {number} [props.maxWords] a target shown beside the word count
  * @param {string} [props.id]
  * @param {string} [props.label]
@@ -118,6 +120,10 @@ function statsOf(editor) {
  * @param {string} [props.error]
  * @param {string} [props.helper]
  */
+/** What the image dialog says when a file is dropped and uploads are off. */
+export const DROP_NEEDS_UPLOADS =
+  'Drop needs Cloudinary — paste an address instead. Uploads are switched on under Settings → Integrations.';
+
 const RichTextEditor = forwardRef(function RichTextEditor(
   {
     value = '',
@@ -128,6 +134,7 @@ const RichTextEditor = forwardRef(function RichTextEditor(
     disabled = false,
     focusKeyword = '',
     onRequestImage,
+    onDropFiles,
     maxWords,
     id,
     label,
@@ -160,6 +167,9 @@ const RichTextEditor = forwardRef(function RichTextEditor(
   const timerRef = useRef(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  // Read by the drop handler, which the editor keeps from its creation.
+  const onDropFilesRef = useRef(onDropFiles);
+  onDropFilesRef.current = onDropFiles;
 
   const extensions = useMemo(
     () => buildExtensions({ variant, placeholder }),
@@ -201,7 +211,23 @@ const RichTextEditor = forwardRef(function RichTextEditor(
             return false;
           }
           event.preventDefault();
-          setImageDialog({ src: hasFiles ? '' : dropped, alt: '', caption: '' });
+          if (!hasFiles) {
+            setImageDialog({ src: dropped, alt: '', caption: '' });
+            return true;
+          }
+          // A file: uploaded when uploads are on, then described in the dialog
+          // — it used to open the dialog empty and throw the file away
+          // (prompt 51). Without Cloudinary the dialog says why it is empty.
+          const upload = onDropFilesRef.current?.(transfer.files);
+          if (upload && typeof upload.then === 'function') {
+            upload.then((uploaded) => {
+              if (uploaded?.src) {
+                setImageDialog({ src: uploaded.src, alt: uploaded.alt ?? '', caption: '' });
+              }
+            });
+            return true;
+          }
+          setImageDialog({ src: '', alt: '', caption: '', note: DROP_NEEDS_UPLOADS });
           return true;
         },
       },

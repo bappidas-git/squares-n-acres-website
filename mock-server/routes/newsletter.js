@@ -26,6 +26,7 @@ const { nextId } = require('../lib/ids');
 const { rateLimit } = require('../middleware/rateLimit');
 const { toCsv } = require('../lib/csv');
 const { validateBody } = require('../middleware/validate');
+const { ApiError } = require('../middleware/errors');
 
 /** §5.11: ten submissions a minute per IP, on every public write. */
 const SUBMISSIONS_PER_MINUTE = 10;
@@ -70,6 +71,13 @@ module.exports = ({ db, getModel }) => {
         if (typeof body.website === 'string' && body.website.trim() !== '') {
           res.message('ok');
           return;
+        }
+
+        // Site settings → Newsletter → "Collect subscriptions" off: the site
+        // hides every signup, and the API refuses one that arrives anyway
+        // (prompt 51).
+        if (db.getSingleton('siteSettings')?.newsletter?.enabled === false) {
+          throw new ApiError(403, 'The newsletter is not taking subscriptions at the moment.');
         }
 
         if (body.email !== undefined) body.email = normalizeEmail(body.email);
