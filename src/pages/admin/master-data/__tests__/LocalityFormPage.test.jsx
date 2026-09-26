@@ -348,6 +348,86 @@ describe('LocalityFormPage (QA-60)', () => {
   });
 });
 
+describe('LocalityFormPage — the zone is a side of the city chosen', () => {
+  const city = () => screen.getByRole('combobox', { name: /^City/ });
+  const zone = () => screen.getByRole('combobox', { name: /^Zone/ });
+  const zoneLabels = () =>
+    within(zone())
+      .getAllByRole('option')
+      .map((option) => option.textContent);
+
+  beforeEach(() => {
+    mockMasterData.cities = [
+      { id: 1, name: 'Bengaluru', slug: 'bengaluru', isActive: true },
+      { id: 2, name: 'Bongaigaon', slug: 'bongaigaon', isActive: true },
+    ];
+  });
+
+  it('names the zones with the city chosen, and follows a change of city', async () => {
+    renderForm({ add: true });
+    await waitFor(() => expect(city()).toHaveValue('1'));
+    expect(zoneLabels()).toEqual([
+      'No zone',
+      'North Bengaluru',
+      'South Bengaluru',
+      'East Bengaluru',
+      'West Bengaluru',
+      'Central Bengaluru',
+    ]);
+
+    fireEvent.change(zone(), { target: { value: 'north' } });
+    fireEvent.change(city(), { target: { value: '2' } });
+
+    expect(zoneLabels()).toEqual([
+      'No zone',
+      'North Bongaigaon',
+      'South Bongaigaon',
+      'East Bongaigaon',
+      'West Bongaigaon',
+      'Central Bongaigaon',
+    ]);
+    // Only the side is saved, so the zone chosen stays chosen.
+    expect(zone()).toHaveValue('north');
+    expect(within(zone()).getByRole('option', { selected: true })).toHaveTextContent(
+      'North Bongaigaon'
+    );
+  });
+
+  it('saves the side and the city', async () => {
+    renderForm({ add: true });
+    await waitFor(() => expect(screen.getByLabelText('Order')).toHaveValue(21));
+
+    fireEvent.change(screen.getByLabelText(/^Name/), { target: { value: 'Mayapuri' } });
+    fireEvent.change(city(), { target: { value: '2' } });
+    fireEvent.change(zone(), { target: { value: 'north' } });
+    await userEvent.click(saveButton());
+
+    await waitFor(() => expect(service.create).toHaveBeenCalledTimes(1));
+    expect(service.create.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ name: 'Mayapuri', cityId: 2, zone: 'north' })
+    );
+  });
+
+  it('names the zones with the city a locality keeps after it is switched off', async () => {
+    mockMasterData.cities = [{ id: 2, name: 'Bongaigaon', slug: 'bongaigaon', isActive: true }];
+    renderForm();
+    await loaded();
+
+    expect(city()).toHaveValue('1');
+    expect(within(zone()).getByRole('option', { selected: true })).toHaveTextContent(
+      'North Bengaluru'
+    );
+  });
+
+  it('offers the sides alone when there is no city to name', async () => {
+    mockMasterData.cities = [];
+    renderForm({ add: true });
+
+    expect(await screen.findByText(/No city is switched on/)).toBeInTheDocument();
+    expect(zoneLabels()).toEqual(['No zone', 'North', 'South', 'East', 'West', 'Central']);
+  });
+});
+
 describe('LocalityFormPage — kept work, and two editors (prompt 51)', () => {
   it('offers back the copy a closed tab kept, and restores it', async () => {
     storage.setItem(`sna_locality_draft:${RECORD.id}`, {

@@ -35,7 +35,8 @@ const LocalityCard = memo(function LocalityCard({
 
   const Heading = `h${headingLevel}`;
 
-  const { name, slug, zone, heroImageUrl, avgPricePerSqft, propertyCount, isFeatured } = locality;
+  const { name, slug, zone, city, heroImageUrl, avgPricePerSqft, propertyCount, isFeatured } =
+    locality;
   const count = typeof propertyCount === 'number' ? propertyCount : null;
   const countLabel = count === null ? null : `${count} ${count === 1 ? 'property' : 'properties'}`;
   const compact = variant === 'compact';
@@ -79,7 +80,7 @@ const LocalityCard = memo(function LocalityCard({
           {zone ? (
             <span className={styles.zone}>
               <Chip tone="primary" variant="soft">
-                {LOCALITY_ZONES.labelOf(zone)}
+                {LOCALITY_ZONES.labelIn(zone, city?.name)}
               </Chip>
             </span>
           ) : null}

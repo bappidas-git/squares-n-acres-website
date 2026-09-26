@@ -283,13 +283,36 @@ const BADGE_TONES = makeEnum([
   { value: 'info', label: 'Info' },
 ]);
 
+/**
+ * The side of its own city a locality is on. The value names the side and
+ * nothing else, so `labelOf` is the side alone ("North") — what a filter
+ * across every city offers — and a locality's zone reads with its city,
+ * "North Bengaluru" or "North Mysuru", through `labelIn` and `optionsIn`.
+ */
 const LOCALITY_ZONES = makeEnum([
-  { value: 'north', label: 'North Bengaluru' },
-  { value: 'south', label: 'South Bengaluru' },
-  { value: 'east', label: 'East Bengaluru' },
-  { value: 'west', label: 'West Bengaluru' },
-  { value: 'central', label: 'Central Bengaluru' },
+  { value: 'north', label: 'North' },
+  { value: 'south', label: 'South' },
+  { value: 'east', label: 'East' },
+  { value: 'west', label: 'West' },
+  { value: 'central', label: 'Central' },
 ]);
+
+/**
+ * "North Mysuru": the zone, named with its city. The side alone without a
+ * city name; `''` for an unknown zone.
+ */
+LOCALITY_ZONES.labelIn = (value, cityName) => {
+  const side = LOCALITY_ZONES.labelOf(value);
+  const city = typeof cityName === 'string' ? cityName.trim() : '';
+  return side && city ? `${side} ${city}` : side;
+};
+
+/** A zone select's options, named with one city (the sides alone without one). */
+LOCALITY_ZONES.optionsIn = (cityName) =>
+  LOCALITY_ZONES.options.map(({ value }) => ({
+    value,
+    label: LOCALITY_ZONES.labelIn(value, cityName),
+  }));
 
 const FAQ_CATEGORIES = makeEnum([
   { value: 'buying', label: 'Buying', tone: 'success' },

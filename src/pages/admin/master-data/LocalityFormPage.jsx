@@ -382,6 +382,19 @@ export default function LocalityFormPage() {
     return undefined;
   }, [cities.length, citiesLoading, cityOptions, values.cityId]);
 
+  // A zone is a side of the locality's own city, so the zone select names the
+  // city chosen above — "North Mysuru" — and follows it when it changes: it
+  // offered "North Bengaluru" whatever the city was. Only the side is saved,
+  // so a zone already chosen stays chosen under the new name.
+  const cityName = useMemo(() => {
+    const chosen = String(values.cityId ?? '');
+    if (chosen === '') return '';
+    const active = cities.find((city) => String(city.id) === chosen);
+    if (active) return active.name;
+    // The city it is filed under, since switched off, is not in the list.
+    return String(record?.cityId) === chosen ? (record?.city?.name ?? '') : '';
+  }, [cities, record, values.cityId]);
+
   const showPreview = () => setPreview({ latitude: values.latitude, longitude: values.longitude });
 
   const title = isEdit ? (record?.name ?? 'Edit locality') : 'New locality';
@@ -519,7 +532,7 @@ export default function LocalityFormPage() {
                 type: 'select',
                 label: 'Zone',
                 placeholder: 'No zone',
-                options: LOCALITY_ZONES.options,
+                options: LOCALITY_ZONES.optionsIn(cityName),
               }}
               form={form}
               disabled={form.submitting}

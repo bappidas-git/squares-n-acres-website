@@ -12,6 +12,7 @@ import {
   LEAD_STATUS,
   LEGACY_LEAD_SOURCE_MAP,
   LISTING_TYPES,
+  LOCALITY_ZONES,
   SECTION_VISIBILITY_KEYS,
   SEO_SCORE_BANDS,
 } from './enums';
@@ -95,6 +96,34 @@ describe('LISTING_TYPES.verbOf', () => {
   it('returns an empty string for an unknown listing type', () => {
     expect(LISTING_TYPES.verbOf('barter')).toBe('');
     expect(LISTING_TYPES.verbOf(undefined)).toBe('');
+  });
+});
+
+describe('LOCALITY_ZONES', () => {
+  it('names a zone with the city it is in, not always Bengaluru', () => {
+    expect(LOCALITY_ZONES.labelIn('north', 'Bengaluru')).toBe('North Bengaluru');
+    expect(LOCALITY_ZONES.labelIn('north', 'Bongaigaon')).toBe('North Bongaigaon');
+    expect(LOCALITY_ZONES.labelIn('central', ' Mysuru ')).toBe('Central Mysuru');
+  });
+
+  it('is the side alone without a city, and "" for an unknown zone', () => {
+    expect(LOCALITY_ZONES.labelOf('east')).toBe('East');
+    expect(LOCALITY_ZONES.labelIn('east')).toBe('East');
+    expect(LOCALITY_ZONES.labelIn('east', '')).toBe('East');
+    expect(LOCALITY_ZONES.labelIn('east', null)).toBe('East');
+    expect(LOCALITY_ZONES.labelIn('uptown', 'Bengaluru')).toBe('');
+    expect(LOCALITY_ZONES.labelIn(null, 'Bengaluru')).toBe('');
+  });
+
+  it('offers every zone of one city, keeping the values', () => {
+    expect(LOCALITY_ZONES.optionsIn('Bongaigaon')).toEqual([
+      { value: 'north', label: 'North Bongaigaon' },
+      { value: 'south', label: 'South Bongaigaon' },
+      { value: 'east', label: 'East Bongaigaon' },
+      { value: 'west', label: 'West Bongaigaon' },
+      { value: 'central', label: 'Central Bongaigaon' },
+    ]);
+    expect(LOCALITY_ZONES.optionsIn('')).toEqual(LOCALITY_ZONES.options);
   });
 });
 

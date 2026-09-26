@@ -68,8 +68,7 @@ export default function LocalityHero({ locality, breadcrumbs = [] }) {
         {zone ? (
           <p className={styles.heroZone}>
             <Icon icon="mdi:map-marker-outline" width="16" height="16" aria-hidden="true" />
-            {LOCALITY_ZONES.labelOf(zone)}
-            {city?.name ? ` · ${city.name}` : ''}
+            {LOCALITY_ZONES.labelIn(zone, city?.name)}
           </p>
         ) : null}
 

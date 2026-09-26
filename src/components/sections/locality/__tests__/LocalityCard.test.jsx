@@ -9,6 +9,7 @@ const locality = {
   name: 'Whitefield',
   slug: 'whitefield',
   zone: 'east',
+  city: { id: 1, name: 'Bengaluru', slug: 'bengaluru' },
   heroImageUrl: 'https://example.test/whitefield.jpg',
   avgPricePerSqft: 8200,
   propertyCount: 24,
@@ -24,6 +25,21 @@ describe('LocalityCard', () => {
     expect(screen.getByText('₹8,200/sq ft avg')).toBeInTheDocument();
     expect(screen.getByText('24 properties')).toBeInTheDocument();
     expect(screen.getByText('Featured')).toBeInTheDocument();
+  });
+
+  it('names the zone with the locality’s own city', () => {
+    renderWith(
+      <LocalityCard
+        locality={{
+          ...locality,
+          zone: 'north',
+          city: { id: 2, name: 'Bongaigaon', slug: 'bongaigaon' },
+        }}
+      />
+    );
+
+    expect(screen.getByText('North Bongaigaon')).toBeInTheDocument();
+    expect(screen.queryByText(/Bengaluru/)).not.toBeInTheDocument();
   });
 
   it('links to the locality guide', () => {
