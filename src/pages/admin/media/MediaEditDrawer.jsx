@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import { Link } from 'react-router-dom';
 
 import LazyImage from '../../../components/ui/LazyImage';
+import FolderField from '../../../components/admin/FolderField';
 import MultiSelect from '../../../components/admin/MultiSelect';
 import PATHS from '../../../routes/paths';
 import mediaService from '../../../services/mediaService';
@@ -163,7 +164,7 @@ const places = (count) => `${count} ${count === 1 ? 'place' : 'places'}`;
  * @param {(record: object) => void} props.onDeleted
  * @param {(record: object, action: 'save'|'delete') => void} [props.onGone] the
  *   file was removed elsewhere since the list was read
- * @param {string[]} [props.folders]
+ * @param {Array<string|{name: string, count?: number}>} [props.folders]
  * @param {(url: string) => void} [props.onCopy]
  */
 export default function MediaEditDrawer({
@@ -456,19 +457,18 @@ export default function MediaEditDrawer({
               onChange={(event) => setForm((state) => ({ ...state, title: event.target.value }))}
             />
 
-            <TextField
+            <FolderField
               label="Folder"
               value={form.folder}
-              maxLength={120}
-              list="sna-media-drawer-folders"
-              hint="Optional. Groups the file in the library."
-              onChange={(event) => setForm((state) => ({ ...state, folder: event.target.value }))}
+              folders={folders}
+              allowNone
+              hint={
+                cleanFolder(form.folder)
+                  ? `Filed in “${cleanFolder(form.folder)}”. Moving it changes the library’s filing only — the address stays.`
+                  : 'Optional. Groups the file in the library.'
+              }
+              onChange={(next) => setForm((state) => ({ ...state, folder: next ?? '' }))}
             />
-            <datalist id="sna-media-drawer-folders">
-              {folders.map((folder) => (
-                <option key={folder} value={folder} />
-              ))}
-            </datalist>
 
             <MultiSelect
               label="Tags"

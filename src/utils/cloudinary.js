@@ -205,7 +205,13 @@ export function uploadToCloudinary(file, options = {}) {
         return;
       }
 
-      reject(new Error(payload?.error?.message || `The upload failed (${xhr.status}).`));
+      // The status travels with the refusal, so a caller can tell an unknown
+      // cloud (401) from a preset that refused the file (400) — prompt 51.
+      reject(
+        Object.assign(new Error(payload?.error?.message || `The upload failed (${xhr.status}).`), {
+          status: xhr.status,
+        })
+      );
     });
 
     xhr.addEventListener('error', () => {
@@ -221,6 +227,91 @@ export function uploadToCloudinary(file, options = {}) {
     xhr.open('POST', uploadEndpoint(cloudName, resourceType));
     xhr.send(form);
   });
+}
+
+/**
+ * Where "Test uploads" files its picture: under the library's own prefix, in a
+ * folder the library never lists, because the test makes no record (prompt 51).
+ */
+export const TEST_UPLOAD_FOLDER = 'sna/_diagnostics';
+
+/** A transparent 1×1 PNG, for a browser that cannot draw one. */
+const ONE_PIXEL_PNG =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+/**
+ * The picture a test upload sends: one pixel drawn on a canvas, or the same
+ * pixel from its bytes where there is no canvas to draw on.
+ *
+ * @returns {Promise<Blob>}
+ */
+export async function testImage() {
+  const fromBytes = () => {
+    const binary = atob(ONE_PIXEL_PNG);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    return new Blob([bytes], { type: 'image/png' });
+  };
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext?.('2d');
+    if (!context || typeof canvas.toBlob !== 'function') return fromBytes();
+    context.fillStyle = 'rgba(0, 0, 0, 0)';
+    context.fillRect(0, 0, 1, 1);
+    const drawn = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    return drawn ?? fromBytes();
+  } catch (_thrown) {
+    return fromBytes();
+  }
+}
+
+/**
+ * Uploads a 1×1 picture with the cloud name and preset given — not the saved
+ * ones, so the values in the settings boxes can be tried before they are
+ * saved (prompt 51). Nothing is filed in the media library: the picture lands
+ * in `sna/_diagnostics` and that is all.
+ *
+ * @param {{cloudName: string, uploadPreset: string, signal?: AbortSignal}} options
+ * @returns {Promise<ReturnType<typeof toUploadResult>>}
+ */
+export async function testCloudinaryUpload({ cloudName, uploadPreset, signal } = {}) {
+  const file = await testImage();
+  return uploadToCloudinary(file, {
+    resourceType: 'image',
+    folder: TEST_UPLOAD_FOLDER,
+    signal,
+    settings: {
+      integrations: {
+        cloudinaryCloudName: String(cloudName ?? '').trim(),
+        cloudinaryUploadPreset: String(uploadPreset ?? '').trim(),
+      },
+    },
+  });
+}
+
+/** What an editor reads when a test upload is refused, per cause (prompt 51). */
+export const UPLOAD_FAILURES = {
+  cloudName: 'Unknown cloud name — check it against the one on your Cloudinary dashboard.',
+  preset: 'Preset not found or not unsigned — open the walkthrough above.',
+  network: 'Cloudinary could not be reached — check the connection and try again.',
+};
+
+/**
+ * A Cloudinary refusal in plain words: an unknown cloud name, a preset that is
+ * missing or signed, or no connection — and Cloudinary's own sentence for
+ * anything else.
+ *
+ * @param {Error & {status?: number}} error what `uploadToCloudinary` rejected with
+ * @returns {string}
+ */
+export function describeUploadFailure(error) {
+  const message = String(error?.message ?? '');
+  if (message === NETWORK_MESSAGE) return UPLOAD_FAILURES.network;
+  if (/cloud[_\s-]?name/i.test(message) || error?.status === 401) return UPLOAD_FAILURES.cloudName;
+  if (/preset/i.test(message)) return UPLOAD_FAILURES.preset;
+  return `Cloudinary refused the test upload: ${message || 'no reason given'}.`;
 }
 
 /** Cloudinary answers JSON on success and on refusal; anything else is `null`. */

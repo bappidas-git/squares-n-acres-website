@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import FormSection, { FormColumn } from '../../../../../components/admin/FormSection';
@@ -5,6 +6,7 @@ import ImageField from '../../../../../components/admin/ImageField';
 import { LazyImage, SwitchField, UrlField } from '../../../../../components/ui';
 import { makeImage } from '../initialState';
 import ImageGalleryEditor, { coverAfterRemoval } from '../components/ImageGalleryEditor';
+import { recordFolder } from '../../../media/useMediaUpload';
 import { propertyFieldId } from '../fieldFocus';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
@@ -38,8 +40,14 @@ export function videoKind(url) {
  * a client has given us a Cloudinary cloud name (§7).
  */
 export default function MediaTab() {
-  const { values, errors, setField, addItem, removeItem, moveItem, updateItem, disabled } =
+  const { state, values, errors, setField, addItem, removeItem, moveItem, updateItem, disabled } =
     usePropertyFormContext();
+
+  // Each listing files its photographs in a folder of its own (prompt 51):
+  // the saved address when there is one, the one being typed for a new
+  // listing, and an id of this draft's own before either exists.
+  const [draftKey] = useState(() => `draft-${Date.now().toString(36)}`);
+  const folder = recordFolder('properties', state?.initial?.slug || values.slug || draftKey);
 
   const images = values.images ?? [];
   const focusKeyword = String(values.seo?.focusKeyword ?? '').trim();
@@ -92,6 +100,7 @@ export default function MediaTab() {
             errors={errors}
             idFor={propertyFieldId}
             disabled={disabled}
+            folder={folder}
             altHint={focusKeyword || null}
             onAdd={addImages}
             onUpdate={(id, patch) => updateItem('images', id, patch)}

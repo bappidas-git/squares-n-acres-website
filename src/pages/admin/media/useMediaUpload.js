@@ -178,6 +178,24 @@ export function fileError(file, accept = 'any') {
   return '';
 }
 
+/**
+ * The folder one record's own files are filed under — `properties/<slug>`,
+ * `articles/<slug>` — or the section's folder when the record has no slug to
+ * name it by yet (prompt 51). Every listing's photographs used to share one
+ * `properties` folder, 284 of the seed's 389 files, which a picker of eighteen
+ * tiles a page could only page through.
+ *
+ * @param {string} section `properties`, `articles`
+ * @param {string} [key] the slug, or a draft's own id
+ * @returns {string}
+ */
+export const recordFolder = (section, key) => {
+  const name = String(key ?? '')
+    .replace(/\//g, '-')
+    .trim();
+  return name ? `${section}/${name}` : section;
+};
+
 /** The Cloudinary folder a logical folder maps to (D-media, `sna/<folder>`). */
 export const cloudinaryFolder = (folder) => {
   const clean = cleanFolder(folder);

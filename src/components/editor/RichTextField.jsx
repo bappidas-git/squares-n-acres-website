@@ -51,7 +51,7 @@ const ERROR_STYLE = { ...STATUS_STYLE, color: 'var(--color-error-dark)' };
 const SILENT_STYLE = { margin: 0 };
 
 const RichTextField = forwardRef(function RichTextField(
-  { minHeight, onRequestImage, folder = 'articles', ...props },
+  { minHeight, onRequestImage, folder = 'articles', fallbackFolder = '', ...props },
   ref
 ) {
   const [picking, setPicking] = useState(false);
@@ -157,6 +157,7 @@ const RichTextField = forwardRef(function RichTextField(
             open
             accept="image"
             folder={folder}
+            fallbackFolder={fallbackFolder}
             title="Insert an image"
             onClose={() => settle(null)}
             onSelect={(items) => {

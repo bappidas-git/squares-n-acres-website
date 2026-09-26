@@ -917,11 +917,41 @@ What the library's endpoints owe the admin's Media screen and its picker (QA-63)
   page, then search for its twenty-four addresses — not the library's.
 - **`meta.folders`.** The list's `meta` carries the folders that hold a file
   every _other_ filter lets through — the list's own query with its `folder`
-  condition left out — sorted, whatever the page: the Folder filter's options.
-  Nothing chosen, that is every folder; under `type=document` (a brochure's
-  picker), only the folders that hold documents, so no option leads to "Nothing
-  to choose from". `SELECT DISTINCT folder … WHERE <every filter but folder> AND
-  folder IS NOT NULL ORDER BY folder`.
+  and `unfiled` conditions left out — sorted, whatever the page: the folder
+  rail's entries. Nothing chosen, that is every folder; under `type=document` (a
+  brochure's picker), only the folders that hold documents, so no entry leads
+  to "Nothing to choose from". Each is `{ name, count }` (prompt 51) and
+  `meta.unfiled` counts the files in no folder: `SELECT folder, COUNT(*) … WHERE
+  <every filter but folder and unfiled> AND folder IS NOT NULL GROUP BY folder
+  ORDER BY folder`, and the same `WHERE` with `folder IS NULL` for `unfiled`.
+  The admin reads plain names as well, but prints no counts for them.
+- **`unfiled` and `usage`.** `unfiled=true` keeps the files with no folder
+  (`false`, the files with one). `usage=unused` keeps the files the search
+  under "Where a file is used" finds nowhere — the same search a delete asks
+  first, so everything it lists deletes without a 409; any other value filters
+  nothing. It is the one filter that reads other tables: build the set of used
+  addresses once per request, not once per row.
+- **Moving files.** `POST /admin/media/bulk { action: 'move', ids, payload:
+  { folder } }` files every selected record that exists under `folder`, cleaned
+  as a record's own folder is — `null` or blank for no folder, 422 on
+  `payload.folder` for anything that is not a string or `null`, or longer than
+  120 characters. The answer is `{ affected, missing }`: `affected` the records
+  whose folder changed, `missing` the ids that matched no record. A move is not
+  all or nothing — an id that has gone is reported, not a reason to refuse the
+  rest.
+- **Renaming a folder.** `POST /admin/media/folders/rename { from, to, merge? }`
+  refiles every record whose folder is `from` or starts with `from/` —
+  `projects` → `archive` moves `projects/aurelia` to `archive/aurelia` — and
+  answers `{ from, to, moved, merged }` with the message "Moved 12 files from
+  “projects” to “archive”." Both names are cleaned first. 422 on `from` when no
+  record is filed there; on `to` when it equals `from`, lies inside `from`, or
+  would make some record's folder longer than 120 characters; and on `to` with
+  `data.existing: { name, count }` when records outside `from` are already
+  filed under `to` — unless `merge: true`, which moves them in beside those
+  ("Merged …"). One transaction; `updated_at` moves on every record it
+  refiles. It changes the library's filing only: `url` and `public_id` stay, so
+  the Cloudinary asset keeps the path it was uploaded to and nothing that
+  points at it breaks.
 - **Folders are filed clean.** A `folder` is stored with its segments trimmed,
   no slash at either end and none doubled — `" /projects//aurelia/ "` is
   `projects/aurelia`, the name the upload gives Cloudinary (`sna/projects/aurelia`)

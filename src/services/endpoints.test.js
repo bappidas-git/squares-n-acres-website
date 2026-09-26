@@ -107,6 +107,8 @@ const ADMIN_NAMED_PATHS = [
   'GET /admin/redirects/export',
   'GET /admin/articles/:id/preview-token',
   'GET /admin/pages/:id/preview-token',
+  // Added by prompt 51 for the media library's folders.
+  'POST /admin/media/folders/rename',
 ];
 
 /** `[path, slugged]` — the resources §5.14 gives the uniform CRUD + bulk set. */

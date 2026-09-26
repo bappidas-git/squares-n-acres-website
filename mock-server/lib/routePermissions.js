@@ -47,6 +47,8 @@ const SEGMENT_ACTIONS = {
   'check-slug': 'create',
   notes: 'edit',
   claim: 'edit',
+  // Refiling a folder's records changes them (prompt 51).
+  rename: 'edit',
 };
 
 /**

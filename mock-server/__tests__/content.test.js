@@ -3317,7 +3317,7 @@ describe('/admin/media', () => {
     });
   });
 
-  it('lists the folders the other filters leave something in, whatever the page (QA-63)', async () => {
+  it('lists the folders the other filters leave something in, whatever the page, with their counts (QA-63, prompt 51)', async () => {
     const seed = seedWith({
       media: (rows) => {
         rows.push(
@@ -3345,16 +3345,12 @@ describe('/admin/media', () => {
 
     await withServer({ seed }, async ({ request, login, db }) => {
       const token = await login(ADMIN);
-      const every = [
-        ...new Set(
-          db
-            .getCollection('media')
-            .map((row) => row.folder)
-            .filter(Boolean)
-        ),
-      ].sort((a, b) => a.localeCompare(b));
+      const rows = db.getCollection('media');
+      const every = [...new Set(rows.map((row) => row.folder).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b))
+        .map((name) => ({ name, count: rows.filter((row) => row.folder === name).length }));
 
-      // Unfiltered, every folder — on the first page as on any.
+      // Unfiltered, every folder with what it holds — on the first page as on any.
       const first = await request('GET', '/admin/media?perPage=2', { token });
       assert.deepEqual(first.body.meta.folders, every);
       const later = await request('GET', '/admin/media?perPage=2&page=5', { token });
@@ -3366,11 +3362,11 @@ describe('/admin/media', () => {
       assert.deepEqual(narrowed.body.meta.folders, every);
 
       // Every other filter does: a picker of documents is offered the folders
-      // that hold documents.
+      // that hold documents, and counts only the documents in them.
       const documents = await request('GET', '/admin/media?type=document', { token });
-      assert.deepEqual(documents.body.meta.folders, ['brochures']);
+      assert.deepEqual(documents.body.meta.folders, [{ name: 'brochures', count: 1 }]);
       const searched = await request('GET', '/admin/media?q=walkthrough', { token });
-      assert.deepEqual(searched.body.meta.folders, ['films']);
+      assert.deepEqual(searched.body.meta.folders, [{ name: 'films', count: 1 }]);
     });
   });
 

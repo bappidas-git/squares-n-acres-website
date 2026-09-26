@@ -33,6 +33,7 @@ import {
   TextareaField,
 } from '../../../components/ui';
 import { generateExcerpt } from '../../../utils/articleUtils';
+import { recordFolder } from '../media/useMediaUpload';
 import { SEO } from '../../../config/adminCopy';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import { useToast } from '../../../components/common/ToastProvider';
@@ -418,6 +419,8 @@ export default function ArticleFormPage() {
                   error={errors.content}
                   disabled={readOnly || saving}
                   focusKeyword={values.seo?.focusKeyword ?? ''}
+                  folder={recordFolder('articles', form.record?.slug || values.slug)}
+                  fallbackFolder="articles"
                   placeholder="Open with the answer, then explain it."
                   helper="Images come from the media library, an address or a file dropped on the editor; every one needs alt text."
                   onChange={(html) => setField('content', html)}

@@ -176,6 +176,17 @@ const EXTRA_SCHEMAS = {
       next: { oneOf: [{ $ref: '#/components/schemas/Article' }, { type: 'null' }] },
     },
   },
+  MediaFolderRename: {
+    type: 'object',
+    description: 'What a folder rename refiled (prompt 51).',
+    properties: {
+      from: { type: 'string' },
+      to: { type: 'string' },
+      moved: { type: 'integer', description: 'records refiled' },
+      merged: { type: 'boolean', description: 'whether `to` already held files' },
+    },
+    required: ['from', 'to', 'moved', 'merged'],
+  },
   RedirectImportSummary: {
     type: 'object',
     properties: {

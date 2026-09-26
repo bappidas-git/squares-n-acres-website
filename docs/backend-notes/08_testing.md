@@ -266,10 +266,13 @@ listing's `videoUrl`, an article's `featuredImage.url`, the settings'
 **Media** — a record whose URL a listing uses refuses to delete with 409 and its
 `usedIn` list, and `?force=true` deletes it anyway. A bank's logo, an author's
 photograph and the SEO settings' share image count as uses too; `meta.folders`
-lists every folder on the first page, and under `type=document` only the folders
-holding documents; `q` finds a file by its address and its tags; a second record
-for the same address is 422 on `url`; `" /a//b/ "` is filed as the folder `a/b`;
-a bulk delete with one file in use removes nothing (QA-63).
+lists every folder on the first page with its count, and under `type=document`
+only the folders holding documents; `q` finds a file by its address and its tags;
+a second record for the same address is 422 on `url`; `" /a//b/ "` is filed as
+the folder `a/b`; a bulk delete with one file in use removes nothing (QA-63). A
+bulk `move` to `pages` answers `affected` and lists an unknown id in `missing`;
+renaming a folder onto one in use is 422 on `to` until `merge: true`, and
+`usage=unused` lists only files a delete removes without a 409 (prompt 51).
 
 **Dashboard** — the 30-day trend has 30 entries including the empty days; the
 conversion rate matches the lead counts; every figure a sales user sees is scoped.

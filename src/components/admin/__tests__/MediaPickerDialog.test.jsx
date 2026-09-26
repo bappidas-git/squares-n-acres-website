@@ -289,3 +289,49 @@ describe('an empty folder (QA-63)', () => {
     expect(mediaService.list.mock.calls.at(-1)[0]).toMatchObject({ type: 'document' });
   });
 });
+
+describe('a record’s own folder (prompt 51)', () => {
+  it('opens on the section’s folder while the record’s own holds nothing yet', async () => {
+    mediaService.list.mockImplementation((params) =>
+      Promise.resolve({
+        ...envelope(params.folder === 'properties' ? FILES : []),
+        meta: {
+          ...envelope([]).meta,
+          folders: [{ name: 'properties', count: 2 }],
+        },
+      })
+    );
+    render({ multiple: true, folder: 'properties/lakeview-heights', fallbackFolder: 'properties' });
+
+    expect(await tile('lobby\\.jpg')).toBeInTheDocument();
+    expect(mediaService.list.mock.calls[0][0]).toMatchObject({
+      folder: 'properties/lakeview-heights',
+    });
+    expect(mediaService.list.mock.calls.at(-1)[0]).toMatchObject({ folder: 'properties' });
+    // The empty folder is never announced on the way.
+    expect(screen.queryByText('No files match')).not.toBeInTheDocument();
+  });
+
+  it('stays on the record’s folder once it holds something', async () => {
+    mediaService.list.mockResolvedValue({
+      ...envelope(FILES),
+      meta: {
+        ...envelope(FILES).meta,
+        folders: [
+          { name: 'properties', count: 280 },
+          { name: 'properties/lakeview-heights', count: 2 },
+        ],
+      },
+    });
+    render({ multiple: true, folder: 'properties/lakeview-heights', fallbackFolder: 'properties' });
+
+    expect(await tile('lobby\\.jpg')).toBeInTheDocument();
+    expect(
+      mediaService.list.mock.calls.every(
+        ([params]) => params.folder === 'properties/lakeview-heights'
+      )
+    ).toBe(true);
+    // The folder filter offers each folder with its count.
+    expect(screen.getByRole('option', { name: 'properties (280)' })).toBeInTheDocument();
+  });
+});

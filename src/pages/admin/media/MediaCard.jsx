@@ -40,6 +40,8 @@ export function describeSize(item) {
  * @param {object} props
  * @param {object} props.item a `media` record
  * @param {boolean} [props.selectable] renders the selection state
+ * @param {boolean} [props.checkbox] shows the box even when it is not ticked —
+ *   the library's select mode, where every tile is a checkbox (prompt 51)
  * @param {boolean} [props.selected]
  * @param {number} [props.selectionIndex] 1-based; shown in the ring when multiple
  * @param {(item: object) => void} props.onOpen
@@ -50,6 +52,7 @@ export function describeSize(item) {
 function MediaCard({
   item,
   selectable = false,
+  checkbox = false,
   selected = false,
   selectionIndex,
   onOpen,
@@ -74,8 +77,8 @@ function MediaCard({
           .join(' ')}
         aria-pressed={selectable && !unavailable ? selected : undefined}
         aria-disabled={unavailable ? true : undefined}
-        onClick={() => {
-          if (!unavailable) onOpen?.(item);
+        onClick={(event) => {
+          if (!unavailable) onOpen?.(item, event);
         }}
       >
         <span className={styles.thumb}>
@@ -104,6 +107,8 @@ function MediaCard({
             <span className={styles.tick} aria-hidden="true">
               {selectionIndex ?? <Icon icon="mdi:check" width="16" height="16" />}
             </span>
+          ) : selectable && checkbox && !unavailable ? (
+            <span className={styles.checkbox} aria-hidden="true" />
           ) : null}
         </span>
 

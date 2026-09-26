@@ -441,6 +441,25 @@ const SPECIAL = {
   },
   'adminSeo.overview': () => ({ path: '/admin/seo/overview?type=property&perPage=5' }),
 
+  // A rename needs a folder of the run's own: the run files a record there,
+  // renames the folder, and removes the record afterwards (prompt 51).
+  'adminMedia.renameFolder': async () => {
+    const seed = nextSeed();
+    const folder = `smoke-folder-${seed}`;
+    const record = await api('POST', '/admin/media', {
+      token: tokens.admin,
+      body: {
+        url: `https://images.example.com/smoke-rename-${seed}.jpg`,
+        alt: 'Smoke — a file whose folder is renamed',
+        folder,
+      },
+    });
+    const id = record.json?.data?.id;
+    if (!id) return { skip: `could not file a record to rename its folder (${record.status})` };
+    created.unshift({ path: `/admin/media/${id}?force=true` });
+    return { body: { from: folder, to: `${folder}-renamed` }, expect: 200 };
+  },
+
   // `resolve` needs a path to resolve, and the seed redirects `/blog`.
   'redirects.resolve': () => ({ path: '/redirects/resolve?path=/blog' }),
 
@@ -896,6 +915,7 @@ async function targetedChecks() {
   // library without saying so, and `?force=true` is the editor's answer to the
   // list it is shown (prompt 39 §5).
   await checkMediaForceDelete(admin);
+  await checkMediaFolders(admin);
 
   const authors = await api('GET', '/authors');
   check(
@@ -1040,6 +1060,94 @@ async function checkMediaForceDelete(admin) {
 
   // Whatever happened above, the run leaves nothing behind.
   if (forced.status !== 200) created.unshift({ path: `/admin/media/${id}?force=true` });
+}
+
+/**
+ * Media folders (prompt 51): the list counts each folder, a bulk `move` names
+ * the ids it did not find, a rename onto a folder in use waits for `merge`, and
+ * `usage=unused` lists a file nothing shows. Everything runs on records the
+ * run files itself, in folders named after the run.
+ *
+ * @param {string} admin the admin token
+ */
+async function checkMediaFolders(admin) {
+  const seed = nextSeed();
+  const folder = (name) => `smoke-${name}-${seed}`;
+  const file = async (name, target) => {
+    const response = await api('POST', '/admin/media', {
+      token: admin,
+      body: {
+        url: `https://images.example.com/smoke-${name}-${seed}.jpg`,
+        alt: `Smoke — ${name}`,
+        folder: target,
+      },
+    });
+    const id = response.json?.data?.id ?? null;
+    if (id) created.unshift({ path: `/admin/media/${id}?force=true` });
+    return id;
+  };
+
+  const first = await file('a', folder('a'));
+  const second = await file('b', folder('b'));
+  if (!first || !second) {
+    check('media.folder-counts', false, 'could not file the records the checks need');
+    return;
+  }
+
+  const listed = await api('GET', `/admin/media?perPage=1&q=${encodeURIComponent(folder('a'))}`, {
+    token: admin,
+  });
+  const entry = (listed.json?.meta?.folders ?? []).find((one) => one?.name === folder('a'));
+  check(
+    'media.folder-counts',
+    listed.status === 200 && entry?.count === 1 && typeof listed.json?.meta?.unfiled === 'number',
+    `folders ${JSON.stringify(listed.json?.meta?.folders ?? null).slice(0, 120)}`
+  );
+
+  const moved = await api('POST', '/admin/media/bulk', {
+    token: admin,
+    body: { ids: [first, 999999], action: 'move', payload: { folder: folder('c') } },
+  });
+  check(
+    'media.bulk-move-reports-missing',
+    moved.status === 200 &&
+      moved.json?.data?.affected === 1 &&
+      Array.isArray(moved.json?.data?.missing) &&
+      moved.json.data.missing.includes(999999),
+    `got ${moved.status} ${JSON.stringify(moved.json?.data ?? null)}`
+  );
+
+  const collision = await api('POST', '/admin/media/folders/rename', {
+    token: admin,
+    body: { from: folder('b'), to: folder('c') },
+  });
+  check(
+    'media.rename-collision-422',
+    collision.status === 422 && collision.json?.data?.existing?.name === folder('c'),
+    `got ${collision.status}`
+  );
+
+  const merged = await api('POST', '/admin/media/folders/rename', {
+    token: admin,
+    body: { from: folder('b'), to: folder('c'), merge: true },
+  });
+  check(
+    'media.rename-merge',
+    merged.status === 200 && merged.json?.data?.merged === true && merged.json?.data?.moved === 1,
+    `got ${merged.status}`
+  );
+
+  const unused = await api(
+    'GET',
+    `/admin/media?perPage=all&usage=unused&q=${encodeURIComponent(folder('c'))}`,
+    { token: admin }
+  );
+  const ids = (unused.json?.data ?? []).map((row) => row.id);
+  check(
+    'media.usage-unused',
+    unused.status === 200 && ids.includes(first) && ids.includes(second),
+    `got ${unused.status}, ${ids.length} rows`
+  );
 }
 
 /** Removes everything the run created, newest first. */

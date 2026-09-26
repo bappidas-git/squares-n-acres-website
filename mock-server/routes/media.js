@@ -1,12 +1,17 @@
 /**
  * Media library (00_MASTER_CONTEXT.md §5.14, §6.12).
  *
- *   GET    /api/admin/media          filters `type`, `folder`, `q`, `provider`;
- *                                    `meta.folders` lists the folders the
- *                                    other filters leave something in
+ *   GET    /api/admin/media          filters `type`, `folder`, `unfiled`, `usage`,
+ *                                    `q`, `provider`; `meta.folders` lists the
+ *                                    folders the other filters leave something
+ *                                    in, each with its count, and `meta.unfiled`
+ *                                    counts the files in none
  *   POST   /api/admin/media          a metadata record — no binary crosses here
  *   GET    /api/admin/media/:id      with `usedIn`
- *   PUT, PATCH, DELETE, bulk
+ *   POST   /api/admin/media/folders/rename   `{ from, to, merge? }` — refiles
+ *                                    every record of a folder (prompt 51)
+ *   PUT, PATCH, DELETE, bulk         bulk: `activate`… `delete`, and `move`
+ *                                    with `payload.folder` (prompt 51)
  *
  * `q` reads the alt text, the title, the folder, the public id, the address
  * and the tags. The address is unique and at most 500 characters: the record
@@ -35,7 +40,10 @@
  * knows is the URL.
  */
 
-const { conflict } = require('../middleware/errors');
+const express = require('express');
+
+const schemas = require('../../src/services/schemas');
+const { ApiError, conflict, validation } = require('../middleware/errors');
 const {
   describeUsages,
   findMediaUsages,
@@ -44,6 +52,10 @@ const {
 } = require('../lib/usage');
 const { makeCrudRouter } = require('../lib/crud');
 const { toBool } = require('../lib/filters');
+const { validateBody } = require('../middleware/validate');
+
+/** The longest folder a record keeps (`media.folder`, §6.12). */
+const FOLDER_MAX_LENGTH = 120;
 
 /** Extensions that decide `type` when the client does not send one (§6.12). */
 const EXTENSION_TYPES = {
@@ -137,14 +149,29 @@ function normaliseTags(body) {
  */
 function normaliseFolder(body) {
   if (typeof body.folder !== 'string') return body;
-  const clean = body.folder
+  const clean = cleanFolder(body.folder);
+  body.folder = clean === '' ? null : clean;
+  return body;
+}
+
+/**
+ * A folder name as the library files it — `" /projects//aurelia/ "` is
+ * `projects/aurelia` — or `''` for none.
+ *
+ * @param {string} folder
+ * @returns {string}
+ */
+function cleanFolder(folder) {
+  return String(folder ?? '')
     .split('/')
     .map((segment) => segment.trim())
     .filter(Boolean)
     .join('/');
-  body.folder = clean === '' ? null : clean;
-  return body;
 }
+
+/** Whether `folder` is `parent` or a folder inside it. */
+const inFolder = (folder, parent) =>
+  typeof folder === 'string' && (folder === parent || folder.startsWith(`${parent}/`));
 
 /**
  * What every write passes through: the inferred fields on a create or a
@@ -248,6 +275,9 @@ function guardMediaBulkDelete(action, targets, { db, query }) {
   );
 }
 
+/** Folder names in the order every list of them is read. */
+const byName = (left, right) => left.localeCompare(right, 'en', { sensitivity: 'base' });
+
 /**
  * The folders of a set of files, sorted — the Folder filter's options (QA-63).
  *
@@ -266,15 +296,180 @@ const foldersOf = (rows) =>
     ...new Set(
       rows.map((row) => row.folder).filter((folder) => typeof folder === 'string' && folder)
     ),
-  ].sort((left, right) => left.localeCompare(right, 'en', { sensitivity: 'base' }));
+  ].sort(byName);
 
 /**
- * The media router.
+ * The folders of a set of files with how many each holds — `meta.folders`
+ * since prompt 51, which the library's folder rail prints: "properties (284)".
+ *
+ * @param {Array<object>} rows
+ * @returns {Array<{name: string, count: number}>}
+ */
+function folderCounts(rows) {
+  const counts = new Map();
+  for (const row of rows) {
+    if (typeof row.folder !== 'string' || row.folder === '') continue;
+    counts.set(row.folder, (counts.get(row.folder) ?? 0) + 1);
+  }
+  return [...counts.keys()].sort(byName).map((name) => ({ name, count: counts.get(name) }));
+}
+
+/**
+ * What a list request knows about where its files are used, worked out once
+ * per request: the index over every collection a file can be shown from, and
+ * each address's answer as it is asked. The `usage` filter reads it for every
+ * row, and again for the folder counts (`facet`), so it is kept against the
+ * request's own snapshot of the collections.
+ */
+const usageMemo = new WeakMap();
+
+/**
+ * Whether anything shows the file at `url`, by the same whole-address search
+ * the delete guard runs.
+ *
+ * @param {string} url
+ * @param {object} collections the request's collections (`lib/usage.js`)
+ * @returns {boolean}
+ */
+function isUsed(url, collections) {
+  let memo = usageMemo.get(collections);
+  if (!memo) {
+    memo = { usagesOf: mediaUsageIndex(collections), answers: new Map() };
+    usageMemo.set(collections, memo);
+  }
+  if (!memo.answers.has(url)) memo.answers.set(url, memo.usagesOf(url).length > 0);
+  return memo.answers.get(url);
+}
+
+/**
+ * `unfiled=true` — the files in no folder; `false`, the files in one.
+ *
+ * @param {object} record
+ * @param {string} raw
+ * @returns {boolean}
+ */
+function unfiledFilter(record, raw) {
+  const wanted = toBool(raw);
+  if (wanted === undefined) return true;
+  const filed = typeof record.folder === 'string' && record.folder !== '';
+  return wanted ? !filed : filed;
+}
+
+/**
+ * `usage=unused` — the files nothing on the site shows, for a cleanup: the
+ * same search a delete asks first, so every file this lists deletes without a
+ * 409. Any other value filters nothing.
+ *
+ * @param {object} record
+ * @param {string} raw
+ * @param {{collections: object}} context
+ * @returns {boolean}
+ */
+function usageFilter(record, raw, { collections }) {
+  if (String(Array.isArray(raw) ? raw[0] : raw) !== 'unused') return true;
+  return !isUsed(record.url, collections);
+}
+
+/**
+ * The bulk `move`: `payload.folder` cleaned as a record's folder is, `null`
+ * (or blank) for no folder at all (prompt 51).
+ *
+ * @param {object|null} payload
+ * @returns {{folder: string|null}}
+ * @throws {import('../middleware/errors').ApiError} 422 on `payload.folder`
+ */
+function moveChanges(payload) {
+  const folder = payload && typeof payload === 'object' ? payload.folder : undefined;
+  if (folder !== null && typeof folder !== 'string') {
+    throw validation({
+      'payload.folder': ['Name the folder to move the files to, or send null for no folder.'],
+    });
+  }
+  const clean = cleanFolder(folder);
+  if (clean.length > FOLDER_MAX_LENGTH) {
+    throw validation({
+      'payload.folder': [`The folder may not be greater than ${FOLDER_MAX_LENGTH} characters.`],
+    });
+  }
+  return { folder: clean === '' ? null : clean };
+}
+
+/**
+ * `POST /admin/media/folders/rename { from, to, merge? }` (prompt 51).
+ *
+ * A folder is a string on its files (D12), so a rename refiles every record
+ * that names it — and every record in a folder inside it, `projects/aurelia`
+ * going along with `projects` — in one write. It moves the library's filing
+ * only: each record keeps its `url` and its `publicId`, so the Cloudinary
+ * asset stays at the path it was uploaded to and nothing pointing at it breaks.
+ *
+ * A name the library already uses is a 422 on `to` carrying
+ * `data.existing: { name, count }`, unless `merge: true` says to move the files
+ * in beside the ones already there.
+ *
+ * @param {object} db the runtime database module
+ * @param {object} body the request body
+ * @returns {{from: string, to: string, moved: number, merged: boolean}}
+ */
+function renameFolder(db, body) {
+  validateBody(schemas.getSchema('media.renameFolder'), body, { fillDefaults: true });
+
+  const from = cleanFolder(body.from);
+  const to = cleanFolder(body.to);
+  if (from === '') throw validation({ from: ['Name the folder to rename.'] });
+  if (to === '') throw validation({ to: ['Name the folder to move the files to.'] });
+
+  const rows = db.getCollection('media');
+  const moving = rows.filter((record) => inFolder(record.folder, from));
+  if (moving.length === 0) throw validation({ from: [`No file is filed in “${from}”.`] });
+  if (to === from) throw validation({ to: ['That is the folder’s name already.'] });
+  if (inFolder(to, from)) {
+    throw validation({ to: ['A folder cannot move into a folder inside itself.'] });
+  }
+
+  const renamed = (folder) => `${to}${folder.slice(from.length)}`;
+  const tooLong = moving.find((record) => renamed(record.folder).length > FOLDER_MAX_LENGTH);
+  if (tooLong) {
+    throw validation({
+      to: [
+        `“${renamed(tooLong.folder)}” would be longer than ${FOLDER_MAX_LENGTH} characters — choose a shorter name.`,
+      ],
+    });
+  }
+
+  const staying = rows.filter((record) => !inFolder(record.folder, from));
+  const existing = staying.filter((record) => inFolder(record.folder, to)).length;
+  const merge = body.merge === true;
+  if (existing > 0 && !merge) {
+    throw new ApiError(
+      422,
+      'The given data was invalid.',
+      {
+        to: [
+          `“${to}” already holds ${existing} ${existing === 1 ? 'file' : 'files'} — merge into it, or choose another name.`,
+        ],
+      },
+      { existing: { name: to, count: existing } }
+    );
+  }
+
+  const now = new Date().toISOString();
+  for (const record of moving) {
+    record.folder = renamed(record.folder);
+    record.updatedAt = now;
+  }
+  db.write();
+
+  return { from, to, moved: moving.length, merged: existing > 0 };
+}
+
+/**
+ * The library's CRUD, bulk and list, on the shared router.
  *
  * @param {{db: object, getModel: Function}} deps
  * @returns {import('express').Router}
  */
-module.exports = ({ db, getModel }) =>
+const mediaCrudRouter = ({ db, getModel }) =>
   makeCrudRouter({
     db,
     model: getModel('media'),
@@ -303,16 +498,56 @@ module.exports = ({ db, getModel }) =>
       const usagesOf = mediaUsageIndex(collections);
       return records.map((record) => ({ ...record, usedIn: usagesOf(record.url) }));
     },
-    listMeta: ({ facet }) => ({ folders: foldersOf(facet('folder')) }),
+    // Each folder with what it holds, and the files in none, over the rows
+    // every other filter lets through — the rail's "properties (284)" and
+    // "No folder (3)" (prompt 51).
+    listMeta: ({ facet }) => {
+      const rows = facet(['folder', 'unfiled']);
+      return {
+        folders: folderCounts(rows),
+        unfiled: rows.filter((row) => typeof row.folder !== 'string' || row.folder === '').length,
+      };
+    },
     adminFilters: {
       type: { field: 'type', type: 'csv' },
       provider: { field: 'provider', type: 'csv' },
       folder: { field: 'folder' },
+      unfiled: unfiledFilter,
+      usage: usageFilter,
     },
+    bulkActions: { move: moveChanges },
     sorts: { createdAt: '-createdAt', bytes: '-bytes', alt: 'alt' },
     defaultSort: 'createdAt',
     noun: { one: 'file', many: 'files' },
   });
+
+/**
+ * The media router.
+ *
+ * @param {{db: object, getModel: Function}} deps
+ * @returns {import('express').Router}
+ */
+module.exports = ({ db, getModel }) => {
+  const router = express.Router();
+
+  router.post('/admin/media/folders/rename', (req, res, next) => {
+    try {
+      const result = renameFolder(db, { ...(req.body ?? {}) });
+      const noun = result.moved === 1 ? 'file' : 'files';
+      res.message(
+        result.merged
+          ? `Merged ${result.moved} ${noun} from “${result.from}” into “${result.to}”.`
+          : `Moved ${result.moved} ${noun} from “${result.from}” to “${result.to}”.`,
+        result
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.use(mediaCrudRouter({ db, getModel }));
+  return router;
+};
 
 module.exports.inferFromUrl = inferFromUrl;
 module.exports.normaliseTags = normaliseTags;
@@ -321,3 +556,7 @@ module.exports.extensionOf = extensionOf;
 module.exports.guardMediaDelete = guardMediaDelete;
 module.exports.guardMediaBulkDelete = guardMediaBulkDelete;
 module.exports.foldersOf = foldersOf;
+module.exports.folderCounts = folderCounts;
+module.exports.cleanFolder = cleanFolder;
+module.exports.moveChanges = moveChanges;
+module.exports.renameFolder = renameFolder;

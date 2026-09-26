@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 
 import ApiError from '../../../../services/apiError';
 import mediaService from '../../../../services/mediaService';
-import useMediaUpload, { cleanFolder, titleFromFileName } from '../useMediaUpload';
+import useMediaUpload, { cleanFolder, recordFolder, titleFromFileName } from '../useMediaUpload';
 import { uploadToCloudinary } from '../../../../utils/cloudinary';
 
 jest.mock('../../../../services/mediaService', () => ({
@@ -151,4 +151,17 @@ it('shortens only what is too long, and cleans only what needs it', () => {
   expect(cleanFolder('  ')).toBe('');
   expect(cleanFolder('properties')).toBe('properties');
   expect(cleanFolder('/a / b//c/')).toBe('a/b/c');
+});
+
+it('files a record’s own uploads in a folder of its own, or the section’s (prompt 51)', () => {
+  expect(recordFolder('properties', 'lakeview-heights-3-bhk-whitefield')).toBe(
+    'properties/lakeview-heights-3-bhk-whitefield'
+  );
+  expect(recordFolder('properties', 'draft-lx3k2')).toBe('properties/draft-lx3k2');
+  expect(recordFolder('articles', '')).toBe('articles');
+  expect(recordFolder('articles', undefined)).toBe('articles');
+  // A slug is one segment: a slash in it does not make a folder inside a folder.
+  expect(recordFolder('pages', 'buyer-assistance/home-loan')).toBe(
+    'pages/buyer-assistance-home-loan'
+  );
 });

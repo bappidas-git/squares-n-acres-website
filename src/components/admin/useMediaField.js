@@ -27,6 +27,8 @@ import useCloudinaryConfig from '../../hooks/useCloudinaryConfig';
  * @param {(picked: object|object[], all: object[]) => void} [options.onPick]
  * @param {'image'|'document'|'video'|'any'} [options.accept]
  * @param {string} [options.folder] where uploads started from this field are filed
+ * @param {string} [options.fallbackFolder] what the library shows while
+ *   `folder` holds nothing yet (prompt 51)
  * @param {boolean} [options.multiple]
  * @returns {{configured: boolean, isOpen: boolean, close: () => void,
  *            onOpenMedia: () => void, onUpload: (() => void)|undefined,
@@ -36,6 +38,7 @@ export default function useMediaField({
   onPick,
   accept = 'image',
   folder = '',
+  fallbackFolder = '',
   multiple = false,
 } = {}) {
   const { configured } = useCloudinaryConfig();
@@ -59,11 +62,12 @@ export default function useMediaField({
       defaultTab: tab ?? 'library',
       accept,
       folder,
+      fallbackFolder,
       multiple,
       onSelect,
       onClose: close,
     }),
-    [tab, accept, folder, multiple, onSelect, close]
+    [tab, accept, folder, fallbackFolder, multiple, onSelect, close]
   );
 
   return {

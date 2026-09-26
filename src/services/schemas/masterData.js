@@ -333,6 +333,18 @@ const media = {
   tags: { type: 'array', items: { type: 'string', maxLength: 60 }, default: [] },
 };
 
+/**
+ * `POST /admin/media/folders/rename` — refiles every record of a folder, and of
+ * the folders inside it, under another name (prompt 51). `merge` says to move
+ * them in beside the files a folder of that name already holds; without it a
+ * name in use is a 422 on `to`.
+ */
+const mediaFolderRename = {
+  from: { type: 'string', required: true, maxLength: 120 },
+  to: { type: 'string', required: true, maxLength: 120 },
+  merge: { type: 'bool', default: false },
+};
+
 const user = {
   name: { type: 'string', required: true, min: 2, maxLength: 80 },
   email: { type: 'email', required: true },
@@ -366,6 +378,6 @@ module.exports = {
   partner: entity(partner),
   job: entity(job),
   redirect: { ...entity(redirect), import: redirectImport },
-  media: entity(media),
+  media: { ...entity(media), renameFolder: mediaFolderRename },
   user: entity(user, userUpdate),
 };

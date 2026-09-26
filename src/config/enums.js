@@ -721,6 +721,8 @@ const BULK_ACTIONS = makeEnum([
   { value: 'assign', label: 'Assign' },
   { value: 'status', label: 'Change status' },
   { value: 'priority', label: 'Change priority' },
+  // Media: `payload.folder`, a folder name or `null` (prompt 51).
+  { value: 'move', label: 'Move to folder' },
 ]);
 
 /* ------------------------------------------------------------------ *

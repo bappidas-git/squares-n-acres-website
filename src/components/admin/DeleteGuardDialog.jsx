@@ -28,6 +28,12 @@ const USAGE_LINK = {
   jobApplication: (usage) =>
     `${PATHS.adminJobApplications}?q=${encodeURIComponent(usage.title ?? '')}`,
   user: () => PATHS.adminUsers,
+  // Where a media file is shown, beyond the records above (prompt 51: the
+  // library's bulk delete lists its refusals here).
+  bank: () => PATHS.adminBanks,
+  author: () => PATHS.adminAuthors,
+  settings: () => PATHS.adminSettings,
+  seoSettings: () => PATHS.adminSeoSettings,
 };
 
 const TYPE_LABEL = {
@@ -44,6 +50,10 @@ const TYPE_LABEL = {
   job: 'Job opening',
   jobApplication: 'Application',
   user: 'User',
+  bank: 'Bank',
+  author: 'Author',
+  settings: 'Site settings',
+  seoSettings: 'SEO settings',
 };
 
 /**

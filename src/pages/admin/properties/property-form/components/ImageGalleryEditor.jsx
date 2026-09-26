@@ -23,8 +23,12 @@ import styles from './ImageGalleryEditor.module.css';
 // visits never open, so it arrives when the button is pressed.
 const MediaPickerDialog = lazy(() => import('../../../../../components/admin/MediaPickerDialog'));
 
-/** The Cloudinary folder a listing's photographs are filed under. */
-const GALLERY_FOLDER = 'properties';
+/**
+ * Where a listing's photographs were all filed before each listing had a
+ * folder of its own — and where the library opens while this one's holds
+ * nothing yet (prompt 51).
+ */
+export const GALLERY_FOLDER = 'properties';
 
 /**
  * One URL per line (or per space), blanks and duplicates dropped, order kept.
@@ -107,12 +111,15 @@ export function coverAfterRemoval(images = [], id) {
  * @param {(id: string|number) => void} props.onRemove
  * @param {(from: number, to: number) => void} props.onMove
  * @param {(id: string|number) => void} props.onSetCover
+ * @param {string} [props.folder] where this listing's uploads are filed —
+ *   `properties/<slug>` (prompt 51)
  */
 export default function ImageGalleryEditor({
   images = [],
   errors = {},
   idFor = () => undefined,
   disabled = false,
+  folder = GALLERY_FOLDER,
   altHint,
   onAdd,
   onUpdate,
@@ -166,7 +173,7 @@ export default function ImageGalleryEditor({
   };
 
   const queue = useMediaUpload({
-    folder: GALLERY_FOLDER,
+    folder,
     accept: 'image',
     onUploaded: addPicked,
   });
@@ -487,7 +494,7 @@ export default function ImageGalleryEditor({
       ) : null}
 
       {configured && uploadOpen ? (
-        <MediaUploadZone queue={queue} accept="image" disabled={disabled} />
+        <MediaUploadZone queue={queue} accept="image" folder={folder} disabled={disabled} />
       ) : null}
 
       {pickerOpen ? (
@@ -496,7 +503,8 @@ export default function ImageGalleryEditor({
             open
             multiple
             accept="image"
-            folder={GALLERY_FOLDER}
+            folder={folder}
+            fallbackFolder={GALLERY_FOLDER}
             title="Add photographs to this listing"
             excludeUrls={urls}
             excludeLabel="In the gallery"

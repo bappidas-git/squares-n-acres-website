@@ -1,8 +1,15 @@
 import { useId, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 
-import { Alert, Button, TextField } from '../../../components/ui';
-import { acceptAttribute, acceptHint, formatBytes } from './useMediaUpload';
+import FolderField from '../../../components/admin/FolderField';
+import { Alert, Button } from '../../../components/ui';
+import {
+  acceptAttribute,
+  acceptHint,
+  cleanFolder,
+  cloudinaryFolder,
+  formatBytes,
+} from './useMediaUpload';
 
 import styles from './MediaLibraryPage.module.css';
 
@@ -27,14 +34,18 @@ const STATUS_LABELS = {
  * one for all of them.
  *
  * The folder is chosen here rather than per file: an editor dropping eight
- * photographs of one project is filing eight photographs of one project.
+ * photographs of one project is filing eight photographs of one project. It
+ * is the folder field every screen of the library uses (prompt 51), so a new
+ * folder is made by typing its name; where the caller fixes the folder — a
+ * listing's own — the zone says where the files go instead.
  *
  * @param {object} props
  * @param {ReturnType<import('./useMediaUpload').default>} props.queue
  * @param {'image'|'video'|'document'|'any'} [props.accept]
  * @param {string} [props.folder] the folder new files are filed under
- * @param {(folder: string) => void} [props.onFolderChange] omit to hide the field
- * @param {string[]} [props.folders]
+ * @param {(folder: string) => void} [props.onFolderChange] omit to show the
+ *   folder as a line rather than a field
+ * @param {Array<string|{name: string, count?: number}>} [props.folders]
  * @param {boolean} [props.disabled]
  */
 export default function MediaUploadZone({
@@ -61,23 +72,26 @@ export default function MediaUploadZone({
   return (
     <div className={styles.uploader}>
       {onFolderChange ? (
-        <>
-          <TextField
-            label="Folder"
-            value={folder}
-            maxLength={120}
-            disabled={disabled}
-            list={`${inputId}-folders`}
-            placeholder="e.g. properties"
-            hint="Everything dropped below is filed here. Cloudinary stores it under sna/<folder>."
-            onChange={(event) => onFolderChange(event.target.value)}
-          />
-          <datalist id={`${inputId}-folders`}>
-            {folders.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
-        </>
+        <FolderField
+          label="Folder"
+          value={folder}
+          folders={folders}
+          disabled={disabled}
+          hint={
+            cleanFolder(folder)
+              ? `Everything dropped below is filed in “${cleanFolder(folder)}” — Cloudinary stores it under ${cloudinaryFolder(folder)}.`
+              : 'Everything dropped below is filed here — leave it empty for no folder.'
+          }
+          onChange={(next) => onFolderChange(next ?? '')}
+        />
+      ) : cleanFolder(folder) ? (
+        <p className={styles.uploadTarget}>
+          <Icon icon="mdi:folder-outline" width="18" height="18" aria-hidden="true" />
+          <span>
+            Filed in “{cleanFolder(folder)}” — Cloudinary stores these under{' '}
+            {cloudinaryFolder(folder)}.
+          </span>
+        </p>
       ) : null}
 
       <div

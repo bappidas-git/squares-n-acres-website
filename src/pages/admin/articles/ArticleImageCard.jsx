@@ -1,5 +1,6 @@
 import ImageField from '../../../components/admin/ImageField';
 import { TextField } from '../../../components/ui';
+import { recordFolder } from '../media/useMediaUpload';
 
 import styles from './ArticleFormPage.module.css';
 
@@ -20,8 +21,10 @@ import styles from './ArticleFormPage.module.css';
  * @param {ReturnType<import('./useArticleForm').default>} props.form
  */
 export default function ArticleImageCard({ form }) {
-  const { values, errors, setField, readOnly, saving } = form;
+  const { values, errors, setField, readOnly, saving, record } = form;
   const disabled = readOnly || saving;
+  // The article's own folder (prompt 51), by its saved address when it has one.
+  const folder = recordFolder('articles', record?.slug || values.slug);
   const image = values.featuredImage ?? {};
   const keyword = values.seo?.focusKeyword ?? '';
 
@@ -38,6 +41,8 @@ export default function ArticleImageCard({ form }) {
         value={image.url ?? ''}
         error={errors['featuredImage.url']}
         disabled={disabled}
+        folder={folder}
+        fallbackFolder="articles"
         onChange={(next) => setField('featuredImage.url', next ?? '')}
       />
 

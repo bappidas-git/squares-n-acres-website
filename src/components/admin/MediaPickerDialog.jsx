@@ -1,10 +1,13 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import Button from '../ui/Button';
 import FilterBar, { SEARCH_DEBOUNCE_MS } from './FilterBar';
-import MediaGrid, { libraryFolders } from '../../pages/admin/media/MediaGrid';
+// The upload zone before the grid: it brings the folder field's stylesheet
+// ahead of the library's, the order every other screen of the library loads
+// them in — the production build refuses two chunks that disagree.
 import MediaUploadZone from '../../pages/admin/media/MediaUploadZone';
+import MediaGrid, { folderOption, libraryFolders } from '../../pages/admin/media/MediaGrid';
 import Modal from '../ui/Modal';
 import Pagination from '../ui/Pagination';
 import Tabs from '../ui/Tabs';
@@ -63,6 +66,10 @@ export const toSelection = (record) => ({
  * @param {boolean} [props.multiple]
  * @param {'image'|'document'|'video'|'any'} [props.accept]
  * @param {string} [props.folder] pre-selects the folder filter and files uploads there
+ * @param {string} [props.fallbackFolder] the folder the Library tab shows when
+ *   `folder` holds nothing yet — a listing's own folder falls back to
+ *   `properties`, where every older photograph is filed (prompt 51). Uploads
+ *   still go to `folder`
  * @param {'library'|'upload'|'url'} [props.defaultTab] where it opens
  * @param {string} [props.title]
  * @param {Array<string>} [props.excludeUrls] addresses the field already holds —
@@ -76,6 +83,7 @@ export default function MediaPickerDialog({
   multiple = false,
   accept = 'image',
   folder = '',
+  fallbackFolder = '',
   defaultTab = 'library',
   title,
   excludeUrls = [],
@@ -128,7 +136,30 @@ export default function MediaPickerDialog({
     else setPicked([]);
   }
 
-  // Every folder in the library, not the page's (QA-63).
+  // A field's own folder that holds nothing yet — a new listing's — opens on
+  // the folder its older files are in instead, once per opening (prompt 51).
+  // `meta.folders` answers for the other filters, so "nothing yet" is known
+  // from the first page without asking again.
+  const [fellBack, setFellBack] = useState(false);
+  if (!open && fellBack) setFellBack(false);
+  const fallbackDue =
+    open &&
+    !fellBack &&
+    Boolean(fallbackFolder) &&
+    fallbackFolder !== folder &&
+    params.folder === folder &&
+    Boolean(folder) &&
+    !loading &&
+    !error &&
+    Array.isArray(meta?.folders) &&
+    !meta.folders.some((entry) => (entry?.name ?? entry) === folder);
+  useEffect(() => {
+    if (!fallbackDue) return;
+    setFellBack(true);
+    setFilters({ folder: fallbackFolder });
+  }, [fallbackDue, fallbackFolder, setFilters]);
+
+  // Every folder in the library, not the page's (QA-63), with its count.
   const folders = useMemo(
     () => libraryFolders(meta, items, params.folder),
     [meta, items, params.folder]
@@ -198,7 +229,7 @@ export default function MediaPickerDialog({
         type: 'select',
         label: 'Folder',
         placeholder: 'Any folder',
-        options: folders.map((name) => ({ value: name, label: name })),
+        options: folders.map(folderOption),
       },
     ];
     // With `accept` fixed to one type there is nothing to choose between.
@@ -302,7 +333,9 @@ export default function MediaPickerDialog({
               <MediaGrid
                 items={items}
                 loading={loading}
-                refreshing={refreshing}
+                // The field's own folder is about to give way to its fallback:
+                // the grid waits for it rather than saying "No files match".
+                refreshing={refreshing || fallbackDue}
                 error={error}
                 onRetry={refetch}
                 selectable

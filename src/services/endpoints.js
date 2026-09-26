@@ -1545,6 +1545,10 @@ const adminMediaBase = adminResource({
     type: enumOf(MEDIA_TYPES),
     provider: enumOf(MEDIA_PROVIDERS),
     folder: 'string',
+    // The files in no folder — the rail's "No folder (3)" (prompt 51).
+    unfiled: 'bool',
+    // The files nothing on the site shows: cleanup day (prompt 51).
+    usage: 'enum:unused',
     // Where each file is used, on the list as well as on a single read: the
     // library prints a "Used in 3" badge per card, and one request for the
     // page beats one request per card (§5.14).
@@ -1563,15 +1567,20 @@ const adminMediaBase = adminResource({
  *
  * The list's `meta.folders` names the folders that hold a file every other
  * filter lets through, whatever the page — the Folder filter's options, none of
- * them leading nowhere (QA-63). `q` reads the alt text, the title, the folder,
- * the public id, the address and the tags.
+ * them leading nowhere (QA-63) — each as `{ name, count }` since prompt 51, with
+ * `meta.unfiled` counting the files in no folder. `q` reads the alt text, the
+ * title, the folder, the public id, the address and the tags.
+ *
+ * A folder is a string on its files (D12): the bulk `move` refiles a selection
+ * (`payload.folder`, `null` for none), and `renameFolder` refiles a whole
+ * folder. Neither touches Cloudinary — each record keeps its address.
  */
 const adminMedia = {
   ...adminMediaBase,
   list: {
     ...adminMediaBase.list,
     description:
-      'List media items for the library grid; `meta.folders` names the folders the other filters leave something in, and `q` also reads the address and the tags',
+      'List media items for the library grid; `meta.folders` is `[{ name, count }]` for the folders the other filters leave something in, `meta.unfiled` counts the files in none, `usage=unused` keeps the files nothing shows, and `q` also reads the address and the tags',
   },
   remove: {
     ...adminMediaBase.remove,
@@ -1583,7 +1592,20 @@ const adminMedia = {
     ...adminMediaBase.bulk,
     query: { force: 'bool' },
     description:
-      'Apply one action to several media items; a delete is all or nothing — a 409 naming every file still in use (`data.refused`), unless `force=true`',
+      'Apply one action to several media items; a delete is all or nothing — a 409 naming every file still in use (`data.refused`), unless `force=true`; `move` refiles them under `payload.folder` (`null` for none) and answers `missing` for ids that matched nothing',
+  },
+  renameFolder: {
+    key: 'adminMedia.renameFolder',
+    method: 'POST',
+    path: '/admin/media/folders/rename',
+    auth: adminMediaBase.update.auth,
+    module: 'media',
+    description:
+      'Refile every media record of a folder (and of the folders inside it) under another name; 422 on `to` with `data.existing` when that name holds files, unless `merge: true`. Records only — Cloudinary paths do not change',
+    query: {},
+    body: 'media.renameFolder',
+    response: 'MediaFolderRename',
+    example: null,
   },
 };
 
