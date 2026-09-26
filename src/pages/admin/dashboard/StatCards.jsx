@@ -1,7 +1,8 @@
 import { Icon } from '@iconify/react';
 
+import PATHS from '../../../routes/paths';
 import StatCard from '../../../components/ui/StatCard';
-import { formatNumber } from '../../../utils/format';
+import { formatNumber, istToday } from '../../../utils/format';
 
 import styles from './DashboardPage.module.css';
 
@@ -22,9 +23,18 @@ import styles from './DashboardPage.module.css';
  * @param {object} props.stats
  * @param {boolean} [props.scoped] true for the sales role
  * @param {boolean} [props.showContent] articles and subscribers (§7)
+ * @param {boolean} [props.showProperties] whether the role may open the property list
  */
-export default function StatCards({ stats = {}, scoped = false, showContent = true }) {
+export default function StatCards({
+  stats = {},
+  scoped = false,
+  showContent = true,
+  showProperties = true,
+}) {
   const leadHint = scoped ? 'Your leads' : undefined;
+  // Every lead number opens the leads it counts (prompt 51); the days are IST's.
+  const today = istToday();
+  const leads = (query) => `${PATHS.adminLeads}${query ? `?${query}` : ''}`;
 
   const cards = [
     {
@@ -33,6 +43,7 @@ export default function StatCards({ stats = {}, scoped = false, showContent = tr
       value: formatNumber(stats.propertiesTotal),
       icon: 'mdi:home-city-outline',
       hint: `${formatNumber(stats.propertiesActive)} live · ${formatNumber(stats.propertiesFeatured)} featured · ${formatNumber(stats.propertiesInactive)} inactive`,
+      to: showProperties ? PATHS.adminProperties : undefined,
     },
     {
       key: 'leadsTotal',
@@ -40,6 +51,7 @@ export default function StatCards({ stats = {}, scoped = false, showContent = tr
       value: formatNumber(stats.leadsTotal),
       icon: 'mdi:account-multiple-outline',
       hint: leadHint,
+      to: leads(),
     },
     {
       key: 'leadsNew',
@@ -47,6 +59,7 @@ export default function StatCards({ stats = {}, scoped = false, showContent = tr
       value: formatNumber(stats.leadsNew),
       icon: 'mdi:new-box',
       hint: leadHint ?? 'Not yet contacted',
+      to: leads('status=new'),
     },
     {
       key: 'leadsToday',
@@ -54,6 +67,7 @@ export default function StatCards({ stats = {}, scoped = false, showContent = tr
       value: formatNumber(stats.leadsToday),
       icon: 'mdi:calendar-today-outline',
       hint: leadHint,
+      to: leads(`from=${today}&to=${today}`),
     },
     {
       key: 'leadsThisMonth',
@@ -62,6 +76,7 @@ export default function StatCards({ stats = {}, scoped = false, showContent = tr
       icon: 'mdi:calendar-month-outline',
       hint: `${formatNumber(stats.leadsLastMonth)} last month`,
       trend: deltaOf(stats.leadsThisMonth, stats.leadsLastMonth),
+      to: leads(`from=${today.slice(0, 8)}01`),
     },
     {
       key: 'conversionRate',
@@ -116,6 +131,7 @@ export default function StatCards({ stats = {}, scoped = false, showContent = tr
           value={card.value}
           hint={card.hint}
           trend={card.trend}
+          to={card.to}
           icon={<Icon icon={card.icon} width="22" height="22" />}
         />
       ))}

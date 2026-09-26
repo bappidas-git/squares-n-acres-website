@@ -497,6 +497,40 @@
   height: 92px;
 }
 
+/* "Re-analyse" answered: one soft pulse, replayed by remounting the gauge. */
+.gaugePulse {
+  animation: gaugePulse 600ms ease-out;
+}
+
+@keyframes gaugePulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.spinning {
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gaugePulse,
+  .spinning {
+    animation: none;
+  }
+}
+
 .gaugeTrack {
   fill: none;
   stroke: var(--color-border);

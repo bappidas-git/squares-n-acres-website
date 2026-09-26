@@ -6,6 +6,7 @@ import PATHS from '../../../routes/paths';
 import SeoScoreChip from '../../../components/seo/SeoScoreChip';
 import StatusChip from '../../../components/admin/StatusChip';
 import Tooltip from '../../../components/ui/Tooltip';
+import { savedBy } from '../savedBy';
 import {
   AREA_UNITS,
   AVAILABILITY,
@@ -409,7 +410,12 @@ export function buildPropertyColumns({ canEdit = false, busyIds = [], onToggleFl
       mobile: false,
       // One line: "15 Sep 2026" broke after the month in a column the width of
       // its header.
-      render: (row) => <span className={styles.nowrap}>{formatDate(row.updatedAt)}</span>,
+      // Who saved it, on hover (prompt 51).
+      render: (row) => (
+        <span className={styles.nowrap} title={savedBy(row)}>
+          {formatDate(row.updatedAt)}
+        </span>
+      ),
     },
   ];
 }

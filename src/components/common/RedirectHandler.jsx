@@ -103,6 +103,8 @@ export default function RedirectHandler() {
   // A rule that points at the page it is on is not a redirect, it is a loop of
   // one; a chain that has gone on too long is a loop of several.
   const target = String(rule?.toPath ?? '').trim();
+  // A table cached before rules carried their id reports nothing.
+  const ruleId = rule?.id ?? null;
   const external = Boolean(target) && isExternal(target);
   const circular =
     Boolean(target) && !external && normalise(target) === normalise(location.pathname);
@@ -121,8 +123,10 @@ export default function RedirectHandler() {
       return;
     }
     hops.current += 1;
+    // The rule was followed: its Hits column counts visitors (prompt 51).
+    redirectService.hit(ruleId);
     if (external) window.location.assign(target);
-  }, [target, external, circular, location.pathname]);
+  }, [target, external, circular, location.pathname, ruleId]);
 
   if (!follow || external) return null;
 

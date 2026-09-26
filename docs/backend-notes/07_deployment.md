@@ -1,53 +1,536 @@
 # Backend notes — deployment
 
-Merged into `backend_developer_guidelines/07_DEPLOYMENT.md`. Two applications
-are deployed: a **static React build** and a **Laravel API**. They share nothing
-but the contract, and the only thing that binds them is one environment
-variable.
+Merged into `backend_developer_guidelines/07_DEPLOYMENT.md`. The site is a
+**static React build** and the API a **Laravel 11** application. They share
+nothing but the contract, and the one thing binding them is the build's
+`REACT_APP_API_URL`.
+
+The client hosts on **Cloudways**, so the sections that follow are written for
+it, in the order the work happens; the material for a self-managed server with
+Nginx is kept at the end, for a team that runs its own. Hostnames: `www.squaresnacres.com` is the site,
+`api.squaresnacres.com` the API when it has a host of its own,
+`https://<application>.cloudways.example` stands for the address the platform
+gives an application before its domain is attached, and `staging.example` for a
+staging copy.
 
 Edit this file, never the generated one.
 
+## Hosting on Cloudways — choose a layout
+
+**Layout A (recommended) — one application, one host.** A single Cloudways
+**Laravel** application on the primary domain serves `/api/*` from Laravel and
+the React build for every other path. The site and the API share an origin, so:
+
+- there is no CORS — no preflight on every admin request, no origin list to keep;
+- `robots.txt`, the sitemaps, `rss.xml` and `llms.txt` are Laravel routes on the
+  host crawlers read, with nothing to proxy;
+- one certificate, one deploy, one set of logs; the frontend's `postbuild`
+  deletes the build's placeholder `robots.txt` so it cannot shadow the route.
+
+**Layout B — two applications, two hosts.** A PHP application serves the static
+build on `www.`, and a Laravel application serves the API on `api.`. It costs:
+CORS on the API, an `.htaccess` SPA rewrite on the static host, a `robots.txt`
+file that `postbuild` writes from the API's (its `Sitemap:` lines on `api.`),
+and both hosts verified in Search Console.
+
+Pick **A** unless the client insists on separate hosts. Everything below
+labelled "Layout A" assumes it; "Layout B — the static application" is the only
+extra work B adds.
+
+## Layout A — server and application
+
+- **Server:** PHP **8.3**, **MySQL 8.0**, Composer 2. There is **no Node** on the
+  server: the site is built elsewhere and uploaded as files. Redis is optional
+  (the file cache is enough on one server).
+- **MariaDB caveat.** If the server runs MariaDB instead, its `JSON` is an alias
+  for `LONGTEXT` with a `CHECK (json_valid(…))` constraint: `schema.sql` loads,
+  but re-run it and the seed import on that server before trusting it — JSON
+  path indexes and `JSON_CONTAINS` behave differently.
+- **Application:** add a "Laravel" application, then set its **webroot** to
+  `public_html/public` (Application Settings → Webroot). The project lives in
+  `public_html/`; only `public/` is reachable over HTTP.
+- **Domains and TLS:** attach `www.squaresnacres.com` as the **primary** domain
+  and the apex `squaresnacres.com` as an alias, and issue one Let's Encrypt
+  certificate for both. The apex redirects to `www` (`.htaccess`, below).
+
+## Layout A — Laravel application
+
+Pinned to **Laravel 11**: there is no `app/Http/Kernel.php` and no
+`app/Console/Kernel.php`; middleware, routing and the schedule are configured
+where this section says.
+
+**`bootstrap/app.php`** registers the API routes (with the `/api` prefix), the
+web routes and the console routes, trusts the platform's proxy, pins the hosts,
+and adds the security headers:
+
+```php
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
+        commands: __DIR__.'/../routes/console.php',
+    )
+    ->withMiddleware(function (Middleware $middleware) {
+        // TLS ends at the platform's Nginx: trust its X-Forwarded-* headers …
+        $middleware->trustProxies(at: '*');
+        // … and answer only for the site's own hosts (06_SEO_SITEMAP_ROBOTS.md).
+        $middleware->trustHosts(at: ['www.squaresnacres.com', 'squaresnacres.com'], subdomains: false);
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+    })
+    ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->shouldRenderJsonWhen(fn ($request) => $request->is('api/*'));
+    })
+    ->create();
+```
+
+(`php artisan install:api` creates `routes/api.php` and installs Sanctum.)
+
+**`routes/web.php`** carries the crawler documents and the SPA fallback:
+
+```php
+Route::get('/robots.txt', [SeoFileController::class, 'robots']);
+Route::get('/sitemap.xml', [SeoFileController::class, 'index']);
+Route::get('/sitemap-{name}.xml', [SeoFileController::class, 'child'])->where('name', '[a-z0-9-]+');
+Route::get('/rss.xml', [SeoFileController::class, 'rss']);
+Route::get('/llms.txt', [SeoFileController::class, 'llms']);
+
+// Every other path is the React app. The prerender writes the bare shell to
+// index.spa.html and the rendered home page to index.html: falling back to
+// index.html would serve the home page's title and canonical on every deep link.
+$spa = function (Request $request) {
+    abort_if($request->is('api/*'), 404);
+    $shell = public_path('index.spa.html');
+    return response()->file(is_file($shell) ? $shell : public_path('index.html'), [
+        'Content-Type' => 'text/html; charset=utf-8',
+        'Cache-Control' => 'no-cache',
+    ]);
+};
+Route::get('/', fn () => response()->file(public_path('index.html'), [
+    'Content-Type' => 'text/html; charset=utf-8',
+    'Cache-Control' => 'no-cache',
+]));
+Route::fallback($spa);
+```
+
+The `abort_if` keeps an unknown `/api/…` path a JSON 404 in the contract's
+envelope instead of the SPA's HTML.
+
+**`public/.htaccess`** — start from Laravel's stock file and change three things:
+
+```apache
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    # 1. A prerendered route is a folder with an index.html; never answer it
+    #    with a 301 to the same path plus a slash.
+    DirectorySlash Off
+    DirectoryIndex index.php
+
+    RewriteEngine On
+
+    # 2. HTTPS as the visitor used it: TLS ends at the platform's Nginx, so ask
+    #    it. Use this OR the platform's HTTPS redirect toggle — never both, and
+    #    never `RewriteCond %{HTTPS} off`, which is always true here and loops.
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # The apex to www.
+    RewriteCond %{HTTP_HOST} ^squaresnacres\.com$ [NC]
+    RewriteRule ^ https://www.squaresnacres.com%{REQUEST_URI} [L,R=301]
+
+    # Handle Authorization Header — keep it: PHP-FPM drops `Bearer` without it,
+    # and every admin call answers 401.
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Redirect Trailing Slashes (the site's addresses have none)...
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # 3. Prerendered pages: /properties/x answers from properties/x/index.html.
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteCond %{REQUEST_FILENAME}/index.html -f
+    RewriteRule ^(.+)$ $1/index.html [L]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+```
+
+**Security headers are Laravel middleware, not `.htaccess`.** The platform's
+Nginx serves static files before the request ever reaches Apache, so
+`Header set` rules in `.htaccess` do not reach them — and the HTML documents
+that need the policy come through Laravel anyway (the routes above). Port the
+values from "Self-managed server (Nginx)" → "Security headers":
+
+```php
+final class SecurityHeaders
+{
+    public function handle(Request $request, Closure $next): Response
+    {
+        $response = $next($request);
+        $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+        $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+        if (str_contains((string) $response->headers->get('Content-Type'), 'text/html')) {
+            $response->headers->set('Content-Security-Policy', config('security.csp'));
+        }
+        return $response;
+    }
+}
+```
+
+On one host, the CSP's `connect-src` keeps its other entries and names `'self'`
+in place of `https://api.squaresnacres.com`; the policy string lives in
+`config/security.php`. A
+prerendered page is a file Apache serves itself (rule 3), so it carries no
+middleware headers: when those pages matter, check them with `curl -I` and, if
+the policy is missing, move the `index.html` lookup into `$spa` (serve
+`public_path("{$path}/index.html")` when it exists) and drop rule 3.
+
+**Static caching.** The platform caches static files at its Nginx; the React
+build's hashed files under `/static/` are safe to cache for a year, `index.html`
+and `index.spa.html` are not. Check what is actually sent — not what a config
+file says:
+
+```bash
+curl -sI https://www.squaresnacres.com/static/js/main.<hash>.js | grep -i cache-control
+curl -sI https://www.squaresnacres.com/ | grep -i cache-control              # must not be a long max-age
+curl -sI https://www.squaresnacres.com/properties/<a slug> | grep -i cache-control
+```
+
+If HTML comes back with a long TTL, exclude `.html` in the platform's cache
+settings, or serve HTML only through Laravel (the routes above answer
+`no-cache`). A cached `index.html` pointing at chunks that are gone is a blank
+page.
+
+**Environment and PHP settings:**
+
+- `.env`: `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://www.squaresnacres.com`,
+  `CACHE_STORE=file` (the Laravel 11 name — `CACHE_DRIVER` is ignored), the database
+  credentials the platform shows, `SANCTUM_TOKEN_TTL_MINUTES=1440`, the `MAIL_*`
+  of `09_MEDIA_AND_EMAIL.md`. The full list is "Environment variables" below.
+- PHP (Application Settings → PHP FPM, or the server's PHP settings):
+  `upload_max_filesize` and `post_max_size` **≥ 16 MB** — headroom over the
+  largest body the API takes (JSON up to 5 MB, the mock's limit; a redirect CSV
+  import is the biggest). No file travels through the API: photographs,
+  brochures and résumés go from the browser straight to Cloudinary.
+- **Sanctum:** tokens expire after `SANCTUM_TOKEN_TTL_MINUTES`, and
+  `POST /auth/refresh` extends the same token (`02_AUTH_AND_RBAC.md`).
+
+**Cron** (Application → Cron Job Management → Advanced):
+
+```cron
+* * * * * cd /home/master/applications/<application>/public_html && php artisan schedule:run >> /dev/null 2>&1
+```
+
+The schedule itself lives in `routes/console.php` (Laravel 11):
+
+```php
+Schedule::command('sanctum:prune-expired --hours=24')->daily();
+Schedule::call(fn () => NotFoundLog::pruneBeyondCap())->hourly();   // 06_SEO_SITEMAP_ROBOTS.md
+```
+
+**Queue.** Lead notification e-mails are queued (`09_MEDIA_AND_EMAIL.md`). Either
+`QUEUE_CONNECTION=database` with a Supervisor program keeping
+`php artisan queue:work --tries=3 --backoff=60` alive (the platform's Supervisor
+jobs, where the plan offers them), or `QUEUE_CONNECTION=sync` — which works, at
+a cost: every enquiry waits for the SMTP round trip, a second or more, and the
+mail must still never fail the lead.
+
+**First install:**
+
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan key:generate                 # once, ever
+php artisan migrate --force
+php artisan db:seed --force              # the seed, as seed-mapping.md maps it
+php artisan config:cache && php artisan route:cache && php artisan view:cache
+```
+
+Run the three `:cache` commands again after every deploy — a stale
+`config:cache` keeps serving the old `.env`.
+
+## Layout A — deploying the site
+
+The site is built **elsewhere** (a laptop or CI) and uploaded as files:
+
+```bash
+cp .env.production.example .env.production     # Layout A's two lines
+npm ci && npm run build                         # or npm run build:prerender
+```
+
+`postbuild` has deleted `build/robots.txt` (one origin), and the build carries
+no source maps. Then upload the **contents** of `build/` into Laravel's
+`public/`, protecting Laravel's own files and keeping the previous releases'
+chunks:
+
+```bash
+APP=<master-user>@<server-ip>:/home/master/applications/<application>/public_html/public
+
+# 1. The new chunks beside the old ones: a visitor holding yesterday's
+#    index.html still loads yesterday's chunks. There are 80 lazy routes and
+#    no chunk-retry, so a deleted chunk is a blank screen for them.
+rsync -av build/static/ "$APP/static/"
+
+# 2. Everything else, deleting what the build no longer has — except
+#    Laravel's own files and the chunks.
+rsync -av --delete \
+  --exclude='/static/' --exclude='/index.php' --exclude='/.htaccess' \
+  --exclude='/storage' --exclude='/vendor' --exclude='/favicon.ico' \
+  build/ "$APP/"
+
+# 3. Once, on the first deploy: the Laravel skeleton's own robots.txt must go.
+#    The --delete above removes it only while no --exclude matches it — an
+#    exclude also protects a file from --delete, and the "--exclude robots.txt"
+#    of older guides does exactly that — and a robots.txt in public/ is served
+#    before the route: the admin's text would never ship.
+ssh <master-user>@<server-ip> 'rm -f /home/master/applications/<application>/public_html/public/robots.txt'
+```
+
+- Prune `static/` to the chunks of the **last two or three** releases, not
+  fewer.
+- Keep the last three builds zipped with their commit —
+  `zip -r build-$(git rev-parse --short HEAD).zip build/` — so a rollback is an
+  upload, not a rebuild.
+- Then: `php artisan config:cache route:cache view:cache` if the Laravel side
+  changed, and the go-live checks below.
+
+## Layout B — the static application
+
+A second, plain PHP application on `www.squaresnacres.com` holds the build; the
+Laravel application is on `api.squaresnacres.com` with its own certificate.
+
+**The build:** Layout B's lines of `.env.production.example`
+(`REACT_APP_API_URL=https://api.squaresnacres.com/api`). `postbuild` fetches the
+API's `robots.txt` and writes `build/robots.txt` with its `Sitemap:` lines on the
+API host — so build **after** the API is up, or read its warning. Upload the
+contents of `build/` to the application's `public_html/`, with the same chunk
+rule as Layout A.
+
+**`public_html/.htaccess`:**
+
+```apache
+Options -MultiViews -Indexes
+DirectorySlash Off
+RewriteEngine On
+
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+RewriteCond %{HTTP_HOST} ^squaresnacres\.com$ [NC]
+RewriteRule ^ https://www.squaresnacres.com%{REQUEST_URI} [L,R=301]
+
+RewriteCond %{REQUEST_URI} (.+)/$
+RewriteRule ^ %1 [L,R=301]
+
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_FILENAME}/index.html -f
+RewriteRule ^(.+)$ $1/index.html [L]
+
+# Every other path is the React app: index.spa.html after build:prerender,
+# index.html after a plain build.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ /index.spa.html [L]
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(js|css|woff2?|png|jpe?g|webp|svg|ico)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    <FilesMatch "\.html$">
+        Header set Cache-Control "no-cache"
+        Header set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        Header set X-Content-Type-Options "nosniff"
+        Header set Referrer-Policy "strict-origin-when-cross-origin"
+        Header set X-Frame-Options "SAMEORIGIN"
+    </FilesMatch>
+</IfModule>
+```
+
+The static-cache caveat applies twice over here: the platform's Nginx may serve
+these files before Apache reads the rules, so verify the headers with `curl -I`
+exactly as in Layout A, and use the platform's cache exclusions when HTML comes
+back with a long TTL.
+
+**The API** (`api.squaresnacres.com`) is Layout A's Laravel application without
+the SPA routes: `APP_URL=https://api.squaresnacres.com`, `trustHosts` naming
+`api.squaresnacres.com`, and CORS for the site's origins in `config/cors.php`
+(`'paths' => ['api/*']`, `'allowed_origins' => ['https://www.squaresnacres.com']`,
+`'supports_credentials' => false` — never `*`). The CSP's `connect-src` on the
+static host names `https://api.squaresnacres.com`.
+
+**Search Console:** verify **both** hosts. The sitemaps live on `api.`, and
+`robots.txt` on `www.` names them there.
+
+## Cloudways specifics that bite
+
+- **Varnish.** The platform's full-page cache will cache an API answer — an
+  hour-old price, or worse, a cached `POST`. Switch Varnish off for the
+  application, or add exclusions for `/api/` and `/admin` in the application's
+  Varnish settings. Verify with two `curl -I` calls on `/api/properties`: no `Age` header
+  growing between them.
+- **Bot protection** must not block the crawlers `robots.txt` allows:
+  Googlebot, Bingbot, DuckDuckBot, GPTBot, OAI-SearchBot, ChatGPT-User,
+  ClaudeBot, Claude-User, Claude-SearchBot, anthropic-ai, PerplexityBot,
+  Perplexity-User, Google-Extended, CCBot, Applebot, Applebot-Extended,
+  Amazonbot, meta-externalagent and Bytespider. Allow-list them, or leave bot
+  protection off.
+- **A CDN in front** (the platform's or Cloudflare): bypass `/api/*` and
+  `/admin*`; cache only `/static/*` for long.
+- **The Authorization header.** Keep the stock `.htaccess` block. When every
+  admin call answers 401 and the token looks right, that block is missing.
+- **`.env` stays out of the web root.** With the webroot at
+  `public_html/public`, `public_html/.env` is not served; never copy it into
+  `public/`, and check that `/.env` answers 404.
+- **Staging blocks crawlers by environment, not by data.** Set
+  `SEO_FORCE_NOINDEX=true` on staging: a middleware then answers `/robots.txt`
+  with `User-agent: *` / `Disallow: /`, adds `X-Robots-Tag: noindex, nofollow`
+  to every response Laravel sends, and rewrites `seo.robots` and
+  `seoSettings.defaults.robots` in public reads to noindex — whatever the
+  database says. A staging database is copied to production sooner or later,
+  and a "block crawlers" switch stored in it goes live with it. Production
+  leaves the variable unset.
+- **Time zone.** Set the server's time zone to `Asia/Kolkata`, so the cron and the
+  logs read in Indian time. Keep Laravel's `APP_TIMEZONE=UTC`: the contract's
+  timestamps and the seed import are UTC, and the business rules name IST where
+  they mean it (`today('Asia/Kolkata')`).
+- **Backups.** Take an on-demand backup before every deploy that migrates, and
+  restore one into a scratch application once, before launch.
+
+## Switch-over on Cloudways
+
+1. Staging first: the Laravel application on a staging copy
+   (`https://staging.example`), `SEO_FORCE_NOINDEX=true`, the seed imported.
+2. On staging, the **full** smoke walk and the Postman collection (they write):
+
+   ```bash
+   node smoke/smoke-api.js --baseUrl=https://staging.example/api --allow-writes
+   ```
+
+3. Build the site for the layout (`.env.production`), upload it, attach the
+   domain, issue the certificate.
+4. Production data: migrate, seed per `seed-mapping.md`, rotate the three seed
+   passwords (`02_AUTH_AND_RBAC.md`).
+5. On production, the **read** checks only (the default against a remote host),
+   signed in as a real account of each role — the seed's are rotated by now —
+   and the comparison with the local mock, which keeps the seed's admin
+   (`https://api.squaresnacres.com/api` in Layout B):
+
+   ```bash
+   node smoke/smoke-api.js --baseUrl=https://www.squaresnacres.com/api \
+     --email=<admin> --password=<…> \
+     --managerEmail=<manager> --managerPassword=<…> \
+     --salesEmail=<sales> --salesPassword=<…>
+
+   node smoke/smoke-api.js --baseUrl=https://www.squaresnacres.com/api \
+     --email=<admin> --password=<…> \
+     --compare=http://localhost:4000/api \
+     --compareEmail=admin@squaresnacres.com --comparePassword=Admin@123
+   ```
+
+6. The go-live checklist below, then submit the sitemap index in Search Console.
+
+## Go-live checklist — Cloudways
+
+Run in order.
+
+1. The built bundle names the production API:
+   `grep -r 'www.squaresnacres.com/api' build/static/js | head -1` (Layout A) or
+   `api.squaresnacres.com/api` (Layout B); `grep -r 'localhost:4000' build/static/js`
+   prints nothing.
+2. The three seed passwords are rotated and the seed accounts renamed or
+   deactivated.
+3. `APP_DEBUG=false`, `APP_ENV=production`; `/api/nonexistent` answers the error
+   envelope, not a stack trace and not the SPA's HTML.
+4. HTTPS: `http://` redirects with one 301 (no loop), the apex to `www` with one.
+5. **Varnish** is off for the application or excludes `/api/` and `/admin` —
+   two `curl -I` on `/api/properties` show no growing `Age`.
+6. **The cron runs:** `php artisan schedule:list` shows the jobs, and the cron
+   log shows `schedule:run` every minute.
+7. **The Authorization header arrives:** one signed-in call —
+   `curl -H "Authorization: Bearer <token>" https://www.squaresnacres.com/api/auth/profile` —
+   answers 200, not 401.
+8. **`robots.txt` on the live host** shows the admin-edited text **and** its
+   `Sitemap:` lines — not the placeholder, not the Laravel skeleton's two lines.
+9. **Both `/sitemap.xml` and `/api/sitemap.xml`** answer with an index whose
+   children open (fetch one child of each).
+10. **A deep link cold-loads:** `https://www.squaresnacres.com/properties/<a slug>`
+    in a fresh private window renders the listing, not a 404 and not the home
+    page's title.
+11. **A prerendered route** (after `build:prerender`) answers `200` at its own
+    address, with no 301 to a trailing slash: `curl -sI https://www.squaresnacres.com/about`.
+12. **`curl -I` shows no long TTL on HTML** (`/`, a deep link), and a year on a
+    `/static/js/` chunk.
+13. `seoSettings.siteUrl` is the canonical host, and `/rss.xml` and `/llms.txt`
+    answer with their content types.
+14. Sign in to `/admin`, create a draft property, publish it, find it on the
+    site, delete it.
+15. Submit the enquiry form; the lead appears with its source and the
+    notification e-mail arrives.
+16. Eleven enquiries in a minute: the eleventh is a 429 with the documented
+    message.
+17. **Write safety:** production only ever gets the read checks —
+    `node smoke/smoke-api.js --baseUrl=<production>` without `--allow-writes`, and
+    `--compare` (step 5 of the switch-over). The full smoke walk and the Postman
+    collection write and delete records, post enquiries that e-mail the desk and
+    create an account; they run on **staging only**.
+18. A backup exists, is scheduled, and has been restored once.
+
 ## Environment variables
 
-**The site** (`.env.production`, read by `npm run build`; every `REACT_APP_*`
-value is baked into the bundle, so changing one needs a rebuild):
+**The site** (`.env.production` on the build machine, read by `npm run build`;
+every `REACT_APP_*` value is baked into the bundle, so changing one needs a
+rebuild — `.env.production.example` has both layouts):
 
-| Variable                             | Required   | Production value                    | What it does                                                                                                                                                                                                                                            |
-| ------------------------------------ | ---------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `REACT_APP_API_URL`                  | **yes**    | `https://api.squaresnacres.com/api` | the API base, `/api` included. **The one switch of the handover.** There is no fallback: the app throws at startup when it is missing, which is deliberate — a site silently talking to `localhost` in production is worse than one that will not start |
-| `REACT_APP_SITE_URL`                 | no         | `https://www.squaresnacres.com`     | canonical and Open Graph URLs                                                                                                                                                                                                                           |
-| `REACT_APP_SITE_NAME`                | no         | `Squares N Acres`                   | display name                                                                                                                                                                                                                                            |
-| `REACT_APP_CLOUDINARY_CLOUD_NAME`    | no         | the cloud                           | enables uploads from the media library; empty disables the upload button, and the library still works with external URLs                                                                                                                                |
-| `REACT_APP_CLOUDINARY_UPLOAD_PRESET` | no         | an **unsigned** preset              | as above                                                                                                                                                                                                                                                |
-| `REACT_APP_GOOGLE_MAPS_KEY`          | no         | a browser key                       | enables the property map; empty hides the map, nothing breaks                                                                                                                                                                                           |
-| `CHROME_PATH`                        | build only | path to Chrome                      | needed by `npm run build:prerender`, never by `npm run build`                                                                                                                                                                                           |
+| Variable                             | Required   | Production value                                                                  | What it does                                                                                                                                                                                         |
+| ------------------------------------ | ---------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REACT_APP_API_URL`                  | **yes**    | A: `https://www.squaresnacres.com/api` · B: `https://api.squaresnacres.com/api` | the API base, `/api` included — **the one switch of the handover**. No fallback: the app throws at startup without it, deliberately. `postbuild` compares its origin with the site's to decide `robots.txt` |
+| `REACT_APP_SITE_URL`                 | yes        | `https://www.squaresnacres.com`                                                   | canonical and Open Graph URLs; `postbuild` reads it too                                                                                                                                              |
+| `REACT_APP_SITE_NAME`                | no         | `Squares N Acres`                                                                 | display name                                                                                                                                                                                         |
+| `REACT_APP_CLOUDINARY_CLOUD_NAME`    | no         | the cloud                                                                         | enables uploads from the media library; empty disables the upload button, and the library still works with external URLs                                                                             |
+| `REACT_APP_CLOUDINARY_UPLOAD_PRESET` | no         | an **unsigned** preset                                                            | as above — its lockdown is in `09_MEDIA_AND_EMAIL.md`                                                                                                                                                |
+| `REACT_APP_GOOGLE_MAPS_KEY`          | no         | a browser key                                                                     | enables the property map; empty hides it                                                                                                                                                             |
+| `CHROME_PATH`                        | build only | path to Chrome                                                                    | needed by `npm run build:prerender`, never by `npm run build`                                                                                                                                        |
 
 **The API** (`.env` on the server, never committed):
 
-| Variable                                                                                | Example                                                   | Notes                                                                                                               |
-| --------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `APP_ENV`                                                                               | `production`                                              |                                                                                                                     |
-| `APP_DEBUG`                                                                             | `false`                                                   | a stack trace in a 500 body leaks the schema                                                                        |
-| `APP_KEY`                                                                               | `base64:…`                                                | `php artisan key:generate` once, then never again — rotating it invalidates every encrypted value                   |
-| `APP_URL`                                                                               | `https://api.squaresnacres.com`                           |                                                                                                                     |
-| `DB_CONNECTION` / `DB_HOST` / `DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | `mysql` / …                                               | the database user needs no `DROP`                                                                                   |
-| `CORS_ALLOWED_ORIGINS`                                                                  | `https://www.squaresnacres.com,https://squaresnacres.com` | comma-separated, explicit, never `*` (see `01_api_contract.md`)                                                     |
-| `SANCTUM_TOKEN_TTL_MINUTES`                                                             | `1440`                                                    | 24 hours, matching the mock                                                                                         |
-| `SITE_URL`                                                                              | `https://www.squaresnacres.com`                           | what the sitemaps, RSS and llms.txt build absolute URLs from when `seoSettings.siteUrl` is empty                    |
-| `CACHE_DRIVER` / `SESSION_DRIVER`                                                       | `redis` / `file`                                          | the view debounce and the sitemap cache need a cache that is shared across workers; `file` works on a single server |
-| `QUEUE_CONNECTION`                                                                      | `redis` or `database`                                     | lead notification e-mails belong on a queue                                                                         |
-| `MAIL_*`                                                                                |                                                           | the addresses in `siteSettings.leads.notificationEmails` receive new-lead alerts                                    |
-| `LOG_CHANNEL` / `LOG_LEVEL`                                                             | `daily` / `warning`                                       |                                                                                                                     |
+| Variable                                                                                | Example                                      | Notes                                                                                                  |
+| --------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `APP_ENV` / `APP_DEBUG`                                                                 | `production` / `false`                       | a stack trace in a 500 body leaks the schema                                                           |
+| `APP_KEY`                                                                               | `base64:…`                                   | `php artisan key:generate` once, then never again                                                      |
+| `APP_URL`                                                                               | A: `https://www.squaresnacres.com` · B: `https://api.squaresnacres.com` | also the API origin the sitemap host rule allows (`06_SEO_SITEMAP_ROBOTS.md`)                        |
+| `APP_TIMEZONE`                                                                          | `UTC`                                        | storage and the contract are UTC; the rules name IST where they mean it                               |
+| `DB_CONNECTION` / `DB_HOST` / `DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | `mysql` / …                                  | the platform's credentials; the user needs no `DROP`                                                   |
+| `CORS_ALLOWED_ORIGINS`                                                                  | `https://www.squaresnacres.com`              | **Layout B only** — comma-separated, explicit, never `*`                                               |
+| `SANCTUM_TOKEN_TTL_MINUTES`                                                             | `1440`                                       | 24 hours, matching the mock; `POST /auth/refresh` extends it                                           |
+| `SITE_URL`                                                                              | `https://www.squaresnacres.com`              | what the sitemaps, RSS and llms.txt build absolute URLs from when `seoSettings.siteUrl` is empty      |
+| `SEO_FORCE_NOINDEX`                                                                     | unset (production) · `true` (staging)        | the environment override of "Cloudways specifics that bite"                                            |
+| `CACHE_STORE` / `SESSION_DRIVER`                                                        | `file` / `file`                              | Laravel 11's name for the cache store; `redis` when the platform's Redis is on                         |
+| `QUEUE_CONNECTION`                                                                      | `database` or `sync`                         | lead notification e-mails — see "Queue" above                                                          |
+| `MAIL_*`                                                                                |                                              | `09_MEDIA_AND_EMAIL.md`                                                                                |
+| `LOG_CHANNEL` / `LOG_LEVEL`                                                             | `daily` / `warning`                          |                                                                                                        |
 
 Two rules worth writing down:
 
 - **No secret belongs in a `REACT_APP_*` variable.** Everything in the bundle is
   public — the Google Maps key must be domain-restricted in the Google console,
-  and the Cloudinary preset must be unsigned and upload-only.
-- The site and the API have separate `.env` files on separate machines or paths.
-  A single `.env` shared by both is how an API secret ends up in a bundle.
+  and the Cloudinary preset must be unsigned and locked down.
+- The site's and the API's variables live in separate files. A single `.env`
+  shared by both is how an API secret ends up in a bundle.
 
-## Nginx — the site
+## Self-managed server (Nginx)
+
+The material below is for a server the team runs itself — a VPS with Nginx in
+front of PHP-FPM. It predates the Cloudways decision and stays correct for that
+setup; nothing in it applies on Cloudways, where the platform's Nginx is not
+yours to configure.
+
+### Nginx — the site
 
 One server block serves the static build and proxies the eight paths that must
 come from the API on the site's own hostname, so that `robots.txt` and the
@@ -129,9 +612,11 @@ The `try_files` line is the one to get right:
 
 Proxying `/api/` through the site's origin is optional — the frontend can talk to
 `api.squaresnacres.com` directly — but it removes CORS from the picture entirely.
-If you use it, set `REACT_APP_API_URL=https://www.squaresnacres.com/api`.
+If you use it, set `REACT_APP_API_URL=https://www.squaresnacres.com/api`. The
+proxied `robots.txt` and sitemap index then name their children on the host that
+was asked, which the API's allow-list accepts (`06_SEO_SITEMAP_ROBOTS.md`).
 
-## Nginx — the API
+### Nginx — the API
 
 ```nginx
 server {
@@ -160,7 +645,7 @@ server {
 The API is never the origin a browser loads a page from, so it needs no SPA
 fallback and no static caching beyond what Laravel sends.
 
-## Security headers
+### Security headers
 
 On the **site** block. The content security policy has to name every third party
 the pages actually load, and the list below is exactly that list:
@@ -203,7 +688,7 @@ add_header Content-Security-Policy "
 On the **API** block: `X-Content-Type-Options`, `Referrer-Policy: no-referrer`,
 and `X-Frame-Options: DENY`. The API has no pages to frame.
 
-## Switch-over
+### Switch-over
 
 Pointing the site at the Laravel API is **one line and one command**:
 
@@ -220,7 +705,8 @@ payload, and no feature flag chooses between them: the whole application reaches
 the API through `src/services/endpoints.js` and `src/services/http.js`, and both
 read that one variable.
 
-Before you cut over, prove the new API answers the same contract:
+Before you cut over, prove the new API answers the same contract — reads only
+against production:
 
 ```bash
 npm run mock                                                   # terminal 1
@@ -228,9 +714,12 @@ npm run smoke -- --baseUrl=https://api.squaresnacres.com/api \
                  --compare=http://localhost:4000/api           # terminal 2
 ```
 
-An empty difference table is the go signal.
+An empty difference table is the go signal. Once the seed passwords are
+rotated, add `--email`/`--password` for the API and
+`--compareEmail=admin@squaresnacres.com --comparePassword=Admin@123` for the mock
+(`08_TESTING_AND_PARITY.md` → "Comparing responses").
 
-## Rollback
+### Rollback
 
 Releases are directories and `current` is a symlink, so a rollback is a symlink
 swap — seconds, and it needs no build:
@@ -254,7 +743,7 @@ Reverting the site to the **mock** is the same one line in reverse
 (`REACT_APP_API_URL=http://localhost:4000/api`) — which is also how a developer
 keeps working while the API is down.
 
-## Go-live checklist
+### Go-live checklist
 
 Run in order. Nothing here takes more than a minute, and every line has burned
 somebody.
@@ -262,7 +751,7 @@ somebody.
 1. `REACT_APP_API_URL` points at the production API, and the built bundle really
    contains it: `grep -r 'api.squaresnacres.com' build/static/js | head -1`.
 2. **The three seed passwords are rotated** and the three seed accounts are
-   either renamed to real people or deactivated (`02_auth.md`).
+   either renamed to real people or deactivated (`02_AUTH_AND_RBAC.md`).
 3. `APP_DEBUG=false`, `APP_ENV=production`, and `/api/nonexistent` answers the
    §5.3 envelope rather than a stack trace.
 4. `CORS_ALLOWED_ORIGINS` lists the production origins and **not** `*`, and the
@@ -271,7 +760,7 @@ somebody.
 5. HTTPS everywhere: HTTP redirects with 301, and so does the apex to `www`.
 6. `seoSettings.siteUrl` equals the canonical host Nginx redirects to.
 7. `robots.txt` on the **production** host is the real one, and on staging it is
-   the blanket disallow. Fetch both and read them.
+   the blanket disallow (`SEO_FORCE_NOINDEX=true`). Fetch both and read them.
 8. `/sitemap.xml` returns the index, and one of its documents opens and contains
    absolute canonical URLs. Submit the index in Search Console.
 9. `/rss.xml` and `/llms.txt` answer with the right content types.
@@ -283,9 +772,9 @@ somebody.
     the property's `enquiryCount` moved, and the notification e-mail arrived.
 13. Rate limiting works: eleven enquiries in a minute, the eleventh is a 429 with
     the documented message.
-14. `npm run smoke -- --baseUrl=<production>` passes, and
-    `--compare=<mock>` shows no differences.
-15. Import the Postman collection, select the production environment, run the
-    collection: every test green.
-16. A database backup exists, is scheduled, and has been **restored once** into a
+14. `npm run smoke -- --baseUrl=<production>` passes its read checks, signed in
+    as a real account of each role, and `--compare=<mock>` shows no
+    differences. The full walk (`--allow-writes`) and the Postman collection run
+    against **staging** only.
+15. A database backup exists, is scheduled, and has been **restored once** into a
     scratch database. A backup nobody has restored is a hope, not a backup.

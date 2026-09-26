@@ -24,6 +24,7 @@ import useRowKeys from './useRowKeys';
 import { ICON_ID_PATTERN } from '../../utils/validation';
 import { getIn } from '../../hooks/useForm';
 import { toSeoPaths } from '../seo/seoValues';
+import { useToast } from '../common/ToastProvider';
 import {
   DateField,
   Field,
@@ -37,6 +38,34 @@ import {
 } from '../ui/FormField';
 
 import styles from './MasterDataForm.module.css';
+
+/** The fields a record keeps its prose in — what the SEO engine calls `content`. */
+const CONTENT_FIELDS = ['content', 'description', 'bio'];
+
+/**
+ * The field of this form an SEO hint's path lands on, or `null`.
+ *
+ * The engine names what it measured — `content`, `images` — and a master-data
+ * record keeps those under its own names: a category's `description`, an
+ * author's `bio` and avatar.
+ *
+ * @param {string} path
+ * @param {Array<{name: string, type?: string}>} fields
+ * @returns {string|null}
+ */
+export function formFieldForSeoPath(path, fields = []) {
+  const names = new Set(fields.map((field) => field.name));
+  if (names.has(path)) return path;
+  if (path === 'content' || path === 'tableOfContents') {
+    return CONTENT_FIELDS.find((name) => names.has(name)) ?? null;
+  }
+  if (path === 'images') return fields.find((field) => field.type === 'image')?.name ?? null;
+  return null;
+}
+
+/** What "focus this field" means when the id is on the column around a control. */
+const FOCUSABLE_IN_COLUMN =
+  '[contenteditable="true"], input:not([type="hidden"]), textarea, select, button';
 
 /**
  * A form built from a list of field descriptions.
@@ -62,6 +91,11 @@ import styles from './MasterDataForm.module.css';
  *   records are — required when `seoPanel` is set
  * @param {object} [props.seoRecord] the record being edited, for the fields the
  *   panel shows but does not own (`id`, `updatedAt`)
+ *
+ * A field may also carry `visible(values)` — drawn only while it answers true,
+ * as the "Retype the new e-mail" of your own account (prompt 51) — and
+ * `action: { label, icon?, onClick(form) }`, a button under its control:
+ * "Generate password".
  */
 export default function MasterDataForm({
   fields = [],
@@ -75,6 +109,27 @@ export default function MasterDataForm({
   seoRecord,
   children,
 }) {
+  const toast = useToast();
+  const baseId = useId();
+  const columnId = (name) => `${baseId}-field-${String(name).replace(/[^a-zA-Z0-9]+/g, '-')}`;
+
+  /**
+   * An SEO hint about the record's own fields — "the description never uses
+   * the focus keyword" — puts the cursor in that field of this form. Without
+   * it the hint was a link that did nothing (prompt 51).
+   */
+  const focusRecordField = (path) => {
+    const name = formFieldForSeoPath(path, fields);
+    const element = name ? document.getElementById(columnId(name)) : null;
+    if (!element) {
+      toast.info('That field is not on this form — open the record’s own page to change it.');
+      return;
+    }
+    const control = element.querySelector(FOCUSABLE_IN_COLUMN);
+    control?.focus?.({ preventScroll: true });
+    element.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  };
+
   // A 422 can name something no control owns — `errors.id` is how the API
   // refuses to demote the last admin — and a message with nowhere to land is a
   // message nobody reads.
@@ -95,18 +150,36 @@ export default function MasterDataForm({
         </FormColumn>
       ) : null}
 
-      {fields.map((field) => (
-        <FormColumn key={field.name} half={field.half}>
-          <FormFieldControl
-            field={field}
-            form={form}
-            disabled={disabled || field.disabled}
-            checkSlug={checkSlug}
-            excludeId={excludeId}
-            slugBase={slugBase}
-          />
-        </FormColumn>
-      ))}
+      {fields
+        .filter((field) => !field.visible || field.visible(form.values))
+        .map((field) => (
+          <FormColumn key={field.name} half={field.half} id={columnId(field.name)}>
+            <FormFieldControl
+              field={field}
+              form={form}
+              disabled={disabled || field.disabled}
+              checkSlug={checkSlug}
+              excludeId={excludeId}
+              slugBase={slugBase}
+            />
+            {field.action ? (
+              <Button
+                variant="link"
+                size="sm"
+                className={styles.fieldAction}
+                disabled={disabled || field.disabled}
+                icon={
+                  field.action.icon ? (
+                    <Icon icon={field.action.icon} width="16" height="16" />
+                  ) : undefined
+                }
+                onClick={() => field.action.onClick(form)}
+              >
+                {field.action.label}
+              </Button>
+            ) : null}
+          </FormColumn>
+        ))}
       {seoPanel && seoEntityType ? (
         <FormColumn>
           <SeoPanel
@@ -119,6 +192,7 @@ export default function MasterDataForm({
             excludeId={excludeId}
             checkSlug={checkSlug}
             slugBase={slugBase}
+            onFocusField={focusRecordField}
             onSlugChange={(slug) => form.setField('slug', slug)}
             onChange={(patch, meta) => {
               // The analysis writing its own score back is not an edit, so the
@@ -229,13 +303,15 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
       );
 
     case 'switch':
+      // A switch is on unless it says otherwise, as `isActive` is; one whose
+      // default is off (a menu flag) is on only when the record says so.
       return (
         <SwitchField
           label={field.label}
           hint={field.hint}
           error={error}
           disabled={disabled}
-          checked={value !== false}
+          checked={field.defaultValue === false ? value === true : value !== false}
           onChange={set}
         />
       );

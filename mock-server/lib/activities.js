@@ -27,16 +27,19 @@ const formatDate = formatIstDate;
  * Appends an entry to `lead.activities` and returns it.
  *
  * @param {object} lead the stored lead, mutated in place
- * @param {{type: string, description: string, createdBy?: number|null, at?: string}} entry
+ * @param {{type: string, description: string, note?: string|null, createdBy?: number|null,
+ *   at?: string}} entry
  * @returns {object} the appended activity
  */
-function addActivity(lead, { type, description, createdBy = null, at }) {
+function addActivity(lead, { type, description, note = null, createdBy = null, at }) {
   if (!Array.isArray(lead.activities)) lead.activities = [];
 
   const activity = {
     id: nextId(lead.activities),
     type,
     description,
+    // What was said, on an activity the desk logged (prompt 51).
+    note: note || null,
     createdBy: createdBy ?? null,
     createdAt: at ?? new Date().toISOString(),
   };
@@ -59,6 +62,16 @@ const describeStatusChange = (from, to, reason) =>
   `Status changed from ${LEAD_STATUS.labelOf(from) || from} to ${LEAD_STATUS.labelOf(to) || to}${
     to === 'lost' && reason ? ` — ${reason}` : ''
   }`;
+
+/**
+ * "Details updated by Sales User — phone, requirement" (prompt 51): the desk
+ * corrected what the form captured.
+ */
+const DETAIL_LABELS = { name: 'name', phone: 'phone', email: 'e-mail', requirement: 'requirement' };
+const describeDetailsUpdate = (fields, byName) =>
+  `Details updated${byName ? ` by ${byName}` : ''} — ${fields
+    .map((field) => DETAIL_LABELS[field] ?? field)
+    .join(', ')}`;
 
 /** "Priority changed from Medium to High". */
 const describePriorityChange = (from, to) =>
@@ -87,4 +100,5 @@ module.exports = {
   describePriorityChange,
   describeAssignment,
   describeFollowUp,
+  describeDetailsUpdate,
 };

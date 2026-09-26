@@ -43,30 +43,90 @@ The mock is not a specification of performance, of concurrency or of SQL. It is 
 specification of **shape**: status codes, envelopes, field names, ordering and
 the business rules of `05_BUSINESS_RULES.md`.
 
+## The smoke bundle
+
+`smoke/` in this package is the repository's `scripts/smoke-api.js` with
+everything it loads — the endpoint registry, the write schemas, the enums and
+the sample bodies — and **nothing to install**: Node 20 or later is all it
+needs, so it runs from a copy of the package on any machine, CI included.
+
+```bash
+node smoke/smoke-api.js                                   # the local mock
+node smoke/smoke-api.js --baseUrl=http://localhost:8000/api   # your API, on your machine
+```
+
+It walks the registry — the same file the frontend calls through — signs in as
+the three roles, sends each endpoint the smallest request that should succeed
+with the least privileged token that should be allowed, and asserts status
+codes, envelopes, pagination meta, RBAC and two dozen behaviours a status code
+cannot describe (a `PATCH` leaving the other fields alone, `bedrooms=3`
+returning only 3-BHK listings, a CSV starting with a BOM). It prints a
+`key | method | path | expected | actual | ok` table and a pass/fail count, and
+exits 1 on any failure — so it drops straight into CI. `--verbose` prints every
+request; `smoke/README.md` lists every option. In the website repository,
+`npm run smoke -- <the same options>` is the same run.
+
+The walk expects `GET /health` to answer `{ "data": { "status": "ok" } }`
+before anything else (`03_ENDPOINTS.md`); a server without it stops the run at
+the first line. The bundle is regenerated with the package, so it always walks
+the registry this package describes.
+
+## Write safety
+
+The full walk **writes**: it creates a record of every writable resource and
+deletes it again, posts enquiries (which e-mail the notification addresses),
+creates and deletes an account for the `/auth/*` checks, changes settings and
+puts them back, and sends deletes that the guards must refuse — a delete the
+guard wrongly allows removes the record. That is right on your machine and on
+staging, and wrong on production. So:
+
+- **Against this machine** (`localhost`, `127.*`, `[::1]`) it runs the full
+  walk.
+- **Against any other host** it runs the **read-only subset** unless
+  `--allow-writes` is passed: every `GET` of the registry but the redirect
+  lookup (it counts a hit), signing in and out, and the checks that only read.
+  Under the table it prints how many entries it left out, which checks it did
+  not run and why — `--verbose` names each entry.
+- `--allow-writes` is for **staging**:
+  `node smoke/smoke-api.js --baseUrl=https://staging.example/api --allow-writes`.
+- `--read-only` asks for the subset on this machine too — the same run
+  production gets, rehearsed where nothing can go wrong.
+
+**Production only ever gets the read checks and `--compare`.** Once the seed
+passwords are rotated, the read checks sign in as a real account of each role:
+
+```bash
+node smoke/smoke-api.js --baseUrl=<production API> \
+  --email=<admin> --password=<…> \
+  --managerEmail=<manager> --managerPassword=<…> \
+  --salesEmail=<sales> --salesPassword=<…>
+```
+
+The same rule holds for the Postman collection below: it runs against the mock
+or staging, never production.
+
 ## Comparing responses
 
-`scripts/smoke-api.js` walks the endpoint registry — the same file the frontend
-calls through — and asserts status codes, envelopes, pagination meta, RBAC and
-two dozen behaviours a status code cannot describe.
-
-**Against one server:**
+Compare mode puts two servers side by side — yours and the mock:
 
 ```bash
-npm run smoke -- --baseUrl=https://api.squaresnacres.com/api
-npm run smoke -- --baseUrl=https://api.squaresnacres.com/api --verbose
-npm run smoke -- --baseUrl=… --email=someone@squaresnacres.com --password=…
+npm run mock                                    # terminal 1
+node smoke/smoke-api.js --baseUrl=http://localhost:8000/api \
+  --compare=http://localhost:4000/api           # terminal 2
 ```
 
-It prints a `key | method | path | expected | actual | ok` table, a pass/fail
-count, and exits non-zero on any failure — so it drops straight into CI.
-
-**Against two servers at once:**
+After a rotation the two hold different passwords: `--email`/`--password` sign
+in to `--baseUrl`, and `--compareEmail`/`--comparePassword` to the compared
+server (they default to the first pair):
 
 ```bash
-npm run smoke -- --baseUrl=http://localhost:8000/api --compare=http://localhost:4000/api
+node smoke/smoke-api.js --baseUrl=<production API> --email=<admin> --password=<…> \
+  --compare=http://localhost:4000/api \
+  --compareEmail=admin@squaresnacres.com --comparePassword=Admin@123
 ```
 
-Compare mode sends **the same read to both** and prints only what differs:
+Compare mode signs in as one admin on each side, sends **the same read to
+both** and prints only what differs:
 
 | What it compares                                                                                             | Why                                                                            |
 | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
@@ -82,9 +142,10 @@ the one that matters. Values are what the Postman tests and the module checklist
 below are for.
 
 Compare mode is **read-only**: it signs in on both servers and then sends only
-`GET` requests, so it is safe against production. Writes are covered by running
-the full smoke walk against each server in turn — do that against staging, never
-against production, because it creates and deletes records.
+`GET` requests — the redirect lookup included only when both servers are on this
+machine, since it counts a hit — so it is safe against production. Writes are
+covered by running the full walk against each server in turn: your machine or
+staging, never production (see "Write safety").
 
 Read the table top to bottom and fix in this order: status differences first
 (something is missing), then envelope differences (something is shaped wrong),
@@ -95,18 +156,35 @@ usually explains the two below it.
 
 `postman_collection.json` and `postman_environment.json` are generated from the
 same registry, with the captured mock response saved under each request as an
-example.
+example. The generator runs the whole collection against the mock before it
+writes the package and refuses a red test, so a green run is the mock's own
+answer.
 
 1. Import both files (Postman → Import → drop both).
 2. Select the **Squares N Acres — Local mock** environment.
 3. Open `auth › auth › POST /auth/login` and send it. Its test script writes
    `{{token}}` into the environment; every other request inherits it from the
    collection's bearer auth.
-4. **Run the collection** (Collection → Run). Every request asserts its status
-   and its envelope.
+4. **Run the collection** (Collection → Run), in its own order. Every request
+   asserts its status — the one the registry gives it: 201 for a create, a
+   duplicate and an application, 204 for the two public reports — and its
+   envelope.
 5. To test the Laravel API, disable the local `baseUrl` row in the environment,
-   enable the production one, sign in again and run it again. Every test that
-   passed against the mock must pass.
+   enable the staging one (or point it at your machine), sign in again and run it
+   again. Every test that passed against the mock must pass.
+
+**The run writes, and cleans up after itself.** The order is the plan: `GET
+/health`, signing in, then each module in turn — a record is created before the
+requests that use it (its id saved as `<module>Id`) and deleted after them; a
+settings write sends back what it read; the profile and password requests work
+on an account the run creates and deletes; the lead claim is sent as the sales
+user of `salesEmail`/`salesPassword`; signing out comes last. Every path id is
+one the seed holds or one the run created. Against a fresh mock the lists read
+the same totals after a run as before it. **Run it against your machine or
+staging — never production**: it posts enquiries that e-mail the desk, creates
+an account and sends deletes.
+The environment's production rows (one host or two) are there for sending a
+single read by hand.
 
 To work as another role, change `email` and `password` in the environment — the
 manager and sales values are there, disabled — and sign in again. That is the
@@ -143,7 +221,9 @@ summary and no price is 422 with `images`, `description`, `shortDescription` and
 `PATCH { "isFeatured": true }` on a live listing is 200 without being asked; a bulk
 `activate` of one ready and one unready draft is 422 and activates neither; a `PUT`
 carrying an `updatedAt` other than the stored one is 409 with `data.conflict:
-'stale'` and writes nothing, and the same `PUT` without `updatedAt` is 200;
+'stale'` and writes nothing, and the same `PUT` without `updatedAt` is 200 — for
+an article, a page, a locality, a developer and a job opening as well, whose 409
+names the account that saved last in `data.current.updatedByName` (prompt 51);
 `GET /properties/featured?listingType=rent` answers only featured rentals; and a
 listing featured and published from the admin is in the home page's Featured row
 with ten others featured before it (QA-62).
@@ -266,19 +346,31 @@ listing's `videoUrl`, an article's `featuredImage.url`, the settings'
 **Media** — a record whose URL a listing uses refuses to delete with 409 and its
 `usedIn` list, and `?force=true` deletes it anyway. A bank's logo, an author's
 photograph and the SEO settings' share image count as uses too; `meta.folders`
-lists every folder on the first page, and under `type=document` only the folders
-holding documents; `q` finds a file by its address and its tags; a second record
-for the same address is 422 on `url`; `" /a//b/ "` is filed as the folder `a/b`;
-a bulk delete with one file in use removes nothing (QA-63).
+lists every folder on the first page with its count, and under `type=document`
+only the folders holding documents; `q` finds a file by its address and its tags;
+a second record for the same address is 422 on `url`; `" /a//b/ "` is filed as
+the folder `a/b`; a bulk delete with one file in use removes nothing (QA-63). A
+bulk `move` to `pages` answers `affected` and lists an unknown id in `missing`;
+renaming a folder onto one in use is 422 on `to` until `merge: true`, and
+`usage=unused` lists only files a delete removes without a 409 (prompt 51).
 
 **Dashboard** — the 30-day trend has 30 entries including the empty days; the
 conversion rate matches the lead counts; every figure a sales user sees is scoped.
 
-Finish with the four commands, and keep their output with the release notes:
+Finish with these, and keep their output with the release notes:
 
 ```bash
-npm run smoke -- --baseUrl=<the API>
-npm run smoke -- --baseUrl=<the API> --compare=http://localhost:4000/api
-npm run check:guidelines
-# and the Postman collection run, green
+# staging — the full walk and the Postman collection
+node smoke/smoke-api.js --baseUrl=https://staging.example/api --allow-writes
+# (Postman: the collection run against staging, green)
+
+# production — the read checks and the comparison, nothing else
+node smoke/smoke-api.js --baseUrl=<production API> --email=<admin> --password=<…> \
+  --managerEmail=<manager> --managerPassword=<…> --salesEmail=<sales> --salesPassword=<…>
+node smoke/smoke-api.js --baseUrl=<production API> --email=<admin> --password=<…> \
+  --compare=http://localhost:4000/api \
+  --compareEmail=admin@squaresnacres.com --comparePassword=Admin@123
 ```
+
+In the website repository, `npm run check:guidelines` proves this package still
+describes the registry it was generated from.

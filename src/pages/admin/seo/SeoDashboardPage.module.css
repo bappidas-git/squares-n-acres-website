@@ -461,3 +461,26 @@
   flex-direction: column;
   gap: var(--space-1);
 }
+
+/* The 404s tab (prompt 51): the address, and where a redirect now sends it. */
+.notFoundPath {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.notFoundPath code {
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.notFoundReferrer {
+  display: inline-block;
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}

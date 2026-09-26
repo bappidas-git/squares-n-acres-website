@@ -4,6 +4,7 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import CmsPage from '../CmsPage';
 import pageService from '../../../services/pageService';
 import renderWith from '../../../test-utils';
+import { resetDraftPreviews, stashDraftPreview } from '../../../utils/draftPreview';
 
 jest.mock('../../../services/pageService', () => ({
   __esModule: true,
@@ -63,5 +64,37 @@ describe('CmsPage', () => {
       expect(pageService.getBySlug).toHaveBeenCalledWith('about', undefined, expect.anything())
     );
     expect(screen.queryByTestId('where')).not.toBeInTheDocument();
+  });
+});
+
+describe('CmsPage — "Preview changes" (prompt 51)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    window.localStorage.clear();
+    resetDraftPreviews();
+  });
+
+  it('draws the editor’s unsaved page from this browser, and fetches nothing', async () => {
+    const id = stashDraftPreview('page', {
+      id: 2,
+      slug: 'about',
+      title: 'About us, rewritten',
+      status: 'published',
+      blocks: [],
+    });
+
+    renderAt(`/about?draftPreview=${id}`);
+
+    expect(
+      await screen.findByText('Previewing unsaved changes — not what visitors see.')
+    ).toBeInTheDocument();
+    expect(pageService.getBySlug).not.toHaveBeenCalled();
+  });
+
+  it('says a spent preview has expired rather than answering 404', async () => {
+    renderAt('/about?draftPreview=never-written');
+
+    expect(await screen.findByText('This preview has expired')).toBeInTheDocument();
+    expect(pageService.getBySlug).not.toHaveBeenCalled();
   });
 });

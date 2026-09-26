@@ -1,12 +1,15 @@
 import { Icon } from '@iconify/react';
+import { Link } from 'react-router-dom';
 import Switch from '@mui/material/Switch';
 
 import Alert from '../../../components/ui/Alert';
 import Avatar from '../../../components/ui/Avatar';
 import Chip from '../../../components/ui/Chip';
 import LazyImage from '../../../components/ui/LazyImage';
+import PATHS from '../../../routes/paths';
 import Rating from '../../../components/ui/Rating';
 import propertyService from '../../../services/propertyService';
+import userService from '../../../services/userService';
 import { FAQ_CATEGORIES, PARTNER_CATEGORIES } from '../../../config/enums';
 import {
   adminCrud,
@@ -17,7 +20,7 @@ import {
   testimonials,
 } from '../../../services/masterDataService';
 import { FORMS } from '../../../config/adminCopy';
-import { formatDate } from '../../../utils/format';
+import { formatDate, formatNumber } from '../../../utils/format';
 import { schemas } from '../../../services/schemas';
 
 import styles from './contentConfigs.module.css';
@@ -713,6 +716,10 @@ const ContactCell = ({ row }) => {
   );
 };
 
+/** The accounts a team card can be linked to, named when the form reopens. */
+const resolveUsers = (ids, opts) =>
+  userService.list({ ids: ids.join(','), perPage: ids.length }, opts);
+
 /**
  * Admin → Team (`/admin/team`).
  *
@@ -722,9 +729,15 @@ const ContactCell = ({ row }) => {
  * identifier rather than a URL — and a delete is refused while a property or a
  * page still points at them (D88).
  *
- * @param {{onMutated?: (collection: string) => void}} [options]
+ * Since prompt 51 the list counts each member's listings and links to them,
+ * the card can name the admin account that signs in as the advisor (leads
+ * about their listings can be routed to it), and switching off somebody who
+ * still answers for listings asks the screen first — `intercept`, which the
+ * page supplies with its reassign dialog.
+ *
+ * @param {{onMutated?: (collection: string) => void, intercept?: Function}} [options]
  */
-export const teamConfig = ({ onMutated } = {}) => ({
+export const teamConfig = ({ onMutated, intercept } = {}) => ({
   key: 'team',
   title: 'Team',
   subtitle: 'The advisors named on the About page and on the listings they handle.',
@@ -739,6 +752,7 @@ export const teamConfig = ({ onMutated } = {}) => ({
   activeToggle: true,
   usageGuard: true,
   reorderHint: REORDER_HINT,
+  intercept,
 
   columns: [
     {
@@ -774,6 +788,31 @@ export const teamConfig = ({ onMutated } = {}) => ({
           <span className={styles.text}>{row.reraId}</span>
         ) : (
           <span className={styles.hint}>—</span>
+        ),
+    },
+    {
+      // The listings that name the member as their advisor, drafts included:
+      // the count is the way to them (prompt 51).
+      key: 'listingCount',
+      label: 'Listings',
+      width: '96px',
+      align: 'center',
+      sortable: true,
+      hideBelow: 'md',
+      render: (row) =>
+        Number(row.listingCount) > 0 ? (
+          <Link
+            className={styles.countLink}
+            to={`${PATHS.adminProperties}?agentId=${row.id}`}
+            title={`The listings ${row.name} answers for`}
+            aria-label={`${formatNumber(row.listingCount)} listings of ${row.name}`}
+            // The row opens the member; the count opens their listings.
+            onClick={(event) => event.stopPropagation()}
+          >
+            {formatNumber(row.listingCount)}
+          </Link>
+        ) : (
+          <span className={styles.hint}>0</span>
         ),
     },
     toggleColumn({
@@ -841,6 +880,16 @@ export const teamConfig = ({ onMutated } = {}) => ({
     { name: 'socialLinks.twitter', type: 'url', label: 'X (Twitter)', half: true },
     { name: 'socialLinks.website', type: 'url', label: 'Website', half: true },
     {
+      name: 'userId',
+      type: 'entity',
+      label: 'Admin account',
+      multiple: false,
+      labelKey: 'name',
+      fetcher: (params, opts) => userService.list({ ...params, isActive: true }, opts),
+      resolveSelected: resolveUsers,
+      hint: 'Optional. Who signs in as this advisor: with Lead notifications set to “The listing’s advisor”, a lead about one of their listings goes to this account.',
+    },
+    {
       name: 'showOnAbout',
       type: 'switch',
       label: 'Show on the About page',
@@ -852,6 +901,7 @@ export const teamConfig = ({ onMutated } = {}) => ({
   newValues: {
     socialLinks: {},
     reraId: null,
+    userId: null,
     showOnAbout: true,
     order: FIRST,
     isActive: true,
@@ -879,6 +929,7 @@ export const teamConfig = ({ onMutated } = {}) => ({
       twitter: record.socialLinks?.twitter ?? null,
       website: record.socialLinks?.website ?? null,
     },
+    userId: record.userId ?? null,
     showOnAbout: record.showOnAbout !== false,
     order: record.order ?? 0,
     isActive: record.isActive !== false,
@@ -901,6 +952,10 @@ export const teamConfig = ({ onMutated } = {}) => ({
           blankToNull(values[field]),
         ])
       ),
+      userId:
+        values.userId === null || values.userId === undefined || values.userId === ''
+          ? null
+          : Number(values.userId),
       socialLinks: {
         ...(record?.socialLinks ?? {}),
         ...(values.socialLinks ?? {}),

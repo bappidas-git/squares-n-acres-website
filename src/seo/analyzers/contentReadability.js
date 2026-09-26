@@ -247,7 +247,7 @@ const tests = {
     if (h1s) {
       return make('heading-hierarchy', 'warn', {
         message: `${h1s} H1 ${h1s === 1 ? 'heading' : 'headings'} inside the body.`,
-        hint: 'The page title is the H1 (§9.7). Demote these to H2.',
+        hint: 'The page title is the H1. Demote these to H2.',
         field,
       });
     }

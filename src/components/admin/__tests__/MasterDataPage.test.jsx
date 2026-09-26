@@ -1267,3 +1267,109 @@ describe('MasterDataPage — QA-60', () => {
     });
   });
 });
+
+describe('MasterDataPage — moving listings before a delete (prompt 51)', () => {
+  const refusal = (usedBy) =>
+    new ApiError({
+      status: 409,
+      message: 'This item is in use.',
+      data: { usedBy },
+    });
+  const LISTINGS = [
+    { type: 'property', id: 12, title: 'Lakeview Heights' },
+    { type: 'property', id: 14, title: 'Aurelia Court' },
+  ];
+  const reassignOf = (move) => ({
+    noun: 'locality',
+    candidates: (row) =>
+      ROWS.filter((other) => other.id !== row.id).map((other) => ({
+        value: String(other.id),
+        label: other.name,
+      })),
+    move,
+  });
+
+  const askToDelete = async () => {
+    await screen.findByText('Whitefield');
+    await userEvent.click(screen.getByRole('button', { name: 'Delete Whitefield' }));
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' })
+    );
+    return screen.findByRole('dialog', { name: 'Move its listings first' });
+  };
+
+  it('moves the listings to the record chosen, then deletes this one', async () => {
+    const move = jest.fn().mockResolvedValue({ data: { affected: 2 } });
+    const service = fakeService({
+      remove: jest
+        .fn()
+        .mockRejectedValueOnce(refusal(LISTINGS))
+        .mockResolvedValueOnce({ data: null, message: 'Deleted' }),
+    });
+    render({ ...baseConfig(service), usageGuard: true, reassign: reassignOf(move) });
+
+    const dialog = await askToDelete();
+    expect(within(dialog).getByRole('link', { name: /Aurelia Court/ })).toBeInTheDocument();
+
+    // Nothing chosen yet: it says so, and moves nothing.
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Move them and delete' }));
+    expect(within(dialog).getByText('Choose where the listings go.')).toBeInTheDocument();
+    expect(move).not.toHaveBeenCalled();
+
+    await userEvent.selectOptions(
+      within(dialog).getByLabelText(/^Move the listings to/),
+      'Jayanagar'
+    );
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Move them and delete' }));
+
+    await waitFor(() => expect(move).toHaveBeenCalledWith([12, 14], '2'));
+    await waitFor(() => expect(service.remove).toHaveBeenCalledTimes(2));
+    expect(
+      await screen.findByText('2 listings moved to Jayanagar, and “Whitefield” deleted.')
+    ).toBeInTheDocument();
+  });
+
+  it('moves the listings and says what still names it, when more than listings do', async () => {
+    const move = jest.fn().mockResolvedValue({ data: { affected: 2 } });
+    const service = fakeService({
+      remove: jest
+        .fn()
+        .mockRejectedValue(refusal([...LISTINGS, { type: 'lead', id: 40, title: 'Ravi Kumar' }])),
+    });
+    render({ ...baseConfig(service), usageGuard: true, reassign: reassignOf(move) });
+
+    const dialog = await askToDelete();
+    await userEvent.selectOptions(
+      within(dialog).getByLabelText(/^Move the listings to/),
+      'Jayanagar'
+    );
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Move the listings' }));
+
+    await waitFor(() => expect(move).toHaveBeenCalledWith([12, 14], '2'));
+    const guard = await screen.findByRole('dialog', { name: 'Still in use' });
+    expect(within(guard).getByRole('link', { name: /Ravi Kumar/ })).toBeInTheDocument();
+    expect(service.remove).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the dialog, and the listings, when the move is refused', async () => {
+    const move = jest.fn().mockRejectedValue(
+      new ApiError({
+        status: 422,
+        message: 'The given data was invalid.',
+        errors: { 'payload.localityId': ['The locality does not exist.'] },
+      })
+    );
+    const service = fakeService({ remove: jest.fn().mockRejectedValue(refusal(LISTINGS)) });
+    render({ ...baseConfig(service), usageGuard: true, reassign: reassignOf(move) });
+
+    const dialog = await askToDelete();
+    await userEvent.selectOptions(
+      within(dialog).getByLabelText(/^Move the listings to/),
+      'Jayanagar'
+    );
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Move them and delete' }));
+
+    expect(await within(dialog).findByText('The locality does not exist.')).toBeInTheDocument();
+    expect(service.remove).toHaveBeenCalledTimes(1);
+  });
+});

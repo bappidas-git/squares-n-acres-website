@@ -741,6 +741,9 @@ module.exports = function localities({ stamps, slugify, media }) {
         ],
         slug,
       }),
+      // Master data is set up by the administrator (prompt 51).
+      createdBy: 1,
+      updatedBy: 1,
       ...stamps({ createdDaysAgo: 175 }),
     };
   });

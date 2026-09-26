@@ -7,6 +7,7 @@
  */
 
 const { absolute, compact } = require('./graph');
+const { formatPhoneForTel } = require('../../utils/format');
 
 /** The `@id` of the publisher node, for anything that references it. */
 const organizationId = (siteUrl) => `${String(siteUrl ?? '').replace(/\/+$/, '')}/#organization`;
@@ -23,6 +24,15 @@ function organizationNode(_input = {}, context = {}) {
   const address = knowledge.address ?? {};
   const geo = knowledge.geo ?? {};
 
+  // The second number Site settings keep for the contact page is the
+  // publisher's too: `telephone` becomes a list when it is set (prompt 51).
+  const alternate = context.siteSettings?.general?.alternatePhone;
+  const phones = [knowledge.phone, alternate ? formatPhoneForTel(alternate) : null].filter(
+    (phone, index, all) =>
+      phone &&
+      all.findIndex((other) => formatPhoneForTel(other) === formatPhoneForTel(phone)) === index
+  );
+
   return compact({
     '@type': knowledge.type || 'Organization',
     '@id': organizationId(siteUrl),
@@ -34,7 +44,7 @@ function organizationNode(_input = {}, context = {}) {
       : undefined,
     image: absolute(siteUrl, knowledge.logoUrl),
     description: knowledge.description,
-    telephone: knowledge.phone,
+    telephone: phones.length > 1 ? phones : phones[0],
     email: knowledge.email,
     address: compact({
       '@type': 'PostalAddress',

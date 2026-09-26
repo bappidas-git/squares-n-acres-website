@@ -101,6 +101,10 @@ const propertyType = {
   segment: segmentRef,
   icon: { type: 'string', required: true, maxLength: 80 },
   description: { type: 'string', nullable: true, maxLength: 500, default: null },
+  // The header's Rent and Commercial menus list the active types with these
+  // on, in their order (prompt 51).
+  showInRentMenu: { type: 'bool', default: false },
+  showInCommercialMenu: { type: 'bool', default: false },
   isActive: { type: 'bool', default: true },
   order: { type: 'int', min: 0, default: 0 },
   seo,
@@ -237,6 +241,14 @@ const teamMember = {
   order: { type: 'int', min: 0, default: 0 },
   isActive: { type: 'bool', default: true },
   showOnAbout: { type: 'bool', default: true },
+  // The admin account behind the card (prompt 51): a lead about one of their
+  // listings goes to it when "the listing's advisor" assigns leads.
+  userId: {
+    type: 'int',
+    nullable: true,
+    default: null,
+    exists: { collection: 'adminUsers', field: 'id' },
+  },
 };
 
 const partner = {
@@ -333,6 +345,18 @@ const media = {
   tags: { type: 'array', items: { type: 'string', maxLength: 60 }, default: [] },
 };
 
+/**
+ * `POST /admin/media/folders/rename` — refiles every record of a folder, and of
+ * the folders inside it, under another name (prompt 51). `merge` says to move
+ * them in beside the files a folder of that name already holds; without it a
+ * name in use is a 422 on `to`.
+ */
+const mediaFolderRename = {
+  from: { type: 'string', required: true, maxLength: 120 },
+  to: { type: 'string', required: true, maxLength: 120 },
+  merge: { type: 'bool', default: false },
+};
+
 const user = {
   name: { type: 'string', required: true, min: 2, maxLength: 80 },
   email: { type: 'email', required: true },
@@ -366,6 +390,6 @@ module.exports = {
   partner: entity(partner),
   job: entity(job),
   redirect: { ...entity(redirect), import: redirectImport },
-  media: entity(media),
+  media: { ...entity(media), renameFolder: mediaFolderRename },
   user: entity(user, userUpdate),
 };

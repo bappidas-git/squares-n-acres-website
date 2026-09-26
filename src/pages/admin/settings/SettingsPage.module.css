@@ -46,6 +46,11 @@
   color: var(--color-text-muted);
 }
 
+/* "Changed under SEO → Settings", under the read-only site address. */
+.fieldLink {
+  margin-top: var(--space-2);
+}
+
 .mono {
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
@@ -348,4 +353,164 @@
     width: 100%;
     margin-right: 0;
   }
+}
+
+/* ── Cloudinary: the walkthrough and "Test uploads" (prompt 51) ─────── */
+
+.cloudinary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.cloudinaryToggle {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 var(--space-2) 0 0;
+  font-family: var(--font-body);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+.cloudinaryToggle:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.cloudinarySteps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-6);
+  list-style: decimal;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+}
+
+.cloudinarySteps li {
+  display: list-item;
+}
+
+.cloudinarySteps li::marker {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.cloudinarySteps a {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
+.cloudinarySteps code {
+  padding: 0 var(--space-1);
+  font-size: var(--font-size-xs);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.cloudinaryTest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+
+.cloudinaryTest .hint {
+  flex: 1 1 240px;
+}
+
+.cloudinaryOk,
+.cloudinaryFailed {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: 0;
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.cloudinaryOk {
+  color: var(--color-success-dark);
+}
+
+.cloudinaryFailed {
+  color: var(--color-error-dark);
+}
+
+/* ------------------------------------------------------------------ *
+ * Lead notifications: the test alert and the WhatsApp message
+ * ------------------------------------------------------------------ */
+
+.testAlert {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+
+.testAlert .hint {
+  flex: 1 1 240px;
+}
+
+.testOk,
+.testFailed {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.testOk {
+  color: var(--color-success-dark);
+}
+
+.testFailed {
+  color: var(--color-error-dark);
+}
+
+.placeholders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-2) 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.placeholders code {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+
+.templatePreview {
+  display: flex;
+  flex: 1 1 280px;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  font-size: var(--font-size-sm);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }

@@ -21,6 +21,7 @@ import NumberWithUnit from '../components/NumberWithUnit';
 import { showsBhk } from '../fieldRules';
 import { LIMITS } from '../validators/property';
 import { usePropertyFormContext } from '../PropertyFormContext';
+import { useToast } from '../../../../../components/common/ToastProvider';
 
 import styles from './PropertyTabs.module.css';
 
@@ -67,16 +68,35 @@ export default function UnitConfigurationsTab() {
   const { values, errors, setFields, addItem, removeItem, moveItem, updateItem, disabled } =
     usePropertyFormContext();
 
+  const toast = useToast();
   const units = values.unitConfigurations ?? [];
   const [removing, setRemoving] = useState(null);
   const residential = showsBhk(values);
   const range = priceRangeOf(units);
+  // A rental quotes its rent on the Pricing tab; a sale's range is what the
+  // listing prints. Offered on a rental, the button wrote fields no tab shows
+  // and no public view reads (prompt 51).
+  const forSale = !values.listingType || values.listingType === 'sale';
 
   const add = (patch = {}) => addItem('unitConfigurations', makeUnitConfiguration(patch));
 
+  /**
+   * The configurations' prices, on the Pricing tab: a spread becomes the range,
+   * one price becomes the price — a range from ₹85 L to ₹85 L is one the
+   * validator refuses ("The highest price must be above the lowest").
+   */
   const applyRange = () => {
     if (!range) return;
-    setFields({ 'pricing.priceRangeMin': range.min, 'pricing.priceRangeMax': range.max });
+    if (range.min === range.max) {
+      setFields({
+        'pricing.price': range.min,
+        'pricing.priceRangeMin': null,
+        'pricing.priceRangeMax': null,
+      });
+    } else {
+      setFields({ 'pricing.priceRangeMin': range.min, 'pricing.priceRangeMax': range.max });
+    }
+    toast.success('Pricing set from the unit configurations — see the Pricing tab.');
   };
 
   return (
@@ -328,7 +348,7 @@ export default function UnitConfigurationsTab() {
           </div>
         </FormColumn>
 
-        {range ? (
+        {range && forSale ? (
           <FormColumn className={styles.conditional}>
             <div className={styles.summary}>
               <p className={styles.summaryText}>
@@ -344,7 +364,7 @@ export default function UnitConfigurationsTab() {
                 onClick={applyRange}
                 icon={<Icon icon="mdi:arrow-right-bold-outline" width="16" height="16" />}
               >
-                Apply as pricing range
+                {range.min === range.max ? 'Apply as the price' : 'Apply as pricing range'}
               </Button>
             </div>
           </FormColumn>

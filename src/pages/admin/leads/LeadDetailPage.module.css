@@ -582,3 +582,109 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
+
+/* ── The desk's own edits (prompt 51) ──────────────────────────────── */
+
+.cardEdit {
+  margin-left: auto;
+}
+
+.detailsEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.requirementEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.budgetRow,
+.addLeadRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+@media (max-width: 599.98px) {
+  .budgetRow,
+  .addLeadRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.addLead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ── Log activity ─────────────────────────────────────────────────── */
+
+.logTypes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.logType {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+}
+
+/* The radio itself stays in the page for the keyboard and the screen reader;
+   the pill is what is drawn. */
+.logType input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.logType:focus-within {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.logTypeOn {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary-dark);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.logNext {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.logNextLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.logPresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

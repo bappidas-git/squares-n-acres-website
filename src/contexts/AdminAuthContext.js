@@ -25,6 +25,13 @@ import { useToast } from '../components/common/ToastProvider';
  * server's 401 through `http.onUnauthorized` — and all three end in the same
  * place: storage cleared, one toast, one redirect to the login screen carrying
  * the location the user was on.
+ *
+ * Five minutes before the end the session asks whether to stay (prompt 51):
+ * `expiringSoon` turns true, and `staySignedIn()` gives the same token a full
+ * lifetime again through `POST /auth/refresh`. A tab whose session another tab
+ * extended reads the new end from storage before its own timer ends anything.
+ * The record forms keep their unsaved work in this browser when the session
+ * ends regardless (`useLocalDraft`).
  */
 
 const AdminAuthContext = createContext(null);
@@ -34,6 +41,9 @@ export const SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please sign in
 
 /** `setTimeout` is unreliable past a few weeks; a day covers every real TTL. */
 const MAX_TIMER_MS = 24 * 60 * 60 * 1000;
+
+/** How long before its end a session asks whether to stay (prompt 51). */
+export const EXPIRY_WARNING_MS = 5 * 60 * 1000;
 
 export const useAdminAuth = () => {
   const context = useContext(AdminAuthContext);
@@ -89,6 +99,8 @@ export const AdminAuthProvider = ({ children }) => {
   const toast = useToast();
 
   const [state, setState] = useState({ ...ANONYMOUS, status: 'loading' });
+  // Within five minutes of the end: the layout offers "Stay signed in".
+  const [expiringSoon, setExpiringSoon] = useState(false);
   /** The session as last rendered, for the listeners registered once. */
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -163,6 +175,25 @@ export const AdminAuthProvider = ({ children }) => {
     [clearState, logout, navigate, toast]
   );
 
+  /**
+   * The end another tab's "Stay signed in" wrote, taken here — read before any
+   * timer of this tab ends or warns about a session that is no longer ending.
+   *
+   * @returns {boolean} whether a later end was found and taken
+   */
+  const adoptStoredExpiry = useCallback(() => {
+    const current = stateRef.current;
+    if (current.status !== 'authenticated') return false;
+    if (storage.getItem(AUTH_STORAGE_KEYS.token, null) !== current.token) return false;
+    const stored = storage.getItem(AUTH_STORAGE_KEYS.expiresAt, null);
+    if (!stored || isExpired(stored)) return false;
+    if (Date.parse(stored) <= Date.parse(current.expiresAt ?? '')) return false;
+    setState((previous) =>
+      previous.status === 'authenticated' ? { ...previous, expiresAt: stored } : previous
+    );
+    return true;
+  }, []);
+
   // The 401 handler is registered before anything can issue a request.
   useEffect(() => onUnauthorized(() => endSession()), [endSession]);
 
@@ -201,25 +232,43 @@ export const AdminAuthProvider = ({ children }) => {
   }, [clearState]);
 
   // The session ends on its own the moment the token does, even if the user
-  // never navigates again.
+  // never navigates again — and says so five minutes before (prompt 51).
   useEffect(() => {
-    if (state.status !== 'authenticated' || !state.expiresAt) return undefined;
+    if (state.status !== 'authenticated' || !state.expiresAt) {
+      setExpiringSoon(false);
+      return undefined;
+    }
     const remaining = Date.parse(state.expiresAt) - Date.now();
     if (Number.isNaN(remaining)) return undefined;
+    setExpiringSoon(remaining <= EXPIRY_WARNING_MS);
     const timer = setTimeout(
-      () => endSession({ revoke: true }),
+      () => {
+        if (!adoptStoredExpiry()) endSession({ revoke: true });
+      },
       Math.max(Math.min(remaining, MAX_TIMER_MS), 0)
     );
-    return () => clearTimeout(timer);
-  }, [state.status, state.expiresAt, endSession]);
+    const warning =
+      remaining > EXPIRY_WARNING_MS
+        ? setTimeout(
+            () => {
+              if (!adoptStoredExpiry()) setExpiringSoon(true);
+            },
+            Math.min(remaining - EXPIRY_WARNING_MS, MAX_TIMER_MS)
+          )
+        : null;
+    return () => {
+      clearTimeout(timer);
+      if (warning) clearTimeout(warning);
+    };
+  }, [state.status, state.expiresAt, endSession, adoptStoredExpiry]);
 
   // …and on every admin route change, which catches a machine that was asleep
   // while the timer should have fired.
   useEffect(() => {
     if (state.status !== 'authenticated') return;
     if (!isAdminLocation(location.pathname)) return;
-    if (isExpired(state.expiresAt)) endSession({ revoke: true });
-  }, [location.pathname, state.status, state.expiresAt, endSession]);
+    if (isExpired(state.expiresAt) && !adoptStoredExpiry()) endSession({ revoke: true });
+  }, [location.pathname, state.status, state.expiresAt, endSession, adoptStoredExpiry]);
 
   // Signing out in one tab signs out the others: the token key disappearing is
   // the signal, a new token (a sign-in elsewhere) is not.
@@ -231,6 +280,11 @@ export const AdminAuthProvider = ({ children }) => {
   // session's business.
   useEffect(() => {
     const handleStorage = (event) => {
+      // "Stay signed in" in another tab: this one's session ends later too.
+      if (event.key === AUTH_STORAGE_KEYS.expiresAt) {
+        adoptStoredExpiry();
+        return;
+      }
       if (event.key === AUTH_STORAGE_KEYS.user) {
         let next = null;
         try {
@@ -255,7 +309,7 @@ export const AdminAuthProvider = ({ children }) => {
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
-  }, [clearState, navigate]);
+  }, [adoptStoredExpiry, clearState, navigate]);
 
   const login = useCallback(async (email, password) => {
     const { data } = await authService.login({ email, password });
@@ -272,6 +326,34 @@ export const AdminAuthProvider = ({ children }) => {
     });
     return data.user;
   }, []);
+
+  /**
+   * "Stay signed in": the same session, a full lifetime from now (prompt 51).
+   * A refusal because the session has already ended ends it here too, through
+   * the 401 handler; any other failure is said, and the session runs on.
+   *
+   * @returns {Promise<boolean>} whether the session was extended
+   */
+  const staySignedIn = useCallback(async () => {
+    try {
+      const { data } = await authService.refresh();
+      const current = stateRef.current;
+      if (!data?.expiresAt || current.status !== 'authenticated') return false;
+      if (data.token && data.token !== current.token) setAuthToken(data.token);
+      storage.setItem(AUTH_STORAGE_KEYS.expiresAt, data.expiresAt);
+      setState((previous) =>
+        previous.status === 'authenticated'
+          ? { ...previous, token: data.token ?? previous.token, expiresAt: data.expiresAt }
+          : previous
+      );
+      return true;
+    } catch (error) {
+      if (error?.status !== 401) {
+        toast.error('The session could not be extended. Save your work, then sign in again.');
+      }
+      return false;
+    }
+  }, [toast]);
 
   /**
    * Reads the signed-in user again. An answer that is no longer news — a write
@@ -327,8 +409,22 @@ export const AdminAuthProvider = ({ children }) => {
       can: (area, action) => can(role, area, action),
       refreshProfile,
       updateUser,
+      expiresAt: state.expiresAt,
+      expiringSoon,
+      staySignedIn,
     }),
-    [state.user, state.status, role, login, logout, refreshProfile, updateUser]
+    [
+      state.user,
+      state.status,
+      state.expiresAt,
+      role,
+      login,
+      logout,
+      refreshProfile,
+      updateUser,
+      expiringSoon,
+      staySignedIn,
+    ]
   );
 
   return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;

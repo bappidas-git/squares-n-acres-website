@@ -11,10 +11,11 @@
  */
 
 const { MODELS } = require('../../../mock-server/schemas/models');
-const { allEndpoints } = require('../../../src/services/endpoints');
+const { allEndpoints, PROPERTY_COUNT_DIMENSIONS } = require('../../../src/services/endpoints');
 const schemas = require('../../../src/services/schemas');
 const { document } = require('./yaml');
 const { maxLengthOf } = require('../../../src/services/schemas/limits');
+const { successStatus } = require('./fixtures');
 
 /** The response shape names that are a collection of §6. */
 const SHAPE_COLLECTIONS = {
@@ -78,14 +79,68 @@ const EXTRA_SCHEMAS = {
     type: 'object',
     properties: {
       token: { type: 'string', description: 'valid for 24 hours' },
+      expiresAt: { type: 'string', format: 'date-time' },
       url: { type: 'string', format: 'uri' },
     },
     required: ['token', 'url'],
+  },
+  NotFoundPath: {
+    type: 'object',
+    description:
+      'One address visitors reached that answered 404, over every day it was reached (prompt 51).',
+    properties: {
+      id: { type: 'integer', description: 'its most recent row — what a dismissal names' },
+      path: { type: 'string' },
+      count: { type: 'integer', description: 'visits, over every day' },
+      days: { type: 'integer', description: 'the days it was reached on' },
+      firstSeenAt: { type: 'string', format: 'date-time' },
+      lastSeenAt: { type: 'string', format: 'date-time' },
+      referrer: { type: ['string', 'null'], description: 'the latest page that linked to it' },
+      redirectedTo: {
+        type: ['string', 'null'],
+        description: 'where an active redirect now sends it — fixed since',
+      },
+    },
+    required: [
+      'id',
+      'path',
+      'count',
+      'days',
+      'firstSeenAt',
+      'lastSeenAt',
+      'referrer',
+      'redirectedTo',
+    ],
   },
   ViewCount: {
     type: 'object',
     properties: { viewCount: { type: 'integer' } },
     required: ['viewCount'],
+  },
+  Health: {
+    type: 'object',
+    description: 'The API is up. The smoke test asks it first, against either backend (prompt 51).',
+    properties: {
+      status: { type: 'string', enum: ['ok'] },
+      time: { type: 'string', format: 'date-time' },
+      version: { type: 'string', description: 'the mock reports its package version' },
+    },
+    required: ['status', 'time'],
+  },
+  PropertyCounts: {
+    type: 'object',
+    description:
+      'For each dimension named in `by`, the live listings per value, after the listing filters (prompt 51). Values are keys as strings; a value no live listing carries is absent. `meta` is null.',
+    properties: Object.fromEntries(
+      PROPERTY_COUNT_DIMENSIONS.map((dimension) => [
+        dimension,
+        {
+          type: 'object',
+          additionalProperties: { type: 'integer', minimum: 1 },
+          description: `live listings per ${dimension}`,
+        },
+      ])
+    ),
   },
   DocumentAccess: {
     type: 'object',
@@ -175,6 +230,26 @@ const EXTRA_SCHEMAS = {
       previous: { oneOf: [{ $ref: '#/components/schemas/Article' }, { type: 'null' }] },
       next: { oneOf: [{ $ref: '#/components/schemas/Article' }, { type: 'null' }] },
     },
+  },
+  LeadAlertTest: {
+    type: 'object',
+    description: 'Where a test lead alert went (prompt 51).',
+    properties: {
+      sentTo: { type: 'array', items: { type: 'string', format: 'email' } },
+      sentAt: { type: 'string', format: 'date-time' },
+    },
+    required: ['sentTo', 'sentAt'],
+  },
+  MediaFolderRename: {
+    type: 'object',
+    description: 'What a folder rename refiled (prompt 51).',
+    properties: {
+      from: { type: 'string' },
+      to: { type: 'string' },
+      moved: { type: 'integer', description: 'records refiled' },
+      merged: { type: 'boolean', description: 'whether `to` already held files' },
+    },
+    required: ['from', 'to', 'moved', 'merged'],
   },
   RedirectImportSummary: {
     type: 'object',
@@ -437,16 +512,22 @@ const pathParameters = (endpoint) =>
 
 /** The responses an endpoint can answer with. */
 function responsesFor(endpoint, example) {
-  const ok = endpoint.method === 'POST' && endpoint.key.endsWith('.create') ? '201' : '200';
+  // The registry's own success: 201 for a record created, 204 for the two
+  // public reports (below), 200 otherwise (prompt 51).
+  const ok = String(successStatus(endpoint));
   const text = TEXT_SHAPES[endpoint.response];
   const responses = {};
+  const noContent = endpoint.response === 'NoContent';
 
   const error = (description) => ({
     description,
     content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
   });
 
-  if (text) {
+  if (noContent) {
+    // Taken note of, nothing to say back (prompt 51).
+    responses['204'] = { description: 'No content — the report was taken, or ignored' };
+  } else if (text) {
     responses[ok] = {
       description: text.description,
       content: { [text.contentType]: { schema: { type: 'string' } } },
@@ -468,6 +549,11 @@ function responsesFor(endpoint, example) {
   if (endpoint.body) responses['422'] = error('validation failed (§5.3)');
   if (endpoint.path === '/leads' || endpoint.path === '/newsletter/subscribe') {
     responses['429'] = error('rate limited — ten per minute per IP (§5.11)');
+  }
+  if (endpoint.path === '/not-found' || endpoint.path === '/redirects/:id/hit') {
+    responses['429'] = error(
+      'rate limited per IP — the site reports, a crawler does not (prompt 51)'
+    );
   }
 
   return responses;
@@ -598,7 +684,15 @@ function buildSpec({ generatedFrom, version, examples = {} }) {
     },
     servers: [
       { url: 'http://localhost:4000/api', description: 'Local mock server (`npm run mock`)' },
-      { url: 'https://api.squaresnacres.com/api', description: 'Production' },
+      { url: 'https://staging.example/api', description: 'Staging (a placeholder host)' },
+      {
+        url: 'https://www.squaresnacres.com/api',
+        description: 'Production — the site and the API on one host (Layout A of 07_DEPLOYMENT.md)',
+      },
+      {
+        url: 'https://api.squaresnacres.com/api',
+        description: 'Production — the API on a host of its own (Layout B)',
+      },
     ],
     tags: modules.map((name) => ({ name, description: `Endpoints of the ${name} module` })),
     paths: sorted(paths),

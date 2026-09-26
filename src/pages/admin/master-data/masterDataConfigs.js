@@ -2,12 +2,14 @@ import { Icon } from '@iconify/react';
 
 import Chip from '../../../components/ui/Chip';
 import LazyImage from '../../../components/ui/LazyImage';
+import ListingsCountLink from './ListingsCountLink';
 import PATHS from '../../../routes/paths';
 import { AMENITY_CATEGORIES, BADGE_TONES, SEGMENTS } from '../../../config/enums';
 import { FORMS } from '../../../config/adminCopy';
 import { ICON_ID_PATTERN } from '../../../utils/validation';
 import { slugify } from '../../../utils/slug';
 import redirectMoves, { describeMoves } from '../../../components/admin/redirectMoves';
+import propertyService from '../../../services/propertyService';
 import {
   adminCrud,
   amenities,
@@ -264,7 +266,16 @@ export const segmentsConfig = ({ onMutated } = {}) => ({
       sortable: true,
       align: 'right',
       width: '110px',
-      render: (row) => formatNumber(row.propertyCount ?? 0),
+      // The count is the way to the listings it counts (prompt 51).
+      render: (row) => (
+        <ListingsCountLink
+          count={row.propertyCount}
+          param="segment"
+          value={row.slug}
+          describe={`in ${row.name}`}
+          className={styles.countLink}
+        />
+      ),
     },
     {
       key: 'order',
@@ -420,6 +431,30 @@ const typePath = (type, segments) =>
     ? PATHS.commercialType(type.slug)
     : PATHS.buyType(type.slug);
 
+/** Whether a type is filed under a segment of the commercial kind. */
+const isCommercialType = (type, segments) => segmentKind(type?.segment, segments) === 'commercial';
+
+/**
+ * The menu flags a type's form sends, as its segment allows them: the Rent
+ * menu is homes and the Commercial menu the commercial segment, so a flag the
+ * segment no longer offers is switched off rather than kept out of sight.
+ *
+ * @param {object} values the form's values
+ * @param {Array<object>} segments
+ * @returns {{showInRentMenu?: boolean, showInCommercialMenu?: boolean}}
+ */
+export function menuFlags(values, segments) {
+  const commercial = isCommercialType(values, segments);
+  const flags = {};
+  if ('showInRentMenu' in values) {
+    flags.showInRentMenu = values.showInRentMenu === true && !commercial;
+  }
+  if ('showInCommercialMenu' in values) {
+    flags.showInCommercialMenu = values.showInCommercialMenu === true && commercial;
+  }
+  return flags;
+}
+
 /**
  * Every address the site links a property type from: `/commercial/…` for a
  * commercial kind, `/buy/…` and `/rent/…` for the others (the menus, the home
@@ -465,9 +500,16 @@ const SegmentChip = ({ slug, segments }) => (
  * collection it holds — every segment, the retired ones included, because a
  * type may still be filed under one.
  *
- * @param {{onMutated?: (collection: string) => void, segments?: Array<object>}} [options]
+ * A type listings are still filed under is not simply refused a delete: the
+ * refusal offers to move them to another type of the same segment first — the
+ * properties' bulk `setPropertyType`, which refuses another segment (that is a
+ * form edit) — and then deletes it (prompt 51).
+ *
+ * @param {{onMutated?: (collection: string) => void, segments?: Array<object>,
+ *   types?: Array<object>}} [options] `types`: the live property types, the
+ *   choices a move offers
  */
-export const propertyTypesConfig = ({ onMutated, segments = [] } = {}) => ({
+export const propertyTypesConfig = ({ onMutated, segments = [], types = [] } = {}) => ({
   key: 'propertyTypes',
   title: 'Property types',
   subtitle: 'Shown in the search filters, on every card and in the property form.',
@@ -483,6 +525,19 @@ export const propertyTypesConfig = ({ onMutated, segments = [] } = {}) => ({
   appendNew: true,
   activeToggle: true,
   usageGuard: true,
+  reassign: {
+    noun: 'property type',
+    candidates: (row) =>
+      types
+        .filter((type) => type.segment === row.segment && String(type.id) !== String(row.id))
+        .map((type) => ({ value: String(type.id), label: type.name })),
+    move: (ids, value) =>
+      propertyService.bulk({
+        ids,
+        action: 'setPropertyType',
+        payload: { propertyTypeId: Number(value) },
+      }),
+  },
   // D87: the type's own landing pages are `/buy/:slug` and `/rent/:slug`, so it
   // carries a `seo` branch like any other page — folded, because there is far
   // less of it to say than of a listing.
@@ -518,7 +573,15 @@ export const propertyTypesConfig = ({ onMutated, segments = [] } = {}) => ({
       sortable: true,
       align: 'right',
       width: '110px',
-      render: (row) => formatNumber(row.propertyCount ?? 0),
+      render: (row) => (
+        <ListingsCountLink
+          count={row.propertyCount}
+          param="propertyTypeId"
+          value={row.id}
+          describe={`of type ${row.name}`}
+          className={styles.countLink}
+        />
+      ),
     },
     {
       key: 'order',
@@ -566,16 +629,48 @@ export const propertyTypesConfig = ({ onMutated, segments = [] } = {}) => ({
       label: 'Description',
       hint: 'Up to 500 characters, shown on the type’s landing page.',
     },
+    // The header's Rent and Commercial menus are the types with these on, in
+    // their order (prompt 51). Each is offered for the kind of segment its
+    // menu lists: a Commercial page lists the commercial segment, and Rent is
+    // homes.
+    {
+      name: 'showInRentMenu',
+      type: 'switch',
+      label: 'Show in the Rent menu',
+      defaultValue: false,
+      hint: 'Lists the type in the header’s Rent menu, in its order, while it is active.',
+      visible: (values) => !isCommercialType(values, segments),
+    },
+    {
+      name: 'showInCommercialMenu',
+      type: 'switch',
+      label: 'Show in the Commercial menu',
+      defaultValue: false,
+      hint: 'Lists the type in the header’s Commercial menu, in its order, while it is active.',
+      visible: (values) => isCommercialType(values, segments),
+    },
     ...STATE_FIELDS,
   ],
 
-  newValues: { segment: 'residential', order: 0, isActive: true },
+  newValues: {
+    segment: 'residential',
+    showInRentMenu: false,
+    showInCommercialMenu: false,
+    order: 0,
+    isActive: true,
+  },
 
   validate: iconRule(true),
 
   // `PUT` replaces the record (§5.8) and this form does not edit `seo`; sending
   // the stored object back is what keeps prompt 36's panel out of harm's way.
-  toPayload: (values, record) => ({ ...values, ...(record?.seo ? { seo: record.seo } : {}) }),
+  // A menu flag the type's segment no longer offers is switched off rather
+  // than kept out of sight.
+  toPayload: (values, record) => ({
+    ...values,
+    ...menuFlags(values, segments),
+    ...(record?.seo ? { seo: record.seo } : {}),
+  }),
 
   /**
    * Moving a type to another segment is allowed, but the listings that already
@@ -739,7 +834,15 @@ export const amenitiesConfig = ({ onMutated } = {}) => ({
       sortable: true,
       align: 'right',
       width: '110px',
-      render: (row) => formatNumber(row.propertyCount ?? 0),
+      render: (row) => (
+        <ListingsCountLink
+          count={row.propertyCount}
+          param="amenityIds"
+          value={row.id}
+          describe={`with ${row.name}`}
+          className={styles.countLink}
+        />
+      ),
     },
     {
       key: 'order',
@@ -874,7 +977,15 @@ export const badgesConfig = ({ onMutated } = {}) => ({
       sortable: true,
       align: 'right',
       width: '110px',
-      render: (row) => formatNumber(row.propertyCount ?? 0),
+      render: (row) => (
+        <ListingsCountLink
+          count={row.propertyCount}
+          param="badgeIds"
+          value={row.id}
+          describe={`with the ${row.name} badge`}
+          className={styles.countLink}
+        />
+      ),
     },
     {
       key: 'order',

@@ -5,7 +5,8 @@
  *
  * - **The Folder filter** listed the folders of the page on screen — two of the
  *   eleven — and once one was chosen, that one alone. It lists every folder
- *   (`meta.folders`) and moves straight from one to another.
+ *   (`meta.folders`) and moves straight from one to another — since prompt 51
+ *   as the rail beside the grid.
  * - **Tags** could not be added at all: "Type a tag and press Enter" did
  *   nothing. A tag is added, saved, and found by the library's search.
  * - **A second record for an address already in the library** was created
@@ -31,7 +32,10 @@ const tile = (page, name) =>
     .getByRole('list', { name: 'Media library' })
     .getByRole('button', { name: new RegExp(`^${name}`) });
 
-const folderFilter = (page) => page.getByLabel('Folder', { exact: true });
+/** The folder rail beside the grid (prompt 51), and one folder's entry in it. */
+const rail = (page) => page.getByRole('region', { name: 'Folders' });
+const folderEntry = (page, name) =>
+  rail(page).getByRole('button', { name: new RegExp(`^${name}\\s*[\\d,]+$`) });
 
 test.describe('the media library', () => {
   test('offers every folder, and moves straight from one to another', async ({ signIn, page }) => {
@@ -39,17 +43,19 @@ test.describe('the media library', () => {
     await page.goto('/admin/media');
     await expect(tile(page, 'Whitefield, Bengaluru')).toBeVisible();
 
-    // The first page holds localities and developers only; the filter offers them all.
-    const options = folderFilter(page).locator('option');
-    await expect(options).toContainText(['Any folder', 'articles', 'authors', 'banks']);
-    const count = await options.count();
+    // The first page holds localities and developers only; the rail offers them all.
+    for (const name of ['articles', 'authors', 'banks']) {
+      await expect(folderEntry(page, name)).toBeVisible();
+    }
+    const entries = rail(page).getByRole('list').getByRole('button');
+    const count = await entries.count();
     expect(count).toBeGreaterThan(10);
 
-    await folderFilter(page).selectOption('localities');
+    await folderEntry(page, 'localities').click();
     await expect(page).toHaveURL(/folder=localities/);
-    await expect(folderFilter(page).locator('option')).toHaveCount(count);
+    await expect(entries).toHaveCount(count);
 
-    await folderFilter(page).selectOption('banks');
+    await folderEntry(page, 'banks').click();
     await expect(page).toHaveURL(/folder=banks/);
     // A bank's logo is a use of the file, not "Not used yet".
     await expect(tile(page, 'Garden City Bank logo')).toContainText('Used in 1');

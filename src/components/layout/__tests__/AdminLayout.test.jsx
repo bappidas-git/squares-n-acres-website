@@ -16,24 +16,35 @@ import theme from '../../../theme';
  * whose scroll position is the point of keeping it.
  */
 
+// The session's last minutes are the one state the shell draws differently.
+// `expiresAt` is fixed when a test sets it, as a real session's is: computed
+// on every render, a re-render a millisecond after the notice read the clock
+// put the end a hair over four minutes away, which reads "in 5 minutes".
+const mockSession = { expiringSoon: false, expiresAt: null };
 jest.mock('../../../contexts/AdminAuthContext', () => ({
   useAdminAuth: () => ({
     role: 'admin',
     user: { name: 'Admin User', email: 'admin@squaresnacres.com' },
     logout: () => {},
+    expiringSoon: mockSession.expiringSoon,
+    expiresAt: mockSession.expiresAt,
+    staySignedIn: () => Promise.resolve(),
   }),
 }));
 
 // The poller is the provider's business, not the shell's.
+const mockNotifications = { newLeadCount: 0, recentLeads: [], hasUnseen: false };
 jest.mock('../../../contexts/LeadNotificationsContext', () => ({
   LeadNotificationsProvider: ({ children }) => children,
-  useLeadNotifications: () => ({
-    newLeadCount: 0,
-    recentLeads: [],
-    hasUnseen: false,
-    markSeen: () => {},
-  }),
+  useLeadNotifications: () => ({ ...mockNotifications, markSeen: () => {} }),
 }));
+
+afterEach(() => {
+  mockNotifications.newLeadCount = 0;
+  mockNotifications.hasUnseen = false;
+  mockSession.expiringSoon = false;
+  mockSession.expiresAt = null;
+});
 
 function renderShell(initialEntry = '/admin/leads') {
   const router = createMemoryRouter(
@@ -129,5 +140,43 @@ describe('AdminLayout', () => {
       await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Admin menu' })).toBeNull());
       expect(screen.getByText('Badges screen')).toBeInTheDocument();
     });
+  });
+});
+
+describe('AdminLayout — the tab title (prompt 51)', () => {
+  it('carries the count of new leads while the bell has news', async () => {
+    mockNotifications.newLeadCount = 3;
+    mockNotifications.hasUnseen = true;
+    renderShell('/admin/leads');
+
+    await waitFor(() => expect(document.title).toMatch(/^\(3\) Leads — Admin/));
+  });
+
+  it('carries none once they have been seen', async () => {
+    mockNotifications.newLeadCount = 3;
+    mockNotifications.hasUnseen = false;
+    renderShell('/admin/leads');
+
+    await waitFor(() => expect(document.title).toMatch(/^Leads — Admin/));
+  });
+});
+
+describe('AdminLayout — the session notice (prompt 51)', () => {
+  it('fetches and draws "Stay signed in" in the session’s last minutes', async () => {
+    mockSession.expiringSoon = true;
+    // Three and a half minutes left reads "4 minutes" for the next thirty
+    // seconds, however long the notice's chunk takes to arrive.
+    mockSession.expiresAt = new Date(Date.now() + 3.5 * 60 * 1000).toISOString();
+    renderShell();
+
+    expect(await screen.findByRole('button', { name: 'Stay signed in' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Your session ends in 4 minutes.');
+  });
+
+  it('draws nothing of it otherwise', async () => {
+    renderShell();
+
+    expect(await screen.findByText('Leads screen')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Stay signed in' })).not.toBeInTheDocument();
   });
 });

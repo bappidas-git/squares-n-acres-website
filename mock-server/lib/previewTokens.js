@@ -1,9 +1,10 @@
 /**
  * Draft preview tokens (00_MASTER_CONTEXT.md §5.10; decision D28).
  *
- * An editor asks for `GET /admin/articles/:id/preview-token`, gets a link with
- * `?preview=<token>` on it and can show an unpublished article or page to
- * somebody who is not signed in. The token is bound to one record, lives 24
+ * An editor asks for `GET /admin/articles/:id/preview-token` (or the page's,
+ * or since prompt 51 `POST /admin/properties/:id/preview-token`), gets a link
+ * with `?preview=<token>` on it and can show an unpublished article, page or
+ * listing to somebody who is not signed in. The token is bound to one record, lives 24
  * hours and is kept **in memory**: a preview link is a conversation, not a
  * feature of the data, and a restart of the mock ending one is correct.
  *
@@ -30,7 +31,7 @@ function prune(now) {
  * Issues a token for one record, replacing the one that record already had —
  * asking twice hands out one link, not two.
  *
- * @param {string} type `'article'` | `'page'`
+ * @param {string} type `'article'` | `'page'` | `'property'`
  * @param {number|string} id
  * @param {number} [now]
  * @returns {{token: string, expiresAt: string}}

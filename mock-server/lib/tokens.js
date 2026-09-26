@@ -41,8 +41,8 @@ function isExpired(record, now = Date.now()) {
  *
  * @param {{db: object, config: object}} deps the runtime-database module and
  *   the resolved configuration (`tokenTtlHours`)
- * @returns {{issueToken: Function, resolveToken: Function, revokeToken: Function,
- *   revokeUserTokens: Function, purgeExpired: Function}}
+ * @returns {{issueToken: Function, extendToken: Function, resolveToken: Function,
+ *   revokeToken: Function, revokeUserTokens: Function, purgeExpired: Function}}
  */
 function createTokenStore({ db, config }) {
   const rows = () => db.getCollection('apiTokens');
@@ -92,6 +92,22 @@ function createTokenStore({ db, config }) {
       };
 
       rows().push(record);
+      db.write();
+      return record;
+    },
+
+    /**
+     * Gives a live token a full lifetime again, from now (`POST /auth/refresh`,
+     * prompt 51). The token itself stays the same: a new one would leave every
+     * request already on its way — and every other tab — holding a revoked one.
+     *
+     * @param {string} token
+     * @returns {object|null} the record, or `null` when the token is not live
+     */
+    extendToken(token) {
+      const record = rows().find((entry) => entry?.token === token);
+      if (!record || isExpired(record)) return null;
+      record.expiresAt = new Date(Date.now() + ttlMs()).toISOString();
       db.write();
       return record;
     },

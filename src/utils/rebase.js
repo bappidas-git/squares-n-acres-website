@@ -1,8 +1,9 @@
 /**
- * An editor's changes, replayed onto a newer version of the record (QA-62).
+ * An editor's changes, replayed onto a newer version of the record (QA-62 for
+ * listings; every record form's "Load their version" since prompt 51).
  *
- * When a save is refused because somebody else saved the listing in between,
- * "Load their version" shows the listing as it now stands and keeps this
+ * When a save is refused because somebody else saved the record in between,
+ * "Load their version" shows the record as it now stands and keeps this
  * editor's work as a draft to restore. Kept whole, that draft was the form as
  * this editor had it — every field of it, including the ones they never
  * touched — and restoring it undid the other save all over again. Kept as a

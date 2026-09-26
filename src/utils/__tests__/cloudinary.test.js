@@ -21,6 +21,10 @@ import cloudinary, {
   NETWORK_MESSAGE,
   NOT_CONFIGURED_MESSAGE,
   SRCSET_WIDTHS,
+  TEST_UPLOAD_FOLDER,
+  UPLOAD_FAILURES,
+  describeUploadFailure,
+  testCloudinaryUpload,
   blurThumb,
   buildSrcSet,
   buildTransformation,
@@ -335,6 +339,84 @@ describe('uploadToCloudinary', () => {
       uploadToCloudinary(file, { settings: SETTINGS, signal: controller.signal })
     ).rejects.toMatchObject({ name: 'AbortError' });
     expect(request).toBeNull();
+  });
+});
+
+describe('testCloudinaryUpload (prompt 51)', () => {
+  const original = global.XMLHttpRequest;
+
+  beforeEach(() => {
+    request = null;
+    global.XMLHttpRequest = FakeXhr;
+    // jsdom draws nothing: the one-pixel picture comes from its bytes.
+    jest.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    global.XMLHttpRequest = original;
+    jest.restoreAllMocks();
+  });
+
+  /** Waits for the request the upload opens once its picture is ready. */
+  const opened = async () => {
+    for (let attempt = 0; attempt < 20 && !request; attempt += 1) {
+      await Promise.resolve();
+    }
+    return request;
+  };
+
+  it('sends a one-pixel PNG with the values given, to the diagnostics folder', async () => {
+    const promise = testCloudinaryUpload({
+      cloudName: ' typed-cloud ',
+      uploadPreset: 'typed-preset',
+    });
+    const sent = await opened();
+
+    expect(sent.url).toBe('https://api.cloudinary.com/v1_1/typed-cloud/image/upload');
+    expect(sent.body.get('upload_preset')).toBe('typed-preset');
+    expect(sent.body.get('folder')).toBe(TEST_UPLOAD_FOLDER);
+    expect(TEST_UPLOAD_FOLDER).toBe('sna/_diagnostics');
+    const picture = sent.body.get('file');
+    expect(picture.type).toBe('image/png');
+    expect(picture.size).toBeGreaterThan(0);
+
+    sent.respond(200, { secure_url: `${CLOUD}/v1/sna/_diagnostics/pixel.png` });
+    await expect(promise).resolves.toMatchObject({ url: `${CLOUD}/v1/sna/_diagnostics/pixel.png` });
+  });
+
+  it('keeps the status of a refusal, so an unknown cloud reads as one', async () => {
+    const promise = testCloudinaryUpload({ cloudName: 'nope', uploadPreset: 'sna-unsigned' });
+    (await opened()).respond(401, { error: { message: 'Invalid cloud_name nope' } });
+
+    const thrown = await promise.catch((error) => error);
+    expect(thrown.status).toBe(401);
+    expect(describeUploadFailure(thrown)).toBe(UPLOAD_FAILURES.cloudName);
+  });
+});
+
+describe('describeUploadFailure (prompt 51)', () => {
+  it('names a missing or signed preset', () => {
+    expect(describeUploadFailure(new Error('Upload preset not found'))).toBe(
+      UPLOAD_FAILURES.preset
+    );
+    expect(
+      describeUploadFailure(new Error('Upload preset must be whitelisted for unsigned uploads'))
+    ).toBe(UPLOAD_FAILURES.preset);
+    expect(UPLOAD_FAILURES.preset).toMatch(/not unsigned — open the walkthrough above/);
+  });
+
+  it('tells an unknown cloud from a preset problem', () => {
+    expect(describeUploadFailure(new Error('Invalid cloud_name demo-x'))).toBe(
+      UPLOAD_FAILURES.cloudName
+    );
+    expect(UPLOAD_FAILURES.cloudName).not.toBe(UPLOAD_FAILURES.preset);
+  });
+
+  it('says the network, and passes anything else on in Cloudinary’s words', () => {
+    expect(describeUploadFailure(new Error(NETWORK_MESSAGE))).toBe(UPLOAD_FAILURES.network);
+    expect(describeUploadFailure(new Error('File size too large'))).toBe(
+      'Cloudinary refused the test upload: File size too large.'
+    );
   });
 });
 

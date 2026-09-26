@@ -53,6 +53,14 @@
   gap: var(--space-5);
 }
 
+.forgot {
+  margin: var(--space-5) 0 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
 .passwordRow {
   position: relative;
 }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { Suspense, lazy, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Divider, Menu, MenuItem } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -12,6 +12,13 @@ import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { useNavigationGuard } from '../../contexts/NavigationGuardContext';
 
 import styles from './AdminTopbar.module.css';
+
+/**
+ * The quick search loads with the panel rather than with the public site: the
+ * admin shell is part of the entry chunk every visitor downloads, and the
+ * search is the largest thing in it no visitor uses (prompt 51, §8.6).
+ */
+const AdminSearch = lazy(() => import('./AdminSearch'));
 
 /**
  * The admin topbar: where you are, what arrived, and who you are.
@@ -78,7 +85,20 @@ export default function AdminTopbar({
         <span className={styles.title}>{title}</span>
       </div>
 
+      {/* One box for the leads, the listings and the articles; `/` reaches it.
+          Its place is kept while it loads, so the bar does not move. */}
+      {isMobile ? null : (
+        <Suspense fallback={<span className={styles.searchSlot} aria-hidden="true" />}>
+          <AdminSearch />
+        </Suspense>
+      )}
+
       <div className={styles.right}>
+        {isMobile ? (
+          <Suspense fallback={null}>
+            <AdminSearch compact />
+          </Suspense>
+        ) : null}
         <a
           className={styles.viewSite}
           href={SITE.url}

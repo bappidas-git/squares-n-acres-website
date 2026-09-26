@@ -35,9 +35,15 @@ const locations = (text) => [...text.matchAll(/<loc>([^<]+)<\/loc>/g)].map((matc
 
 const SITE = SEED.seoSettings.siteUrl;
 
+/** The five children, named on `base`. */
+const children = (base) =>
+  ['properties', 'localities', 'developers', 'articles', 'pages'].map(
+    (name) => `${base}/sitemap-${name}.xml`
+  );
+
 describe('GET /sitemap.xml', () => {
   it('is a sitemap index of the five child documents, each with a lastmod', async () => {
-    await withServer(async ({ request }) => {
+    await withServer(async ({ request, origin }) => {
       const response = await request('GET', '/sitemap.xml');
 
       assert.equal(response.status, 200);
@@ -51,17 +57,43 @@ describe('GET /sitemap.xml', () => {
       );
       assert.equal(count(response.text, 'sitemap'), 5);
 
-      assert.deepEqual(locations(response.text), [
-        `${SITE}/sitemap-properties.xml`,
-        `${SITE}/sitemap-localities.xml`,
-        `${SITE}/sitemap-developers.xml`,
-        `${SITE}/sitemap-articles.xml`,
-        `${SITE}/sitemap-pages.xml`,
-      ]);
+      // Named where the index was fetched — here the local API — so each one
+      // opens (prompt 51).
+      assert.deepEqual(locations(response.text), children(`${origin}/api`));
 
       for (const [, value] of response.text.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)) {
         assert.ok(!Number.isNaN(Date.parse(value)), `${value} is a date`);
       }
+    });
+  });
+
+  it('names its children at the root when it is read at the root', async () => {
+    await withServer(async ({ origin }) => {
+      const response = await fetch(`${origin}/sitemap.xml`);
+      assert.deepEqual(locations(await response.text()), children(origin));
+    });
+  });
+
+  it('names them on the site’s address for a host that is not the site’s (prompt 51)', async () => {
+    await withServer(async ({ origin }) => {
+      const forged = await fetch(`${origin}/api/sitemap.xml`, {
+        headers: { 'X-Forwarded-Host': 'elsewhere.example', 'X-Forwarded-Proto': 'https' },
+      });
+      assert.deepEqual(locations(await forged.text()), children(SITE));
+
+      // The site's own host, forwarded by the proxy in front of it, is one.
+      const own = await fetch(`${origin}/api/sitemap.xml`, {
+        headers: { 'X-Forwarded-Host': new URL(SITE).host, 'X-Forwarded-Proto': 'https' },
+      });
+      assert.deepEqual(locations(await own.text()), children(`${SITE}/api`));
+    });
+  });
+
+  it('keeps the site’s address on the pages inside the children', async () => {
+    await withServer(async ({ request }) => {
+      const pages = locations((await request('GET', '/sitemap-pages.xml')).text);
+      assert.ok(pages.length > 0);
+      assert.ok(pages.every((loc) => loc.startsWith(SITE)));
     });
   });
 });
@@ -310,7 +342,7 @@ describe('the other child sitemaps', () => {
 
 describe('GET /robots.txt', () => {
   it('resolves %siteurl% and names every sitemap', async () => {
-    await withServer(async ({ request }) => {
+    await withServer(async ({ request, origin }) => {
       const response = await request('GET', '/robots.txt');
 
       assert.match(response.headers.get('content-type'), /^text\/plain; charset=utf-8$/);
@@ -319,10 +351,23 @@ describe('GET /robots.txt', () => {
       assert.match(response.text, /^Disallow: \/admin$/m);
       assert.match(response.text, /^User-agent: ClaudeBot$/m);
 
+      // The document's own line keeps the site's address; the lines added for
+      // the children follow the index's rule (prompt 51).
       assert.match(response.text, new RegExp(`^Sitemap: ${SITE}/sitemap\\.xml$`, 'm'));
-      for (const name of ['properties', 'localities', 'developers', 'articles', 'pages']) {
-        assert.match(response.text, new RegExp(`^Sitemap: ${SITE}/sitemap-${name}\\.xml$`, 'm'));
+      for (const child of children(`${origin}/api`)) {
+        assert.ok(response.text.includes(`\nSitemap: ${child}\n`), child);
       }
+    });
+  });
+
+  it('adds its sitemap lines on the site’s address for a host that is not the site’s', async () => {
+    await withServer(async ({ origin }) => {
+      const forged = await fetch(`${origin}/robots.txt`, {
+        headers: { 'X-Forwarded-Host': 'elsewhere.example' },
+      });
+      const text = await forged.text();
+      for (const child of children(SITE)) assert.ok(text.includes(`Sitemap: ${child}`), child);
+      assert.ok(!text.includes('elsewhere.example'));
     });
   });
 });
@@ -385,7 +430,7 @@ describe('GET /llms.txt', () => {
 });
 
 describe('the root mirrors (D21)', () => {
-  it('serve the same documents as the API paths', async () => {
+  it('serve the same documents as the API paths, the index naming its children where it was read', async () => {
     await withServer(async ({ request, origin }) => {
       for (const file of [
         'sitemap.xml',
@@ -402,7 +447,11 @@ describe('the root mirrors (D21)', () => {
         const direct = await request('GET', `/${file}`);
 
         assert.equal(mirrored.status, 200, file);
-        assert.equal(await mirrored.text(), direct.text, file);
+        assert.equal(
+          await mirrored.text(),
+          direct.text.replaceAll(`${origin}/api/`, `${origin}/`),
+          file
+        );
       }
     });
   });

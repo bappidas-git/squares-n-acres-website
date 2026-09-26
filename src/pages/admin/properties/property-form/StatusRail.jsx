@@ -11,11 +11,15 @@ import {
   SwitchField,
 } from '../../../../components/ui';
 import { AVAILABILITY } from '../../../../config/enums';
-import { formatRelative, formatTime } from '../../../../utils/format';
+import { formatDateTime, formatRelative, formatTime } from '../../../../utils/format';
+import { firstFieldMessage } from '../../../../services/apiError';
 import { completenessTone } from './completeness';
 
 import styles from './StatusRail.module.css';
-import { FORMS } from '../../../../config/adminCopy';
+import { FORMS, SEO } from '../../../../config/adminCopy';
+import { resolveFieldPath } from './fieldFocus';
+import { tabByKey, tabOfPath } from './tabs';
+import { useToast } from '../../../../components/common/ToastProvider';
 
 /**
  * The right-hand rail of the property form: everything about the listing that
@@ -33,6 +37,9 @@ import { FORMS } from '../../../../config/adminCopy';
  * @param {ReturnType<import('./usePropertyForm').default>} props.form
  * @param {boolean} [props.collapsible] renders as an accordion (the phone layout)
  */
+/** Why the page link is off while the address or the status is unsaved. */
+const SAVE_FIRST = 'Save first — the link reflects the saved listing.';
+
 export default function StatusRail({ form, collapsible = false }) {
   const {
     state,
@@ -48,6 +55,7 @@ export default function StatusRail({ form, collapsible = false }) {
     completeness,
     warnings,
     viewUrl,
+    viewStale,
     setField,
     setActive,
     focusField,
@@ -55,7 +63,34 @@ export default function StatusRail({ form, collapsible = false }) {
     save,
     duplicate,
     remove,
+    shareLink,
   } = form;
+  const toast = useToast();
+
+  // "Copy share link (24 h)" (prompt 51): the link last made, shown as well as
+  // copied, for a browser that does not let a page write to the clipboard.
+  const [sharing, setSharing] = useState(false);
+  const [shared, setShared] = useState(null);
+  const copyShareLink = async () => {
+    setSharing(true);
+    let link = null;
+    try {
+      link = await shareLink?.();
+    } catch (thrown) {
+      toast.error(firstFieldMessage(thrown, 'The share link could not be made.'));
+      setSharing(false);
+      return;
+    }
+    setSharing(false);
+    if (!link) return;
+    setShared(link);
+    try {
+      await navigator.clipboard.writeText(link.url);
+      toast.success(`Share link copied — it works until ${formatDateTime(link.expiresAt)}.`);
+    } catch (_thrown) {
+      toast.info('This browser did not let the page copy it — copy the link below.');
+    }
+  };
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDuplicate, setConfirmDuplicate] = useState(false);
@@ -82,7 +117,8 @@ export default function StatusRail({ form, collapsible = false }) {
     save('inactive');
   };
   const tone = completenessTone(completeness.percent);
-  const published = values.isActive === true;
+  // The link follows the saved listing, so "published" is its saved state too.
+  const published = (state?.initial?.isActive ?? values.isActive) === true;
   // An unpublished listing has no public page, so the link is the admin
   // preview of it instead — and it exists only once the record has been saved.
   const openUrl = isNew ? null : viewUrl;
@@ -91,7 +127,12 @@ export default function StatusRail({ form, collapsible = false }) {
   const savedNotes = (
     <div className={styles.savedNotes}>
       <p className={styles.note} aria-live="polite">
-        {lastSavedAt ? `Last saved ${formatRelative(lastSavedAt)}` : 'Not saved yet'}
+        {lastSavedAt
+          ? `Last saved ${formatRelative(lastSavedAt)}${
+              // Who, since prompt 51 — the API names the account that saved.
+              state?.initial?.updatedByName ? ` by ${state.initial.updatedByName}` : ''
+            }`
+          : 'Not saved yet'}
         {dirty ? ' — with unsaved changes' : ''}
       </p>
       {draftSavedAt ? (
@@ -267,11 +308,18 @@ export default function StatusRail({ form, collapsible = false }) {
       <section className={styles.block} aria-labelledby="rail-seo">
         <SeoSummaryCard
           seo={values.seo}
-          onOpen={(field) => {
+          onOpen={(failure) => {
             // The first failing test is the one worth opening on; when nothing
             // is failing the tab itself is the destination.
-            if (field) focusField(field);
-            else setActiveTab('seo');
+            if (!failure?.field) {
+              setActiveTab('seo');
+              if (failure?.message) toast.info(SEO.panel.opened('SEO', failure.message));
+              return;
+            }
+            focusField(failure.field);
+            const target = resolveFieldPath(failure.field, values);
+            const where = target.startsWith('seo.') ? 'SEO' : tabByKey(tabOfPath(target)).label;
+            toast.info(SEO.panel.opened(where, failure.message));
           }}
         />
       </section>
@@ -286,26 +334,57 @@ export default function StatusRail({ form, collapsible = false }) {
         </p>
         {openUrl ? (
           <>
-            <Button
-              variant="outline"
-              size="sm"
-              href={openUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              icon={
-                <Icon
-                  icon={published ? 'mdi:open-in-new' : 'mdi:eye-outline'}
-                  width="16"
-                  height="16"
-                />
-              }
-            >
-              {published ? 'View on site' : 'Preview'}
-            </Button>
-            {published ? null : (
-              <p className={styles.note}>
-                Only you see this — the page answers 404 to everybody else until it is published.
+            <span title={viewStale ? SAVE_FIRST : undefined} className={styles.linkWrap}>
+              <Button
+                variant="outline"
+                size="sm"
+                href={openUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                disabled={viewStale}
+                aria-describedby={viewStale ? 'rail-url-stale' : undefined}
+                icon={
+                  <Icon
+                    icon={published ? 'mdi:open-in-new' : 'mdi:eye-outline'}
+                    width="16"
+                    height="16"
+                  />
+                }
+              >
+                {published ? 'View on site' : 'Preview'}
+              </Button>
+            </span>
+            {viewStale ? (
+              <p className={styles.note} id="rail-url-stale">
+                {SAVE_FIRST}
               </p>
+            ) : published ? null : (
+              <>
+                <p className={styles.note}>
+                  Only you see this — the page answers 404 to everybody else until it is published.
+                </p>
+                {readOnly ? null : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    loading={sharing}
+                    disabled={working}
+                    icon={<Icon icon="mdi:link-variant" width="16" height="16" />}
+                    onClick={copyShareLink}
+                  >
+                    Copy share link (24 h)
+                  </Button>
+                )}
+                {shared ? (
+                  <p className={styles.note}>
+                    Anybody with{' '}
+                    <a href={shared.url} target="_blank" rel="noopener noreferrer">
+                      this link
+                    </a>{' '}
+                    sees the listing until {formatDateTime(shared.expiresAt)}, signed in or not.
+                  </p>
+                ) : null}
+              </>
             )}
           </>
         ) : (
@@ -434,8 +513,8 @@ function SaveMenu({ save, onSaveInactive, working, isNew, published }) {
 
       <Button
         variant="outline"
-        aria-haspopup="menu"
         aria-expanded={open}
+        aria-controls={open ? 'rail-save-more' : undefined}
         aria-label="More ways to save"
         disabled={working}
         className={styles.saveToggle}
@@ -445,13 +524,15 @@ function SaveMenu({ save, onSaveInactive, working, isNew, published }) {
       </Button>
 
       {open ? (
-        <div className={styles.menu} role="menu">
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.menuItem}
-            onClick={() => run('view')}
-          >
+        // A disclosure of two ordinary buttons (prompt 51): `role="menu"`
+        // promised arrow keys the list never answered.
+        <div
+          className={styles.menu}
+          role="group"
+          aria-label="More ways to save"
+          id="rail-save-more"
+        >
+          <button type="button" className={styles.menuItem} onClick={() => run('view')}>
             <Icon
               icon={published ? 'mdi:open-in-new' : 'mdi:eye-outline'}
               width="16"
@@ -460,12 +541,7 @@ function SaveMenu({ save, onSaveInactive, working, isNew, published }) {
             />
             {published ? 'Save & view on site' : 'Save & preview'}
           </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.menuItem}
-            onClick={() => run('inactive')}
-          >
+          <button type="button" className={styles.menuItem} onClick={() => run('inactive')}>
             <Icon icon="mdi:eye-off-outline" width="16" height="16" aria-hidden="true" />
             Save as inactive
           </button>

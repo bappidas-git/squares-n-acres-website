@@ -7,6 +7,7 @@ import articleService from '../../../services/articleService';
 import propertyService from '../../../services/propertyService';
 import renderWith from '../../../test-utils';
 import { AdminAuthProvider } from '../../../contexts/AdminAuthContext';
+import { resetDraftPreviews, stashDraftPreview } from '../../../utils/draftPreview';
 
 jest.mock('../../../services/articleService', () => ({
   __esModule: true,
@@ -119,6 +120,44 @@ beforeEach(() => {
   articleService.list.mockResolvedValue({ data: [related], meta: { total: 1 } });
   articleService.prevNext.mockResolvedValue({ data: neighbours });
   propertyService.list.mockResolvedValue({ data: [], meta: { total: 0 } });
+});
+
+describe('ArticleDetail — "Preview changes" (prompt 51)', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    resetDraftPreviews();
+  });
+
+  it('shows the editor’s unsaved article from this browser, fetches nothing, and says so', async () => {
+    const id = stashDraftPreview('article', { ...article, title: 'RERA, explained again' });
+    renderPage(`/insights/articles/${article.slug}?draftPreview=${id}`);
+
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
+      'RERA, explained again'
+    );
+    expect(
+      screen.getByText('Previewing unsaved changes — not what visitors see.')
+    ).toBeInTheDocument();
+    expect(articleService.getBySlug).not.toHaveBeenCalled();
+    await settle();
+  });
+
+  it('says a preview opened a second time has expired', async () => {
+    const id = stashDraftPreview('article', article);
+    const { unmount } = renderPage(`/insights/articles/${article.slug}?draftPreview=${id}`);
+    await screen.findByRole('heading', { level: 1 });
+    await settle();
+    unmount();
+
+    // A new page load: the hand-off was spent by the first one.
+    resetDraftPreviews();
+    renderPage(`/insights/articles/${article.slug}?draftPreview=${id}`);
+    expect(await screen.findByText('This preview has expired')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open the saved page' })).toHaveAttribute(
+      'href',
+      `/insights/articles/${article.slug}`
+    );
+  });
 });
 
 describe('ArticleDetail', () => {

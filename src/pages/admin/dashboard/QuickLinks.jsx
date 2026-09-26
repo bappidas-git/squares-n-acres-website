@@ -26,7 +26,8 @@ const LINKS = [
     key: 'seo',
     label: 'SEO issues',
     icon: 'mdi:magnify-scan',
-    to: PATHS.adminSeo,
+    // The Issues tab itself, which the dashboard now keeps in its address.
+    to: `${PATHS.adminSeo}?tab=issues`,
     permission: ['seo', 'view'],
   },
   {

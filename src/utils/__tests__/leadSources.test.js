@@ -1,4 +1,4 @@
-import { LEAD_SOURCES } from '../../config/enums';
+import { ADMIN_LEAD_SOURCES, LEAD_SOURCES, SITE_LEAD_SOURCES } from '../../config/enums';
 import {
   DEFAULT_FIELDS,
   ENTRY_KEYS,
@@ -27,10 +27,22 @@ describe('ENTRY_POINTS', () => {
   });
 
   it('maps every canonical source to at least one entry point', () => {
-    // `other` is the CRM's catch-all for a lead somebody files by hand; it is
-    // not a place on the site, so nothing here claims it.
-    const covered = new Set([...ENTRY_KEYS.map((key) => ENTRY_POINTS[key].source), 'other']);
+    // `other` is the CRM's catch-all for a lead somebody files by hand, and the
+    // desk's own sources (walk-in, phone, the portals — prompt 51) are how a
+    // lead reached the office; none is a place on the site, so nothing here
+    // claims them.
+    const covered = new Set([
+      ...ENTRY_KEYS.map((key) => ENTRY_POINTS[key].source),
+      'other',
+      ...ADMIN_LEAD_SOURCES,
+    ]);
     expect(LEAD_SOURCES.values.filter((value) => !covered.has(value))).toEqual([]);
+  });
+
+  it('never sends one of the desk’s own sources from a form on the site', () => {
+    for (const key of ENTRY_KEYS) {
+      expect(SITE_LEAD_SOURCES).toContain(ENTRY_POINTS[key].source);
+    }
   });
 
   it('gives every entry a heading and a usable set of fields', () => {

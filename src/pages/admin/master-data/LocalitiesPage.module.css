@@ -39,3 +39,19 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
+
+/* A count that opens the listings it counts (prompt 51). */
+.countLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 24px;
+  min-height: 24px;
+  color: var(--color-primary-dark);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.countLink:hover {
+  text-decoration: underline;
+}

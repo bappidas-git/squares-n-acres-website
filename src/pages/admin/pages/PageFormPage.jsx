@@ -9,13 +9,17 @@ import ApiError from '../../../services/apiError';
 // them, and two orders for one chunk is a mini-css-extract "Conflicting
 // order", which `build:ci` refuses.
 import { FormFieldControl } from '../../../components/admin/MasterDataForm';
+import focusFirstError from '../../../components/admin/focusFirstError';
 import BlockEditor from '../../../components/cms/BlockEditor/BlockEditor';
 import PATHS, { RESERVED_PATH_PREFIXES, isReservedPath } from '../../../routes/paths';
 import openInNewTab from '../../../utils/openInNewTab';
+import { DRAFT_PREVIEW_PARAM, stashDraftPreview } from '../../../utils/draftPreview';
 import pageService from '../../../services/pageService';
 import redirectService from '../../../services/redirectService';
 import useApi from '../../../hooks/useApi';
 import useForm from '../../../hooks/useForm';
+import useLocalDraft from '../../../hooks/useLocalDraft';
+import useStaleGuard, { isStaleWrite } from '../../../hooks/useStaleGuard';
 import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import { useNavigationGuard } from '../../../contexts/NavigationGuardContext';
@@ -25,6 +29,8 @@ import { useNavigationGuard } from '../../../contexts/NavigationGuardContext';
 import FormSection, { FormColumn } from '../../../components/admin/FormSection';
 import SeoPanel from '../../../components/seo/SeoPanel';
 import PageHeader from '../../../components/admin/PageHeader';
+import ConflictDialog from '../../../components/admin/ConflictDialog';
+import DraftBanner from '../../../components/admin/DraftBanner';
 import SlugField from '../../../components/admin/SlugField';
 import {
   Button,
@@ -52,7 +58,11 @@ import {
   PAGE_TITLE_MIN_LENGTH,
 } from '../../../services/schemas/page';
 import { validateBlockData } from '../../../components/cms/BlockEditor/blockSchemas';
-import { applySeoSideEffects, validateSeoBranch } from '../../../components/seo/seoSideEffects';
+import {
+  applySeoSideEffects,
+  redirectWarning,
+  validateSeoBranch,
+} from '../../../components/seo/seoSideEffects';
 import { clearCache as clearRedirectCache } from '../../../components/common/RedirectHandler';
 import {
   createSeo,
@@ -64,6 +74,7 @@ import { resetNavPagesCache } from '../../../hooks/useNavPages';
 import { schemas } from '../../../services/schemas';
 import { slugifyPath } from '../../../utils/slug';
 import { useToast } from '../../../components/common/ToastProvider';
+import { FORMS } from '../../../config/adminCopy';
 
 import styles from './PageFormPage.module.css';
 
@@ -180,6 +191,21 @@ function focusField(path) {
 const checkPageSlug = (slug, { excludeId, signal } = {}) =>
   pageService.checkSlug({ slug, excludeId }, { signal });
 
+/**
+ * The two blocks the home page draws — one Features ("Why choose us") and one
+ * Steps ("How it works") — and only while there is not one already: anything
+ * else added to the home record was saved and never appeared (prompt 51).
+ */
+const HOME_BLOCK_TYPES = ['features', 'steps'];
+const HOME_BLOCKS_NOTE =
+  'The home page shows one Features block (“Why choose us”) and one Steps block (“How it works”); the rest of it is built from Site settings and the listings.';
+
+/** The home block types not on the page yet. Exported for the unit test. */
+export const homeBlockTypes = (blocks = []) =>
+  HOME_BLOCK_TYPES.filter(
+    (type) => !(Array.isArray(blocks) ? blocks : []).some((block) => block?.type === type)
+  );
+
 /** The templates an editor may choose — "Built-in" is the site's own (QA-56). */
 const WRITTEN_TEMPLATES = PAGE_TEMPLATES.options.filter(
   (option) => option.value !== SYSTEM_TEMPLATE
@@ -209,6 +235,8 @@ export function toBlockPayload(blocks) {
     id: Number.isInteger(block.id) ? block.id : (highest += 1),
     type: block.type,
     order: index + 1,
+    // "Hide for now" travels with the block (prompt 51).
+    hidden: block.hidden === true,
     data: block.data ?? {},
   }));
 }
@@ -240,6 +268,10 @@ export default function PageFormPage() {
   // skeleton — the scroll went back to the top and every open block closed
   // (QA-56). The API's answer is the record; it is used as it is.
   const [stored, setStored] = useState(null);
+  // A save over somebody else's is refused, and the dialog says whose (prompt 51).
+  const guard = useStaleGuard({ storedAt: stored?.updatedAt ?? null });
+  // Whether the save the dialog is about was a "Publish", for "Save mine anyway".
+  const lastPublish = useRef(false);
 
   const system = isSystemPage(stored);
   const home = isHomePage(stored);
@@ -255,6 +287,10 @@ export default function PageFormPage() {
   const [publishing, setPublishing] = useState(null);
   // Moving a live page's URL: send visitors from the old address (QA-56).
   const [redirectOld, setRedirectOld] = useState(true);
+  // A refused save: the block editor opens the cards holding a message, then
+  // the cursor goes to the first one (prompt 51).
+  const [revealErrors, setRevealErrors] = useState(0);
+  const formRef = useRef(null);
 
   const toPayload = useCallback(
     (values) => {
@@ -354,13 +390,14 @@ export default function PageFormPage() {
     onSubmit: async (payload) => {
       try {
         const envelope = isEdit
-          ? await pageService.update(id, payload)
+          ? await pageService.update(id, guard.stamp(payload))
           : await pageService.create(payload);
         return envelope?.data ?? null;
       } catch (thrown) {
         throw await withSlugSuggestion(thrown, payload.slug, id);
       }
     },
+    onError: guard.onError,
   });
 
   const { reset, values, setField, errors } = form;
@@ -371,7 +408,28 @@ export default function PageFormPage() {
     reset(toFormValues(record));
   }, [record, reset]);
 
-  useUnsavedChanges(form.dirty);
+  // A copy of the form in this browser — every ten seconds, and on the way out
+  // unless the editor discarded it — offered back when it is newer than the
+  // stored page (prompt 51).
+  const draft = useLocalDraft({
+    key: `sna_page_draft:${id ?? 'new'}`,
+    values,
+    dirty: form.dirty,
+    ready: !isEdit || Boolean(record),
+    storedAt: record?.updatedAt ?? null,
+    version: guard.current,
+    paused: form.submitting,
+  });
+
+  useUnsavedChanges(form.dirty, { onDiscard: draft.forget });
+
+  /** "Restore the draft": its values, saved against the version it was made from. */
+  const restoreDraft = () => {
+    const offer = draft.take();
+    if (!offer?.values) return;
+    form.setValues(offer.values);
+    guard.adopt(offer.version);
+  };
 
   // A menu added in another tab (the placement's "Manage" link opens one) is
   // offered here as soon as the editor comes back to this one.
@@ -402,12 +460,16 @@ export default function PageFormPage() {
     const blocks = Array.isArray(values.blocks) ? values.blocks : [];
 
     for (const [key, message] of Object.entries(errors)) {
-      const match = /^blocks\.(\d+)\.data\.(.+)$/.exec(key);
+      // A message about the block itself — an unknown `type` the API refuses —
+      // lands on its card as `type`; one inside it keeps its own field.
+      const match =
+        /^blocks\.(\d+)\.data\.(.+)$/.exec(key) ?? /^blocks\.(\d+)\.(type|id|order)$/.exec(key);
       if (!match) continue;
       const block = blocks[Number(match[1])];
       if (!block) continue;
       const blockId = String(block.id);
-      grouped[blockId] = { ...grouped[blockId], [match[2]]: message };
+      const field = key.includes('.data.') ? match[2] : 'type';
+      grouped[blockId] = { ...grouped[blockId], [field]: message };
     }
 
     return grouped;
@@ -457,23 +519,40 @@ export default function PageFormPage() {
    *   save was refused
    */
   const save = async ({ force = false } = {}) => {
+    // A save the rules refuse says so, opens the block that holds the problem
+    // and puts the cursor on it: silent, with the message inside a collapsed
+    // card, Save and Publish looked dead (prompt 51).
+    const refuse = () => {
+      toast.error(FORMS.fixFields);
+      setRevealErrors((count) => count + 1);
+      return false;
+    };
+
     // Nothing has changed since the last save: say so rather than write the
     // same record again — a rewrite moved it to the top of the list sorted by
     // "Updated" and changed the date its sitemap entry reports (QA-56).
     if (isEdit && stored && !form.dirty && !force) {
-      if (!form.validateAll()) {
-        toast.error('Please fix the highlighted fields.');
-        return false;
-      }
+      if (!form.validateAll()) return refuse();
+      // What is on screen is what is stored: a copy kept before an edit was
+      // taken back is out of date — unless it is the one on offer.
+      if (!draft.offer) draft.clear();
       toast.info('No changes to save.');
       return stored;
     }
 
+    if (!form.validateAll()) return refuse();
+
     const leaving = redirectsMove ? liveSlug : null;
+    lastPublish.current = force;
     const saved = await form.submit();
-    if (!saved) return false;
+    if (!saved) {
+      // A 422 from the API is already toasted; its messages still need finding.
+      setRevealErrors((count) => count + 1);
+      return false;
+    }
 
     setStored(saved);
+    draft.clear();
     reset(toFormValues(saved));
 
     // The header and footer menus are built from the published pages and are
@@ -481,16 +560,20 @@ export default function PageFormPage() {
     resetNavPagesCache();
     // The redirect this page's `seo` asks for, against the slug the API
     // answered with — a new page has none until now (§9.6).
-    await applySeoSideEffects('page', saved);
+    const effects = await applySeoSideEffects('page', saved);
     if (leaving && saved.slug !== leaving) await redirectMovedPage(leaving, saved);
 
-    toast.success(
-      isEdit
-        ? saved.status === 'published'
-          ? 'Page saved. It is live.'
-          : 'Page saved.'
-        : 'Page created.'
-    );
+    if (!effects.ok) {
+      toast.warning(redirectWarning(effects.error));
+    } else {
+      toast.success(
+        isEdit
+          ? saved.status === 'published'
+            ? 'Page saved. It is live.'
+            : 'Page saved.'
+          : 'Page created.'
+      );
+    }
 
     // A created page moves to its own URL, replacing the add route so Back
     // does not offer to create it a second time.
@@ -502,6 +585,12 @@ export default function PageFormPage() {
 
   const saveRef = useRef(save);
   saveRef.current = save;
+
+  // After the render that opened the blocks holding a message.
+  useEffect(() => {
+    if (revealErrors === 0) return;
+    focusFirstError(formRef.current);
+  }, [revealErrors]);
 
   // The second half of "Publish": the status is now `published` in state, so
   // the save builds the payload that says so. A refusal puts the status back:
@@ -520,6 +609,26 @@ export default function PageFormPage() {
     setPublishing({ from: values.status });
     setField('status', 'published');
   };
+
+  /**
+   * "Save mine anyway": the same save again — a "Publish" publishes — over the
+   * version the refusal named, so a third save made meanwhile is still refused.
+   */
+  const overwriteConflict = () =>
+    guard.overwrite(() => (lastPublish.current ? publish() : saveRef.current()));
+
+  /** "Load their version", with these edits kept as the draft on offer. */
+  const reloadConflict = () =>
+    guard.reload({
+      fetchLatest: () => pageService.adminGet(id),
+      toValues: toFormValues,
+      form: { baseline: form.baseline, values },
+      draft,
+      load: (fresh) => {
+        setStored(fresh);
+        reset(toFormValues(fresh));
+      },
+    });
 
   // Ctrl/Cmd+S saves rather than offering to save the HTML of the page. Every
   // button that saves is disabled while a save is in flight; the keyboard is
@@ -574,6 +683,26 @@ export default function PageFormPage() {
     }
   };
 
+  // A published page is previewed without saving it live (prompt 51): the
+  // form goes to its public page through this browser's storage, once.
+  const liveNow = isEdit && stored?.status === 'published' && !system && !home;
+  const previewChanges = () => {
+    const id = stashDraftPreview('page', {
+      ...stored,
+      ...toPayload(values),
+      status: stored.status,
+      slug: stored.slug,
+    });
+    if (!id) {
+      toast.error('This browser keeps nothing for the page to read — save to see the changes.');
+      return;
+    }
+    const path = `${PATHS.page(stored.slug)}?${DRAFT_PREVIEW_PARAM}=${encodeURIComponent(id)}`;
+    if (!openInNewTab(path)) {
+      toast.info(`Your browser blocked the new tab. The preview is at ${path} — it opens once.`);
+    }
+  };
+
   const title = isEdit ? (stored?.title ?? 'Edit page') : 'New page';
   const published = values.status === 'published';
   const saving = form.submitting || publishing !== null;
@@ -619,6 +748,16 @@ export default function PageFormPage() {
           icon={<Icon icon="mdi:open-in-new" width="18" height="18" />}
         >
           View on the site
+        </Button>
+      ) : liveNow ? (
+        <Button
+          variant="outline"
+          onClick={previewChanges}
+          disabled={saving}
+          title="Opens your unsaved changes on the live page, in this browser only and once. Nothing is saved."
+          icon={<Icon icon="mdi:eye-outline" width="18" height="18" />}
+        >
+          Preview changes
         </Button>
       ) : (
         <Button
@@ -694,7 +833,16 @@ export default function PageFormPage() {
         actions={<div className={styles.headerActions}>{actions}</div>}
       />
 
+      <DraftBanner
+        draft={draft.offer}
+        noun="page"
+        isNew={!isEdit}
+        onRestore={restoreDraft}
+        onDiscard={draft.dismiss}
+      />
+
       <form
+        ref={formRef}
         className={styles.form}
         noValidate
         onSubmit={(event) => {
@@ -810,7 +958,9 @@ export default function PageFormPage() {
                   ? unpublishRefusal(stored)
                   : home
                     ? 'A draft home record hides the two bands it gives the home page; the page itself stays up.'
-                    : 'A draft answers 404 to visitors; “Save & preview” opens it anyway.'
+                    : liveNow
+                      ? '“Preview changes” opens your unsaved edits on the live page — in this browser only, and once. Nothing is saved until you save.'
+                      : 'A draft answers 404 to visitors; “Save & preview” opens it anyway.'
               }
               onChange={(next) => setField('status', next)}
             />
@@ -1000,6 +1150,9 @@ export default function PageFormPage() {
                 <BlockEditor
                   blocks={values.blocks ?? []}
                   errors={blockErrors}
+                  revealErrors={revealErrors}
+                  allowedTypes={home ? homeBlockTypes(values.blocks) : undefined}
+                  addNote={home ? HOME_BLOCKS_NOTE : undefined}
                   disabled={form.submitting}
                   onChange={(next) => setField('blocks', next)}
                 />
@@ -1008,7 +1161,7 @@ export default function PageFormPage() {
 
             <FormSection
               title="Search engines"
-              description="The whole panel: the phrase this page targets, what a result prints, the share cards, the robots directives and the structured data (§9)."
+              description="The whole panel: the phrase this page targets, what a result prints, the share cards, the robots directives and the structured data."
             >
               <FormColumn>
                 <SeoPanel
@@ -1047,6 +1200,15 @@ export default function PageFormPage() {
 
         <div className={styles.actionBar}>{actions}</div>
       </form>
+
+      <ConflictDialog
+        conflict={guard.conflict}
+        noun="page"
+        busy={saving || guard.busy}
+        onKeepEditing={guard.dismiss}
+        onReload={reloadConflict}
+        onOverwrite={overwriteConflict}
+      />
     </>
   );
 }
@@ -1059,7 +1221,7 @@ export default function PageFormPage() {
  * front of the field that caused it (§5.9).
  */
 async function withSlugSuggestion(thrown, slug, excludeId) {
-  if (thrown?.status !== 409 || !slug) return thrown;
+  if (thrown?.status !== 409 || !slug || isStaleWrite(thrown)) return thrown;
 
   try {
     const { data } = await pageService.checkSlug({ slug, excludeId });

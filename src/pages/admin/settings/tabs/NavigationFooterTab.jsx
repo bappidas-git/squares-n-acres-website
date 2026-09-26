@@ -171,7 +171,7 @@ export default function NavigationFooterTab({ form, disabled = false }) {
 
       <FormSection
         title="Footer gallery"
-        description="The picture strip under the footer columns — off by default (D79)."
+        description="The picture strip under the footer columns — off by default."
       >
         <FormColumn>
           <SwitchField

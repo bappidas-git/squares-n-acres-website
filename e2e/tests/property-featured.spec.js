@@ -103,7 +103,7 @@ test.describe('featuring and publishing a property', () => {
 
     await signIn('admin');
     await page.goto('/admin/properties');
-    await page.getByLabel('Search').fill(title);
+    await page.getByLabel('Search', { exact: true }).fill(title);
 
     const star = page.getByRole('button', { name: `Featured — ${title}` });
     await expect(star).toHaveAttribute('aria-pressed', 'false', { timeout: 20_000 });
@@ -129,7 +129,7 @@ test.describe('featuring and publishing a property', () => {
 
     await signIn('admin');
     await page.goto('/admin/properties');
-    await page.getByLabel('Search').fill(title);
+    await page.getByLabel('Search', { exact: true }).fill(title);
 
     await page.getByRole('button', { name: `Active — ${title}` }).click();
 

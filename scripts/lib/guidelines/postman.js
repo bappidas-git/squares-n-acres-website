@@ -3,9 +3,16 @@
  *
  * One request per entry of `src/services/endpoints.js`, grouped module →
  * registry group, with the captured response saved as a Postman example and a
- * test that asserts the status and the envelope of §5.2. Sign in once and the
- * login's test script writes `{{token}}` into the environment; every other
- * request inherits it from the collection's bearer auth.
+ * test that asserts the status the registry promises and the envelope of §5.2.
+ * Sign in once and the login's test script writes `{{token}}` into the
+ * environment; every other request inherits it from the collection's bearer
+ * auth.
+ *
+ * Run whole, the collection is a sequence that works (prompt 51): the order,
+ * the variables, the lookups before a request and the clean-up after it come
+ * from `postmanPlan.js`, which the generator also performs as a dry run
+ * against the mock — so a collection that would not run green is never
+ * written.
  *
  * Nothing here is random: the ids are hashes of the names, so regenerating the
  * package produces the same file.
@@ -13,8 +20,8 @@
 
 const crypto = require('crypto');
 
-const { allEndpoints } = require('../../../src/services/endpoints');
 const { TOKEN_FOR } = require('./fixtures');
+const { buildPlan, rawBody } = require('./postmanPlan');
 
 const SCHEMA = 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json';
 
@@ -33,18 +40,19 @@ function stableId(name) {
 /** The request line a reader recognises: `GET /properties/slug/:slug`. */
 const title = (endpoint) => `${endpoint.method} ${endpoint.path}`;
 
-/** Postman's url object, with `:param` filled from the registry's `example`. */
-function urlOf(endpoint, example) {
-  const captured = example?.request;
-  const path = (captured?.path ?? endpoint.path).replace(/^\//, '');
+/** Postman's url object for one step of the run: its path and query, variables and all. */
+function urlOf(step) {
+  const path = step.path.replace(/^\//, '');
   const segments = path.split('/').filter(Boolean);
-  const query = (captured?.query ?? '')
+  const query = step.query
+    .replace(/^\?/, '')
     .split('&')
     .filter(Boolean)
     .map((pair) => {
       const [key, value = ''] = pair.split('=');
       return { key, value };
     });
+  const endpoint = step.endpoint;
 
   // Everything the registry allows, switched off, so a reader can turn a
   // filter on in the UI instead of looking it up (§5.6, §5.7).
@@ -64,8 +72,132 @@ function urlOf(endpoint, example) {
   };
 }
 
+/* ------------------------------------------------------------------ *
+ * The run's scripts, from the plan's actions
+ * ------------------------------------------------------------------ */
+
+/**
+ * A dotted-path reader, written into every script that saves a value. A step
+ * past the end reads `null` — `== null` covers both absences, and keeps the
+ * collection free of the word `check:guidelines` treats as a rendering hole.
+ */
+const PICK = [
+  'var pick = function (value, path) {',
+  "  return String(path).split('.').reduce(function (at, key) {",
+  '    if (at == null) { return null; }',
+  '    var index = Number(key);',
+  '    return Array.isArray(at) && Number.isInteger(index) ? at[index < 0 ? at.length + index : index] : at[key];',
+  '  }, value);',
+  '};',
+];
+
+/** A JavaScript string literal of any text. */
+const quote = (text) =>
+  `'${String(text)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')}'`;
+
+/** `pm.collectionVariables.set` for each `name: path` of a response. */
+function saveLines(source, saves = {}, { asJson = false, scope = 'collectionVariables' } = {}) {
+  return Object.entries(saves).map(([name, path]) => {
+    const value = `pick(${source}, ${quote(path)})`;
+    return `pm.${scope}.set(${quote(name)}, ${asJson ? `JSON.stringify(${value} == null ? null : ${value})` : value});`;
+  });
+}
+
+/**
+ * The JavaScript of a list of actions: each request nested in the callback of
+ * the one before, so the next reads what the last one saved.
+ *
+ * @param {Array<object>} actions
+ * @param {'prepares'|'cleans up'} verb how a request's own assertion reads
+ * @returns {string[]}
+ */
+function actionLines(actions, verb) {
+  if (actions.length === 0) return [];
+  const [action, ...rest] = actions;
+
+  if (action.set) {
+    return [
+      ...Object.entries(action.set).map(
+        ([name, value]) =>
+          `pm.collectionVariables.set(${quote(name)}, pm.variables.replaceIn(${quote(value)}));`
+      ),
+      ...actionLines(rest, verb),
+    ];
+  }
+  if (action.saveEnv) {
+    return [
+      ...saveLines('pm.response.json()', action.saveEnv, { scope: 'environment' }),
+      ...actionLines(rest, verb),
+    ];
+  }
+  if (!action.send) {
+    return [
+      ...saveLines('pm.response.json()', action.save),
+      ...saveLines('pm.response.json()', action.saveJson, { asJson: true }),
+      ...actionLines(rest, verb),
+    ];
+  }
+
+  const { method, path, body, auth = true, token = 'token' } = action.send;
+  const text = rawBody(body, 0);
+  const needsJson = Boolean(action.save || action.saveJson || action.find);
+  const header = [
+    "Accept: 'application/json'",
+    ...(text ? ["'Content-Type': 'application/json'"] : []),
+    ...(auth ? [`Authorization: 'Bearer ' + pm.variables.get(${quote(token)})`] : []),
+  ].join(', ');
+
+  const inner = [
+    `  pm.test(${quote(`${verb}: ${method} ${path}`)}, function () {`,
+    '    pm.expect(err).to.eql(null);',
+    '    pm.expect(res.code).to.be.within(200, 299);',
+    '  });',
+    ...(needsJson ? ['  var json = res.json();'] : []),
+    ...saveLines('json', action.save).map((line) => `  ${line}`),
+    ...saveLines('json', action.saveJson, { asJson: true }).map((line) => `  ${line}`),
+    ...(action.find
+      ? [
+          `  var rows = pick(json, ${quote(action.find.list)}) || [];`,
+          '  var row = rows.find(function (entry) {',
+          `    return ${Object.entries(action.find.where)
+            .map(
+              ([field, value]) =>
+                `entry[${quote(field)}] === pm.variables.replaceIn(${quote(value)})`
+            )
+            .join(' && ')};`,
+          '  });',
+          ...Object.entries(action.find.save).map(
+            ([name, field]) =>
+              `  pm.collectionVariables.set(${quote(name)}, row ? row[${quote(field)}] : '');`
+          ),
+        ]
+      : []),
+    ...actionLines(rest, verb).map((line) => `  ${line}`),
+  ];
+
+  return [
+    'pm.sendRequest({',
+    `  url: pm.variables.replaceIn('{{baseUrl}}' + ${quote(path)}),`,
+    `  method: ${quote(method)},`,
+    `  header: { ${header} },`,
+    ...(text ? [`  body: { mode: 'raw', raw: pm.variables.replaceIn(${quote(text)}) },`] : []),
+    '}, function (err, res) {',
+    ...inner,
+    '});',
+  ];
+}
+
+/** Whether a list of actions reads a value out of a response. */
+const picks = (actions) =>
+  actions.some((action) => action.save || action.saveJson || action.saveEnv || action.find);
+
 /** The test script every request carries. */
-function testScript(endpoint, expectedStatus) {
+function testScript(step) {
+  const { endpoint, expect: expectedStatus } = step;
   const lines = [
     `pm.test('${expectedStatus} — the status the contract promises', function () {`,
     `  pm.response.to.have.status(${expectedStatus});`,
@@ -89,6 +221,12 @@ function testScript(endpoint, expectedStatus) {
     lines.push(
       "pm.test('a non-empty text document (§5.13)', function () {",
       "  pm.expect(pm.response.text().trim()).to.not.eql('');",
+      '});'
+    );
+  } else if (endpoint.response === 'NoContent') {
+    lines.push(
+      "pm.test('no body (prompt 51)', function () {",
+      "  pm.expect(pm.response.text()).to.eql('');",
       '});'
     );
   } else if (endpoint.response === 'Null') {
@@ -130,17 +268,31 @@ function testScript(endpoint, expectedStatus) {
     lines.push(
       '',
       '// The one request the rest of the collection depends on: it puts the',
-      '// bearer token into the environment, and the collection sends it.',
-      "pm.environment.set('token', pm.response.json().data.token);",
-      "pm.environment.set('tokenExpiresAt', pm.response.json().data.expiresAt);"
+      '// bearer token into the environment, and the collection sends it.'
+    );
+  }
+
+  if (step.after.length > 0) {
+    lines.push(
+      '',
+      '// What the run needs from this answer, and what it made that goes again.',
+      ...(picks(step.after) ? PICK : []),
+      ...actionLines(step.after, 'cleans up')
     );
   }
 
   return lines;
 }
 
+/** The pre-request script of a step that prepares something first, or `null`. */
+function prerequestScript(step) {
+  if (step.before.length === 0) return null;
+  return [...(picks(step.before) ? PICK : []), ...actionLines(step.before, 'prepares')];
+}
+
 /** The saved response Postman shows under a request. */
-function savedResponse(endpoint, example) {
+function savedResponse(step, example) {
+  const { endpoint } = step;
   if (!example?.response) return [];
   const { status, contentType } = example.response;
   const body =
@@ -152,12 +304,14 @@ function savedResponse(endpoint, example) {
     {
       id: stableId(`response:${endpoint.key}`),
       name: `${status} — captured from the mock server`,
+      // The request as the run sends it: the capture's own ids were of records
+      // it had deleted again by the time the package was written.
       originalRequest: {
-        method: example.request.method,
+        method: step.method,
         header: [],
-        url: { raw: `{{baseUrl}}${example.request.path}`, host: ['{{baseUrl}}'] },
+        url: { raw: `{{baseUrl}}${step.path}${step.query}`, host: ['{{baseUrl}}'] },
       },
-      status: status === 201 ? 'Created' : 'OK',
+      status: status === 201 ? 'Created' : status === 204 ? 'No Content' : 'OK',
       code: status,
       _postman_previewlanguage: contentType.includes('json') ? 'json' : 'text',
       header: [{ key: 'Content-Type', value: contentType }],
@@ -167,64 +321,89 @@ function savedResponse(endpoint, example) {
   ];
 }
 
-/** One Postman request item. */
-function itemOf(endpoint, example) {
-  const expectedStatus = endpoint.method === 'POST' && endpoint.key.endsWith('.create') ? 201 : 200;
+/** The line that says whose token a request is sent with, when it is not the admin's. */
+function sentAs(step, role) {
+  const as = step.token === 'token' ? null : step.token.replace(/Token$/, '');
+  if (as === 'throwaway') {
+    return '- Sent as a throwaway account the request creates and signs in first, then signs out and deletes — the run never renames the admin or signs the admin out.';
+  }
+  if (as) {
+    return `- Sent as **${as}**: the run signs that account in for this request (\`{{${as}Email}}\`) and out again.`;
+  }
+  return role && role !== 'admin'
+    ? `- Sign in as **${role}** first to see this as the least privileged role that may call it.`
+    : null;
+}
+
+/** One Postman request item, for one step of the run. */
+function itemOf(step, example) {
+  const { endpoint } = step;
   const role = TOKEN_FOR[endpoint.auth];
-  // The credentials belong to the environment, not to the collection: changing
-  // `email` and `password` there is how a reader signs in as another role.
-  const body =
-    endpoint.key === 'auth.login'
-      ? { email: '{{email}}', password: '{{password}}' }
-      : example?.request?.body;
+  const body = rawBody(step.body);
 
   const description = [
     endpoint.description,
     '',
     `- **Registry key** \`${endpoint.key}\``,
     `- **Auth** ${endpoint.auth === 'public' ? 'none' : `bearer token, minimum role \`${endpoint.auth}\``}`,
+    `- **Success** ${step.expect}`,
     `- **Response shape** \`${endpoint.response}\` — see \`01_API_CONTRACT.md\``,
     endpoint.body ? `- **Body schema** \`${endpoint.body}\` — see \`03_ENDPOINTS.md\`` : null,
-    role && role !== 'admin'
-      ? `- Sign in as **${role}** first to see this as the least privileged role that may call it.`
-      : null,
+    sentAs(step, role),
   ]
     .filter((line) => line !== null)
     .join('\n');
+
+  const prerequest = prerequestScript(step);
+  const auth =
+    endpoint.auth === 'public'
+      ? { auth: { type: 'noauth' } }
+      : step.token !== 'token'
+        ? {
+            auth: {
+              type: 'bearer',
+              bearer: [{ key: 'token', value: `{{${step.token}}}`, type: 'string' }],
+            },
+          }
+        : {};
 
   return {
     id: stableId(`item:${endpoint.key}`),
     name: `${title(endpoint)} — ${endpoint.description}`,
     request: {
       method: endpoint.method,
-      ...(endpoint.auth === 'public' ? { auth: { type: 'noauth' } } : {}),
+      ...auth,
       header: [
         { key: 'Accept', value: 'application/json' },
         ...(body ? [{ key: 'Content-Type', value: 'application/json' }] : []),
       ],
-      ...(body
-        ? {
-            body: {
-              mode: 'raw',
-              raw: JSON.stringify(body, null, 2),
-              options: { raw: { language: 'json' } },
-            },
-          }
-        : {}),
-      url: urlOf(endpoint, example),
+      ...(body ? { body: { mode: 'raw', raw: body, options: { raw: { language: 'json' } } } } : {}),
+      url: urlOf(step),
       description,
     },
     event: [
+      ...(prerequest
+        ? [
+            {
+              listen: 'prerequest',
+              script: {
+                id: stableId(`prerequest:${endpoint.key}`),
+                type: 'text/javascript',
+                exec: prerequest,
+              },
+            },
+          ]
+        : []),
       {
         listen: 'test',
         script: {
           id: stableId(`test:${endpoint.key}`),
           type: 'text/javascript',
-          exec: testScript(endpoint, expectedStatus),
+          exec: testScript(step),
         },
       },
     ],
-    response: savedResponse(endpoint, example),
+    response: savedResponse(step, example),
   };
 }
 
@@ -235,30 +414,19 @@ function itemOf(endpoint, example) {
  * @returns {object} a Postman v2.1 collection
  */
 function buildCollection({ generatedFrom, examples = {} }) {
-  const byModule = new Map();
-
-  for (const endpoint of allEndpoints()) {
-    const group = String(endpoint.key).split('.')[0];
-    if (!byModule.has(endpoint.module)) byModule.set(endpoint.module, new Map());
-    const groups = byModule.get(endpoint.module);
-    if (!groups.has(group)) groups.set(group, []);
-    groups.get(group).push(itemOf(endpoint, examples[endpoint.key]));
-  }
-
-  const item = [...byModule.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([module, groups]) => ({
-      id: stableId(`folder:${module}`),
-      name: module,
-      description: `Every endpoint of the ${module} module.`,
-      item: [...groups.entries()]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([group, items]) => ({
-          id: stableId(`folder:${module}:${group}`),
-          name: group,
-          item: items,
-        })),
-    }));
+  const item = buildPlan().map((folder) => ({
+    id: stableId(`folder:${folder.module}`),
+    name: folder.module,
+    description:
+      folder.module === 'sign out'
+        ? 'Last: signing out revokes the token every request before it was sent with.'
+        : `Every endpoint of the ${folder.module} module.`,
+    item: folder.groups.map((group) => ({
+      id: stableId(`folder:${folder.module}:${group.group}`),
+      name: group.group,
+      item: group.steps.map((step) => itemOf(step, examples[step.key])),
+    })),
+  }));
 
   return {
     info: {
@@ -273,9 +441,12 @@ function buildCollection({ generatedFrom, examples = {} }) {
         'To work as another role, change `email` and `password` in the environment',
         '(the manager and sales values are there, disabled) and sign in again.',
         '',
-        'Running the whole collection is the parity check of `08_TESTING_AND_PARITY.md`:',
-        'point `{{baseUrl}}` at the Laravel API and every test that passes against',
-        'the mock must pass against it.',
+        '**Running the whole collection** (the Runner, in this order) is the parity',
+        'check of `08_TESTING_AND_PARITY.md`: it checks health, signs in, creates each',
+        'record before the requests that use it and deletes it after them, restates',
+        'every setting it touches, and signs out last — every test green against a',
+        'fresh mock, and against the Laravel API once it is equal to the mock.',
+        '**It writes: run it against the mock or staging, never production.**',
         '',
         `generatedFrom: ${generatedFrom}`,
       ].join('\n'),
@@ -305,10 +476,11 @@ function buildCollection({ generatedFrom, examples = {} }) {
 }
 
 /**
- * The environment file: the local mock, with the production values alongside
- * it, disabled. Postman uses the last enabled row of a key, so enabling the
- * production `baseUrl` and disabling the local one switches the whole
- * collection over — the same one-line switch the frontend makes (BDG-03).
+ * The environment file: the local mock, with staging and the production values
+ * alongside it, disabled. Postman uses the last enabled row of a key, so
+ * enabling the staging `baseUrl` and disabling the local one switches the whole
+ * collection over — the same one-line switch the frontend makes (BDG-03). The
+ * collection writes, so a run belongs on the mock or staging (prompt 51).
  *
  * @param {{generatedFrom: string}} context
  * @returns {object} a Postman environment
@@ -324,10 +496,16 @@ function buildEnvironment({ generatedFrom }) {
   return {
     id: stableId('environment'),
     name: 'Squares N Acres — Local mock',
+    // The collection writes: it runs against the mock or staging. The two
+    // production rows — one host (Layout A of 07_DEPLOYMENT.md) or two
+    // (Layout B) — are there for sending a single read by hand.
     values: [
       value('baseUrl', 'http://localhost:4000/api'),
+      value('baseUrl', 'https://staging.example/api', { enabled: false }),
+      value('baseUrl', 'https://www.squaresnacres.com/api', { enabled: false }),
       value('baseUrl', 'https://api.squaresnacres.com/api', { enabled: false }),
       value('siteUrl', 'http://localhost:3000'),
+      value('siteUrl', 'https://staging.example', { enabled: false }),
       value('siteUrl', 'https://www.squaresnacres.com', { enabled: false }),
       value('email', 'admin@squaresnacres.com'),
       value('password', 'Admin@123', { type: 'secret' }),
@@ -335,6 +513,9 @@ function buildEnvironment({ generatedFrom }) {
       value('password', 'Manager@123', { enabled: false, type: 'secret' }),
       value('email', 'sales@squaresnacres.com', { enabled: false }),
       value('password', 'Sales@123', { enabled: false, type: 'secret' }),
+      // The one request of a run that is the sales desk's signs this account in.
+      value('salesEmail', 'sales@squaresnacres.com'),
+      value('salesPassword', 'Sales@123', { type: 'secret' }),
       value('token', '', { type: 'secret' }),
       value('tokenExpiresAt', ''),
     ],

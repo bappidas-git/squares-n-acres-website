@@ -150,8 +150,51 @@ function embedProperty(property, source, { publicRead = false } = {}) {
 }
 
 /**
- * A lead with `property` (`{ id, title, slug }`) and `assignedUser`
- * (`{ id, name }`) embedded.
+ * What a lead keeps of the listing it named, taken when it arrives (prompt 51):
+ * the title, the address and the locality, so the lead still says what it was
+ * about after the listing is deleted.
+ *
+ * @param {object|null} property
+ * @param {object} [source] collections — `localities` is read
+ * @returns {{title: string, slug: string, localityName: string|null}|null}
+ */
+function propertySnapshotOf(property, source) {
+  if (!property) return null;
+  const db = resolveSource(source);
+  const locality = byId(db, 'localities', property.location?.localityId);
+  return {
+    title: property.title ?? '',
+    slug: property.slug ?? '',
+    localityName: locality?.name ?? null,
+  };
+}
+
+/**
+ * A listing's name as a lead reads it: the listing itself, or — once it is
+ * deleted — the snapshot the lead took, "(deleted)" after its title and with
+ * no address to link to (prompt 51).
+ *
+ * @param {object} lead
+ * @param {object} [source]
+ * @returns {{id: number, title: string, slug: string|null, deleted?: true}|null}
+ */
+function leadProperty(lead, source) {
+  const db = resolveSource(source);
+  const live = pick(byId(db, 'properties', lead?.propertyId), ['id', 'title', 'slug']);
+  if (live) return live;
+  const snapshot = lead?.propertySnapshot;
+  if (!snapshot?.title) return null;
+  return {
+    id: lead.propertyId ?? null,
+    title: `${snapshot.title} (deleted)`,
+    slug: null,
+    deleted: true,
+  };
+}
+
+/**
+ * A lead with `property` (`{ id, title, slug }`, from its snapshot when the
+ * listing is gone) and `assignedUser` (`{ id, name }`) embedded.
  */
 function embedLead(lead, source) {
   if (!lead) return lead;
@@ -159,7 +202,7 @@ function embedLead(lead, source) {
 
   return {
     ...lead,
-    property: pick(byId(db, 'properties', lead.propertyId), ['id', 'title', 'slug']),
+    property: leadProperty(lead, db),
     assignedUser: pick(byId(db, 'adminUsers', lead.assignedTo), ['id', 'name']),
   };
 }
@@ -202,6 +245,8 @@ module.exports = {
   embedProperty,
   embedAgent,
   embedLead,
+  leadProperty,
+  propertySnapshotOf,
   embedArticle,
   embedLocality,
   embedDeveloper,

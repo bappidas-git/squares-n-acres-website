@@ -42,6 +42,18 @@ const timestamps = {
   updatedAt: { type: 'datetime', required: true, serverManaged: true },
 };
 
+/**
+ * Who created a record and who saved it last (`created_by` / `updated_by` →
+ * `admin_users`), and the latter's name as the admin reads join it — for "Last
+ * saved … by Priya" and for the "somebody else saved this" refusal (prompt 51).
+ * A model that has them lists the two ids in its `publicOmit`.
+ */
+const audit = {
+  createdBy: { type: 'int', nullable: true, default: null, serverManaged: true },
+  updatedBy: { type: 'int', nullable: true, default: null, serverManaged: true },
+  updatedByName: { type: 'string', nullable: true, read: true, default: null },
+};
+
 /** A denormalised display object the API embeds on reads (§5.5). */
 const embed = (shape, { array = false, nullable = true } = {}) =>
   array
@@ -118,8 +130,7 @@ const properties = {
     viewCount: { type: 'int', min: 0, default: 0, serverManaged: true },
     enquiryCount: { type: 'int', min: 0, default: 0, serverManaged: true },
     publishedAt: { type: 'datetime', nullable: true, default: null, serverManaged: true },
-    createdBy: { type: 'int', nullable: true, default: null, serverManaged: true },
-    updatedBy: { type: 'int', nullable: true, default: null, serverManaged: true },
+    ...audit,
     ...timestamps,
   },
 };
@@ -135,12 +146,13 @@ const localities = {
   sortable: ['order', 'name', 'propertyCount'],
   defaultSort: { field: 'order', order: 'asc' },
   publicScope: { isActive: true },
-  publicOmit: [],
+  publicOmit: ['createdBy', 'updatedBy'],
   fields: {
     ...id,
     ...masterData.locality.create,
     city: embed(refShape),
     propertyCount: computedCount('Active properties in this locality'),
+    ...audit,
     ...timestamps,
   },
 };
@@ -231,11 +243,12 @@ const developers = {
   sortable: ['order', 'name', 'propertyCount'],
   defaultSort: { field: 'order', order: 'asc' },
   publicScope: { isActive: true },
-  publicOmit: [],
+  publicOmit: ['createdBy', 'updatedBy'],
   fields: {
     ...id,
     ...masterData.developer.create,
     propertyCount: computedCount('Active properties by this developer'),
+    ...audit,
     ...timestamps,
   },
 };
@@ -278,6 +291,19 @@ const leads = {
     assignedUser: embed({ id: { type: 'int', required: true }, name: str(80) }),
     followUpAt: { type: 'datetime', nullable: true, default: null },
     lostReason: { type: 'string', nullable: true, maxLength: 300, default: null },
+    // What the listing was called when the lead arrived (prompt 51): a lead
+    // keeps naming it after the listing is deleted.
+    propertySnapshot: {
+      type: 'object',
+      nullable: true,
+      default: null,
+      serverManaged: true,
+      shape: {
+        title: { type: 'string', maxLength: 200 },
+        slug: { type: 'slug' },
+        localityName: { type: 'string', nullable: true, maxLength: 120 },
+      },
+    },
     notes: {
       type: 'array',
       default: [],
@@ -302,6 +328,8 @@ const leads = {
           id: { type: 'int', required: true },
           type: { type: 'enum', enum: LEAD_ACTIVITY_TYPES.values, required: true },
           description: { type: 'string', required: true, maxLength: 300 },
+          // What was said, on an activity the desk logged (prompt 51).
+          note: { type: 'string', nullable: true, maxLength: 2000, default: null },
           createdBy: { type: 'int', nullable: true, default: null },
           createdAt: { type: 'datetime', required: true },
         },
@@ -342,7 +370,7 @@ const articles = {
   sortable: ['newest', 'popular', 'publishedAt', 'updatedAt', 'title', 'viewCount', 'seoScore'],
   defaultSort: { field: 'publishedAt', order: 'desc' },
   publicScope: { status: 'published' },
-  publicOmit: [],
+  publicOmit: ['createdBy', 'updatedBy'],
   fields: {
     ...id,
     ...articleSchema.create,
@@ -357,6 +385,7 @@ const articles = {
     readingTimeMinutes: { type: 'int', read: true, min: 0, default: 0 },
     wordCount: { type: 'int', read: true, min: 0, default: 0 },
     viewCount: { type: 'int', min: 0, default: 0, serverManaged: true },
+    ...audit,
     ...timestamps,
   },
 };
@@ -442,7 +471,9 @@ const teamMembers = {
   sortable: ['order', 'name'],
   defaultSort: { field: 'order', order: 'asc' },
   publicScope: { isActive: true },
-  publicOmit: [],
+  // The admin account a card is linked to routes leads (prompt 51); it is
+  // nobody's business on the About page.
+  publicOmit: ['userId'],
   fields: { ...id, ...masterData.teamMember.create, ...timestamps },
 };
 
@@ -464,8 +495,8 @@ const pages = {
   sortable: ['order', 'title', 'updatedAt'],
   defaultSort: { field: 'order', order: 'asc' },
   publicScope: { status: 'published' },
-  publicOmit: [],
-  fields: { ...id, ...pageSchema.create, ...timestamps },
+  publicOmit: ['createdBy', 'updatedBy'],
+  fields: { ...id, ...pageSchema.create, ...audit, ...timestamps },
 };
 
 /**
@@ -504,11 +535,12 @@ const jobOpenings = {
   sortable: ['postedAt', 'title', 'department'],
   defaultSort: { field: 'postedAt', order: 'desc' },
   publicScope: { isActive: true },
-  publicOmit: [],
+  publicOmit: ['createdBy', 'updatedBy'],
   fields: {
     ...id,
     ...masterData.job.create,
     applicationCount: computedCount('Applications received for this opening'),
+    ...audit,
     ...timestamps,
   },
 };
@@ -693,6 +725,32 @@ const propertyViews = {
   },
 };
 
+/**
+ * The addresses visitors reached that answered 404 (prompt 51): one row per
+ * path per Indian day, counted, written by `POST /not-found` from the site's
+ * 404 page and read by the SEO dashboard's 404s tab. Capped at 500 rows — the
+ * ones seen longest ago go first — so a crawler cannot grow it without bound.
+ */
+const notFoundLog = {
+  collection: 'notFoundLog',
+  slugField: null,
+  publicRead: false,
+  searchable: ['path'],
+  sortable: ['count', 'lastSeenAt'],
+  defaultSort: { field: 'count', order: 'desc' },
+  publicScope: null,
+  publicOmit: [],
+  fields: {
+    ...id,
+    path: { type: 'string', required: true, maxLength: 500 },
+    day: { type: 'date', required: true, note: 'The Indian (IST) day the path was reached' },
+    count: { type: 'int', min: 1, default: 1, serverManaged: true },
+    referrer: { type: 'string', nullable: true, maxLength: 500, default: null },
+    firstSeenAt: { type: 'datetime', required: true, serverManaged: true },
+    lastSeenAt: { type: 'datetime', required: true, serverManaged: true },
+  },
+};
+
 const MODELS = {
   properties,
   localities,
@@ -724,6 +782,7 @@ const MODELS = {
   adminUsers,
   apiTokens,
   propertyViews,
+  notFoundLog,
 };
 
 /** A collection descriptor by name, or `null` when the name is unknown. */

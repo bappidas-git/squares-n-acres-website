@@ -157,7 +157,9 @@ const create = {
       shape: {
         id: { type: 'int', required: true },
         url: { type: 'url', required: true },
-        alt: { type: 'string', required: true, maxLength: 200 },
+        // Asked for when the listing goes live, not before (prompt 51,
+        // `config/propertyRules`).
+        alt: { type: 'string', maxLength: 200, default: '' },
         caption: { type: 'string', nullable: true, maxLength: 300, default: null },
         order: { type: 'int', min: 0, default: 0 },
         isCover: { type: 'bool', default: false },

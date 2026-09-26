@@ -578,3 +578,318 @@
   font-size: var(--font-size-sm);
   color: var(--color-text);
 }
+
+/* A file the picker's field already holds: readable, not choosable. */
+.cardUnavailable {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.inField {
+  align-self: flex-start;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-info-bg);
+  color: var(--color-info-dark);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ── Folders beside the grid (prompt 51) ───────────────────────────── */
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.railHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.railTitle {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.railActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+/* A list beside the grid on a desktop; a select above it below that. */
+.railList {
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 520px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+@media (min-width: 1024px) {
+  .railList {
+    display: flex;
+  }
+
+  .railSelect {
+    display: none;
+  }
+}
+
+.railItem {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  width: 100%;
+  min-height: 40px;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+
+.railItem:hover {
+  background: var(--color-surface);
+}
+
+.railItem:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.railItemSelected {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary-dark);
+  background: var(--color-primary-light);
+}
+
+.railItemSelected:hover {
+  background: var(--color-primary-light);
+}
+
+/* A folder made on this page that holds nothing yet. */
+.railItemPending {
+  border: 1px dashed var(--color-border-strong);
+}
+
+.railIcon {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.railItemSelected .railIcon {
+  color: var(--color-primary-dark);
+}
+
+.railName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.railCount,
+.railNote {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.railNote {
+  font-style: italic;
+}
+
+.railHint {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.railUnused {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  min-height: 24px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.railUnused input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--color-primary);
+}
+
+.railUnusedHint {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* The grid beside the rail: one column fewer until the canvas is wide. */
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .gridWithRail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) and (max-width: 1599.98px) {
+  .gridWithRail {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1600px) and (max-width: 1899.98px) {
+  .gridWithRail {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+/* Select mode: every tile shows its box (prompt 51). */
+.checkbox {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 24px;
+  height: 24px;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toolbarNote {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.toolbarCount {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+/* Where the upload zone files what it is given, when it is not a choice. */
+.uploadTarget {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ── Manage folders ────────────────────────────────────────────────── */
+
+.manageNote {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-info-dark);
+  background: var(--color-info-bg);
+  border-radius: var(--radius-md);
+}
+
+.manageEmpty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.manageList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.manageRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 48px;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.manageRow:last-child {
+  border-bottom: 0;
+}
+
+.manageName {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.manageForm {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.manageActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}

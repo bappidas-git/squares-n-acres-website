@@ -14,16 +14,17 @@ import { CHART_HEIGHT } from './LeadsByDayChart';
 import { formatDate } from '../../../../utils/format';
 
 /**
- * Property views per day over the last thirty (§6.16 `trends.viewsByDay`).
+ * Property views per day over the chosen range (§6.16 `trends.viewsByDay`).
  *
- * The same thirty days as the leads line, so the two can be read against each
+ * The same days as the leads line, so the two can be read against each
  * other: traffic that rises without enquiries rising is a story about the
  * listings, not about the marketing.
  *
  * @param {object} props
  * @param {Array<{date: string, count: number}>} props.data
+ * @param {number} [props.days] the range the series covers — 7, 30 or 90 (prompt 51)
  */
-export default function ViewsByDayChart({ data = [] }) {
+export default function ViewsByDayChart({ data = [], days = 30 }) {
   const stroke = useCssVar('--color-info', 'currentColor');
   const grid = useCssVar('--color-border', 'currentColor');
   const tick = useAxisTick();
@@ -32,8 +33,8 @@ export default function ViewsByDayChart({ data = [] }) {
 
   return (
     <ChartFrame
-      title="Property views per day, last 30 days"
-      description="An area chart of how many listing pages were viewed on each of the last thirty days."
+      title={`Property views per day, last ${days} days`}
+      description={`An area chart of how many listing pages were viewed on each of the last ${days} days.`}
       columns={['Day', 'Views']}
       rows={points.map((point) => ({ label: point.label, value: point.count }))}
     >

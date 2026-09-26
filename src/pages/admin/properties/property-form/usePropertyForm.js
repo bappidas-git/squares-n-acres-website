@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import ApiError from '../../../../services/apiError';
 import PATHS from '../../../../routes/paths';
 import propertyService from '../../../../services/propertyService';
-import storage from '../../../../utils/storage';
+import useLocalDraft, { AUTOSAVE_INTERVAL_MS } from '../../../../hooks/useLocalDraft';
 import useUnsavedChanges from '../../../../hooks/useUnsavedChanges';
 import { SITE } from '../../../../config/site';
 import { TOASTS } from '../../../../config/adminCopy';
@@ -15,17 +15,18 @@ import { useToast } from '../../../../components/common/ToastProvider';
 import { PREVIEW_QUERY, publicUrlOf, viewPathOf, viewUrlOf } from '../publicUrl';
 import { DEFAULT_TAB, firstTabWithErrors, groupErrorsByTab, tabByKey, tabOfPath } from './tabs';
 import { focusFieldElement, resolveFieldPath } from './fieldFocus';
-import { applySeoSideEffects } from '../../../../components/seo/seoSideEffects';
+import redirectMoves, { describeMoves } from '../../../../components/admin/redirectMoves';
+import { applySeoSideEffects, redirectWarning } from '../../../../components/seo/seoSideEffects';
 import { computeCompleteness } from './completeness';
 import { validateAll as runAllValidators, validateForActivation } from './validators';
 import fromRecord from './fromRecord';
-import rebase from './rebase';
+import rebase from '../../../../utils/rebase';
 import reducer, { actions, createFormState } from './reducer';
 import toPayload, { formPathOf, keptRowIndexes } from './toPayload';
 import { reserveTmpIds } from './initialState';
 
 /** How often a dirty form writes its draft to this browser (§4.2 of prompt 18). */
-export const AUTOSAVE_INTERVAL_MS = 10000;
+export { AUTOSAVE_INTERVAL_MS };
 
 /** `sna_property_draft:<id|new>` — one draft per listing, per browser (§4.2). */
 export const draftKey = (propertyId) => `sna_property_draft:${propertyId ?? 'new'}`;
@@ -43,17 +44,6 @@ export const draftKey = (propertyId) => `sna_property_draft:${propertyId ?? 'new
 export { PREVIEW_QUERY, publicUrlOf, viewPathOf, viewUrlOf };
 
 const errorCount = (errors) => Object.keys(errors).length;
-
-/**
- * A draft: the values on screen, when they were kept, and the version of the
- * record they were made from — so a draft restored after somebody else saved
- * the listing is refused by the version check instead of undoing that save.
- */
-const draftOf = (current) => ({
-  values: current.values,
-  savedAt: new Date().toISOString(),
-  version: current.state.version ?? null,
-});
 
 /** The 409 of a save made over somebody else's (QA-62) — not the slug's 409. */
 const isStaleWrite = (thrown) => thrown?.status === 409 && thrown?.data?.conflict === 'stale';
@@ -100,6 +90,7 @@ export default function usePropertyForm({
   propertyId = null,
   record = null,
   readOnly = false,
+  canRedirect = false,
 } = {}) {
   const navigate = useNavigate();
   const toast = useToast();
@@ -107,8 +98,6 @@ export default function usePropertyForm({
 
   const [state, dispatch] = useReducer(reducer, { propertyId, record }, createFormState);
   const [activeTab, setActiveTab] = useState(DEFAULT_TAB);
-  const [draftOffer, setDraftOffer] = useState(null);
-  const [draftSavedAt, setDraftSavedAt] = useState(null);
   const [redirect, setRedirect] = useState(null);
   const [busy, setBusy] = useState(false);
   // A save refused because somebody else saved the listing after this form
@@ -131,9 +120,11 @@ export default function usePropertyForm({
   // down — cannot start another request before the first one answers.
   const savingRef = useRef(false);
 
-  // Set when the editor answers the unsaved-changes question with "Discard":
-  // what they threw away is not kept as a draft on the way out.
-  const discardedRef = useRef(false);
+  // A live listing whose address changes leaves a 301 behind, on by default
+  // (prompt 51) — what a page, a locality and a developer already did.
+  const [redirectOld, setRedirectOld] = useState(true);
+  const redirectRef = useRef({ redirectOld, canRedirect });
+  redirectRef.current = { redirectOld, canRedirect };
 
   const { values, errors, initial } = state;
 
@@ -162,9 +153,6 @@ export default function usePropertyForm({
     const stamp = `${record.id}:${record.updatedAt ?? ''}`;
     if (loadedStamp.current === stamp) return;
     loadedStamp.current = stamp;
-    // The route may hand this same form another listing (Duplicate, then
-    // Back): a "discard" answered about the last one says nothing about it.
-    discardedRef.current = false;
     dispatch(actions.load(record));
   }, [record]);
 
@@ -172,99 +160,46 @@ export default function usePropertyForm({
    * The draft
    * ---------------------------------------------------------------- */
 
-  const clearDraft = useCallback(() => {
-    storage.removeItem(draftKey(latest.current.propertyId));
-    setDraftOffer(null);
-    setDraftSavedAt(null);
-  }, []);
-
-  /**
-   * Writes what is on screen as this browser's draft, now rather than at the
-   * next ten-second tick. Used when the form is about to go away without the
-   * editor having said "discard": the tab unloading, the session ending.
-   */
-  const keepDraft = useCallback(() => {
-    const current = latest.current;
-    if (current.readOnly || !current.dirty || current.gone) return false;
-    return storage.setItem(draftKey(current.propertyId), draftOf(current));
-  }, []);
+  // A copy of the form in this browser, every ten seconds and on the way out,
+  // offered back when it is newer than the stored listing (`useLocalDraft`,
+  // extracted from here in prompt 51). Each copy carries the version it was
+  // made from — so a copy restored after somebody else saved the listing is
+  // refused by the version check instead of undoing that save.
+  const {
+    offer: draftOffer,
+    savedAt: draftSavedAt,
+    take: takeDraft,
+    dismiss: discardDraft,
+    clear: clearDraft,
+    keep: keepDraft,
+    forget: forgetDraft,
+    put: putDraft,
+  } = useLocalDraft({
+    key: draftKey(propertyId),
+    values,
+    dirty,
+    enabled: !readOnly && !gone,
+    ready: !propertyId || Boolean(record),
+    storedAt: record?.updatedAt ?? null,
+    version: state.version ?? null,
+    paused: state.saving,
+  });
 
   // "Discard changes" means it: the draft autosaved from those changes went on
   // being offered — "Unsaved changes were found in this browser" — the next
   // time the listing was opened (QA-62).
-  const forgetDraft = useCallback(() => {
-    discardedRef.current = true;
-    clearDraft();
-  }, [clearDraft]);
-
   useUnsavedChanges(dirty && !readOnly, { onDiscard: forgetDraft });
 
-  // Leaving without discarding keeps the work. The guard lets a sign-in page
-  // through without asking — a session that ended cannot be stayed in — so a
-  // form that goes away dirty writes its draft on the way out, and the
-  // listing offers it back after signing in; a reload does the same through
-  // `pagehide`, rather than losing whatever the last autosave missed (QA-62).
-  useEffect(() => {
-    if (readOnly) return undefined;
-    window.addEventListener('pagehide', keepDraft);
-    return () => {
-      window.removeEventListener('pagehide', keepDraft);
-      if (!discardedRef.current) keepDraft();
-    };
-  }, [readOnly, keepDraft]);
-
-  // Offered once: on a new listing straight away, on an existing one as soon as
-  // the record is there to compare the draft's age against (§7 of prompt 18).
-  const offered = useRef(false);
-  useEffect(() => {
-    if (readOnly || offered.current) return;
-    if (propertyId && !record) return;
-    offered.current = true;
-
-    const draft = storage.getItem(draftKey(propertyId), null);
-    if (!draft?.values || !draft.savedAt) return;
-
-    const newerThanRecord =
-      !record?.updatedAt || Date.parse(draft.savedAt) > Date.parse(record.updatedAt);
-    if (!newerThanRecord) {
-      storage.removeItem(draftKey(propertyId));
-      return;
-    }
-    setDraftOffer(draft);
-  }, [propertyId, record, readOnly]);
-
-  // Autosave: every ten seconds, and only while there is something to save.
-  useEffect(() => {
-    if (readOnly) return undefined;
-
-    const timer = setInterval(() => {
-      const current = latest.current;
-      if (!current.dirty || current.state.saving || current.gone) return;
-      const draft = draftOf(current);
-      if (storage.setItem(draftKey(current.propertyId), draft)) setDraftSavedAt(draft.savedAt);
-    }, AUTOSAVE_INTERVAL_MS);
-
-    return () => clearInterval(timer);
-  }, [readOnly]);
-
   const restoreDraft = useCallback(() => {
-    setDraftOffer((offer) => {
-      if (offer) {
-        // The draft's new rows carry the `tmp-n` ids of the session that wrote
-        // it, and this session's counter started again at 1: without moving it
-        // past them, the next row added shared an id with a restored one, and
-        // typing into it renamed both.
-        reserveTmpIds(offer.values);
-        dispatch(actions.restoreDraft(offer));
-      }
-      return null;
-    });
-  }, []);
-
-  const discardDraft = useCallback(() => {
-    storage.removeItem(draftKey(latest.current.propertyId));
-    setDraftOffer(null);
-  }, []);
+    const offer = takeDraft();
+    if (!offer) return;
+    // The draft's new rows carry the `tmp-n` ids of the session that wrote
+    // it, and this session's counter started again at 1: without moving it
+    // past them, the next row added shared an id with a restored one, and
+    // typing into it renamed both.
+    reserveTmpIds(offer.values);
+    dispatch(actions.restoreDraft(offer));
+  }, [takeDraft]);
 
   /* ---------------------------------------------------------------- *
    * Writing values
@@ -470,6 +405,17 @@ export default function usePropertyForm({
 
       const payload = toPayload(candidate);
       const wasPublished = current.state.initial?.isActive === true;
+      // The address a live listing is leaving, when the editor keeps the 301.
+      const liveSlug = wasPublished ? (current.state.initial?.slug ?? null) : null;
+      const leaving =
+        current.propertyId &&
+        liveSlug &&
+        payload.slug &&
+        payload.slug !== liveSlug &&
+        redirectRef.current.canRedirect &&
+        redirectRef.current.redirectOld
+          ? liveSlug
+          : null;
       // An update names the version it was made from — the `updatedAt` this
       // form read — and the API refuses it when the listing has been saved
       // since. Without it, two editors (or one editor in two tabs) overwrote
@@ -491,16 +437,28 @@ export default function usePropertyForm({
         // is kept on screen, and still unsaved, rather than replaced by the
         // server's copy of the older values.
         dispatch(actions.markSaved(saved, current.values));
-        storage.removeItem(draftKey(current.propertyId));
-        setDraftOffer(null);
-        setDraftSavedAt(null);
+        clearDraft();
 
         // The redirect this listing's `seo` asks for is written now, against
         // the slug the API answered with — a new listing has none until this
         // point (§9.6). It comes after the state that says the listing is
         // saved, because it never throws and never changes that answer.
-        await applySeoSideEffects('property', saved);
-        toast.success(savedMessage(mode, saved, wasPublished));
+        const effects = await applySeoSideEffects('property', saved);
+        if (effects.ok) toast.success(savedMessage(mode, saved, wasPublished));
+        else toast.warning(redirectWarning(effects.error));
+
+        // The old address sends its visitors on (prompt 51); a rule that
+        // cannot be written is said, not swallowed.
+        if (leaving && saved?.slug && saved.slug !== leaving) {
+          const moved = describeMoves(
+            await redirectMoves(
+              [[PATHS.propertyDetails(leaving), PATHS.propertyDetails(saved.slug)]],
+              `“${saved.title}” moved (Admin → Properties).`
+            )
+          );
+          if (moved.error) toast.error(moved.error);
+          else if (moved.info) toast.info(moved.info);
+        }
 
         // A created listing moves to its own URL, replacing the add route so
         // Back does not offer to create it a second time.
@@ -558,7 +516,7 @@ export default function usePropertyForm({
         savingRef.current = false;
       }
     },
-    [applyServerErrors, collectErrors, focusField, keepDraft, toast]
+    [applyServerErrors, clearDraft, collectErrors, focusField, keepDraft, toast]
   );
 
   // Ctrl/Cmd+S saves rather than offering to save the HTML of the page. The
@@ -587,6 +545,25 @@ export default function usePropertyForm({
   }, [readOnly]);
 
   /** `POST /admin/properties/:id/duplicate` → the copy's own form (§5.14). */
+  /**
+   * A link to the saved listing that works for 24 hours for somebody who never
+   * signs in (prompt 51) — the owner checking the copy, a colleague on the
+   * road. Built on this deployment's own site address, like the preview.
+   *
+   * @returns {Promise<{url: string, expiresAt: string}|null>} `null` before the
+   *   listing is saved; throws what the API refused
+   */
+  const shareLink = useCallback(async () => {
+    const current = latest.current;
+    const slug = current.state.initial?.slug;
+    if (!current.propertyId || !slug) return null;
+    const { data } = await propertyService.previewToken(current.propertyId);
+    return {
+      url: `${SITE.url}${PATHS.propertyDetails(slug)}?preview=${encodeURIComponent(data.token)}`,
+      expiresAt: data.expiresAt,
+    };
+  }, []);
+
   const duplicate = useCallback(async () => {
     const current = latest.current;
     if (!current.propertyId || current.readOnly) return false;
@@ -616,7 +593,7 @@ export default function usePropertyForm({
     setBusy(true);
     try {
       await propertyService.remove(current.propertyId);
-      storage.removeItem(draftKey(current.propertyId));
+      clearDraft();
       toast.success('Property deleted.');
       dispatch(actions.reset());
       setRedirect({ to: PATHS.adminProperties, replace: true });
@@ -627,7 +604,7 @@ export default function usePropertyForm({
     } finally {
       setBusy(false);
     }
-  }, [toast]);
+  }, [clearDraft, toast]);
 
   /* ---------------------------------------------------------------- *
    * A save made over somebody else's, and a listing deleted elsewhere
@@ -662,16 +639,14 @@ export default function usePropertyForm({
       if (!fresh) return false;
       // Their version with this editor's own edits replayed on top — not the
       // whole form as it was, which undid their save again on restore.
-      const draft = {
-        ...draftOf(current),
+      putDraft({
         values: rebase(current.state.initial, current.values, fromRecord(fresh)),
+        savedAt: new Date().toISOString(),
         version: fresh.updatedAt ?? null,
-      };
-      storage.setItem(draftKey(current.propertyId), draft);
+      });
       loadedStamp.current = `${fresh.id}:${fresh.updatedAt ?? ''}`;
       dispatch(actions.load(fresh));
       setConflict(null);
-      setDraftOffer(draft);
       return true;
     } catch (thrown) {
       toast.error(firstFieldMessage(thrown, 'The latest version could not be loaded.'));
@@ -679,7 +654,7 @@ export default function usePropertyForm({
     } finally {
       setBusy(false);
     }
-  }, [toast]);
+  }, [putDraft, toast]);
 
   /**
    * The listing was deleted while this form was open: the work on screen is
@@ -702,7 +677,7 @@ export default function usePropertyForm({
       }
       const saved = envelope?.data ?? null;
       if (!saved?.id) return false;
-      storage.removeItem(draftKey(current.propertyId));
+      clearDraft();
       dispatch(actions.markSaved(saved));
       setGone(false);
       toast.success('Saved as a new listing.');
@@ -715,7 +690,7 @@ export default function usePropertyForm({
       savingRef.current = false;
       setBusy(false);
     }
-  }, [toast]);
+  }, [clearDraft, toast]);
 
   // Leaving waits for the guard to let go, twice over: a saved form is clean,
   // but the provider learns that one render later and `useBlocker` re-registers
@@ -812,9 +787,40 @@ export default function usePropertyForm({
     reloadConflict,
     gone,
     saveAsNew,
+    shareLink,
     publicUrl: values.slug ? publicUrlOf(values.slug) : null,
-    /** Where "View on site" / "Preview" goes — the preview link while unpublished. */
-    viewUrl: values.slug ? viewUrlOf(values.slug, values.isActive === true) : null,
+    /**
+     * Where "View on site" / "Preview" goes — the preview link while
+     * unpublished. Built from the **saved** listing: an unsaved slug or status
+     * made the link a 404 (prompt 51).
+     */
+    viewUrl: state.initial?.slug
+      ? viewUrlOf(state.initial.slug, state.initial.isActive === true)
+      : null,
+    /**
+     * A live listing's address about to change (prompt 51): where it is live
+     * now, and whether saving leaves a 301 behind.
+     */
+    slugMove: {
+      livePath:
+        state.initial?.isActive === true && state.initial?.slug
+          ? PATHS.propertyDetails(state.initial.slug)
+          : null,
+      moved:
+        Boolean(propertyId) &&
+        state.initial?.isActive === true &&
+        Boolean(state.initial?.slug) &&
+        String(values.slug ?? '').trim() !== '' &&
+        String(values.slug).trim() !== state.initial.slug,
+      canRedirect,
+      redirect: redirectOld,
+      setRedirect: setRedirectOld,
+    },
+    /** The address or the status differs from the saved listing's. */
+    viewStale:
+      Boolean(state.initial?.slug) &&
+      (values.slug !== state.initial.slug ||
+        (values.isActive === true) !== (state.initial.isActive === true)),
   };
 }
 

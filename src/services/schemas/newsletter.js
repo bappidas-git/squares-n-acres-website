@@ -4,14 +4,23 @@
  * rather than 409 — subscribing twice is not an error for the visitor.
  */
 
-const { LEAD_SOURCES } = require('../../config/enums');
+const { NEWSLETTER_STATUS, SITE_LEAD_SOURCES } = require('../../config/enums');
 
 const subscribe = {
   email: { type: 'email', required: true },
   name: { type: 'string', nullable: true, maxLength: 80, default: null },
-  source: { type: 'enum', enum: LEAD_SOURCES.values, default: 'newsletter' },
+  source: { type: 'enum', enum: SITE_LEAD_SOURCES, default: 'newsletter' },
   // Honeypot (§5.11).
   website: { type: 'string', nullable: true, maxLength: 200, default: null },
 };
 
-module.exports = { subscribe };
+/**
+ * `PATCH /admin/newsletter-subscribers/:id` — the one thing about a subscriber
+ * an editor changes: somebody who asked, by e-mail or on the phone, to stop
+ * receiving it (prompt 51).
+ */
+const status = {
+  status: { type: 'enum', enum: NEWSLETTER_STATUS.values, required: true },
+};
+
+module.exports = { subscribe, status };

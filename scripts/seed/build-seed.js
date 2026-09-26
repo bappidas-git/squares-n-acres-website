@@ -176,6 +176,8 @@ function build() {
     adminUsers,
     apiTokens: [],
     propertyViews: [],
+    // Filled by the site's 404 page as visitors reach missing addresses (prompt 51).
+    notFoundLog: [],
   };
 
   db.media = media.records();

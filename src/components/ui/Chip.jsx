@@ -10,7 +10,10 @@ import styles from './Chip.module.css';
  * @param {'neutral'|'primary'|'success'|'warning'|'error'|'info'} [props.tone]
  * @param {'soft'|'filled'|'outline'} [props.variant]
  * @param {'sm'|'md'} [props.size]
- * @param {boolean} [props.selected]
+ * @param {boolean} [props.selected] painted as chosen
+ * @param {boolean} [props.pressed] a toggle's state, announced as `aria-pressed` —
+ *   only a chip given one is a toggle; a clickable chip that opens something (the
+ *   lead status menu) is a plain button (prompt 51)
  * @param {() => void} [props.onClick] renders a `<button>`
  * @param {() => void} [props.onDelete] renders a remove control
  */
@@ -19,6 +22,7 @@ export default function Chip({
   variant = 'soft',
   size = 'sm',
   selected = false,
+  pressed,
   icon,
   onClick,
   onDelete,
@@ -81,7 +85,7 @@ export default function Chip({
         className={classes}
         style={style}
         onClick={onClick}
-        aria-pressed={selected}
+        aria-pressed={pressed}
         {...rest}
       >
         {content}

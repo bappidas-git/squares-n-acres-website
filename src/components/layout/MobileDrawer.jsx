@@ -62,8 +62,8 @@ export default function MobileDrawer({ open, onClose }) {
     setExpanded(null);
   }, [location.pathname, location.search]);
 
-  const cta = actions.find((action) => action.kind === 'lead');
-  const links = actions.filter((action) => action.kind !== 'lead');
+  const cta = actions.find((action) => action.key === 'cta');
+  const links = actions.filter((action) => action.key !== 'cta');
 
   return (
     <>
@@ -97,7 +97,7 @@ export default function MobileDrawer({ open, onClose }) {
               />
             )
           )}
-          {cta ? (
+          {cta?.kind === 'lead' ? (
             <button
               type="button"
               className={[styles.action, styles.actionPrimary].join(' ')}
@@ -110,6 +110,27 @@ export default function MobileDrawer({ open, onClose }) {
               <Icon icon={cta.icon} aria-hidden="true" />
               {cta.label}
             </button>
+          ) : null}
+          {cta?.kind === 'link' && cta.internal ? (
+            <Link
+              to={cta.href}
+              onClick={onClose}
+              className={[styles.action, styles.actionPrimary].join(' ')}
+            >
+              <Icon icon={cta.icon} aria-hidden="true" />
+              {cta.label}
+            </Link>
+          ) : null}
+          {cta?.kind === 'link' && !cta.internal ? (
+            <a
+              href={cta.href}
+              onClick={onClose}
+              className={[styles.action, styles.actionPrimary].join(' ')}
+              {...(cta.external ? { target: '_blank', rel: 'noopener noreferrer' } : null)}
+            >
+              <Icon icon={cta.icon} aria-hidden="true" />
+              {cta.label}
+            </a>
           ) : null}
         </div>
 

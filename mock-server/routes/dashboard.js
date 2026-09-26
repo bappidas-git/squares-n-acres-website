@@ -39,7 +39,9 @@ module.exports = ({ db }) => {
 
   router.get('/admin/dashboard', (req, res) => {
     const state = Object.fromEntries(SOURCES.map((name) => [name, db.getCollection(name)]));
-    res.ok(buildDashboard(state, { user: req.user }));
+    // `range` — 7, 30 or 90 days of trend (prompt 51); anything else is 30.
+    const range = Array.isArray(req.query.range) ? req.query.range[0] : req.query.range;
+    res.ok(buildDashboard(state, { user: req.user, range }));
   });
 
   return router;

@@ -16,7 +16,11 @@ import renderWith from '../../../test-utils';
 
 jest.mock('../../../services/redirectService', () => {
   const actual = jest.requireActual('../../../services/redirectService');
-  return { __esModule: true, ...actual, default: { ...actual.default, list: jest.fn() } };
+  return {
+    __esModule: true,
+    ...actual,
+    default: { ...actual.default, list: jest.fn(), hit: jest.fn() },
+  };
 });
 
 const RULES = [
@@ -113,5 +117,22 @@ describe('<RedirectHandler>', () => {
     renderWith(<Harness />, { initialEntries: ['/old-properties'] });
 
     expect(await screen.findByText('Old properties')).toBeInTheDocument();
+  });
+});
+
+describe('<RedirectHandler> — the Hits column (prompt 51)', () => {
+  it('reports the rule it followed, once', async () => {
+    renderWith(<Harness />, { initialEntries: ['/old-properties'] });
+
+    expect(await screen.findByText('Properties')).toBeInTheDocument();
+    expect(redirectService.hit).toHaveBeenCalledTimes(1);
+    expect(redirectService.hit).toHaveBeenCalledWith(1);
+  });
+
+  it('reports nothing where nothing was followed', async () => {
+    renderWith(<Harness />, { initialEntries: ['/somewhere'] });
+
+    await waitFor(() => expect(redirectService.list).toHaveBeenCalled());
+    expect(redirectService.hit).not.toHaveBeenCalledWith(expect.anything());
   });
 });

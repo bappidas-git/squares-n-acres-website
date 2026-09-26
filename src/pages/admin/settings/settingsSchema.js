@@ -21,7 +21,8 @@
  */
 
 import { schemas } from '../../../services/schemas';
-import { EMAIL_PATTERN, URL_PATTERN, validate } from '../../../utils/validation';
+import { EMAIL_PATTERN, validate } from '../../../utils/validation';
+import { WHATSAPP_PLACEHOLDERS } from '../../../config/leadWhatsapp';
 
 const contract = schemas['settings.update'];
 
@@ -239,9 +240,6 @@ export function prepareSettings(record) {
   return { ...record, general: withReadablePhones(record.general) };
 }
 
-/** A site address with no trailing slash — what canonicals are built from. */
-export const trimTrailingSlash = (value) => text(value).replace(/\/+$/, '');
-
 /**
  * Whether a link target resolves: an in-app path, an anchor on the current
  * page (`#post-requirement` opens the lead modal, D82), a full address, or a
@@ -284,12 +282,6 @@ export function validateSettings(values = {}) {
 
   if (!filled(general.siteName)) {
     errors['general.siteName'] = 'Name the site — it is the brand name in every title and tab.';
-  }
-
-  if (!filled(general.siteUrl)) {
-    errors['general.siteUrl'] = 'The site address is what every canonical URL is built from.';
-  } else if (!URL_PATTERN.test(trimTrailingSlash(general.siteUrl))) {
-    errors['general.siteUrl'] = 'Start with https:// — for example https://www.squaresnacres.com.';
   }
 
   if (filled(general.establishedYear) || typeof general.establishedYear === 'number') {
@@ -414,6 +406,18 @@ export function validateSettings(values = {}) {
     errors['leads.notificationEmails'] = `“${badEmail}” is not an e-mail address.`;
   }
 
+  // A placeholder the buttons do not know would be sent to the lead as typed,
+  // braces and all (prompt 51).
+  const unknownPlaceholder = (text(leads.whatsappTemplate).match(/\{[^{}]*\}/g) ?? []).find(
+    (token) => !WHATSAPP_PLACEHOLDERS.some((placeholder) => `{${placeholder.key}}` === token)
+  );
+  if (unknownPlaceholder) {
+    errors['leads.whatsappTemplate'] =
+      `${unknownPlaceholder} is not a placeholder — use ${WHATSAPP_PLACEHOLDERS.map(
+        (placeholder) => `{${placeholder.key}}`
+      ).join(', ')}.`;
+  }
+
   return errors;
 }
 
@@ -434,7 +438,8 @@ function normalizeBranch(value, descriptor) {
     if (!isPlainObject(value)) return value;
     const result = {};
     for (const [key, child] of Object.entries(descriptor.shape)) {
-      if (!(key in value)) continue;
+      // A field the API answers but never takes (`general.siteUrl`) is not sent.
+      if (!(key in value) || child?.read) continue;
       result[key] = normalizeBranch(value[key], child);
     }
     return result;
@@ -462,10 +467,6 @@ function normalizeBranch(value, descriptor) {
  */
 export function normalizeSettings(values = {}) {
   const payload = normalizeBranch(values, { type: 'object', shape: settingsSchema });
-
-  if (payload.general && typeof payload.general.siteUrl === 'string') {
-    payload.general.siteUrl = trimTrailingSlash(payload.general.siteUrl);
-  }
 
   // A number typed as `919876543210` passes the form's check, and the API's
   // `phone` type would refuse it as typed: it leaves as `+91 98765 43210`
@@ -595,6 +596,7 @@ const FIELD_LABELS = {
   'leads.notificationEmails': 'notification e-mails',
   'leads.autoAssign': 'automatic assignment',
   'leads.defaultPriority': 'default priority',
+  'leads.whatsappTemplate': 'WhatsApp message',
   ...Object.fromEntries(
     Object.entries(INTEGRATION_PATTERNS).map(([field, rule]) => [
       `integrations.${field}`,

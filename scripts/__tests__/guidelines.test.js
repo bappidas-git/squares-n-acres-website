@@ -28,7 +28,7 @@ const {
 const { buildSchema, columnType, renderDdl: toDdl } = require('../lib/guidelines/sql');
 const { blocks, cell, facts, table } = require('../lib/guidelines/markdown');
 const { document, isPlain } = require('../lib/guidelines/yaml');
-const { render, splitSections } = require('../lib/guidelines/merge');
+const { render, section, splitSections, unplacedSections } = require('../lib/guidelines/merge');
 const { trim, trimText, STABLE } = require('../lib/guidelines/capture');
 const { toJsonSchema } = require('../lib/guidelines/openapi');
 
@@ -381,6 +381,51 @@ describe('Merging the hand-written notes', () => {
   it('fills a template, and refuses to leave a hole', () => {
     assert.equal(render('a {{x}} b', { x: 'X' }, 't.md'), 'a X b');
     assert.throws(() => render('a {{y}}', {}, 't.md'), /nothing to put in y/);
+  });
+
+  // Prompt 51: a section written into the notes vanished when its template had
+  // no placeholder for it. Both ways round are now an error that names it.
+  it('refuses a section of the notes its template has no placeholder for', () => {
+    assert.throws(
+      () => render('{{a}}', { a: 'A', b: 'B', c: 'C' }, 'templates/T.md', { placed: ['b', 'c'] }),
+      /templates\/T\.md has no placeholder for \{\{b\}\}, \{\{c\}\}/
+    );
+    assert.equal(render('{{a}} {{b}}', { a: 'A', b: 'B' }, 'T.md', { placed: ['b'] }), 'A B');
+  });
+
+  it('lists the sections no template asked for', () => {
+    const notes = {
+      '02_auth': splitSections(markdown),
+      '09_media': splitSections('## Folders\n\ntext\n\n## Orphans\n\nmore'),
+    };
+    assert.deepEqual(unplacedSections(notes), [
+      '02_auth.sales-scoping',
+      '02_auth.token-flow',
+      '09_media.folders',
+      '09_media.orphans',
+    ]);
+    section(notes, '02_auth.token-flow');
+    section(notes, '09_media.orphans');
+    assert.deepEqual(unplacedSections(notes), ['02_auth.sales-scoping', '09_media.folders']);
+    // What `section()` records stays out of the notes' own keys.
+    assert.deepEqual(Object.keys(notes), ['02_auth', '09_media']);
+  });
+});
+
+describe('Generating outside a git checkout', () => {
+  it('fails, naming why, before anything is written', () => {
+    const { spawnSync } = require('node:child_process');
+    const path = require('node:path');
+    const run = spawnSync(
+      process.execPath,
+      [path.join(__dirname, '..', 'generate-backend-guidelines.js'), '--skip-capture', '--quiet'],
+      {
+        encoding: 'utf8',
+        env: { ...process.env, GIT_DIR: path.join(__dirname, 'no-such-repository.git') },
+      }
+    );
+    assert.equal(run.status, 1);
+    assert.match(run.stderr, /must name the commit it was generated from/);
   });
 });
 

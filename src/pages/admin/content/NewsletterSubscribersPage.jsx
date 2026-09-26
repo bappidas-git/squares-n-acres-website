@@ -65,7 +65,9 @@ export const sanitiseSubscriberParams = (params) =>
  *
  * The export repeats what is on screen and nothing else: no page, no sort, no
  * parameter the endpoint does not declare — the file is every matching row by
- * definition.
+ * definition. With no status chosen it is the **subscribed** addresses (prompt
+ * 51): the file is for sending the newsletter, and it carried everybody who had
+ * asked to stop. The button says so.
  *
  * Exported for the unit test.
  */
@@ -73,7 +75,7 @@ export const exportParamsOf = (params = {}) => {
   const { q, status } = params;
   const out = {};
   if (q) out.q = q;
-  if (status) out.status = status;
+  out.status = status || 'subscribed';
   return out;
 };
 
@@ -116,6 +118,31 @@ export default function NewsletterSubscribersPage() {
   const [deleting, setDeleting] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(null);
+
+  /**
+   * "Mark unsubscribed" — somebody who asked, by e-mail or on the phone, to
+   * stop — and back (prompt 51). Kept on the list, left out of the export.
+   */
+  const setStatus = useCallback(
+    async (row, status) => {
+      setStatusBusy(row.id);
+      try {
+        await newsletterService.patch(row.id, { status });
+        toast.success(
+          status === 'unsubscribed'
+            ? `“${row.email}” is unsubscribed, and leaves the export.`
+            : `“${row.email}” is subscribed again.`
+        );
+        refetch();
+      } catch (thrown) {
+        toast.error(firstFieldMessage(thrown, 'The subscriber could not be changed.'));
+      } finally {
+        setStatusBusy(null);
+      }
+    },
+    [refetch, toast]
+  );
 
   /**
    * After a removal: the page before when this one has just been emptied. It
@@ -226,6 +253,21 @@ export default function NewsletterSubscribersPage() {
         icon: 'mdi:email-outline',
         href: `mailto:${row.email}`,
       },
+      row.status === 'unsubscribed'
+        ? {
+            key: 'subscribe',
+            label: 'Mark subscribed again',
+            icon: 'mdi:email-check-outline',
+            disabled: statusBusy === row.id,
+            onClick: () => setStatus(row, 'subscribed'),
+          }
+        : {
+            key: 'unsubscribe',
+            label: 'Mark unsubscribed',
+            icon: 'mdi:email-off-outline',
+            disabled: statusBusy === row.id,
+            onClick: () => setStatus(row, 'unsubscribed'),
+          },
       {
         key: 'delete',
         label: 'Remove',
@@ -234,7 +276,7 @@ export default function NewsletterSubscribersPage() {
         onClick: () => setDeleting(row),
       },
     ],
-    []
+    [setStatus, statusBusy]
   );
 
   const filterFields = useMemo(
@@ -289,8 +331,12 @@ export default function NewsletterSubscribersPage() {
             icon={<Icon icon="mdi:file-delimited-outline" width="18" height="18" />}
             loading={exporting}
             onClick={exportCsv}
+            title={view.status ? undefined : 'Choose a status to export the other addresses.'}
           >
-            Export CSV{typeof total === 'number' ? ` (${formatNumber(total)})` : ''}
+            {/* No status chosen, the file is the subscribed addresses (prompt 51). */}
+            {view.status
+              ? `Export CSV${typeof total === 'number' ? ` (${formatNumber(total)})` : ''}`
+              : 'Export subscribed (CSV)'}
           </Button>
         }
       />

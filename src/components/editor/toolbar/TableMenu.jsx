@@ -29,12 +29,24 @@ const ACTIONS = [
  * @param {import('@tiptap/core').Editor} props.editor
  */
 export default function TableMenu({ editor }) {
-  const inTable = useEditorState({
+  // Which commands can run where the cursor is — deleting the only row, merging
+  // a single cell: a button that could not was pressed and nothing happened
+  // (prompt 51). Read in the same snapshot as "in a table", so both move together.
+  const state = useEditorState({
     editor,
-    selector: ({ editor: instance }) => Boolean(instance?.isActive('table')),
+    selector: ({ editor: instance }) => {
+      if (!instance?.isActive('table')) return { inTable: false, possible: {} };
+      const can = instance.can();
+      return {
+        inTable: true,
+        possible: Object.fromEntries(
+          ACTIONS.map((action) => [action.key, Boolean(can[action.key]?.())])
+        ),
+      };
+    },
   });
 
-  if (!editor || !inTable) return null;
+  if (!editor || !state?.inTable) return null;
 
   return (
     <div role="toolbar" aria-label="Table" className={styles.tableMenu}>
@@ -45,6 +57,7 @@ export default function TableMenu({ editor }) {
               type="button"
               className={styles.toolbarButton}
               aria-label={action.label}
+              disabled={!state.possible[action.key]}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => editor.chain().focus()[action.key]().run()}
             >

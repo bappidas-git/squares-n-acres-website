@@ -90,6 +90,8 @@ export function ImageHint({ hint, id }) {
  * @param {string} [props.ratio] overrides the hint's ratio
  * @param {'image'|'document'|'video'|'any'} [props.accept] what the picker offers
  * @param {string} [props.folder] where an upload from this field is filed
+ * @param {string} [props.fallbackFolder] what the library shows while `folder`
+ *   holds nothing yet — an article's own folder falls back to `articles`
  * @param {(picked: object) => void} [props.onPick] replaces "set the URL" — a
  *   caller that also wants the alt text or the dimensions
  * @param {() => void} [props.onUpload] overrides the built-in upload button
@@ -108,6 +110,7 @@ export default function ImageField({
   ratio,
   accept = 'image',
   folder = '',
+  fallbackFolder = '',
   onPick,
   onUpload,
   onOpenMedia,
@@ -122,6 +125,7 @@ export default function ImageField({
   const media = useMediaField({
     accept,
     folder,
+    fallbackFolder,
     onPick: (picked) => {
       if (onPick) onPick(picked);
       else onChange?.(picked.url);

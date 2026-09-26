@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
+import { useNavigate } from 'react-router-dom';
 
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import SeoPanel from '../../../components/seo/SeoPanel';
 import Skeleton from '../../../components/ui/Skeleton';
 import ErrorState from '../../../components/ui/ErrorState';
-import { applySeoSideEffects, validateSeoBranch } from '../../../components/seo/seoSideEffects';
+import {
+  applySeoSideEffects,
+  redirectWarning,
+  validateSeoBranch,
+} from '../../../components/seo/seoSideEffects';
 import { entityLabel, serviceFor } from './seoEntityServices';
 import { firstFieldMessage } from '../../../services/apiError';
 import { toSeoPayload, withSeoDefaults } from '../../../components/seo/seoValues';
@@ -50,6 +55,7 @@ export default function SeoEditDialog({
   readOnly = false,
 }) {
   const toast = useToast();
+  const navigate = useNavigate();
   const service = serviceFor(row?.type);
 
   const [entity, setEntity] = useState(null);
@@ -141,7 +147,7 @@ export default function SeoEditDialog({
       const { data } = await service.patch(entity.id, { seo: payload });
       const saved = data ?? { ...entity, seo: payload };
 
-      await applySeoSideEffects(rowType, saved);
+      const effects = await applySeoSideEffects(rowType, saved);
 
       if (alive.current) {
         setEntity(saved);
@@ -149,7 +155,8 @@ export default function SeoEditDialog({
         setDirty(false);
       }
       onSaved?.({ id: saved.id, type: rowType, seo: saved.seo ?? payload });
-      toast.success(SEO.saved);
+      if (effects.ok) toast.success(SEO.saved);
+      else toast.warning(redirectWarning(effects.error));
       onClose?.();
     } catch (thrown) {
       const fields = thrown?.errors ?? {};
@@ -227,7 +234,18 @@ export default function SeoEditDialog({
           seo={seo}
           onChange={handleChange}
           onFocusField={() => {
-            toast.info('That field is edited in the record’s own form.');
+            // The body, the images, the FAQs: the dialog edits the `seo` branch
+            // only, so a hint about the rest of the record opens the record's
+            // own form — unless that would drop SEO changes not saved yet.
+            if (dirty) {
+              toast.info(
+                'That field is edited in the record’s own form. Save or discard the SEO changes here first.'
+              );
+              return;
+            }
+            if (!service || !entity) return;
+            onClose?.();
+            navigate(service.adminPath(entity.id));
           }}
           variant="full"
           context={context}

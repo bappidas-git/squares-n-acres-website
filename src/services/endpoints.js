@@ -31,10 +31,12 @@ const {
   AVAILABILITY,
   ARTICLE_STATUS,
   CONSTRUCTION_STATUS,
+  EMPLOYMENT_TYPES,
   FACING,
   FAQ_CATEGORIES,
   FURNISHING,
   JOB_APPLICATION_STATUS,
+  LEAD_FOLLOW_UP,
   LEAD_PRIORITY,
   LEAD_SOURCES,
   LEAD_STATUS,
@@ -55,6 +57,13 @@ const {
 
 const enumOf = (subject) => `enum:${subject.values.join(',')}`;
 const csvEnumOf = (subject) => `csv:enum:${subject.values.join(',')}`;
+
+/*
+ * An entry's `status` is the success it answers with when it is not 200: 201
+ * for a write that creates a record, 204 for a report with nothing to say back
+ * (prompt 51). The smoke test, the Postman collection and the OpenAPI document
+ * all read it from here.
+ */
 
 /** Parameters every paginated list accepts (§5.6). */
 const LIST_QUERY = {
@@ -96,6 +105,25 @@ const PROPERTY_FILTERS = {
 const PROPERTY_LIST_QUERY = {
   ...LIST_QUERY,
   sort: enumOf(SORT_OPTIONS),
+  ...PROPERTY_FILTERS,
+};
+
+/**
+ * What `GET /properties/counts` counts by (prompt 51): `by` names one or more,
+ * and any other name in it is ignored. The mock reads the list from here.
+ */
+const PROPERTY_COUNT_DIMENSIONS = [
+  'segment',
+  'propertyTypeId',
+  'listingType',
+  'constructionStatus',
+  'localityId',
+];
+
+/** `by`, plus the list's own filters, applied before counting. */
+const PROPERTY_COUNTS_QUERY = {
+  by: `csv:enum:${PROPERTY_COUNT_DIMENSIONS.join(',')}`,
+  q: 'string',
   ...PROPERTY_FILTERS,
 };
 
@@ -147,6 +175,7 @@ const adminResource = ({
       description: `Create a ${singular}`,
       body: `${schema}.create`,
       response,
+      status: 201,
     }),
     get: entry('get', {
       method: 'GET',
@@ -222,6 +251,19 @@ const properties = {
     response: 'PropertyList',
     example: 1,
   },
+  counts: {
+    key: 'properties.counts',
+    method: 'GET',
+    path: '/properties/counts',
+    auth: 'public',
+    module: 'properties',
+    description:
+      'Live listings per value of each dimension in `by`, under the listing filters; cacheable for five minutes',
+    query: PROPERTY_COUNTS_QUERY,
+    body: null,
+    response: 'PropertyCounts',
+    example: 1,
+  },
   featured: {
     key: 'properties.featured',
     method: 'GET',
@@ -240,8 +282,9 @@ const properties = {
     path: '/properties/slug/:slug',
     auth: 'public',
     module: 'properties',
-    description: 'Property details by slug; 404 when inactive',
-    query: {},
+    description:
+      'Property details by slug; 404 when inactive, unless `previewToken` is that listing’s share token',
+    query: { previewToken: 'string' },
     body: null,
     response: 'Property',
     example: 'lakeview-heights-3-bhk-whitefield',
@@ -732,6 +775,7 @@ const jobs = {
     query: {},
     body: 'jobApplication.create',
     response: 'JobApplication',
+    status: 201,
     example: 1,
   },
 };
@@ -747,6 +791,7 @@ const leads = {
     query: {},
     body: 'lead.create',
     response: 'LeadCreated',
+    status: 201,
     example: 1,
   },
 };
@@ -815,10 +860,62 @@ const redirects = {
     path: '/redirects/resolve',
     auth: 'public',
     module: 'seo',
-    description: 'The active rule for one path, or 404; the only place hits are counted',
+    description: 'The active rule for one path, or 404; counts a hit, like a followed rule',
     query: { path: 'string' },
     body: null,
     response: 'Redirect',
+    example: null,
+  },
+  hit: {
+    key: 'redirects.hit',
+    method: 'POST',
+    path: '/redirects/:id/hit',
+    auth: 'public',
+    module: 'seo',
+    description:
+      'Count a visitor RedirectHandler sent on by an active rule; 204, rate-limited, 404 for an unknown or inactive rule (prompt 51)',
+    query: {},
+    body: null,
+    response: 'NoContent',
+    status: 204,
+    example: 1,
+  },
+};
+
+/** The site's 404 page reporting where it was reached (prompt 51). */
+const notFound = {
+  report: {
+    key: 'notFound.report',
+    method: 'POST',
+    path: '/not-found',
+    auth: 'public',
+    module: 'seo',
+    description:
+      'The 404 page reporting the address it was reached at; 204, rate-limited — the admin, the API, static files and redirected addresses are ignored (prompt 51)',
+    query: {},
+    body: 'notFound.report',
+    response: 'NoContent',
+    status: 204,
+    example: null,
+  },
+};
+
+/**
+ * The API's own liveness (prompt 51). The site never asks it; the smoke test's
+ * first request does — against the mock and against Laravel alike — and so
+ * does a load balancer's health check.
+ */
+const system = {
+  health: {
+    key: 'system.health',
+    method: 'GET',
+    path: '/health',
+    auth: 'public',
+    module: 'system',
+    description: 'Liveness: `{ status: "ok", time }` — the first request of the smoke test',
+    query: {},
+    body: null,
+    response: 'Health',
     example: null,
   },
 };
@@ -951,6 +1048,19 @@ const auth = {
     response: 'AuthSession',
     example: null,
   },
+  refresh: {
+    key: 'auth.refresh',
+    method: 'POST',
+    path: '/auth/refresh',
+    auth: 'user',
+    module: 'auth',
+    description:
+      'Keep the current session: the same token, valid for a full lifetime from now — the answer a sign-in gives (prompt 51)',
+    query: {},
+    body: null,
+    response: 'AuthSession',
+    example: null,
+  },
   logout: {
     key: 'auth.logout',
     method: 'POST',
@@ -1012,33 +1122,45 @@ const dashboard = {
     path: '/admin/dashboard',
     auth: 'user',
     module: 'dashboard',
-    description: 'Role-aware dashboard aggregates, trends and recent activity',
-    query: {},
+    description:
+      'Role-aware dashboard aggregates, trends and recent activity; follow-ups due with the overdue ones first and `overdueCount`',
+    // How many days the two trend series cover (prompt 51); 30 by default.
+    query: { range: 'enum:7,30,90' },
     body: null,
     response: 'DashboardData',
     example: null,
   },
 };
 
+const adminPropertyCrud = adminResource({
+  group: 'adminProperties',
+  path: '/admin/properties',
+  module: 'properties',
+  singular: 'property',
+  plural: 'properties',
+  schema: 'property',
+  response: 'Property',
+  withUsage: false,
+  // Sales may read the admin list (read-only) but never write (§7).
+  readAuth: 'user',
+  query: {
+    ...PROPERTY_FILTERS,
+    sort: 'enum:updatedAt,price,viewCount,priorityOrder,title,seoScore',
+    seoScoreBand: enumOf(SEO_SCORE_BANDS),
+    createdBy: 'int',
+    // The listings an advisor answers for (prompt 51).
+    agentId: 'int',
+  },
+});
+
 const adminProperties = {
-  ...adminResource({
-    group: 'adminProperties',
-    path: '/admin/properties',
-    module: 'properties',
-    singular: 'property',
-    plural: 'properties',
-    schema: 'property',
-    response: 'Property',
-    withUsage: false,
-    // Sales may read the admin list (read-only) but never write (§7).
-    readAuth: 'user',
-    query: {
-      ...PROPERTY_FILTERS,
-      sort: 'enum:updatedAt,price,viewCount,priorityOrder,title,seoScore',
-      seoScoreBand: enumOf(SEO_SCORE_BANDS),
-      createdBy: 'int',
-    },
-  }),
+  ...adminPropertyCrud,
+  bulk: {
+    ...adminPropertyCrud.bulk,
+    // Prompt 51: five actions carry their value in `payload`.
+    description:
+      'Apply one action to several properties: activate, deactivate, feature, unfeature, verify, unverify, delete — or availability {availability}, assignAgent {agentId}, setLocality {localityId}, setPropertyType {propertyTypeId}, setDeveloper {developerId}',
+  },
   // The admin read by slug, not by id: a public URL is all the preview link
   // carries, and an inactive listing answers 404 on the public route (§5.10).
   bySlug: {
@@ -1053,6 +1175,19 @@ const adminProperties = {
     response: 'Property',
     example: 'lakeview-heights-3-bhk-whitefield',
   },
+  // A share link for a listing before it is published (prompt 51).
+  previewToken: {
+    key: 'adminProperties.previewToken',
+    method: 'POST',
+    path: '/admin/properties/:id/preview-token',
+    auth: 'manager',
+    module: 'properties',
+    description: 'A 24-hour share token and URL that opens an inactive property on the site',
+    query: {},
+    body: null,
+    response: 'PreviewToken',
+    example: 1,
+  },
   duplicate: {
     key: 'adminProperties.duplicate',
     method: 'POST',
@@ -1063,6 +1198,7 @@ const adminProperties = {
     query: {},
     body: null,
     response: 'Property',
+    status: 201,
     example: 1,
   },
 };
@@ -1085,9 +1221,40 @@ const adminLeads = {
       propertyId: 'int',
       from: 'date',
       to: 'date',
+      // The worklist (prompt 51): open leads by where their follow-up stands,
+      // and the ones nobody has touched in `idleDays`.
+      followUp: enumOf(LEAD_FOLLOW_UP),
+      idleDays: 'int',
     },
     body: null,
     response: 'LeadList',
+    example: 1,
+  },
+  create: {
+    key: 'adminLeads.create',
+    method: 'POST',
+    path: '/admin/leads',
+    auth: 'user',
+    module: 'leads',
+    description:
+      'Enter a lead by hand — a walk-in, a call, a portal lead; a sales user’s lead is their own, anyone else’s goes to the colleague named or is auto-assigned',
+    query: {},
+    body: 'lead.adminCreate',
+    response: 'Lead',
+    status: 201,
+    example: null,
+  },
+  logActivity: {
+    key: 'adminLeads.logActivity',
+    method: 'POST',
+    path: '/admin/leads/:id/activities',
+    auth: 'user',
+    module: 'leads',
+    description:
+      'Log a call, a WhatsApp, a site visit, a meeting or another conversation on the lead’s timeline',
+    query: {},
+    body: 'lead.activity',
+    response: 'Lead',
     example: 1,
   },
   get: {
@@ -1183,6 +1350,8 @@ const adminLeads = {
       propertyId: 'int',
       from: 'date',
       to: 'date',
+      followUp: enumOf(LEAD_FOLLOW_UP),
+      idleDays: 'int',
     },
     body: null,
     response: 'Csv',
@@ -1387,6 +1556,12 @@ const adminTeam = adminResource({
   response: 'TeamMember',
   query: { showOnAbout: 'bool' },
 });
+// An admin read counts the listings naming the member (`listingCount`, prompt
+// 51) — `sort=listingCount` orders the Team list by it.
+adminTeam.list = {
+  ...adminTeam.list,
+  description: `${adminTeam.list.description}; each row carries \`listingCount\`, the listings naming the member as their advisor`,
+};
 
 const adminPartners = adminResource({
   group: 'adminPartners',
@@ -1446,7 +1621,7 @@ const adminJobs = adminResource({
   plural: 'job postings',
   schema: 'job',
   response: 'Job',
-  query: { department: 'string' },
+  query: { department: 'string', employmentType: csvEnumOf(EMPLOYMENT_TYPES) },
 });
 
 const adminJobApplications = {
@@ -1501,6 +1676,19 @@ const adminNewsletterSubscribers = {
     response: 'NewsletterSubscriberList',
     example: 1,
   },
+  patch: {
+    key: 'adminNewsletterSubscribers.patch',
+    method: 'PATCH',
+    path: '/admin/newsletter-subscribers/:id',
+    auth: 'manager',
+    module: 'content',
+    description:
+      'Mark a subscriber unsubscribed — or subscribed again; the status is all it changes (prompt 51)',
+    query: {},
+    body: 'newsletter.status',
+    response: 'NewsletterSubscriber',
+    example: 1,
+  },
   remove: {
     key: 'adminNewsletterSubscribers.remove',
     method: 'DELETE',
@@ -1544,6 +1732,10 @@ const adminMediaBase = adminResource({
     type: enumOf(MEDIA_TYPES),
     provider: enumOf(MEDIA_PROVIDERS),
     folder: 'string',
+    // The files in no folder — the rail's "No folder (3)" (prompt 51).
+    unfiled: 'bool',
+    // The files nothing on the site shows: cleanup day (prompt 51).
+    usage: 'enum:unused',
     // Where each file is used, on the list as well as on a single read: the
     // library prints a "Used in 3" badge per card, and one request for the
     // page beats one request per card (§5.14).
@@ -1562,15 +1754,20 @@ const adminMediaBase = adminResource({
  *
  * The list's `meta.folders` names the folders that hold a file every other
  * filter lets through, whatever the page — the Folder filter's options, none of
- * them leading nowhere (QA-63). `q` reads the alt text, the title, the folder,
- * the public id, the address and the tags.
+ * them leading nowhere (QA-63) — each as `{ name, count }` since prompt 51, with
+ * `meta.unfiled` counting the files in no folder. `q` reads the alt text, the
+ * title, the folder, the public id, the address and the tags.
+ *
+ * A folder is a string on its files (D12): the bulk `move` refiles a selection
+ * (`payload.folder`, `null` for none), and `renameFolder` refiles a whole
+ * folder. Neither touches Cloudinary — each record keeps its address.
  */
 const adminMedia = {
   ...adminMediaBase,
   list: {
     ...adminMediaBase.list,
     description:
-      'List media items for the library grid; `meta.folders` names the folders the other filters leave something in, and `q` also reads the address and the tags',
+      'List media items for the library grid; `meta.folders` is `[{ name, count }]` for the folders the other filters leave something in, `meta.unfiled` counts the files in none, `usage=unused` keeps the files nothing shows, and `q` also reads the address and the tags',
   },
   remove: {
     ...adminMediaBase.remove,
@@ -1582,7 +1779,20 @@ const adminMedia = {
     ...adminMediaBase.bulk,
     query: { force: 'bool' },
     description:
-      'Apply one action to several media items; a delete is all or nothing — a 409 naming every file still in use (`data.refused`), unless `force=true`',
+      'Apply one action to several media items; a delete is all or nothing — a 409 naming every file still in use (`data.refused`), unless `force=true`; `move` refiles them under `payload.folder` (`null` for none) and answers `missing` for ids that matched nothing',
+  },
+  renameFolder: {
+    key: 'adminMedia.renameFolder',
+    method: 'POST',
+    path: '/admin/media/folders/rename',
+    auth: adminMediaBase.update.auth,
+    module: 'media',
+    description:
+      'Refile every media record of a folder (and of the folders inside it) under another name; 422 on `to` with `data.existing` when that name holds files, unless `merge: true`. Records only — Cloudinary paths do not change',
+    query: {},
+    body: 'media.renameFolder',
+    response: 'MediaFolderRename',
+    example: null,
   },
 };
 
@@ -1618,8 +1828,8 @@ const adminRedirects = {
     path: '/admin/redirects/export',
     auth: 'manager',
     module: 'seo',
-    description: 'Every redirect as a CSV file',
-    query: {},
+    description: 'The redirects the list filters select, as a CSV file',
+    query: { q: 'string', isActive: 'bool' },
     body: null,
     response: 'Csv',
     example: null,
@@ -1672,13 +1882,41 @@ const adminSeo = {
     description: 'Lightweight SEO rows for the dashboard and the uniqueness checks',
     query: {
       ...LIST_QUERY,
+      sort: 'enum:updatedAt,lastAnalyzedAt,title,score,type',
       type: enumOf(SEO_ENTITY_TYPES),
       scoreBand: enumOf(SEO_SCORE_BANDS),
       index: 'bool',
+      missing: 'csv:enum:focusKeyword,description,title',
     },
     body: null,
     response: 'SeoOverviewRowList',
     example: null,
+  },
+  notFound: {
+    key: 'adminSeo.notFound',
+    method: 'GET',
+    path: '/admin/seo/not-found',
+    auth: 'manager',
+    module: 'seo',
+    description:
+      'The addresses visitors reached that answered 404, one line per path, the most reached first (prompt 51)',
+    query: { page: 'int', perPage: 'int', q: 'string' },
+    body: null,
+    response: 'NotFoundPathList',
+    example: null,
+  },
+  dismissNotFound: {
+    key: 'adminSeo.dismissNotFound',
+    method: 'DELETE',
+    path: '/admin/seo/not-found/:id',
+    auth: 'manager',
+    module: 'seo',
+    description:
+      'Take a path off the 404 list — every day of it; a new visit puts it back (prompt 51)',
+    query: {},
+    body: null,
+    response: 'Null',
+    example: 1,
   },
 };
 
@@ -1693,7 +1931,7 @@ const adminSettings = {
     query: {},
     body: null,
     response: 'Settings',
-    example: null,
+    example: 1,
   },
   update: {
     key: 'adminSettings.update',
@@ -1705,7 +1943,21 @@ const adminSettings = {
     query: {},
     body: 'settings.update',
     response: 'Settings',
-    example: null,
+    example: 1,
+  },
+  // "Send a test alert" beside the notification addresses (prompt 51).
+  testLeadAlert: {
+    key: 'adminSettings.testLeadAlert',
+    method: 'POST',
+    path: '/admin/settings/test-lead-alert',
+    auth: 'admin',
+    module: 'settings',
+    description:
+      'Send a test lead alert to the saved notification addresses; answers `sentTo` — 422 when none is saved, 502 when the mailer refuses',
+    query: {},
+    body: null,
+    response: 'LeadAlertTest',
+    example: 1,
   },
 };
 
@@ -1760,6 +2012,8 @@ const endpoints = {
   settings,
   seo,
   redirects,
+  notFound,
+  system,
   sitemap,
   auth,
   dashboard,
@@ -1799,4 +2053,4 @@ const allEndpoints = () => Object.values(endpoints).flatMap((group) => Object.va
 /** One entry by its `group.action` key, or `undefined`. */
 const findEndpoint = (key) => allEndpoints().find((entry) => entry.key === key);
 
-module.exports = { endpoints, allEndpoints, findEndpoint };
+module.exports = { endpoints, allEndpoints, findEndpoint, PROPERTY_COUNT_DIMENSIONS };

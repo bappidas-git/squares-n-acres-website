@@ -5,6 +5,9 @@
  *   GET, PUT /api/admin/seo/settings    the whole singleton, deep-merged
  *   GET      /api/admin/seo/overview    one row per optimisable entity
  *   GET      /api/admin/seo/llms-preview  the generated llms.txt, unsaved
+ *   POST     /api/not-found            the site's 404 page reporting where it was reached
+ *   GET      /api/admin/seo/not-found  those addresses, one line per path (prompt 51)
+ *   DELETE   /api/admin/seo/not-found/:id  a path dismissed from the list
  *
  * `seoSettings` is public in full (§4.8 of this prompt): the site has to render
  * the verification tags, `customHeadHtml` and the knowledge graph itself, the
@@ -34,7 +37,11 @@ const { SEO_ENTITY_TYPES } = require('../lib/enums');
 const { isSystemPage } = require('../../src/config/pages');
 const { absoluteUrl, generateLlms, publicPathOf } = require('../lib/sitemapBuilder');
 const { applySettingsUpdate } = require('./settings');
-const { forbidden } = require('../middleware/errors');
+const schemas = require('../../src/services/schemas');
+const { forbidden, notFound, validation } = require('../middleware/errors');
+const { isIgnored, normalizePath, recordVisit, summarize } = require('../lib/notFoundLog');
+const { rateLimit } = require('../middleware/rateLimit');
+const { validateBody } = require('../middleware/validate');
 const { inCsv, matchesQ, toBool } = require('../lib/filters');
 const { paginate, toPositiveInt, DEFAULT_PER_PAGE_ADMIN } = require('../lib/paginate');
 const { publicSeoSettings } = require('../lib/scope');
@@ -68,15 +75,24 @@ const ENTITY_SOURCES = {
 /** The sorts the overview accepts. */
 const OVERVIEW_SORTS = {
   updatedAt: { spec: 'updatedAt', order: 'desc' },
+  // When the panel last measured the record — what the desk's "Last analysed"
+  // column shows (prompt 51; it used to sort by the last save).
+  lastAnalyzedAt: { spec: 'seo.lastAnalyzedAt', order: 'desc' },
   title: { spec: 'title', order: 'asc' },
   score: { spec: 'seo.score', order: 'desc' },
   type: { spec: 'type,title', order: 'asc' },
 };
 
+/** The `seo` fields `?missing=` can ask about. */
+const MISSING_FIELDS = ['focusKeyword', 'description', 'title'];
+
 /** The collections `llms-preview` reads. */
 const LLMS_SOURCES = ['properties', 'localities', 'propertyTypes', 'articles'];
 
 const first = (value) => (Array.isArray(value) ? value[0] : value);
+
+/** How many 404s one address may report in a minute (prompt 51). */
+const NOT_FOUND_REPORTS_PER_MINUTE = 30;
 
 /** The three `seo` fields a duplicate is reported for (§4.12 of prompt 37). */
 const DUPLICATE_FIELDS = ['title', 'description', 'focusKeyword'];
@@ -229,6 +245,10 @@ module.exports = ({ db, getModel }) => {
       });
 
       Object.assign(current(), updated);
+      // The site's address is kept here and nowhere else (prompt 51): Site
+      // settings' `general.siteUrl` is a copy, which a settings `PUT` ignores.
+      const site = db.getSingleton('siteSettings');
+      if (site?.general && updated.siteUrl) site.general.siteUrl = updated.siteUrl;
       db.write();
 
       res.ok({ ...current() });
@@ -262,6 +282,16 @@ module.exports = ({ db, getModel }) => {
       rows = rows.filter((row) => bands.includes(row.seo?.scoreBand ?? 'none'));
     }
 
+    // "No focus keyword" / "No meta description" on the overview cards: the
+    // records without one, analysed or not (prompt 51) — the cards used to open
+    // the Issues tab, which lists analysed records only.
+    const missing = inCsv(req.query.missing).filter((field) => MISSING_FIELDS.includes(field));
+    if (missing.length > 0) {
+      rows = rows.filter((row) =>
+        missing.some((field) => String(row.seo?.[field] ?? '').trim() === '')
+      );
+    }
+
     // `index` reads as the SEO panel labels it — `indexed` or `noindex` — and
     // as the plain boolean the registry declares.
     const index = first(req.query.index);
@@ -290,6 +320,70 @@ module.exports = ({ db, getModel }) => {
 
     const { data, meta } = paginate(sorted, { page: first(req.query.page), perPage });
     res.ok(data, meta);
+  });
+
+  /* ---------------------------------------------------------------- *
+   * The 404 log (prompt 51)
+   * ---------------------------------------------------------------- */
+
+  const notFoundRows = () => db.getCollection('notFoundLog');
+
+  // The site's 404 page, once per page view. A crawler walking dead links
+  // meets the rate limit before it fills anything; the log keeps 500 rows.
+  router.post('/not-found', rateLimit({ max: NOT_FOUND_REPORTS_PER_MINUTE }), (req, res, next) => {
+    try {
+      const body = { ...(req.body ?? {}) };
+      validateBody(schemas.getSchema('notFound.report'), body);
+      const path = normalizePath(body.path);
+      if (!path.startsWith('/')) {
+        throw validation({ path: ['The path must start with a slash.'] });
+      }
+      if (!isIgnored(path, db.getCollection('redirects'))) {
+        recordVisit(notFoundRows(), { path, referrer: body.referrer ?? null });
+        db.write();
+      }
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get('/admin/seo/not-found', (req, res) => {
+    const q = String(first(req.query.q) ?? '')
+      .trim()
+      .toLowerCase();
+    // A path a redirect now answers says where it goes: fixed, and dismissable.
+    const redirected = new Map(
+      db
+        .getCollection('redirects')
+        .filter((rule) => rule.isActive !== false)
+        .map((rule) => [normalizePath(rule.fromPath), rule.toPath])
+    );
+    const lines = summarize(notFoundRows())
+      .filter((line) => !q || line.path.toLowerCase().includes(q))
+      .map((line) => ({ ...line, redirectedTo: redirected.get(line.path) ?? null }));
+    const perPage =
+      String(first(req.query.perPage)) === 'all'
+        ? null
+        : toPositiveInt(first(req.query.perPage), DEFAULT_PER_PAGE_ADMIN);
+    const { data, meta } = paginate(lines, { page: first(req.query.page), perPage });
+    res.ok(data, meta);
+  });
+
+  // Dismissing a path takes every day of it off the list; a visitor who
+  // reaches it again puts it back.
+  router.delete('/admin/seo/not-found/:id', (req, res, next) => {
+    const rows = notFoundRows();
+    const named = rows.find((row) => String(row.id) === String(req.params.id));
+    if (!named) {
+      next(notFound());
+      return;
+    }
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      if (rows[index].path === named.path) rows.splice(index, 1);
+    }
+    db.write();
+    res.message(`${named.path} was dismissed.`);
   });
 
   router.get('/admin/seo/llms-preview', (req, res) => {

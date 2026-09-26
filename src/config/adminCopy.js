@@ -221,6 +221,47 @@ const SEO = {
   saveFailed: 'The search appearance of this record could not be saved.',
   settingsSaved: 'SEO settings saved',
 
+  /**
+   * The panel's own buttons (prompt 51): every one says what it did, or why it
+   * did nothing — the analysis already runs on every keystroke, so a button
+   * that only re-ran it looked broken.
+   */
+  panel: {
+    reanalyse: 'Re-analyse',
+    reanalyseHint:
+      'Re-runs every test against the current values and the latest site-wide index (used by the uniqueness tests)',
+    /** `reanalysed({score: 51, passed: 12, total: 32}, false)`. */
+    reanalysed: ({ score, passed, total }, same) =>
+      `Re-analysed — ${same ? 'still ' : ''}${score}/100, ${passed} of ${total} tests passed`,
+    autoFill: 'Auto-fill missing',
+    autoFillHint: 'Fills only the SEO fields that are empty; never replaces what you typed',
+    nothingToFill:
+      'Nothing to fill — the SEO title, description, focus keyword and share image are already set. Use "Regenerate all" to replace them.',
+    /** `filled(['description', 'share image'])` → `'Filled: description, share image'`. */
+    filled: (labels) => `Filled: ${labels.join(', ')}`,
+    /** `couldNotFill(['share image (no image on this record)'])`. */
+    couldNotFill: (reasons) => `Could not fill: ${reasons.join(', ')}`,
+    regenerate: 'Regenerate all',
+    regenerateHint: 'Replaces the SEO title, description, focus keyword and share image',
+    regenerateTitle: 'Regenerate the SEO fields?',
+    regenerateMessage:
+      'Replace the SEO title, description, focus keyword and share image with generated values? What you typed will be lost.',
+    regenerateConfirm: 'Regenerate',
+    regenerated: (labels) => `Regenerated: ${labels.join(', ')}`,
+    /** What a regenerate left alone because nothing could be generated for it. */
+    kept: (reasons) => `Kept: ${reasons.join(', ')}`,
+    generated: 'Generated from the page’s own facts.',
+    /** `replaceTitle('SEO title')` → the per-field Generate's confirmation. */
+    replaceTitle: (noun) => `Replace the ${noun} you wrote with a generated one?`,
+    replaceMessage: (noun) =>
+      `The ${noun} is rebuilt from the record’s own facts, and what is in the box now is lost.`,
+    replaceConfirm: 'Replace it',
+    sameAsGenerated: (noun) => `The generated ${noun} is the one already in the box.`,
+    cannotGenerate: (noun, reason) => `No ${noun} could be generated — ${reason}.`,
+    /** `opened('SEO', 'The title does not carry the focus keyword.')` — Fix SEO's jump. */
+    opened: (where, message) => `Opened ${where} — “${message}”`,
+  },
+
   dashboard: {
     empty: 'Nothing analysed yet',
     emptyText: 'Run an analysis to see how every published record scores, and what would raise it.',
@@ -242,7 +283,7 @@ const SEO = {
 
 const DASHBOARD = {
   leadsEmpty: 'No leads yet.',
-  followUpsEmpty: 'Nothing is due in the next two weeks.',
+  followUpsEmpty: 'Nothing is overdue, and nothing is due in the next two weeks.',
   propertiesEmpty: 'No listings have been viewed yet.',
   viewAll: 'View all',
 };

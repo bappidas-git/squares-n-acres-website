@@ -85,8 +85,8 @@ export default function SeoOverviewCards({ summary, loading = false, onFilter, o
         value={summary.missingKeyword}
         hint="Nothing to measure the page against"
         tone={summary.missingKeyword > 0 ? 'warning' : 'success'}
-        onClick={() => onOpenTab?.('issues')}
-        actionLabel="Open the issues list"
+        onClick={() => onFilter?.({ missing: ['focusKeyword'] })}
+        actionLabel="Filter the table to records without a focus keyword"
       />
       <CountCard
         icon="mdi:text-box-remove-outline"
@@ -94,8 +94,8 @@ export default function SeoOverviewCards({ summary, loading = false, onFilter, o
         value={summary.missingDescription}
         hint="The site-wide sentence is used instead"
         tone={summary.missingDescription > 0 ? 'warning' : 'success'}
-        onClick={() => onOpenTab?.('issues')}
-        actionLabel="Open the issues list"
+        onClick={() => onFilter?.({ missing: ['description'] })}
+        actionLabel="Filter the table to records without a meta description"
       />
       <CountCard
         icon="mdi:eye-off-outline"

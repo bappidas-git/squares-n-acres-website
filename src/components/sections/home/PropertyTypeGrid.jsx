@@ -18,8 +18,9 @@ import { usePropertyTypes } from '../../../hooks/useMasterData';
  * the header's Buy menu and in the footer without a code change. A commercial
  * type links to `/commercial/<slug>`; everything else to `/buy/<slug>` (D25).
  *
- * The counts share `useCategoryCounts`' cache with the tiles above, so the two
- * sections between them make one request per filter rather than two.
+ * The counts share `useCategoryCounts`' cache with the tiles above: every
+ * type's number is in the one `GET /properties/counts` answer the Plots, Rent
+ * and Commercial tiles read too.
  */
 
 /** Where a type's listings live (D25), by its segment's kind (QA-52). */

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 
+import FolderField from '../../../components/admin/FolderField';
 import mediaService from '../../../services/mediaService';
 import useDebounce from '../../../hooks/useDebounce';
 import { Alert, Button, Modal, SelectField, TextField } from '../../../components/ui';
@@ -132,8 +133,9 @@ export function describeUrl(url) {
  * before it is filed.
  *
  * @param {object} props
- * @param {string} [props.folder] pre-filled, and offered as a datalist
- * @param {string[]} [props.folders] the folders that already exist
+ * @param {string} [props.folder] pre-filled
+ * @param {Array<string|{name: string, count?: number}>} [props.folders] the
+ *   folders that already exist, offered by the folder field (prompt 51)
  * @param {'image'|'video'|'document'|'any'} [props.accept] the one kind of file
  *   the field takes — the Type is then fixed, and a certain mismatch refused
  * @param {(record: object) => void} props.onCreated
@@ -408,21 +410,18 @@ export function MediaUrlForm({
           onChange={(event) => setChosenType(event.target.value)}
         />
 
-        <TextField
+        <FolderField
           label="Folder"
           value={target}
+          folders={folders}
           error={refused.folder}
-          maxLength={120}
-          list="sna-media-folders"
-          placeholder="e.g. properties"
-          hint="Optional. Groups the file in the library."
-          onChange={(event) => setTarget(event.target.value)}
+          hint={
+            cleanFolder(target)
+              ? `Filed in “${cleanFolder(target)}”.`
+              : 'Optional. Groups the file in the library.'
+          }
+          onChange={(next) => setTarget(next ?? '')}
         />
-        <datalist id="sna-media-folders">
-          {folders.map((name) => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
       </div>
 
       {described ? (
@@ -463,7 +462,7 @@ export function MediaUrlForm({
  * @param {(record: object) => void} [props.onExisting] opens the file an
  *   address already in the library belongs to
  * @param {string} [props.folder]
- * @param {string[]} [props.folders]
+ * @param {Array<string|{name: string, count?: number}>} [props.folders]
  */
 export default function MediaAddUrlDialog({
   open,

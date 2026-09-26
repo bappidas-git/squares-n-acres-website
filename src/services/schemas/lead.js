@@ -9,12 +9,14 @@
 
 const {
   AREA_UNITS,
+  LEAD_CONTACT_TYPES,
   LEAD_PRIORITY,
   LEAD_SOURCES,
   LEAD_STATUS,
   LEGACY_LEAD_SOURCE_MAP,
   LISTING_TYPES,
   REQUIREMENT_TIMELINES,
+  SITE_LEAD_SOURCES,
 } = require('../../config/enums');
 const { PATH_SLUG_PATTERN, PATH_SLUG_MAX_LENGTH } = require('./page');
 
@@ -58,10 +60,12 @@ const create = {
   phone: { type: 'phone', required: true },
   email: { type: 'email', nullable: true, default: null },
   message: { type: 'string', nullable: true, maxLength: 2000, default: null },
+  // The site's own sources: the desk's (walk-in, phone, …) are for the leads
+  // it enters through `POST /admin/leads` (prompt 51).
   source: {
     type: 'enum',
     required: true,
-    enum: LEAD_SOURCES.values,
+    enum: SITE_LEAD_SOURCES,
     accepts: Object.keys(LEGACY_LEAD_SOURCE_MAP),
     default: 'contact-page',
   },
@@ -96,6 +100,11 @@ const patch = {
   assignedTo: { type: 'int', nullable: true },
   followUpAt: { type: 'datetime', nullable: true },
   lostReason: { type: 'string', nullable: true, maxLength: 300 },
+  // The contact details are the desk's to correct once the call has been
+  // made (prompt 51): a mistyped digit made a lead unreachable for good.
+  name: { type: 'string', min: 2, maxLength: 80 },
+  phone: { type: 'phone' },
+  email: { type: 'email', nullable: true },
   requirement,
 };
 
@@ -103,4 +112,34 @@ const note = {
   text: { type: 'string', required: true, min: 1, maxLength: 2000 },
 };
 
-module.exports = { create, patch, note };
+/**
+ * `POST /admin/leads` — an enquiry the desk enters itself: a walk-in, a phone
+ * call, a portal lead (prompt 51). The public form's shape without its
+ * honeypot, consent banner and page context, plus who it goes to, how urgent
+ * it is and the first note.
+ */
+const adminCreate = {
+  name: create.name,
+  phone: create.phone,
+  email: create.email,
+  message: create.message,
+  source: { type: 'enum', required: true, enum: LEAD_SOURCES.values, default: 'walk-in' },
+  propertyId: create.propertyId,
+  requirement,
+  assignedTo: { type: 'int', nullable: true, default: null },
+  priority: { type: 'enum', enum: LEAD_PRIORITY.values, nullable: true, default: null },
+  consent: create.consent,
+  note: { type: 'string', nullable: true, maxLength: 2000, default: null },
+};
+
+/**
+ * `POST /admin/leads/:id/activities` — a call, a WhatsApp, a visit or a
+ * meeting, written to the timeline as it happened (prompt 51).
+ */
+const activity = {
+  type: { type: 'enum', required: true, enum: LEAD_CONTACT_TYPES.values },
+  outcome: { type: 'string', nullable: true, maxLength: 200, default: null },
+  note: { type: 'string', nullable: true, maxLength: 2000, default: null },
+};
+
+module.exports = { create, patch, note, adminCreate, activity };

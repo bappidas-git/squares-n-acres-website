@@ -31,6 +31,11 @@ Every later call
         ├─ known token, role not allowed      →  403 { message: 'You do not have permission to perform this action.' }
         └─ known token, role allowed          →  the handler runs, with $request->user() set
 
+POST /api/auth/refresh                                     (prompt 51)
+        ├─ $token = $request->user()->currentAccessToken()
+        ├─ $token->forceFill(['expires_at' => now()->addMinutes(config('sanctum.expiration'))])->save()
+        └─→ 200 { data: { token, expiresAt, user } }   — the token the request carried, a later expiresAt
+
 POST /api/auth/logout
         └─ $request->user()->currentAccessToken()->delete()  →  200 { data: null, message: 'Logged out.' }
 ```
@@ -52,6 +57,14 @@ Notes that matter:
   too: it stores `sna_auth_token`, `sna_auth_user` and `sna_auth_expires_at`, sets
   a timer, and signs the user out with a toast the moment the clock runs out. Send
   it as ISO-8601 UTC, the same instant the token record carries.
+- **"Stay signed in"** (prompt 51). Five minutes before `expiresAt` the admin
+  shows "Your session ends in 5 minutes." with a button that calls
+  `POST /auth/refresh`: the **same** token, its `expires_at` moved a full
+  lifetime from now, answered in the login response's shape. Do not issue a new
+  token there — the requests already on their way, and the admin's other tabs,
+  hold the old one, and revoking it signs them all out. A token that is no
+  longer live answers `401`. Unsaved work in the record forms is kept in the
+  browser if the session ends anyway.
 - A `401` from **any** endpoint makes the frontend drop its stored session and
   redirect to the login screen, so never answer 401 for an authorisation failure —
   that is what `403` is for.

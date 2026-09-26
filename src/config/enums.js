@@ -366,8 +366,41 @@ const LEAD_SOURCES = makeEnum([
   { value: 'whatsapp-click', label: 'WhatsApp Click' },
   { value: 'call-click', label: 'Call Click' },
   { value: 'hero-search', label: 'Hero Search' },
+  // What the desk enters itself (prompt 51): the enquiries that never passed
+  // through a form of the site.
+  { value: 'walk-in', label: 'Walk-in' },
+  { value: 'phone', label: 'Phone call' },
+  { value: 'whatsapp-inbound', label: 'WhatsApp (inbound)' },
+  { value: 'referral', label: 'Referral' },
+  { value: 'portal-99acres', label: 'Portal: 99acres' },
+  { value: 'portal-magicbricks', label: 'Portal: MagicBricks' },
+  { value: 'portal-housing', label: 'Portal: Housing' },
   { value: 'other', label: 'Other' },
 ]);
+
+/** The sources an enquiry entered by the desk usually has, first in its picker (prompt 51). */
+const ADMIN_LEAD_SOURCES = [
+  'walk-in',
+  'phone',
+  'whatsapp-inbound',
+  'referral',
+  'portal-99acres',
+  'portal-magicbricks',
+  'portal-housing',
+];
+
+/**
+ * The sources a form on the site may send — every one but the desk's own: a
+ * visitor's enquiry is never a walk-in (prompt 51).
+ */
+const SITE_LEAD_SOURCES = LEAD_SOURCES.values.filter(
+  (value) => !ADMIN_LEAD_SOURCES.includes(value)
+);
+
+/** …as the options of a picker that files a site form's enquiries. */
+const SITE_LEAD_SOURCE_OPTIONS = LEAD_SOURCES.options.filter((option) =>
+  SITE_LEAD_SOURCES.includes(option.value)
+);
 
 /**
  * The 24 source values the boilerplate wrote, mapped onto `LEAD_SOURCES`
@@ -432,6 +465,86 @@ const LEAD_ACTIVITY_TYPES = makeEnum([
   { value: 'email-sent', label: 'E-mail sent' },
   { value: 'call-logged', label: 'Call logged' },
   { value: 'priority-changed', label: 'Priority changed' },
+  // Prompt 51: the desk's own record of a conversation, and the two facts a
+  // lead learns without anybody logging them.
+  { value: 'whatsapp-logged', label: 'WhatsApp logged' },
+  { value: 'site-visit-logged', label: 'Site visit logged' },
+  { value: 'meeting-logged', label: 'Meeting logged' },
+  { value: 'activity-logged', label: 'Activity logged' },
+  { value: 'details-updated', label: 'Details updated' },
+  { value: 'enquired-again', label: 'Enquired again' },
+]);
+
+/**
+ * What the desk did — `POST /admin/leads/:id/activities { type }` (prompt 51).
+ * Each is written to the timeline as its `activity` type.
+ */
+const LEAD_CONTACT_TYPES = makeEnum([
+  {
+    value: 'call',
+    label: 'Call',
+    action: 'Log call',
+    activity: 'call-logged',
+    icon: 'mdi:phone-outline',
+  },
+  {
+    value: 'whatsapp',
+    label: 'WhatsApp',
+    action: 'Log WhatsApp',
+    activity: 'whatsapp-logged',
+    icon: 'mdi:whatsapp',
+  },
+  {
+    value: 'site-visit',
+    label: 'Site visit',
+    action: 'Log site visit',
+    activity: 'site-visit-logged',
+    icon: 'mdi:home-map-marker',
+  },
+  {
+    value: 'meeting',
+    label: 'Meeting',
+    action: 'Log meeting',
+    activity: 'meeting-logged',
+    icon: 'mdi:account-group-outline',
+  },
+  {
+    value: 'other',
+    label: 'Other',
+    action: 'Log activity',
+    activity: 'activity-logged',
+    icon: 'mdi:note-text-outline',
+  },
+]);
+
+/**
+ * The follow-up worklist — `GET /admin/leads?followUp=` (prompt 51). Open
+ * leads only: a converted or lost lead has no next step to be late for.
+ */
+const LEAD_FOLLOW_UP = makeEnum([
+  { value: 'overdue', label: 'Overdue' },
+  { value: 'today', label: 'Due today' },
+  { value: 'next7', label: 'Due in the next 7 days' },
+  { value: 'none', label: 'No next step' },
+]);
+
+/** Who a new lead goes to (`settings.leads.autoAssign`). */
+/**
+ * The statuses a lead is still being worked in — every one but the two that
+ * close it (prompt 51): what the follow-up worklist counts, and what a
+ * colleague who leaves hands over.
+ */
+const LEAD_CLOSED_STATUSES = ['converted', 'lost'];
+const LEAD_OPEN_STATUSES = LEAD_STATUS.values.filter(
+  (status) => !LEAD_CLOSED_STATUSES.includes(status)
+);
+
+const LEAD_AUTO_ASSIGN = makeEnum([
+  { value: 'none', label: 'Nobody — leads arrive unassigned' },
+  { value: 'round-robin', label: 'Round robin between the sales users' },
+  // Prompt 51: the listing's advisor, when their team card is linked to an
+  // active sales or manager account.
+  { value: 'listing-advisor', label: 'The listing’s advisor, else round robin' },
 ]);
 
 const REQUIREMENT_TIMELINES = makeEnum([
@@ -721,6 +834,14 @@ const BULK_ACTIONS = makeEnum([
   { value: 'assign', label: 'Assign' },
   { value: 'status', label: 'Change status' },
   { value: 'priority', label: 'Change priority' },
+  // Media: `payload.folder`, a folder name or `null` (prompt 51).
+  { value: 'move', label: 'Move to folder' },
+  // Properties, each with its value in `payload` (prompt 51).
+  { value: 'availability', label: 'Set availability' },
+  { value: 'assignAgent', label: 'Change the advisor' },
+  { value: 'setLocality', label: 'Change the locality' },
+  { value: 'setPropertyType', label: 'Change the property type' },
+  { value: 'setDeveloper', label: 'Change the developer' },
 ]);
 
 /* ------------------------------------------------------------------ *
@@ -833,6 +954,14 @@ module.exports = {
   LEAD_SOURCES,
   LEGACY_LEAD_SOURCE_MAP,
   LEAD_ACTIVITY_TYPES,
+  LEAD_CONTACT_TYPES,
+  LEAD_FOLLOW_UP,
+  LEAD_AUTO_ASSIGN,
+  LEAD_CLOSED_STATUSES,
+  LEAD_OPEN_STATUSES,
+  ADMIN_LEAD_SOURCES,
+  SITE_LEAD_SOURCES,
+  SITE_LEAD_SOURCE_OPTIONS,
   REQUIREMENT_TIMELINES,
   // Content
   ARTICLE_STATUS,

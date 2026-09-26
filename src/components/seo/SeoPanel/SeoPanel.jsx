@@ -173,7 +173,7 @@ export default function SeoPanel({
     () => (initialField ? tabOfSeoField(initialField) : null) ?? 'general'
   );
   const masterData = useMasterData();
-  const { rows: siteIndex } = useSiteSeoIndex();
+  const { rows: siteIndex, refresh: refreshIndex } = useSiteSeoIndex();
   const { settings: loadedSettings } = useSeoSettings();
 
   const seoSettings = seoSettingsProp ?? loadedSettings;
@@ -247,6 +247,16 @@ export default function SeoPanel({
 
   const setSeo = useCallback((patch) => onChangeRef.current?.(patch), []);
 
+  // "Re-analyse" reads the site-wide list again before it runs, because three
+  // tests compare this record against every other one. A host that hands the
+  // panel its own list (the SEO dashboard's dialog) keeps it: the module cache
+  // is refreshed for the next panel, and the answer is the host's list.
+  const hostIndex = contextProp?.siteIndex;
+  const refreshSiteIndex = useCallback(async () => {
+    const rows = await refreshIndex();
+    return hostIndex ?? rows ?? [];
+  }, [refreshIndex, hostIndex]);
+
   // Focusing a control that has just been revealed has to wait for the render
   // that reveals it. The target carries a counter: keyed on the tab alone, a
   // hint for a field on the tab already open changed nothing, ran nothing, and
@@ -313,6 +323,7 @@ export default function SeoPanel({
     analysis,
     analysing,
     reanalyse,
+    refreshSiteIndex,
     resolved,
     seoSettings,
     siteUrl,

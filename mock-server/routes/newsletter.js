@@ -26,6 +26,7 @@ const { nextId } = require('../lib/ids');
 const { rateLimit } = require('../middleware/rateLimit');
 const { toCsv } = require('../lib/csv');
 const { validateBody } = require('../middleware/validate');
+const { ApiError, notFound } = require('../middleware/errors');
 
 /** §5.11: ten submissions a minute per IP, on every public write. */
 const SUBMISSIONS_PER_MINUTE = 10;
@@ -70,6 +71,13 @@ module.exports = ({ db, getModel }) => {
         if (typeof body.website === 'string' && body.website.trim() !== '') {
           res.message('ok');
           return;
+        }
+
+        // Site settings → Newsletter → "Collect subscriptions" off: the site
+        // hides every signup, and the API refuses one that arrives anyway
+        // (prompt 51).
+        if (db.getSingleton('siteSettings')?.newsletter?.enabled === false) {
+          throw new ApiError(403, 'The newsletter is not taking subscriptions at the moment.');
         }
 
         if (body.email !== undefined) body.email = normalizeEmail(body.email);
@@ -136,6 +144,26 @@ module.exports = ({ db, getModel }) => {
     res.send(toCsv(matching, CSV_COLUMNS));
   });
 
+  // "Mark unsubscribed" (prompt 51): somebody who asked to stop is kept on the
+  // list as unsubscribed — so a later subscribe is theirs to make — rather
+  // than deleted, and leaves the export.
+  router.patch('/admin/newsletter-subscribers/:id', (req, res, next) => {
+    try {
+      const subscriber = rows().find((row) => String(row.id) === String(req.params.id));
+      if (!subscriber) throw notFound();
+      const body = { status: req.body?.status };
+      validateBody(schemas.getSchema('newsletter.status'), body);
+      if (subscriber.status !== body.status) {
+        subscriber.status = body.status;
+        subscriber.updatedAt = new Date().toISOString();
+        db.write();
+      }
+      res.ok(subscriber);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.use(
     makeCrudRouter({
       db,
@@ -143,8 +171,8 @@ module.exports = ({ db, getModel }) => {
       basePath: 'newsletter-subscribers',
       schema: 'newsletterSubscriber',
       // A subscriber is created by the public form and removed by an editor;
-      // there is nothing to edit in between, so the contract has no write
-      // endpoints here (§5.14) and neither does the router.
+      // the status is the one thing changed in between (the `PATCH` above).
+      // Nothing else is written here (§5.14).
       routes: ['adminList', 'remove'],
       publicPath: false,
       slugged: false,

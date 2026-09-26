@@ -13,6 +13,7 @@ import {
   TextareaField,
 } from '../../../../../components/ui';
 import { URL_PATTERN } from '../../../../../utils/validation';
+import { useToast } from '../../../../../components/common/ToastProvider';
 import { LIMITS } from '../validators/property';
 
 import styles from './ImageGalleryEditor.module.css';
@@ -22,8 +23,12 @@ import styles from './ImageGalleryEditor.module.css';
 // visits never open, so it arrives when the button is pressed.
 const MediaPickerDialog = lazy(() => import('../../../../../components/admin/MediaPickerDialog'));
 
-/** The Cloudinary folder a listing's photographs are filed under. */
-const GALLERY_FOLDER = 'properties';
+/**
+ * Where a listing's photographs were all filed before each listing had a
+ * folder of its own — and where the library opens while this one's holds
+ * nothing yet (prompt 51).
+ */
+export const GALLERY_FOLDER = 'properties';
 
 /**
  * One URL per line (or per space), blanks and duplicates dropped, order kept.
@@ -45,6 +50,45 @@ export function parseUrlList(text, existing = []) {
       found.push(url);
     });
   return found;
+}
+
+/**
+ * What adding files from the library says: how many were added and how many
+ * the gallery already held.
+ *
+ * @param {number} added
+ * @param {number} skipped
+ * @returns {string}
+ */
+export function galleryAddMessage(added, skipped) {
+  const held = `${skipped} ${skipped === 1 ? 'was' : 'were'} already in the gallery`;
+  if (added === 0) {
+    return skipped === 1
+      ? 'That photograph is already in the gallery.'
+      : 'Those photographs are already in the gallery.';
+  }
+  return skipped > 0 ? `Added ${added} — ${held}.` : `Added ${added}.`;
+}
+
+/**
+ * "Fill empty alt text" (prompt 51): `<title> — <locality> — photo <n>` for each
+ * image that has an address and no description, `n` its place in the gallery.
+ * A start the editor improves on — an image already described is never
+ * touched.
+ *
+ * @param {Array<object>} images
+ * @param {{title?: string, locality?: string}} [source]
+ * @returns {Array<{id: string|number, alt: string}>} one patch per filled image
+ */
+export function fillEmptyAlts(images = [], { title, locality } = {}) {
+  const lead = [title, locality].map((part) => String(part ?? '').trim()).filter(Boolean);
+  return images
+    .map((image, index) => {
+      if (!String(image?.url ?? '').trim() || String(image?.alt ?? '').trim()) return null;
+      const photo = lead.length > 0 ? `photo ${index + 1}` : `Photo ${index + 1}`;
+      return { id: image.id, alt: [...lead, photo].join(' — ') };
+    })
+    .filter(Boolean);
 }
 
 /**
@@ -88,13 +132,19 @@ export function coverAfterRemoval(images = [], id) {
  * @param {(id: string|number) => void} props.onRemove
  * @param {(from: number, to: number) => void} props.onMove
  * @param {(id: string|number) => void} props.onSetCover
+ * @param {string} [props.folder] where this listing's uploads are filed —
+ *   `properties/<slug>` (prompt 51)
+ * @param {{title?: string, locality?: string}} [props.altSource] what "Fill
+ *   empty alt text" writes from (prompt 51)
  */
 export default function ImageGalleryEditor({
   images = [],
   errors = {},
   idFor = () => undefined,
   disabled = false,
+  folder = GALLERY_FOLDER,
   altHint,
+  altSource,
   onAdd,
   onUpdate,
   onRemove,
@@ -102,6 +152,7 @@ export default function ImageGalleryEditor({
   onSetCover,
 }) {
   const coverName = useId();
+  const toast = useToast();
   const { configured } = useCloudinaryConfig();
   const [single, setSingle] = useState('');
   const [singleError, setSingleError] = useState('');
@@ -128,21 +179,43 @@ export default function ImageGalleryEditor({
     const fresh = items
       .filter((item) => item?.url && !known.has(item.url))
       .map((item) => ({ url: item.url, alt: item.alt ?? '', caption: '' }));
+    const skipped = items.length - fresh.length;
 
+    // Said where it is seen (prompt 51): the only message used to go to a
+    // visually hidden region, so a pick of files the gallery already held
+    // looked like a button that did nothing.
+    const message = galleryAddMessage(fresh.length, skipped);
     if (fresh.length === 0) {
-      setAnnouncement('Those photographs are already in the gallery.');
-      return;
+      toast.info(message);
+      setAnnouncement(message);
+      return { added: 0, skipped };
     }
     onAdd?.(fresh);
-    setAnnouncement(`${fresh.length} ${fresh.length === 1 ? 'image' : 'images'} added.`);
+    toast.success(message);
+    setAnnouncement(message);
+    return { added: fresh.length, skipped };
   };
 
   const queue = useMediaUpload({
-    folder: GALLERY_FOLDER,
+    folder,
     accept: 'image',
     onUploaded: addPicked,
   });
   const missingAlt = images.filter((image) => String(image.alt ?? '').trim() === '').length;
+
+  const fillAlts = () => {
+    const patches = fillEmptyAlts(images, altSource);
+    if (patches.length === 0) {
+      toast.info('Every image is already described.');
+      return;
+    }
+    patches.forEach((patch) => onUpdate?.(patch.id, { alt: patch.alt }));
+    const message = `${patches.length} ${
+      patches.length === 1 ? 'image described' : 'images described'
+    } from the title and the locality — edit any of them.`;
+    toast.success(message);
+    setAnnouncement(message);
+  };
 
   const move = (from, to) => {
     if (disabled || to < 0 || to >= images.length || from === to) return;
@@ -221,7 +294,24 @@ export default function ImageGalleryEditor({
         ) : images.length > 0 ? (
           <span className={styles.described}> · every image described</span>
         ) : null}
+        {missingAlt > 0 && !disabled ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            className={styles.fillAlts}
+            icon={<Icon icon="mdi:text-box-edit-outline" width="16" height="16" />}
+            onClick={fillAlts}
+          >
+            Fill empty alt text
+          </Button>
+        ) : null}
       </p>
+      {missingAlt > 0 ? (
+        <p className={styles.altNote}>
+          A draft saves without descriptions; the listing needs one for every image before it goes
+          live.
+        </p>
+      ) : null}
 
       {galleryError ? (
         <p className={styles.galleryError} id={idFor('images')} tabIndex={-1} role="alert">
@@ -294,7 +384,6 @@ export default function ImageGalleryEditor({
                   <TextField
                     id={idFor(`images.${index}.alt`)}
                     label="Alt text"
-                    required
                     value={image.alt ?? ''}
                     error={altError}
                     disabled={disabled}
@@ -459,7 +548,7 @@ export default function ImageGalleryEditor({
       ) : null}
 
       {configured && uploadOpen ? (
-        <MediaUploadZone queue={queue} accept="image" disabled={disabled} />
+        <MediaUploadZone queue={queue} accept="image" folder={folder} disabled={disabled} />
       ) : null}
 
       {pickerOpen ? (
@@ -468,8 +557,11 @@ export default function ImageGalleryEditor({
             open
             multiple
             accept="image"
-            folder={GALLERY_FOLDER}
+            folder={folder}
+            fallbackFolder={GALLERY_FOLDER}
             title="Add photographs to this listing"
+            excludeUrls={urls}
+            excludeLabel="In the gallery"
             onClose={() => setPickerOpen(false)}
             onSelect={addPicked}
           />

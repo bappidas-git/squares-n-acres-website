@@ -250,7 +250,7 @@ describe('SeoPanel', () => {
 
     const [insert] = screen.getAllByRole('button', { name: 'Insert variable' });
     await userEvent.click(insert);
-    await userEvent.click(screen.getByRole('menuitem', { name: /%price%/ }));
+    await userEvent.click(screen.getByRole('button', { name: /%price%/ }));
 
     await waitFor(() => expect(screen.getByLabelText('SEO title')).toHaveValue('%price%'));
     // The preview resolves against the form's values, not the saved record.

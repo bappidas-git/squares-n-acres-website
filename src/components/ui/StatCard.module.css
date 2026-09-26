@@ -55,3 +55,38 @@
   color: var(--color-error-dark);
   font-weight: var(--font-weight-semibold);
 }
+
+/* A card that opens the list behind its number: the label is the link, and
+   its ::after covers the card so the whole tile is the target. */
+.linked {
+  position: relative;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.linked:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.stretched {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.stretched::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.stretched:focus-visible {
+  outline: none;
+}
+
+.linked:has(.stretched:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}

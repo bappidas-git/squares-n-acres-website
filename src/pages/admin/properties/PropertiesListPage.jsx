@@ -2,16 +2,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 
+import AvailabilityDialog from './AvailabilityDialog';
 import Button from '../../../components/ui/Button';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import DataTable from '../../../components/admin/DataTable';
 import FilterBar from '../../../components/admin/FilterBar';
 import PageHeader from '../../../components/admin/PageHeader';
 import PATHS from '../../../routes/paths';
+import leadService from '../../../services/leadService';
 import propertyService from '../../../services/propertyService';
+import useApi from '../../../hooks/useApi';
 import useApiList from '../../../hooks/useApiList';
 import useLingering from '../../../hooks/useLingering';
 import ActivationCheckDialog from './ActivationCheckDialog';
+import EditPriceDialog from './EditPriceDialog';
+import { AVAILABILITY } from '../../../config/enums';
 import { CSV_MIME, csvFileName, toCsv } from '../../../utils/csv';
 import { publishGaps, publishProblems } from '../../../config/propertyRules';
 import { PROPERTY_CSV_COLUMNS, buildPropertyColumns, renderPropertyCard } from './propertyColumns';
@@ -27,12 +32,15 @@ import { firstFieldMessage } from '../../../services/apiError';
 import { formatNumber } from '../../../utils/format';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import {
+  useAmenities,
   useDevelopers,
   useLocalities,
   usePropertyTypes,
   useSegments,
 } from '../../../hooks/useMasterData';
+import { useMasterData } from '../../../contexts/MasterDataContext';
 import { useToast } from '../../../components/common/ToastProvider';
+import { team } from '../../../services/masterDataService';
 import { viewUrlOf } from './publicUrl';
 
 import styles from './PropertiesListPage.module.css';
@@ -46,6 +54,11 @@ const BULK_ACTIONS = [
   { key: 'unfeature', label: 'Unfeature', icon: 'mdi:star-off-outline' },
   { key: 'verify', label: 'Verify', icon: 'mdi:check-decagram-outline' },
   { key: 'unverify', label: 'Unverify', icon: 'mdi:decagram-outline' },
+  // `availability` with its value in the payload (prompt 51).
+  { key: 'availability:available', label: 'Mark available', icon: 'mdi:check-circle-outline' },
+  { key: 'availability:reserved', label: 'Mark reserved', icon: 'mdi:clock-outline' },
+  { key: 'availability:sold', label: 'Mark sold', icon: 'mdi:tag-check-outline' },
+  { key: 'availability:rented', label: 'Mark rented', icon: 'mdi:key-outline' },
   {
     key: 'delete',
     label: 'Delete',
@@ -58,6 +71,8 @@ const BULK_ACTIONS = [
     },
   },
 ];
+
+const AVAILABILITY_ACTION = /^availability:(.+)$/;
 
 /** A row the publish rules refuse, as the activation check lists it — or `null`. */
 function notReadyOf(row) {
@@ -101,6 +116,18 @@ export default function PropertiesListPage() {
   const propertyTypes = usePropertyTypes({ activeOnly: false });
   const localities = useLocalities({ activeOnly: false });
   const developers = useDevelopers({ activeOnly: false });
+  // For the Amenity and Badge filters Master data's counts link to (prompt 51).
+  const amenities = useAmenities({ activeOnly: false });
+  const { badges } = useMasterData();
+  // The advisors, for the Advisor filter the Team list links to (prompt 51).
+  // A sales user cannot read the team's admin list; the filter still works
+  // from a link, named by its id.
+  const { data: agentRows } = useApi(
+    (signal) => team.adminList({ perPage: 'all', sort: 'name' }, { signal }),
+    [],
+    { enabled: can('content', 'view'), initialData: [] }
+  );
+  const agents = useMemo(() => (Array.isArray(agentRows) ? agentRows : []), [agentRows]);
 
   const {
     items,
@@ -128,6 +155,10 @@ export default function PropertiesListPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [deletingBusy, setDeletingBusy] = useState(false);
+  // "Availability…" and "Edit price…" from the row menu (prompt 51).
+  const [availabilityFor, setAvailabilityFor] = useState(null);
+  const [pricingFor, setPricingFor] = useState(null);
+  const [rowBusy, setRowBusy] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState(null);
   const [exporting, setExporting] = useState(false);
   // Listings an "Activate" would put on the site without what the publish
@@ -270,6 +301,57 @@ export default function PropertiesListPage() {
     else refetch();
   };
 
+  // What still points at the listing about to be deleted: the leads keep a
+  // snapshot of its name, and the confirm says so (prompt 51).
+  const { meta: leadRefs } = useApi(
+    (signal) => leadService.adminList({ propertyId: deleting.id, perPage: 1 }, { signal }),
+    [deleting?.id ?? null],
+    { enabled: Boolean(deleting) }
+  );
+  const referencingLeads = deleting ? (leadRefs?.total ?? 0) : 0;
+
+  /**
+   * A change made from a row's dialog — availability, price — sent as a PATCH
+   * of those fields alone, the row showing what the API answered. A view that
+   * the change takes the row out of is asked again.
+   */
+  const patchRow = async (row, body, message) => {
+    const id = String(row.id);
+    setRowBusy(true);
+    try {
+      const envelope = await propertyService.patch(row.id, body);
+      const saved = envelope?.data ?? {};
+      toast.success(message);
+      const narrowed = Object.keys(body).some((key) => {
+        const value = paramsRef.current?.[key];
+        return value !== undefined && value !== null && value !== '';
+      });
+      if (narrowed) {
+        refetch();
+      } else {
+        setOverrides((current) => ({
+          ...current,
+          [id]: {
+            ...current[id],
+            ...Object.fromEntries(Object.keys(body).map((key) => [key, saved[key] ?? body[key]])),
+            ...(saved.updatedAt ? { updatedAt: saved.updatedAt } : null),
+          },
+        }));
+      }
+      return true;
+    } catch (thrown) {
+      if (thrown?.status === 404) {
+        toast.error(TOASTS.gone(`“${row.title}”`));
+        refetch();
+        return true;
+      }
+      toast.error(firstFieldMessage(thrown, 'The change could not be saved.'));
+      return false;
+    } finally {
+      setRowBusy(false);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleting) return;
     setDeletingBusy(true);
@@ -291,11 +373,23 @@ export default function PropertiesListPage() {
     }
   };
 
-  const applyBulk = async (action, ids) => {
+  const applyBulk = async (action, ids, payload) => {
     setBulkBusy(true);
     try {
-      const { message } = await propertyService.bulk({ ids, action });
-      toast.success(message || `${ids.length} properties updated.`);
+      const { data, message } = await propertyService.bulk({
+        ids,
+        action,
+        ...(payload ? { payload } : null),
+      });
+      if (action === 'availability' && data?.affected === 0) {
+        toast.info(
+          `Nothing to change: the selected listings were already ${AVAILABILITY.labelOf(
+            payload?.availability
+          ).toLowerCase()}.`
+        );
+      } else {
+        toast.success(message || `${ids.length} properties updated.`);
+      }
       setSelectedIds([]);
       if (action === 'delete') afterRemoval(ids.length);
       else refetch();
@@ -319,6 +413,11 @@ export default function PropertiesListPage() {
    * which listing lacks what, and may activate the ones that are ready.
    */
   const runBulk = async (action, ids) => {
+    const availability = AVAILABILITY_ACTION.exec(action);
+    if (availability) {
+      await applyBulk('availability', ids, { availability: availability[1] });
+      return;
+    }
     if (action === 'activate') {
       const chosen = new Set(ids.map(String));
       // A listing already live is left as it is — activating it again changes
@@ -450,6 +549,21 @@ export default function PropertiesListPage() {
             icon: row.isFeatured === true ? 'mdi:star-off-outline' : 'mdi:star-outline',
             disabled: busyIds.includes(String(row.id)),
             onClick: () => setFlag(row, 'isFeatured', row.isFeatured !== true),
+          },
+          // The two edits a live listing gets most, without the form (prompt 51).
+          {
+            key: 'availability',
+            label: named('Availability…', `Availability of ${row.title}`),
+            icon: 'mdi:tag-outline',
+            disabled: busyIds.includes(String(row.id)),
+            onClick: () => setAvailabilityFor(row),
+          },
+          {
+            key: 'price',
+            label: named('Edit price…', `Edit the price of ${row.title}`),
+            icon: 'mdi:currency-inr',
+            disabled: busyIds.includes(String(row.id)),
+            onClick: () => setPricingFor(row),
           }
         );
       }
@@ -470,8 +584,17 @@ export default function PropertiesListPage() {
   );
 
   const filterFields = useMemo(
-    () => buildPropertyFilterFields({ segments, propertyTypes, localities, developers }),
-    [segments, propertyTypes, localities, developers]
+    () =>
+      buildPropertyFilterFields({
+        segments,
+        propertyTypes,
+        localities,
+        developers,
+        agents,
+        amenities,
+        badges,
+      }),
+    [segments, propertyTypes, localities, developers, agents, amenities, badges]
   );
 
   const filtered = hasActiveFilters(params);
@@ -602,6 +725,83 @@ export default function PropertiesListPage() {
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
         onExited={releaseDeleting}
+      >
+        {referencingLeads > 0 ? (
+          <p className={styles.deleteNote}>
+            {`${formatNumber(referencingLeads)} ${
+              referencingLeads === 1 ? 'lead references' : 'leads reference'
+            } this listing — they keep a snapshot of its name.`}
+          </p>
+        ) : null}
+        {deleting && canEdit ? (
+          <>
+            <p className={styles.deleteNote}>
+              To take it off the site and keep it, deactivate it; a sale or a let is better recorded
+              than deleted.
+            </p>
+            <div className={styles.deleteAlternatives}>
+              {deleting.isActive === true ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={deletingBusy}
+                  onClick={() => {
+                    const row = deleting;
+                    setDeleting(null);
+                    setFlag(row, 'isActive', false);
+                  }}
+                >
+                  Deactivate instead
+                </Button>
+              ) : null}
+              {['sold', 'rented'].includes(deleting.availability) ? null : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={deletingBusy}
+                  onClick={() => {
+                    const row = deleting;
+                    const closed = row.listingType === 'sale' ? 'sold' : 'rented';
+                    setDeleting(null);
+                    patchRow(
+                      row,
+                      { availability: closed },
+                      `“${row.title}” is now ${AVAILABILITY.labelOf(closed)}.`
+                    );
+                  }}
+                >
+                  {deleting.listingType === 'sale' ? 'Mark sold instead' : 'Mark rented instead'}
+                </Button>
+              )}
+            </div>
+          </>
+        ) : null}
+      </ConfirmDialog>
+
+      <AvailabilityDialog
+        property={availabilityFor}
+        loading={rowBusy}
+        onClose={() => setAvailabilityFor(null)}
+        onConfirm={async (availability) => {
+          const row = availabilityFor;
+          const saved = await patchRow(
+            row,
+            { availability },
+            `“${row.title}” is now ${AVAILABILITY.labelOf(availability)}.`
+          );
+          if (saved) setAvailabilityFor(null);
+        }}
+      />
+
+      <EditPriceDialog
+        property={pricingFor}
+        loading={rowBusy}
+        onClose={() => setPricingFor(null)}
+        onConfirm={async (body, headline) => {
+          const row = pricingFor;
+          const saved = await patchRow(row, body, `“${row.title}”: ${headline}.`);
+          if (saved) setPricingFor(null);
+        }}
       />
 
       <ActivationCheckDialog

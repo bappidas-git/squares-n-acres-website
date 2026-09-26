@@ -67,6 +67,17 @@ export async function resolve(path, opts) {
 export const adminList = (params, opts) =>
   http.request(endpoints.adminRedirects.list, { params, ...opts });
 
+/**
+ * A rule the site has just followed, counted (prompt 51). Fire and forget:
+ * the visitor is on their way whatever the API says.
+ *
+ * @param {number|string} id
+ */
+export function hit(id) {
+  if (id === undefined || id === null) return;
+  http.request(endpoints.redirects.hit, { pathParams: { id } }).catch(() => {});
+}
+
 export const adminGet = (id, opts) =>
   http.request(endpoints.adminRedirects.get, { pathParams: { id }, ...opts });
 
@@ -178,6 +189,7 @@ const redirectService = {
   list,
   matchRedirect,
   resolve,
+  hit,
   import: importRows,
   importRows,
   exportUrl,

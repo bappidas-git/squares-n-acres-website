@@ -198,12 +198,11 @@ const WRITABLE = {
   adminUsers: { path: '/admin/users', schema: 'user.create', patch: { phone: '9876543211' } },
 };
 
-/** The POSTs that answer 201: the ones that create a record (§5.8). */
-const CREATES = new Set(['adminProperties.duplicate', 'jobs.apply']);
+/** The status an endpoint answers a success with: the registry's `status`, else 200. */
+const successStatus = (endpoint) => endpoint.status ?? 200;
 
-/** Whether an endpoint's success is a 201 rather than a 200. */
-const isCreate = (endpoint) =>
-  endpoint.method === 'POST' && (endpoint.key.endsWith('.create') || CREATES.has(endpoint.key));
+/** Whether an endpoint creates a record — a success of 201 (§5.8). */
+const isCreate = (endpoint) => successStatus(endpoint) === 201;
 
 /** The token an endpoint's declared minimum role maps to. */
 const TOKEN_FOR = { public: undefined, user: 'sales', manager: 'manager', admin: 'admin' };
@@ -241,13 +240,13 @@ function collectionOfGroup(group) {
 }
 
 module.exports = {
-  CREATES,
   GROUP_COLLECTIONS,
   TOKEN_FOR,
   WRITABLE,
   collectionOfGroup,
   groupOf,
   isCreate,
+  successStatus,
   sampleBody,
   sampleValue,
 };

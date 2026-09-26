@@ -1,0 +1,24 @@
+/* "Previewing unsaved changes" (prompt 51): above everything, always in view. */
+.banner {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--container-padding);
+  padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  background: var(--color-warning-bg);
+  color: var(--color-warning-dark);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+
+.expired {
+  padding: var(--space-16) 0;
+}

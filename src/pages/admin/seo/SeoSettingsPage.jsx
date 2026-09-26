@@ -22,6 +22,7 @@ import SitemapTab from './settings-tabs/SitemapTab';
 import Skeleton from '../../../components/ui/Skeleton';
 import VerificationTab from './settings-tabs/VerificationTab';
 import { displayedAt, fieldError, seoSettingsLabel } from './seoSettingsFields';
+import pageService from '../../../services/pageService';
 import seoService from '../../../services/seoService';
 import useApi from '../../../hooks/useApi';
 import useForm from '../../../hooks/useForm';
@@ -106,6 +107,15 @@ export default function SeoSettingsPage() {
   const { data, loading, error, refetch } = useApi(
     (signal) => seoService.adminSettings({ signal }),
     []
+  );
+
+  // The home page's own record, which the head preview resolves: it said it
+  // previewed the home page and was handed none (prompt 51). A site whose home
+  // record is unpublished previews the templates alone, as before.
+  const { data: homePage } = useApi(
+    (signal) => pageService.getBySlug('home', undefined, { signal }),
+    [],
+    { initialData: null }
   );
 
   // The field a refused save's 422 names first, so the tab that holds it can be
@@ -284,7 +294,7 @@ export default function SeoSettingsPage() {
         </AdminTabPanel>
       ) : null}
       <AdminTabPanel tabKey="preview" value={tab}>
-        <HeadPreviewTab form={tabForm} context={context} homePage={null} />
+        <HeadPreviewTab form={tabForm} context={context} homePage={homePage ?? null} />
       </AdminTabPanel>
 
       {form.dirty ? (

@@ -218,7 +218,12 @@ describe('adding master data from the listing', () => {
       kind: 'land',
       order: 5,
     });
-    expect(await screen.findByRole('radio', { name: 'Agricultural' })).toBeChecked();
+    // The radio is outside the dialog, so it is in the accessibility tree only
+    // once the dialog's exit transition has run — which, under a full parallel
+    // test run, has taken longer than the default second.
+    expect(
+      await screen.findByRole('radio', { name: 'Agricultural' }, { timeout: 5000 })
+    ).toBeChecked();
     expect(stored().segment).toBe('agricultural');
   });
 

@@ -152,4 +152,14 @@ const seo = {
   },
 };
 
-module.exports = { seo, seoRobots, seoAnalysisItem };
+/**
+ * `POST /not-found` — the site's 404 page reporting the address it was reached
+ * at, and where from (prompt 51). The path must start with `/`; the API
+ * ignores the admin, the API and static files.
+ */
+const notFoundReport = {
+  path: { type: 'string', required: true, maxLength: 500 },
+  referrer: { type: 'string', nullable: true, maxLength: 500, default: null },
+};
+
+module.exports = { seo, seoRobots, seoAnalysisItem, notFoundReport };

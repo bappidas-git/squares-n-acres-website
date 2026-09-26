@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import focusFirstError from '../../../components/admin/focusFirstError';
 import redirectMoves, { describeMoves } from '../../../components/admin/redirectMoves';
 import { FORMS, TOASTS } from '../../../config/adminCopy';
-import { applySeoSideEffects } from '../../../components/seo/seoSideEffects';
+import { applySeoSideEffects, redirectWarning } from '../../../components/seo/seoSideEffects';
+import useLocalDraft from '../../../hooks/useLocalDraft';
+import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 import { slugify } from '../../../utils/slug';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import { useNavigationGuard } from '../../../contexts/NavigationGuardContext';
@@ -31,6 +33,14 @@ import { useToast } from '../../../components/common/ToastProvider';
  * - **A live record whose URL changes redirects the old address** (301), unless
  *   the editor switches that off — the rule the Pages form follows.
  * - **Ctrl/Cmd+S saves**, once per press, as it does on every other form.
+ * - **The work survives a closed tab** (prompt 51): a copy of the form is kept
+ *   in this browser every ten seconds and on the way out, and offered back
+ *   when it is newer than the stored record (`useLocalDraft`).
+ * - **A save over somebody else's is refused** (prompt 51): the update names
+ *   the version the form read (`useStaleGuard`, which the page hands its
+ *   `useForm`), and the refusal opens the dialog that says who saved it —
+ *   keep editing, load their version with these edits kept as the draft, or
+ *   save over it knowingly.
  *
  * The job opening form (QA-61) is a record page too, with no SEO branch and a
  * title instead of a name: `entityType: null` skips the SEO side effect, and
@@ -52,6 +62,15 @@ import { useToast } from '../../../components/common/ToastProvider';
  * @param {(id: number|string) => string} options.editPath its edit screen
  * @param {() => void} options.onSaved after every save — the master-data cache
  * @param {{current: HTMLElement|null}} options.formRef the form element
+ * @param {ReturnType<typeof import('../../../hooks/useStaleGuard').default>} [options.guard]
+ *   the version check the page's `useForm` stamps its updates with
+ * @param {string} [options.draftKey] where this browser keeps the form's copy —
+ *   `sna_locality_draft:<id|new>`
+ * @param {() => Promise<{data?: object}>} [options.fetchLatest] reads the record
+ *   again, for "Load their version"
+ * @param {(record: object) => object} [options.toFormValues] the form's values of a record
+ * @param {boolean} [options.blocked] nothing to keep or guard — the record was
+ *   deleted elsewhere
  */
 export default function useRecordPage({
   entityType,
@@ -66,6 +85,11 @@ export default function useRecordPage({
   editPath,
   onSaved,
   formRef,
+  guard = null,
+  draftKey = null,
+  fetchLatest = null,
+  toFormValues = null,
+  blocked = false,
 }) {
   const navigate = useNavigate();
   const toast = useToast();
@@ -73,6 +97,24 @@ export default function useRecordPage({
   const [redirect, setRedirect] = useState(null);
   const [redirectOld, setRedirectOld] = useState(true);
   const [refusals, setRefusals] = useState(0);
+
+  const draft = useLocalDraft({
+    key: draftKey,
+    values: form.values,
+    dirty: form.dirty,
+    enabled: !blocked,
+    ready: !isEdit || Boolean(record),
+    storedAt: record?.updatedAt ?? null,
+    version: guard?.current ?? null,
+    paused: form.submitting,
+  });
+
+  // "Discard changes" on leaving throws the copy away too; leaving any other
+  // way keeps it (QA-55, QA-62).
+  useUnsavedChanges(form.dirty && !blocked, { onDiscard: draft.forget });
+
+  // What the save the dialog is about was going to do next, for "Save mine anyway".
+  const lastAfter = useRef('stay');
 
   /** The address a live record is leaving, when its URL has been changed. */
   const liveSlug = isEdit && record && record.isActive !== false ? (record.slug ?? null) : null;
@@ -115,8 +157,11 @@ export default function useRecordPage({
       }
 
       // Nothing has changed since the last save: say so rather than write the
-      // same record again.
+      // same record again. What is on screen is what is stored, so a copy kept
+      // before an edit was taken back is out of date — unless it is the one on
+      // offer, which waits for the editor's own answer.
       if (isEdit && record && !form.dirty) {
+        if (!draft.offer) draft.clear();
         if (after === 'view') {
           if (record.isActive === false) toast.info(FORMS.notLive(noun));
           else if (record.slug) setRedirect({ to: publicPath(record.slug) });
@@ -127,6 +172,7 @@ export default function useRecordPage({
       }
 
       saving.current = true;
+      lastAfter.current = after;
       const leaving = slugMoved && canRedirect && redirectOld ? liveSlug : null;
       try {
         const saved = await form.submit();
@@ -138,10 +184,13 @@ export default function useRecordPage({
         // The answer becomes the form and its baseline: the settled order, the
         // slug the API chose, the analysis — without a second read.
         setRecord(saved);
+        draft.clear();
 
         // The redirect this record's `seo` asks for, against the slug the API
         // answered with — a new record has none until now (§9.6).
-        if (entityType) await applySeoSideEffects(entityType, saved);
+        const effects = entityType
+          ? await applySeoSideEffects(entityType, saved)
+          : { ok: true, error: null };
         if (leaving && saved.slug && saved.slug !== leaving) {
           const result = await redirectMoves(
             [[publicPath(leaving), publicPath(saved.slug)]],
@@ -152,7 +201,8 @@ export default function useRecordPage({
           if (error) toast.error(error);
         }
 
-        toast.success(isEdit ? TOASTS.saved(noun) : TOASTS.created(noun));
+        if (effects.ok) toast.success(isEdit ? TOASTS.saved(noun) : TOASTS.created(noun));
+        else toast.warning(redirectWarning(effects.error));
         onSaved?.();
 
         if (after === 'view' && saved.slug) {
@@ -175,6 +225,7 @@ export default function useRecordPage({
       toast,
       isEdit,
       record,
+      draft,
       noun,
       publicPath,
       editPath,
@@ -215,5 +266,52 @@ export default function useRecordPage({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  return { save, slugMoved, liveSlug, canRedirect, redirectOld, setRedirectOld };
+  /** "Restore the draft": its values, saved against the version it was made from. */
+  const { take, offer, dismiss, put } = draft;
+  const { setValues } = form;
+  const restoreDraft = useCallback(() => {
+    const taken = take();
+    if (!taken?.values) return;
+    setValues(taken.values);
+    guard?.adopt(taken.version);
+  }, [guard, setValues, take]);
+
+  /** "Save mine anyway": the same save again, over the version the refusal named. */
+  const overwriteConflict = useCallback(
+    () => guard?.overwrite(() => saveRef.current(lastAfter.current)),
+    [guard]
+  );
+
+  /** "Load their version", with these edits kept as the draft on offer. */
+  const reloadConflict = useCallback(
+    () =>
+      guard && fetchLatest && toFormValues
+        ? guard.reload({
+            fetchLatest,
+            toValues: toFormValues,
+            form: { baseline: form.baseline, values: form.values },
+            draft: { put },
+            load: setRecord,
+          })
+        : undefined,
+    [fetchLatest, form.baseline, form.values, guard, put, setRecord, toFormValues]
+  );
+
+  return {
+    save,
+    slugMoved,
+    liveSlug,
+    canRedirect,
+    redirectOld,
+    setRedirectOld,
+    // Spread into `DraftBanner` and `ConflictDialog`, beside the page's noun.
+    draftBanner: { draft: offer, isNew: !isEdit, onRestore: restoreDraft, onDiscard: dismiss },
+    conflictDialog: {
+      conflict: guard?.conflict ?? null,
+      busy: form.submitting || Boolean(guard?.busy),
+      onKeepEditing: guard?.dismiss,
+      onReload: reloadConflict,
+      onOverwrite: overwriteConflict,
+    },
+  };
 }

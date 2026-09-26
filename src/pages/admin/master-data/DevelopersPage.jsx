@@ -2,9 +2,11 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import MasterDataPage from '../../../components/admin/MasterDataPage';
+import ListingsCountLink from './ListingsCountLink';
 import PATHS from '../../../routes/paths';
 import SeoScoreChip from '../../../components/seo/SeoScoreChip';
 import { LazyImage } from '../../../components/ui';
+import propertyService from '../../../services/propertyService';
 import { adminCrud, developers } from '../../../services/masterDataService';
 import { formatDate, formatNumber } from '../../../utils/format';
 import { useMasterData } from '../../../contexts/MasterDataContext';
@@ -29,7 +31,7 @@ export default function DevelopersPage() {
   const navigate = useNavigate();
   // The seven public lists are loaded once and cached (D93); a write here is
   // what makes that cache wrong, so it is refreshed from here.
-  const { refresh } = useMasterData();
+  const { refresh, developers: live } = useMasterData();
 
   const config = useMemo(
     () => ({
@@ -47,6 +49,22 @@ export default function DevelopersPage() {
       activeToggle: true,
       featuredToggle: true,
       usageGuard: true,
+      // A developer listings still name: its delete offers to move them to
+      // another one — or to none — first (prompt 51).
+      reassign: {
+        noun: 'developer',
+        none: 'No developer',
+        candidates: (row) =>
+          live
+            .filter((developer) => String(developer.id) !== String(row.id))
+            .map((developer) => ({ value: String(developer.id), label: developer.name })),
+        move: (ids, value) =>
+          propertyService.bulk({
+            ids,
+            action: 'setDeveloper',
+            payload: { developerId: value === null ? null : Number(value) },
+          }),
+      },
 
       columns: [
         {
@@ -86,7 +104,16 @@ export default function DevelopersPage() {
           sortable: true,
           align: 'right',
           width: '110px',
-          render: (row) => formatNumber(row.propertyCount ?? 0),
+          // The count is the way to the listings it counts (prompt 51).
+          render: (row) => (
+            <ListingsCountLink
+              count={row.propertyCount}
+              param="developerId"
+              value={row.id}
+              describe={`by ${row.name}`}
+              className={styles.countLink}
+            />
+          ),
         },
         {
           key: 'establishedYear',
@@ -183,7 +210,7 @@ export default function DevelopersPage() {
         text: 'Add the builders behind your listings — they carry the builder pages and the "About the builder" section of every property.',
       },
     }),
-    [navigate, refresh]
+    [live, navigate, refresh]
   );
 
   return <MasterDataPage config={config} />;

@@ -1,3 +1,4 @@
+import CloudinarySetup from '../parts/CloudinarySetup';
 import FormSection, { FormColumn } from '../../../../components/admin/FormSection';
 import PATHS from '../../../../routes/paths';
 import styles from '../SettingsPage.module.css';
@@ -24,7 +25,7 @@ const FIELDS = [
   },
   {
     key: 'googleMapsApiKey',
-    hint: 'Only the property form’s draggable pin needs it (D42); every public map is key-free.',
+    hint: 'Only the property form’s draggable pin needs it; every public map is key-free.',
   },
   {
     key: 'cloudinaryCloudName',
@@ -40,9 +41,12 @@ const FIELDS = [
   },
   {
     key: 'recaptchaSiteKey',
-    hint: 'The public half of the pair. The secret half belongs to the server and is never stored here.',
+    hint: 'Stored for the backend’s form-verification step — nothing on the site reads it yet.',
   },
 ];
+
+/** The two boxes the Cloudinary walkthrough and its test sit under (prompt 51). */
+const CLOUDINARY_KEYS = ['cloudinaryCloudName', 'cloudinaryUploadPreset'];
 
 /**
  * Integrations — the seven ids the site hands to other people's scripts
@@ -61,6 +65,8 @@ const FIELDS = [
 export default function IntegrationsTab({ form, disabled = false }) {
   const { values, setField, getError } = form;
   const integrations = values.integrations ?? {};
+  // What the settings hold, for "Test uploads" to say whether it tried those.
+  const saved = form.baseline?.integrations ?? {};
 
   return (
     <div className={styles.tab}>
@@ -83,8 +89,27 @@ export default function IntegrationsTab({ form, disabled = false }) {
         ))}
       </FormSection>
 
-      <FormSection title="Maps, media and spam">
-        {FIELDS.slice(3).map((field) => (
+      <FormSection title="Maps and spam">
+        {FIELDS.filter((field) => !CLOUDINARY_KEYS.includes(field.key))
+          .slice(3)
+          .map((field) => (
+            <FormColumn half key={field.key}>
+              <IntegrationField
+                field={field}
+                values={integrations}
+                setField={setField}
+                getError={getError}
+                disabled={disabled}
+              />
+            </FormColumn>
+          ))}
+      </FormSection>
+
+      <FormSection
+        title="Media uploads (Cloudinary)"
+        description="Both boxes together turn on uploading across the admin. Without them, files are added by their address — which always works."
+      >
+        {FIELDS.filter((field) => CLOUDINARY_KEYS.includes(field.key)).map((field) => (
           <FormColumn half key={field.key}>
             <IntegrationField
               field={field}
@@ -95,6 +120,18 @@ export default function IntegrationsTab({ form, disabled = false }) {
             />
           </FormColumn>
         ))}
+        <FormColumn>
+          <CloudinarySetup
+            cloudName={integrations.cloudinaryCloudName ?? ''}
+            uploadPreset={integrations.cloudinaryUploadPreset ?? ''}
+            savedCloudName={saved.cloudinaryCloudName ?? ''}
+            savedUploadPreset={saved.cloudinaryUploadPreset ?? ''}
+            valid={CLOUDINARY_KEYS.every((key) =>
+              INTEGRATION_PATTERNS[key].pattern.test(String(integrations[key] ?? '').trim())
+            )}
+            disabled={disabled}
+          />
+        </FormColumn>
       </FormSection>
     </div>
   );

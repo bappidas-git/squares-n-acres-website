@@ -23,6 +23,10 @@ import { validate as validateSchema } from '../utils/validation';
  * @param {Record<string, object>} [options.schema] a `src/services/schemas` descriptor
  * @param {(values: object) => Record<string, string>} [options.validate] extra rules
  * @param {(values: object) => Promise<unknown>} [options.onSubmit]
+ * @param {(thrown: unknown) => boolean} [options.onError] a failed submit the
+ *   caller answers itself: `true` leaves the fields and the toasts alone — a
+ *   save refused because somebody else saved first opens a dialog instead
+ *   (`useStaleGuard`, prompt 51)
  * @param {(values: object) => object} [options.normalize] the body the API will
  *   receive; it is what gets validated, so the form checks what it sends
  * @param {boolean} [options.partial] validate as a PATCH (no `required` checks)
@@ -41,6 +45,7 @@ export default function useForm({
   validate: customValidate = null,
   normalize = null,
   onSubmit = null,
+  onError = null,
   partial = false,
   successMessage = '',
   labels = null,
@@ -66,6 +71,7 @@ export default function useForm({
     customValidate,
     normalize,
     onSubmit,
+    onError,
     partial,
     successMessage,
     toast,
@@ -183,6 +189,7 @@ export default function useForm({
       if (config.successMessage) config.toast.success(config.successMessage);
       return result === undefined ? true : result;
     } catch (thrown) {
+      if (config.onError?.(thrown) === true) return false;
       setServerErrors(thrown);
       config.toast.error(thrown?.message || 'Something went wrong. Please try again.');
       return false;

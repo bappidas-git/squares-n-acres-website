@@ -96,6 +96,8 @@ const saveButton = () => screen.getAllByRole('button', { name: 'Save' })[0];
 
 beforeEach(() => {
   jest.restoreAllMocks();
+  // A dirty form keeps a copy of itself on the way out (prompt 51).
+  window.localStorage.clear();
   jest.spyOn(service, 'checkSlug').mockResolvedValue({ data: { available: true } });
   jest
     .spyOn(service, 'adminList')

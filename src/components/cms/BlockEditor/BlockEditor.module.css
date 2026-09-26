@@ -421,3 +421,37 @@
     padding: var(--space-3) var(--space-2);
   }
 }
+
+.cardError {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-error-bg);
+  color: var(--color-error-dark);
+  font-size: var(--font-size-sm);
+}
+
+.addNote {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* A block hidden for now (prompt 51): kept on the page, off the site. */
+.cardHidden .cardToggle {
+  opacity: 0.6;
+}
+
+.hiddenBadge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}

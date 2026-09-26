@@ -1680,6 +1680,8 @@ module.exports = function pages({ stamps, media, lookup }) {
       id: position + 1,
       type: block.type,
       order: position + 1,
+      // Every seeded block is on the page; "hide for now" is the editor's (prompt 51).
+      hidden: false,
       data: block.data,
     }));
 
@@ -1707,6 +1709,9 @@ module.exports = function pages({ stamps, media, lookup }) {
       showInHeader: Boolean(definition.header),
       headerMenu: definition.header,
       headerSubmenu: null,
+      // The site's pages were set up by the administrator (prompt 51).
+      createdBy: 1,
+      updatedBy: 1,
       ...stamps({ createdDaysAgo: 158 - index }),
     };
   });
@@ -1739,6 +1744,8 @@ module.exports = function pages({ stamps, media, lookup }) {
       showInHeader: Boolean(placement.header),
       headerMenu: placement.header ?? null,
       headerSubmenu: null,
+      createdBy: 1,
+      updatedBy: 1,
       ...stamps({ createdDaysAgo: 160 }),
     };
   });

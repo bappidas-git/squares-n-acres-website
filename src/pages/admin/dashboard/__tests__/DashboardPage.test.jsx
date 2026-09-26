@@ -11,7 +11,8 @@
  * data the page hands them, which each chart also publishes as a table.
  */
 
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import DashboardPage from '../DashboardPage';
 import ToastProvider from '../../../../components/common/ToastProvider';
@@ -216,7 +217,12 @@ describe('DashboardPage', () => {
     );
 
     const listings = screen.getByRole('region', { name: 'Top listings' });
-    expect(within(listings).getByText('120 views · 4 enquiries')).toBeInTheDocument();
+    expect(within(listings).getByText(/120 views/)).toBeInTheDocument();
+    // The enquiry count opens the leads that name the listing (prompt 51).
+    expect(within(listings).getByRole('link', { name: '4 enquiries' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/admin/leads?propertyId=')
+    );
 
     const seo = screen.getByRole('region', { name: 'SEO health' });
     expect(within(seo).getByText('72.4')).toBeInTheDocument();
@@ -226,8 +232,63 @@ describe('DashboardPage', () => {
       '/admin/seo'
     );
 
-    const followUps = screen.getByRole('region', { name: 'Upcoming follow-ups' });
+    const followUps = screen.getByRole('region', { name: 'Follow-ups due' });
     expect(within(followUps).getByRole('link', { name: 'Rahul Menon' })).toBeInTheDocument();
+    // Nothing is late: "View all" opens the week ahead.
+    expect(within(followUps).getByRole('link', { name: 'View all' })).toHaveAttribute(
+      'href',
+      '/admin/leads?followUp=next7'
+    );
+  });
+
+  it('puts the overdue follow-ups first, counts them, and opens them all (prompt 51)', async () => {
+    dashboardService.get.mockResolvedValue({
+      data: {
+        ...FIXTURE,
+        overdueCount: 11,
+        upcomingFollowUps: [
+          {
+            id: 4,
+            name: 'Kavya Iyer',
+            followUpAt: '2026-09-01T05:30:00.000Z',
+            status: 'contacted',
+            isOverdue: true,
+            assignedTo: 3,
+            assignedUser: 'Sales User',
+          },
+          ...FIXTURE.upcomingFollowUps,
+        ],
+      },
+    });
+    renderAs('admin');
+    await loaded();
+
+    const followUps = screen.getByRole('region', { name: 'Follow-ups due' });
+    expect(within(followUps).getByText('11 overdue')).toBeInTheDocument();
+    const [first] = within(followUps).getAllByRole('listitem');
+    expect(within(first).getByText('Kavya Iyer')).toBeInTheDocument();
+    expect(within(first).getByText('Overdue')).toBeInTheDocument();
+    expect(within(followUps).getByRole('link', { name: 'View all' })).toHaveAttribute(
+      'href',
+      '/admin/leads?followUp=overdue'
+    );
+  });
+
+  it('reads the trends over the range chosen, kept in the address (prompt 51)', async () => {
+    renderAs('admin');
+    await loaded();
+    expect(dashboardService.get).toHaveBeenLastCalledWith(
+      expect.objectContaining({ params: { range: 30 } })
+    );
+    expect(screen.getByRole('button', { name: '30 days' })).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(screen.getByRole('button', { name: '90 days' }));
+    await waitFor(() =>
+      expect(dashboardService.get).toHaveBeenLastCalledWith(
+        expect.objectContaining({ params: { range: 90 } })
+      )
+    );
+    expect(screen.getByRole('button', { name: '90 days' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('offers an admin every quick link', async () => {

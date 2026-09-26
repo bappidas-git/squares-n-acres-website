@@ -6,10 +6,10 @@ import MapEmbed from '../../../components/common/MapEmbed';
 import PATHS from '../../../routes/paths';
 import useApi from '../../../hooks/useApi';
 import useForm from '../../../hooks/useForm';
+import useStaleGuard from '../../../hooks/useStaleGuard';
 import MovedNotice from './MovedNotice';
 import useRecordPage from './useRecordPage';
 import useRowKeys from '../../../components/admin/useRowKeys';
-import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 import withSlugSuggestion from '../../../components/admin/slugSuggestion';
 // The kit is imported file by file, in the order `MasterDataPage` reaches for
 // the same components: the barrel's own order disagrees with it, and webpack
@@ -19,6 +19,8 @@ import { FormFieldControl } from '../../../components/admin/MasterDataForm';
 import FormSection, { FormColumn } from '../../../components/admin/FormSection';
 import SeoPanel from '../../../components/seo/SeoPanel';
 import PageHeader from '../../../components/admin/PageHeader';
+import ConflictDialog from '../../../components/admin/ConflictDialog';
+import DraftBanner from '../../../components/admin/DraftBanner';
 import RichTextField from '../../../components/editor/RichTextField';
 import SortableList from '../../../components/admin/SortableList';
 import {
@@ -255,6 +257,9 @@ export default function LocalityFormPage() {
     []
   );
 
+  // A save over somebody else's is refused, and the dialog says whose (prompt 51).
+  const guard = useStaleGuard({ storedAt: record?.updatedAt ?? null });
+
   const form = useForm({
     initialValues: BLANK,
     schema: isEdit ? UPDATE_SCHEMA : CREATE_SCHEMA,
@@ -270,7 +275,7 @@ export default function LocalityFormPage() {
     onSubmit: async (payload) => {
       try {
         const envelope = isEdit
-          ? await localityService.update(id, payload)
+          ? await localityService.update(id, guard.stamp(payload))
           : await localityService.create(payload);
         return envelope?.data ?? null;
       } catch (thrown) {
@@ -280,6 +285,7 @@ export default function LocalityFormPage() {
         });
       }
     },
+    onError: guard.onError,
   });
 
   const { reset, values, setField, setComputed } = form;
@@ -326,9 +332,16 @@ export default function LocalityFormPage() {
     return () => controller.abort();
   }, [isEdit, setComputed]);
 
-  useUnsavedChanges(form.dirty);
-
-  const { save, slugMoved, liveSlug, canRedirect, redirectOld, setRedirectOld } = useRecordPage({
+  const {
+    save,
+    slugMoved,
+    liveSlug,
+    canRedirect,
+    redirectOld,
+    setRedirectOld,
+    draftBanner,
+    conflictDialog,
+  } = useRecordPage({
     entityType: 'locality',
     noun: 'Locality',
     isEdit,
@@ -340,6 +353,10 @@ export default function LocalityFormPage() {
     // The home strip and every locality picker read the cached list (D93).
     onSaved: refreshMasterData,
     formRef,
+    guard,
+    draftKey: `sna_locality_draft:${id ?? 'new'}`,
+    fetchLatest: () => localityService.get(id),
+    toFormValues,
   });
 
   // The active cities, and the one this locality is filed under when it has
@@ -435,6 +452,8 @@ export default function LocalityFormPage() {
         breadcrumbs={[{ label: 'Localities', to: PATHS.adminLocalities }, { label: title }]}
         actions={<div className={styles.headerActions}>{actions}</div>}
       />
+
+      <DraftBanner noun="locality" {...draftBanner} />
 
       <form
         ref={formRef}
@@ -707,7 +726,7 @@ export default function LocalityFormPage() {
 
         <FormSection
           title="Search engines"
-          description="The phrase this page targets, what a result prints, and the share cards. The robots directives, the redirect and the structured data are in the sections below it (§9)."
+          description="The phrase this page targets, what a result prints, and the share cards. The robots directives, the redirect and the structured data are in the sections below it."
         >
           <FormColumn>
             <SeoPanel
@@ -743,6 +762,8 @@ export default function LocalityFormPage() {
 
         <div className={styles.actionBar}>{actions}</div>
       </form>
+
+      <ConflictDialog noun="locality" {...conflictDialog} />
     </>
   );
 }

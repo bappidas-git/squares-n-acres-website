@@ -1,7 +1,8 @@
 # Project state — Squares N Acres website
 
 Status: COMPLETE
-Last prompt executed: 48 — Final audit and release checklist   Next prompt: none — 1.0.0 is tagged
+Version: 1.1.0
+Last prompt executed: 51 — Dead actions, media UX, admin practicality, Cloudways handover   Next prompt: none — 1.1.0 is tagged
 
 ## Executed prompts
 
@@ -55,6 +56,7 @@ Last prompt executed: 48 — Final audit and release checklist   Next prompt: no
 | 46  | QA: cross-device, Lighthouse, SEO validation, prerender dry run      | `4a917e8` (+ `95c6f3b`, the review fix on the same branch)                          | 2026-09-18 |
 | 47  | Backend developer handover package: generator, docs, schema, Postman | `ee6f762`                                                                          | 2026-09-18 |
 | 48  | Final audit, client content checklist, README, version 1.0.0         | this commit (tagged `v1.0.0`)                                                      | 2026-09-18 |
+| 51  | Dead actions, media UX, admin practicality, Cloudways handover       | `0bfeaba` `0a797d0` `3fb5636` `292a89e` `5926aa4` `768de0a` `f4bce35` `6f13137`, the redirects-table fix, then the package commit (tagged `v1.1.0`) | 2026-09-26 |
 
 ## Final metrics (1.0.0, prompt 48)
 
@@ -244,7 +246,8 @@ The renormalisation is therefore invisible in the diff.
 | `mock`                  | `node mock-server/server.js`                                                                                    | 06                              |
 | `mock:watch`            | `node --watch --watch-preserve-output mock-server/server.js`                                                    | QA-54                           |
 | `mock:reset`            | `node mock-server/reset.js`                                                                                     | 06                              |
-| `build`                 | `react-scripts build`                                                                                           | boilerplate                     |
+| `build`                 | `cross-env GENERATE_SOURCEMAP=false react-scripts build`                                                        | boilerplate (no source maps, 51) |
+| `postbuild`             | `node scripts/postbuild.js` — settles `build/robots.txt` for the hosting layout (npm runs it after `build`)      | 51                              |
 | `test`                  | `react-scripts test`                                                                                            | boilerplate                     |
 | `eject`                 | `react-scripts eject`                                                                                           | boilerplate                     |
 | `lint`                  | `eslint … --max-warnings=0 && node scripts/check-endpoints.js`                                                  | 01 (extended in 05, 06)         |
@@ -253,7 +256,8 @@ The renormalisation is therefore invisible in the diff.
 | `format:check`          | `prettier --check "src/**" "mock-server/**/*.js" "scripts/**/*.js"`                                             | 01 (extended in 06)             |
 | `test:ci`               | `cross-env CI=true react-scripts test --watchAll=false --passWithNoTests`                                       | 01                              |
 | `test:mock`             | `cd mock-server && node --test`                                                                                 | 07                              |
-| `build:ci`              | `cross-env CI=true react-scripts build`                                                                         | 01                              |
+| `build:ci`              | `cross-env CI=true GENERATE_SOURCEMAP=false react-scripts build`                                                | 01 (no source maps, 51)         |
+| `postbuild:ci`          | `node scripts/postbuild.js` (after `build:ci`)                                                                  | 51                              |
 | `check:traces`          | `node scripts/check-traces.js`                                                                                  | 01                              |
 | `check:traces:report`   | `node scripts/check-traces.js --report`                                                                         | 01                              |
 | `generate:brand-assets` | `node scripts/fetch-brand-assets.js`                                                                            | 02                              |
@@ -271,6 +275,7 @@ The renormalisation is therefore invisible in the diff.
 | `a11y:audit`            | `node scripts/a11y-audit.js` (needs a running mock, a served build and `CHROME_PATH`; skips without Chrome)     | 42                              |
 | `generate:backend-guidelines` | `node scripts/generate-backend-guidelines.js` (needs a running mock; `--skip-capture` reuses `.tmp/examples.json`) | 47                              |
 | `check:guidelines`      | `node scripts/check-guidelines.js` (reads files only, so it is inside `check:all`)                              | 47                              |
+| `generate:smoke-bundle` | `node scripts/generate-smoke-bundle.js` — `backend_developer_guidelines/smoke/` (the guidelines generator runs it too) | 51                              |
 | `check:all`             | `… lint && test:ci && test:mock && test:scripts && build:ci && check:traces && validate:seed && check:contrast && check:guidelines` | 01 (extended in 04, 06, 07, 41, 47) |
 
 ### Environment variables
@@ -356,6 +361,19 @@ colleague means reading the directory. Every write on `/admin/users` and the
 The boilerplate's own endpoint surface stays inventoried in
 `docs/archive/CODEBASE_INVENTORY.md` §d until prompt 11 replaces it.
 
+**Prompt 51 added thirteen endpoints — 274 are now declared** (261 before it),
+each with its registry entry, mock route, smoke check, contract note and a place
+in the handover package: `GET /health` (`system.health`, which the mock had
+always served and the smoke test's first step needs), `GET /properties/counts`,
+`POST /admin/properties/:id/preview-token`, `POST /admin/leads`,
+`POST /admin/leads/:id/activities`, `POST /admin/media/folders/rename`,
+`POST /redirects/:id/hit`, `POST /not-found`, `GET /admin/seo/not-found`,
+`DELETE /admin/seo/not-found/:id`, `PATCH /admin/newsletter-subscribers/:id`,
+`POST /admin/settings/test-lead-alert` and `POST /auth/refresh`. A registry entry
+may now carry `status` — 201 on every create, a duplicate, an application and
+the desk's lead, 204 on the two public reports — which the smoke test, the
+Postman tests and the OpenAPI responses read.
+
 ## Pending rewrites (temporary adapters that must be removed; owner prompt)
 
 **Empty as of prompt 43.** Every row below is struck through and closed; the
@@ -438,13 +456,13 @@ the wrong cause recorded against it and the correction is worth keeping.
 | Item | What it is | Why it is deferred (or where it was closed) |
 | --- | --- | --- |
 | NEW-35 | For ~500 ms after a route change, a `position: fixed` element inside `<main>` is positioned against MainLayout's framer-motion wrapper rather than the viewport, because the wrapper carries a `transform` while the spring settles. Measured at 390 px on a property page: the CTA bar reads `top: 9041`, then pins correctly from ~500 ms. | It self-corrects, and it affects one element on one page — the floating WhatsApp button sits outside `<main>` and is never affected. The fix is to drop the transform from the page-transition wrapper or move the CTA bar out of `<main>`, and both change layout or animation structure across every page. That is a considered change, not a release-eve one. Owner prompt 41 chose the same. |
-| NEW-42 | The home page fires 25 `GET /properties?…&perPage=1` requests purely to read `meta.total` for the category tiles. Against the mock each answers in under 100 ms; against a real API it is 25 round trips for a row of six numbers. | The fix is an aggregate response, and it is an **API change**. Its documentation half is already done: prompt 47 wrote `GET /properties/counts` up under **Planned additions** in `01_API_CONTRACT.md` — request, response, caching, scoping, and the note that it is optional because the frontend keeps the per-tile fallback. What is left is a server that implements it. This prompt's contract is explicitly "none touched" and the registry is frozen in the handover package, so calling an endpoint no backend answers yet would ship a 404 in production. `useCategoryCounts` changes to prefer it in the release that follows the API. |
+| ~~NEW-42~~ | **Closed in 51.** The home page fired 25 `GET /properties?…&perPage=1` requests to read `meta.total` for the category tiles. | `GET /properties/counts` is in the registry, the mock and the package: the home page asks it two questions — `by=segment,listingType,propertyTypeId` and `by=constructionStatus&listingType=sale` — and maps every tile from the answers, falling back to the per-tile requests for the visit when either answers 404 or 501 (D-P51.43). |
 | NEW-47 | `a11y:audit` reports "background unknown" whenever the thing behind the text is a photograph — a hero, a locality card, the gallery counter — so contrast there is unmeasured. | Closing it means sampling rendered pixels (screenshot the text's box, composite, compare against the computed foreground), which is a new capability for the audit script rather than a fix. Every such case was checked by eye at 390 px in prompt 42 and the one that was wrong (NEW-43) was fixed. |
 | NEW-51 | The property gallery stage fails `label-content-name-mismatch`: a `role="button"` region whose accessible name starts with its visible counter, which also contains three real buttons. | The defect underneath is the nesting, and the fix is to lift the counter and the three controls out of the clickable region against a new wrapper — a restructure of the most-used interactive component on the site. Lighthouse Accessibility is **100** on that page and the names are correct (prompt 42's NEW-45 fix); the rule is inapplicable-by-restructure rather than violated-in-effect. Not worth the regression risk on the release commit. |
 | NEW-52 | `a11y:audit` measures the contrast of `aria-hidden` decoration: 63 of the width grid's 454 warnings are the breadcrumb `/` separator at 1.47:1. axe skips anything outside the accessibility tree; ours does not. | It is already reported as a **warning**, not an error, and the code says why: a tool cannot tell a breadcrumb's "/" (decoration) from a rank numeral that is the only thing showing the rank, so both surface and a person decides. Loosening an accessibility rule is a deliberate decision, and the last commit before a tag is the wrong place to make it. A rule that over-reports is the safer failure. |
 | ~~NEW-53~~ | **Closed in 49.** The measurement stands — the shell really did drag 788 px on `/admin/properties`, 328 on `/admin/articles`, 237 on `/admin/leads` and 104 on `/admin/jobs` — but the fix recorded here does not work. `html` and `body` already carry `overflow-x: clip`, and adding `hidden` to either or both moves the number by zero; all four were applied to the live page and measured. `contain: paint` on `.scroller` in `DataTable.module.css` takes the table out of its ancestors' scrollable overflow and the root stops at the viewport, while the table keeps its own horizontal scrollbar. One declaration, on the element that holds the overflow, rather than a global change underneath every sticky header. | `docs/QA/49-ui-ux-audit.md` §2.1 |
 | ~~NEW-54~~ | **Closed in 49, and the cause corrected.** `.control::placeholder` was not the offender: measured on the page it is 6.05:1. The fields that failed are the ones whose CSS module sets no placeholder colour at all — `ImageField`, the SEO panel's schema box — so they fell back to the browser's own grey at 4.30:1. One rule in `global.css` gives every input the muted token the explicit fields already used: no token changed, and no field is missed. Measuring also caught what the audit cannot see, since it reads `color` and `opacity` separately — MUI's placeholder scored 16.48:1 while rendering at 2.58:1, so every MUI field in the admin was under the minimum and none was reported. | `docs/QA/49-ui-ux-audit.md` §2.2 |
-| reCAPTCHA wiring | The site key is a settings field (Admin → Settings → Integrations) and setting it only shows the notice under the newsletter form. No token is verified. | Verifying a token is a **server** responsibility. The mock cannot prove the Laravel implementation, so wiring it here would ship a client-side ceremony with nothing behind it — worse than the honest gap, because it looks like protection. The honeypot and the ten-a-minute throttle are what actually defend the forms today (D43), and they are server-side. |
+| reCAPTCHA wiring — **specified for backend (planned addition)** | The site key is a settings field (Admin → Settings → Integrations) and setting it only shows the notice under the newsletter form. No token is verified. | Verifying a token is a **server** responsibility, and prompt 51 specified it for the backend: `09_MEDIA_AND_EMAIL.md` → "reCAPTCHA (planned addition)" — an optional `recaptchaToken` on the three public writes, verified against `RECAPTCHA_SECRET_KEY` with a score threshold, 422 on the field when it fails, skipped when no secret is configured. The frontend sends the token in the release that ships with it; until then the honeypot and the ten-a-minute throttle defend the forms (D43). |
 | Property compare | Comparing two or three listings side by side. | Never in the 48-prompt scope, and it needs product decisions no prompt has made: which fields, how many at once, and what it becomes on a phone. Shortlist covers the "keep track of these" job it would share. |
 
 ## Known issues (closed) — the audit's own tables
@@ -503,7 +521,7 @@ the wrong cause recorded against it and the correction is worth keeping.
 | ~~NEW-39~~ (closed in 45) | **`cleanTitle` leaves a comma standing in front of the separator.** `'%bhk% in %locality%, %developer% %sep% %sitename%'` on a listing with no builder resolves to `"3 BHK in Whitefield, **Closed in 45:** one more rule in `cleanTitle`, written so that a comma doing its job (`Whitefield, Bengaluru`, `₹1,20,000 - ₹1,50,000`) is untouched, plus two cases in `variables.test.js`. | Squares N Acres"`: §9.5's cleanup removes the unresolved variable and handles a leading `–                                                                                                                                                                                                                                                                                                      | `, a doubled separator and `in , Bengaluru`, but not punctuation left immediately before the separator. Found while writing the SEO settings screen's live template examples; the engine belongs to prompt 35 and its tests assert the current behaviour, so 37 left it alone and documented it rather than changing a scorer mid-prompt. The fix is one more rule in `cleanTitle`plus a case in`variables.test.js`. | 37, writing `TitlesMetaTab.test.jsx` | ~~45~~ closed in 45 |
 | ~~NEW-40~~ (closed in 46) | **Four status-listing titles run past the 60 characters a result shows.** `npm run check:jsonld` warns on `/buy/pre-launch` (72), `/buy/under-construction` (82), `/buy/ready-to-move` (73) and `/buy/resale` (70): the §9.5 `listing` template appends `for Sale` to a noun that already contains the status, so "Under-construction properties for Sale in Bengaluru – 6 Listings \| Squares N Acres" says "sale" twice and is cut off in the result. The same warning flags seven CMS pages whose titles are _short_ (`/disclaimer` at 10 characters). Both are copy rather than code: the fix is the `verb` of the four status entries in `listingRoutes.js` and the `seo.title` of the CMS records, which is prompt 46's SEO pass. Warnings, not errors — `check:jsonld` exits 0. **Closed in 46:** two fixes. (1) `%listingtype%` in a listing *title* now goes through `titleVerbOf`, which honours the route's own `verb` exactly as the `<h1>` and the description always have — the four status pages lose the redundant "for Sale" and drop to 63/73/64/61 characters. (2) The seven short CMS titles were rewritten in `scripts/seed/data/pages.js` and are now 37–51 characters; the page `title` (the `<h1>`) is untouched. `check:jsonld` warnings fall from 43 to 36 (short titles 22 → 15; the 21 long ones are unchanged in count). Those 21 share one cause — the `listing` template of §9.5 itself, whose "– %count% Listings %sep% %sitename%" is 30 characters of suffix, so every listing route lands at 61–73 whatever its subject; the four status pages did get 9 characters shorter, they are simply still over the guide. Changing that template is a deliberate change to a spec-pinned default rather than a defect fix, so it is left to prompt 48. | 38, running `check:jsonld` against the rendered site                                                                                                                                                                                                                                                                                                                                                                 | ~~46~~ closed in 46 |
 | ~~NEW-41~~ (closed in 45) | **Two seeded links point at articles that are not published.** `npm run check:links` (Chrome) reports `/insights/articles/under-construction-vs-ready-to-move`, linked from the bodies of articles 4 and 6, and `/insights/articles/first-time-homebuyer-checklist-bengaluru`, linked from the body of page 12 (`insights/real-estate-awareness`). The first record is `status: "draft"`; the second is `status: "scheduled"` for 2026-10-31, so it starts resolving on that date on its own. The 404 is correct behaviour (§5.4: a public detail endpoint answers 404 for an unpublished slug) — the defect is in the seed copy, and `db.json` is off-limits to prompt 38 (§12 guardrails). The checker is left reporting them rather than taught to forgive them, so `check:links` exits 1 on these two until the seed is corrected. **Closed in 45:** `check:links` is an acceptance criterion of prompt 45 and the fix is seed copy inside its modules, so the three anchors were retargeted at published guides that carry the same information and `db.json` was rebuilt. The draft and the scheduled article keep their statuses, which `docs/SEED_GUIDE.md` pins and the schedule tests need. `check:links` now reports 0 broken links. | 38, running `check:links` against the rendered site                                                                                                                                                                                                                                                                                                                                             | ~~46~~ closed in 45 |
-| NEW-42                    | **The home page fires 25 `GET /properties?…&perPage=1` requests to count the category tiles.** `useCategoryCounts` (prompt 27) asks for one result per tile — six segment/listing-type tiles and seventeen property types — purely to read `meta.total`. Against the mock each answers in under 100 ms and the page is fine; against a real API it is 25 round trips and 25 state updates for a row of six numbers. The fix is one aggregate response (a `counts` branch on an existing endpoint, or `GET /properties/counts`), which needs an API change and is therefore prompt 46's to specify and prompt 47's to document. Seen in the Lighthouse network trace of `/`.                                                                                                                                                                                                                                                                                                                                                                                                                                           | 41, reading the Lighthouse trace of the home page                                                                                                                                                                                                                                                                                                                                               | backend + 48 (the aggregate endpoint is specified in QA 46 §9.2 and documented for the API developer by prompt 47; the home page still issues the 25 requests) |
+| NEW-42                    | **The home page fires 25 `GET /properties?…&perPage=1` requests to count the category tiles.** `useCategoryCounts` (prompt 27) asks for one result per tile — six segment/listing-type tiles and seventeen property types — purely to read `meta.total`. Against the mock each answers in under 100 ms and the page is fine; against a real API it is 25 round trips and 25 state updates for a row of six numbers. The fix is one aggregate response (a `counts` branch on an existing endpoint, or `GET /properties/counts`), which needs an API change and is therefore prompt 46's to specify and prompt 47's to document. Seen in the Lighthouse network trace of `/`.                                                                                                                                                                                                                                                                                                                                                                                                                                           | 41, reading the Lighthouse trace of the home page                                                                                                                                                                                                                                                                                                                                               | **closed in 51** — `GET /properties/counts` built end to end; the home page makes two requests, with the per-tile fallback kept |
 | NEW-47                    | **Text over a photograph cannot be contrast-checked from CSS.** `npm run a11y:audit` composites scrims, translucent layers and positioned siblings, and reports "background unknown" the moment the thing behind the text is a picture — a hero, a locality card, the gallery counter. Every such case was checked by eye at 390 px in prompt 42 and the one that was wrong is NEW-43 (the placeholder behind the scrim, now charcoal), but the check is blind there by construction. Sampling the rendered pixels — a screenshot of the text's box, the modal background colour, the ratio against the computed foreground — would close it. | 42, writing the in-page audit | 46 |
 | NEW-46 (re-tested in 44)  | **Not observed on the current build.** Prompt 44 drove the two in-page transitions a property page still offers — to `/buy` and to `/localities` through the header — and watched every `/api/` request and every console line: no `GET /properties/slug/<wrong>` and no console error. The transition the row names, a property page to `/localities/:slug`, can no longer be started from the page itself, which renders no locality link at 1280 px or 390 px. The console audit over 74 property-related page loads found no such error either. Kept open rather than closed because the transition could not be reproduced end to end, and because the fix the row proposes is in the router setup (D97) — shared code prompt 44 is told not to touch. Original row: **navigating away from a property page fires one doomed request for the new slug.** `MainLayout` wraps the outlet in `<AnimatePresence mode="wait">` keyed on the pathname, so the outgoing page stays mounted through its exit animation while `useParams()` already reports the new location: leaving `/properties/aurelia-court-duplex-koramangala` for `/localities/koramangala` makes `PropertyDetails` fetch `GET /properties/slug/koramangala`, which answers 404 and logs an error in the console. One wasted request per navigation away from a property page, and a console error on a page that is otherwise clean. The fix is React Router's own remedy — render the outlet against a pinned `location` so the exiting subtree keeps the params it was mounted with — which is a change to the router setup (D97) rather than to this page.                                                                                                                                                                                                                                                               | 41, watching the mock's log during a prerender verification                                                                                                                                                                                                                                                                                                                                     | 44                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | ~~NEW-48~~ (closed in 46) | **`scripts/lib/inPageAudit.js` calls horizontal scroll from `document.documentElement.scrollWidth`.** Chromium's root `scrollWidth` counts a wide element that lives inside its **own** `overflow-x: auto` scroller, so `/admin/properties` reports 721 px of overflow in a 1280 px viewport while `window.scrollX` stays 0 and the page does not move; `/admin/leads` reports 161 px. `horizontal-scroll` is a **failing** rule, so the audit would refuse a page that is correct. The honest measure is to try to scroll: remember `scrollX`, `scrollTo(clientWidth, scrollY)`, read it back, restore. The admin routes are not crawled today because the audit cannot sign in, which is why it has not fired yet. **Closed in 46:** `inPageAudit` now decides the rule by attempting the scroll — remember `scrollX`, `scrollTo({ left, behavior: 'instant' })`, read it back, restore — and reports the distance the window actually moved. `behavior: 'instant'` is load-bearing: `global.css` sets `scroll-behavior: smooth`, and the first version of the fix used a positional `scrollTo`, so it read back the starting position and answered 0 for every page — a silently dead rule, caught in self-review and now guarded by a source assertion in `scripts/__tests__/inPageAudit.test.js`. The admin routes were crawled at all seven widths in prompt 46, with the rule alive, and there is no horizontal-scroll finding. | 44, auditing 74 property-related page loads at 1280 and 390 px | ~~46~~ closed in 46 | **Re-opened in part by prompt 48 as NEW-53 (deferred):** the rule change was right, but the premise was not — the page *does* move. Measured at 1280 px on `/admin/properties`: `window.scrollX` reaches 721 and `body`, the sidebar and the `<h1>` all shift 721 px left. The 721 px was never the false positive; the conclusion drawn about it was.
@@ -7502,3 +7520,190 @@ by-design: **NEW-49**. Deferred to post-1.0 with rationale: **NEW-35**,
 compare feature. **"Known issues (open)" is empty.**
 
 **Next prompt: none. 1.0.0 is tagged.**
+
+### Prompt 51 — Dead actions, media UX, admin practicality, Cloudways handover (2026-09-26)
+
+**What this prompt did**
+
+Made every control of the admin either do something visible or say why it
+cannot, gave the media library first-class folders and a Cloudinary set-up
+people can follow, gave the lead desk the daily tools a real agency uses, closed
+the publish-day gaps of properties, articles and pages, protected every record
+form from lost work and silent overwrites — and rebuilt the handover package
+around Cloudways, with a smoke test that is safe to point at production.
+
+- **SEO panel (4.A).** "Re-analyse", "Auto-fill missing" and "Regenerate all"
+  on the score card each answer with a toast that says what changed (or why
+  nothing did); per-field "Generate" never silently no-ops; "Fix SEO" lands on
+  the right tab **and** field everywhere, `seo.*` on articles included
+  (D-P51.1–3).
+- **Dead or silent actions (4.B).** Every item of §1.B fixed — pages, settings,
+  jobs, the editor, the dashboards, redirects; every combobox shares one
+  keyboard pattern (D-P51.4–12).
+- **Media (4.C).** "New folder" before any upload, one creatable `FolderField`
+  everywhere a folder is typed, select mode with bulk move and the guarded bulk
+  delete, folder rename with merge, `usage=unused`, per-listing upload folders
+  (`properties/<slug>`), and Settings → Integrations' walkthrough with a "Test
+  uploads" that files nothing (D-P51.13–17, D-P51.59).
+- **Leads (4.D).** Admin lead entry with the seven desk sources, the follow-up
+  worklist (Overdue / Due today / No next step with counts), editing a lead's
+  details, one panel to log a call with its outcome and next follow-up, the
+  repeat-enquiry owner rule, listing-advisor routing, the property snapshot that
+  keeps a deleted listing's name, offboarding through a reassign dialog, the
+  test alert and the WhatsApp template (D-P51.18–25).
+- **Properties, articles, pages (4.E).** Availability and price from the list,
+  descriptions required on publish only, slug changes that offer the 301, share
+  links for inactive listings, "Preview changes" that never writes, hidden
+  blocks and insert-below, "Last saved … by …" (D-P51.26–32).
+- **Cross-cutting (4.F).** Draft recovery and the `updatedAt` conflict guard on
+  every record form, `POST /auth/refresh` with the five-minute warning, the
+  top-bar quick search, master-data counts as links with move-then-delete,
+  redirect hits and the 404 log with "Create redirect", subscriber status, the
+  Rent/Commercial menu flags (D-P51.33–42).
+- **Counts, robots, sitemaps (4.G/4.H).** `GET /properties/counts` replaces 23
+  `perPage=1` requests with two; `postbuild` settles `build/robots.txt` per
+  layout; no source maps are published; the sitemap index names its children on
+  an allow-listed fetch origin; `GET /health` joined the registry
+  (D-P51.43–48).
+- **Handover (4.I/4.J).** The Cloudways deployment guide (below), the
+  self-contained smoke bundle, write safety, a Postman collection that runs
+  green, `09_MEDIA_AND_EMAIL.md`, and a generator that refuses to drop a
+  section or to run outside git (D-P51.49–61).
+
+**Endpoints added (13 — 274 declared, 261 before)**
+
+| Endpoint | Auth | |
+| --- | --- | --- |
+| `GET /health` | public | was mock-only; the smoke test's first step |
+| `GET /properties/counts` | public | `by` dimensions after every listing filter |
+| `POST /admin/properties/:id/preview-token` | editor roles | 24-hour token; the public read honours `?previewToken=` |
+| `POST /admin/leads` | admin, manager, sales | sales own what they create |
+| `POST /admin/leads/:id/activities` | lead-scoped roles | a typed timeline entry |
+| `POST /admin/media/folders/rename` | media roles | `{ from, to, merge? }`; records only |
+| `POST /redirects/:id/hit` | public, throttled | 204 |
+| `POST /not-found` | public, throttled | 204; a capped log |
+| `GET /admin/seo/not-found`, `DELETE /admin/seo/not-found/:id` | admin, manager | the 404 log and its dismissal |
+| `PATCH /admin/newsletter-subscribers/:id` | admin, manager | `{ status }` |
+| `POST /admin/settings/test-lead-alert` | admin | the mock logs; Laravel sends |
+| `POST /auth/refresh` | any signed-in | extends the same token |
+
+**Endpoints extended:** `POST /admin/media/bulk` (`move`),
+`POST /admin/properties/bulk` (`availability`, `assignAgent`, `setLocality`,
+`setPropertyType`, `setDeveloper`), `PATCH /admin/leads/:id` (`name`, `phone`,
+`email`, `requirement`; sales on their own), the lead, property, article, page,
+locality, developer and job `PUT`s (`updatedAt` precondition → 409 conflict),
+`GET /admin/dashboard` (`range`, overdue-first follow-ups, `overdueCount`), the
+admin leads list (`followUp`, `idleDays`, `meta.followUp`), the admin
+properties list (`agentId`), the jobs admin list (`employmentType`), the media
+admin list (`usage=unused`; `meta.folders` is now `[{ name, count }]`),
+`GET /admin/seo/overview` (`missing=`, `sort=lastAnalyzedAt`), the redirects
+export (the list's filters) and the redirect CSV import (an update switches the
+rule on and takes the row's note).
+
+**Schema and seed** (through `scripts/seed` and `npm run seed:build`):
+`teamMembers.userId`, `propertyTypes.showInRentMenu`/`showInCommercialMenu`,
+`pages.blocks[].hidden`, `leads.propertySnapshot` (backfilled for the seeded
+leads with a listing), the seven desk lead sources,
+`siteSettings.leads.autoAssign` gains `listing-advisor`,
+`siteSettings.leads.whatsappTemplate`, the `notFoundLog` collection (seeded
+empty), and `updatedByName` on admin reads. `db.json` holds 31 top-level keys:
+29 collections and the two settings singletons.
+
+**`postbuild`.** After `build` and `build:ci`, `scripts/postbuild.js` reads the
+two addresses the build read: no API address → `build/robots.txt` left as
+committed (a fresh clone, `check:all`); one origin → deleted, because the API's
+route must answer and a file is served first; two origins → the API's
+`robots.txt` with every `Sitemap:` line on the API origin, or — the API
+unreachable — the seed's text with `%siteurl%` resolved, and a warning.
+`public/robots.txt` is never touched.
+
+**The smoke bundle.** `backend_developer_guidelines/smoke/` is the smoke test
+with the 20 files Node loads for it and no dependency — `node smoke/smoke-api.js`
+from a copy of the package, Node 20 and nothing else. A script test copies it
+outside the repository and runs it against a mock, full and read-only;
+`check:guidelines` compares it with its sources byte for byte. The walk writes
+only to this machine unless `--allow-writes` is passed (staging's flag);
+anywhere else it runs the read-only subset and says what it skipped, and
+`--compare` takes separate credentials for each side.
+
+**Deployment.** `07_DEPLOYMENT.md` now leads with Cloudways: the two layouts
+(one Laravel application on the primary domain, recommended; or two
+applications), the server and application, the Laravel 11 application
+(`bootstrap/app.php`, the `index.spa.html` fallback, `DirectorySlash Off`, the
+Authorization header block, the `X-Forwarded-Proto` redirect, security headers
+as middleware, the static-cache check, cron, queue), deploying the site (the
+exclusion list, the one-time `robots.txt` removal, chunk retention), Layout B,
+the platform's pitfalls (Varnish, bot protection, the CDN, `.env`,
+`SEO_FORCE_NOINDEX` on staging, the time zone, backups), the switch-over and
+the go-live checklist — with the self-managed Nginx material kept whole after
+it. `docs/DEPLOYMENT_CLOUDWAYS.md` is the frontend's half, linked from the
+README and the release checklist.
+
+**The handover package** is regenerated from the last code commit (its
+`generatedFrom`) against a freshly reset mock and committed alone after it;
+`v1.1.0` tags that commit. 16 files plus `smoke/`: 274 endpoints, 271 captured
+examples and 3 explained skips, the new `09_MEDIA_AND_EMAIL.md`, and a Postman
+collection whose 274 requests and 576 tests run green against the mock — the
+generator runs it before it writes anything. `check:guidelines` passes 15/15;
+two runs against a fresh mock produce identical files.
+
+**npm scripts:** `postbuild`, `postbuild:ci`, `generate:smoke-bundle` added;
+`build` and `build:ci` set `GENERATE_SOURCEMAP=false`. **Env:** no new
+variable for the application. `SEO_FORCE_NOINDEX` is documented for Laravel's
+staging; `E2E_BASE_URL` and `E2E_API_URL` are documented in `e2e/README.md`,
+and `check:env` now asserts both that and the source-map switch.
+
+**Measured at the end of the prompt**
+
+| Measure | Value |
+| --- | --- |
+| API endpoints | **274** (261 before this prompt, 242 at 1.0.0) — every one in the registry, the mock, the smoke test and the package |
+| Jest | **240 suites, 4 596 tests** — all passing |
+| `node --test` | mock server 410 tests in 106 suites; tooling 74 tests in 22 suites (1 skipped: the Chrome auto-discovery test, with no Chrome in a standard location on this machine) |
+| Playwright | **18 specs, 85 tests — all passing** with no retries (Chromium through `CHROME_PATH`), the two new ones — `seo-actions` and `media-folders` — included; the first run found five steps broken by the quick search's label, fixed below |
+| `main.*.js` (gzip) | **296.87 kB** against the 300 kB budget; `main.*.css` 15.26 kB |
+| Source maps in `build/static` | **0** |
+| `check:traces` | 1 323 files — **0** findings |
+| `check:endpoints` | 916 files — **0** blocking findings |
+| `check:env` | 11/11 (two checks new: no source maps, the e2e variables documented) |
+| API smoke (fresh mock) | full walk **335/335**; read-only subset (`--read-only`) **160/160**; self-compare 127/127 reads, no differences |
+| Postman dry run (fresh mock) | 274 requests, 576 tests, **0** failures; every admin list total the same after the run |
+| Handover package | 16 files + `smoke/` (20 files); 274 endpoints; 271 captured examples + 3 explained skips; `check:guidelines` **15/15**; two runs byte-identical |
+| `db.json` | 29 collections + the two settings singletons (`notFoundLog` new, seeded empty) |
+| npm scripts | 39 |
+| Dependencies | 32 runtime, 11 dev — none added |
+| Home page in a browser | **2** `GET /properties/counts` requests and no per-tile ones; with the endpoint forced to 404, the 23 per-tile requests of before and the same 23 numbers |
+| Browser sweep | 25 admin screens at 1280 and 390 px (and the sales user's dashboard and leads), plus Add lead, Log activity, Edit details, New folder, select mode, the quick search and 404s → Create redirect opened for real: **no** console error or warning, uncaught error, failed API call or horizontal overflow (the sandbox's untrusted proxy certificate for external images aside); the score card's three actions wrap inside 360 px |
+
+**Issues**
+
+Closed: **NEW-42** — the home page's 23 count requests are two
+(`GET /properties/counts`), with the per-tile fallback kept. The **reCAPTCHA**
+row of "Deferred" is now "specified for backend (planned addition)":
+`09_MEDIA_AND_EMAIL.md` specifies the verification, and the self-service
+password reset beside it. Found and fixed on the way: the Cloudinary
+walkthrough asked for a preset folder that Cloudinary applies over the one the
+library requests, and for a size cap presets do not have (D-P51.59); the
+capture documented three new endpoints as 422s and the 404-log dismissal as a
+skip (D-P51.61); the production smoke commands would have failed at sign-in
+after the seed passwords were rotated, and now pass each role's credentials;
+five end-to-end steps located the admin lists' search box by the label
+"Search", which the new quick search ("Search leads, properties and articles")
+also matched — Playwright's strict mode refuses an ambiguous match, so they
+now ask for the exact label; one full Jest run timed out BasicsTab's segment test while the
+dialog's exit transition ran (it passed alone and in the next full run), so its
+last lookup waits up to five seconds for the same state; and a later full run
+caught this prompt's own session-notice test reading "5 minutes": its mocked
+session recomputed `expiresAt` from the clock on every render, so a re-render a
+millisecond after the notice read the clock moved the end past four minutes.
+The mock now fixes the expiry when the test sets it, three and a half minutes
+out, as a real session does. The browser sweep found one line of copy: the
+quick search offered "See all 1 leads"; one match now reads "See 1 lead in
+Leads". It also showed, on SEO → Redirects at 1280 px, the paths split mid-word
+("/flats- / in- / whitefiel / d") — older than this prompt: `overflow-wrap:
+anywhere` let the table squeeze the From and To columns to a few characters.
+They now break only after a slash or a hyphen, hold a path of about twenty
+characters on one line at 1280 px, and cap a single unbroken piece at the
+column rather than widening it; Updated shows from 1536 px (D-P51.62).
+
+**Next prompt: none. 1.1.0 is tagged.**

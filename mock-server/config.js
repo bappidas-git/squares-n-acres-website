@@ -46,6 +46,13 @@ const config = {
   /** The git-ignored working copy JSON Server mutates. */
   runtimePath: path.join(__dirname, '.runtime', 'db.json'),
 
+  /**
+   * `REACT_APP_API_URL` — the API's own address, when it is set: the sitemap
+   * index and robots.txt may name their child sitemaps on its origin as well
+   * as on the site's (prompt 51, `lib/sitemapHost.js`).
+   */
+  apiUrl: process.env.REACT_APP_API_URL || null,
+
   /** Origins allowed to call the API (§5.12): dev server, and the served build. */
   corsOrigins: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5000'],
 };

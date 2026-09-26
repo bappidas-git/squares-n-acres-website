@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 
 import Chip from '../ui/Chip';
 import SortableList from './SortableList';
+import useListboxNavigation from '../../hooks/useListboxNavigation';
 import { isCanceled } from '../../services/apiError';
 
 import styles from './EntityPicker.module.css';
@@ -182,6 +183,23 @@ export default function EntityPicker({
   const shownPlaceholder =
     !showChosen && !multiple && chosen.length > 0 ? chosen[0].label : placeholder;
 
+  const listOpen = open && query.trim().length > 0 && !searching;
+  const isTaken = (record) => ids.some((entry) => sameId(entry, record.id)) || (full && multiple);
+
+  // The keyboard of the combobox its role promises (prompt 51): arrows move
+  // through the results, Enter picks, Escape closes — and the focus stays in
+  // the box, so leaving it is the only thing that closes the list on blur.
+  const nav = useListboxNavigation({
+    id: `${id}-results`,
+    options: listOpen ? results : [],
+    open: listOpen && results.length > 0,
+    resetKey: query.trim(),
+    isDisabled: isTaken,
+    onPick: (record) => add(record),
+    onClose: () => setOpen(false),
+    onOpen: () => setOpen(true),
+  });
+
   return (
     <div className={[styles.field, fieldClassName].filter(Boolean).join(' ')}>
       <label className={[styles.label, labelClassName].filter(Boolean).join(' ')} htmlFor={id}>
@@ -209,46 +227,66 @@ export default function EntityPicker({
           value={query}
           placeholder={shownPlaceholder}
           disabled={disabled || (full && !multiple)}
-          aria-expanded={open && results.length > 0}
+          aria-expanded={listOpen && results.length > 0}
           aria-controls={`${id}-results`}
           aria-autocomplete="list"
+          aria-activedescendant={nav.activeDescendant}
           onChange={(event) => {
             setQuery(event.target.value);
             setOpen(true);
           }}
+          onKeyDown={nav.onKeyDown}
           onFocus={() => setOpen(true)}
-          onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+          onBlur={() => setOpen(false)}
         />
         {searching ? <span className={styles.searching}>Searching…</span> : null}
       </div>
 
       {action ? <div className={styles.action}>{action}</div> : null}
 
-      {open && query.trim() && !searching ? (
-        <ul className={styles.results} id={`${id}-results`} role="listbox">
-          {results.length === 0 ? (
-            <li className={styles.noResults}>No matches for “{query.trim()}”.</li>
-          ) : (
-            results.map((record) => {
-              const already = ids.some((entry) => sameId(entry, record.id));
-              return (
-                <li key={record.id}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={already}
-                    className={styles.result}
-                    disabled={already || (full && multiple)}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => add(record)}
-                  >
-                    {renderOption ? renderOption(record) : (record[labelKey] ?? record.title)}
-                    {already ? <span className={styles.already}>Added</span> : null}
-                  </button>
-                </li>
-              );
-            })
-          )}
+      {listOpen && results.length === 0 ? (
+        <div className={styles.results} id={`${id}-results`} role="status">
+          <p className={styles.noResults}>No matches for “{query.trim()}”.</p>
+        </div>
+      ) : null}
+      {listOpen && results.length > 0 ? (
+        <ul
+          className={styles.results}
+          id={`${id}-results`}
+          role="listbox"
+          aria-label={label}
+          aria-multiselectable={multiple || undefined}
+        >
+          {results.map((record, index) => {
+            const already = ids.some((entry) => sameId(entry, record.id));
+            const unavailable = isTaken(record);
+            return (
+              <li
+                key={record.id}
+                id={nav.optionId(index)}
+                role="option"
+                aria-selected={already}
+                aria-disabled={unavailable || undefined}
+                className={[
+                  styles.result,
+                  index === nav.activeIndex ? styles.resultActive : '',
+                  unavailable ? styles.resultDisabled : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                // The list closes on blur, so a press must not take the focus
+                // out of the box before the click lands.
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => nav.setActiveIndex(index)}
+                onClick={() => {
+                  if (!unavailable) add(record);
+                }}
+              >
+                {renderOption ? renderOption(record) : (record[labelKey] ?? record.title)}
+                {already ? <span className={styles.already}>Added</span> : null}
+              </li>
+            );
+          })}
         </ul>
       ) : null}
 

@@ -22,6 +22,7 @@ import LeadNotes from './LeadNotes';
 import LeadPipeline from './LeadPipeline';
 import LeadRequirementCard from './LeadRequirementCard';
 import LeadTimeline from './LeadTimeline';
+import LogActivityPanel from './LogActivityPanel';
 import PATHS from '../../../routes/paths';
 import PageHeader from '../../../components/admin/PageHeader';
 import StatusChip from '../../../components/admin/StatusChip';
@@ -29,15 +30,16 @@ import leadService from '../../../services/leadService';
 import propertyService from '../../../services/propertyService';
 import useApi from '../../../hooks/useApi';
 import userService from '../../../services/userService';
-import { DuplicateChip } from './leadColumns';
-import { LEAD_PRIORITY, LEAD_STATUS } from '../../../config/enums';
+import { DuplicateChip, leadWhatsappMessage } from './leadColumns';
+import { LEAD_CONTACT_TYPES, LEAD_PRIORITY, LEAD_STATUS } from '../../../config/enums';
 import { SelectField } from '../../../components/ui';
 import { TableSkeleton } from '../../../components/common/SkeletonLoaders';
 import { firstFieldMessage } from '../../../services/apiError';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import { useLeadNotifications } from '../../../contexts/LeadNotificationsContext';
 import { useToast } from '../../../components/common/ToastProvider';
-import { viewUrlOf } from '../properties/publicUrl';
+import { formatDateTime, whatsappLink } from '../../../utils/format';
+import { publicUrlOf, viewUrlOf } from '../properties/publicUrl';
 
 import styles from './LeadDetailPage.module.css';
 import { TOASTS } from '../../../config/adminCopy';
@@ -76,6 +78,7 @@ export default function LeadDetailPage() {
   const canAssign = can('leads', 'assign');
   const canClaim = can('leads', 'claim');
   const canDelete = can('leads', 'delete');
+  const canEditListing = can('properties', 'edit');
 
   const { users } = useAssignableUsers({ enabled: canAssign });
 
@@ -91,6 +94,8 @@ export default function LeadDetailPage() {
   const [busy, setBusy] = useState(false);
   const [lostOpen, setLostOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // Set by the contact card's Call and WhatsApp buttons (prompt 51).
+  const [activityPrefill, setActivityPrefill] = useState(null);
 
   const { data: property } = useApi(
     (signal) => propertyService.adminGet(lead.propertyId, { signal }),
@@ -116,6 +121,50 @@ export default function LeadDetailPage() {
       } finally {
         setBusy(false);
       }
+    },
+    [id, refetch, refreshNotifications, toast]
+  );
+
+  /**
+   * A conversation, logged — and the status or follow-up that came of it,
+   * sent beside it (prompt 51). The two are separate requests, so a refusal
+   * of the second says the first went through.
+   */
+  const logActivity = useCallback(
+    async (entry, changes) => {
+      setBusy(true);
+      const label = LEAD_CONTACT_TYPES.labelOf(entry.type);
+      try {
+        await leadService.logActivity(id, entry);
+      } catch (thrown) {
+        toast.error(firstFieldMessage(thrown, 'The activity could not be logged.'));
+        setBusy(false);
+        return false;
+      }
+
+      const said = [`${label} logged.`];
+      let saved = true;
+      if (changes) {
+        try {
+          await leadService.patch(id, changes);
+          if (changes.status) said.push(`Now ${LEAD_STATUS.labelOf(changes.status)}.`);
+          if (changes.followUpAt)
+            said.push(`Next follow-up ${formatDateTime(changes.followUpAt)}.`);
+        } catch (thrown) {
+          saved = false;
+          toast.error(
+            `${label} logged, but the change was not saved: ${firstFieldMessage(
+              thrown,
+              'try again'
+            )}`
+          );
+        }
+      }
+      if (saved) toast.success(said.join(' '));
+      await refetch();
+      refreshNotifications();
+      setBusy(false);
+      return saved;
     },
     [id, refetch, refreshNotifications, toast]
   );
@@ -256,6 +305,19 @@ export default function LeadDetailPage() {
   }
 
   const statusMeta = LEAD_STATUS.meta[lead.status] ?? {};
+  // The details are the desk's to correct: an admin's or a manager's on any
+  // lead, a sales user's on their own (prompt 51).
+  const canEditDetails = canAssign || String(lead.assignedTo ?? '') === String(user?.id ?? '');
+  // "Send listing on WhatsApp": the lead's message, with the listing's address
+  // after it when the template does not already carry it (prompt 51).
+  const listingLive = Boolean(lead.property?.slug) && property?.isActive === true;
+  const listingUrl = listingLive ? publicUrlOf(lead.property.slug) : '';
+  const listingMessage = listingUrl
+    ? leadWhatsappMessage(lead).includes(listingUrl)
+      ? leadWhatsappMessage(lead)
+      : `${leadWhatsappMessage(lead)}\n${listingUrl}`
+    : '';
+  const sendListing = listingUrl ? whatsappLink(lead.phone, listingMessage) : '';
 
   return (
     <>
@@ -277,10 +339,17 @@ export default function LeadDetailPage() {
 
       <div className={styles.layout}>
         <div className={styles.lead}>
-          <LeadContactCard lead={lead} />
+          <LeadContactCard
+            lead={lead}
+            canEdit={canEditDetails}
+            onSave={(changes) => patch(changes, 'The details are saved.')}
+            onContact={(type) => setActivityPrefill({ type, nonce: Date.now() })}
+          />
         </div>
 
         <aside className={styles.rail} aria-label="Lead controls">
+          <LogActivityPanel lead={lead} busy={busy} prefill={activityPrefill} onLog={logActivity} />
+
           <Card className={styles.railCard}>
             <LeadPipeline
               status={lead.status}
@@ -360,9 +429,24 @@ export default function LeadDetailPage() {
         </aside>
 
         <div className={styles.main}>
-          <LeadRequirementCard requirement={lead.requirement} />
+          <LeadRequirementCard
+            requirement={lead.requirement}
+            canEdit={canEditDetails}
+            onSave={(requirement) => patch({ requirement }, 'The requirement is saved.')}
+          />
 
-          {lead.property ? (
+          {lead.property?.deleted ? (
+            <Card as="section" className={styles.card} aria-labelledby="lead-property-heading">
+              <h2 className={styles.cardTitle} id="lead-property-heading">
+                Enquired about
+              </h2>
+              <p className={styles.propertyTitle}>{lead.property.title}</p>
+              <p className={styles.emptyLine}>
+                The listing has been deleted. The lead keeps the name it had when the enquiry came
+                in.
+              </p>
+            </Card>
+          ) : lead.property ? (
             <Card as="section" className={styles.card} aria-labelledby="lead-property-heading">
               <h2 className={styles.cardTitle} id="lead-property-heading">
                 Enquired about
@@ -398,10 +482,30 @@ export default function LeadDetailPage() {
                       size="sm"
                       variant="ghost"
                       to={PATHS.adminPropertyEdit(lead.property.id)}
-                      icon={<Icon icon="mdi:pencil-outline" width="16" height="16" />}
+                      icon={
+                        <Icon
+                          icon={canEditListing ? 'mdi:pencil-outline' : 'mdi:eye-outline'}
+                          width="16"
+                          height="16"
+                        />
+                      }
                     >
-                      Edit listing
+                      {/* A sales user opens the form read-only (§7). */}
+                      {canEditListing ? 'Edit listing' : 'View listing'}
                     </Button>
+                    {sendListing ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        href={sendListing}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        icon={<Icon icon="mdi:whatsapp" width="16" height="16" />}
+                        onClick={() => setActivityPrefill({ type: 'whatsapp', nonce: Date.now() })}
+                      >
+                        Send listing on WhatsApp
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </div>

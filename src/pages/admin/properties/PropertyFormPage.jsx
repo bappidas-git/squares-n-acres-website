@@ -39,7 +39,13 @@ export default function PropertyFormPage() {
     refetch,
   } = useApi((signal) => propertyService.adminGet(id, { signal }), [id], { enabled: isEdit });
 
-  const form = usePropertyForm({ propertyId: id ?? null, record, readOnly });
+  // A moved live listing's 301 is a row of SEO → Redirects (prompt 51).
+  const form = usePropertyForm({
+    propertyId: id ?? null,
+    record,
+    readOnly,
+    canRedirect: can('seo', 'edit'),
+  });
 
   const title = isEdit ? `Edit: ${record?.title ?? 'property'}` : 'Add property';
   const breadcrumbs = [

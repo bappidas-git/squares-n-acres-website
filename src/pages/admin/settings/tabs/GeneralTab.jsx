@@ -3,10 +3,12 @@ import { Icon } from '@iconify/react';
 import Button from '../../../../components/ui/Button';
 import FormSection, { FormColumn } from '../../../../components/admin/FormSection';
 import ImageField from '../../../../components/admin/ImageField';
+import PATHS from '../../../../routes/paths';
 import styles from '../SettingsPage.module.css';
 import { BRAND } from '../../../../config/site';
-import { CURRENT_YEAR, trimTrailingSlash } from '../settingsSchema';
+import { CURRENT_YEAR } from '../settingsSchema';
 import { NumberField, TextField } from '../../../../components/ui/FormField';
+import { useSiteSettings } from '../../../../contexts/SiteSettingsContext';
 
 /**
  * General — who the site is (§6.13 `general`).
@@ -17,6 +19,9 @@ import { NumberField, TextField } from '../../../../components/ui/FormField';
  * assets" puts back the Cloudinary originals of §2.1, which is the way out of
  * an upload that turned out wrong.
  *
+ * The site's address is shown, not edited: it is SEO → Settings' to change,
+ * the one place it is kept (prompt 51), and the two copies had drifted.
+ *
  * @param {object} props
  * @param {ReturnType<typeof import('../../../../hooks/useForm').default>} props.form
  * @param {boolean} [props.disabled]
@@ -24,6 +29,8 @@ import { NumberField, TextField } from '../../../../components/ui/FormField';
 export default function GeneralTab({ form, disabled = false }) {
   const { values, setField, getError } = form;
   const general = values.general ?? {};
+  const { seoSettings } = useSiteSettings();
+  const siteUrl = seoSettings?.siteUrl || general.siteUrl || '';
 
   const set = (path, value) => setField(`general.${path}`, value);
   const error = (path) => getError(`general.${path}`);
@@ -61,7 +68,7 @@ export default function GeneralTab({ form, disabled = false }) {
 
       <FormSection
         title="Brand assets"
-        description="The wordmark sits on light surfaces only (D3); the monogram is the favicon, the app icon and the loading mark."
+        description="The wordmark sits on light surfaces only; the monogram is the favicon, the app icon and the loading mark."
         action={
           <Button
             variant="outline"
@@ -143,18 +150,20 @@ export default function GeneralTab({ form, disabled = false }) {
           <TextField
             label="Site URL"
             type="url"
-            inputMode="url"
-            value={general.siteUrl ?? ''}
-            onChange={(event) => set('siteUrl', event.target.value)}
-            onBlur={() => {
-              const trimmed = trimTrailingSlash(general.siteUrl ?? '');
-              if (trimmed !== general.siteUrl) set('siteUrl', trimmed);
-            }}
-            error={error('siteUrl')}
-            hint="No trailing slash — every canonical URL is built from it. SEO settings keeps its own copy for canonicals."
-            required
-            disabled={disabled}
+            value={siteUrl}
+            readOnly
+            disabled
+            hint="Every canonical URL, the sitemap and the structured data are built from it."
           />
+          <Button
+            variant="link"
+            size="sm"
+            to={PATHS.adminSeoSettings}
+            className={styles.fieldLink}
+            icon={<Icon icon="mdi:cog-outline" width="16" height="16" />}
+          >
+            Changed under SEO → Settings
+          </Button>
         </FormColumn>
         <FormColumn half>
           <TextField

@@ -27,6 +27,12 @@ import { SEO_ENTITY_TYPES } from '../../../config/enums';
 import { SITE } from '../../../config/site';
 import { publicPathFor } from '../../../seo/urls';
 
+/** A list screen searched for one record's name, or the plain list without one. */
+const listSearchedFor = (path, row) => {
+  const name = String(row?.title ?? row?.name ?? '').trim();
+  return name ? `${path}?q=${encodeURIComponent(name)}` : path;
+};
+
 /** A master-data collection as the three functions the desk needs. */
 const fromCollection = (collection) => ({
   get: (id, opts) => collection.adminGet(id, opts),
@@ -38,7 +44,7 @@ const fromCollection = (collection) => ({
  *   label: string,          // singular, for a dialog title
  *   get: (id: number|string, opts?: object) => Promise<{data: object}>,
  *   patch: (id: number|string, body: object, opts?: object) => Promise<{data: object}>,
- *   adminPath: (id: number|string) => string,   // the screen that edits it
+ *   adminPath: (id: number|string, row?: {title?: string}) => string,   // the screen that edits it
  *   previewToken?: (id: number|string, opts?: object) => Promise<{data: {token: string}}>,
  *   adminPreview?: boolean, // supports `?preview=admin` instead of a token
  * }>}
@@ -78,18 +84,19 @@ export const SEO_ENTITY_SERVICES = {
   articleCategory: {
     label: 'Article category',
     ...fromCollection(masterDataService.articleCategories),
-    // The taxonomy screens edit in a dialog, so the deep link is the list.
-    adminPath: () => PATHS.adminArticleCategories,
+    // The taxonomy screens edit in a dialog, so the deep link is the list —
+    // searched for the record, so it is the one row showing (prompt 51).
+    adminPath: (_id, row) => listSearchedFor(PATHS.adminArticleCategories, row),
   },
   author: {
     label: 'Author',
     ...fromCollection(masterDataService.authors),
-    adminPath: () => PATHS.adminAuthors,
+    adminPath: (_id, row) => listSearchedFor(PATHS.adminAuthors, row),
   },
   propertyType: {
     label: 'Property type',
     ...fromCollection(masterDataService.propertyTypes),
-    adminPath: () => PATHS.adminPropertyTypes,
+    adminPath: (_id, row) => listSearchedFor(PATHS.adminPropertyTypes, row),
   },
 };
 

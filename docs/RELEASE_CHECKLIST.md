@@ -1,15 +1,18 @@
 # Release checklist — Squares N Acres website
 
 The go-live list for the **frontend**: what to verify on the build machine, at
-the DNS and Nginx layer, and on the live host once the site is up. It is
+the DNS and hosting layer, and on the live host once the site is up. It is
 reusable — run it for 1.0.0 and for every release after it.
 
-Two companion documents do the other halves, and this file does not repeat
+Three companion documents do the other halves, and this file does not repeat
 them:
 
-- `backend_developer_guidelines/07_DEPLOYMENT.md` → the Nginx blocks, the
-  release-directory layout, the rollback, and the **API's** own go-live list
-  (`APP_DEBUG`, CORS, rate limiting, migrations).
+- [`docs/DEPLOYMENT_CLOUDWAYS.md`](./DEPLOYMENT_CLOUDWAYS.md) → the frontend's
+  half of the Cloudways deployment: the layout, `.env.production`, the build,
+  what to upload where, and what `postbuild` did to `robots.txt`.
+- `backend_developer_guidelines/07_DEPLOYMENT.md` → the Cloudways layouts in
+  full, the self-managed Nginx alternative, the rollback, and the **API's** own
+  go-live lists (`APP_DEBUG`, CORS, rate limiting, migrations, Varnish, cron).
 - `docs/CONTENT_TO_BE_PROVIDED_BY_CLIENT.md` → every placeholder the client
   replaces in Admin, with its screen. §5 below is only the sign-off gate.
 
@@ -34,8 +37,14 @@ a day if somebody owns them.
 - [ ] Build for production: `npm run build` — or `npm run build:prerender` when
       Chrome is on the build machine and static HTML is wanted for crawlers.
 - [ ] **blocker** The built bundle really contains the production API, not the
-      mock: `grep -r 'api.squaresnacres.com' build/static/js | head -1` prints a
-      match, and `grep -r 'localhost:4000' build/static/js` prints nothing.
+      mock: `grep -r 'www.squaresnacres.com/api' build/static/js | head -1` (one
+      host) or `grep -r 'api.squaresnacres.com/api' build/static/js | head -1`
+      (two hosts) prints a match, and `grep -r 'localhost:4000' build/static/js`
+      prints nothing.
+- [ ] `postbuild` settled `build/robots.txt` for the layout: gone on one host,
+      present with its `Sitemap:` lines on the API host on two
+      (`docs/DEPLOYMENT_CLOUDWAYS.md` → "What `postbuild` did"). No `.map`
+      file is in `build/static`.
 
 ## 2. Environment
 
@@ -44,7 +53,7 @@ a day if somebody owns them.
       `REACT_APP_SITE_NAME` (copy `.env.production.example`).
 - [ ] **blocker** `REACT_APP_API_URL` ends in `/api` and uses `https://`.
 - [ ] `REACT_APP_SITE_URL` is the canonical host **without** a trailing slash,
-      and matches the host Nginx redirects everything else to.
+      and matches the host everything else redirects to.
 - [ ] Optional keys set only if the client supplied them — Cloudinary cloud and
       unsigned preset, Google Maps browser key. Each is embedded in the bundle
       at build time, so a change needs a rebuild, not a restart.
@@ -53,39 +62,70 @@ a day if somebody owns them.
 - [ ] No secret in any `REACT_APP_*` variable. Everything with that prefix is
       **public**: it ships inside the JavaScript. Server keys belong to Laravel.
 
-## 3. DNS, Nginx and TLS
+## 3. DNS, hosting and TLS
+
+On Cloudways, the platform's own checks are in `07_DEPLOYMENT.md` → "Go-live
+checklist — Cloudways" (Varnish, cron, the Authorization header, the
+trailing-slash rule); the lines below hold on any host.
 
 - [ ] **blocker** `A`/`AAAA` records for `www` and the apex point at the web
-      host; `api` points at the API host. Check with `dig`, not the registrar's
-      dashboard.
-- [ ] **blocker** TLS certificate covers `www`, the apex and `api`, and renews
-      automatically. Verify the expiry date, not just the padlock.
+      host; on two hosts, `api` points at the API host. Check with `dig`, not
+      the registrar's dashboard.
+- [ ] **blocker** TLS certificate covers `www`, the apex (and `api`, on two
+      hosts), and renews automatically. Verify the expiry date, not just the
+      padlock.
 - [ ] **blocker** HTTP → HTTPS is a 301, and the apex → `www` is a 301 (or the
       reverse — pick one and make `REACT_APP_SITE_URL` and `seoSettings.siteUrl`
       agree with it).
 - [ ] **blocker** The SPA fallback is in place: a deep link opened in a fresh
-      tab renders, e.g. `https://www.squaresnacres.com/properties/<slug>`. A 404
-      here means the `try_files` line is wrong
-      (`07_DEPLOYMENT.md` → "Nginx — the site").
+      tab renders, e.g. `https://www.squaresnacres.com/properties/<slug>`, with
+      its own title — not a 404, and not the home page's title (a fallback to
+      the prerendered `index.html` instead of `index.spa.html`). See
+      `07_DEPLOYMENT.md` → "Layout A — Laravel application" or, on Nginx, the
+      `try_files` line of "Self-managed server (Nginx)".
 - [ ] Hashed assets under `/static/` are served with a one-year immutable
       cache; `index.html` is served with `no-cache`. A stale `index.html` is how
       a deployment appears to do nothing.
 - [ ] Security headers answer on a real response (`curl -I`): HSTS,
       `X-Content-Type-Options`, `Referrer-Policy`, and the CSP from
       `07_DEPLOYMENT.md` → "Security headers".
-- [ ] `/sitemap.xml`, `/robots.txt`, `/rss.xml` and `/llms.txt` are proxied to
-      the API, not swallowed by the SPA fallback.
+- [ ] `/sitemap.xml`, `/robots.txt`, `/rss.xml` and `/llms.txt` come from the
+      API — Laravel routes on one host, proxied on Nginx — not swallowed by the
+      SPA fallback; `robots.txt` shows the admin's text and its `Sitemap:`
+      lines.
 
-## 4. API smoke against production
+## 4. API smoke — staging writes, production reads
+
+The smoke walk and the Postman collection **write** — they post enquiries that
+e-mail the desk, create an account and send deletes the guards must refuse. They
+run on this machine and on staging; production only ever gets the read checks
+and the comparison. Against any host but this machine the smoke test runs the
+read-only subset unless `--allow-writes` is passed.
+
+- [ ] **blocker** The full walk and the Postman collection pass on **staging**:
+
+      npm run smoke -- --baseUrl=https://staging.example/api --allow-writes
+
+- [ ] **blocker** The production API passes the read checks, signed in as a
+      real account of each role (the seed's passwords are rotated by now):
+
+      npm run smoke -- --baseUrl=<production API> \
+        --email=<admin> --password=<…> \
+        --managerEmail=<manager> --managerPassword=<…> \
+        --salesEmail=<sales> --salesPassword=<…>
 
 - [ ] **blocker** The production API answers the same contract as the mock:
 
       npm run mock                                                   # terminal 1
-      npm run smoke -- --baseUrl=https://api.squaresnacres.com/api \
-                       --compare=http://localhost:4000/api           # terminal 2
+      npm run smoke -- --baseUrl=<production API> \
+        --email=<admin> --password=<…> \
+        --compare=http://localhost:4000/api \
+        --compareEmail=admin@squaresnacres.com --comparePassword=Admin@123   # terminal 2
 
       An empty difference table is the go signal. A difference is a launch
-      blocker, not a note for later.
+      blocker, not a note for later. The production API is
+      `https://www.squaresnacres.com/api` on one host and
+      `https://api.squaresnacres.com/api` on two.
 - [ ] **blocker** `/api/nonexistent` returns the documented error envelope, not
       a stack trace (`APP_DEBUG=false`).
 - [ ] CORS allows the production origin and not `*` — verify from a browser's

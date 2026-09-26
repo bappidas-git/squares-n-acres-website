@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import Switch from '@mui/material/Switch';
+import { useSearchParams } from 'react-router-dom';
 
 import Button from '../../../components/ui/Button';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
@@ -63,6 +64,57 @@ const BULK_ACTIONS = [
 ];
 
 /**
+ * A path split where a reader would break it: after each `/` or `-` with more
+ * of the path behind it — never after the leading slash, and never inside
+ * the `//` of an absolute target. `/flats-in-whitefield` is `/flats-`, `in-`,
+ * `whitefield`; `https://example.com/new` is `https://`, `example.com/`,
+ * `new`.
+ *
+ * @param {string} path
+ * @returns {string[]} the pieces, which join back to `path`
+ */
+export function pathSegments(path) {
+  const text = String(path ?? '');
+  const segments = [];
+  let current = '';
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+    current += char;
+    if ((char === '/' || char === '-') && current.length > 1 && next && next !== '/') {
+      segments.push(current);
+      current = '';
+    }
+  }
+  if (current) segments.push(current);
+  return segments;
+}
+
+/**
+ * A path in a table cell. It wraps at the `<wbr>` after a slash or a hyphen,
+ * so a path too long for its column reads `/properties/` `lakeview-`
+ * `heights` rather than `/propert` `ies/lake…`; only a single piece longer
+ * than the column itself breaks inside, as the last resort (the page's CSS).
+ * `<wbr>` adds no character, so a copied path is the path.
+ * (`overflow-wrap: anywhere` used to split them mid-word — and let the table
+ * squeeze these columns to a few characters, since it counts every character
+ * as a place to break.)
+ */
+export function RedirectPath({ path }) {
+  return (
+    <code className={styles.path}>
+      {pathSegments(path).map((segment, index) => (
+        // A path's pieces never move, so their place is part of their name.
+        <Fragment key={`${index}:${segment}`}>
+          {index > 0 ? <wbr /> : null}
+          {segment}
+        </Fragment>
+      ))}
+    </code>
+  );
+}
+
+/**
  * Admin → SEO → Redirects (`/admin/seo/redirects`, §9.10, D30).
  *
  * Every URL the site has ever published is a promise: somebody has it in a
@@ -104,6 +156,24 @@ export default function RedirectsPage() {
   });
 
   const [editing, setEditing] = useState(null);
+
+  // "Create redirect" from SEO → 404s (prompt 51) opens the form on the
+  // address: `?create=/flats-in-hebal`. Read once, then taken out of the
+  // address, so a reload does not open the form again.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const asked = searchParams.get('create');
+  useEffect(() => {
+    if (!asked || !canEdit) return;
+    setEditing({ ...BLANK, fromPath: asked });
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete('create');
+        return next;
+      },
+      { replace: true }
+    );
+  }, [asked, canEdit, setSearchParams]);
   const [deleting, setDeleting] = useState(null);
   const [deletingBusy, setDeletingBusy] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -164,9 +234,13 @@ export default function RedirectsPage() {
   const exportCsv = async () => {
     setExporting(true);
     try {
+      // What the list is showing, not every rule there is (prompt 51).
+      const filters = Object.fromEntries(
+        ['q', 'isActive'].filter((key) => isSet(params[key])).map((key) => [key, params[key]])
+      );
       await downloadAuthenticated(
         endpoints.adminRedirects.exportCsv,
-        {},
+        filters,
         csvFileName('redirects'),
         { type: 'text/csv;charset=utf-8' }
       );
@@ -200,27 +274,33 @@ export default function RedirectsPage() {
 
   const columns = useMemo(
     () => [
+      // The two paths are the rule, so they get the room: each column holds a
+      // path of about twenty characters on one line at 1280 px, and a longer
+      // one wraps after a slash or a hyphen (`RedirectPath`). The widths are
+      // the page's CSS, which caps a path in a cell by the same numbers.
       {
         key: 'fromPath',
         label: 'From',
         sortable: true,
         primary: true,
-        render: (row) => <code className={styles.path}>{row.fromPath}</code>,
+        width: 'var(--redirect-from-width)',
+        render: (row) => <RedirectPath path={row.fromPath} />,
       },
       {
         key: 'toPath',
         label: 'To',
+        width: 'var(--redirect-to-width)',
         render: (row) => (
           <span className={styles.toCell}>
             <Icon icon="mdi:arrow-right" width="16" height="16" aria-hidden="true" />
-            <code className={styles.path}>{row.toPath}</code>
+            <RedirectPath path={row.toPath} />
           </span>
         ),
       },
       {
         key: 'statusCode',
         label: 'Type',
-        width: '7rem',
+        width: '5rem',
         hideBelow: 'md',
         render: (row) => (
           <StatusChip
@@ -233,7 +313,7 @@ export default function RedirectsPage() {
       {
         key: 'isActive',
         label: 'Active',
-        width: '6rem',
+        width: '5rem',
         render: (row) => (
           <Switch
             size="small"
@@ -267,11 +347,12 @@ export default function RedirectsPage() {
         hideBelow: 'lg',
         render: (row) => <span className={styles.note}>{row.note || '—'}</span>,
       },
+      // The least of the row's facts; below 1536 px its room is the note's.
       {
         key: 'updatedAt',
         label: 'Updated',
         width: '9rem',
-        hideBelow: 'lg',
+        hideBelow: 'xl',
         render: (row) => formatRelative(row.updatedAt),
       },
     ],
@@ -452,7 +533,7 @@ export default function RedirectsPage() {
         size="md"
         mobile="fullscreen"
         title="Nginx redirects"
-        description="Server-level 301s, for the deployment that fronts this build. The app performs the same rules in the browser (D30)."
+        description="Server-level 301s, for the deployment that fronts this build. The app performs the same rules in the browser."
         footer={
           <>
             <Button variant="outline" onClick={() => setSnippet(null)}>

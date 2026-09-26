@@ -78,7 +78,6 @@ export default function VariableMenu({ inputId, value, onInsert, disabled = fals
         variant="ghost"
         size="sm"
         disabled={disabled}
-        aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         icon={<Icon icon="mdi:code-braces" width="16" height="16" />}
@@ -88,12 +87,14 @@ export default function VariableMenu({ inputId, value, onInsert, disabled = fals
       </Button>
 
       {open ? (
-        <div className={styles.menu} role="menu" id={menuId}>
+        // A disclosure of ordinary buttons, reached with Tab — not a
+        // `role="menu"`, which promises arrow keys this list never had
+        // (prompt 51).
+        <div className={styles.menu} role="group" aria-label="Template variables" id={menuId}>
           {listVariables().map((variable) => (
             <button
               key={variable.token}
               type="button"
-              role="menuitem"
               className={styles.menuItem}
               onClick={() => insert(variable.token)}
             >

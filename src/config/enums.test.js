@@ -1,9 +1,12 @@
 import {
+  ADMIN_LEAD_SOURCES,
   makeEnum,
   AREA_UNITS,
   AVAILABILITY,
   BADGE_TONES,
   BLOCK_TYPES,
+  LEAD_CLOSED_STATUSES,
+  LEAD_OPEN_STATUSES,
   LEAD_PIPELINE,
   LEAD_SOURCES,
   LEAD_STATUS,
@@ -135,9 +138,26 @@ describe('SEO_SCORE_BANDS.bandOf', () => {
 
 describe('LEAD_SOURCES', () => {
   it('carries every documented source', () => {
-    expect(LEAD_SOURCES.values).toHaveLength(29);
+    // 29 from the site's forms, and the seven the desk enters (prompt 51).
+    expect(LEAD_SOURCES.values).toHaveLength(36);
     expect(LEAD_SOURCES.values).toEqual(
-      expect.arrayContaining(['property-enquiry', 'hero-search'])
+      expect.arrayContaining(['property-enquiry', 'hero-search', ...ADMIN_LEAD_SOURCES])
+    );
+    expect(ADMIN_LEAD_SOURCES).toEqual([
+      'walk-in',
+      'phone',
+      'whatsapp-inbound',
+      'referral',
+      'portal-99acres',
+      'portal-magicbricks',
+      'portal-housing',
+    ]);
+  });
+
+  it('splits the statuses into the open ones and the two that close a lead', () => {
+    expect(LEAD_CLOSED_STATUSES).toEqual(['converted', 'lost']);
+    expect([...LEAD_OPEN_STATUSES, ...LEAD_CLOSED_STATUSES].sort()).toEqual(
+      [...LEAD_STATUS.values].sort()
     );
   });
 

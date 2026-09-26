@@ -219,6 +219,8 @@ const RESOURCES = [
     basePath: 'localities',
     collection: 'localities',
     schema: 'locality',
+    // A form opened before somebody else's save is refused, not replayed over it.
+    staleGuard: 'locality',
     needs: ['cities', 'properties'],
     noun: { one: 'locality', many: 'localities' },
     deleteGuard: 'locality',
@@ -364,6 +366,7 @@ const RESOURCES = [
     basePath: 'developers',
     collection: 'developers',
     schema: 'developer',
+    staleGuard: 'developer',
     needs: ['properties'],
     noun: { one: 'developer', many: 'developers' },
     deleteGuard: 'developer',
@@ -497,8 +500,21 @@ const RESOURCES = [
     schema: 'teamMember',
     noun: { one: 'team member', many: 'team members' },
     deleteGuard: 'teamMember',
+    needs: ['properties'],
+    // How many listings name the member as their advisor, drafts included —
+    // the Team list's "Listings" column, and what deactivating them affects
+    // (prompt 51). The public read keeps it to itself.
+    afterRead: (record, { admin, collections }) =>
+      admin
+        ? {
+            ...record,
+            listingCount: (collections.properties ?? []).filter((property) =>
+              sameId(property.agent?.teamMemberId, record.id)
+            ).length,
+          }
+        : record,
     publicFilters: { showOnAbout: { field: 'showOnAbout', type: 'bool' } },
-    sorts: { order: 'order,name', name: 'name' },
+    sorts: { order: 'order,name', name: 'name', listingCount: '-listingCount' },
     defaultSort: 'order',
     settleOrder: true,
   },
@@ -547,6 +563,7 @@ module.exports = ({ db, getModel }) => {
         // Every collection here is typed into a form, and the real API trims
         // what a form sends (Laravel's `TrimStrings`, QA-60).
         trimStrings: true,
+        staleGuard: resource.staleGuard ?? false,
         routes: resource.routes ?? null,
         noun: resource.noun,
       })

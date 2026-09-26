@@ -45,6 +45,7 @@ const { ApiError, notFound, validation } = require('../middleware/errors');
 const { issueToken, verifyToken } = require('../lib/previewTokens');
 const { makeCrudRouter } = require('../lib/crud');
 const { maxId } = require('../lib/ids');
+const { omit } = require('../lib/scope');
 const { paginate, toPositiveInt } = require('../lib/paginate');
 const { slugifyPath } = require('../lib/slug');
 const { toBool } = require('../lib/filters');
@@ -340,7 +341,15 @@ module.exports = ({ db, getModel }) => {
       return;
     }
 
-    res.ok({ ...page });
+    // A hidden block is the editor's, not the visitor's (prompt 51): the
+    // public read leaves it out, and the page renders what is left. Who wrote
+    // and saved the page is the panel's business too.
+    res.ok({
+      ...omit(page, getModel('pages').publicOmit ?? []),
+      blocks: (Array.isArray(page.blocks) ? page.blocks : []).filter(
+        (block) => block?.hidden !== true
+      ),
+    });
   });
 
   /* ---------------------------------------------------------------- *
@@ -389,6 +398,8 @@ module.exports = ({ db, getModel }) => {
       defaultSort: 'order',
       bulkActions: BULK_ACTIONS,
       noun: { one: 'page', many: 'pages' },
+      // A form opened before somebody else's save is refused (prompt 51).
+      staleGuard: 'page',
     })
   );
 

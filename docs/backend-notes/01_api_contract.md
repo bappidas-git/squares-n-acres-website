@@ -68,8 +68,13 @@ switched off wholesale without breaking a single screen.
 
 ## CORS
 
-The site and the API are separate origins, so every public read is a
-cross-origin request.
+**On one host** — the recommended layout, where one Laravel application serves
+the API under `/api` and the site beside it (`07_DEPLOYMENT.md`, Layout A) —
+the browser never makes a cross-origin request, and nothing below is needed
+beyond Laravel's defaults. **On two hosts** (Layout B, the API on `api.`) every
+public read is a cross-origin request, and the API answers it like this —
+Laravel 11 ships no `config/cors.php` until `php artisan config:publish cors`
+writes one:
 
 ```php
 // config/cors.php
@@ -137,49 +142,60 @@ keyed on the user id, because it takes the current password and would otherwise
 let any open session guess it at full speed. Over the limit: `429`, `Retry-After`,
 "Too many attempts to change the password. Try again in a minute.".
 
-## Planned additions
+## Category counts
 
-One endpoint is specified but not yet in the registry, so it is not in
-`03_ENDPOINTS.md`, the Postman collection or `openapi.yaml`. It is here because
-the frontend has a use for it today and works without it.
-
-### `GET /properties/counts` — one response instead of twenty-five
-
-The home page shows a row of category tiles — six segment and listing-type
-tiles, seventeen property-type tiles — each with a count beside it. Today
-`useCategoryCounts` reads each count from `meta.total` of its own
-`GET /properties?…&perPage=1`: **25 requests and 25 state updates for 23
-numbers.** Against the mock each answers in under 100 ms; against an API across
-the network it is the slowest thing the home page does.
+`GET /properties/counts` answers the home page's category tiles — six segment,
+listing-type and status tiles and one tile per property type, each with a count
+— in **two requests** instead of one `GET /properties?…&perPage=1` a tile
+(twenty-three of them against the seed):
 
 ```
-GET /properties/counts?by=segment,propertyTypeId[&listingType=sale]
+GET /properties/counts?by=segment,listingType,propertyTypeId
+GET /properties/counts?by=constructionStatus&listingType=sale
 
 200 {
   "data": {
-    "segment": { "residential": 26, "commercial": 5, "land": 5 },
+    "segment": { "residential": 26, "commercial": 5, "land": 9 },
+    "listingType": { "sale": 31, "rent": 7, "lease": 2 },
     "propertyTypeId": { "1": 8, "2": 4, "9": 3 }
   },
   "meta": null
 }
 ```
 
-- Public, no auth, cacheable — `Cache-Control: public, max-age=300, s-maxage=3600`.
-- `by` is a comma-separated list of the dimensions to group on; the only two the
-  frontend asks for are `segment` and `propertyTypeId`, and an unknown dimension
-  is ignored rather than refused (§5.6).
-- Any §5.7 filter may be sent alongside and narrows the counts, so
-  `?by=propertyTypeId&listingType=rent` answers "how many rentals of each type".
-- The same `isActive: true` scoping every public read applies, and a dimension's
-  keys are the ids or enum values, as strings.
-- One `SELECT … GROUP BY` per dimension. Do not compute it by counting rows in
-  PHP.
+- Public, no auth, the same answer for every visitor — `Cache-Control: public,
+  max-age=300`, the five minutes the frontend keeps the numbers itself.
+- `by` is a comma-separated list of dimensions: `segment`, `propertyTypeId`,
+  `listingType`, `constructionStatus`, `localityId`. An unknown one is ignored
+  rather than refused (§5.6); no known one answers `data: {}`.
+- **Every listing filter of `GET /properties` applies before counting**, so the
+  second request above is "the sale listings, per construction status" — the
+  three sale-status tiles. Filtering first and grouping second is the whole
+  point: `?by=propertyTypeId&listingType=rent` is "how many rentals of each
+  type".
+- The `isActive: true` scoping of every public read applies. A dimension's keys
+  are the ids or values as strings; a value no live listing carries is absent,
+  and the frontend reads it as 0.
+- One `SELECT … GROUP BY` per dimension over the filtered query
+  (`05_BUSINESS_RULES.md` → "Category counts"). Do not count rows in PHP.
 
-`useCategoryCounts` will call it once and keep the per-tile requests as the
-fallback for a backend that has not shipped it, so the frontend is correct
-either way and simply becomes faster the day the endpoint exists. Until then it
-is **optional**: nothing breaks without it.
+The frontend makes exactly those two calls and maps its tiles from them. When
+either answers **404 or 501** it falls back to the per-tile
+`GET /properties?perPage=1` requests it made before, for the rest of the visit —
+so an API that has not built the endpoint yet still shows every number, and the
+endpoint is listed as optional in the parity checklist. Any other failure leaves
+the tiles without a number rather than guessing.
 
-When you do add it, add it to `src/services/endpoints.js` in the same change —
+## Planned additions
+
+Two additions are specified but not yet in the registry, so they are not in
+`03_ENDPOINTS.md`, the Postman collection or `openapi.yaml`: the self-service
+password reset pair (`POST /auth/forgot`, `POST /auth/reset`, with its token
+table) and the server-side verification of the reCAPTCHA token the site key in
+Site settings is kept for. Both are written up in `09_MEDIA_AND_EMAIL.md`, beside
+the e-mail they depend on. Until they exist, an administrator resets a password
+from Settings → Users, which the sign-in page says.
+
+When you add either, add it to `src/services/endpoints.js` in the same change —
 that is what puts it into this package, the smoke test and the Postman
 collection.

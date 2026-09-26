@@ -32,6 +32,7 @@ function ChipRow({ field, label, options, value, error, required = false, onSele
             variant={value === option.value ? 'filled' : 'soft'}
             size="md"
             selected={value === option.value}
+            pressed={value === option.value}
             onClick={() => onSelect(field, option.value)}
             aria-pressed={value === option.value}
             icon={option.icon ? <Icon icon={option.icon} aria-hidden="true" /> : undefined}

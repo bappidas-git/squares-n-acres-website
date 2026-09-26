@@ -174,6 +174,9 @@ module.exports = function jobs({ stamps, dates }) {
     isActive: true,
     postedAt: dates.dateDaysAgo(entry.postedDaysAgo),
     closesAt: null,
+    // Openings are posted by the desk that manages the content (prompt 51).
+    createdBy: 2,
+    updatedBy: 2,
     ...stamps({ createdDaysAgo: entry.postedDaysAgo }),
   }));
 

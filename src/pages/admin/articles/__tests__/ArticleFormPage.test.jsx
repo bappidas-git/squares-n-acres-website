@@ -16,6 +16,7 @@ import ToastProvider from '../../../../components/common/ToastProvider';
 import articleService from '../../../../services/articleService';
 import authService from '../../../../services/authService';
 import masterDataService from '../../../../services/masterDataService';
+import redirectService from '../../../../services/redirectService';
 import ApiError from '../../../../services/apiError';
 import renderWith from '../../../../test-utils';
 import storage from '../../../../utils/storage';
@@ -27,6 +28,15 @@ import { toDateTimeLocal } from '../../../../utils/articleUtils';
 jest.mock('../../../../services/authService');
 jest.mock('../../../../services/articleService');
 jest.mock('../../../../services/propertyService');
+jest.mock('../../../../services/redirectService', () => ({
+  __esModule: true,
+  default: {
+    deactivateByFromPath: jest.fn(),
+    upsertByFromPath: jest.fn(),
+    list: jest.fn(),
+    public: jest.fn(),
+  },
+}));
 // `NavigationGuardContext` drives the in-app confirm through `useBlocker`, which
 // only exists inside a data router; the test renders a `MemoryRouter`, so the
 // guard is stubbed out to the two things this screen asks of it.
@@ -218,6 +228,108 @@ beforeEach(() => {
     Promise.resolve({ data: { ...RECORD, ...body, id: 99 } })
   );
   articleService.previewToken.mockResolvedValue({ data: { token: 'tok-1', url: 'x' } });
+});
+
+describe('ArticleFormPage — a published article that moves (prompt 51)', () => {
+  const PUBLISHED = { ...RECORD, status: 'published', publishedAt: '2026-09-10T06:00:00.000Z' };
+
+  it('offers the 301 from the old address, and writes it on save', async () => {
+    articleService.adminGet.mockResolvedValue({ data: PUBLISHED });
+    articleService.update.mockImplementation((id, body) =>
+      Promise.resolve({ data: { ...PUBLISHED, ...body, id: Number(id) } })
+    );
+    redirectService.deactivateByFromPath.mockResolvedValue({ data: null });
+    redirectService.upsertByFromPath.mockResolvedValue({ data: {} });
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    fireEvent.change(screen.getByDisplayValue(RECORD.slug), {
+      target: { value: 'khata-transfer-guide' },
+    });
+    expect(await screen.findByText(/This article is live at/)).toBeInTheDocument();
+    expect(
+      screen.getByRole('switch', {
+        name: 'Send visitors from /insights/articles/khata-transfer-checklist to the new address (301)',
+      })
+    ).toHaveAttribute('aria-checked', 'true');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(redirectService.upsertByFromPath).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fromPath: '/insights/articles/khata-transfer-checklist',
+          toPath: '/insights/articles/khata-transfer-guide',
+          statusCode: 301,
+        })
+      )
+    );
+  });
+
+  it('says so when the redirect cannot be written, rather than staying silent', async () => {
+    articleService.adminGet.mockResolvedValue({ data: PUBLISHED });
+    articleService.update.mockImplementation((id, body) =>
+      Promise.resolve({ data: { ...PUBLISHED, ...body, id: Number(id) } })
+    );
+    redirectService.deactivateByFromPath.mockResolvedValue({ data: null });
+    redirectService.upsertByFromPath.mockRejectedValue(new Error('refused'));
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    fireEvent.change(screen.getByDisplayValue(RECORD.slug), {
+      target: { value: 'khata-transfer-guide' },
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(
+      await screen.findByText(/could not be redirected\. Add it under SEO → Redirects/)
+    ).toBeInTheDocument();
+  });
+
+  it('previews the changes of a published article without saving them', async () => {
+    articleService.adminGet.mockResolvedValue({ data: PUBLISHED });
+    const open = jest.spyOn(window, 'open').mockImplementation(() => ({}));
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    editHeadline(' — revised');
+    await userEvent.click(screen.getByRole('button', { name: 'Preview changes' }));
+
+    expect(articleService.update).not.toHaveBeenCalled();
+    expect(articleService.previewToken).not.toHaveBeenCalled();
+    const [url] = open.mock.calls[0];
+    const id = new URL(url, 'http://localhost').searchParams.get('draftPreview');
+    expect(url).toMatch(/^\/insights\/articles\/khata-transfer-checklist\?draftPreview=/);
+    const kept = JSON.parse(window.localStorage.getItem(`sna-draft-preview-${id}`));
+    expect(kept.type).toBe('article');
+    expect(kept.record).toMatchObject({
+      title: `${RECORD.title} — revised`,
+      status: 'published',
+      slug: RECORD.slug,
+      category: RECORD.category,
+    });
+    open.mockRestore();
+  });
+
+  it('says when the article was last saved, and by whom', async () => {
+    articleService.adminGet.mockResolvedValue({
+      data: { ...PUBLISHED, updatedByName: 'Manager User' },
+    });
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    expect(screen.getByText(/^Last saved .* by Manager User\.$/)).toBeInTheDocument();
+  });
+
+  it('asks nothing of a draft whose address changes', async () => {
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+
+    fireEvent.change(screen.getByDisplayValue(RECORD.slug), {
+      target: { value: 'khata-transfer-guide' },
+    });
+    expect(screen.queryByText(/This article is live at/)).not.toBeInTheDocument();
+  });
 });
 
 describe('ArticleFormPage — the publish rules (§2)', () => {
@@ -898,5 +1010,70 @@ describe('ArticleFormPage — related articles (QA-55)', () => {
         expect.anything()
       )
     );
+  });
+});
+
+describe('ArticleFormPage — two editors, one article (prompt 51)', () => {
+  const THEIRS_AT = '2026-09-15T07:00:00.000Z';
+  const refusal = () =>
+    new ApiError({
+      status: 409,
+      message: 'Manager User saved this article after you opened it.',
+      data: {
+        conflict: 'stale',
+        current: {
+          updatedAt: THEIRS_AT,
+          updatedBy: { id: 2, name: 'Manager User' },
+          updatedByName: 'Manager User',
+        },
+      },
+    });
+
+  it('names the version it read, and answers a save over somebody else’s with the dialog', async () => {
+    articleService.update.mockRejectedValueOnce(refusal());
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+    editHeadline();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Somebody else saved this article' });
+    expect(within(dialog).getByText(/Manager User saved it/)).toBeInTheDocument();
+    expect(articleService.update.mock.calls[0][1].updatedAt).toBe(RECORD.updatedAt);
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save mine anyway' }));
+    await waitFor(() => expect(articleService.update).toHaveBeenCalledTimes(2));
+    expect(articleService.update.mock.calls[1][1].updatedAt).toBe(THEIRS_AT);
+  });
+
+  it('names the version each save answered with, not the one it opened on', async () => {
+    renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+    articleService.update.mockImplementationOnce((id, body) =>
+      Promise.resolve({ data: { ...RECORD, ...body, id: Number(id), updatedAt: THEIRS_AT } })
+    );
+    editHeadline();
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(articleService.update).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled());
+
+    fireEvent.change(await screen.findByDisplayValue(`${RECORD.title} (revised)`), {
+      target: { value: `${RECORD.title} (revised again)` },
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(articleService.update).toHaveBeenCalledTimes(2));
+    expect(articleService.update.mock.calls[1][1].updatedAt).toBe(THEIRS_AT);
+  });
+
+  it('keeps a dirty form as a copy when it goes away', async () => {
+    const { unmount } = renderForm();
+    await screen.findByDisplayValue(RECORD.title);
+    editHeadline(' (unsaved)');
+
+    unmount();
+
+    const copy = storage.getItem(draftKey('7'), null);
+    expect(copy.values.title).toBe(`${RECORD.title} (unsaved)`);
+    expect(copy.version).toBe(RECORD.updatedAt);
   });
 });

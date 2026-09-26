@@ -83,3 +83,19 @@ export function firstFieldMessage(error, fallback = GENERIC_MESSAGE) {
   const message = Array.isArray(first) ? first[0] : first;
   return message || error?.message || fallback;
 }
+
+/**
+ * The first message of every field a 422 names — `{ phone: '…', propertyId: '…' }`
+ * — for a form that paints each under its own box; `{}` for any other failure.
+ *
+ * @param {ApiError|null|undefined} error
+ * @returns {Record<string, string>}
+ */
+export function fieldMessages(error) {
+  if (error?.status !== 422 || !error?.errors || typeof error.errors !== 'object') return {};
+  return Object.fromEntries(
+    Object.entries(error.errors)
+      .map(([field, messages]) => [field, Array.isArray(messages) ? messages[0] : messages])
+      .filter(([, message]) => typeof message === 'string' && message !== '')
+  );
+}

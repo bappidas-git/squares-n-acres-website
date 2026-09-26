@@ -150,6 +150,21 @@ const TYPES = [
   ],
 ];
 
+/**
+ * The header's Rent and Commercial menus (prompt 51): each lists the active
+ * types with its flag on, in their `order` — these are the lists the menus
+ * were spelled out as in code before they were data.
+ */
+const RENT_MENU = ['apartments', 'villas', 'independent-houses', 'pg-co-living'];
+const COMMERCIAL_MENU = ['office-spaces', 'retail-shops', 'warehouses', 'co-working-spaces'];
+
+/**
+ * Where a type's `order` is not its place in the list above: the Commercial
+ * menu has always offered Co-working after Warehouses, and a menu follows
+ * `order` now.
+ */
+const ORDER = { 'retail-shops': 12, warehouses: 13, 'co-working-spaces': 14 };
+
 module.exports = function propertyTypes({ stamps }) {
   return TYPES.map(([name, slug, segment, icon, description, focusKeyword], index) => ({
     id: index + 1,
@@ -158,8 +173,10 @@ module.exports = function propertyTypes({ stamps }) {
     segment,
     icon,
     description,
+    showInRentMenu: RENT_MENU.includes(slug),
+    showInCommercialMenu: COMMERCIAL_MENU.includes(slug),
     isActive: true,
-    order: index + 1,
+    order: ORDER[slug] ?? index + 1,
     seo: makeSeo({
       title: `${name} in Bengaluru`,
       description: fitDescription(

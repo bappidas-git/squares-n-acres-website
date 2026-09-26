@@ -50,14 +50,6 @@
   min-width: 0;
 }
 
-/* The draft banner's two buttons */
-.draftActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-}
-
 /* The phone's primary writes, always within thumb's reach */
 .bottomBar {
   position: sticky;

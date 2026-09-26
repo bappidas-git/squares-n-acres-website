@@ -96,11 +96,16 @@
   cursor: pointer;
 }
 
-.result:hover:not(:disabled) {
+.result:hover:not(.resultDisabled),
+.resultActive {
   background: var(--color-surface);
 }
 
-.result:disabled {
+.resultActive {
+  box-shadow: inset 2px 0 0 var(--color-focus);
+}
+
+.resultDisabled {
   color: var(--color-text-muted);
   cursor: default;
 }
@@ -111,6 +116,7 @@
 }
 
 .noResults {
+  margin: 0;
   padding: var(--space-3);
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);

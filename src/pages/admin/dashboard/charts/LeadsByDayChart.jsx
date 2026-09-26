@@ -16,15 +16,17 @@ import { formatDate } from '../../../../utils/format';
 export const CHART_HEIGHT = 280;
 
 /**
- * Leads per day over the last thirty (§6.16 `trends.leadsByDay`).
+ * Leads per day over the last 7, 30 or 90 days (§6.16 `trends.leadsByDay`;
+ * the range since prompt 51).
  *
- * The series always has thirty points, zeroes included, because a line that
+ * The series has a point for every day, zeroes included, because a line that
  * skips the quiet days makes a slow week look like a busy one.
  *
  * @param {object} props
  * @param {Array<{date: string, count: number}>} props.data
+ * @param {number} [props.days] the range the series covers — 7, 30 or 90 (prompt 51)
  */
-export default function LeadsByDayChart({ data = [] }) {
+export default function LeadsByDayChart({ data = [], days = 30 }) {
   const line = useCssVar('--color-primary', 'currentColor');
   const grid = useCssVar('--color-border', 'currentColor');
   const tick = useAxisTick();
@@ -33,8 +35,8 @@ export default function LeadsByDayChart({ data = [] }) {
 
   return (
     <ChartFrame
-      title="Leads per day, last 30 days"
-      description="A line chart of how many enquiries arrived on each of the last thirty days."
+      title={`Leads per day, last ${days} days`}
+      description={`A line chart of how many enquiries arrived on each of the last ${days} days.`}
       columns={['Day', 'Leads']}
       rows={points.map((point) => ({ label: point.label, value: point.count }))}
     >

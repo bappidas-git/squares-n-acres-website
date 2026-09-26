@@ -223,6 +223,9 @@ module.exports = function developers({ stamps, slugify, media }) {
         secondaryKeywords: [`${entry.name.toLowerCase()} projects`, 'builders in bengaluru'],
         slug,
       }),
+      // Master data is set up by the administrator (prompt 51).
+      createdBy: 1,
+      updatedBy: 1,
       ...stamps({ createdDaysAgo: 172 }),
     };
   });

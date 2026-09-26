@@ -10,6 +10,7 @@ import DeleteGuardDialog from './DeleteGuardDialog';
 import FilterBar from './FilterBar';
 import IconButton from '../ui/IconButton';
 import MasterDataForm from './MasterDataForm';
+import { SelectField } from '../ui/FormField';
 import Modal from '../ui/Modal';
 import PageHeader from './PageHeader';
 import RowActions from './RowActions';
@@ -23,7 +24,7 @@ import focusFirstError from './focusFirstError';
 import sanitiseParams from './sanitiseParams';
 import withSlugSuggestion from './slugSuggestion';
 import { DIALOGS, FORMS, TABLES, TOASTS } from '../../config/adminCopy';
-import { applySeoSideEffects, validateSeoBranch } from '../seo/seoSideEffects';
+import { applySeoSideEffects, redirectWarning, validateSeoBranch } from '../seo/seoSideEffects';
 import ApiError, { firstFieldMessage } from '../../services/apiError';
 import { toSeoPayload, withSeoDefaults } from '../seo/seoValues';
 import { tidyPhone } from '../../utils/validators';
@@ -336,8 +337,20 @@ export function labelsOf(fields) {
  *   API answered and the one the form opened on — a property type whose URL
  *   moved redirects the old one
  * @param {(row: object) => Array<object>} [props.config.extraRowActions]
+ * @param {(action: 'deactivate'|'delete', rows: Array<object>, proceed: () => Promise<unknown>)
+ *   => boolean|Promise<boolean>} [props.config.intercept] asked before records are switched
+ *   off or deleted — from the Active switch, the form, a row's Delete or the bulk bar — by a
+ *   screen with something to settle first: a user's open leads, a team member's listings
+ *   (prompt 51). `true` means the screen has taken over with a dialog of its own and calls
+ *   `proceed()` to carry the action out, without asking again; `false` lets it go ahead
  * @param {(values: object, row: object|null) => object} [props.config.toPayload]
  * @param {(row: object) => object} [props.config.toFormValues]
+ * @param {{noun: string, candidates: (row: object) => Array<{value: string, label: string}>,
+ *   none?: string, move: (ids: Array<number|string>, value: string|null) => Promise<unknown>}}
+ *   [props.config.reassign] a record listings point at — a locality, a developer, a property
+ *   type (prompt 51): its delete, refused over those listings, offers to move them to another
+ *   record first and then deletes it. `none` offers "no value" as well (a listing may have no
+ *   developer); `move` is the properties' bulk `set*` action
  */
 export default function MasterDataPage({ config }) {
   const {
@@ -384,6 +397,8 @@ export default function MasterDataPage({ config }) {
     toPayload,
     toFormValues,
     validate: customValidate,
+    intercept,
+    reassign,
   } = config;
 
   const toast = useToast();
@@ -408,6 +423,11 @@ export default function MasterDataPage({ config }) {
   const [deleting, setDeleting] = useState(null);
   const [deletingBusy, setDeletingBusy] = useState(false);
   const [guard, setGuard] = useState(null);
+  // A refused delete whose listings can be moved first (prompt 51).
+  const [moving, setMoving] = useState(null);
+  const [moveTarget, setMoveTarget] = useState('');
+  const [moveError, setMoveError] = useState('');
+  const [moveBusy, setMoveBusy] = useState(false);
   const [saveWarning, setSaveWarning] = useState(null);
   const [checkingSave, setCheckingSave] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -431,6 +451,7 @@ export default function MasterDataPage({ config }) {
   const [shown, releaseEditing] = useLingering(editing);
   const [shownDeleting, releaseDeleting] = useLingering(deleting);
   const [shownGuard, releaseGuard] = useLingering(guard);
+  const [shownMoving, releaseMoving] = useLingering(moving);
   const [shownWarning, releaseWarning] = useLingering(saveWarning);
 
   const isNew = Boolean(editing) && !editing.id;
@@ -604,7 +625,10 @@ export default function MasterDataPage({ config }) {
     const saved = answer?.data ?? answer;
     // The redirect this record's `seo` asks for, against the slug the API
     // answered with — a new record has none until now (§9.6).
-    if (seoPanel && seoEntityType) await applySeoSideEffects(seoEntityType, saved);
+    const effects =
+      seoPanel && seoEntityType
+        ? await applySeoSideEffects(seoEntityType, saved)
+        : { ok: true, error: null };
     if (afterSave) {
       try {
         await afterSave(saved, editing, { toast });
@@ -613,9 +637,13 @@ export default function MasterDataPage({ config }) {
         console.warn('A step after the save did not complete.', thrown);
       }
     }
-    toast.success(
-      editing?.id ? TOASTS.saved(capitalise(singular)) : TOASTS.created(capitalise(singular))
-    );
+    if (effects.ok) {
+      toast.success(
+        editing?.id ? TOASTS.saved(capitalise(singular)) : TOASTS.created(capitalise(singular))
+      );
+    } else {
+      toast.warning(redirectWarning(effects.error));
+    }
     closeForm();
     onMutated?.(collectionKey);
     refetch();
@@ -632,6 +660,26 @@ export default function MasterDataPage({ config }) {
    */
   const save = async () => {
     if (!editing) return;
+
+    // Switched off in the form: the screen's own question comes first, as it
+    // does from the list's switch (prompt 51).
+    if (intercept && editing.id && editing.isActive !== false && form.values.isActive === false) {
+      if (!form.validateAll()) {
+        setRefusals((count) => count + 1);
+        return;
+      }
+      setCheckingSave(true);
+      let taken = false;
+      try {
+        taken = await intercept('deactivate', [editing], () => persist());
+      } catch (_thrown) {
+        // The question is advisory: a lookup that fails must not block the save.
+      } finally {
+        setCheckingSave(false);
+      }
+      if (taken) return;
+    }
+
     if (!confirmSave) {
       await persist();
       return;
@@ -671,14 +719,22 @@ export default function MasterDataPage({ config }) {
     else refetch();
   };
 
-  const confirmDelete = async () => {
-    if (!deleting) return;
+  const confirmDelete = () => (deleting ? performDelete(deleting) : undefined);
+
+  /**
+   * The delete itself — after the confirm, or after a screen's own dialog.
+   *
+   * @param {object} record
+   * @param {{done?: string}} [options] what the success says, when more happened
+   *   than the delete — "3 listings moved to Yelahanka, and “Hebbal” deleted."
+   */
+  async function performDelete(record, { done } = {}) {
     setDeletingBusy(true);
     try {
-      await service.remove(deleting.id);
-      toast.success(TOASTS.deleted(`“${labelOf(deleting, columns)}”`));
+      await service.remove(record.id);
+      toast.success(done ?? TOASTS.deleted(`“${labelOf(record, columns)}”`));
       setDeleting(null);
-      setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
+      setSelectedIds((current) => current.filter((id) => String(id) !== String(record.id)));
       onMutated?.(collectionKey);
       afterRemoval(1);
     } catch (thrown) {
@@ -686,9 +742,9 @@ export default function MasterDataPage({ config }) {
       // happened. It said "Not found" and left the row on screen, to be
       // deleted again with the same answer (QA-61).
       if (thrown?.status === 404) {
-        toast.info(TOASTS.alreadyDeleted(`“${labelOf(deleting, columns)}”`));
+        toast.info(TOASTS.alreadyDeleted(`“${labelOf(record, columns)}”`));
         setDeleting(null);
-        setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
+        setSelectedIds((current) => current.filter((id) => String(id) !== String(record.id)));
         onMutated?.(collectionKey);
         afterRemoval(1);
         return;
@@ -697,8 +753,16 @@ export default function MasterDataPage({ config }) {
       // first, and the dialog is where that list belongs (D88).
       if (usageGuard && thrown?.status === 409) {
         const usedBy = thrown.data?.usedBy ?? [];
-        const label = labelOf(deleting, columns);
+        const label = labelOf(record, columns);
         setDeleting(null);
+        // Listings in the way can be moved to another record first, and the
+        // delete then goes through (prompt 51).
+        if (reassign && usedBy.some((usage) => usage.type === 'property')) {
+          setMoveTarget('');
+          setMoveError('');
+          setMoving({ record, label, usedBy });
+          return;
+        }
         setGuard({
           title: label,
           // "This item is in use." named nothing; the dialog names the record.
@@ -718,6 +782,82 @@ export default function MasterDataPage({ config }) {
     } finally {
       setDeletingBusy(false);
     }
+  }
+
+  /**
+   * Switching off or deleting, asked of the screen first (prompt 51): a user
+   * with open leads, a team member who is the advisor on listings. `otherwise`
+   * is what happens when the screen has nothing to ask — the house confirm,
+   * for a single delete.
+   */
+  const guarded = async (action, targets, proceed, otherwise = proceed) => {
+    let taken = false;
+    if (intercept) {
+      try {
+        taken = await intercept(action, targets, proceed);
+      } catch (_thrown) {
+        // A lookup that fails must not stand in the way of the action.
+        taken = false;
+      }
+    }
+    if (!taken) await otherwise();
+  };
+
+  /**
+   * "Move and delete" (prompt 51): the listings go to the record picked, and —
+   * when nothing else names this one — it is deleted. What still names it is
+   * listed by the guard afterwards, as a delete refused anyway would be.
+   */
+  const confirmMove = async () => {
+    if (!moving || !reassign || moveBusy) return;
+    if (!moveTarget) {
+      setMoveError(`Choose where the listings go.`);
+      return;
+    }
+    const { record, label, usedBy } = moving;
+    const listings = usedBy.filter((usage) => usage.type === 'property');
+    const others = usedBy.filter((usage) => usage.type !== 'property');
+    const value = moveTarget === MOVE_TO_NONE ? null : moveTarget;
+
+    setMoveBusy(true);
+    try {
+      await reassign.move(
+        listings.map((usage) => usage.id),
+        value
+      );
+    } catch (thrown) {
+      setMoveError(firstFieldMessage(thrown, 'The listings could not be moved.'));
+      return;
+    } finally {
+      setMoveBusy(false);
+    }
+
+    const count = `${listings.length} ${listings.length === 1 ? 'listing' : 'listings'}`;
+    const target = reassign.candidates(record).find((option) => option.value === value)?.label;
+    const moved =
+      value === null
+        ? `${count} no longer ${listings.length === 1 ? 'names' : 'name'} a ${reassign.noun}`
+        : `${count} moved to ${target ?? `the ${reassign.noun} chosen`}`;
+    setMoving(null);
+    onMutated?.(collectionKey);
+
+    if (others.length > 0) {
+      toast.success(`${moved}.`);
+      refetch();
+      setGuard({ title: label, message: `“${label}” is still used by:`, usedBy: others });
+      return;
+    }
+    await performDelete(record, { done: `${moved}, and “${label}” deleted.` });
+  };
+
+  // The latest of each, for the memoised row actions and Active switch to call.
+  const writersRef = useRef(null);
+  writersRef.current = { guarded, performDelete };
+
+  const onBulkAction = (action, ids) => {
+    if (action !== 'deactivate' && action !== 'delete') return runBulk(action, ids);
+    const targets = ids.map((id) => rows.find((row) => String(row.id) === String(id)) ?? { id });
+    return guarded(action, targets, () => runBulk(action, ids));
   };
 
   const runBulk = async (action, ids) => {
@@ -947,7 +1087,13 @@ export default function MasterDataPage({ config }) {
               (canToggleActive ? !canToggleActive(row) : false)
             }
             onClick={(event) => event.stopPropagation()}
-            onChange={() => patchField(row, 'isActive', row.isActive === false)}
+            onChange={() =>
+              row.isActive === false
+                ? patchField(row, 'isActive', true)
+                : writersRef.current.guarded('deactivate', [row], () =>
+                    patchField(row, 'isActive', false)
+                  )
+            }
             // `slotProps.input` replaces MUI's own defaults for that slot, and
             // `role: 'switch'` is one of them — a toggle that reports itself as a
             // checkbox is a worse answer than the one MUI ships.
@@ -1001,7 +1147,13 @@ export default function MasterDataPage({ config }) {
               label: `Delete ${labelOf(row, columns)}`,
               icon: 'mdi:delete-outline',
               danger: true,
-              onClick: () => setDeleting(row),
+              onClick: () =>
+                writersRef.current.guarded(
+                  'delete',
+                  [row],
+                  () => writersRef.current.performDelete(row),
+                  () => setDeleting(row)
+                ),
             },
           ]
         : []),
@@ -1042,16 +1194,27 @@ export default function MasterDataPage({ config }) {
   // The way into the drag list from the table: on a phone the table is cards,
   // with no "Order" header to press, and after "Table view" there was no way
   // back but the address bar (QA-59).
+  // Already in display order with nothing to drag (an empty or refused list):
+  // the press changed nothing and said nothing, so it is off and says why
+  // (prompt 51).
+  const alreadyOrdered = params.sort === 'order' && params.order !== 'desc';
   const reorderButton =
     orderable && canEdit && !reordering ? (
-      <Button
-        variant="outline"
-        size="sm"
-        icon={<Icon icon="mdi:swap-vertical" width="18" height="18" />}
-        onClick={() => setParams({ sort: 'order', order: 'asc' })}
+      <span
+        title={
+          alreadyOrdered ? 'Already in display order — there are no rows here to drag.' : undefined
+        }
       >
-        {TABLES.reorder}
-      </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={alreadyOrdered}
+          icon={<Icon icon="mdi:swap-vertical" width="18" height="18" />}
+          onClick={() => setParams({ sort: 'order', order: 'asc' })}
+        >
+          {TABLES.reorder}
+        </Button>
+      </span>
     ) : null;
 
   // The group headings belong to one sort — the rows have to arrive grouped for
@@ -1279,7 +1442,7 @@ export default function MasterDataPage({ config }) {
           bulkNounOne={singular}
           bulkNounMany={plural}
           bulkBusy={bulkBusy}
-          onBulkAction={runBulk}
+          onBulkAction={onBulkAction}
           rowActions={rowActions}
           rowActionsMenu={rowActionsMenu}
           rowActionsLabel={(row) => `Actions for ${labelOf(row, columns)}`}
@@ -1385,6 +1548,51 @@ export default function MasterDataPage({ config }) {
         }}
       />
 
+      {reassign ? (
+        <DeleteGuardDialog
+          open={Boolean(moving)}
+          heading="Move its listings first"
+          title={shownMoving?.label}
+          message={shownMoving ? `“${shownMoving.label}” is still used by:` : undefined}
+          usedBy={shownMoving?.usedBy ?? []}
+          hint={
+            shownMoving?.usedBy.some((usage) => usage.type !== 'property')
+              ? `The listings move now; “${shownMoving.label}” can be deleted once the other records above no longer name it.`
+              : `The listings move to the ${reassign.noun} you choose, and “${shownMoving?.label ?? ''}” is deleted.`
+          }
+          confirmLabel={
+            shownMoving?.usedBy.some((usage) => usage.type !== 'property')
+              ? 'Move the listings'
+              : 'Move them and delete'
+          }
+          loading={moveBusy}
+          onConfirm={confirmMove}
+          onClose={moveBusy ? undefined : () => setMoving(null)}
+          onExited={releaseMoving}
+        >
+          <SelectField
+            label="Move the listings to"
+            required
+            placeholder={`Choose a ${reassign.noun}`}
+            options={
+              shownMoving
+                ? [
+                    ...(reassign.none ? [{ value: MOVE_TO_NONE, label: reassign.none }] : []),
+                    ...reassign.candidates(shownMoving.record),
+                  ]
+                : []
+            }
+            value={moveTarget}
+            error={moveError}
+            disabled={moveBusy}
+            onChange={(event) => {
+              setMoveTarget(event.target.value);
+              setMoveError('');
+            }}
+          />
+        </DeleteGuardDialog>
+      ) : null}
+
       <DeleteGuardDialog
         open={Boolean(guard)}
         title={shownGuard?.title}
@@ -1400,6 +1608,9 @@ export default function MasterDataPage({ config }) {
     </>
   );
 }
+
+/** "No developer" in the "Move the listings to" picker (prompt 51). */
+const MOVE_TO_NONE = '__none__';
 
 /** What a bulk action's records already were when it changed none of them. */
 const ALREADY = {

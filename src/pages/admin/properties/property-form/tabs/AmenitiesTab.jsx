@@ -5,6 +5,8 @@ import FormSection, { FormColumn } from '../../../../../components/admin/FormSec
 import PATHS from '../../../../../routes/paths';
 import { segmentKind } from '../../../../../config/segments';
 import { useAmenitiesGrouped } from '../../../../../hooks/useMasterData';
+import { useMasterData } from '../../../../../contexts/MasterDataContext';
+import { useToast } from '../../../../../components/common/ToastProvider';
 import { propertyFieldId } from '../fieldFocus';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
@@ -228,7 +230,7 @@ export default function AmenitiesTab() {
               >
                 Master data → Amenities
               </a>
-              .
+              , then <RefreshAmenities />.
             </p>
           </FormColumn>
         </FormSection>
@@ -315,11 +317,42 @@ export default function AmenitiesTab() {
               >
                 Master data → Amenities
               </a>{' '}
-              — it opens in a new tab, so nothing here is lost.
+              — it opens in a new tab, so nothing here is lost — then <RefreshAmenities />.
             </p>
           </FormColumn>
         </FormSection>
       ) : null}
     </>
+  );
+}
+
+/**
+ * "Refresh list" — reads the amenities again, for one added in another tab
+ * a moment ago. Other tabs hear about a refresh on their own
+ * (`MasterDataContext`); this is the button for when an editor does not wait.
+ */
+function RefreshAmenities() {
+  const { refresh } = useMasterData();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <button
+      type="button"
+      className={styles.link}
+      disabled={busy}
+      aria-busy={busy || undefined}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          await refresh('amenities');
+          toast.success('The amenities list is up to date.');
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      Refresh list
+    </button>
   );
 }

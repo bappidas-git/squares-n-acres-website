@@ -131,7 +131,7 @@ function stubServices(record) {
   return { picks, typeFaqs };
 }
 
-const renderProperty = (record) =>
+const renderProperty = (record, search = '') =>
   renderWith(
     <AdminAuthProvider>
       <MasterDataProvider>
@@ -142,7 +142,7 @@ const renderProperty = (record) =>
         </LeadCaptureProvider>
       </MasterDataProvider>
     </AdminAuthProvider>,
-    { initialEntries: [`/properties/${record.slug}`] }
+    { initialEntries: [`/properties/${record.slug}${search}`] }
   );
 
 describe('every active seed property renders its detail page', () => {
@@ -169,6 +169,25 @@ describe('every active seed property renders its detail page', () => {
   afterEach(() => {
     errorSpy.mockRestore();
     warnSpy.mockRestore();
+  });
+
+  it('opens an unpublished listing from a share link, says so, and counts no view (prompt 51)', async () => {
+    const draft = seed.properties.find((property) => !property.isActive);
+    const record = asPublicRecord(draft);
+    stubServices(record);
+
+    renderProperty(record, '?preview=tok-1');
+
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(record.title);
+    expect(propertyService.getBySlug).toHaveBeenCalledWith(
+      draft.slug,
+      expect.objectContaining({ previewToken: 'tok-1' })
+    );
+    expect(propertyService.adminGetBySlug).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(/Shared preview — this property is not published yet/)
+    ).toBeInTheDocument();
+    expect(propertyService.view).not.toHaveBeenCalled();
   });
 
   it('publishes enough listings for this to be a contract test', () => {

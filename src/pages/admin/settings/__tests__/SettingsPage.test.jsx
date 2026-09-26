@@ -35,7 +35,7 @@ import { SiteSettingsContext } from '../../../../contexts/SiteSettingsContext';
 jest.mock('../../../../services/authService');
 jest.mock('../../../../services/settingsService', () => ({
   __esModule: true,
-  default: { admin: jest.fn(), update: jest.fn(), public: jest.fn() },
+  default: { admin: jest.fn(), update: jest.fn(), public: jest.fn(), testLeadAlert: jest.fn() },
 }));
 
 const RECORD = {
@@ -250,6 +250,23 @@ it('sends what changed, and nothing it did not (QA-64)', async () => {
   );
   expect(siteSettings.refresh).toHaveBeenCalled();
   expect(await screen.findByText(/site settings saved/i)).toBeInTheDocument();
+});
+
+it('shows the site address SEO settings keep, and never sends it (prompt 51)', async () => {
+  renderAs('admin');
+
+  const siteUrl = await screen.findByLabelText(/site url/i);
+  expect(siteUrl).toHaveValue('https://www.squaresnacres.com');
+  expect(siteUrl).toBeDisabled();
+  expect(screen.getByRole('link', { name: /changed under seo → settings/i })).toHaveAttribute(
+    'href',
+    '/admin/seo/settings'
+  );
+
+  await type(screen.getByLabelText(/tagline/i), 'Homes, verified');
+  await save();
+  await waitFor(() => expect(settingsService.update).toHaveBeenCalled());
+  expect(settingsService.update.mock.calls[0][0].general).not.toHaveProperty('siteUrl');
 });
 
 it('refuses a measurement id that is not one, on the tab that holds it', async () => {
@@ -520,6 +537,91 @@ describe('QA-64', () => {
       'info@squaresnacres.com',
       'ops@squaresnacres.com',
     ]);
+  });
+
+  it('routes to the listing’s advisor and words the WhatsApp message, placeholders checked', async () => {
+    renderAs('admin');
+    await screen.findByLabelText(/site name/i);
+    await openTab('lead notifications');
+
+    await act(async () => {
+      await userEvent.selectOptions(
+        screen.getByLabelText(/assign automatically to/i),
+        'listing-advisor'
+      );
+    });
+    expect(screen.getByText(/goes to the listing’s advisor/)).toBeInTheDocument();
+
+    // The stored record has no message yet: the default is shown, filled in.
+    const message = screen.getByLabelText(/^message/i);
+    expect(message).toHaveValue('Hello {name}, this is {brand} following up on your enquiry.');
+    expect(
+      screen.getByText('Hello Ananya, this is Squares N Acres following up on your enquiry.')
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.change(message, { target: { value: 'Hi {name}, about {price}.' } });
+    });
+    await save();
+    expect(await screen.findByText(/\{price\} is not a placeholder/)).toBeInTheDocument();
+    expect(settingsService.update).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.change(message, { target: { value: 'Hi {name}, about {property}: {link}' } });
+    });
+    expect(
+      screen.getByText(
+        'Hi Ananya, about Lakeview Heights: https://www.squaresnacres.com/properties/lakeview-heights'
+      )
+    ).toBeInTheDocument();
+    await save();
+
+    await waitFor(() => expect(settingsService.update).toHaveBeenCalled());
+    expect(settingsService.update.mock.calls[0][0]).toEqual({
+      leads: {
+        autoAssign: 'listing-advisor',
+        whatsappTemplate: 'Hi {name}, about {property}: {link}',
+      },
+    });
+  });
+
+  it('sends a test alert and says where it went — or why it did not', async () => {
+    settingsService.testLeadAlert
+      .mockResolvedValueOnce({
+        data: { sentTo: ['info@squaresnacres.com'], sentAt: '2026-09-26T09:30:00.000Z' },
+        message: 'A test alert was sent to info@squaresnacres.com.',
+      })
+      .mockRejectedValueOnce(
+        Object.assign(new Error('The given data was invalid.'), {
+          status: 422,
+          errors: {
+            'leads.notificationEmails': [
+              'Add at least one notification e-mail and save the settings first.',
+            ],
+          },
+        })
+      );
+    renderAs('admin');
+    await screen.findByLabelText(/site name/i);
+    await openTab('lead notifications');
+
+    expect(
+      screen.getByText('Sends a sample lead alert to the saved addresses.')
+    ).toBeInTheDocument();
+    await click(screen.getByRole('button', { name: 'Send a test alert' }));
+    expect(
+      await screen.findByText(/^Last test: sent to info@squaresnacres\.com at/)
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText('A test alert was sent to info@squaresnacres.com.')
+    ).toBeInTheDocument();
+
+    await click(screen.getByRole('button', { name: 'Send a test alert' }));
+    expect(
+      await screen.findByText(
+        'Last test failed: Add at least one notification e-mail and save the settings first.'
+      )
+    ).toBeInTheDocument();
   });
 
   it('saves an address typed and followed straight away by a click on Save', async () => {

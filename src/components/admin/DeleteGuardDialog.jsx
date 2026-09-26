@@ -28,6 +28,12 @@ const USAGE_LINK = {
   jobApplication: (usage) =>
     `${PATHS.adminJobApplications}?q=${encodeURIComponent(usage.title ?? '')}`,
   user: () => PATHS.adminUsers,
+  // Where a media file is shown, beyond the records above (prompt 51: the
+  // library's bulk delete lists its refusals here).
+  bank: () => PATHS.adminBanks,
+  author: () => PATHS.adminAuthors,
+  settings: () => PATHS.adminSettings,
+  seoSettings: () => PATHS.adminSeoSettings,
 };
 
 const TYPE_LABEL = {
@@ -44,6 +50,10 @@ const TYPE_LABEL = {
   job: 'Job opening',
   jobApplication: 'Application',
   user: 'User',
+  bank: 'Bank',
+  author: 'Author',
+  settings: 'Site settings',
+  seoSettings: 'SEO settings',
 };
 
 /**
@@ -77,6 +87,8 @@ const TYPE_LABEL = {
  * @param {string} [props.confirmLabel]
  * @param {boolean} [props.loading]
  * @param {() => void} [props.onExited] once the close transition has finished
+ * @param {React.ReactNode} [props.children] under the list, above the hint — the
+ *   "Move them to" picker of a record whose listings can be moved (prompt 51)
  */
 export default function DeleteGuardDialog({
   open,
@@ -91,6 +103,7 @@ export default function DeleteGuardDialog({
   confirmLabel = 'Continue',
   loading = false,
   onExited,
+  children,
 }) {
   const usageItem = (usage) => {
     const to = USAGE_LINK[usage.type]?.(usage);
@@ -156,6 +169,8 @@ export default function DeleteGuardDialog({
       ) : usedBy.length > 0 ? (
         <ul className={styles.list}>{usedBy.map(usageItem)}</ul>
       ) : null}
+
+      {children}
 
       {hint ? <p className={styles.hint}>{hint}</p> : null}
     </Modal>

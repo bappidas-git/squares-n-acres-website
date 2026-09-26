@@ -1,8 +1,10 @@
 import { Icon } from '@iconify/react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import AdminTabs, { AdminTabPanel } from '../../../components/admin/AdminTabs';
+import ConflictDialog from '../../../components/admin/ConflictDialog';
+import DraftBanner from '../../../components/admin/DraftBanner';
 import ArticleChecksCard from './ArticleChecksCard';
 import ArticleFaqsCard from './ArticleFaqsCard';
 import ArticleImageCard from './ArticleImageCard';
@@ -16,6 +18,7 @@ import SeoSummaryCard from '../../../components/seo/SeoPanel/SeoSummaryCard';
 import PageHeader from '../../../components/admin/PageHeader';
 import RichTextField from '../../../components/editor/RichTextField';
 import SlugField from '../../../components/admin/SlugField';
+import SlugMoveNotice from '../../../components/admin/SlugMoveNotice';
 import { toSeoPaths } from '../../../components/seo/seoValues';
 import articleService from '../../../services/articleService';
 import useApi from '../../../hooks/useApi';
@@ -23,7 +26,6 @@ import useArticleForm, { EXCERPT_MAX_LENGTH, TITLE_MAX_LENGTH } from './useArtic
 import useArticleTaxonomy from './useArticleTaxonomy';
 import useBreakpoint from '../../../hooks/useBreakpoint';
 import {
-  Alert,
   Button,
   ConfirmDialog,
   EmptyState,
@@ -33,7 +35,10 @@ import {
   TextareaField,
 } from '../../../components/ui';
 import { generateExcerpt } from '../../../utils/articleUtils';
+import { recordFolder } from '../media/useMediaUpload';
+import { SEO } from '../../../config/adminCopy';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
+import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './ArticleFormPage.module.css';
 
@@ -59,11 +64,15 @@ const FORM_TABS = [
  * What the SEO analysers call a field, and where it is on this screen.
  *
  * A hint that names the body scrolls to the editor; one that names the category
- * scrolls to the Classification card in the rail. Anything not listed still
- * opens the Content tab, which is where everything about the article is.
+ * scrolls to the Classification card in the rail. The images an article is
+ * measured on are the ones in its body, so `images` is the editor too. Anything
+ * not listed still opens the Content tab, which is where everything about the
+ * article is — and anything under `seo.` is the SEO panel's, reached through
+ * its own `focusRequest`.
  */
 const FIELD_TARGET = {
   content: 'article-content',
+  images: 'article-content',
   excerpt: 'article-excerpt',
   slug: 'article-slug',
   faqs: 'article-faqs',
@@ -114,7 +123,13 @@ export default function ArticleFormPage() {
   } = useApi((signal) => articleService.adminGet(id, { signal }), [id], { enabled: isEdit });
 
   const taxonomy = useArticleTaxonomy();
-  const form = useArticleForm({ articleId: id ?? null, record, readOnly });
+  // A moved published article's 301 is a row of SEO → Redirects (prompt 51).
+  const form = useArticleForm({
+    articleId: id ?? null,
+    record,
+    readOnly,
+    canRedirect: can('seo', 'edit'),
+  });
 
   const [activeTab, setActiveTab] = useState('content');
   // "Generate from content" over an excerpt somebody wrote asks first: the
@@ -124,12 +139,34 @@ export default function ArticleFormPage() {
   // Focusing a control the SEO tab has just hidden has to wait for the render
   // that brings it back, which is what this ref and the callback below are for.
   const pendingFocus = useRef(null);
+  // A field of the SEO panel the rail's "Fix SEO" (or a hint) asked for: the
+  // panel mounts with the tab and opens its own sub-tab on it. A new object
+  // asks again, so the same field can be asked for twice.
+  const [seoFocusRequest, setSeoFocusRequest] = useState(null);
+  const toast = useToast();
+
+  // A request is spent once the editor leaves the SEO tab: left in place, the
+  // panel — which mounts with the tab — put the cursor back in that field every
+  // time the tab was opened again.
+  useEffect(() => {
+    if (activeTab !== 'seo') setSeoFocusRequest(null);
+  }, [activeTab]);
 
   /**
-   * The SEO panel's fix hints: open the half of the form that holds the field,
-   * then put the cursor in it.
+   * The SEO panel's fix hints and the rail's "Fix SEO": open the half of the
+   * form that holds the field, then put the cursor in it. A path under `seo.`
+   * lives on the SEO tab (the first failure of most articles is one — "The
+   * title does not carry the focus keyword" is `seo.title`), everything else on
+   * Content.
    */
   const focusField = useCallback((path) => {
+    if (!path) return;
+    if (String(path).startsWith('seo.')) {
+      setActiveTab('seo');
+      setSeoFocusRequest((previous) => ({ path, nonce: (previous?.nonce ?? 0) + 1 }));
+      return;
+    }
+
     const target = FIELD_TARGET[path];
     setActiveTab('content');
     pendingFocus.current = target ?? null;
@@ -159,6 +196,7 @@ export default function ArticleFormPage() {
     draftOffer,
     restoreDraft,
     discardDraft,
+    isNew,
   } = form;
 
   // An article that is already live has one obvious write — save it — so "Save"
@@ -246,7 +284,14 @@ export default function ArticleFormPage() {
 
   const rail = (
     <div className={styles.rail}>
-      <ArticleStatusCard form={form} />
+      <ArticleStatusCard
+        form={form}
+        lookup={{
+          categories: taxonomy.categories,
+          authors: taxonomy.authors,
+          tags: taxonomy.tags,
+        }}
+      />
       <aside className={styles.card} aria-labelledby="article-seo">
         <h2 className={styles.cardTitle} id="article-seo">
           Search engines
@@ -254,9 +299,13 @@ export default function ArticleFormPage() {
         <SeoSummaryCard
           compact
           seo={values.seo}
-          onOpen={(field) => {
-            if (field) focusField(field);
+          onOpen={(failure) => {
+            if (failure?.field) focusField(failure.field);
             else setActiveTab('seo');
+            if (failure?.message) {
+              const where = !failure.field || failure.field.startsWith('seo.') ? 'SEO' : 'Content';
+              toast.info(SEO.panel.opened(where, failure.message));
+            }
           }}
         />
       </aside>
@@ -291,7 +340,13 @@ export default function ArticleFormPage() {
             if (!readOnly) save('save');
           }}
         >
-          <DraftBanner draft={draftOffer} onRestore={restoreDraft} onDiscard={discardDraft} />
+          <DraftBanner
+            draft={draftOffer}
+            noun="article"
+            isNew={isNew}
+            onRestore={restoreDraft}
+            onDiscard={discardDraft}
+          />
 
           <AdminTabs
             label="Article sections"
@@ -335,6 +390,16 @@ export default function ArticleFormPage() {
                   checkSlug={checkArticleSlug}
                   onChange={(next) => setField('slug', next)}
                 />
+                {form.slugMove.moved ? (
+                  <SlugMoveNotice
+                    livePath={form.slugMove.livePath}
+                    noun="article"
+                    canRedirect={form.slugMove.canRedirect}
+                    checked={form.slugMove.redirect}
+                    disabled={readOnly || saving}
+                    onChange={form.slugMove.setRedirect}
+                  />
+                ) : null}
               </FormColumn>
 
               <FormColumn>
@@ -386,8 +451,10 @@ export default function ArticleFormPage() {
                   error={errors.content}
                   disabled={readOnly || saving}
                   focusKeyword={values.seo?.focusKeyword ?? ''}
+                  folder={recordFolder('articles', form.record?.slug || values.slug)}
+                  fallbackFolder="articles"
                   placeholder="Open with the answer, then explain it."
-                  helper="Images are added by address until the media library arrives; every one needs alt text."
+                  helper="Images come from the media library, an address or a file dropped on the editor; every one needs alt text."
                   onChange={(html) => setField('content', html)}
                 />
               </FormColumn>
@@ -409,6 +476,7 @@ export default function ArticleFormPage() {
               slugBase="/insights/articles/"
               context={{ categories: taxonomy.categories, authors: taxonomy.authors }}
               onFocusField={focusField}
+              focusRequest={seoFocusRequest}
               onSlugChange={(slug) => setField('slug', slug)}
               onChange={(patch, meta) => {
                 // The analysis writing its own score back is not an edit, so it
@@ -431,6 +499,15 @@ export default function ArticleFormPage() {
 
         {beside ? <div className={styles.railColumn}>{rail}</div> : null}
       </div>
+
+      <ConflictDialog
+        conflict={form.conflict}
+        noun="article"
+        busy={saving || form.conflictBusy}
+        onKeepEditing={form.dismissConflict}
+        onReload={form.reloadConflict}
+        onOverwrite={form.overwriteConflict}
+      />
 
       <ConfirmDialog
         open={replaceExcerpt}
@@ -486,44 +563,6 @@ function PrimaryAction({ form }) {
     >
       {scheduling ? 'Schedule' : 'Publish now'}
     </Button>
-  );
-}
-
-/**
- * "Restore unsaved changes from 5 minutes ago?"
- *
- * The form writes a draft to this browser every ten seconds while it is dirty,
- * so a closed tab, a reload or a crash does not cost an afternoon's writing. On
- * the next visit the draft is **offered**, never applied: the record on the
- * server is the truth until an editor says otherwise.
- *
- * @param {object} props
- * @param {{savedAt: string}|null} props.draft
- * @param {() => void} props.onRestore
- * @param {() => void} props.onDiscard
- */
-function DraftBanner({ draft, onRestore, onDiscard }) {
-  if (!draft) return null;
-
-  return (
-    <Alert
-      tone="warning"
-      title="Unsaved changes were found in this browser"
-      icon={<Icon icon="mdi:history" width="20" height="20" />}
-    >
-      <p>
-        A draft of this article was saved in this browser after the last time it reached the server.
-        Restore it, or discard it and keep what is saved.
-      </p>
-      <div className={styles.draftActions}>
-        <Button size="sm" onClick={onRestore}>
-          Restore the draft
-        </Button>
-        <Button size="sm" variant="ghost" onClick={onDiscard}>
-          Discard it
-        </Button>
-      </div>
-    </Alert>
   );
 }
 

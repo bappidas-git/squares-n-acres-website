@@ -34,6 +34,7 @@ export default function LinkDialog({ open, value, onSubmit, onRemove, onClose })
   const [newTab, setNewTab] = useState(false);
   const [noFollow, setNoFollow] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [textTouched, setTextTouched] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -42,14 +43,31 @@ export default function LinkDialog({ open, value, onSubmit, onRemove, onClose })
     setNewTab(Boolean(value?.newTab));
     setNoFollow(Boolean(value?.noFollow));
     setTouched(false);
+    setTextTouched(false);
   }, [open, value]);
 
   const trimmed = href.trim();
-  const invalid = touched && trimmed.length > 0 && !isValidHref(trimmed);
-  const canSubmit = isValidHref(trimmed) && (value?.hasSelection || text.trim().length > 0);
+  const needsText = !value?.hasSelection;
+  const canSubmit = isValidHref(trimmed) && (!needsText || text.trim().length > 0);
+
+  // Each box says what it is missing once it has been left — "Save link" is
+  // disabled until both are right, so a press never does nothing in silence
+  // (prompt 51).
+  const hrefError = !touched
+    ? undefined
+    : trimmed.length === 0
+      ? 'Enter the address the link goes to.'
+      : !isValidHref(trimmed)
+        ? 'Use https://…, mailto:…, tel:… or a path starting with /.'
+        : undefined;
+  const textError =
+    needsText && textTouched && text.trim().length === 0
+      ? 'Enter the words the link shows.'
+      : undefined;
 
   const submit = () => {
     setTouched(true);
+    setTextTouched(true);
     if (!canSubmit) return;
     onSubmit({ href: trimmed, text: text.trim(), newTab, noFollow });
   };
@@ -71,7 +89,7 @@ export default function LinkDialog({ open, value, onSubmit, onRemove, onClose })
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={submit}>
+          <Button variant="primary" onClick={submit} disabled={!canSubmit}>
             Save link
           </Button>
         </>
@@ -83,21 +101,23 @@ export default function LinkDialog({ open, value, onSubmit, onRemove, onClose })
           required
           value={href}
           placeholder="https://example.com, /localities/whitefield, mailto:…"
-          error={invalid ? 'Use https://…, mailto:…, tel:… or a path starting with /.' : undefined}
+          error={hrefError}
           hint="A path starting with / stays on this site."
           onBlur={() => setTouched(true)}
           onChange={(event) => setHref(event.target.value)}
         />
 
-        {value?.hasSelection ? null : (
+        {needsText ? (
           <TextField
             label="Text"
             required
             value={text}
+            error={textError}
             hint="What the link says. Describe the destination, not “click here”."
+            onBlur={() => setTextTouched(true)}
             onChange={(event) => setText(event.target.value)}
           />
-        )}
+        ) : null}
 
         <SwitchField
           label="Open in a new tab"

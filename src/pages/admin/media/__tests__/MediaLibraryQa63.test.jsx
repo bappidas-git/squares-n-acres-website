@@ -310,8 +310,15 @@ describe('the drawer', () => {
     await userEvent.click(within(drawer).getAllByRole('button', { name: 'Close' }).at(-1));
     const again = await screen.findByRole('dialog', { name: 'Discard unsaved changes?' });
     await userEvent.click(within(again).getByRole('button', { name: 'Discard changes' }));
+    // Both have to be gone: the page stays hidden from the accessibility tree
+    // while either is still fading out.
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: 'File details' })).not.toBeInTheDocument()
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Discard unsaved changes?' })
+      ).not.toBeInTheDocument()
     );
 
     drawer = await openDrawer('Photograph 1');

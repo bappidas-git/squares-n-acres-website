@@ -71,6 +71,12 @@ message underneath it.
 
 ---
 
+## Category counts
+
+{{notesCounts}}
+
+---
+
 ## Planned additions
 
 {{notesPlanned}}

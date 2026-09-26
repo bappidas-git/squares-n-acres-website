@@ -73,7 +73,7 @@ export default function FaqsTab() {
     <>
       <FormSection
         title="FAQs"
-        description="The questions a buyer would otherwise have to ring up to ask. They render as an accordion on the listing page and as FAQ structured data for search engines (§9)."
+        description="The questions a buyer would otherwise have to ring up to ask. They render as an accordion on the listing page and as FAQ structured data for search engines."
       >
         <FormColumn>
           {faqs.length === 0 ? (

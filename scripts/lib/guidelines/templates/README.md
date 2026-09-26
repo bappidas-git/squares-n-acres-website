@@ -54,13 +54,15 @@ Three consequences worth internalising before you write a controller:
 Pointing the live site at your API is **one line**:
 
 ```bash
-# .env.production, on the build machine
-REACT_APP_API_URL=https://api.squaresnacres.com/api
+# .env.production, on the build machine — one of the two
+REACT_APP_API_URL=https://www.squaresnacres.com/api   # the site and the API on one host
+REACT_APP_API_URL=https://api.squaresnacres.com/api   # the API on a host of its own
 ```
 
 then `npm run build` and deploy the `build/` folder. There is no second step, no
-feature flag and no code change. `07_DEPLOYMENT.md` has the full procedure, the
-Nginx blocks and the rollback.
+feature flag and no code change. `07_DEPLOYMENT.md` has the full procedure on
+Cloudways — one host (Layout A, recommended) or two (Layout B) — the
+self-managed Nginx alternative, and the go-live checklist.
 
 ---
 
@@ -77,6 +79,8 @@ Nginx blocks and the rollback.
    counts, the lead pipeline, the dashboard aggregates. Read it before you
    finish the property list, not after.
 5. **`08_TESTING_AND_PARITY.md`** — prove it matches.
+6. **`07_DEPLOYMENT.md`** and **`09_MEDIA_AND_EMAIL.md`** — the hosting, the
+   Cloudinary presets and the lead e-mail, before the go-live and not during it.
 
 ---
 
@@ -86,12 +90,17 @@ Nginx blocks and the rollback.
 2. Select the **Squares N Acres — Local mock** environment.
 3. Send `auth › auth › POST /auth/login`. Its test script writes `{{token}}`
    into the environment; every other request inherits it.
-4. Run the whole collection. Each request asserts its status and its envelope.
+4. Run the whole collection. Each request asserts its status and its envelope,
+   and the run creates, edits and deletes records — every one it creates it
+   deletes again.
 
 Every request carries the response captured from the mock as a saved example, so
 you can see the shape of an answer before you have written it. To test your API,
-switch the `baseUrl` row in the environment and run the collection again: every
-test that passes against the mock must pass against you.
+switch the `baseUrl` row of the environment to your machine or to **staging**
+and run the collection again: every test that passes against the mock must pass
+against you. **Never run it against production** — it posts enquiries that
+e-mail the desk and creates an account; production gets the read checks of the
+smoke test below.
 
 `openapi.yaml` describes the same {{endpointCount}} operations for tooling —
 paste it into <https://editor.swagger.io> to browse it, or generate a client
@@ -106,12 +115,19 @@ apart. In order:
 
 - [ ] `schema.sql` runs clean on MySQL 8, and `db.json` imports per
       `seed-mapping.md` with the ids preserved.
-- [ ] `npm run smoke -- --baseUrl=<your API>` passes — it walks every registry
-      entry and checks statuses, envelopes, pagination, RBAC and two dozen
-      behaviours a status code cannot describe.
-- [ ] `npm run smoke -- --baseUrl=<your API> --compare=http://localhost:4000/api`
-      prints an empty difference table.
-- [ ] The Postman collection runs green against your API.
+- [ ] `node smoke/smoke-api.js --baseUrl=<your API>` passes — it walks every
+      registry entry and checks statuses, envelopes, pagination, RBAC and two
+      dozen behaviours a status code cannot describe. Node 20 and this folder
+      are all it needs; in the website repository `npm run smoke -- <the same
+      options>` is the same run. It writes only to your own machine unless
+      `--allow-writes` is passed, and that is for **staging**: against
+      production it runs the read checks alone (`smoke/README.md`).
+- [ ] `node smoke/smoke-api.js --baseUrl=<your API> --compare=http://localhost:4000/api`
+      prints an empty difference table — with `--email`/`--password` for your API
+      and `--compareEmail`/`--comparePassword` for the mock once the passwords
+      differ.
+- [ ] The Postman collection runs green against your machine or staging —
+      never against production.
 - [ ] The module checklist in `08_TESTING_AND_PARITY.md` is walked through in a
       browser, with the site pointed at your API.
 - [ ] The go-live checklist in `07_DEPLOYMENT.md` is complete — including
@@ -128,11 +144,13 @@ rather than breaking.
 
 {{supportMatrix}}
 
-One endpoint is **specified but not in the registry**, so it is in none of the
-tables above: `GET /properties/counts`, which replaces the twenty-five count
-requests the home page makes today. It is optional — the frontend keeps the
-per-tile fallback — and it is written up under **Planned additions** at the end
-of `01_API_CONTRACT.md`.
+`GET /properties/counts` is optional in the sense the table gives the word: the
+home page asks it two questions and, when it answers 404 or 501, falls back to
+one `GET /properties?perPage=1` a tile — the numbers are the same, only slower
+(`01_API_CONTRACT.md` → "Category counts"). Two further additions are specified
+but not yet in the registry, so they are in none of the tables above: the
+self-service password reset and the reCAPTCHA check, written up in
+`09_MEDIA_AND_EMAIL.md`.
 
 ---
 
@@ -150,8 +168,12 @@ npm run check:guidelines                # coverage check: registry ↔ docs ↔ 
 The generator reads `src/services/endpoints.js`, `src/services/schemas/`,
 `src/config/enums.js`, `mock-server/schemas/models.js`, `src/config/rbac.js`,
 the hand-written notes in `docs/backend-notes/` and the live mock, then writes
-every file in this folder. It is deterministic: running it twice produces no
-diff, and the only line that changes between commits is `generatedFrom`.
+every file in this folder — `smoke/` included, which `npm run
+generate:smoke-bundle` also rebuilds alone. Before it writes anything it runs
+the Postman collection against the mock and refuses a red test, and it refuses a
+section of the notes no document places. It is deterministic: running it twice
+against a fresh mock produces no diff, and the only line that changes between
+commits is `generatedFrom` — which is why it fails outside a git checkout.
 
 **Do not edit the generated files.** To change a sentence, edit
 `docs/backend-notes/*.md`; to change a fact, edit the registry, the schema

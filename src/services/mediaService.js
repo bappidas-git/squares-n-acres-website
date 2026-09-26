@@ -39,8 +39,42 @@ export const remove = (id, { force = false, ...opts } = {}) =>
     ...opts,
   });
 
-export const bulk = (body, opts) => http.request(endpoints.adminMedia.bulk, { body, ...opts });
+/**
+ * One action on several files. A `delete` is all or nothing — a 409 naming
+ * every file still in use (`data.refused`) — and `{ force: true }` removes
+ * them anyway, as on a single delete.
+ *
+ * @param {{ids: Array<number>, action: string, payload?: object|null}} body
+ * @param {{force?: boolean}} [opts]
+ */
+export const bulk = (body, { force = false, ...opts } = {}) =>
+  http.request(endpoints.adminMedia.bulk, {
+    body,
+    ...(force ? { params: { force: true } } : null),
+    ...opts,
+  });
 
-const mediaService = { list, get, create, update, patch, remove, bulk };
+/**
+ * Refiles files under `folder` — `null` for no folder (prompt 51). The answer
+ * is `{ affected, missing }`: the files whose folder changed, and the ids that
+ * matched nothing.
+ *
+ * @param {Array<number>} ids
+ * @param {string|null} folder
+ */
+export const move = (ids, folder, opts) => bulk({ ids, action: 'move', payload: { folder } }, opts);
+
+/**
+ * Renames a folder, and every folder inside it, by refiling their records
+ * (prompt 51). A name that already holds files is a 422 on `to` carrying
+ * `data.existing` until `merge` is `true`. Records only: every file keeps its
+ * address, so no Cloudinary path changes.
+ *
+ * @param {{from: string, to: string, merge?: boolean}} body
+ */
+export const renameFolder = (body, opts) =>
+  http.request(endpoints.adminMedia.renameFolder, { body, ...opts });
+
+const mediaService = { list, get, create, update, patch, remove, bulk, move, renameFolder };
 
 export default mediaService;

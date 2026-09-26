@@ -5,12 +5,14 @@ import userEvent from '@testing-library/user-event';
 import renderWith from '../../../../../test-utils';
 import ImageGalleryEditor, {
   coverAfterRemoval,
+  fillEmptyAlts,
   parseUrlList,
+  galleryAddMessage,
 } from '../components/ImageGalleryEditor';
 import { makeImage, resetTmpIds } from '../initialState';
 
 /** The gallery, wired the way `MediaTab` wires it. */
-function Harness({ initial = [], errors = {}, altHint, disabled = false, onMoveSpy }) {
+function Harness({ initial = [], errors = {}, altHint, altSource, disabled = false, onMoveSpy }) {
   const [images, setImages] = useState(initial);
 
   return (
@@ -19,6 +21,7 @@ function Harness({ initial = [], errors = {}, altHint, disabled = false, onMoveS
         images={images}
         errors={errors}
         altHint={altHint}
+        altSource={altSource}
         disabled={disabled}
         onAdd={(added) =>
           setImages((current) => [
@@ -74,6 +77,25 @@ const gallery = () => {
     makeImage({ url: 'https://example.com/c.jpg', alt: '' }),
   ];
 };
+
+describe('fillEmptyAlts', () => {
+  it('numbers each image by its place, and says "Photo n" with nothing else to go on', () => {
+    const images = [
+      { id: 1, url: 'https://x.test/a.jpg', alt: '' },
+      { id: 2, url: 'https://x.test/b.jpg', alt: 'Kitchen' },
+      { id: 3, url: '', alt: '' },
+      { id: 4, url: 'https://x.test/d.jpg', alt: '   ' },
+    ];
+    expect(fillEmptyAlts(images, { title: 'Aurelia Court', locality: '' })).toEqual([
+      { id: 1, alt: 'Aurelia Court — photo 1' },
+      { id: 4, alt: 'Aurelia Court — photo 4' },
+    ]);
+    expect(fillEmptyAlts(images)).toEqual([
+      { id: 1, alt: 'Photo 1' },
+      { id: 4, alt: 'Photo 4' },
+    ]);
+  });
+});
 
 describe('parseUrlList', () => {
   it('takes one URL per line and keeps the order', () => {
@@ -178,7 +200,7 @@ describe('coverAfterRemoval', () => {
 });
 
 describe('alt text', () => {
-  it('is marked required and carries the validator message', () => {
+  it('is asked for when the listing goes live, and carries the message then (prompt 51)', () => {
     renderWith(
       <Harness
         initial={gallery()}
@@ -189,9 +211,34 @@ describe('alt text', () => {
     );
 
     const alts = screen.getAllByLabelText(/^Alt text/);
-    expect(alts[2]).toBeRequired();
+    // A draft saves without one: the box is not a required field.
+    expect(alts[2]).not.toBeRequired();
     expect(alts[2]).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByRole('alert')).toHaveTextContent('Describe this image');
+    expect(screen.getByText(/needs one for every image before it goes live/)).toBeInTheDocument();
+  });
+
+  it('fills only the empty descriptions from the title and the locality (prompt 51)', async () => {
+    renderWith(
+      <Harness
+        initial={gallery()}
+        altSource={{ title: 'Lakeview Heights', locality: 'Whitefield' }}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fill empty alt text' }));
+
+    const [living, kitchen, third] = stored();
+    expect(living.alt).toBe('Living room');
+    expect(kitchen.alt).toBe('Kitchen');
+    expect(third.alt).toBe('Lakeview Heights — Whitefield — photo 3');
+    // Editable after, and nothing left to fill.
+    expect(screen.getAllByLabelText(/^Alt text/)[2]).toHaveValue(
+      'Lakeview Heights — Whitefield — photo 3'
+    );
+    expect(screen.queryByRole('button', { name: 'Fill empty alt text' })).not.toBeInTheDocument();
+    // Toasted, and said to the gallery's own live region.
+    expect(await screen.findAllByText(/1 image described from the title/)).toHaveLength(2);
   });
 
   it('suggests the SEO focus keyword when there is one', () => {
@@ -399,5 +446,18 @@ describe('adding by address (QA-62)', () => {
     expect(
       screen.getByText('This line is not the address of a photograph — fix or remove it.')
     ).toBeInTheDocument();
+  });
+});
+
+describe('galleryAddMessage — what "Add from library" says (prompt 51)', () => {
+  it('names what was added and what the gallery already held', () => {
+    expect(galleryAddMessage(2, 3)).toBe('Added 2 — 3 were already in the gallery.');
+    expect(galleryAddMessage(1, 1)).toBe('Added 1 — 1 was already in the gallery.');
+    expect(galleryAddMessage(4, 0)).toBe('Added 4.');
+  });
+
+  it('says so when every pick was already there', () => {
+    expect(galleryAddMessage(0, 1)).toBe('That photograph is already in the gallery.');
+    expect(galleryAddMessage(0, 3)).toBe('Those photographs are already in the gallery.');
   });
 });

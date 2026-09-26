@@ -4,7 +4,13 @@
  * keys only (§5.14), so every branch is optional and carries its default.
  */
 
-const { HERO_SEARCH_TABS, LEAD_PRIORITY, SITEMAP_CHANGEFREQ } = require('../../config/enums');
+const {
+  HERO_SEARCH_TABS,
+  LEAD_AUTO_ASSIGN,
+  LEAD_PRIORITY,
+  SITEMAP_CHANGEFREQ,
+} = require('../../config/enums');
+const { DEFAULT_WHATSAPP_TEMPLATE } = require('../../config/leadWhatsapp');
 
 const siteSettings = {
   general: {
@@ -14,7 +20,9 @@ const siteSettings = {
       tagline: { type: 'string', maxLength: 200, default: '' },
       logoUrl: { type: 'url', nullable: true, default: null },
       iconUrl: { type: 'url', nullable: true, default: null },
-      siteUrl: { type: 'url', required: true },
+      // A copy of `seoSettings.siteUrl`, the one place the address changes
+      // (prompt 51): the API keeps it and ignores it in a `PUT`.
+      siteUrl: { type: 'url', read: true },
       defaultLanguage: { type: 'string', maxLength: 10, default: 'en-IN' },
       contactEmail: { type: 'email', required: true },
       contactPhone: { type: 'phone', required: true },
@@ -159,7 +167,14 @@ const siteSettings = {
     type: 'object',
     shape: {
       notificationEmails: { type: 'array', items: { type: 'email' }, default: [] },
-      autoAssign: { type: 'enum', enum: ['none', 'round-robin'], default: 'none' },
+      autoAssign: { type: 'enum', enum: LEAD_AUTO_ASSIGN.values, default: 'none' },
+      // The message the desk's WhatsApp buttons open with (prompt 51):
+      // `{name}`, `{property}`, `{agent}`, `{link}` and `{brand}` are filled in.
+      whatsappTemplate: {
+        type: 'string',
+        maxLength: 500,
+        default: DEFAULT_WHATSAPP_TEMPLATE,
+      },
       defaultPriority: {
         type: 'enum',
         enum: LEAD_PRIORITY.values,

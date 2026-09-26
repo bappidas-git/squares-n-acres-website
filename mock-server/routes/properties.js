@@ -26,6 +26,7 @@
 const express = require('express');
 
 const schemas = require('../../src/services/schemas');
+const { AVAILABILITY } = require('../../src/config/enums');
 const {
   PUBLISH_FIELDS,
   notReadyMessage,
@@ -36,10 +37,14 @@ const { ApiError } = require('../middleware/errors');
 const { applyPropertyFilters, applyPropertySort, priceOf } = require('../lib/propertyFilters');
 const { checkSlug, ensureUniqueSlug, slugify } = require('../lib/slug');
 const { computeFacets } = require('../lib/facets');
+const { countBy, dimensionsOf, filtersOf } = require('../lib/propertyCounts');
 const { conflict, forbidden, notFound, validation } = require('../middleware/errors');
 const { countView } = require('../lib/viewCounter');
+const { issueToken, verifyToken } = require('../lib/previewTokens');
 const { clientIp } = require('../middleware/rateLimit');
 const { embedProperty } = require('../lib/embed');
+const { withEditorName } = require('../lib/editors');
+const { refuseStaleReplace } = require('../lib/staleGuard');
 const { inCsv, matchesQ } = require('../lib/filters');
 const { maxId, nextId } = require('../lib/ids');
 const {
@@ -91,6 +96,65 @@ const BULK_ACTIONS = {
   verify: { isVerified: true },
   unverify: { isVerified: false },
   delete: null,
+};
+
+/**
+ * The bulk actions that carry a value in `payload` (prompt 51): what the desk
+ * changes across a batch of listings on a busy day — availability after a
+ * sale, the advisor when somebody leaves, a locality, a type or a developer
+ * entered wrongly on a dozen listings.
+ *
+ * `key` is the payload's key; `collection`, where an id must exist; `nullable`,
+ * whether `null` clears it. `read` and `write` reach the field on the record.
+ */
+const PAYLOAD_ACTIONS = {
+  availability: {
+    key: 'availability',
+    read: (property) => property.availability ?? null,
+    write: (property, value) => {
+      property.availability = value;
+    },
+  },
+  assignAgent: {
+    key: 'agentId',
+    collection: 'teamMembers',
+    nullable: true,
+    activeOnly: true,
+    read: (property) => property.agent?.teamMemberId ?? null,
+    write: (property, value) => {
+      property.agent = { ...(property.agent ?? {}), teamMemberId: value };
+    },
+  },
+  setLocality: {
+    key: 'localityId',
+    collection: 'localities',
+    read: (property) => property.location?.localityId ?? null,
+    // A locality belongs to a city: the listing moves with it.
+    write: (property, value, record) => {
+      property.location = {
+        ...(property.location ?? {}),
+        localityId: value,
+        cityId: record?.cityId ?? property.location?.cityId ?? null,
+      };
+    },
+  },
+  setPropertyType: {
+    key: 'propertyTypeId',
+    collection: 'propertyTypes',
+    read: (property) => property.propertyTypeId ?? null,
+    write: (property, value) => {
+      property.propertyTypeId = value;
+    },
+  },
+  setDeveloper: {
+    key: 'developerId',
+    collection: 'developers',
+    nullable: true,
+    read: (property) => property.project?.developerId ?? null,
+    write: (property, value) => {
+      property.project = { ...(property.project ?? {}), developerId: value };
+    },
+  },
 };
 
 /** How many listings `/properties/:id/similar` answers with (§5.14). */
@@ -233,7 +297,10 @@ module.exports = ({ db, getModel }) => {
 
   const present = (property, { admin, collections = source() }) => {
     const embedded = embedProperty(property, collections, { publicRead: !admin });
-    return admin ? embedded : publicProperty(embedded);
+    // The admin reads name whoever saved last (prompt 51); the public never.
+    return admin
+      ? withEditorName(embedded, db.getCollection('adminUsers'))
+      : publicProperty(embedded);
   };
 
   /** `perPage`, with `all` reserved for the admin routes (§5.6). */
@@ -357,38 +424,19 @@ module.exports = ({ db, getModel }) => {
 
   /**
    * A replace that names the version it was made from — the `updatedAt` its
-   * client read — is refused when the listing has been saved since (QA-62).
-   *
-   * `PUT` sends the whole record, so a form opened before somebody else's save
-   * wrote every field back as it had read it: the other editor's changes went,
-   * silently — a form left open un-featured a listing starred from the list
-   * meanwhile. The check is optional: a body without `updatedAt` replaces as
-   * before, which is also how the form's "Save mine anyway" goes through.
+   * client read — is refused when the listing has been saved since (QA-62):
+   * a form left open un-featured a listing starred from the list meanwhile.
+   * The rule, shared with every record form since prompt 51, is
+   * `lib/staleGuard.js`.
    *
    * @param {object} existing the stored record
    * @param {object} body the request body
-   * @throws {ApiError} 409 with `data.conflict: 'stale'` and who saved it last
    */
-  function refuseStaleReplace(existing, body) {
-    const expected = typeof body?.updatedAt === 'string' ? body.updatedAt : null;
-    if (!expected || !existing.updatedAt || expected === existing.updatedAt) return;
-
-    const editor = db
-      .getCollection('adminUsers')
-      .find((user) => sameId(user?.id, existing.updatedBy));
-    throw conflict(
-      editor?.name
-        ? `${editor.name} saved this listing after you opened it.`
-        : 'This listing was saved by somebody else after you opened it.',
-      undefined,
-      {
-        conflict: 'stale',
-        current: {
-          updatedAt: existing.updatedAt,
-          updatedBy: editor ? { id: editor.id, name: editor.name } : null,
-        },
-      }
-    );
+  function refuseStale(existing, body) {
+    refuseStaleReplace(existing, body, {
+      users: db.getCollection('adminUsers'),
+      noun: 'listing',
+    });
   }
 
   /** The entity slug and `seo.slug` are always the same string (§5.9). */
@@ -405,6 +453,17 @@ module.exports = ({ db, getModel }) => {
   router.get('/properties', (req, res) => {
     const items = applyPropertyFilters(active(), req.query, { source: source() });
     listResponse(res, items, req.query, { admin: false });
+  });
+
+  /**
+   * The live listings per value of each dimension `by` names, under the list's
+   * filters (prompt 51) — the home page's tiles in two requests. The answer is
+   * the same for every visitor, so shared caches may keep it five minutes.
+   */
+  router.get('/properties/counts', (req, res) => {
+    const items = applyPropertyFilters(active(), filtersOf(req.query), { source: source() });
+    res.set('Cache-Control', 'public, max-age=300');
+    res.ok(countBy(items, dimensionsOf(req.query.by)), null);
   });
 
   router.get('/properties/featured', (req, res) => {
@@ -486,7 +545,14 @@ module.exports = ({ db, getModel }) => {
   });
 
   router.get('/properties/slug/:slug', (req, res, next) => {
-    const property = active().find((row) => row.slug === req.params.slug);
+    // A share link opens an inactive listing for 24 hours (prompt 51): the
+    // token is bound to that one listing, and the page is still 404 without it.
+    const token = first(req.query.previewToken);
+    const property = rows().find(
+      (row) =>
+        row.slug === req.params.slug &&
+        (row.isActive === true || verifyToken(token, 'property', row.id))
+    );
     if (!property) {
       next(notFound());
       return;
@@ -628,6 +694,88 @@ module.exports = ({ db, getModel }) => {
     res.ok(present(property, { admin: true }));
   });
 
+  /**
+   * One of {@link PAYLOAD_ACTIONS} across a batch, validated before anything is
+   * written: an id that names nothing, an advisor who is switched off, or a
+   * type from another segment refuses the whole batch with 422 — a type moves
+   * a listing between residential and commercial only through the form, where
+   * the fields that differ are asked for.
+   *
+   * @returns {number} how many listings changed; one already so is not counted
+   */
+  function applyPayloadAction(action, payload, targets, user) {
+    const rule = PAYLOAD_ACTIONS[action];
+    const field = `payload.${rule.key}`;
+    const value = payload?.[rule.key];
+
+    if (value === undefined || (value === null && !rule.nullable)) {
+      throw validation({ [field]: [`The ${field} field is required.`] });
+    }
+
+    let record = null;
+    if (action === 'availability') {
+      if (!AVAILABILITY.has(value)) {
+        throw validation({ [field]: ['The selected availability is invalid.'] });
+      }
+    } else if (value !== null) {
+      if (!Number.isInteger(value)) {
+        throw validation({ [field]: [`The ${field} must be an integer.`] });
+      }
+      record = db.getCollection(rule.collection).find((row) => sameId(row.id, value)) ?? null;
+      if (!record) throw validation({ [field]: [`The selected ${field} is invalid.`] });
+      if (rule.activeOnly && record.isActive === false) {
+        throw validation({ [field]: [`${record.name} is switched off in Team.`] });
+      }
+    }
+
+    if (action === 'setPropertyType' && record) {
+      const other = targets.filter((property) => property.segment !== record.segment);
+      if (other.length > 0) {
+        throw validation({
+          [field]: [
+            `${record.name} is a ${record.segment} type, and ${other.length} of the selected ${
+              other.length === 1 ? 'listing is' : 'listings are'
+            } not — change ${other.length === 1 ? 'it' : 'those'} in the form.`,
+          ],
+        });
+      }
+    }
+
+    const now = new Date().toISOString();
+    let affected = 0;
+    for (const property of targets) {
+      if (sameId(rule.read(property) ?? '', value ?? '')) continue;
+      rule.write(property, value, record);
+      Object.assign(property, { updatedBy: user?.id ?? null, updatedAt: now });
+      affected += 1;
+    }
+    if (affected > 0) db.write();
+    return affected;
+  }
+
+  /** The site URL a share link is built on (§9.1). */
+  function siteUrl() {
+    const seo = db.getSingleton('seoSettings');
+    const settings = db.getSingleton('siteSettings');
+    return String(seo?.siteUrl ?? settings?.general?.siteUrl ?? '').replace(/\/+$/, '');
+  }
+
+  // A listing shown before it is published, to somebody who does not sign in
+  // (prompt 51): one token per listing, 24 hours, as articles and pages have.
+  router.post('/admin/properties/:id/preview-token', (req, res, next) => {
+    const property = find(req.params.id);
+    if (!property) {
+      next(notFound());
+      return;
+    }
+    const { token, expiresAt } = issueToken('property', property.id);
+    res.ok({
+      token,
+      expiresAt,
+      url: `${siteUrl()}/properties/${property.slug}?preview=${token}`,
+    });
+  });
+
   router.get('/admin/properties/check-slug', (req, res) => {
     const slug = String(first(req.query.slug) ?? '');
     const excludeId = first(req.query.excludeId) ?? null;
@@ -638,6 +786,15 @@ module.exports = ({ db, getModel }) => {
     try {
       const body = { ...(req.body ?? {}) };
       validateBody(schemas.bulk, body);
+
+      if (hasOwn(PAYLOAD_ACTIONS, body.action)) {
+        const ids = body.ids.map(String);
+        const targets = rows().filter((property) => ids.includes(String(property.id)));
+        const affected = applyPayloadAction(body.action, body.payload, targets, req.user);
+        const noun = affected === 1 ? 'property' : 'properties';
+        res.message(`${affected} ${noun} updated.`, { affected });
+        return;
+      }
 
       if (!Object.prototype.hasOwnProperty.call(BULK_ACTIONS, body.action)) {
         throw validation({ action: ['The selected action is invalid.'] });
@@ -683,7 +840,7 @@ module.exports = ({ db, getModel }) => {
       if (!existing) throw notFound();
 
       const body = assignNestedIds({ ...(req.body ?? {}) });
-      refuseStaleReplace(existing, body);
+      refuseStale(existing, body);
       validateBody(schemas.getSchema('property.update'), body, { lookup: db.getCollection });
 
       const slug = resolveSlug(body, { existing });

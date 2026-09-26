@@ -15,3 +15,8 @@
   font-weight: var(--font-weight-regular);
   color: var(--color-text-muted);
 }
+
+/* "Generate password", under the reset dialog's box (prompt 51). */
+.generate {
+  margin-top: var(--space-2);
+}

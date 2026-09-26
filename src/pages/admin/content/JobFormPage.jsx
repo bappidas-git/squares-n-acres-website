@@ -6,7 +6,7 @@ import PATHS from '../../../routes/paths';
 import careerService from '../../../services/careerService';
 import useApi from '../../../hooks/useApi';
 import useForm from '../../../hooks/useForm';
-import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
+import useStaleGuard from '../../../hooks/useStaleGuard';
 import MovedNotice from '../master-data/MovedNotice';
 import useRecordPage from '../master-data/useRecordPage';
 import withSlugSuggestion from '../../../components/admin/slugSuggestion';
@@ -16,6 +16,8 @@ import withSlugSuggestion from '../../../components/admin/slugSuggestion';
 import { FormFieldControl } from '../../../components/admin/MasterDataForm';
 import FormSection, { FormColumn } from '../../../components/admin/FormSection';
 import PageHeader from '../../../components/admin/PageHeader';
+import ConflictDialog from '../../../components/admin/ConflictDialog';
+import DraftBanner from '../../../components/admin/DraftBanner';
 import { Button, ErrorState, Skeleton, TextField } from '../../../components/ui';
 import { EMPLOYMENT_TYPES } from '../../../config/enums';
 import { TOASTS } from '../../../config/adminCopy';
@@ -179,6 +181,9 @@ export default function JobFormPage() {
   // Posted today — Bengaluru's today (QA-61).
   const [blank] = useState(() => ({ ...BLANK, postedAt: istToday() }));
 
+  // A save over somebody else's is refused, and the dialog says whose (prompt 51).
+  const guard = useStaleGuard({ storedAt: record?.updatedAt ?? null });
+
   const form = useForm({
     initialValues: blank,
     schema: isEdit ? schemas['job.update'] : schemas['job.create'],
@@ -188,7 +193,7 @@ export default function JobFormPage() {
     onSubmit: async (payload) => {
       try {
         const envelope = isEdit
-          ? await careerService.updateJob(id, payload)
+          ? await careerService.updateJob(id, guard.stamp(payload))
           : await careerService.createJob(payload);
         return envelope?.data ?? null;
       } catch (thrown) {
@@ -202,6 +207,7 @@ export default function JobFormPage() {
         });
       }
     },
+    onError: guard.onError,
   });
 
   const { reset, values, setField } = form;
@@ -213,9 +219,16 @@ export default function JobFormPage() {
     reset(toFormValues(record));
   }, [record, reset]);
 
-  useUnsavedChanges(form.dirty && !gone);
-
-  const { save, slugMoved, liveSlug, canRedirect, redirectOld, setRedirectOld } = useRecordPage({
+  const {
+    save,
+    slugMoved,
+    liveSlug,
+    canRedirect,
+    redirectOld,
+    setRedirectOld,
+    draftBanner,
+    conflictDialog,
+  } = useRecordPage({
     entityType: null,
     noun: 'Opening',
     labelField: 'title',
@@ -227,6 +240,11 @@ export default function JobFormPage() {
     publicPath: PATHS.job,
     editPath: PATHS.adminJobEdit,
     formRef,
+    guard,
+    draftKey: `sna_job_draft:${id ?? 'new'}`,
+    fetchLatest: () => careerService.adminJobGet(id),
+    toFormValues,
+    blocked: gone,
   });
 
   const title = isEdit ? (record?.title ?? 'Edit opening') : 'New opening';
@@ -322,6 +340,8 @@ export default function JobFormPage() {
         breadcrumbs={breadcrumbs}
         actions={<div className={styles.headerActions}>{actions}</div>}
       />
+
+      <DraftBanner noun="job opening" {...draftBanner} />
 
       <form
         ref={formRef}
@@ -485,6 +505,8 @@ export default function JobFormPage() {
 
         <div className={styles.actionBar}>{actions}</div>
       </form>
+
+      <ConflictDialog noun="job opening" {...conflictDialog} />
     </>
   );
 }

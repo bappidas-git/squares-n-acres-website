@@ -2,12 +2,17 @@ import { act, fireEvent, screen, within } from '@testing-library/react';
 
 import NotFound from '../NotFound';
 import propertyService from '../../../services/propertyService';
+import seoService from '../../../services/seoService';
 import renderWith from '../../../test-utils';
 import { ERRORS, NAV } from '../../../config/copy';
 
 jest.mock('../../../services/propertyService', () => ({
   __esModule: true,
   default: { suggestions: jest.fn() },
+}));
+jest.mock('../../../services/seoService', () => ({
+  __esModule: true,
+  default: { reportNotFound: jest.fn() },
 }));
 
 const mockNavigate = jest.fn();
@@ -119,5 +124,29 @@ describe('NotFound', () => {
     // eslint-disable-next-line global-require
     const { NEVER_INDEXED } = require('../../../seo/pageTypes');
     expect(NEVER_INDEXED.has('notFound')).toBe(true);
+  });
+});
+
+describe('NotFound — the 404 log (prompt 51)', () => {
+  afterEach(() => {
+    delete window.__SNA_PRERENDER__;
+  });
+
+  it('reports the address it was reached at, once a visit', () => {
+    const { rerender } = renderWith(<NotFound />, { initialEntries: ['/flats-in-hebal'] });
+    rerender(<NotFound />);
+
+    expect(seoService.reportNotFound).toHaveBeenCalledTimes(1);
+    expect(seoService.reportNotFound).toHaveBeenCalledWith({
+      path: '/flats-in-hebal',
+      referrer: null,
+    });
+  });
+
+  it('reports nothing to the prerender crawl', () => {
+    window.__SNA_PRERENDER__ = true;
+    renderWith(<NotFound />, { initialEntries: ['/gone-while-prerendering'] });
+
+    expect(seoService.reportNotFound).not.toHaveBeenCalled();
   });
 });

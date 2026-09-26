@@ -237,3 +237,10 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/* The follow-up worklist above the table (prompt 51). */
+.worklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

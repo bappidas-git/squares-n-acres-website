@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import AdminTabs, { AdminTabPanel } from '../../../components/admin/AdminTabs';
 import Button from '../../../components/ui/Button';
 import DataTable from '../../../components/admin/DataTable';
 import FilterBar from '../../../components/admin/FilterBar';
+import NotFoundTab from './NotFoundTab';
 import PATHS from '../../../routes/paths';
 import PageHeader from '../../../components/admin/PageHeader';
 import SeoBulkTools from './SeoBulkTools';
@@ -29,6 +31,7 @@ import { previewUrlOfRow, publicUrlOfRow, serviceFor, typeLabel } from './seoEnt
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import { useMasterData } from '../../../contexts/MasterDataContext';
 import { useSeoSettings } from '../../../components/seo/SeoPanel/useSiteSeoIndex';
+import { tabOfSeoField } from '../../../components/seo/SeoPanel/SeoPanel';
 import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './SeoDashboardPage.module.css';
@@ -52,6 +55,16 @@ const TABS = [
   { key: 'entities', label: 'All records', icon: 'mdi:format-list-bulleted' },
   { key: 'duplicates', label: 'Duplicates', icon: 'mdi:content-duplicate' },
   { key: 'issues', label: 'Issues', icon: 'mdi:alert-circle-outline' },
+  // The addresses visitors reached that answered 404 (prompt 51).
+  { key: 'notFound', label: '404s', icon: 'mdi:link-variant-off' },
+];
+
+const TAB_KEYS = TABS.map((entry) => entry.key);
+
+/** The two "missing" filters the overview cards narrow the table to. */
+const MISSING_OPTIONS = [
+  { value: 'focusKeyword', label: 'No focus keyword' },
+  { value: 'description', label: 'No meta description' },
 ];
 
 /**
@@ -78,10 +91,33 @@ export default function SeoDashboardPage() {
   const { settings: seoSettings } = useSeoSettings();
 
   const canEdit = can('seo', 'edit');
+  const navigate = useNavigate();
 
-  const [tab, setTab] = useState('entities');
+  // The tab is in the address (`?tab=issues`), so the dashboard's "SEO issues"
+  // link opens the list it names (prompt 51). Written beside the table's own
+  // query, which only changes on the tab that holds the table.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const asked = searchParams.get('tab');
+  const tab = TAB_KEYS.includes(asked) ? asked : 'entities';
+  const setTab = useCallback(
+    (next) =>
+      setSearchParams((current) => {
+        const copy = new URLSearchParams(current);
+        if (next === 'entities') copy.delete('tab');
+        else copy.set('tab', next);
+        return copy;
+      }),
+    [setSearchParams]
+  );
+
   const [editing, setEditing] = useState(null);
   const [exporting, setExporting] = useState(false);
+  // "Re-analyse all" pressed outside the toolbar that runs it.
+  const [reanalyseAsked, setReanalyseAsked] = useState(false);
+  const reanalyseAll = useCallback(() => {
+    setTab('entities');
+    setReanalyseAsked(true);
+  }, [setTab]);
 
   const {
     items,
@@ -124,9 +160,18 @@ export default function SeoDashboardPage() {
     refetch();
   }, [refreshAll, refetch]);
 
+  // "Fix" on a test the SEO dialog cannot edit — the body, the images — opens
+  // the record's own form instead of a dialog with nothing to focus (prompt 51).
   const openEditor = useCallback(
-    (row, field) => setEditing({ row, field: field ?? undefined }),
-    []
+    (row, field) => {
+      const service = serviceFor(row?.type);
+      if (field && !tabOfSeoField(field) && service) {
+        navigate(service.adminPath(row.id, row));
+        return;
+      }
+      setEditing({ row, field: field ?? undefined });
+    },
+    [navigate]
   );
 
   const openPublicPage = useCallback(
@@ -189,7 +234,7 @@ export default function SeoDashboardPage() {
                 key: 'form',
                 label: 'Open the record',
                 icon: 'mdi:pencil-outline',
-                to: service.adminPath(row.id),
+                to: service.adminPath(row.id, row),
               },
             ]
           : []),
@@ -226,6 +271,13 @@ export default function SeoDashboardPage() {
           { value: 'indexed', label: 'Indexed' },
           { value: 'noindex', label: 'Noindex' },
         ],
+      },
+      {
+        key: 'missing',
+        type: 'multiselect',
+        label: 'Missing',
+        placeholder: 'Anything',
+        options: MISSING_OPTIONS,
       },
     ],
     []
@@ -308,6 +360,8 @@ export default function SeoDashboardPage() {
               seoSettings={seoSettings}
               context={context}
               onFinished={afterWrite}
+              autoStart={reanalyseAsked && !allLoading}
+              onAutoStarted={() => setReanalyseAsked(false)}
             />
           ) : null}
         </div>
@@ -344,11 +398,12 @@ export default function SeoDashboardPage() {
                   // not been built yet rather than the site being empty (§8.2).
                   title: SEO.dashboard.empty,
                   text: SEO.dashboard.emptyText,
-                  action: (
-                    <Button variant="outline" onClick={afterWrite} loading={allLoading}>
+                  // The real run, not a reload of the list (prompt 51).
+                  action: canEdit ? (
+                    <Button variant="outline" onClick={reanalyseAll} loading={allLoading}>
                       {SEO.dashboard.reanalyse}
                     </Button>
-                  ),
+                  ) : undefined,
                 }
           }
         />
@@ -363,7 +418,12 @@ export default function SeoDashboardPage() {
           rows={allRows}
           loading={allLoading && allRows.length === 0}
           onEdit={openEditor}
+          onReanalyse={canEdit ? reanalyseAll : undefined}
         />
+      </AdminTabPanel>
+
+      <AdminTabPanel tabKey="notFound" value={tab}>
+        <NotFoundTab canEdit={canEdit} />
       </AdminTabPanel>
 
       <SeoEditDialog

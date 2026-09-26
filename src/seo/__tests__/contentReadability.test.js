@@ -208,7 +208,8 @@ describe('heading-hierarchy (§7)', () => {
     const result = run('article', body('<h1>A title</h1><p>Body.</p>'))['heading-hierarchy'];
     expect(result.status).toBe('warn');
     expect(result.message).toContain('H1');
-    expect(result.hint).toContain('§9.7');
+    // The spec reference stays in the code; the hint an editor reads says what to do (prompt 51).
+    expect(result.hint).toBe('The page title is the H1. Demote these to H2.');
   });
 
   it('warns when the outline jumps a level', () => {

@@ -14,17 +14,26 @@ import ApiError from '../../../../services/apiError';
 import PropertiesListPage from '../PropertiesListPage';
 import ToastProvider from '../../../../components/common/ToastProvider';
 import authService from '../../../../services/authService';
+import leadService from '../../../../services/leadService';
 import propertyService from '../../../../services/propertyService';
 import renderWith from '../../../../test-utils';
 import storage from '../../../../utils/storage';
 import { AUTH_STORAGE_KEYS, clearSession } from '../../../../services/http';
 import { AdminAuthProvider } from '../../../../contexts/AdminAuthContext';
 import { MasterDataProvider } from '../../../../contexts/MasterDataContext';
+import { team } from '../../../../services/masterDataService';
 
 jest.mock('../../../../services/authService');
 jest.mock('../../../../services/propertyService');
+jest.mock('../../../../services/leadService', () => ({
+  __esModule: true,
+  default: { adminList: jest.fn() },
+}));
 jest.mock('../../../../services/masterDataService', () => {
-  const collection = (data) => ({ list: jest.fn(() => Promise.resolve({ data })) });
+  const collection = (data) => ({
+    list: jest.fn(() => Promise.resolve({ data })),
+    adminList: jest.fn(() => Promise.resolve({ data })),
+  });
   const service = {
     localities: collection([{ id: 4, name: 'Whitefield', order: 1, isActive: true }]),
     cities: collection([{ id: 1, name: 'Bengaluru', isActive: true }]),
@@ -188,6 +197,14 @@ beforeEach(() => {
   propertyService.bulk.mockResolvedValue({
     data: { affected: 1 },
     message: '1 property updated.',
+  });
+  leadService.adminList.mockResolvedValue({ data: [], meta: { total: 0 } });
+  // CRA resets every mock before each test: the advisors are answered here.
+  team.adminList.mockResolvedValue({
+    data: [
+      { id: 2, name: 'Team Member 2', isActive: true },
+      { id: 5, name: 'Team Member 5', isActive: false },
+    ],
   });
 });
 
@@ -402,6 +419,34 @@ describe('PropertiesListPage', () => {
       expect(await screen.findByText('1 property updated.')).toBeInTheDocument();
     });
 
+    it('marks a batch sold (prompt 51)', async () => {
+      renderAs('admin');
+      await screen.findByText('Lakeview Heights');
+
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Select Lakeview Heights' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Mark sold' }));
+
+      await waitFor(() =>
+        expect(propertyService.bulk).toHaveBeenCalledWith({
+          ids: [1],
+          action: 'availability',
+          payload: { availability: 'sold' },
+        })
+      );
+    });
+
+    it('says so when a batch needed no change (prompt 51)', async () => {
+      propertyService.bulk.mockResolvedValue({ data: { affected: 0 }, message: '0 updated.' });
+      renderAs('admin');
+      await screen.findByText('Lakeview Heights');
+
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Select Nandi Ridge Plot' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Mark reserved' }));
+      expect(
+        await screen.findByText('Nothing to change: the selected listings were already reserved.')
+      ).toBeInTheDocument();
+    });
+
     it('forgets a selection whose rows are no longer on screen', async () => {
       renderAs('admin');
       await screen.findByText('Lakeview Heights');
@@ -462,6 +507,86 @@ describe('PropertiesListPage', () => {
       await waitFor(() => expect(propertyService.remove).toHaveBeenCalledWith(1));
     });
 
+    it('sets the availability without opening the form (prompt 51)', async () => {
+      propertyService.patch.mockResolvedValue({ data: { ...ROWS[0], availability: 'sold' } });
+      renderAs('admin');
+      await screen.findByText('Lakeview Heights');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Actions for Lakeview Heights' }));
+      await userEvent.click(await screen.findByRole('menuitem', { name: 'Availability…' }));
+      const dialog = await screen.findByRole('dialog', {
+        name: 'Availability of “Lakeview Heights”',
+      });
+      expect(within(dialog).getByRole('button', { name: 'Set availability' })).toBeDisabled();
+      await userEvent.click(within(dialog).getByRole('radio', { name: 'Sold' }));
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Set availability' }));
+
+      await waitFor(() =>
+        expect(propertyService.patch).toHaveBeenCalledWith(1, { availability: 'sold' })
+      );
+      expect(await screen.findByText('“Lakeview Heights” is now Sold.')).toBeInTheDocument();
+    });
+
+    it('edits the price in a dialog and sends the pricing alone (prompt 51)', async () => {
+      propertyService.patch.mockResolvedValue({ data: ROWS[0] });
+      renderAs('admin');
+      await screen.findByText('Lakeview Heights');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Actions for Lakeview Heights' }));
+      await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit price…' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Price of “Lakeview Heights”' });
+
+      const price = within(dialog).getByLabelText(/^Price \(₹\)/);
+      expect(price).toHaveValue('12400000');
+      // A live listing may not be left without a price.
+      await userEvent.clear(price);
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Save price' }));
+      expect(
+        await within(dialog).findByText(/A published listing needs a price/)
+      ).toBeInTheDocument();
+      expect(propertyService.patch).not.toHaveBeenCalled();
+
+      await userEvent.type(price, '13500000');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Save price' }));
+
+      await waitFor(() => expect(propertyService.patch).toHaveBeenCalled());
+      const [id, body] = propertyService.patch.mock.calls[0];
+      expect(id).toBe(1);
+      expect(Object.keys(body)).toEqual(['pricing']);
+      expect(body.pricing).toMatchObject({ price: 13500000, priceOnRequest: false });
+      expect(await screen.findByText('“Lakeview Heights”: ₹1.35 Cr.')).toBeInTheDocument();
+    });
+
+    it('says how many leads keep the listing’s name, and offers to mark it sold instead', async () => {
+      leadService.adminList.mockResolvedValue({ data: [], meta: { total: 3 } });
+      propertyService.patch.mockResolvedValue({ data: { ...ROWS[0], availability: 'sold' } });
+      renderAs('admin');
+      await screen.findByText('Lakeview Heights');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Actions for Lakeview Heights' }));
+      await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Delete this property?' });
+
+      expect(
+        await within(dialog).findByText(
+          '3 leads reference this listing — they keep a snapshot of its name.'
+        )
+      ).toBeInTheDocument();
+      expect(leadService.adminList).toHaveBeenCalledWith(
+        { propertyId: 1, perPage: 1 },
+        expect.anything()
+      );
+      expect(
+        within(dialog).getByRole('button', { name: 'Deactivate instead' })
+      ).toBeInTheDocument();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Mark sold instead' }));
+
+      await waitFor(() =>
+        expect(propertyService.patch).toHaveBeenCalledWith(1, { availability: 'sold' })
+      );
+      expect(propertyService.remove).not.toHaveBeenCalled();
+    });
+
     it('previews an unpublished listing instead of linking to a 404', async () => {
       renderAs('admin');
       await screen.findByText('Nandi Ridge Plot');
@@ -473,6 +598,19 @@ describe('PropertiesListPage', () => {
         expect.stringContaining('/properties/nandi-ridge-plot-devanahalli?preview=admin')
       );
     });
+  });
+
+  it('narrows to one advisor’s listings from a link, naming a switched-off one', async () => {
+    renderAs('admin', { url: '/admin/properties?agentId=5' });
+    await screen.findByText('Lakeview Heights');
+
+    expect(propertyService.adminList).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: '5' }),
+      expect.anything()
+    );
+    expect(
+      await screen.findByRole('option', { name: 'Team Member 5 (inactive)' })
+    ).toBeInTheDocument();
   });
 
   it('reads a flag in the URL as a boolean, so the screen and the request agree', async () => {

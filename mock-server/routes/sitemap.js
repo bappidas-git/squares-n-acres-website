@@ -35,6 +35,7 @@ const {
   sitemapIndexChildren,
   sitemapSets,
 } = require('../lib/sitemapBuilder');
+const { sitemapBase } = require('../lib/sitemapHost');
 
 /** An hour, which is long enough to matter and short enough to iterate on. */
 const CACHE_CONTROL = 'public, max-age=3600';
@@ -59,7 +60,7 @@ const SOURCES = [
  * @param {{db: object}} deps
  * @returns {import('express').Router}
  */
-module.exports = ({ db }) => {
+module.exports = ({ db, config }) => {
   const router = express.Router();
 
   /** Everything the builders read, gathered fresh for each request. */
@@ -79,9 +80,24 @@ module.exports = ({ db }) => {
   const sendXml = (res, body) => send(res, body, 'text/xml');
   const sendText = (res, body) => send(res, body, 'text/plain');
 
+  /**
+   * The address the index and robots.txt name the child sitemaps on: the one
+   * the request came in on, when it is allowed (`lib/sitemapHost.js`).
+   */
+  const baseOf = (req, state) =>
+    sitemapBase(req, {
+      siteUrl: state.seoSettings?.siteUrl ?? '',
+      apiUrl: config?.apiUrl ?? null,
+      // `/sitemap.xml` at the root is rewritten onto this router (app.js),
+      // and marked so: its children are at the root too.
+      prefix: req.seoFileAtRoot ? '' : req.baseUrl,
+    });
+
   router.get('/sitemap.xml', (req, res) => {
     const state = data();
-    const children = sitemapIndexChildren(state).map(({ loc, lastmod }) => ({ loc, lastmod }));
+    const children = sitemapIndexChildren(state, Date.now(), baseOf(req, state)).map(
+      ({ loc, lastmod }) => ({ loc, lastmod })
+    );
     sendXml(res, renderSitemapIndex(children));
   });
 
@@ -92,7 +108,8 @@ module.exports = ({ db }) => {
   }
 
   router.get('/robots.txt', (req, res) => {
-    sendText(res, renderRobots(data()));
+    const state = data();
+    sendText(res, renderRobots(state, baseOf(req, state)));
   });
 
   router.get('/rss.xml', (req, res) => {

@@ -5,8 +5,10 @@ import ApiError from '../../../services/apiError';
 import PATHS from '../../../routes/paths';
 import articleService from '../../../services/articleService';
 import openInNewTab from '../../../utils/openInNewTab';
-import storage from '../../../utils/storage';
+import { DRAFT_PREVIEW_PARAM, stashDraftPreview } from '../../../utils/draftPreview';
 import useForm from '../../../hooks/useForm';
+import useLocalDraft from '../../../hooks/useLocalDraft';
+import useStaleGuard, { isStaleWrite } from '../../../hooks/useStaleGuard';
 import useUnsavedChanges from '../../../hooks/useUnsavedChanges';
 import { URL_PATTERN } from '../../../utils/validation';
 import {
@@ -17,7 +19,12 @@ import {
   toDateTimeLocal,
   wordCount,
 } from '../../../utils/articleUtils';
-import { applySeoSideEffects, validateSeoBranch } from '../../../components/seo/seoSideEffects';
+import redirectMoves, { describeMoves } from '../../../components/admin/redirectMoves';
+import {
+  applySeoSideEffects,
+  redirectWarning,
+  validateSeoBranch,
+} from '../../../components/seo/seoSideEffects';
 import { createSeo, toSeoPayload, withSeoDefaults } from '../../../components/seo/seoValues';
 import {
   GOING_LIVE,
@@ -29,9 +36,6 @@ import { schemas } from '../../../services/schemas';
 import { slugify } from '../../../utils/slug';
 import { useNavigationGuard } from '../../../contexts/NavigationGuardContext';
 import { useToast } from '../../../components/common/ToastProvider';
-
-/** How often a dirty form writes its draft to this browser (§4.2, prompt 18). */
-export const AUTOSAVE_INTERVAL_MS = 10000;
 
 /** `sna_article_draft:<id|new>` — one draft per article, per browser (§4.2). */
 export const draftKey = (articleId) => `sna_article_draft:${articleId ?? 'new'}`;
@@ -112,6 +116,7 @@ const BLANK = {
   scheduledAt: '',
   updatedAtDisplay: null,
   updatedAt: null,
+  updatedByName: null,
   isFeatured: false,
   allowComments: false,
   relatedArticleIds: [],
@@ -156,6 +161,8 @@ export function toFormValues(record) {
     // Read-only, and never sent back: the SEO panel prints it as "last
     // modified", which is what the page reports as `dateModified` (§9.3).
     updatedAt: record.updatedAt ?? null,
+    // Who saved it last — for the rail's "Last saved … by …" (prompt 51).
+    updatedByName: record.updatedByName ?? null,
     isFeatured: record.isFeatured === true,
     allowComments: record.allowComments === true,
     relatedArticleIds: Array.isArray(record.relatedArticleIds) ? record.relatedArticleIds : [],
@@ -236,6 +243,50 @@ export function toPayload(values) {
     tableOfContents: values.tableOfContents !== false,
     // The slug and `seo.slug` are one URL (D34).
     seo: toSeoPayload(values.seo, slug),
+  };
+}
+
+/**
+ * What "Preview changes" hands a published article's public page (prompt 51):
+ * the stored article with the form over it — its words, its picture, its FAQs,
+ * and the category, author and tags the form now names — in the shape
+ * `GET /articles/slug/:slug` answers, so the page renders it as it would the
+ * saved one. The status and the address stay the stored ones: the preview is
+ * of the live page.
+ *
+ * @param {object} record the stored article
+ * @param {object} values the form
+ * @param {{categories?: Array<object>, authors?: Array<object>, tags?: Array<object>}} [lookup]
+ * @returns {object}
+ */
+export function draftArticleRecord(record, values, lookup = {}) {
+  const payload = toPayload(values);
+  const find = (rows, id) =>
+    (Array.isArray(rows) ? rows : []).find((row) => String(row.id) === String(id)) ?? null;
+  const words = wordCount(payload.content);
+  const same = (left, right) => String(left ?? '') === String(right ?? '');
+
+  return {
+    ...record,
+    ...payload,
+    status: record.status,
+    slug: record.slug,
+    publishedAt: record.publishedAt,
+    category: same(payload.categoryId, record.categoryId)
+      ? (record.category ?? null)
+      : find(lookup.categories, payload.categoryId),
+    author: same(payload.authorId, record.authorId)
+      ? (record.author ?? null)
+      : find(lookup.authors, payload.authorId),
+    tags: payload.tagIds
+      .map(
+        (id) => (record.tags ?? []).find((tag) => same(tag.id, id)) ?? find(lookup.tags, id) ?? null
+      )
+      .filter(Boolean),
+    faqs: payload.faqs.filter((faq) => faq.question && plainText(faq.answer)),
+    wordCount: words,
+    readingTimeMinutes: readingTime(words),
+    seo: { ...(record.seo ?? {}), ...payload.seo, slug: record.slug },
   };
 }
 
@@ -326,17 +377,46 @@ export function contentChecks(values, words) {
  * @param {object|null} [options.record] the record `GET /admin/articles/:id` returned
  * @param {boolean} [options.readOnly] no writes, no autosave (§7)
  */
-export default function useArticleForm({ articleId = null, record = null, readOnly = false } = {}) {
+export default function useArticleForm({
+  articleId = null,
+  record = null,
+  readOnly = false,
+  canRedirect = false,
+} = {}) {
   const navigate = useNavigate();
   const toast = useToast();
   const { isBlocking } = useNavigationGuard();
 
   const isNew = !articleId;
 
-  const [draftOffer, setDraftOffer] = useState(null);
-  const [draftSavedAt, setDraftSavedAt] = useState(null);
+  // A published article whose address changes leaves a 301 behind, on by
+  // default (prompt 51) — what a page, a locality and a developer already did.
+  const [redirectOld, setRedirectOld] = useState(true);
+  const redirectRef = useRef({ redirectOld, canRedirect });
+  redirectRef.current = { redirectOld, canRedirect };
+
   const [redirect, setRedirect] = useState(null);
   const [previewing, setPreviewing] = useState(false);
+
+  // The article as last read or saved: the load, then the answer to each save
+  // and to "Load their version". The prop is the first read only — after a
+  // save it no longer said what the article was, and the status a save starts
+  // from, the live address and the version check all read this.
+  const [stored, setStored] = useState(record);
+  // A save made from an older version is refused, and answered with a dialog
+  // rather than written over somebody else's (prompt 51).
+  const guard = useStaleGuard({ storedAt: stored?.updatedAt ?? null });
+  const {
+    adopt: adoptVersion,
+    current: currentVersion,
+    dismiss: dismissConflict,
+    onError: onSaveError,
+    overwrite,
+    reload,
+    stamp,
+  } = guard;
+  // The mode of the save the dialog is about, for "Save mine anyway".
+  const lastMode = useRef('save');
   // A save that also changes the status needs the render that commits the new
   // status before it can build a payload that says so.
   const [pending, setPending] = useState(null);
@@ -411,13 +491,14 @@ export default function useArticleForm({ articleId = null, record = null, readOn
     onSubmit: async (payload) => {
       try {
         const envelope = articleId
-          ? await articleService.update(articleId, payload)
+          ? await articleService.update(articleId, stamp(payload))
           : await articleService.create(payload);
         return envelope?.data ?? null;
       } catch (thrown) {
         throw await withSlugSuggestion(thrown, payload.slug, articleId);
       }
     },
+    onError: onSaveError,
   });
 
   const {
@@ -432,10 +513,43 @@ export default function useArticleForm({ articleId = null, record = null, readOn
     values,
   } = form;
 
+  // A copy of the form in this browser — every ten seconds, and on the way out
+  // unless the editor discarded it — offered back when it is newer than the
+  // stored article (`useLocalDraft`, prompt 51: the close and session-end
+  // write the article form lacked).
+  const {
+    offer: draftOffer,
+    savedAt: draftSavedAt,
+    changed: draftChanged,
+    take: takeDraft,
+    dismiss: discardDraft,
+    clear: clearDraft,
+    forget: forgetDraft,
+    put: putDraft,
+  } = useLocalDraft({
+    key: draftKey(articleId),
+    values,
+    dirty: form.dirty,
+    enabled: !readOnly,
+    ready: !articleId || Boolean(record),
+    storedAt: record?.updatedAt ?? null,
+    version: currentVersion,
+    paused: form.submitting,
+  });
+
   // Read by the callbacks without becoming dependencies of them: a save must
   // see the values of the moment it runs, not of the render that created it.
   const latest = useRef({});
-  latest.current = { values, articleId, readOnly, isNew, record, dirty: form.dirty };
+  latest.current = {
+    values,
+    articleId,
+    readOnly,
+    isNew,
+    record: stored,
+    dirty: form.dirty,
+    baseline: form.baseline,
+    offer: draftOffer,
+  };
 
   /**
    * `useForm.setField`, plus the one error it cannot know to clear: the slug
@@ -460,13 +574,7 @@ export default function useArticleForm({ articleId = null, record = null, readOn
 
   // A copy autosaved to this browser is for a crash, a reload or a closed tab.
   // Changes the editor chose to discard are not worth offering back next time
-  // (QA-55) — and the autosave stops, so none is written on the way out.
-  const discarded = useRef(false);
-  const forgetDraft = useCallback(() => {
-    discarded.current = true;
-    storage.removeItem(draftKey(latest.current.articleId));
-  }, []);
-
+  // (QA-55) — and none is written on the way out.
   useUnsavedChanges(form.dirty && !readOnly, { onDiscard: forgetDraft });
 
   /* ---------------------------------------------------------------- *
@@ -478,9 +586,10 @@ export default function useArticleForm({ articleId = null, record = null, readOn
   const loadedStamp = useRef(null);
   useEffect(() => {
     if (!record) return;
-    const stamp = `${record.id}:${record.updatedAt ?? ''}`;
-    if (loadedStamp.current === stamp) return;
-    loadedStamp.current = stamp;
+    const loaded = `${record.id}:${record.updatedAt ?? ''}`;
+    if (loadedStamp.current === loaded) return;
+    loadedStamp.current = loaded;
+    setStored(record);
     reset(toFormValues(record));
   }, [record, reset]);
 
@@ -488,79 +597,14 @@ export default function useArticleForm({ articleId = null, record = null, readOn
    * The draft
    * ---------------------------------------------------------------- */
 
-  const clearDraft = useCallback(() => {
-    storage.removeItem(draftKey(latest.current.articleId));
-    setDraftOffer(null);
-    setDraftSavedAt(null);
-  }, []);
-
-  // Offered once: on a new article straight away, on an existing one as soon as
-  // the record is there to compare the draft's age against.
-  const offered = useRef(false);
-  useEffect(() => {
-    if (readOnly || offered.current) return;
-    if (articleId && !record) return;
-    offered.current = true;
-
-    const draft = storage.getItem(draftKey(articleId), null);
-    if (!draft?.values || !draft.savedAt) return;
-
-    const newerThanRecord =
-      !record?.updatedAt || Date.parse(draft.savedAt) > Date.parse(record.updatedAt);
-    if (!newerThanRecord) {
-      storage.removeItem(draftKey(articleId));
-      return;
-    }
-    setDraftOffer(draft);
-  }, [articleId, record, readOnly]);
-
-  // Autosave: every ten seconds, and only while there is something to save.
-  const dirtyRef = useRef(false);
-  dirtyRef.current = form.dirty;
-  const savingRef = useRef(false);
-  savingRef.current = form.submitting;
-  // The values the last autosave wrote, by identity: every edit makes a new
-  // object, so "changes since" is whether the form still holds that one.
-  const draftValues = useRef(null);
-
-  useEffect(() => {
-    if (readOnly) return undefined;
-
-    const timer = setInterval(() => {
-      if (!dirtyRef.current || savingRef.current || discarded.current) return;
-      if (latest.current.values === draftValues.current) return;
-      const savedAt = new Date().toISOString();
-      if (
-        storage.setItem(draftKey(latest.current.articleId), {
-          values: latest.current.values,
-          savedAt,
-        })
-      ) {
-        draftValues.current = latest.current.values;
-        setDraftSavedAt(savedAt);
-      }
-    }, AUTOSAVE_INTERVAL_MS);
-
-    return () => clearInterval(timer);
-  }, [readOnly]);
-
-  // The offer is read from a ref rather than from inside a state updater: a
-  // `setState` updater has to be pure, and this one has to write a second piece
-  // of state.
-  const offerRef = useRef(null);
-  offerRef.current = draftOffer;
-
   const restoreDraft = useCallback(() => {
-    const offer = offerRef.current;
+    const offer = takeDraft();
     if (!offer?.values) return;
     setValues(offer.values);
-    setDraftOffer(null);
-  }, [setValues]);
-
-  const discardDraft = useCallback(() => {
-    storage.removeItem(draftKey(latest.current.articleId));
-    setDraftOffer(null);
-  }, []);
+    // A copy made from an older version is saved against that version: over a
+    // newer save it is refused rather than written back over it.
+    adoptVersion(offer.version);
+  }, [adoptVersion, setValues, takeDraft]);
 
   /* ---------------------------------------------------------------- *
    * Saving
@@ -596,24 +640,44 @@ export default function useArticleForm({ articleId = null, record = null, readOn
       // edit was taken back is out of date — unless it is the one on offer,
       // which waits for the editor's own answer.
       if (mode === 'save' && !current.isNew && !current.dirty && current.record) {
-        if (!offerRef.current) clearDraft();
+        if (!current.offer) clearDraft();
         toast.info('No changes to save.');
         return current.record;
       }
 
       const before = current.record?.status ?? null;
+      // The address a published article is leaving, when the editor keeps the 301.
+      const liveSlug = before === 'published' ? (current.record?.slug ?? null) : null;
+      lastMode.current = mode;
       const saved = await submit();
       if (!saved) return false;
 
       clearDraft();
+      setStored(saved);
+      adoptVersion(saved.updatedAt ?? null);
       reset(toFormValues(saved));
 
       // The redirect this article's `seo` asks for is written against the slug
       // the API answered with — a new article has none until now (§9.6). It
       // comes after the draft is cleared: the article is saved either way, and
       // a side effect must not hold up the state that says so.
-      await applySeoSideEffects('article', saved);
-      toast.success(savedMessage(saved, before));
+      const effects = await applySeoSideEffects('article', saved);
+      if (effects.ok) toast.success(savedMessage(saved, before));
+      else toast.warning(redirectWarning(effects.error));
+
+      // The old address sends its readers on (prompt 51); a rule that cannot
+      // be written is said, not swallowed.
+      const { canRedirect: mayRedirect, redirectOld: keepOld } = redirectRef.current;
+      if (liveSlug && saved.slug && saved.slug !== liveSlug && mayRedirect && keepOld) {
+        const moved = describeMoves(
+          await redirectMoves(
+            [[PATHS.article(liveSlug), PATHS.article(saved.slug)]],
+            `“${saved.title}” moved (Admin → Articles).`
+          )
+        );
+        if (moved.error) toast.error(moved.error);
+        else if (moved.info) toast.info(moved.info);
+      }
 
       // A created article moves to its own URL, replacing the add route so Back
       // does not offer to create it a second time.
@@ -622,7 +686,7 @@ export default function useArticleForm({ articleId = null, record = null, readOn
       }
       return saved;
     },
-    [clearDraft, reset, submit, toast, validateAll]
+    [adoptVersion, clearDraft, reset, submit, toast, validateAll]
   );
 
   const runSaveRef = useRef(runSave);
@@ -703,6 +767,38 @@ export default function useArticleForm({ articleId = null, record = null, readOn
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [readOnly]);
 
+  /* ---------------------------------------------------------------- *
+   * A save made over somebody else's (prompt 51)
+   * ---------------------------------------------------------------- */
+
+  /**
+   * "Save mine anyway": the same save again, over the version the refusal
+   * named — so a third save made meanwhile is still refused.
+   */
+  const overwriteConflict = useCallback(
+    () => overwrite(() => saveRef.current(lastMode.current)),
+    [overwrite]
+  );
+
+  /**
+   * "Load their version": the article as it now stands, with this editor's
+   * edits kept as the draft the banner offers back, replayed on top of it.
+   */
+  const reloadConflict = useCallback(
+    () =>
+      reload({
+        fetchLatest: () => articleService.adminGet(latest.current.articleId),
+        toValues: toFormValues,
+        form: { baseline: latest.current.baseline, values: latest.current.values },
+        draft: { put: putDraft },
+        load: (fresh) => {
+          setStored(fresh);
+          reset(toFormValues(fresh));
+        },
+      }),
+    [putDraft, reload, reset]
+  );
+
   /**
    * Save, then open the article in a new tab behind a 24-hour token (D28).
    *
@@ -740,6 +836,37 @@ export default function useArticleForm({ articleId = null, record = null, readOn
       setPreviewing(false);
     }
   }, [toast]);
+
+  /**
+   * "Preview changes" on a published article (prompt 51): the form as it
+   * stands, shown on the live page in a new tab — handed over through this
+   * browser's storage, never saved, never sent to the API. Visitors keep
+   * seeing the saved article; the link opens once, here.
+   *
+   * @param {{categories?: Array<object>, authors?: Array<object>, tags?: Array<object>}} [lookup]
+   *   what the form's selects name, for the category, author and tags it now points at
+   * @returns {boolean} whether the preview opened
+   */
+  const previewChanges = useCallback(
+    (lookup) => {
+      const current = latest.current;
+      const stored = current.record;
+      if (!stored?.slug) return false;
+      const id = stashDraftPreview(
+        'article',
+        draftArticleRecord(stored, current.values, lookup ?? {})
+      );
+      if (!id) {
+        toast.error('This browser keeps nothing for the page to read — save to see the changes.');
+        return false;
+      }
+      const path = `${PATHS.article(stored.slug)}?${DRAFT_PREVIEW_PARAM}=${encodeURIComponent(id)}`;
+      if (openInNewTab(path)) return true;
+      toast.info(`Your browser blocked the new tab. The preview is at ${path} — it opens once.`);
+      return false;
+    },
+    [toast]
+  );
 
   // Leaving waits for the guard to let go, twice over: a saved form is clean,
   // but the provider learns that one render later and `useBlocker`
@@ -902,6 +1029,7 @@ export default function useArticleForm({ articleId = null, record = null, readOn
     primaryMode,
     save,
     preview,
+    previewChanges,
     addFaq,
     updateFaq,
     removeFaq,
@@ -911,12 +1039,33 @@ export default function useArticleForm({ articleId = null, record = null, readOn
     // Whether the form holds anything the last autosave did not write — not
     // whether it differs from the server, which it always does while there is
     // a draft at all (QA-55).
-    draftChanged: draftSavedAt !== null && values !== draftValues.current,
-    record,
+    draftChanged,
+    record: stored,
     restoreDraft,
     discardDraft,
     clearDraft,
+    conflict: guard.conflict,
+    conflictBusy: guard.busy,
+    dismissConflict,
+    overwriteConflict,
+    reloadConflict,
     publicPath: values.slug ? PATHS.article(values.slug) : null,
+    /**
+     * A published article's address about to change (prompt 51): where it is
+     * live now, and whether saving leaves a 301 behind.
+     */
+    slugMove: {
+      livePath: stored?.status === 'published' && stored?.slug ? PATHS.article(stored.slug) : null,
+      moved:
+        Boolean(articleId) &&
+        stored?.status === 'published' &&
+        Boolean(stored?.slug) &&
+        slugify(values.slug ?? '') !== '' &&
+        slugify(values.slug ?? '') !== stored.slug,
+      canRedirect,
+      redirect: redirectOld,
+      setRedirect: setRedirectOld,
+    },
   };
 }
 
@@ -959,7 +1108,7 @@ function omitKeys(source, keys) {
  * front of the field that caused it (§5.9).
  */
 async function withSlugSuggestion(thrown, slug, excludeId) {
-  if (thrown?.status !== 409 || !slug) return thrown;
+  if (thrown?.status !== 409 || !slug || isStaleWrite(thrown)) return thrown;
 
   try {
     const { data } = await articleService.checkSlug({ slug, excludeId });

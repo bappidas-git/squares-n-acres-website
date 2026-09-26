@@ -9,7 +9,8 @@
  *
  * Nothing here is hardcoded content: the header's menus are the `headerMenus`
  * collection (QA-56) — their names, their order, their submenus and the links
- * typed into them — the property types and localities are master data, the
+ * typed into them — the property types and localities are master data (a
+ * type's `showInRentMenu` / `showInCommercialMenu` put it in those menus), the
  * pages in each menu and footer column are the published CMS pages that carry
  * `showInHeader` / `showInFooter`, and the call, WhatsApp and CTA buttons are
  * `siteSettings.navigation`. A menu with nothing behind it is not rendered — an
@@ -56,9 +57,21 @@ const active = (records) =>
 const typesOf = (propertyTypes, kind) =>
   active(propertyTypes).filter((type) => segmentKind(type.segment) === kind);
 
-/** One property type by slug, or `null` — a menu never invents a type. */
-const typeBySlug = (propertyTypes, slug) =>
-  active(propertyTypes).find((type) => type.slug === slug) ?? null;
+/**
+ * The types an editor put in the Rent or the Commercial menu (prompt 51): the
+ * active ones with the menu's flag on, in their order. A Commercial page lists
+ * the commercial segment, so only a type of that kind can be in its menu; the
+ * Rent menu is homes, so only a type of another kind can be in it.
+ *
+ * @param {Array<object>} propertyTypes
+ * @param {'showInRentMenu'|'showInCommercialMenu'} flag
+ */
+const menuTypes = (propertyTypes, flag) =>
+  active(propertyTypes).filter(
+    (type) =>
+      type[flag] === true &&
+      (segmentKind(type.segment) === 'commercial') === (flag === 'showInCommercialMenu')
+  );
 
 /** Published pages an editor assigned to one footer column, in `order`. */
 const pagesForColumn = (pages, column) =>
@@ -138,12 +151,6 @@ export function budgetBands() {
  * Header
  * ------------------------------------------------------------------ */
 
-/** The Rent menu's picks, in the order it offers them (§4.7 of prompt 27). */
-const RENT_TYPE_SLUGS = ['apartments', 'villas', 'independent-houses', 'pg-co-living'];
-
-/** The Commercial menu's picks. */
-const COMMERCIAL_TYPE_SLUGS = ['office-spaces', 'retail-shops', 'warehouses', 'co-working-spaces'];
-
 /** The Buy mega-menu's columns: status, type, budget and the localities people ask for. */
 function buyColumns({ propertyTypes, localities }) {
   const residential = typesOf(propertyTypes, 'residential');
@@ -193,11 +200,13 @@ function buyColumns({ propertyTypes, localities }) {
   ];
 }
 
-/** Rent: four residential types plus the commercial lease route. */
+/** Rent: the types flagged for it (`showInRentMenu`) plus the commercial lease route. */
 function rentColumns({ propertyTypes }) {
-  const links = RENT_TYPE_SLUGS.map((slug) => typeBySlug(propertyTypes, slug))
-    .filter(Boolean)
-    .map((type) => ({ key: `rent-${type.slug}`, label: type.name, to: PATHS.rentType(type.slug) }));
+  const links = menuTypes(propertyTypes, 'showInRentMenu').map((type) => ({
+    key: `rent-${type.slug}`,
+    label: type.name,
+    to: PATHS.rentType(type.slug),
+  }));
 
   return [
     {
@@ -208,15 +217,13 @@ function rentColumns({ propertyTypes }) {
   ];
 }
 
-/** Commercial: four commercial types plus lease. */
+/** Commercial: the types flagged for it (`showInCommercialMenu`) plus lease. */
 function commercialColumns({ propertyTypes }) {
-  const links = COMMERCIAL_TYPE_SLUGS.map((slug) => typeBySlug(propertyTypes, slug))
-    .filter(Boolean)
-    .map((type) => ({
-      key: `commercial-${type.slug}`,
-      label: type.name,
-      to: PATHS.commercialType(type.slug),
-    }));
+  const links = menuTypes(propertyTypes, 'showInCommercialMenu').map((type) => ({
+    key: `commercial-${type.slug}`,
+    label: type.name,
+    to: PATHS.commercialType(type.slug),
+  }));
 
   return [
     {
@@ -467,15 +474,40 @@ export function buildHeaderActions({ settings } = {}) {
     });
   }
 
-  actions.push({
-    key: 'cta',
-    kind: 'lead',
-    label: navigation.headerCtaLabel || NAV.postRequirement,
-    title: navigation.headerCtaLabel || NAV.postRequirement,
-    icon: 'mdi:clipboard-text-outline',
-  });
+  actions.push(headerCta(settings));
 
   return actions;
+}
+
+/** The anchor that means "open the requirement form" rather than "go somewhere". */
+export const LEAD_FORM_ANCHOR = '#post-requirement';
+
+/**
+ * The header's call to action, as Site settings → Navigation describes it: the
+ * default target (`#post-requirement`, or nothing) opens the requirement form;
+ * any other target — a path such as `/contact`, a full address, `tel:` — is a
+ * plain link, the same in the header, the drawer and the bottom bar.
+ *
+ * @param {object|null} [settings] the public settings object
+ * @returns {{key: 'cta', kind: 'lead'|'link', label: string, title: string,
+ *   icon: string, href?: string, external?: boolean, internal?: boolean}}
+ */
+export function headerCta(settings) {
+  const navigation = settings?.navigation ?? {};
+  const label = navigation.headerCtaLabel || NAV.postRequirement;
+  const href = String(navigation.headerCtaHref ?? '').trim();
+  const base = { key: 'cta', label, title: label, icon: 'mdi:clipboard-text-outline' };
+
+  if (!href || href === LEAD_FORM_ANCHOR) return { ...base, kind: 'lead' };
+  return {
+    ...base,
+    kind: 'link',
+    href,
+    // A site path goes through the router; anything else is an ordinary anchor,
+    // and another site opens in its own tab.
+    internal: /^\/(?!\/)/.test(href),
+    external: /^https?:\/\//i.test(href),
+  };
 }
 
 /**
@@ -688,6 +720,7 @@ export function buildBottomNav() {
 
 const navigation = {
   buildHeaderNav,
+  headerCta,
   collapseMenus,
   buildHeaderMenus,
   buildHeaderActions,

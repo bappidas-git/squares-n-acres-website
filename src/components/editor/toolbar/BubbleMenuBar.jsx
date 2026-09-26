@@ -55,6 +55,17 @@ export default function BubbleMenuBar({ editor, containerRef, onLink }) {
     });
   }, [editor, containerRef]);
 
+  // The keyboard's way in is Tab from the selection: the editor blurring
+  // towards the bar is not the selection going away (prompt 51 — the bar
+  // vanished on exactly the Tab that should have reached it).
+  const onEditorBlur = useCallback(
+    ({ event } = {}) => {
+      if (ref.current?.contains(event?.relatedTarget)) return;
+      measure();
+    },
+    [measure]
+  );
+
   useEffect(() => {
     if (!editor) return undefined;
     measure();
@@ -62,17 +73,33 @@ export default function BubbleMenuBar({ editor, containerRef, onLink }) {
     editor.on('selectionUpdate', measure);
     editor.on('transaction', measure);
     editor.on('focus', measure);
-    editor.on('blur', measure);
+    editor.on('blur', onEditorBlur);
     return () => {
       editor.off('create', measure);
       editor.off('selectionUpdate', measure);
       editor.off('transaction', measure);
       editor.off('focus', measure);
-      editor.off('blur', measure);
+      editor.off('blur', onEditorBlur);
     };
-  }, [editor, measure]);
+  }, [editor, measure, onEditorBlur]);
 
   if (!editor || !rect) return null;
+
+  /** A toolbar's own keys: Left and Right move between its buttons. */
+  const onKeyDown = (event) => {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      editor.chain().focus().run();
+      return;
+    }
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    const buttons = [...(ref.current?.querySelectorAll('button') ?? [])];
+    const at = buttons.indexOf(document.activeElement);
+    if (at === -1) return;
+    event.preventDefault();
+    const step = event.key === 'ArrowRight' ? 1 : -1;
+    buttons[(at + step + buttons.length) % buttons.length]?.focus();
+  };
 
   const button = (label, icon, active, run) => (
     <button
@@ -96,6 +123,13 @@ export default function BubbleMenuBar({ editor, containerRef, onLink }) {
       aria-label="Selection formatting"
       className={styles.bubble}
       style={{ top: `${rect.top}px`, left: `${rect.left}px` }}
+      onKeyDown={onKeyDown}
+      onBlur={(event) => {
+        // Leaving the bar for anywhere but the editor hides it.
+        if (ref.current?.contains(event.relatedTarget)) return;
+        if (isMounted(editor) && editor.view.dom.contains(event.relatedTarget)) return;
+        setRect(null);
+      }}
     >
       {button('Bold', 'mdi:format-bold', editor.isActive('bold'), () =>
         editor.chain().focus().toggleBold().run()

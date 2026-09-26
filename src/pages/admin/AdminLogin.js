@@ -168,6 +168,13 @@ const AdminLogin = () => {
             {submitting ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
+
+        {/* There is no self-service reset yet (prompt 51): the way back in is
+            an administrator, and the screen says so rather than leaving a
+            locked-out user to guess. */}
+        <p className={styles.forgot}>
+          Forgot your password? Ask an administrator to reset it from Settings → Users.
+        </p>
       </main>
     </div>
   );

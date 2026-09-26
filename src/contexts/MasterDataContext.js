@@ -30,10 +30,20 @@ import { setKnownSegments } from '../config/segments';
  * Every segment list it receives is also handed to `config/segments.js`, whose
  * registry is how the property form's rules and the SEO engine learn the kind
  * of a segment an editor added (QA-52).
+ *
+ * Other tabs hear about a refresh (prompt 51): the property form told an editor
+ * to "add it in Master data — it opens in a new tab, so nothing here is lost",
+ * and the amenity added there never reached the form, whose cache was ten
+ * minutes old at most and per tab. A refresh now leaves a mark in
+ * `localStorage` that every other tab's provider answers by reading that
+ * collection again; a window coming back into focus reads again whatever has
+ * gone past the cache's age.
  */
 
 const CACHE_KEY = 'sna_master_data_cache';
 const CACHE_TTL_MS = 10 * 60 * 1000;
+/** Written by a refresh, read by the `storage` event of every other tab. */
+const CHANGED_KEY = 'sna_master_data_changed';
 
 /** The whole of each collection: every one is comfortably under the 100 cap. */
 const LIST_PARAMS = { perPage: 100 };
@@ -82,6 +92,8 @@ export const MasterDataProvider = ({ children }) => {
   }, []);
   const [data, setData] = useState(cached ?? EMPTY);
   const [loading, setLoading] = useState(!cached);
+  // When the lists were last read in full — what "stale on focus" measures.
+  const loadedAt = useRef(cached ? Date.now() : 0);
 
   // What is currently held, readable after an `await` without making `load`
   // depend on the render that produced it.
@@ -122,7 +134,10 @@ export const MasterDataProvider = ({ children }) => {
     // that render already knows the segment that just arrived.
     setKnownSegments(next.segments);
     setData(next);
-    if (!only) setLoading(false);
+    if (!only) {
+      setLoading(false);
+      loadedAt.current = Date.now();
+    }
     storage.setItem(CACHE_KEY, { savedAt: Date.now(), data: next }, { session: true });
   }, []);
 
@@ -133,7 +148,42 @@ export const MasterDataProvider = ({ children }) => {
     return () => controller.abort();
   }, [cached, load]);
 
-  const refresh = useCallback((collection) => load(undefined, collection), [load]);
+  // A refresh in another tab — Master data → Amenities, opened from the form —
+  // reads the same collection here; a window back in focus after the cache's
+  // age reads everything again.
+  useEffect(() => {
+    const onStorage = (event) => {
+      if (event.key !== CHANGED_KEY) return;
+      let changed = null;
+      try {
+        changed = JSON.parse(event.newValue ?? 'null');
+      } catch {
+        changed = null;
+      }
+      load(undefined, changed?.collection ?? undefined);
+    };
+    const onFocus = () => {
+      if (document.visibilityState === 'hidden') return;
+      if (Date.now() - loadedAt.current > CACHE_TTL_MS) load();
+    };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, [load]);
+
+  /** Reads one collection (or all) again, and tells the other tabs to. */
+  const refresh = useCallback(
+    async (collection) => {
+      await load(undefined, collection);
+      storage.setItem(CHANGED_KEY, { collection: collection ?? null, at: Date.now() });
+    },
+    [load]
+  );
 
   const value = useMemo(
     () => ({
@@ -166,5 +216,5 @@ const FALLBACK = {
   bySlug: () => null,
 };
 
-export { MasterDataContext, CACHE_KEY, CACHE_TTL_MS };
+export { MasterDataContext, CACHE_KEY, CACHE_TTL_MS, CHANGED_KEY };
 export default MasterDataContext;
