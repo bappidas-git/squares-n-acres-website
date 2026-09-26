@@ -17,14 +17,17 @@ import theme from '../../../theme';
  */
 
 // The session's last minutes are the one state the shell draws differently.
-const mockSession = { expiringSoon: false };
+// `expiresAt` is fixed when a test sets it, as a real session's is: computed
+// on every render, a re-render a millisecond after the notice read the clock
+// put the end a hair over four minutes away, which reads "in 5 minutes".
+const mockSession = { expiringSoon: false, expiresAt: null };
 jest.mock('../../../contexts/AdminAuthContext', () => ({
   useAdminAuth: () => ({
     role: 'admin',
     user: { name: 'Admin User', email: 'admin@squaresnacres.com' },
     logout: () => {},
     expiringSoon: mockSession.expiringSoon,
-    expiresAt: new Date(Date.now() + 4 * 60 * 1000).toISOString(),
+    expiresAt: mockSession.expiresAt,
     staySignedIn: () => Promise.resolve(),
   }),
 }));
@@ -40,6 +43,7 @@ afterEach(() => {
   mockNotifications.newLeadCount = 0;
   mockNotifications.hasUnseen = false;
   mockSession.expiringSoon = false;
+  mockSession.expiresAt = null;
 });
 
 function renderShell(initialEntry = '/admin/leads') {
@@ -160,6 +164,9 @@ describe('AdminLayout — the tab title (prompt 51)', () => {
 describe('AdminLayout — the session notice (prompt 51)', () => {
   it('fetches and draws "Stay signed in" in the session’s last minutes', async () => {
     mockSession.expiringSoon = true;
+    // Three and a half minutes left reads "4 minutes" for the next thirty
+    // seconds, however long the notice's chunk takes to arrive.
+    mockSession.expiresAt = new Date(Date.now() + 3.5 * 60 * 1000).toISOString();
     renderShell();
 
     expect(await screen.findByRole('button', { name: 'Stay signed in' })).toBeInTheDocument();

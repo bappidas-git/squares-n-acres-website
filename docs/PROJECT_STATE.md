@@ -56,7 +56,7 @@ Last prompt executed: 51 — Dead actions, media UX, admin practicality, Cloudwa
 | 46  | QA: cross-device, Lighthouse, SEO validation, prerender dry run      | `4a917e8` (+ `95c6f3b`, the review fix on the same branch)                          | 2026-09-18 |
 | 47  | Backend developer handover package: generator, docs, schema, Postman | `ee6f762`                                                                          | 2026-09-18 |
 | 48  | Final audit, client content checklist, README, version 1.0.0         | this commit (tagged `v1.0.0`)                                                      | 2026-09-18 |
-| 51  | Dead actions, media UX, admin practicality, Cloudways handover       | `0bfeaba` `0a797d0` `3fb5636` `292a89e` `5926aa4`, the handover commit and the package commit after it (tagged `v1.1.0`) | 2026-09-26 |
+| 51  | Dead actions, media UX, admin practicality, Cloudways handover       | `0bfeaba` `0a797d0` `3fb5636` `292a89e` `5926aa4` `768de0a`, a test fix, then the package commit (tagged `v1.1.0`) | 2026-09-26 |
 
 ## Final metrics (1.0.0, prompt 48)
 
@@ -7639,7 +7639,7 @@ the go-live checklist — with the self-managed Nginx material kept whole after
 it. `docs/DEPLOYMENT_CLOUDWAYS.md` is the frontend's half, linked from the
 README and the release checklist.
 
-**The handover package** is regenerated from the handover commit (its
+**The handover package** is regenerated from the last code commit (its
 `generatedFrom`) against a freshly reset mock and committed alone after it;
 `v1.1.0` tags that commit. 16 files plus `smoke/`: 274 endpoints, 271 captured
 examples and 3 explained skips, the new `09_MEDIA_AND_EMAIL.md`, and a Postman
@@ -7688,8 +7688,13 @@ after the seed passwords were rotated, and now pass each role's credentials;
 five end-to-end steps located the admin lists' search box by the label
 "Search", which the new quick search ("Search leads, properties and articles")
 also matched — Playwright's strict mode refuses an ambiguous match, so they
-now ask for the exact label; and one full Jest run timed out BasicsTab's segment test while the
+now ask for the exact label; one full Jest run timed out BasicsTab's segment test while the
 dialog's exit transition ran (it passed alone and in the next full run), so its
-last lookup waits up to five seconds for the same state.
+last lookup waits up to five seconds for the same state; and a later full run
+caught this prompt's own session-notice test reading "5 minutes": its mocked
+session recomputed `expiresAt` from the clock on every render, so a re-render a
+millisecond after the notice read the clock moved the end past four minutes.
+The mock now fixes the expiry when the test sets it, three and a half minutes
+out, as a real session does.
 
 **Next prompt: none. 1.1.0 is tagged.**
