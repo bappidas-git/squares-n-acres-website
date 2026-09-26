@@ -26,6 +26,7 @@
 const express = require('express');
 
 const schemas = require('../../src/services/schemas');
+const { AVAILABILITY } = require('../../src/config/enums');
 const {
   PUBLISH_FIELDS,
   notReadyMessage,
@@ -91,6 +92,65 @@ const BULK_ACTIONS = {
   verify: { isVerified: true },
   unverify: { isVerified: false },
   delete: null,
+};
+
+/**
+ * The bulk actions that carry a value in `payload` (prompt 51): what the desk
+ * changes across a batch of listings on a busy day — availability after a
+ * sale, the advisor when somebody leaves, a locality, a type or a developer
+ * entered wrongly on a dozen listings.
+ *
+ * `key` is the payload's key; `collection`, where an id must exist; `nullable`,
+ * whether `null` clears it. `read` and `write` reach the field on the record.
+ */
+const PAYLOAD_ACTIONS = {
+  availability: {
+    key: 'availability',
+    read: (property) => property.availability ?? null,
+    write: (property, value) => {
+      property.availability = value;
+    },
+  },
+  assignAgent: {
+    key: 'agentId',
+    collection: 'teamMembers',
+    nullable: true,
+    activeOnly: true,
+    read: (property) => property.agent?.teamMemberId ?? null,
+    write: (property, value) => {
+      property.agent = { ...(property.agent ?? {}), teamMemberId: value };
+    },
+  },
+  setLocality: {
+    key: 'localityId',
+    collection: 'localities',
+    read: (property) => property.location?.localityId ?? null,
+    // A locality belongs to a city: the listing moves with it.
+    write: (property, value, record) => {
+      property.location = {
+        ...(property.location ?? {}),
+        localityId: value,
+        cityId: record?.cityId ?? property.location?.cityId ?? null,
+      };
+    },
+  },
+  setPropertyType: {
+    key: 'propertyTypeId',
+    collection: 'propertyTypes',
+    read: (property) => property.propertyTypeId ?? null,
+    write: (property, value) => {
+      property.propertyTypeId = value;
+    },
+  },
+  setDeveloper: {
+    key: 'developerId',
+    collection: 'developers',
+    nullable: true,
+    read: (property) => property.project?.developerId ?? null,
+    write: (property, value) => {
+      property.project = { ...(property.project ?? {}), developerId: value };
+    },
+  },
 };
 
 /** How many listings `/properties/:id/similar` answers with (§5.14). */
@@ -628,6 +688,65 @@ module.exports = ({ db, getModel }) => {
     res.ok(present(property, { admin: true }));
   });
 
+  /**
+   * One of {@link PAYLOAD_ACTIONS} across a batch, validated before anything is
+   * written: an id that names nothing, an advisor who is switched off, or a
+   * type from another segment refuses the whole batch with 422 — a type moves
+   * a listing between residential and commercial only through the form, where
+   * the fields that differ are asked for.
+   *
+   * @returns {number} how many listings changed; one already so is not counted
+   */
+  function applyPayloadAction(action, payload, targets, user) {
+    const rule = PAYLOAD_ACTIONS[action];
+    const field = `payload.${rule.key}`;
+    const value = payload?.[rule.key];
+
+    if (value === undefined || (value === null && !rule.nullable)) {
+      throw validation({ [field]: [`The ${field} field is required.`] });
+    }
+
+    let record = null;
+    if (action === 'availability') {
+      if (!AVAILABILITY.has(value)) {
+        throw validation({ [field]: ['The selected availability is invalid.'] });
+      }
+    } else if (value !== null) {
+      if (!Number.isInteger(value)) {
+        throw validation({ [field]: [`The ${field} must be an integer.`] });
+      }
+      record = db.getCollection(rule.collection).find((row) => sameId(row.id, value)) ?? null;
+      if (!record) throw validation({ [field]: [`The selected ${field} is invalid.`] });
+      if (rule.activeOnly && record.isActive === false) {
+        throw validation({ [field]: [`${record.name} is switched off in Team.`] });
+      }
+    }
+
+    if (action === 'setPropertyType' && record) {
+      const other = targets.filter((property) => property.segment !== record.segment);
+      if (other.length > 0) {
+        throw validation({
+          [field]: [
+            `${record.name} is a ${record.segment} type, and ${other.length} of the selected ${
+              other.length === 1 ? 'listing is' : 'listings are'
+            } not — change ${other.length === 1 ? 'it' : 'those'} in the form.`,
+          ],
+        });
+      }
+    }
+
+    const now = new Date().toISOString();
+    let affected = 0;
+    for (const property of targets) {
+      if (sameId(rule.read(property) ?? '', value ?? '')) continue;
+      rule.write(property, value, record);
+      Object.assign(property, { updatedBy: user?.id ?? null, updatedAt: now });
+      affected += 1;
+    }
+    if (affected > 0) db.write();
+    return affected;
+  }
+
   router.get('/admin/properties/check-slug', (req, res) => {
     const slug = String(first(req.query.slug) ?? '');
     const excludeId = first(req.query.excludeId) ?? null;
@@ -638,6 +757,15 @@ module.exports = ({ db, getModel }) => {
     try {
       const body = { ...(req.body ?? {}) };
       validateBody(schemas.bulk, body);
+
+      if (hasOwn(PAYLOAD_ACTIONS, body.action)) {
+        const ids = body.ids.map(String);
+        const targets = rows().filter((property) => ids.includes(String(property.id)));
+        const affected = applyPayloadAction(body.action, body.payload, targets, req.user);
+        const noun = affected === 1 ? 'property' : 'properties';
+        res.message(`${affected} ${noun} updated.`, { affected });
+        return;
+      }
 
       if (!Object.prototype.hasOwnProperty.call(BULK_ACTIONS, body.action)) {
         throw validation({ action: ['The selected action is invalid.'] });

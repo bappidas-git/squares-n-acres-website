@@ -24,7 +24,13 @@ jest.mock('../../../../services/leadService', () => ({
     bulk: jest.fn(),
     claim: jest.fn(),
     remove: jest.fn(),
+    adminCreate: jest.fn(),
   },
+}));
+
+jest.mock('../../../../hooks/useMasterData', () => ({
+  useLocalities: () => [{ id: 1, name: 'Whitefield' }],
+  usePropertyTypes: () => [{ id: 1, name: 'Apartments' }],
 }));
 
 jest.mock('../../../../services/propertyService', () => ({
@@ -257,6 +263,99 @@ describe('LeadsListPage', () => {
         expect.anything()
       )
     );
+  });
+
+  it('counts the worklist from the list and narrows to a bucket in one press', async () => {
+    leadService.adminList.mockResolvedValue({
+      ...envelope(),
+      meta: { ...envelope().meta, followUp: { overdue: 3, today: 1, next7: 4, none: 2 } },
+    });
+    render();
+    await screen.findByText('Ananya Rao');
+
+    const overdue = screen.getByRole('button', { name: 'Overdue (3)' });
+    expect(screen.getByRole('button', { name: 'Due today (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'No next step (2)' })).toBeInTheDocument();
+    expect(overdue).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(overdue);
+
+    await waitFor(() =>
+      expect(leadService.adminList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ followUp: 'overdue' }),
+        expect.anything()
+      )
+    );
+    expect(screen.getByRole('button', { name: 'Overdue (3)' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mine' }));
+    await waitFor(() =>
+      expect(leadService.adminList).toHaveBeenLastCalledWith(
+        expect.objectContaining({ followUp: 'overdue', assignedTo: 'me' }),
+        expect.anything()
+      )
+    );
+  });
+
+  it('adds a walk-in from the desk, handed to a colleague, and opens it', async () => {
+    leadService.adminCreate.mockResolvedValue({ data: { id: 41, name: 'Kavya Iyer' } });
+    render();
+    await screen.findByText('Ananya Rao');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add lead' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add a lead' });
+    expect(within(dialog).getByLabelText(/Where it came from/)).toHaveValue('walk-in');
+
+    // Nothing is sent while the name and the phone are missing.
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add lead' }));
+    expect(await within(dialog).findByText(/Name is required/i)).toBeInTheDocument();
+    expect(leadService.adminCreate).not.toHaveBeenCalled();
+
+    await userEvent.type(within(dialog).getByLabelText(/^Name/), 'Kavya Iyer');
+    await userEvent.type(within(dialog).getByLabelText(/^Phone/), '98450 12345');
+    await userEvent.type(within(dialog).getByLabelText(/Budget up to/), '9000000');
+    await userEvent.selectOptions(within(dialog).getByLabelText(/Assign to/), '3');
+    await userEvent.type(within(dialog).getByLabelText(/First note/), 'Saw the Sunday ad.');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add lead' }));
+
+    await waitFor(() =>
+      expect(leadService.adminCreate).toHaveBeenCalledWith({
+        name: 'Kavya Iyer',
+        phone: '+919845012345',
+        email: null,
+        source: 'walk-in',
+        propertyId: null,
+        requirement: expect.objectContaining({ budgetMin: null, budgetMax: 9000000 }),
+        assignedTo: 3,
+        note: 'Saw the Sunday ad.',
+      })
+    );
+    expect(await screen.findByText('“Kavya Iyer” is in the leads.')).toBeInTheDocument();
+    expect(mockNotifications.refresh).toHaveBeenCalled();
+  });
+
+  it('keeps a lead a sales user adds as theirs, with nobody to hand it to', async () => {
+    mockRole = 'sales';
+    leadService.adminCreate.mockResolvedValue({ data: { id: 42, name: 'Rohan Das' } });
+    render();
+    await screen.findByText('Ananya Rao');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add lead' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add a lead' });
+    expect(within(dialog).queryByLabelText(/Assign to/)).not.toBeInTheDocument();
+    expect(within(dialog).getByText('The lead will be yours.')).toBeInTheDocument();
+
+    await userEvent.type(within(dialog).getByLabelText(/^Name/), 'Rohan Das');
+    await userEvent.type(within(dialog).getByLabelText(/^Phone/), '9845012346');
+    await userEvent.selectOptions(within(dialog).getByLabelText(/Where it came from/), 'phone');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add lead' }));
+
+    await waitFor(() => expect(leadService.adminCreate).toHaveBeenCalled());
+    const body = leadService.adminCreate.mock.calls[0][0];
+    expect(body).toMatchObject({ name: 'Rohan Das', source: 'phone', requirement: null });
+    expect(body).not.toHaveProperty('assignedTo');
   });
 
   it('gives a sales user no bulk bar, no delete and no assign', async () => {

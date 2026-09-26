@@ -236,3 +236,49 @@ button.flagOff:hover {
 .gapTitle:focus-visible {
   color: var(--color-primary-dark);
 }
+
+/* "Edit price…" (prompt 51): the Pricing tab's boxes, in a dialog. */
+.priceForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.priceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.priceFull {
+  grid-column: 1 / -1;
+}
+
+.priceHalf {
+  grid-column: span 1;
+}
+
+@media (max-width: 479px) {
+  .priceHalf {
+    grid-column: 1 / -1;
+  }
+}
+
+.priceHeadline {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* The delete confirm's lead count and its two ways out (prompt 51). */
+.deleteNote {
+  margin: var(--space-3) 0 0;
+  font-size: var(--font-size-sm);
+}
+
+.deleteAlternatives {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}

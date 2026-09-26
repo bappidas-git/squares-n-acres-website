@@ -22,6 +22,7 @@
 
 import { schemas } from '../../../services/schemas';
 import { EMAIL_PATTERN, URL_PATTERN, validate } from '../../../utils/validation';
+import { WHATSAPP_PLACEHOLDERS } from '../../../config/leadWhatsapp';
 
 const contract = schemas['settings.update'];
 
@@ -414,6 +415,18 @@ export function validateSettings(values = {}) {
     errors['leads.notificationEmails'] = `“${badEmail}” is not an e-mail address.`;
   }
 
+  // A placeholder the buttons do not know would be sent to the lead as typed,
+  // braces and all (prompt 51).
+  const unknownPlaceholder = (text(leads.whatsappTemplate).match(/\{[^{}]*\}/g) ?? []).find(
+    (token) => !WHATSAPP_PLACEHOLDERS.some((placeholder) => `{${placeholder.key}}` === token)
+  );
+  if (unknownPlaceholder) {
+    errors['leads.whatsappTemplate'] =
+      `${unknownPlaceholder} is not a placeholder — use ${WHATSAPP_PLACEHOLDERS.map(
+        (placeholder) => `{${placeholder.key}}`
+      ).join(', ')}.`;
+  }
+
   return errors;
 }
 
@@ -595,6 +608,7 @@ const FIELD_LABELS = {
   'leads.notificationEmails': 'notification e-mails',
   'leads.autoAssign': 'automatic assignment',
   'leads.defaultPriority': 'default priority',
+  'leads.whatsappTemplate': 'WhatsApp message',
   ...Object.fromEntries(
     Object.entries(INTEGRATION_PATTERNS).map(([field, rule]) => [
       `integrations.${field}`,

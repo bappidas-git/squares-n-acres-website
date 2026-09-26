@@ -460,6 +460,28 @@ const SPECIAL = {
     return { body: { from: folder, to: `${folder}-renamed` }, expect: 200 };
   },
 
+  // A lead the desk enters itself (prompt 51) — as a sales user, whose lead it
+  // then is — removed again afterwards.
+  'adminLeads.create': () => ({
+    body: {
+      name: 'Smoke Desk Lead',
+      phone: '9876543211',
+      source: 'walk-in',
+      note: 'Created by the API smoke test.',
+    },
+    expect: 201,
+    after: (response) => {
+      if (response.json?.data?.id) {
+        created.unshift({ path: `/admin/leads/${response.json.data.id}` });
+      }
+    },
+  }),
+  'adminLeads.logActivity': () => ({
+    path: `/admin/leads/${fixtures.adminLeads?.id}/activities`,
+    body: { type: 'call', outcome: 'Logged by the API smoke test' },
+    skip: fixtures.adminLeads?.id ? false : 'no lead was created',
+  }),
+
   // `resolve` needs a path to resolve, and the seed redirects `/blog`.
   'redirects.resolve': () => ({ path: '/redirects/resolve?path=/blog' }),
 
@@ -786,6 +808,25 @@ async function targetedChecks() {
   if (duplicate.json?.data?.id)
     created.unshift({ path: `/admin/properties/${duplicate.json.data.id}` });
 
+  // The value-carrying bulk actions (prompt 51), on the run's own copy only.
+  const copy = duplicate.json?.data ?? null;
+  if (copy?.id) {
+    const target = copy.availability === 'sold' ? 'reserved' : 'sold';
+    const marked = await api('POST', '/admin/properties/bulk', {
+      token: admin,
+      body: { ids: [copy.id], action: 'availability', payload: { availability: target } },
+    });
+    const refused = await api('POST', '/admin/properties/bulk', {
+      token: admin,
+      body: { ids: [copy.id], action: 'assignAgent', payload: { agentId: 999999 } },
+    });
+    check(
+      'bulk.payload-actions',
+      marked.status === 200 && marked.json?.data?.affected === 1 && refused.status === 422,
+      `got ${marked.status} / ${refused.status}`
+    );
+  }
+
   const bulk = await api('POST', '/admin/properties/bulk', {
     token: admin,
     body: { ids: [999999], action: 'activate' },
@@ -832,6 +873,7 @@ async function targetedChecks() {
     'topProperties',
     'seoHealth',
     'upcomingFollowUps',
+    'overdueCount',
   ];
   const missing = expectedKeys.filter((key) => !(key in (dashboard.json?.data ?? {})));
   check('dashboard.shape', missing.length === 0, `missing ${missing.join(', ')}`);
@@ -839,6 +881,30 @@ async function targetedChecks() {
     'dashboard.trends-30-days',
     (dashboard.json?.data?.trends?.leadsByDay ?? []).length === 30,
     `${(dashboard.json?.data?.trends?.leadsByDay ?? []).length} days`
+  );
+
+  // Overdue follow-ups lead the card, and `range` sizes the series (prompt 51).
+  const followUps = dashboard.json?.data?.upcomingFollowUps ?? [];
+  const firstUpcoming = followUps.findIndex((row) => !row.isOverdue);
+  check(
+    'dashboard.overdue-first',
+    firstUpcoming === -1 || followUps.slice(firstUpcoming).every((row) => !row.isOverdue),
+    `${dashboard.json?.data?.overdueCount ?? '?'} overdue`
+  );
+  const week = await api('GET', '/admin/dashboard?range=7', { token: admin });
+  check(
+    'dashboard.range-7',
+    (week.json?.data?.trends?.leadsByDay ?? []).length === 7,
+    `${(week.json?.data?.trends?.leadsByDay ?? []).length} days`
+  );
+
+  // The worklist's counts ride on the lead list (prompt 51).
+  const worklist = await api('GET', '/admin/leads?perPage=1', { token: admin });
+  const buckets = Object.keys(worklist.json?.meta?.followUp ?? {}).sort();
+  check(
+    'leads.worklist-counts',
+    buckets.join(',') === 'next7,none,overdue,today',
+    `meta.followUp: ${buckets.join(', ') || 'missing'}`
   );
 
   const duplicateSubscriber = await api('POST', '/newsletter/subscribe', {

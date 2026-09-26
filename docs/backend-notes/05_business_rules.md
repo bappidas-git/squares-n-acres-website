@@ -251,15 +251,115 @@ increments the property it names. Use `increment()`, never read-modify-write.
 2. Sets `status: 'new'` and `priority` from `siteSettings.leads.defaultPriority`.
 3. Stores `utm`, `pageUrl`, `ipAddress` and `userAgent` from the request.
 4. Appends `activities[0]`: `{ type: 'created', description: 'Lead created via <source label>' }`.
-5. Increments the named property's `enquiry_count`.
-6. Auto-assigns when `siteSettings.leads.autoAssign === 'round-robin'`:
-   active sales users ordered by id; find the one who got the **most recent**
-   round-robin lead; assign to the next in the ring, wrapping; assign to the
-   first when none has one yet. With no active sales user, leave it unassigned.
+5. Increments the named property's `enquiry_count`, and stores
+   `property_snapshot` — `{ title, slug, localityName }` of the listing as it is
+   now (see "A deleted listing" below).
+6. Assigns it — in this order (prompt 51):
+   - **A repeat enquiry goes to its owner.** When an **open** lead (not
+     converted, not lost) holds the same phone number — normalised to its last
+     ten digits — and was created within **30 days**, the new lead goes to that
+     lead's owner, if they are an active user, skipping the rotation; its
+     `assigned` entry reads "Assigned to Ravi — they hold lead #12 from this
+     number". The older lead gains an `enquired-again` entry: "Enquired again
+     via Property Enquiry about Lakeview Heights — lead #46", and its
+     `updated_at` moves. Both leads are kept — the pair is the audit trail, and
+     `isPossibleDuplicate` links them. A closed older lead, one older than 30
+     days, or one with no owner changes nothing: the lead is assigned as below.
+   - **`autoAssign: 'listing-advisor'`**: the lead's listing names an advisor
+     (`agent.teamMemberId`); when that team member is active and linked
+     (`team_members.user_id`) to an **active sales or manager** account, the
+     lead goes to that account. Otherwise — no listing, no advisor, no link, an
+     inactive account — round robin.
+   - **`autoAssign: 'round-robin'`**: active sales users ordered by id; find
+     the one who got the **most recent** lead among them; assign to the next in
+     the ring, wrapping; assign to the first when none has one yet. A colleague
+     deactivated since is simply out of the ring — the turn passes to the
+     first. With no active sales user, leave it unassigned.
 7. Answers **201** with the stored lead, plus `access`: the token that opens the
    gated files of the listing the lead names, or `null` when it names no active
    listing (see [Gated files](#gated-files)). The token is never stored on the
    lead.
+
+**Leads the desk enters** (prompt 51). `POST /admin/leads` files a walk-in, a
+phone call, a portal lead — any role that works leads. It validates like the
+public form without the honeypot or the rate limit, and takes the `source` it
+is sent (the seven desk sources — `walk-in`, `phone`, `whatsapp-inbound`,
+`referral`, `portal-99acres`, `portal-magicbricks`, `portal-housing` — are
+ordinary members of the enum, filtered and exported like any other; the public
+`POST /leads` refuses them with 422 on `source`, since a visitor's enquiry is
+never a walk-in). A
+`propertyId` must exist (422 on `propertyId`). A **sales** user's lead is
+theirs whatever `assignedTo` says; an admin's or a manager's goes to the active
+user named, or — none named — through step 6's auto-assignment (the repeat
+rule is the public form's). `priority` defaults as the form's does; `note`, when
+sent, becomes the first note. The first activity reads "Added by Admin User —
+Walk-in", credited to the caller. The same number as another lead is allowed:
+the duplicate chip says so.
+
+**Correcting the details** (prompt 51). `PATCH /admin/leads/:id` also takes
+`name`, `phone` (stored as the public form stores it), `email` and
+`requirement`; a change to any of them appends one `details-updated` entry
+naming the fields — "Details updated by Sales User — phone, requirement". A
+sales user may change them on a lead **assigned to them** only (403 otherwise),
+and the status, priority, follow-up and lost reason on any lead in their scope,
+as before.
+
+**Logging a conversation** (prompt 51). `POST /admin/leads/:id/activities
+{ type, outcome?, note? }` — `type` one of `call`, `whatsapp`, `site-visit`,
+`meeting`, `other` — appends a typed entry (`call-logged`, `whatsapp-logged`,
+`site-visit-logged`, `meeting-logged`, `activity-logged`): "Call logged —
+Interested, wants a Saturday visit", with `note` (≤ 2000) kept on the entry.
+Answers 200 with the lead. A status or follow-up that came of the conversation
+is the `PATCH` the panel sends beside it. Every activity carries `note`, `null`
+when there is none.
+
+**The follow-up worklist** (prompt 51). `followUp` filters **open** leads —
+converted and lost ones never match — by where their follow-up stands, as of
+the request: `overdue` (the time has passed), `today` (due later today, IST),
+`next7` (due within the next seven days, today's included) and `none` (no
+follow-up at all). `idleDays=n` keeps the open leads whose `updated_at` is at
+least `n` days old. Every list answer carries `meta.followUp: { overdue, today,
+next7, none }` — the counts over the view with every filter **except**
+`followUp` applied, so the chips keep their numbers while one is chosen:
+`COUNT(*) … WHERE <the other filters> AND status NOT IN ('converted','lost') AND
+follow_up_at < NOW()` and so on.
+
+**A deleted listing** (prompt 51). A lead reads its listing from
+`property_snapshot` once the listing is gone: `property` is `{ id, title:
+"<title> (deleted)", slug: null, deleted: true }`, and the CSV export's
+Property column says the same. Deleting a listing never touches its leads.
+
+**The dashboard's follow-ups** (prompt 51). `upcomingFollowUps` lists the
+overdue ones first — the longest overdue at the top — then what falls due in
+the next fourteen days, ten in all, each with `isOverdue`; `overdueCount`
+counts every overdue one in the caller's scope. `range=7|30|90` sets how many
+days `leadsByDay` and `viewsByDay` cover (30 otherwise).
+
+**The WhatsApp message** (prompt 51). Every admin lead read carries
+`whatsappMessage`: `settings.leads.whatsappTemplate` filled in for that lead —
+its name, its listing's title and public address when the listing is live, the
+name of the colleague it is assigned to, and `general.siteName` — so the list's
+and the lead page's WhatsApp buttons open with the agency's own words. It is
+filled **server-side** because a sales user cannot read the `leads` branch of
+the settings, and the sales desk is who sends it. See [Settings](#settings).
+
+**Handing over a leaver's leads** (prompt 51). Neither deactivating nor
+deleting an account reassigns anything by itself; the panel asks first. Before
+it switches off or deletes somebody, it reads their open leads —
+`GET /admin/leads?assignedTo=<id>&status=new,contacted,qualified,site-visit,negotiation&perPage=all`
+— and, when there are any, offers to hand them to another active sales user
+(`POST /admin/leads/bulk { action: 'assign', payload: { assignedTo } }`) or to
+leave them unassigned (the only offer when nobody else in sales is active) (the same action with `null` before a deactivation; a
+delete unassigns them itself, as below). Only then does it send the
+deactivation or the delete. The API needs nothing new for this; it must keep
+the bulk `assign` honouring `null` and refusing an inactive new owner.
+
+**The test alert** (prompt 51). `POST /admin/settings/test-lead-alert`
+(admin only) sends the lead notification's test message to the **saved**
+`leads.notificationEmails` and answers `{ sentTo, sentAt }`; 422 on
+`leads.notificationEmails` when none is saved. Laravel sends it through the
+configured mailer and answers **502** with the mailer's message when the relay
+refuses — the mock writes it to its console instead (`09_MEDIA_AND_EMAIL.md`).
 
 **Activities are appended, never edited.** A `PATCH` that changes `status`,
 `assignedTo`, `priority` or `followUpAt` appends one entry per field that
@@ -811,6 +911,22 @@ duplicateOf, isActive, status, updatedAt }`. `perPage=all` is allowed.
   (3–300 characters, 422 on `payload.lostReason`), recorded on every lead it
   closes — a lead already lost keeps its own; `assign` takes an integer id or
   `null`, and refuses a deactivated user.
+- Properties add five actions that carry their value in `payload` (prompt 51):
+  `availability { availability }` — one of the availability enum;
+  `assignAgent { agentId }` — an existing, **active** team member, or `null` to
+  name none (it sets `agent.team_member_id` and leaves any contact details typed
+  on the listing alone); `setLocality { localityId }` — an existing locality,
+  which moves the listing's `city_id` with it; `setPropertyType
+{ propertyTypeId }` — an existing type **of the listing's own segment**: a type
+  from another segment refuses the whole batch with 422 on
+  `payload.propertyTypeId` ("Office Space is a commercial type, and 2 of the
+  selected listings are not — change those in the form"), because the fields
+  that differ between segments are only asked for in the form; and
+  `setDeveloper { developerId }` — an existing developer, or `null`. A missing
+  or unknown value is 422 on `payload.<key>` and nothing is written; `affected`
+  counts the listings whose value actually changed, and each of those gets
+  `updated_by`/`updated_at`. The publish rules are not asked — none of these
+  fields is one they read.
 - Run it in one transaction and apply the same per-record rules a single write
   would: a bulk `delete` of master data still respects the guard below, a bulk
   `assign` still refuses a sales user assigning to somebody else, and an
@@ -1049,6 +1165,18 @@ What the Content screens' writes keep, and what a public read shows (QA-61).
   fill in nothing: what the listing typed itself still shows, and with nothing
   typed the site draws no advisor card. Admin reads are unchanged, so the
   property form still names the member and an editor can pick somebody else.
+- **A team member can be linked to an account** (prompt 51). `user_id` —
+  nullable, an existing `admin_users.id` — says who signs in as that advisor;
+  the listing-advisor routing of [Leads](#leads) reads it. It is admin data:
+  the public `GET /team` never shows it.
+- **The Team list counts each member's listings** (prompt 51). Admin reads
+  carry `listingCount` — the properties, drafts included, whose
+  `agent.team_member_id` is the member — sortable as `sort=listingCount`
+  (most first), and `GET /admin/properties?agentId=<id>` lists them. Switching
+  off a member who still answers for listings is asked about in the panel
+  first: it offers to hand them to another active advisor with the properties'
+  `assignAgent` bulk action ([Bulk actions](#bulk-actions)) before it sends the
+  deactivation. A delete stays refused while any listing names the member.
 
 ## FAQs
 
@@ -1125,9 +1253,18 @@ choice is a `segments` row, and an editor can add one — "Industrial",
   bring the lost update back. The response is the whole stored record; the
   screen takes it as its new starting point.
 
+`leads` (prompt 51) holds `autoAssign` — `none`, `round-robin` or
+`listing-advisor` ([Leads](#leads)) — and `whatsappTemplate`, at most 500
+characters, the message the desk's WhatsApp buttons open with: `{name}`,
+`{property}`, `{agent}`, `{link}` and `{brand}` are filled in by the admin (the
+lead's name, the listing's title, the colleague it is with, the listing's
+address, `general.siteName`), and a placeholder with nothing behind it is left
+out. The default is "Hello {name}, this is {brand} following up on your
+enquiry."
+
 `GET /settings` and `GET /seo/settings` are the **public subsets**. The public
-settings response omits `leads` entirely (notification addresses and the
-assignment policy are internal); everything else — including the analytics ids
+settings response omits `leads` entirely (notification addresses, the
+assignment policy and the WhatsApp template are internal); everything else — including the analytics ids
 and the Cloudinary cloud name — is public by nature, since the browser needs it
 to render the page. There is no secret in this model, and none may be added to
 it without a private endpoint to hold it.

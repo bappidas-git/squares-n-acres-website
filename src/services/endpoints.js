@@ -36,6 +36,7 @@ const {
   FAQ_CATEGORIES,
   FURNISHING,
   JOB_APPLICATION_STATUS,
+  LEAD_FOLLOW_UP,
   LEAD_PRIORITY,
   LEAD_SOURCES,
   LEAD_STATUS,
@@ -1013,33 +1014,45 @@ const dashboard = {
     path: '/admin/dashboard',
     auth: 'user',
     module: 'dashboard',
-    description: 'Role-aware dashboard aggregates, trends and recent activity',
-    query: {},
+    description:
+      'Role-aware dashboard aggregates, trends and recent activity; follow-ups due with the overdue ones first and `overdueCount`',
+    // How many days the two trend series cover (prompt 51); 30 by default.
+    query: { range: 'enum:7,30,90' },
     body: null,
     response: 'DashboardData',
     example: null,
   },
 };
 
+const adminPropertyCrud = adminResource({
+  group: 'adminProperties',
+  path: '/admin/properties',
+  module: 'properties',
+  singular: 'property',
+  plural: 'properties',
+  schema: 'property',
+  response: 'Property',
+  withUsage: false,
+  // Sales may read the admin list (read-only) but never write (§7).
+  readAuth: 'user',
+  query: {
+    ...PROPERTY_FILTERS,
+    sort: 'enum:updatedAt,price,viewCount,priorityOrder,title,seoScore',
+    seoScoreBand: enumOf(SEO_SCORE_BANDS),
+    createdBy: 'int',
+    // The listings an advisor answers for (prompt 51).
+    agentId: 'int',
+  },
+});
+
 const adminProperties = {
-  ...adminResource({
-    group: 'adminProperties',
-    path: '/admin/properties',
-    module: 'properties',
-    singular: 'property',
-    plural: 'properties',
-    schema: 'property',
-    response: 'Property',
-    withUsage: false,
-    // Sales may read the admin list (read-only) but never write (§7).
-    readAuth: 'user',
-    query: {
-      ...PROPERTY_FILTERS,
-      sort: 'enum:updatedAt,price,viewCount,priorityOrder,title,seoScore',
-      seoScoreBand: enumOf(SEO_SCORE_BANDS),
-      createdBy: 'int',
-    },
-  }),
+  ...adminPropertyCrud,
+  bulk: {
+    ...adminPropertyCrud.bulk,
+    // Prompt 51: five actions carry their value in `payload`.
+    description:
+      'Apply one action to several properties: activate, deactivate, feature, unfeature, verify, unverify, delete — or availability {availability}, assignAgent {agentId}, setLocality {localityId}, setPropertyType {propertyTypeId}, setDeveloper {developerId}',
+  },
   // The admin read by slug, not by id: a public URL is all the preview link
   // carries, and an inactive listing answers 404 on the public route (§5.10).
   bySlug: {
@@ -1086,9 +1099,39 @@ const adminLeads = {
       propertyId: 'int',
       from: 'date',
       to: 'date',
+      // The worklist (prompt 51): open leads by where their follow-up stands,
+      // and the ones nobody has touched in `idleDays`.
+      followUp: enumOf(LEAD_FOLLOW_UP),
+      idleDays: 'int',
     },
     body: null,
     response: 'LeadList',
+    example: 1,
+  },
+  create: {
+    key: 'adminLeads.create',
+    method: 'POST',
+    path: '/admin/leads',
+    auth: 'user',
+    module: 'leads',
+    description:
+      'Enter a lead by hand — a walk-in, a call, a portal lead; a sales user’s lead is their own, anyone else’s goes to the colleague named or is auto-assigned',
+    query: {},
+    body: 'lead.adminCreate',
+    response: 'Lead',
+    example: null,
+  },
+  logActivity: {
+    key: 'adminLeads.logActivity',
+    method: 'POST',
+    path: '/admin/leads/:id/activities',
+    auth: 'user',
+    module: 'leads',
+    description:
+      'Log a call, a WhatsApp, a site visit, a meeting or another conversation on the lead’s timeline',
+    query: {},
+    body: 'lead.activity',
+    response: 'Lead',
     example: 1,
   },
   get: {
@@ -1184,6 +1227,8 @@ const adminLeads = {
       propertyId: 'int',
       from: 'date',
       to: 'date',
+      followUp: enumOf(LEAD_FOLLOW_UP),
+      idleDays: 'int',
     },
     body: null,
     response: 'Csv',
@@ -1388,6 +1433,12 @@ const adminTeam = adminResource({
   response: 'TeamMember',
   query: { showOnAbout: 'bool' },
 });
+// An admin read counts the listings naming the member (`listingCount`, prompt
+// 51) — `sort=listingCount` orders the Team list by it.
+adminTeam.list = {
+  ...adminTeam.list,
+  description: `${adminTeam.list.description}; each row carries \`listingCount\`, the listings naming the member as their advisor`,
+};
 
 const adminPartners = adminResource({
   group: 'adminPartners',
@@ -1730,6 +1781,20 @@ const adminSettings = {
     query: {},
     body: 'settings.update',
     response: 'Settings',
+    example: null,
+  },
+  // "Send a test alert" beside the notification addresses (prompt 51).
+  testLeadAlert: {
+    key: 'adminSettings.testLeadAlert',
+    method: 'POST',
+    path: '/admin/settings/test-lead-alert',
+    auth: 'admin',
+    module: 'settings',
+    description:
+      'Send a test lead alert to the saved notification addresses; answers `sentTo` — 422 when none is saved, 502 when the mailer refuses',
+    query: {},
+    body: null,
+    response: 'LeadAlertTest',
     example: null,
   },
 };

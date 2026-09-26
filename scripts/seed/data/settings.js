@@ -19,6 +19,7 @@
  */
 
 const { BRAND } = require('../lib/media');
+const { DEFAULT_WHATSAPP_TEMPLATE } = require('../../../src/config/leadWhatsapp');
 
 const ROBOTS_TXT = `User-agent: *
 Allow: /
@@ -227,6 +228,7 @@ module.exports = function settings({ media, dates }) {
     leads: {
       notificationEmails: ['info@squaresnacres.com'],
       autoAssign: 'none',
+      whatsappTemplate: DEFAULT_WHATSAPP_TEMPLATE,
       defaultPriority: 'medium',
     },
     updatedAt,

@@ -283,7 +283,7 @@ const SEO = {
 
 const DASHBOARD = {
   leadsEmpty: 'No leads yet.',
-  followUpsEmpty: 'Nothing is due in the next two weeks.',
+  followUpsEmpty: 'Nothing is overdue, and nothing is due in the next two weeks.',
   propertiesEmpty: 'No listings have been viewed yet.',
   viewAll: 'View all',
 };

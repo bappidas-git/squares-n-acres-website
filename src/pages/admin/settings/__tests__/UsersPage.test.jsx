@@ -17,6 +17,7 @@ import userEvent from '@testing-library/user-event';
 import ToastProvider from '../../../../components/common/ToastProvider';
 import UsersPage, { PASSWORD_RULE, passwordProblem } from '../UsersPage';
 import authService from '../../../../services/authService';
+import leadService from '../../../../services/leadService';
 import renderWith from '../../../../test-utils';
 import storage from '../../../../utils/storage';
 import userService from '../../../../services/userService';
@@ -24,6 +25,10 @@ import { AUTH_STORAGE_KEYS, clearSession } from '../../../../services/http';
 import { AdminAuthProvider } from '../../../../contexts/AdminAuthContext';
 
 jest.mock('../../../../services/authService');
+jest.mock('../../../../services/leadService', () => ({
+  __esModule: true,
+  default: { adminList: jest.fn(), bulk: jest.fn() },
+}));
 jest.mock('../../../../services/userService', () => ({
   __esModule: true,
   default: {
@@ -115,7 +120,25 @@ beforeEach(() => {
   userService.create.mockImplementation(async (body) => ({ data: { ...body, id: 9 } }));
   userService.update.mockImplementation(async (id, body) => ({ data: { ...ADMIN, ...body, id } }));
   userService.patch.mockResolvedValue({ data: SALES });
+  userService.remove.mockResolvedValue({ data: null, message: 'Deleted' });
+  leadService.adminList.mockResolvedValue(envelope([]));
+  leadService.bulk.mockResolvedValue({ data: { affected: 2 }, message: '2 leads updated.' });
 });
+
+/** A second salesperson, to hand the leads to. */
+const PRIYA = {
+  ...SALES,
+  id: 4,
+  name: 'Priya Sales',
+  email: 'priya@squaresnacres.com',
+  phone: '9880000013',
+};
+
+/** Sales User holds two open leads; nobody else holds any. */
+const salesHoldsLeads = () =>
+  leadService.adminList.mockImplementation(async (query) =>
+    envelope(query.assignedTo === '3' ? [{ id: 11 }, { id: 12 }] : [])
+  );
 
 describe('passwordProblem', () => {
   it('asks for eight characters with a letter and a digit, as the API does', () => {
@@ -155,6 +178,116 @@ describe('UsersPage (QA-64)', () => {
     await click(await screen.findByRole('switch', { name: 'Sales User is active' }));
 
     expect(await screen.findByText('“Sales User” can no longer sign in')).toBeInTheDocument();
+  });
+
+  it('hands a leaver’s open leads to another salesperson before switching them off', async () => {
+    salesHoldsLeads();
+    userService.list.mockResolvedValue(envelope([ADMIN, SALES, PRIYA]));
+    userService.patch.mockResolvedValue({ data: { ...SALES, isActive: false } });
+    renderPage();
+
+    await click(await screen.findByRole('switch', { name: 'Sales User is active' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Deactivate Sales User?' });
+    expect(within(dialog).getByText(/has 2 open leads/)).toBeInTheDocument();
+    expect(leadService.adminList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        assignedTo: '3',
+        status: ['new', 'contacted', 'qualified', 'site-visit', 'negotiation'],
+        perPage: 'all',
+      })
+    );
+    expect(userService.patch).not.toHaveBeenCalled();
+
+    // The sales desk takes them over: the admin is not offered.
+    await waitFor(() => expect(within(dialog).getByLabelText(/^Salesperson/)).toHaveValue('4'));
+    expect(within(dialog).queryByRole('option', { name: 'Admin User' })).not.toBeInTheDocument();
+    await click(within(dialog).getByRole('button', { name: 'Hand over and deactivate' }));
+
+    await waitFor(() => expect(userService.patch).toHaveBeenCalledWith(3, { isActive: false }));
+    expect(leadService.bulk).toHaveBeenCalledWith({
+      ids: [11, 12],
+      action: 'assign',
+      payload: { assignedTo: 4 },
+    });
+    expect(leadService.bulk.mock.invocationCallOrder[0]).toBeLessThan(
+      userService.patch.mock.invocationCallOrder[0]
+    );
+    expect(await screen.findByText('2 leads are now Priya Sales’s.')).toBeInTheDocument();
+  });
+
+  it('unassigns the leads of somebody switched off when asked to', async () => {
+    salesHoldsLeads();
+    userService.patch.mockResolvedValue({ data: { ...SALES, isActive: false } });
+    renderPage();
+
+    await click(await screen.findByRole('switch', { name: 'Sales User is active' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Deactivate Sales User?' });
+    await click(within(dialog).getByRole('radio', { name: 'Leave them unassigned' }));
+    await click(within(dialog).getByRole('button', { name: 'Unassign and deactivate' }));
+
+    await waitFor(() => expect(userService.patch).toHaveBeenCalledWith(3, { isActive: false }));
+    expect(leadService.bulk).toHaveBeenCalledWith({
+      ids: [11, 12],
+      action: 'assign',
+      payload: { assignedTo: null },
+    });
+  });
+
+  it('deletes a leaver as before when the leads are left unassigned', async () => {
+    salesHoldsLeads();
+    renderPage();
+
+    await click(await screen.findByRole('button', { name: 'Delete Sales User' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Delete Sales User?' });
+    expect(within(dialog).getByText(/This cannot be undone/)).toBeInTheDocument();
+    await click(within(dialog).getByRole('radio', { name: 'Leave them unassigned' }));
+    await click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(userService.remove).toHaveBeenCalledWith(3));
+    // The API unassigns a deleted account's leads itself.
+    expect(leadService.bulk).not.toHaveBeenCalled();
+  });
+
+  it('offers only “Leave them unassigned” when nobody else in sales is active', async () => {
+    salesHoldsLeads();
+    userService.patch.mockResolvedValue({ data: { ...SALES, isActive: false } });
+    renderPage();
+
+    await click(await screen.findByRole('switch', { name: 'Sales User is active' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Deactivate Sales User?' });
+    await waitFor(() =>
+      expect(within(dialog).getByText(/Nobody else in sales is active/)).toBeInTheDocument()
+    );
+    expect(within(dialog).getAllByRole('radio')).toHaveLength(1);
+    expect(within(dialog).getByRole('radio', { name: 'Leave them unassigned' })).toBeChecked();
+    await click(within(dialog).getByRole('button', { name: 'Unassign and deactivate' }));
+
+    await waitFor(() => expect(userService.patch).toHaveBeenCalledWith(3, { isActive: false }));
+    expect(leadService.bulk).toHaveBeenCalledWith({
+      ids: [11, 12],
+      action: 'assign',
+      payload: { assignedTo: null },
+    });
+  });
+
+  it('keeps the account when the hand-over is refused', async () => {
+    salesHoldsLeads();
+    userService.list.mockResolvedValue(envelope([ADMIN, SALES, PRIYA]));
+    leadService.bulk.mockRejectedValue(
+      Object.assign(new Error('The given data was invalid.'), {
+        status: 422,
+        errors: { 'payload.assignedTo': ['The selected user is inactive.'] },
+      })
+    );
+    renderPage();
+
+    await click(await screen.findByRole('switch', { name: 'Sales User is active' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Deactivate Sales User?' });
+    await waitFor(() => expect(within(dialog).getByLabelText(/^Salesperson/)).toHaveValue('4'));
+    await click(within(dialog).getByRole('button', { name: 'Hand over and deactivate' }));
+
+    expect(await within(dialog).findByText('The selected user is inactive.')).toBeInTheDocument();
+    expect(userService.patch).not.toHaveBeenCalled();
   });
 
   it('refuses a new account whose password is letters only, before any request', async () => {

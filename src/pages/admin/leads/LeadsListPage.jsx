@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
+import { useNavigate } from 'react-router-dom';
 
 import AssignDialog from './AssignDialog';
 import Button from '../../../components/ui/Button';
@@ -15,6 +16,10 @@ import DataTable from '../../../components/admin/DataTable';
 // (`components/admin/index.js` says the same).
 import FilterBar from '../../../components/admin/FilterBar';
 import EntityPicker from '../../../components/admin/EntityPicker';
+// After the picker, for the same reason: the lead page, which shares this
+// chunk, reaches the lead page's stylesheet only after the list's, the table's
+// and the picker's.
+import AddLeadDialog from './AddLeadDialog';
 import LostReasonDialog from './LostReasonDialog';
 import PATHS from '../../../routes/paths';
 import PageHeader from '../../../components/admin/PageHeader';
@@ -31,6 +36,7 @@ import {
   exportParamsOf,
   hasActiveFilters,
   useAssignableUsers,
+  useLeadDirectory,
 } from './leadFilters';
 import { LEAD_PRIORITY, LEAD_STATUS } from '../../../config/enums';
 import { csvFileName } from '../../../utils/csv';
@@ -65,6 +71,16 @@ const BULK_ACTIONS = [
 
 const rowLabel = (row) => row.name;
 
+/**
+ * The worklist chips above the table (prompt 51): the follow-up buckets a desk
+ * works through every morning, counted from `meta.followUp`, and "Mine".
+ */
+const WORKLIST = [
+  { key: 'overdue', label: 'Overdue', icon: 'mdi:alarm-note', tone: 'error' },
+  { key: 'today', label: 'Due today', icon: 'mdi:calendar-today', tone: 'warning' },
+  { key: 'none', label: 'No next step', icon: 'mdi:calendar-question', tone: 'neutral' },
+];
+
 /** Whether the view is the "N new" chip's own: status New and nothing else. */
 const isNewOnly = (status) =>
   Array.isArray(status) && status.length === 1 && String(status[0]) === 'new';
@@ -95,6 +111,7 @@ const isNewOnly = (status) =>
 export default function LeadsListPage() {
   const { can } = useAdminAuth();
   const toast = useToast();
+  const navigate = useNavigate();
   const {
     newLeadCount,
     refreshKey,
@@ -110,6 +127,9 @@ export default function LeadsListPage() {
   const canClaim = can('leads', 'claim');
 
   const { users } = useAssignableUsers({ enabled: canAssign });
+  // The Assigned filter names deactivated colleagues too (prompt 51).
+  const { users: directory } = useLeadDirectory({ enabled: canAssign });
+  const [adding, setAdding] = useState(false);
 
   const {
     items,
@@ -433,7 +453,7 @@ export default function LeadsListPage() {
   const filterFields = useMemo(
     () =>
       buildLeadFilterFields({
-        users,
+        users: directory.length > 0 ? directory : users,
         canAssign,
         propertyTitle: (id) =>
           knownProperties.find((property) => String(property.id) === String(id))?.title ?? null,
@@ -453,7 +473,7 @@ export default function LeadsListPage() {
           />
         ),
       }),
-    [users, canAssign, knownProperties, searchProperties]
+    [directory, users, canAssign, knownProperties, searchProperties]
   );
 
   /* ---------------- states ---------------- */
@@ -512,6 +532,9 @@ export default function LeadsListPage() {
 
   /* ---------------- dialogs ---------------- */
 
+  const worklist = meta?.followUp ?? null;
+  const mine = params.assignedTo === 'me';
+
   const bulkTarget = statusDialog ?? assignDialog ?? priorityDialog;
   const targetCount = bulkTarget?.ids?.length ?? 0;
   const targetLabel = `${targetCount} ${targetCount === 1 ? 'lead' : 'leads'}`;
@@ -560,11 +583,49 @@ export default function LeadsListPage() {
                 Export CSV{typeof total === 'number' ? ` (${formatNumber(total)})` : ''}
               </Button>
             ) : null}
+            <Button
+              icon={<Icon icon="mdi:account-plus-outline" width="18" height="18" />}
+              onClick={() => setAdding(true)}
+            >
+              Add lead
+            </Button>
           </>
         }
       />
 
       <div className={styles.screen}>
+        {/* The morning's work, one press each (prompt 51). The counts are the
+            view's, every other filter applied. */}
+        <div className={styles.worklist} role="group" aria-label="Follow-up worklist">
+          {WORKLIST.map((bucket) => {
+            const on = params.followUp === bucket.key;
+            const count = worklist?.[bucket.key];
+            return (
+              <Chip
+                key={bucket.key}
+                tone={bucket.tone}
+                selected={on}
+                pressed={on}
+                icon={<Icon icon={bucket.icon} width="14" height="14" />}
+                onClick={() => setFilters({ followUp: on ? undefined : bucket.key })}
+              >
+                {typeof count === 'number'
+                  ? `${bucket.label} (${formatNumber(count)})`
+                  : bucket.label}
+              </Chip>
+            );
+          })}
+          <Chip
+            tone="info"
+            selected={mine}
+            pressed={mine}
+            icon={<Icon icon="mdi:account-outline" width="14" height="14" />}
+            onClick={() => setFilters({ assignedTo: mine ? undefined : 'me' })}
+          >
+            Mine
+          </Chip>
+        </div>
+
         <FilterBar
           fields={filterFields}
           values={params}
@@ -694,6 +755,19 @@ export default function LeadsListPage() {
               : `“${target.row.name}” is unassigned.`,
             { assignedTo, assignedUser: owner ? { id: owner.id, name: owner.name } : null }
           );
+        }}
+      />
+
+      <AddLeadDialog
+        open={adding}
+        canAssign={canAssign}
+        users={users}
+        onClose={() => setAdding(false)}
+        onCreated={(lead) => {
+          setAdding(false);
+          toast.success(`“${lead.name}” is in the leads.`);
+          afterWrite();
+          navigate(PATHS.adminLead(lead.id));
         }}
       />
 

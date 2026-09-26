@@ -237,6 +237,14 @@ const teamMember = {
   order: { type: 'int', min: 0, default: 0 },
   isActive: { type: 'bool', default: true },
   showOnAbout: { type: 'bool', default: true },
+  // The admin account behind the card (prompt 51): a lead about one of their
+  // listings goes to it when "the listing's advisor" assigns leads.
+  userId: {
+    type: 'int',
+    nullable: true,
+    default: null,
+    exists: { collection: 'adminUsers', field: 'id' },
+  },
 };
 
 const partner = {

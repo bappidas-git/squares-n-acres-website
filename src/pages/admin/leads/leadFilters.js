@@ -16,7 +16,7 @@
 import { DEFAULT_PER_PAGE } from '../../../components/admin/DataTable';
 import useApi from '../../../hooks/useApi';
 import userService from '../../../services/userService';
-import { LEAD_PRIORITY, LEAD_SOURCES, LEAD_STATUS } from '../../../config/enums';
+import { LEAD_FOLLOW_UP, LEAD_PRIORITY, LEAD_SOURCES, LEAD_STATUS } from '../../../config/enums';
 
 /** What the table asks for before anybody touches a control (§5.6, D47). */
 export const LEAD_LIST_DEFAULTS = {
@@ -40,6 +40,9 @@ export const LEAD_LIST_PARAM_KEYS = {
   propertyId: 'string',
   from: 'string',
   to: 'string',
+  // The worklist (prompt 51).
+  followUp: 'string',
+  idleDays: 'int',
   sort: 'string',
   order: 'string',
   page: 'int',
@@ -56,6 +59,8 @@ export const LEAD_FILTER_KEYS = [
   'propertyId',
   'from',
   'to',
+  'followUp',
+  'idleDays',
 ];
 
 const isSet = (value) =>
@@ -109,7 +114,28 @@ export function useAssignableUsers({ enabled = true } = {}) {
   return { users: Array.isArray(data) ? data : [], loading };
 }
 
-/** `Me`, `Unassigned` and — for the roles that may assign — every colleague. */
+/**
+ * Everyone who has held leads — the deactivated colleagues too, for the
+ * Assigned filter (prompt 51): the leads of somebody who has left are exactly
+ * the ones that need finding, and an active-only list hid them.
+ *
+ * @param {{enabled?: boolean}} [options]
+ * @returns {{users: Array<object>, loading: boolean}}
+ */
+export function useLeadDirectory({ enabled = true } = {}) {
+  const { data, loading } = useApi(
+    (signal) => userService.list({ perPage: 'all' }, { signal }),
+    [],
+    { enabled, initialData: [] }
+  );
+
+  return { users: Array.isArray(data) ? data : [], loading };
+}
+
+/**
+ * `Me`, `Unassigned` and — for the roles that may assign — every colleague,
+ * a deactivated one as "Ravi (inactive)".
+ */
 export function assigneeOptions({ users = [], canAssign = false } = {}) {
   const options = [
     { value: 'me', label: 'Me' },
@@ -117,7 +143,13 @@ export function assigneeOptions({ users = [], canAssign = false } = {}) {
   ];
   if (!canAssign) return options;
 
-  return [...options, ...users.map((user) => ({ value: String(user.id), label: user.name }))];
+  return [
+    ...options,
+    ...users.map((user) => ({
+      value: String(user.id),
+      label: user.isActive === false ? `${user.name} (inactive)` : user.name,
+    })),
+  ];
 }
 
 /**
@@ -178,6 +210,13 @@ export function buildLeadFilterFields({
       label: 'Assigned',
       placeholder: 'Anyone',
       options: assigneeOptions({ users, canAssign }),
+    },
+    {
+      key: 'followUp',
+      type: 'select',
+      label: 'Follow-up',
+      placeholder: 'Any follow-up',
+      options: LEAD_FOLLOW_UP.options,
     },
     {
       key: 'created',

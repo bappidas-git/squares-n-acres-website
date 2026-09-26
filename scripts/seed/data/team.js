@@ -20,6 +20,14 @@ const DESIGNATIONS = [
   'Client Relations (placeholder)',
 ];
 
+/**
+ * The admin account behind each card, by team member number (prompt 51): the
+ * two advisors who answer for listings are linked to the two accounts that
+ * work leads — the seed's one sales user and its manager — so "the listing's
+ * advisor" routing has somebody to route to.
+ */
+const LINKED_USERS = { 2: 3, 3: 2 };
+
 module.exports = function team({ stamps, media }) {
   return DESIGNATIONS.map((designation, index) => {
     const number = index + 1;
@@ -56,6 +64,7 @@ module.exports = function team({ stamps, media }) {
       order: number,
       isActive: true,
       showOnAbout: true,
+      userId: LINKED_USERS[number] ?? null,
       ...stamps({ createdDaysAgo: 164 }),
     };
   });

@@ -497,8 +497,21 @@ const RESOURCES = [
     schema: 'teamMember',
     noun: { one: 'team member', many: 'team members' },
     deleteGuard: 'teamMember',
+    needs: ['properties'],
+    // How many listings name the member as their advisor, drafts included —
+    // the Team list's "Listings" column, and what deactivating them affects
+    // (prompt 51). The public read keeps it to itself.
+    afterRead: (record, { admin, collections }) =>
+      admin
+        ? {
+            ...record,
+            listingCount: (collections.properties ?? []).filter((property) =>
+              sameId(property.agent?.teamMemberId, record.id)
+            ).length,
+          }
+        : record,
     publicFilters: { showOnAbout: { field: 'showOnAbout', type: 'bool' } },
-    sorts: { order: 'order,name', name: 'name' },
+    sorts: { order: 'order,name', name: 'name', listingCount: '-listingCount' },
     defaultSort: 'order',
     settleOrder: true,
   },

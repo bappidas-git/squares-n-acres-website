@@ -223,7 +223,10 @@ describe('GET /admin/leads', () => {
 
       const newest = await request('GET', '/admin/leads?perPage=all', { token });
       assert.deepEqual(ids(newest), [1, 2, 4, 3, 5, 6]);
-      assert.deepEqual(newest.body.meta, { page: 1, perPage: 6, total: 6, totalPages: 1 });
+      const { followUp, ...paging } = newest.body.meta;
+      assert.deepEqual(paging, { page: 1, perPage: 6, total: 6, totalPages: 1 });
+      // The worklist's counts ride on every list answer (prompt 51).
+      assert.deepEqual(Object.keys(followUp).sort(), ['next7', 'none', 'overdue', 'today']);
 
       const oldest = await request('GET', '/admin/leads?sort=createdAt&order=asc&perPage=2', {
         token,

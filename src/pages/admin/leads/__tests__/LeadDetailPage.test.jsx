@@ -28,6 +28,7 @@ jest.mock('../../../../services/leadService', () => ({
     removeNote: jest.fn(),
     claim: jest.fn(),
     remove: jest.fn(),
+    logActivity: jest.fn(),
   },
 }));
 
@@ -169,8 +170,10 @@ describe('LeadDetailPage', () => {
     await screen.findByRole('heading', { level: 1, name: 'Ananya Rao' });
 
     const headings = screen.getAllByRole('heading', { level: 2 }).map((node) => node.textContent);
-    expect(headings.slice(0, 5)).toEqual([
+    expect(headings.slice(0, 6)).toEqual([
       'Contact',
+      // The desk's primary flow since prompt 51, first among the decisions.
+      'Log activity',
       'Pipeline',
       'Priority',
       'Assigned to',
@@ -239,6 +242,103 @@ describe('LeadDetailPage', () => {
       expect.objectContaining({ isActive: true }),
       expect.anything()
     );
+  });
+
+  it('corrects a mistyped number, sending only what changed', async () => {
+    render();
+    await screen.findByRole('heading', { level: 1, name: 'Ananya Rao' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit details' }));
+    const phone = screen.getByLabelText(/^Phone/);
+    await userEvent.clear(phone);
+    await userEvent.type(phone, '98765 00199');
+    await userEvent.click(screen.getByRole('button', { name: 'Save details' }));
+
+    await waitFor(() =>
+      expect(leadService.patch).toHaveBeenCalledWith('1', { phone: '+919876500199' })
+    );
+    expect(await screen.findByText('The details are saved.')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Save details' })).not.toBeInTheDocument()
+    );
+  });
+
+  it('lets a sales user correct their own lead, and nobody else’s', async () => {
+    mockRole = 'sales';
+    leadService.adminGet.mockResolvedValue({
+      data: { ...LEAD, assignedTo: 1, assignedUser: { id: 1, name: 'Admin User' } },
+    });
+    const { unmount } = render();
+    await screen.findByRole('heading', { level: 1, name: 'Ananya Rao' });
+    expect(screen.getByRole('button', { name: 'Edit details' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit requirement' })).toBeInTheDocument();
+    unmount();
+
+    leadService.adminGet.mockResolvedValue({
+      data: { ...LEAD, assignedTo: 3, assignedUser: { id: 3, name: 'Sales User' } },
+    });
+    render();
+    await screen.findByRole('heading', { level: 1, name: 'Ananya Rao' });
+    expect(screen.queryByRole('button', { name: 'Edit details' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit requirement' })).not.toBeInTheDocument();
+  });
+
+  it('logs the call first and the status it led to after, with one toast', async () => {
+    leadService.logActivity.mockResolvedValue({ data: LEAD });
+    render();
+    await screen.findByRole('heading', { level: 1, name: 'Ananya Rao' });
+
+    await userEvent.type(screen.getByLabelText('How it went'), 'Wants a Saturday visit');
+    await userEvent.selectOptions(screen.getByLabelText('Status now'), 'contacted');
+    await userEvent.click(screen.getByRole('button', { name: 'Log call' }));
+
+    expect(await screen.findByText('Call logged. Now Contacted.')).toBeInTheDocument();
+    expect(leadService.logActivity).toHaveBeenCalledWith('1', {
+      type: 'call',
+      outcome: 'Wants a Saturday visit',
+      note: null,
+    });
+    expect(leadService.patch).toHaveBeenCalledWith('1', { status: 'contacted' });
+    expect(leadService.logActivity.mock.invocationCallOrder[0]).toBeLessThan(
+      leadService.patch.mock.invocationCallOrder[0]
+    );
+    await waitFor(() => expect(screen.getByLabelText('How it went')).toHaveValue(''));
+  });
+
+  it('says the call was logged when the change after it is refused', async () => {
+    leadService.logActivity.mockResolvedValue({ data: LEAD });
+    leadService.patch.mockRejectedValue(
+      new ApiError({ status: 422, message: 'The given data was invalid.', errors: {} })
+    );
+    render();
+    await screen.findByRole('heading', { level: 1, name: 'Ananya Rao' });
+
+    await userEvent.type(screen.getByLabelText('How it went'), 'No answer');
+    await userEvent.selectOptions(screen.getByLabelText('Status now'), 'contacted');
+    await userEvent.click(screen.getByRole('button', { name: 'Log call' }));
+
+    expect(
+      await screen.findByText(/^Call logged, but the change was not saved/)
+    ).toBeInTheDocument();
+    // Kept, so the change can be tried again without typing it twice.
+    expect(screen.getByLabelText('How it went')).toHaveValue('No answer');
+  });
+
+  it('keeps the name of a listing that has since been deleted', async () => {
+    leadService.adminGet.mockResolvedValue({
+      data: {
+        ...LEAD,
+        propertyId: 9,
+        property: { id: 9, title: 'Lakeview Heights (deleted)', slug: null, deleted: true },
+      },
+    });
+    render();
+    await screen.findByRole('heading', { level: 1, name: 'Ananya Rao' });
+
+    const card = screen.getByRole('region', { name: 'Enquired about' });
+    expect(within(card).getByText('Lakeview Heights (deleted)')).toBeInTheDocument();
+    expect(within(card).getByText(/The listing has been deleted/)).toBeInTheDocument();
+    expect(within(card).queryByRole('link')).not.toBeInTheDocument();
   });
 
   it('leaves no way Back to a lead it has deleted', async () => {

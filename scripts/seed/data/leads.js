@@ -682,6 +682,7 @@ module.exports = function leads({ media: _media, lookup, dates }) {
         id: activities.length + 1,
         type,
         description,
+        note: null,
         createdBy,
         createdAt: after(minutes),
       });
@@ -784,6 +785,18 @@ module.exports = function leads({ media: _media, lookup, dates }) {
       message: entry.message ?? null,
       source,
       propertyId: property ? property.id : null,
+      // What the listing was called when the lead arrived (prompt 51), so a
+      // lead still names it once the listing is deleted.
+      propertySnapshot: property
+        ? {
+            title: property.title,
+            slug: property.slug,
+            localityName:
+              Object.values(lookup.localities).find(
+                (locality) => locality.id === property.location?.localityId
+              )?.name ?? null,
+          }
+        : null,
       articleId: entry.article ? lookup.articleSlugs[entry.article] : null,
       pageSlug,
       pageUrl,

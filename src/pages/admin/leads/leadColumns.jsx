@@ -16,6 +16,8 @@ import {
   whatsappLink,
 } from '../../../utils/format';
 import { localPhoneDigits } from '../../../utils/validators';
+import { DEFAULT_WHATSAPP_TEMPLATE, fillWhatsappTemplate } from '../../../config/leadWhatsapp';
+import { SITE } from '../../../config/site';
 
 import styles from './LeadsListPage.module.css';
 
@@ -48,9 +50,14 @@ export function isFollowUpOverdue(lead, now = Date.now()) {
   return Number.isFinite(due) && due < now;
 }
 
-/** The message a WhatsApp click opens with — the lead's name and ours. */
+/**
+ * The message a WhatsApp click opens with (prompt 51): the one the API filled
+ * in from `settings.leads.whatsappTemplate`, or the default template with the
+ * site's name for an API that does not send one.
+ */
 export const leadWhatsappMessage = (lead) =>
-  `Hello${lead?.name ? ` ${lead.name}` : ''}, this is Squares N Acres following up on your enquiry.`;
+  lead?.whatsappMessage ||
+  fillWhatsappTemplate(DEFAULT_WHATSAPP_TEMPLATE, { name: lead?.name, brand: SITE.name });
 
 /** `https://wa.me/…`, or `''` when the record has no usable number. */
 export const leadWhatsappLink = (lead) => whatsappLink(lead?.phone, leadWhatsappMessage(lead));

@@ -5,15 +5,26 @@
  *   POST   /api/leads                        the site's forms, throttled; a lead
  *                                            about a listing also opens its gated
  *                                            files (`access`, lib/fileAccess.js)
- *   GET    /api/admin/leads                  filters, sales scope, pagination
+ *   GET    /api/admin/leads                  filters, sales scope, pagination;
+ *                                            `meta.followUp` counts the worklist
+ *   POST   /api/admin/leads                  an enquiry the desk enters itself
  *   GET    /api/admin/leads/export           the same list as CSV
  *   GET    /api/admin/leads/:id
- *   PATCH  /api/admin/leads/:id              status, priority, follow-up, owner
+ *   PATCH  /api/admin/leads/:id              status, priority, follow-up, owner,
+ *                                            and the contact details
  *   DELETE /api/admin/leads/:id              admins and managers only
  *   POST   /api/admin/leads/:id/claim        a sales user takes an open lead
  *   POST   /api/admin/leads/:id/notes
  *   DELETE /api/admin/leads/:id/notes/:noteId
+ *   POST   /api/admin/leads/:id/activities   a call, a visit, a meeting — logged
  *   POST   /api/admin/leads/bulk             status | assign | priority | delete
+ *
+ * Prompt 51 made the desk's own work part of the record: a lead entered by
+ * hand, the details it corrects, the conversations it logs. A second enquiry
+ * from a number whose open lead is under thirty days old goes to that lead's
+ * owner, and the older lead's timeline says so. A lead keeps a snapshot of
+ * the listing it named, so it still says what it was about once the listing
+ * is gone.
  *
  * Two rules run through all of it. **Scope** (D15): a sales user sees, edits,
  * claims and exports the leads assigned to them and the ones nobody has taken,
@@ -33,24 +44,30 @@ const schemas = require('../../src/services/schemas');
 const { formatBhk, formatPriceRange } = require('../../src/utils/format');
 const { toCsv } = require('../lib/csv');
 const {
+  LEAD_CONTACT_TYPES,
   LEAD_PRIORITY,
   LEAD_SOURCES,
   LEAD_STATUS,
   LEGACY_LEAD_SOURCE_MAP,
   LISTING_TYPES,
   REQUIREMENT_TIMELINES,
+  SITE_LEAD_SOURCES,
 } = require('../lib/enums');
 const {
   applyLeadFilters,
   applyLeadSort,
   buildDuplicateIndex,
+  followUpCounts,
+  isOpenLead,
   isPossibleDuplicate,
+  leadPhoneKey,
   normalizeLeadPhone,
 } = require('../lib/leadFilters');
 const { canSeeLead, omit, scopeLeads } = require('../lib/scope');
 const { clientIp, rateLimit } = require('../middleware/rateLimit');
 const { conflict, forbidden, notFound, validation } = require('../middleware/errors');
-const { embedLead } = require('../lib/embed');
+const { embedLead, leadProperty, propertySnapshotOf } = require('../lib/embed');
+const { fillWhatsappTemplate } = require('../../src/config/leadWhatsapp');
 const { issueAccess } = require('../lib/fileAccess');
 const { istDateTime, istDay } = require('../lib/ist');
 const { nextId } = require('../lib/ids');
@@ -61,6 +78,7 @@ const {
   addActivity,
   describeAssignment,
   describeCreated,
+  describeDetailsUpdate,
   describeFollowUp,
   describePriorityChange,
   describeStatusChange,
@@ -69,8 +87,24 @@ const {
 /** §5.11: ten submissions a minute per IP, on every public write. */
 const SUBMISSIONS_PER_MINUTE = 10;
 
-/** The fields a sales user may change on a lead they hold (§7, D15). */
-const SALES_PATCHABLE = ['status', 'priority', 'followUpAt', 'lostReason'];
+/** What a lead captured about the person, which the desk may correct (prompt 51). */
+const DETAIL_FIELDS = ['name', 'phone', 'email', 'requirement'];
+
+/**
+ * The fields a sales user may change on a lead they hold (§7, D15) — the
+ * details only on a lead assigned to them (prompt 51).
+ */
+const SALES_PATCHABLE = ['status', 'priority', 'followUpAt', 'lostReason', ...DETAIL_FIELDS];
+
+/**
+ * How recent an open lead from the same number must be for a new enquiry to
+ * go to its owner rather than round the rotation (prompt 51).
+ */
+const REPEAT_WINDOW_DAYS = 30;
+const REPEAT_WINDOW_MS = REPEAT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+
+/** The roles a listing's advisor may be linked to and still receive leads (prompt 51). */
+const ADVISOR_ROLES = new Set(['sales', 'manager']);
 
 /** `POST /admin/leads/bulk` (§5.14). */
 const BULK_ACTIONS = ['status', 'assign', 'priority', 'delete'];
@@ -242,7 +276,11 @@ module.exports = ({ db, getModel }) => {
   const present = (lead, { admin = true, list = false, collections = source() } = {}) => {
     const embedded = embedLead(lead, collections);
     const scoped = admin
-      ? { ...embedded, isPossibleDuplicate: isPossibleDuplicate(lead, collections.duplicates) }
+      ? {
+          ...embedded,
+          isPossibleDuplicate: isPossibleDuplicate(lead, collections.duplicates),
+          whatsappMessage: whatsappMessageOf(embedded),
+        }
       : omit(embedded, ['ipAddress', 'userAgent']);
     if (list) return omit(scoped, ['activities']);
 
@@ -256,6 +294,28 @@ module.exports = ({ db, getModel }) => {
         }
       : scoped;
   };
+
+  /**
+   * The message the desk's WhatsApp buttons open with for this lead
+   * (prompt 51): `settings.leads.whatsappTemplate`, filled in here because the
+   * `leads` branch of the settings is not a sales user's to read, and the
+   * sales desk is who sends it.
+   *
+   * @param {object} lead the lead with `property` and `assignedUser` embedded
+   * @returns {string}
+   */
+  function whatsappMessageOf(lead) {
+    const settings = db.getSingleton('siteSettings') ?? {};
+    const live = lead.property && !lead.property.deleted ? lead.property : null;
+    const siteUrl = String(settings.general?.siteUrl ?? '').replace(/\/+$/, '');
+    return fillWhatsappTemplate(settings.leads?.whatsappTemplate, {
+      name: lead.name,
+      property: live?.title ?? '',
+      agent: lead.assignedUser?.name ?? '',
+      link: live?.slug && siteUrl ? `${siteUrl}/properties/${live.slug}` : '',
+      brand: settings.general?.siteName ?? '',
+    });
+  }
 
   /**
    * The colleague a lead may be handed to, or a 422 naming `field`.
@@ -279,16 +339,84 @@ module.exports = ({ db, getModel }) => {
   }
 
   /**
-   * The next sales user in the rotation, or `null` when auto-assignment is off.
+   * Who a new lead goes to, by `settings.leads.autoAssign`: nobody, the next
+   * sales user in the rotation, or — `listing-advisor`, prompt 51 — the
+   * account linked to the advisor of the listing it names, with the rotation
+   * as the fallback.
+   *
+   * @param {object} record the lead about to be stored
+   * @returns {number|null}
+   */
+  function autoAssignee(record) {
+    const mode = db.getSingleton('siteSettings')?.leads?.autoAssign;
+    if (mode === 'listing-advisor') return advisorOf(record.propertyId) ?? nextInRotation();
+    if (mode === 'round-robin') return nextInRotation();
+    return null;
+  }
+
+  /**
+   * The account behind a listing's advisor card, when it can take the lead:
+   * the card is active and linked to an active sales or manager account.
+   *
+   * @param {number|null} propertyId
+   * @returns {number|null}
+   */
+  function advisorOf(propertyId) {
+    if (propertyId === null || propertyId === undefined) return null;
+    const property = db.getCollection('properties').find((row) => sameId(row.id, propertyId));
+    const memberId = property?.agent?.teamMemberId;
+    if (memberId === null || memberId === undefined) return null;
+    const member = db.getCollection('teamMembers').find((row) => sameId(row.id, memberId));
+    if (!member || member.isActive === false) return null;
+    return activeOwner(member.userId, ADVISOR_ROLES);
+  }
+
+  /**
+   * `id` when it names an active account (of one of `roles`, when given) —
+   * somebody who can still sign in and work a lead — else `null`.
+   */
+  function activeOwner(id, roles = null) {
+    if (id === null || id === undefined) return null;
+    const user = users().find((row) => sameId(row.id, id));
+    if (!user || user.isActive === false) return null;
+    if (roles && !roles.has(user.role)) return null;
+    return user.id;
+  }
+
+  /**
+   * The open lead a new enquiry repeats: the newest one from the same number,
+   * not converted or lost, created within {@link REPEAT_WINDOW_DAYS} days
+   * (prompt 51). A lead with no number repeats nothing.
+   *
+   * @param {object} record the new lead
+   * @param {number} now
+   * @returns {object|null}
+   */
+  function repeatedLead(record, now) {
+    const key = leadPhoneKey(record.phone);
+    if (key === '') return null;
+    return (
+      rows()
+        .filter(
+          (lead) =>
+            !sameId(lead.id, record.id) &&
+            isOpenLead(lead) &&
+            leadPhoneKey(lead.phone) === key &&
+            now - Date.parse(lead.createdAt) <= REPEAT_WINDOW_MS
+        )
+        .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0] ?? null
+    );
+  }
+
+  /**
+   * The next sales user in the rotation.
    *
    * The turn is derived from the leads themselves — the most recently created
    * one that went to a sales user decides who is next — so the mock needs no
-   * cursor of its own (§10).
+   * cursor of its own (§10). A colleague who has since been deactivated is
+   * simply not in the rotation any more: the turn passes to the first one.
    */
-  function nextAssignee() {
-    const settings = db.getSingleton('siteSettings');
-    if (settings?.leads?.autoAssign !== 'round-robin') return null;
-
+  function nextInRotation() {
     const sales = users()
       .filter((user) => user.role === 'sales' && user.isActive !== false)
       .sort((left, right) => left.id - right.id);
@@ -323,6 +451,14 @@ module.exports = ({ db, getModel }) => {
     const at = new Date().toISOString();
     const differs = (field) => hasOwn(changes, field) && !sameValue(changes[field], lead[field]);
     const entries = [];
+
+    const details = DETAIL_FIELDS.filter(differs);
+    if (details.length > 0) {
+      entries.push({
+        type: 'details-updated',
+        description: describeDetailsUpdate(details, user?.name ?? null),
+      });
+    }
 
     if (differs('status')) {
       entries.push({
@@ -362,6 +498,40 @@ module.exports = ({ db, getModel }) => {
     return applyLeadSort(filtered, req.query.sort, req.query.order);
   }
 
+  /**
+   * The worklist's counts for the view on screen — every filter but the
+   * follow-up bucket itself, so the chips keep their numbers while one of
+   * them is chosen (prompt 51).
+   */
+  function worklistCounts(req) {
+    const scoped = scopeLeads(rows(), req.user);
+    const view = applyLeadFilters(
+      scoped,
+      { ...req.query, followUp: undefined },
+      { user: req.user }
+    );
+    return followUpCounts(view);
+  }
+
+  /**
+   * Files a new lead about a listing: the enquiry counter moves (§10) and the
+   * lead keeps a snapshot of the listing (prompt 51).
+   *
+   * @param {object} record the lead about to be stored
+   * @returns {object|null} the listing, when it is live
+   */
+  function attachListing(record) {
+    const property = db
+      .getCollection('properties')
+      .find((row) => sameId(row.id, record.propertyId));
+    record.propertySnapshot = propertySnapshotOf(property ?? null, {
+      localities: db.getCollection('localities'),
+    });
+    if (!property?.isActive) return null;
+    property.enquiryCount = (property.enquiryCount ?? 0) + 1;
+    return property;
+  }
+
   /* ---------------------------------------------------------------- *
    * Public
    * ---------------------------------------------------------------- */
@@ -385,22 +555,23 @@ module.exports = ({ db, getModel }) => {
       // The old site's 24 source values keep arriving from bookmarked pages and
       // stale bundles; they are stored under their §6.17 name (BUG-09).
       const canonical = LEGACY_LEAD_SOURCE_MAP[body.source] ?? body.source;
-      if (!LEAD_SOURCES.has(canonical)) {
+      // A visitor's enquiry is never one of the desk's sources (prompt 51).
+      if (!SITE_LEAD_SOURCES.includes(canonical)) {
         throw validation({ source: ['The selected source is invalid.'] });
       }
 
       const settings = db.getSingleton('siteSettings');
       const clean = sanitize(body, model.fields);
-      const now = new Date().toISOString();
+      const moment = Date.now();
+      const now = new Date(moment).toISOString();
       const utm = hasValue(clean.utm) ? clean.utm : utmFromUrl(clean.pageUrl);
-      const assignedTo = nextAssignee();
 
       const record = {
         ...mergeDefaults(buildDefaults(model.fields), clean),
         source: canonical,
         status: 'new',
         priority: settings?.leads?.defaultPriority ?? 'medium',
-        assignedTo,
+        assignedTo: null,
         notes: [],
         activities: [],
         utm: { ...utm },
@@ -411,23 +582,42 @@ module.exports = ({ db, getModel }) => {
         updatedAt: now,
       };
 
+      // Somebody who enquired a fortnight ago is already somebody's
+      // conversation: the new enquiry goes to that colleague, not to whoever
+      // the rotation reaches next, and the older lead hears about it
+      // (prompt 51).
+      const repeat = repeatedLead(record, moment);
+      const owner = repeat ? activeOwner(repeat.assignedTo) : null;
+      record.assignedTo = owner ?? autoAssignee(record);
+
       addActivity(record, { type: 'created', description: describeCreated(canonical), at: now });
-      if (assignedTo !== null) {
+      if (record.assignedTo !== null) {
         addActivity(record, {
           type: 'assigned',
-          description: describeAssignment(userName(assignedTo)),
+          description: owner
+            ? `${describeAssignment(userName(owner))} — they hold lead #${repeat.id} from this number`
+            : describeAssignment(userName(record.assignedTo)),
           at: now,
         });
       }
 
+      // An enquiry is a fact about the listing too (§10); the counter is
+      // server-managed, so this and the desk's own entry are the only places
+      // it moves.
+      const property = attachListing(record);
       rows().push(record);
 
-      // An enquiry is a fact about the listing too (§10); the counter is
-      // server-managed, so this is the only place it moves.
-      const property = db
-        .getCollection('properties')
-        .find((row) => sameId(row.id, record.propertyId) && row.isActive);
-      if (property) property.enquiryCount = (property.enquiryCount ?? 0) + 1;
+      if (repeat) {
+        const about = leadProperty(record, { properties: db.getCollection('properties') });
+        addActivity(repeat, {
+          type: 'enquired-again',
+          description: `Enquired again via ${LEAD_SOURCES.labelOf(canonical) || canonical}${
+            about ? ` about ${about.title}` : ''
+          } — lead #${record.id}`,
+          at: now,
+        });
+        repeat.updatedAt = now;
+      }
 
       db.write();
 
@@ -458,8 +648,96 @@ module.exports = ({ db, getModel }) => {
 
     res.ok(
       data.map((lead) => present(lead, { list: true, collections })),
-      meta
+      { ...meta, followUp: worklistCounts(req) }
     );
+  });
+
+  /**
+   * An enquiry the desk enters itself — a walk-in, a phone call, a portal
+   * lead (prompt 51). Validated like the public form without its honeypot or
+   * rate limit; the source is the one sent. A sales user's lead is their own
+   * whatever the form says; anyone else's goes to the colleague named, or —
+   * nobody named — the way a public lead would.
+   */
+  router.post('/admin/leads', (req, res, next) => {
+    try {
+      const body = { ...(req.body ?? {}) };
+      if (typeof body.phone === 'string') body.phone = normalizeLeadPhone(body.phone) ?? body.phone;
+      validateBody(schemas.getSchema('lead.adminCreate'), body, { fillDefaults: true });
+
+      if (
+        body.propertyId !== null &&
+        body.propertyId !== undefined &&
+        !db.getCollection('properties').some((row) => sameId(row.id, body.propertyId))
+      ) {
+        throw validation({ propertyId: ['The selected property does not exist.'] });
+      }
+
+      const user = req.user;
+      const named = req.user.role === 'sales' ? null : (body.assignedTo ?? null);
+      if (named !== null) assertAssignable(named, 'assignedTo');
+
+      const settings = db.getSingleton('siteSettings');
+      const now = new Date().toISOString();
+      const note = typeof body.note === 'string' ? body.note.trim() : '';
+      const { note: _note, ...fields } = body;
+      const clean = sanitize(fields, model.fields);
+
+      const record = {
+        ...mergeDefaults(buildDefaults(model.fields), clean),
+        source: body.source,
+        status: 'new',
+        priority: body.priority ?? settings?.leads?.defaultPriority ?? 'medium',
+        assignedTo: null,
+        notes: [],
+        activities: [],
+        utm: { source: null, medium: null, campaign: null, term: null, content: null },
+        ipAddress: null,
+        userAgent: null,
+        id: nextId(rows()),
+        createdAt: now,
+        updatedAt: now,
+      };
+      record.assignedTo = req.user.role === 'sales' ? user.id : (named ?? autoAssignee(record));
+
+      addActivity(record, {
+        type: 'created',
+        description: `Added by ${user.name} — ${LEAD_SOURCES.labelOf(body.source) || body.source}`,
+        createdBy: user.id,
+        at: now,
+      });
+      if (record.assignedTo !== null) {
+        addActivity(record, {
+          type: 'assigned',
+          description: describeAssignment(userName(record.assignedTo)),
+          createdBy: user.id,
+          at: now,
+        });
+      }
+      if (note) {
+        record.notes.push({
+          id: 1,
+          text: note,
+          createdBy: user.id,
+          createdByName: user.name,
+          createdAt: now,
+        });
+        addActivity(record, {
+          type: 'note-added',
+          description: 'Note added',
+          createdBy: user.id,
+          at: now,
+        });
+      }
+
+      attachListing(record);
+      rows().push(record);
+      db.write();
+
+      res.created(present(record));
+    } catch (error) {
+      next(error);
+    }
   });
 
   router.get('/admin/leads/export', (req, res) => {
@@ -508,9 +786,8 @@ module.exports = ({ db, getModel }) => {
         lostReason: lead.status === 'lost' ? lead.lostReason : null,
         priority: LEAD_PRIORITY.labelOf(lead.priority) || lead.priority,
         assignedTo: userName(lead.assignedTo),
-        property:
-          collections.properties.find((property) => sameId(property.id, lead.propertyId))?.title ??
-          null,
+        // A deleted listing is still named, from the lead's snapshot (prompt 51).
+        property: leadProperty(lead, collections)?.title ?? null,
         requirement: requirement(lead),
         message: lead.message,
         followUpAt: istDateTime(lead.followUpAt),
@@ -612,16 +889,24 @@ module.exports = ({ db, getModel }) => {
     try {
       const lead = findInScope(req);
       const body = { ...(req.body ?? {}) };
+      // Stored the way the public form stores it, so a corrected number still
+      // matches the lead's other enquiries (prompt 51).
+      if (typeof body.phone === 'string') body.phone = normalizeLeadPhone(body.phone) ?? body.phone;
       validateBody(schemas.getSchema('lead.patch'), body, { partial: true });
 
       const changes = sanitize(body, model.fields);
 
       // A sales user works their own pipeline: the status, the priority, the
-      // follow-up and why a lead was lost. Handing a lead to somebody else is
-      // `leads.assign`, which they do not hold (§7).
+      // follow-up and why a lead was lost — and the details of a lead that is
+      // theirs (prompt 51). Handing a lead to somebody else is `leads.assign`,
+      // which they do not hold (§7).
       if (req.user.role === 'sales') {
         const refused = Object.keys(changes).filter((field) => !SALES_PATCHABLE.includes(field));
         if (refused.length > 0) throw forbidden(FORBIDDEN);
+        const editsDetails = DETAIL_FIELDS.some((field) => hasOwn(changes, field));
+        if (editsDetails && !sameId(lead.assignedTo, req.user.id)) {
+          throw forbidden('You can correct the details of your own leads only.');
+        }
       }
 
       if (hasOwn(changes, 'assignedTo')) {
@@ -687,6 +972,38 @@ module.exports = ({ db, getModel }) => {
       addActivity(lead, {
         type: 'note-added',
         description: 'Note added',
+        createdBy: req.user.id,
+        at,
+      });
+      lead.updatedAt = at;
+      db.write();
+
+      res.ok(present(lead));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * A conversation, logged (prompt 51): a typed entry on the timeline — "Call
+   * logged — Interested, wants a Saturday visit" — with whatever was noted.
+   * A change of status or follow-up that came of it is the `PATCH` the panel
+   * sends beside it.
+   */
+  router.post('/admin/leads/:id/activities', (req, res, next) => {
+    try {
+      const lead = findInScope(req);
+      const body = { ...(req.body ?? {}) };
+      validateBody(schemas.getSchema('lead.activity'), body, { fillDefaults: true });
+
+      const outcome = typeof body.outcome === 'string' ? body.outcome.trim() : '';
+      const note = typeof body.note === 'string' ? body.note.trim() : '';
+      const at = new Date().toISOString();
+
+      addActivity(lead, {
+        type: LEAD_CONTACT_TYPES.meta[body.type]?.activity ?? 'activity-logged',
+        description: `${LEAD_CONTACT_TYPES.labelOf(body.type)} logged${outcome ? ` — ${outcome}` : ''}`,
+        note: note || null,
         createdBy: req.user.id,
         at,
       });

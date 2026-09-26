@@ -176,6 +176,15 @@ const EXTRA_SCHEMAS = {
       next: { oneOf: [{ $ref: '#/components/schemas/Article' }, { type: 'null' }] },
     },
   },
+  LeadAlertTest: {
+    type: 'object',
+    description: 'Where a test lead alert went (prompt 51).',
+    properties: {
+      sentTo: { type: 'array', items: { type: 'string', format: 'email' } },
+      sentAt: { type: 'string', format: 'date-time' },
+    },
+    required: ['sentTo', 'sentAt'],
+  },
   MediaFolderRename: {
     type: 'object',
     description: 'What a folder rename refiled (prompt 51).',

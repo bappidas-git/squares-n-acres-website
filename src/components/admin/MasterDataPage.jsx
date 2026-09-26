@@ -336,6 +336,12 @@ export function labelsOf(fields) {
  *   API answered and the one the form opened on — a property type whose URL
  *   moved redirects the old one
  * @param {(row: object) => Array<object>} [props.config.extraRowActions]
+ * @param {(action: 'deactivate'|'delete', rows: Array<object>, proceed: () => Promise<unknown>)
+ *   => boolean|Promise<boolean>} [props.config.intercept] asked before records are switched
+ *   off or deleted — from the Active switch, the form, a row's Delete or the bulk bar — by a
+ *   screen with something to settle first: a user's open leads, a team member's listings
+ *   (prompt 51). `true` means the screen has taken over with a dialog of its own and calls
+ *   `proceed()` to carry the action out, without asking again; `false` lets it go ahead
  * @param {(values: object, row: object|null) => object} [props.config.toPayload]
  * @param {(row: object) => object} [props.config.toFormValues]
  */
@@ -384,6 +390,7 @@ export default function MasterDataPage({ config }) {
     toPayload,
     toFormValues,
     validate: customValidate,
+    intercept,
   } = config;
 
   const toast = useToast();
@@ -639,6 +646,26 @@ export default function MasterDataPage({ config }) {
    */
   const save = async () => {
     if (!editing) return;
+
+    // Switched off in the form: the screen's own question comes first, as it
+    // does from the list's switch (prompt 51).
+    if (intercept && editing.id && editing.isActive !== false && form.values.isActive === false) {
+      if (!form.validateAll()) {
+        setRefusals((count) => count + 1);
+        return;
+      }
+      setCheckingSave(true);
+      let taken = false;
+      try {
+        taken = await intercept('deactivate', [editing], () => persist());
+      } catch (_thrown) {
+        // The question is advisory: a lookup that fails must not block the save.
+      } finally {
+        setCheckingSave(false);
+      }
+      if (taken) return;
+    }
+
     if (!confirmSave) {
       await persist();
       return;
@@ -678,14 +705,16 @@ export default function MasterDataPage({ config }) {
     else refetch();
   };
 
-  const confirmDelete = async () => {
-    if (!deleting) return;
+  const confirmDelete = () => (deleting ? performDelete(deleting) : undefined);
+
+  /** The delete itself — after the confirm, or after a screen's own dialog. */
+  async function performDelete(record) {
     setDeletingBusy(true);
     try {
-      await service.remove(deleting.id);
-      toast.success(TOASTS.deleted(`“${labelOf(deleting, columns)}”`));
+      await service.remove(record.id);
+      toast.success(TOASTS.deleted(`“${labelOf(record, columns)}”`));
       setDeleting(null);
-      setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
+      setSelectedIds((current) => current.filter((id) => String(id) !== String(record.id)));
       onMutated?.(collectionKey);
       afterRemoval(1);
     } catch (thrown) {
@@ -693,9 +722,9 @@ export default function MasterDataPage({ config }) {
       // happened. It said "Not found" and left the row on screen, to be
       // deleted again with the same answer (QA-61).
       if (thrown?.status === 404) {
-        toast.info(TOASTS.alreadyDeleted(`“${labelOf(deleting, columns)}”`));
+        toast.info(TOASTS.alreadyDeleted(`“${labelOf(record, columns)}”`));
         setDeleting(null);
-        setSelectedIds((current) => current.filter((id) => String(id) !== String(deleting.id)));
+        setSelectedIds((current) => current.filter((id) => String(id) !== String(record.id)));
         onMutated?.(collectionKey);
         afterRemoval(1);
         return;
@@ -704,7 +733,7 @@ export default function MasterDataPage({ config }) {
       // first, and the dialog is where that list belongs (D88).
       if (usageGuard && thrown?.status === 409) {
         const usedBy = thrown.data?.usedBy ?? [];
-        const label = labelOf(deleting, columns);
+        const label = labelOf(record, columns);
         setDeleting(null);
         setGuard({
           title: label,
@@ -725,6 +754,35 @@ export default function MasterDataPage({ config }) {
     } finally {
       setDeletingBusy(false);
     }
+  }
+
+  /**
+   * Switching off or deleting, asked of the screen first (prompt 51): a user
+   * with open leads, a team member who is the advisor on listings. `otherwise`
+   * is what happens when the screen has nothing to ask — the house confirm,
+   * for a single delete.
+   */
+  const guarded = async (action, targets, proceed, otherwise = proceed) => {
+    let taken = false;
+    if (intercept) {
+      try {
+        taken = await intercept(action, targets, proceed);
+      } catch (_thrown) {
+        // A lookup that fails must not stand in the way of the action.
+        taken = false;
+      }
+    }
+    if (!taken) await otherwise();
+  };
+
+  // The latest of each, for the memoised row actions and Active switch to call.
+  const writersRef = useRef(null);
+  writersRef.current = { guarded, performDelete };
+
+  const onBulkAction = (action, ids) => {
+    if (action !== 'deactivate' && action !== 'delete') return runBulk(action, ids);
+    const targets = ids.map((id) => rows.find((row) => String(row.id) === String(id)) ?? { id });
+    return guarded(action, targets, () => runBulk(action, ids));
   };
 
   const runBulk = async (action, ids) => {
@@ -954,7 +1012,13 @@ export default function MasterDataPage({ config }) {
               (canToggleActive ? !canToggleActive(row) : false)
             }
             onClick={(event) => event.stopPropagation()}
-            onChange={() => patchField(row, 'isActive', row.isActive === false)}
+            onChange={() =>
+              row.isActive === false
+                ? patchField(row, 'isActive', true)
+                : writersRef.current.guarded('deactivate', [row], () =>
+                    patchField(row, 'isActive', false)
+                  )
+            }
             // `slotProps.input` replaces MUI's own defaults for that slot, and
             // `role: 'switch'` is one of them — a toggle that reports itself as a
             // checkbox is a worse answer than the one MUI ships.
@@ -1008,7 +1072,13 @@ export default function MasterDataPage({ config }) {
               label: `Delete ${labelOf(row, columns)}`,
               icon: 'mdi:delete-outline',
               danger: true,
-              onClick: () => setDeleting(row),
+              onClick: () =>
+                writersRef.current.guarded(
+                  'delete',
+                  [row],
+                  () => writersRef.current.performDelete(row),
+                  () => setDeleting(row)
+                ),
             },
           ]
         : []),
@@ -1297,7 +1367,7 @@ export default function MasterDataPage({ config }) {
           bulkNounOne={singular}
           bulkNounMany={plural}
           bulkBusy={bulkBusy}
-          onBulkAction={runBulk}
+          onBulkAction={onBulkAction}
           rowActions={rowActions}
           rowActionsMenu={rowActionsMenu}
           rowActionsLabel={(row) => `Actions for ${labelOf(row, columns)}`}

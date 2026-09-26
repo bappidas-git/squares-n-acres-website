@@ -22,9 +22,13 @@ const { LEAD_STATUS } = require('./enums');
 const { isLive } = require('./articleFilters');
 const { istClock, istDay } = require('./ist');
 const { scopeLeads } = require('./scope');
+const { leadProperty } = require('./embed');
 
 /** How many days the `leadsByDay` and `viewsByDay` series cover (§6.16). */
 const TREND_DAYS = 30;
+
+/** The windows `?range=` may ask the series for, in days (prompt 51). */
+const TREND_RANGES = [7, 30, 90];
 
 /** How many rows each list of the dashboard carries (§6.16). */
 const RECENT_LEADS = 10;
@@ -74,15 +78,18 @@ function dayRange(now, days = TREND_DAYS) {
 }
 
 /** `[{ date, count }]` over `dayRange`, counting `records` by `field`'s day. */
-function seriesByDay(records, field, now) {
+function seriesByDay(records, field, now, days = TREND_DAYS) {
   const counts = new Map();
   for (const record of records) {
     const day = dayOf(record?.[field]);
     if (day) counts.set(day, (counts.get(day) ?? 0) + 1);
   }
 
-  return dayRange(now).map((date) => ({ date, count: counts.get(date) ?? 0 }));
+  return dayRange(now, days).map((date) => ({ date, count: counts.get(date) ?? 0 }));
 }
+
+/** The series window a `?range=` asks for, or the default when it names none. */
+const trendDaysOf = (range) => (TREND_RANGES.includes(Number(range)) ? Number(range) : TREND_DAYS);
 
 /** `[{ <key>, count }]` — one entry per value of `field`, biggest first. */
 function countBy(records, field, key) {
@@ -141,10 +148,12 @@ function seoHealth(state) {
  * The whole `GET /admin/dashboard` payload.
  *
  * @param {object} state the collections (`{ properties: [...], leads: [...] }`)
- * @param {{user?: object, now?: number}} [options]
+ * @param {{user?: object, now?: number, range?: number|string}} [options] `range`
+ *   is the days the two series cover — 7, 30 or 90 (prompt 51)
  * @returns {object} the §6.16 shape
  */
-function buildDashboard(state, { user = null, now = Date.now() } = {}) {
+function buildDashboard(state, { user = null, now = Date.now(), range } = {}) {
+  const days = trendDaysOf(range);
   const properties = rows(state, 'properties');
   const articles = rows(state, 'articles');
   const views = rows(state, 'propertyViews');
@@ -186,7 +195,7 @@ function buildDashboard(state, { user = null, now = Date.now() } = {}) {
   };
 
   const trends = {
-    leadsByDay: seriesByDay(leads, 'createdAt', now),
+    leadsByDay: seriesByDay(leads, 'createdAt', now, days),
     leadsBySource: countBy(leads, 'source', 'source'),
     // Every status of the pipeline appears, including the ones nobody is in:
     // a funnel chart with a missing rung is a chart that lies.
@@ -194,7 +203,7 @@ function buildDashboard(state, { user = null, now = Date.now() } = {}) {
       status,
       count: leads.filter((lead) => lead.status === status).length,
     })),
-    viewsByDay: seriesByDay(views, 'viewedAt', now),
+    viewsByDay: seriesByDay(views, 'viewedAt', now, days),
   };
 
   const titleOf = (id) => properties.find((property) => property.id === id) ?? null;
@@ -213,7 +222,10 @@ function buildDashboard(state, { user = null, now = Date.now() } = {}) {
         source: lead.source,
         status: lead.status,
         propertyId: lead.propertyId ?? null,
-        property: property ? { id: property.id, title: property.title, slug: property.slug } : null,
+        // A deleted listing is still named, from the lead's snapshot (prompt 51).
+        property: property
+          ? { id: property.id, title: property.title, slug: property.slug }
+          : leadProperty(lead, { properties }),
         createdAt: lead.createdAt,
         assignedTo: lead.assignedTo ?? null,
       };
@@ -239,19 +251,26 @@ function buildDashboard(state, { user = null, now = Date.now() } = {}) {
       enquiryCount: property.enquiryCount ?? 0,
     }));
 
+  // The follow-ups that are due: every overdue one first, the longest overdue
+  // at the top, then what falls due in the next two weeks (prompt 51). The
+  // card used to keep only the future — on the seed, where every dated
+  // follow-up had passed, it said nothing was due.
   const horizon = now + FOLLOW_UP_DAYS * 24 * 60 * 60 * 1000;
-  const upcomingFollowUps = leads
-    .filter((lead) => {
-      if (CLOSED_STATUSES.has(lead.status)) return false;
-      const due = lead.followUpAt ? Date.parse(lead.followUpAt) : NaN;
-      return Number.isFinite(due) && due >= now && due <= horizon;
-    })
-    .sort((left, right) => Date.parse(left.followUpAt) - Date.parse(right.followUpAt))
+  const dueOf = (lead) => (lead.followUpAt ? Date.parse(lead.followUpAt) : Number.NaN);
+  const dated = leads.filter(
+    (lead) => !CLOSED_STATUSES.has(lead.status) && Number.isFinite(dueOf(lead))
+  );
+  const overdue = dated.filter((lead) => dueOf(lead) < now);
+  const upcoming = dated.filter((lead) => dueOf(lead) >= now && dueOf(lead) <= horizon);
+  const byDue = (left, right) => dueOf(left) - dueOf(right);
+
+  const upcomingFollowUps = [...overdue.sort(byDue), ...upcoming.sort(byDue)]
     .slice(0, FOLLOW_UPS)
     .map((lead) => ({
       id: lead.id,
       name: lead.name,
       followUpAt: lead.followUpAt,
+      isOverdue: dueOf(lead) < now,
       status: lead.status,
       assignedTo: lead.assignedTo ?? null,
       assignedUser: lead.assignedTo === null ? null : nameOf(lead.assignedTo),
@@ -264,6 +283,7 @@ function buildDashboard(state, { user = null, now = Date.now() } = {}) {
     topProperties,
     seoHealth: seoHealth(state),
     upcomingFollowUps,
+    overdueCount: overdue.length,
   };
 }
 
@@ -273,6 +293,8 @@ module.exports = {
   dayRange,
   seriesByDay,
   countBy,
+  trendDaysOf,
   TREND_DAYS,
+  TREND_RANGES,
   SEO_COLLECTIONS,
 };

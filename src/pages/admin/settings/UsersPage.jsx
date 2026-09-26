@@ -4,6 +4,7 @@ import Avatar from '../../../components/ui/Avatar';
 import Button from '../../../components/ui/Button';
 import MasterDataPage from '../../../components/admin/MasterDataPage';
 import Modal from '../../../components/ui/Modal';
+import OffboardUserDialog, { openLeadsOf } from './OffboardUserDialog';
 import StatusChip from '../../../components/admin/StatusChip';
 import userService from '../../../services/userService';
 import { PASSWORD_PATTERN } from '../../../services/schemas/auth';
@@ -72,11 +73,16 @@ const sessionFields = (record) => ({
  * saved here is handed to the session, so the header and "My profile" show it
  * at once — "My profile" used to open on the old name and, saved, put it back
  * (QA-64).
+ *
+ * Switching off or deleting somebody who still holds open leads asks first who
+ * takes them (prompt 51) — from the Active switch, the form, the row's Delete
+ * and the bulk bar alike.
  */
 export default function UsersPage() {
   const { user: currentUser, updateUser } = useAdminAuth();
   const toast = useToast();
   const [resetting, setResetting] = useState(null);
+  const [offboarding, setOffboarding] = useState(null);
 
   const config = useMemo(
     () => ({
@@ -93,6 +99,18 @@ export default function UsersPage() {
       canToggleActive: (row) => !sameId(row.id, currentUser?.id),
       deleteMessage: (row) =>
         `“${row.name}” will be removed and their leads left unassigned. This cannot be undone.`,
+      // Open leads are handed over before their owner is switched off or
+      // deleted (prompt 51). An account already switched off handed its leads
+      // over then; deleting it still asks, for the leads it may hold.
+      intercept: async (action, targets, proceed) => {
+        const people =
+          action === 'delete' ? targets : targets.filter((row) => row.isActive !== false);
+        if (people.length === 0) return false;
+        const holding = await openLeadsOf(people);
+        if (holding.length === 0) return false;
+        setOffboarding({ action, holding, count: targets.length, proceed });
+        return true;
+      },
       flagMessage: (label, field, on) =>
         field === 'isActive'
           ? `${label} ${on ? 'can sign in again' : 'can no longer sign in'}`
@@ -269,6 +287,7 @@ export default function UsersPage() {
   return (
     <>
       <MasterDataPage config={config} />
+      <OffboardUserDialog request={offboarding} onClose={() => setOffboarding(null)} />
       <ResetPasswordDialog
         user={resetting}
         isSelf={Boolean(resetting) && sameId(resetting.id, currentUser?.id)}

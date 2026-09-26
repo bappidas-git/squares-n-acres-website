@@ -1,9 +1,13 @@
 /**
  * Site settings (00_MASTER_CONTEXT.md §5.14, §6.13).
  *
- *   GET /api/settings          the public subset — everything except `leads`
- *   GET /api/admin/settings    the whole singleton
- *   PUT /api/admin/settings    a deep merge of the keys the model knows
+ *   GET  /api/settings          the public subset — everything except `leads`
+ *   GET  /api/admin/settings    the whole singleton
+ *   PUT  /api/admin/settings    a deep merge of the keys the model knows
+ *   POST /api/admin/settings/test-lead-alert
+ *                               a test lead alert to the saved addresses
+ *                               (prompt 51) — the mock writes it to its
+ *                               console, its "outbox"; Laravel sends it
  *
  * `siteSettings` is one object, not a collection, and the admin form edits it
  * one panel at a time: General, Contact, Hero, Navigation, Footer, Newsletter,
@@ -28,11 +32,15 @@ const express = require('express');
 
 const schemas = require('../../src/services/schemas');
 const { publicSettings } = require('../lib/scope');
+const { validation } = require('../middleware/errors');
 const { sanitize } = require('../middleware/timestamps');
 const { validateBody } = require('../middleware/validate');
 
 const isPlainObject = (value) =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/** An address a lead alert could be sent to. */
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Merges `patch` into `target`, descending into objects and replacing arrays.
@@ -107,6 +115,43 @@ module.exports = ({ db, getModel }) => {
       db.write();
 
       res.ok({ ...current() });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * "Send a test alert" (prompt 51): the lead notification, addressed to the
+   * **saved** list — the one a real lead would reach. Nothing leaves the mock:
+   * the alert is written to its console, and the answer names every address
+   * it went to. Laravel sends it for real and answers 502 with the mailer's
+   * reason when the SMTP relay refuses it.
+   */
+  router.post('/admin/settings/test-lead-alert', (req, res, next) => {
+    try {
+      const emails = Array.isArray(current().leads?.notificationEmails)
+        ? current().leads.notificationEmails
+        : [];
+      if (emails.length === 0) {
+        throw validation({
+          'leads.notificationEmails': [
+            'Add at least one notification e-mail and save the settings first.',
+          ],
+        });
+      }
+      const invalid = emails.filter((email) => !EMAIL.test(String(email)));
+      if (invalid.length > 0) {
+        throw validation({
+          'leads.notificationEmails': [`Not an e-mail address: ${invalid.join(', ')}.`],
+        });
+      }
+
+      const sentAt = new Date().toISOString();
+      console.info(`[outbox] Test lead alert to ${emails.join(', ')}`);
+      res.message(
+        `Test alert sent to ${emails.length} ${emails.length === 1 ? 'address' : 'addresses'}.`,
+        { sentTo: [...emails], sentAt }
+      );
     } catch (error) {
       next(error);
     }

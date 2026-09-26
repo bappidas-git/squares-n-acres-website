@@ -2677,6 +2677,8 @@ describe('GET /admin/dashboard', () => {
       const data = body.data;
 
       assert.deepEqual(Object.keys(data).sort(), [
+        // How many follow-ups have passed (prompt 51).
+        'overdueCount',
         'recentLeads',
         'seoHealth',
         'stats',
@@ -2684,6 +2686,7 @@ describe('GET /admin/dashboard', () => {
         'trends',
         'upcomingFollowUps',
       ]);
+      assert.equal(typeof data.overdueCount, 'number');
 
       for (const key of [
         'propertiesTotal',

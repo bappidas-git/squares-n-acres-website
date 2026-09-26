@@ -37,6 +37,21 @@ export const removeNote = (id, noteId, opts) =>
 
 export const bulk = (body, opts) => http.request(endpoints.adminLeads.bulk, { body, ...opts });
 
+/**
+ * A lead the desk enters itself — a walk-in, a call, a portal lead (prompt 51).
+ * A sales user's is their own; anyone else's goes to the colleague named or
+ * is auto-assigned.
+ */
+export const adminCreate = (body, opts) =>
+  http.request(endpoints.adminLeads.create, { body, ...opts });
+
+/**
+ * A conversation on the timeline — `{ type, outcome?, note? }` (prompt 51).
+ * A status or follow-up that came of it is a separate `patch`.
+ */
+export const logActivity = (id, body, opts) =>
+  http.request(endpoints.adminLeads.logActivity, { pathParams: { id }, body, ...opts });
+
 /** The CSV URL for `utils/download.js`, which adds the bearer token (D46). */
 export const exportUrl = (params) => buildUrl(endpoints.adminLeads.exportCsv, {}, params);
 
@@ -50,6 +65,8 @@ const leadService = {
   addNote,
   removeNote,
   bulk,
+  adminCreate,
+  logActivity,
   exportUrl,
 };
 

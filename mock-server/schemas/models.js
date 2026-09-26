@@ -278,6 +278,19 @@ const leads = {
     assignedUser: embed({ id: { type: 'int', required: true }, name: str(80) }),
     followUpAt: { type: 'datetime', nullable: true, default: null },
     lostReason: { type: 'string', nullable: true, maxLength: 300, default: null },
+    // What the listing was called when the lead arrived (prompt 51): a lead
+    // keeps naming it after the listing is deleted.
+    propertySnapshot: {
+      type: 'object',
+      nullable: true,
+      default: null,
+      serverManaged: true,
+      shape: {
+        title: { type: 'string', maxLength: 200 },
+        slug: { type: 'slug' },
+        localityName: { type: 'string', nullable: true, maxLength: 120 },
+      },
+    },
     notes: {
       type: 'array',
       default: [],
@@ -302,6 +315,8 @@ const leads = {
           id: { type: 'int', required: true },
           type: { type: 'enum', enum: LEAD_ACTIVITY_TYPES.values, required: true },
           description: { type: 'string', required: true, maxLength: 300 },
+          // What was said, on an activity the desk logged (prompt 51).
+          note: { type: 'string', nullable: true, maxLength: 2000, default: null },
           createdBy: { type: 'int', nullable: true, default: null },
           createdAt: { type: 'datetime', required: true },
         },
@@ -442,7 +457,9 @@ const teamMembers = {
   sortable: ['order', 'name'],
   defaultSort: { field: 'order', order: 'asc' },
   publicScope: { isActive: true },
-  publicOmit: [],
+  // The admin account a card is linked to routes leads (prompt 51); it is
+  // nobody's business on the About page.
+  publicOmit: ['userId'],
   fields: { ...id, ...masterData.teamMember.create, ...timestamps },
 };
 

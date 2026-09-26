@@ -52,6 +52,8 @@ export const PROPERTY_LIST_PARAM_KEYS = {
   isFeatured: 'bool',
   developerId: 'string',
   seoScoreBand: 'string',
+  // The listings one advisor answers for — the Team list links here (prompt 51).
+  agentId: 'string',
   sort: 'string',
   order: 'string',
   page: 'int',
@@ -71,6 +73,7 @@ export const PROPERTY_FILTER_KEYS = [
   'isFeatured',
   'developerId',
   'seoScoreBand',
+  'agentId',
 ];
 
 const isSet = (value) =>
@@ -109,6 +112,7 @@ export function exportParamsOf(params = {}) {
  * @param {Array<object>} [sources.propertyTypes] every type, active or not
  * @param {Array<object>} [sources.localities]
  * @param {Array<object>} [sources.developers]
+ * @param {Array<object>} [sources.agents] the team members, switched-off ones too
  * @returns {Array<object>}
  */
 export function buildPropertyFilterFields({
@@ -116,6 +120,7 @@ export function buildPropertyFilterFields({
   propertyTypes = [],
   localities = [],
   developers = [],
+  agents = [],
 } = {}) {
   return [
     {
@@ -197,6 +202,17 @@ export function buildPropertyFilterFields({
       label: 'SEO',
       placeholder: 'Any score',
       options: SEO_SCORE_BANDS.options,
+    },
+    {
+      key: 'agentId',
+      type: 'select',
+      label: 'Advisor',
+      placeholder: 'Any advisor',
+      // Somebody who has left still answers for the listings nobody moved.
+      options: agents.map((agent) => ({
+        value: String(agent.id),
+        label: agent.isActive === false ? `${agent.name} (inactive)` : agent.name,
+      })),
     },
   ];
 }

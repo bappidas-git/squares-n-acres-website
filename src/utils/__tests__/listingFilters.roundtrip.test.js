@@ -68,7 +68,8 @@ const CONTRACT_PARAMS = [
 ];
 
 /** The admin list adds three of its own (§5.7, §5.14). */
-const ADMIN_ONLY_PARAMS = ['isActive', 'seoScoreBand', 'createdBy', 'order'];
+// `agentId`: the listings one advisor answers for (prompt 51).
+const ADMIN_ONLY_PARAMS = ['isActive', 'seoScoreBand', 'createdBy', 'order', 'agentId'];
 
 const query = (params) => new URLSearchParams(serializeFilters(params)).toString();
 

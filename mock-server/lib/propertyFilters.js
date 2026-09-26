@@ -197,6 +197,9 @@ function matchesFilters(property, query, { admin, source }) {
       return false;
     }
     if (has('createdBy') && !includes('createdBy', property.createdBy)) return false;
+    // The listings an advisor answers for — the Team list's count links here,
+    // and so does "Reassign listings to…" (prompt 51).
+    if (has('agentId') && !includes('agentId', property.agent?.teamMemberId)) return false;
   }
 
   return matchesSearch(property, first(query.q), source);

@@ -15,9 +15,81 @@
  * `isPossibleDuplicate`, the flag the CRM list and detail carry (prompt 29).
  */
 
-const { LEAD_PRIORITY, LEAD_STATUS } = require('./enums');
+const { LEAD_FOLLOW_UP, LEAD_PRIORITY, LEAD_STATUS } = require('./enums');
 const { inCsv, matchesQ, toBool } = require('./filters');
 const { istDay } = require('./ist');
+
+/** The statuses a follow-up can no longer be late for (prompt 51). */
+const CLOSED_STATUSES = new Set(['converted', 'lost']);
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** How far ahead "due in the next 7 days" looks. */
+const NEXT_DAYS = 7;
+
+/** Whether a lead is still being worked: not converted and not lost. */
+const isOpenLead = (lead) => !CLOSED_STATUSES.has(lead?.status);
+
+/**
+ * Which follow-up bucket an open lead is in, as of `now` (prompt 51):
+ *
+ *   - `overdue` — its follow-up time has passed;
+ *   - `today`   — it is due later today (IST);
+ *   - `next7`   — it is due within the next seven days, today's included;
+ *   - `none`    — it has no follow-up at all: no next step.
+ *
+ * A closed lead is in none of them. The buckets `overdue`, `today` and `none`
+ * never overlap, which is what lets the worklist chips add up; `next7` is a
+ * horizon and holds `today`'s leads too.
+ *
+ * @param {object} lead
+ * @param {string} bucket a value of `LEAD_FOLLOW_UP`
+ * @param {number} [now]
+ * @returns {boolean}
+ */
+function matchesFollowUp(lead, bucket, now = Date.now()) {
+  if (!isOpenLead(lead)) return false;
+  const due = lead?.followUpAt ? Date.parse(lead.followUpAt) : Number.NaN;
+
+  if (bucket === 'none') return !Number.isFinite(due);
+  if (!Number.isFinite(due)) return false;
+  if (bucket === 'overdue') return due < now;
+  if (bucket === 'today') return due >= now && istDay(due) === istDay(now);
+  if (bucket === 'next7') return due >= now && due <= now + NEXT_DAYS * DAY_MS;
+  return true;
+}
+
+/**
+ * The worklist's counts — `meta.followUp` of the lead list (prompt 51): how
+ * many open leads of the view are overdue, due today, due within seven days,
+ * and without a next step.
+ *
+ * @param {Array<object>} leads the view, every filter but `followUp` applied
+ * @param {number} [now]
+ * @returns {{overdue: number, today: number, next7: number, none: number}}
+ */
+function followUpCounts(leads, now = Date.now()) {
+  return Object.fromEntries(
+    LEAD_FOLLOW_UP.values.map((bucket) => [
+      bucket,
+      leads.filter((lead) => matchesFollowUp(lead, bucket, now)).length,
+    ])
+  );
+}
+
+/**
+ * Whether an open lead has gone `days` days without a change (prompt 51).
+ *
+ * @param {object} lead
+ * @param {number} days
+ * @param {number} [now]
+ * @returns {boolean}
+ */
+function isIdleFor(lead, days, now = Date.now()) {
+  if (!isOpenLead(lead)) return false;
+  const touched = Date.parse(lead?.updatedAt ?? lead?.createdAt);
+  return Number.isFinite(touched) && now - touched >= days * DAY_MS;
+}
 
 const first = (value) => (Array.isArray(value) ? value[0] : value);
 
@@ -80,15 +152,23 @@ function matchesLeadQuery(lead, q) {
  * @param {{user?: object}} [options] the signed-in user, for `assignedTo=me`
  * @returns {Array<object>}
  */
-function applyLeadFilters(items, query = {}, { user } = {}) {
+function applyLeadFilters(items, query = {}, { user, now = Date.now() } = {}) {
   const csv = (name) => inCsv(query[name]);
   const has = (name) => csv(name).length > 0;
 
   const from = isFilled(first(query.from)) ? String(first(query.from)).slice(0, 10) : null;
   const to = isFilled(first(query.to)) ? String(first(query.to)).slice(0, 10) : null;
   const q = first(query.q);
+  // An unknown bucket filters nothing, as an unknown parameter does (§5.6).
+  const followUp = LEAD_FOLLOW_UP.has(String(first(query.followUp) ?? ''))
+    ? String(first(query.followUp))
+    : null;
+  const idle = Number.parseInt(String(first(query.idleDays) ?? ''), 10);
+  const idleDays = Number.isFinite(idle) && idle > 0 ? idle : null;
 
   return items.filter((lead) => {
+    if (followUp && !matchesFollowUp(lead, followUp, now)) return false;
+    if (idleDays && !isIdleFor(lead, idleDays, now)) return false;
     if (has('status') && !csv('status').includes(String(lead.status))) return false;
     if (has('source') && !csv('source').includes(String(lead.source))) return false;
     if (has('priority') && !csv('priority').includes(String(lead.priority))) return false;
@@ -293,6 +373,10 @@ module.exports = {
   applyLeadFilters,
   applyLeadSort,
   buildDuplicateIndex,
+  followUpCounts,
+  isIdleFor,
+  isOpenLead,
+  matchesFollowUp,
   isPossibleDuplicate,
   leadPhoneKey,
   localMobileDigits,
@@ -300,5 +384,6 @@ module.exports = {
   matchesLeadQuery,
   normalizeLeadPhone,
   DUPLICATE_WINDOW_DAYS,
+  CLOSED_STATUSES,
   SORTABLE,
 };
