@@ -38,6 +38,7 @@ const SOURCES = [
   {
     key: 'leads',
     label: 'Leads',
+    one: 'lead',
     area: 'leads',
     search: (q, signal) =>
       leadService.adminList({ q: phoneQuery(q), perPage: PER_GROUP }, { signal }),
@@ -57,6 +58,7 @@ const SOURCES = [
   {
     key: 'properties',
     label: 'Properties',
+    one: 'property',
     area: 'properties',
     search: (q, signal) => propertyService.adminList({ q, perPage: PER_GROUP }, { signal }),
     option: (property) => ({
@@ -71,6 +73,7 @@ const SOURCES = [
   {
     key: 'articles',
     label: 'Articles',
+    one: 'article',
     area: 'articles',
     search: (q, signal) => articleService.adminList({ q, perPage: PER_GROUP }, { signal }),
     option: (article) => ({
@@ -189,7 +192,11 @@ export default function AdminSearch({ compact = false }) {
         const entries = [
           ...group.rows,
           {
-            label: `See all ${group.total} ${group.source.label.toLowerCase()}`,
+            // "See all 1 leads" read wrong: one match says which list it opens.
+            label:
+              group.total === 1
+                ? `See 1 ${group.source.one} in ${group.source.label}`
+                : `See all ${group.total} ${group.source.label.toLowerCase()}`,
             to: group.source.all(state.query),
             seeAll: true,
           },

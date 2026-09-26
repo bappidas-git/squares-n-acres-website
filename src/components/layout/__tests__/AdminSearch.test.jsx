@@ -119,7 +119,8 @@ describe('AdminSearch (prompt 51)', () => {
     renderSearch();
     await userEvent.type(box(), 'khata');
 
-    await userEvent.click(await screen.findByRole('option', { name: 'See all 1 articles' }));
+    // One match reads in the singular and names the list it opens.
+    await userEvent.click(await screen.findByRole('option', { name: 'See 1 article in Articles' }));
 
     expect(screen.getByTestId('where')).toHaveTextContent('/admin/articles?q=khata');
   });
