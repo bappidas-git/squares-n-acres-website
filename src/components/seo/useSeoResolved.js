@@ -34,7 +34,6 @@ import {
   DEFAULT_ROBOTS,
   ENGINE_TYPE_FOR,
   HTML_LANG,
-  INDEX_PAGES,
   NEVER_INDEXED,
   OG_LOCALE,
   OG_TYPE_FOR,
@@ -42,6 +41,7 @@ import {
   RSS_TYPES,
   THEME_COLOR,
   VERIFICATION_META,
+  indexPageFor,
 } from './seoDefaults';
 
 const { absolute, compact, isoDate } = schema;
@@ -176,7 +176,7 @@ export default function useSeoResolved({
    */
   const subject = useMemo(() => {
     const base = entity && typeof entity === 'object' ? entity : {};
-    const fallback = INDEX_PAGES[type] ?? {};
+    const fallback = indexPageFor(type, context);
     const seo = base.seo ?? {};
 
     return {
@@ -197,7 +197,7 @@ export default function useSeoResolved({
         twitter: { ...(seo.twitter ?? {}), ...(overrides.twitter ?? {}) },
       },
     };
-  }, [entity, type, title, description, overrides]);
+  }, [entity, type, title, description, overrides, context]);
 
   const output = useMemo(
     () => resolveSeoOutput(engineType, subject, seoSettings ?? {}, context),

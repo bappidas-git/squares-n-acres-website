@@ -19,6 +19,7 @@
  */
 
 const copy = require('../config/copy');
+const { localitiesIndex } = require('./localitiesIndex');
 
 /** Every value `<Seo type>` accepts (§9.2, extended by prompt 38). */
 const PAGE_TYPES = [
@@ -103,12 +104,31 @@ const DEFAULT_ROBOTS = { index: true, follow: true, maxImagePreview: 'large' };
  * The words themselves are `config/copy.js` — every string the site says is
  * reviewed in one place (§8.5, prompt 43) — and this is where the engine picks
  * them up. Their titles go **through** the type's title template like any
- * record's would, so "Localities in Bengaluru" becomes "Localities in
- * Bengaluru | Squares N Acres" and changing the separator in Admin → SEO
- * changes it here too. A page may still pass its own `title`/`description`
- * and win.
+ * record's would, so "Careers" becomes "Careers | Squares N Acres" and
+ * changing the separator in Admin → SEO changes it here too. A page may still
+ * pass its own `title`/`description` and win; the localities index's words
+ * are a function of the master data (`indexPageFor`).
  */
 const INDEX_PAGES = copy.SEO.indexPages;
+
+/**
+ * The words an index page goes by: its row of `INDEX_PAGES`, except the
+ * localities index, which names the cities its localities are in — read from
+ * the master data both `<Seo>` and `scripts/lib/renderJsonLd.js` hold, so the
+ * two resolve it alike.
+ *
+ * @param {string} type a page type
+ * @param {{localities?: Array<object>, cities?: Array<object>}} [context]
+ * @returns {{title?: string, description?: string}}
+ */
+function indexPageFor(type, context = {}) {
+  if (type !== 'localities') return INDEX_PAGES[type] ?? {};
+  const { title, description } = localitiesIndex({
+    localities: context.localities,
+    cities: context.cities,
+  });
+  return { title, description };
+}
 
 /** The `<meta name="…">` each verification service looks for (§9.3). */
 const VERIFICATION_META = {
@@ -134,4 +154,5 @@ module.exports = {
   RECORD_TYPES,
   RSS_TYPES,
   VERIFICATION_META,
+  indexPageFor,
 };

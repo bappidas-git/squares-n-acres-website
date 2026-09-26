@@ -524,18 +524,27 @@ const EMPTY = {
  * Titles and descriptions for the pages that have no record behind them.
  *
  * They go **through** the type's title template like any record's would, so
- * "Localities in Bengaluru" becomes "Localities in Bengaluru | Squares N Acres"
- * and changing the separator in Admin → SEO changes it here too. A page may
- * still pass its own `title`/`description` and win.
+ * "Careers" becomes "Careers | Squares N Acres" and changing the separator in
+ * Admin → SEO changes it here too. A page may still pass its own
+ * `title`/`description` and win.
  *
  * `src/seo/pageTypes.js` exports this table as `INDEX_PAGES`.
  */
 const SEO = {
   indexPages: {
+    // The localities index names the cities its localities are in
+    // (`src/seo/localitiesIndex.js`). `title` and `description` are what it
+    // says before it knows one; `%cities%` is one to three names, "Bengaluru"
+    // or "Bengaluru and Mysuru", and past three the cities are counted.
     localities: {
-      title: 'Localities in Bengaluru',
-      description:
-        'Explore neighbourhoods across Bengaluru: connectivity, prices and lifestyle at a glance.',
+      title: 'Localities',
+      description: 'Explore neighbourhoods: connectivity, prices and lifestyle at a glance.',
+      titleIn: 'Localities in %cities%',
+      descriptionIn:
+        'Explore neighbourhoods across %cities%: connectivity, prices and lifestyle at a glance.',
+      titleAcross: 'Localities across %count% cities',
+      descriptionAcross:
+        'Explore neighbourhoods across %count% cities: connectivity, prices and lifestyle at a glance.',
     },
     builders: {
       title: 'Builders and developers in Bengaluru',

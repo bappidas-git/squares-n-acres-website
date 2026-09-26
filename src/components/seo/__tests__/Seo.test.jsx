@@ -10,6 +10,7 @@
 /* eslint-disable testing-library/no-node-access, testing-library/no-wait-for-multiple-assertions */
 import { waitFor } from '@testing-library/react';
 
+import MasterDataContext from '../../../contexts/MasterDataContext';
 import Seo from '../Seo';
 import renderWith from '../../../test-utils';
 import { PAGE_TYPES } from '../seoDefaults';
@@ -190,6 +191,21 @@ beforeEach(() => {
   document.title = '';
 });
 
+const BENGALURU = { id: 1, name: 'Bengaluru', slug: 'bengaluru' };
+const BONGAIGAON = { id: 2, name: 'Bongaigaon', slug: 'bongaigaon' };
+
+/** The page inside master data holding one locality per city given. */
+const withLocalities = (ui, cities) => (
+  <MasterDataContext.Provider
+    value={{
+      localities: cities.map((city, index) => ({ id: index + 1, cityId: city.id, city })),
+      cities: [...new Map(cities.map((city) => [city.id, city])).values()],
+    }}
+  >
+    {ui}
+  </MasterDataContext.Provider>
+);
+
 describe('<Seo> — titles', () => {
   it('resolves the record through its type template (§9.5)', async () => {
     renderWith(<Seo type="property" entity={PROPERTY} />, {
@@ -202,9 +218,23 @@ describe('<Seo> — titles', () => {
   });
 
   it('puts a page of its own through the template too', async () => {
-    renderWith(<Seo type="localities" />, { initialEntries: ['/localities'] });
+    renderWith(withLocalities(<Seo type="localities" />, [BENGALURU]), {
+      initialEntries: ['/localities'],
+    });
 
     expect((await head()).title).toBe('Localities in Bengaluru | Squares N Acres');
+  });
+
+  it('names every city the localities index covers, and none before it knows one', async () => {
+    const { unmount } = renderWith(
+      withLocalities(<Seo type="localities" />, [BENGALURU, BENGALURU, BONGAIGAON]),
+      { initialEntries: ['/localities'] }
+    );
+    expect((await head()).title).toBe('Localities in Bengaluru and Bongaigaon | Squares N Acres');
+    unmount();
+
+    renderWith(<Seo type="localities" />, { initialEntries: ['/localities'] });
+    await waitFor(() => expect(document.title).toBe('Localities | Squares N Acres'));
   });
 
   it('uses an override title verbatim (§9.3)', async () => {

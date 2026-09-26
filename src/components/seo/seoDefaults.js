@@ -23,6 +23,7 @@ export const {
   RECORD_TYPES,
   RSS_TYPES,
   VERIFICATION_META,
+  indexPageFor,
 } = pageTypes;
 
 /**
