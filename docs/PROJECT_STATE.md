@@ -7706,4 +7706,40 @@ They now break only after a slash or a hyphen, hold a path of about twenty
 characters on one line at 1280 px, and cap a single unbroken piece at the
 column rather than widening it; Updated shows from 1536 px (D-P51.62).
 
+### After 1.1.0 — a locality's zone names its own city (2026-09-26)
+
+Reported from Admin → Master data → Localities → Add: with the city set to
+Bongaigaon, the Zone select offered "North Bengaluru" … "Central Bengaluru".
+`LOCALITY_ZONES` carried Bengaluru in every label, so a zone read as
+Bengaluru's whatever the locality's city. The enum now labels the side alone
+and names it with a city through `labelIn` / `optionsIn`: the locality form's
+zone select and the property form's "Add a new locality" dialog follow the city
+chosen beside them, and the admin list, the public card and the guide's hero
+name each locality's own city. The admin list's Zone filter and the
+`/localities` chips span every city and offer the sides alone ("North"). The
+values and the API are unchanged; the handover package's smoke bundle carries
+the new `enums.js` (§6.17 in `DECISIONS.md`). Verified in Chromium against the
+mock with a second city: the options, the save (`cityId` 2, `zone: north`), the
+edit form after a reload, the list row, the dialog, the card and the hero.
+
+### After 1.1.0 — `/localities` names the cities it covers (2026-09-26)
+
+`/localities` was written for Bengaluru — its heading, intro and SEO copy — so
+a second city's localities were listed under "Localities in Bengaluru". The
+index now names the cities its localities are in (`src/seo/localitiesIndex.js`):
+one city reads exactly as before — prerendered on the seed, the page is
+identical to `main`'s, head, heading, intro, chips, cards and JSON-LD alike —
+two or three are named, and more are counted. A chip row (from two cities) or
+`?city=<slug>` makes the index one city's, and its zone chips name that city;
+the slug maps to the `cityId` the API already filters by, and the canonical
+stays `/localities`. The words wait for the master data behind a skeleton, and
+so do the prerender and, under `?city=`, the list request: one request, never
+an unfiltered one first. `<Seo>` and `scripts/lib/renderJsonLd.js` resolve the
+index's words through `indexPageFor` (§9.3 in `DECISIONS.md`). On a phone, a
+chip row long enough to scroll opened scrolled by the gutter, its first chip on
+the edge of the screen; the rows snap from the gutter now. Verified in Chromium
+with one city and with two: the chips, the URL, Back, a direct
+`?city=bongaigaon&zone=north`, 390 px without horizontal scroll, and the
+prerendered page of each.
+
 **Next prompt: none. 1.1.0 is tagged.**

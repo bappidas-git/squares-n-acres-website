@@ -32,6 +32,12 @@
   padding-top: var(--space-8);
 }
 
+/* The city chips, when the index covers more than one: a row of their own
+   above the zone chips and the sort, which keep the toolbar they always had. */
+.cities {
+  margin-bottom: var(--space-3);
+}
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -158,9 +164,13 @@
   }
 
   .chips {
-    /* The chip row scrolls past the container gutter on a phone. */
+    /* The chip row scrolls past the container gutter on a phone. Snapping
+       measures from the gutter too: from the row's edge, a row long enough to
+       scroll opened scrolled, its first chip on the edge of the screen, and
+       out of line with a short row above it. */
     margin: 0 calc(var(--container-padding) * -1);
     padding: 0 var(--container-padding) var(--space-1);
+    scroll-padding-inline: var(--container-padding);
   }
 
   .sort {

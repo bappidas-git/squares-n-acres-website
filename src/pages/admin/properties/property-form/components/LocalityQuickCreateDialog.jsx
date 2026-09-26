@@ -45,6 +45,9 @@ export default function LocalityQuickCreateDialog({
     setSaving(false);
   }, [open, defaultCityId, cities]);
 
+  // A zone is a side of the city chosen beside it, and is named with it.
+  const cityName = cities.find((city) => String(city.id) === String(cityId))?.name ?? '';
+
   const submit = async () => {
     const trimmed = name.trim();
     if (trimmed.length < 2) {
@@ -118,7 +121,7 @@ export default function LocalityQuickCreateDialog({
           <SelectField
             label="Zone"
             placeholder="Not specified"
-            options={LOCALITY_ZONES.options}
+            options={LOCALITY_ZONES.optionsIn(cityName)}
             value={zone}
             error={errors.zone}
             hint="Which side of the city it is on — it groups the locality pages."

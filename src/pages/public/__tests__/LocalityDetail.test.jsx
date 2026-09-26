@@ -85,7 +85,7 @@ describe('LocalityDetail', () => {
       await screen.findByRole('heading', { level: 1, name: 'Properties in Whitefield' })
     ).toBeInTheDocument();
 
-    expect(screen.getByText('East Bengaluru · Bengaluru')).toBeInTheDocument();
+    expect(screen.getByText('East Bengaluru')).toBeInTheDocument();
     expect(screen.getByText('₹8,200/sq ft')).toBeInTheDocument();
     expect(screen.getByText('560066, 560067')).toBeInTheDocument();
 
@@ -107,6 +107,21 @@ describe('LocalityDetail', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: 'Looking for a home in Whitefield?' })
     ).toBeInTheDocument();
+  });
+
+  it('names the zone with the locality’s own city', async () => {
+    masterDataService.localities.bySlug.mockResolvedValue(
+      envelope({
+        ...whitefield,
+        zone: 'north',
+        city: { id: 2, name: 'Bongaigaon', slug: 'bongaigaon' },
+      })
+    );
+    render();
+
+    await screen.findByRole('heading', { level: 1, name: 'Properties in Whitefield' });
+    expect(screen.getByText('North Bongaigaon')).toBeInTheDocument();
+    expect(screen.queryByText(/North Bengaluru/)).toBeNull();
   });
 
   it('asks the API for the locality named in the URL', async () => {

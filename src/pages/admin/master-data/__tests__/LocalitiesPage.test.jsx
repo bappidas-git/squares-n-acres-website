@@ -64,6 +64,41 @@ describe('LocalitiesPage (QA-60)', () => {
     expect(within(live).getByText(/· Featured/)).toBeInTheDocument();
     expect(within(off).queryByText(/· Featured/)).toBeNull();
   });
+
+  it('names each locality’s zone with its own city', async () => {
+    jest.spyOn(masterDataService.localities, 'adminList').mockResolvedValue(
+      page([
+        {
+          id: 1,
+          name: 'Whitefield',
+          slug: 'whitefield',
+          cityId: 1,
+          city: { id: 1, name: 'Bengaluru', slug: 'bengaluru' },
+          zone: 'east',
+          order: 1,
+          isActive: true,
+          propertyCount: 3,
+        },
+        {
+          id: 2,
+          name: 'Mayapuri',
+          slug: 'mayapuri',
+          cityId: 2,
+          city: { id: 2, name: 'Bongaigaon', slug: 'bongaigaon' },
+          zone: 'north',
+          order: 2,
+          isActive: true,
+          propertyCount: 0,
+        },
+      ])
+    );
+    renderWith(<LocalitiesPage />);
+
+    const bengaluru = await screen.findByRole('listitem', { name: /^Whitefield,/ });
+    const bongaigaon = screen.getByRole('listitem', { name: /^Mayapuri,/ });
+    expect(within(bengaluru).getByText(/^East Bengaluru ·/)).toBeInTheDocument();
+    expect(within(bongaigaon).getByText(/^North Bongaigaon ·/)).toBeInTheDocument();
+  });
 });
 
 describe('DevelopersPage (QA-60)', () => {

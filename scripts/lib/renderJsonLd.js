@@ -25,8 +25,8 @@ const urls = require('../../src/seo/urls');
 const {
   DEFAULT_ROBOTS,
   ENGINE_TYPE_FOR,
-  INDEX_PAGES,
   RECORD_TYPES,
+  indexPageFor,
 } = require('../../src/seo/pageTypes');
 const { resolveSeoOutput, robotsContent } = require('../../src/seo/resolve');
 
@@ -113,7 +113,7 @@ function routeFor(pathname) {
 function renderHead({ pathname, entity, type, seoSettings, context = {} }) {
   const siteUrl = String(seoSettings?.siteUrl ?? '').replace(/\/+$/, '');
   const engineType = ENGINE_TYPE_FOR[type] ?? (RECORD_TYPES.has(type) ? type : 'page');
-  const fallback = INDEX_PAGES[type] ?? {};
+  const fallback = indexPageFor(type, context);
 
   const base = entity && typeof entity === 'object' ? entity : {};
   const seo = base.seo ?? {};

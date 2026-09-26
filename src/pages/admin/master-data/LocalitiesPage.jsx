@@ -100,7 +100,7 @@ export default function LocalitiesPage() {
           key: 'zone',
           label: 'Zone',
           hideBelow: 'md',
-          render: (row) => (row.zone ? LOCALITY_ZONES.labelOf(row.zone) : '—'),
+          render: (row) => (row.zone ? LOCALITY_ZONES.labelIn(row.zone, row.city?.name) : '—'),
         },
         {
           key: 'avgPricePerSqft',
@@ -151,6 +151,7 @@ export default function LocalitiesPage() {
           type: 'select',
           label: 'Zone',
           placeholder: 'All zones',
+          // It filters every city's localities, so it offers the sides alone.
           options: LOCALITY_ZONES.options,
         },
         {
@@ -207,7 +208,7 @@ export default function LocalitiesPage() {
         <span className={styles.orderRow}>
           <span className={styles.name}>{row.name}</span>
           <span className={styles.orderMeta}>
-            {row.zone ? LOCALITY_ZONES.labelOf(row.zone) : 'No zone'} ·{' '}
+            {row.zone ? LOCALITY_ZONES.labelIn(row.zone, row.city?.name) : 'No zone'} ·{' '}
             {formatNumber(row.propertyCount ?? 0)}{' '}
             {row.propertyCount === 1 ? 'property' : 'properties'}
             {/* The home strip is the featured ones in this order, so which of
