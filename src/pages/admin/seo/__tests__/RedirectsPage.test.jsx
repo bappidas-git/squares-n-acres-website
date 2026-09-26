@@ -23,7 +23,12 @@ import userEvent from '@testing-library/user-event';
 import ApiError from '../../../../services/apiError';
 import redirectService from '../../../../services/redirectService';
 import renderWith from '../../../../test-utils';
-import { RedirectFormDialog, validateRedirectValues } from '../RedirectsPage';
+import {
+  RedirectFormDialog,
+  RedirectPath,
+  pathSegments,
+  validateRedirectValues,
+} from '../RedirectsPage';
 
 jest.mock('../../../../services/redirectService', () => ({
   __esModule: true,
@@ -74,6 +79,43 @@ describe('validateRedirectValues', () => {
 
   it('says nothing about a half-typed rule', () => {
     expect(validateRedirectValues({ fromPath: '', toPath: '' })).toEqual({});
+  });
+});
+
+// The table's paths wrap after a slash or a hyphen, never inside a word: at
+// 1280 px `overflow-wrap: anywhere` had split `/flats-in-whitefield` into
+// "/flats- / in- / whitefiel / d".
+describe('a path in the table', () => {
+  it('splits after each slash or hyphen that has more of the path behind it', () => {
+    expect(pathSegments('/flats-in-whitefield')).toEqual(['/flats-', 'in-', 'whitefield']);
+    expect(pathSegments('/insights/articles')).toEqual(['/insights/', 'articles']);
+    expect(pathSegments('/blog')).toEqual(['/blog']);
+    expect(pathSegments('/old/')).toEqual(['/old/']);
+  });
+
+  it('never breaks after the leading slash, or inside the // of an address', () => {
+    expect(pathSegments('/')).toEqual(['/']);
+    expect(pathSegments('https://example.com/new-page')).toEqual([
+      'https://',
+      'example.com/',
+      'new-',
+      'page',
+    ]);
+  });
+
+  it('gives back exactly the path it was given', () => {
+    ['/flats-in-whitefield', 'https://example.com/a/b-c', '/', ''].forEach((path) =>
+      expect(pathSegments(path).join('')).toBe(path)
+    );
+    expect(pathSegments(null)).toEqual([]);
+  });
+
+  it('marks the breaks with <wbr>, so the text a reader copies is the path', () => {
+    renderWith(<RedirectPath path="/flats-in-whitefield" />);
+
+    const code = screen.getByText('/flats-in-whitefield');
+    expect(code).toHaveTextContent(/^\/flats-in-whitefield$/);
+    expect(code).toContainHTML('/flats-<wbr>in-<wbr>whitefield');
   });
 });
 

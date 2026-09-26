@@ -2,6 +2,12 @@
    the Nginx snippet. */
 
 .page {
+  /* The two path columns: wide enough for a path of about twenty characters
+     on one line at 1280 px. The table's columns and the cap on a path in a
+     cell (below) both read these. */
+  --redirect-from-width: 13rem;
+  --redirect-to-width: 15.5rem;
+
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -58,7 +64,25 @@
 .path {
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
-  overflow-wrap: anywhere;
+  /* Breaks at the <wbr> after a slash or a hyphen (RedirectPath). `break-word`,
+     unlike `anywhere`, never lets the table size a column as if every
+     character were a place to break — which is how the columns were squeezed
+     to a few characters and the paths split mid-word. */
+  overflow-wrap: break-word;
+}
+
+/* In the table a path is never wider than its column holds — the column less
+   the cell's padding, and less the arrow before a "To" path — so one piece
+   with no slash or hyphen in it, longer than that, breaks inside itself as the
+   last resort instead of widening its column until the table scrolls. The
+   phone's cards are not capped. */
+td .path {
+  display: inline-block;
+  max-width: calc(var(--redirect-from-width) - 2 * var(--space-4));
+}
+
+td .toCell .path {
+  max-width: calc(var(--redirect-to-width) - 2 * var(--space-4) - 1rem - var(--space-2));
 }
 
 .toCell {

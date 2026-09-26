@@ -56,7 +56,7 @@ Last prompt executed: 51 — Dead actions, media UX, admin practicality, Cloudwa
 | 46  | QA: cross-device, Lighthouse, SEO validation, prerender dry run      | `4a917e8` (+ `95c6f3b`, the review fix on the same branch)                          | 2026-09-18 |
 | 47  | Backend developer handover package: generator, docs, schema, Postman | `ee6f762`                                                                          | 2026-09-18 |
 | 48  | Final audit, client content checklist, README, version 1.0.0         | this commit (tagged `v1.0.0`)                                                      | 2026-09-18 |
-| 51  | Dead actions, media UX, admin practicality, Cloudways handover       | `0bfeaba` `0a797d0` `3fb5636` `292a89e` `5926aa4` `768de0a` `f4bce35`, a QA fix, then the package commit (tagged `v1.1.0`) | 2026-09-26 |
+| 51  | Dead actions, media UX, admin practicality, Cloudways handover       | `0bfeaba` `0a797d0` `3fb5636` `292a89e` `5926aa4` `768de0a` `f4bce35` `6f13137`, the redirects-table fix, then the package commit (tagged `v1.1.0`) | 2026-09-26 |
 
 ## Final metrics (1.0.0, prompt 48)
 
@@ -7699,6 +7699,11 @@ millisecond after the notice read the clock moved the end past four minutes.
 The mock now fixes the expiry when the test sets it, three and a half minutes
 out, as a real session does. The browser sweep found one line of copy: the
 quick search offered "See all 1 leads"; one match now reads "See 1 lead in
-Leads".
+Leads". It also showed, on SEO → Redirects at 1280 px, the paths split mid-word
+("/flats- / in- / whitefiel / d") — older than this prompt: `overflow-wrap:
+anywhere` let the table squeeze the From and To columns to a few characters.
+They now break only after a slash or a hyphen, hold a path of about twenty
+characters on one line at 1280 px, and cap a single unbroken piece at the
+column rather than widening it; Updated shows from 1536 px (D-P51.62).
 
 **Next prompt: none. 1.1.0 is tagged.**
