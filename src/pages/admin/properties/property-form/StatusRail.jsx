@@ -15,7 +15,10 @@ import { formatRelative, formatTime } from '../../../../utils/format';
 import { completenessTone } from './completeness';
 
 import styles from './StatusRail.module.css';
-import { FORMS } from '../../../../config/adminCopy';
+import { FORMS, SEO } from '../../../../config/adminCopy';
+import { resolveFieldPath } from './fieldFocus';
+import { tabByKey, tabOfPath } from './tabs';
+import { useToast } from '../../../../components/common/ToastProvider';
 
 /**
  * The right-hand rail of the property form: everything about the listing that
@@ -56,6 +59,7 @@ export default function StatusRail({ form, collapsible = false }) {
     duplicate,
     remove,
   } = form;
+  const toast = useToast();
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDuplicate, setConfirmDuplicate] = useState(false);
@@ -267,11 +271,18 @@ export default function StatusRail({ form, collapsible = false }) {
       <section className={styles.block} aria-labelledby="rail-seo">
         <SeoSummaryCard
           seo={values.seo}
-          onOpen={(field) => {
+          onOpen={(failure) => {
             // The first failing test is the one worth opening on; when nothing
             // is failing the tab itself is the destination.
-            if (field) focusField(field);
-            else setActiveTab('seo');
+            if (!failure?.field) {
+              setActiveTab('seo');
+              if (failure?.message) toast.info(SEO.panel.opened('SEO', failure.message));
+              return;
+            }
+            focusField(failure.field);
+            const target = resolveFieldPath(failure.field, values);
+            const where = target.startsWith('seo.') ? 'SEO' : tabByKey(tabOfPath(target)).label;
+            toast.info(SEO.panel.opened(where, failure.message));
           }}
         />
       </section>

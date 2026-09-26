@@ -19,7 +19,12 @@ import { createContext, useContext } from 'react';
  *   inside `seo` (`og.title`, `robots.maxSnippet`)
  * @property {object} analysis `{ score, band, testsPassed, testsTotal, groups }`
  * @property {boolean} analysing true while the first analysis is still pending
- * @property {() => void} reanalyse runs the analysis now, skipping the debounce
+ * @property {(contextPatch?: object) => object} reanalyse runs the analysis now,
+ *   skipping the debounce, and answers with the result; `contextPatch` is merged
+ *   over the context (a site index read a moment ago)
+ * @property {() => Promise<Array<object>>} refreshSiteIndex reads the site-wide
+ *   SEO list the uniqueness tests compare against again, and resolves with it (an
+ *   empty list when the role may not read it)
  * @property {object} resolved `resolveSeoOutput` for this record
  * @property {object} seoSettings `GET /seo/settings`
  * @property {string} siteUrl

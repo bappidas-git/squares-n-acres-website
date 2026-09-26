@@ -1,5 +1,5 @@
 import { Icon } from '@iconify/react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import AdminTabs, { AdminTabPanel } from '../../../components/admin/AdminTabs';
@@ -33,7 +33,9 @@ import {
   TextareaField,
 } from '../../../components/ui';
 import { generateExcerpt } from '../../../utils/articleUtils';
+import { SEO } from '../../../config/adminCopy';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
+import { useToast } from '../../../components/common/ToastProvider';
 
 import styles from './ArticleFormPage.module.css';
 
@@ -59,11 +61,15 @@ const FORM_TABS = [
  * What the SEO analysers call a field, and where it is on this screen.
  *
  * A hint that names the body scrolls to the editor; one that names the category
- * scrolls to the Classification card in the rail. Anything not listed still
- * opens the Content tab, which is where everything about the article is.
+ * scrolls to the Classification card in the rail. The images an article is
+ * measured on are the ones in its body, so `images` is the editor too. Anything
+ * not listed still opens the Content tab, which is where everything about the
+ * article is — and anything under `seo.` is the SEO panel's, reached through
+ * its own `focusRequest`.
  */
 const FIELD_TARGET = {
   content: 'article-content',
+  images: 'article-content',
   excerpt: 'article-excerpt',
   slug: 'article-slug',
   faqs: 'article-faqs',
@@ -124,12 +130,34 @@ export default function ArticleFormPage() {
   // Focusing a control the SEO tab has just hidden has to wait for the render
   // that brings it back, which is what this ref and the callback below are for.
   const pendingFocus = useRef(null);
+  // A field of the SEO panel the rail's "Fix SEO" (or a hint) asked for: the
+  // panel mounts with the tab and opens its own sub-tab on it. A new object
+  // asks again, so the same field can be asked for twice.
+  const [seoFocusRequest, setSeoFocusRequest] = useState(null);
+  const toast = useToast();
+
+  // A request is spent once the editor leaves the SEO tab: left in place, the
+  // panel — which mounts with the tab — put the cursor back in that field every
+  // time the tab was opened again.
+  useEffect(() => {
+    if (activeTab !== 'seo') setSeoFocusRequest(null);
+  }, [activeTab]);
 
   /**
-   * The SEO panel's fix hints: open the half of the form that holds the field,
-   * then put the cursor in it.
+   * The SEO panel's fix hints and the rail's "Fix SEO": open the half of the
+   * form that holds the field, then put the cursor in it. A path under `seo.`
+   * lives on the SEO tab (the first failure of most articles is one — "The
+   * title does not carry the focus keyword" is `seo.title`), everything else on
+   * Content.
    */
   const focusField = useCallback((path) => {
+    if (!path) return;
+    if (String(path).startsWith('seo.')) {
+      setActiveTab('seo');
+      setSeoFocusRequest((previous) => ({ path, nonce: (previous?.nonce ?? 0) + 1 }));
+      return;
+    }
+
     const target = FIELD_TARGET[path];
     setActiveTab('content');
     pendingFocus.current = target ?? null;
@@ -254,9 +282,13 @@ export default function ArticleFormPage() {
         <SeoSummaryCard
           compact
           seo={values.seo}
-          onOpen={(field) => {
-            if (field) focusField(field);
+          onOpen={(failure) => {
+            if (failure?.field) focusField(failure.field);
             else setActiveTab('seo');
+            if (failure?.message) {
+              const where = !failure.field || failure.field.startsWith('seo.') ? 'SEO' : 'Content';
+              toast.info(SEO.panel.opened(where, failure.message));
+            }
           }}
         />
       </aside>
@@ -409,6 +441,7 @@ export default function ArticleFormPage() {
               slugBase="/insights/articles/"
               context={{ categories: taxonomy.categories, authors: taxonomy.authors }}
               onFocusField={focusField}
+              focusRequest={seoFocusRequest}
               onSlugChange={(slug) => setField('slug', slug)}
               onChange={(patch, meta) => {
                 // The analysis writing its own score back is not an edit, so it

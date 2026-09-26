@@ -95,25 +95,29 @@ function loadSettings() {
  * is a perfectly good one: the panel still works, it simply cannot say whether
  * a description is unique.
  *
- * @returns {{rows: Array<object>, loading: boolean, refresh: () => void}}
+ * @returns {{rows: Array<object>, loading: boolean, refresh: () => Promise<Array<object>>}}
  */
 export function useSiteSeoIndex() {
   const [rows, setRows] = useState(() => cache ?? []);
   const [loading, setLoading] = useState(() => cache === null);
 
+  // Answers with the rows it settled on — an empty list when the request was
+  // refused — so a caller can wait for the index and read it in one step.
   const load = useCallback((alive) => {
     setLoading(cache === null);
-    loadIndex()
+    return loadIndex()
       .then((loaded) => {
         if (alive.current) {
           setRows(loaded);
           setLoading(false);
         }
+        return loaded;
       })
       .catch((thrown) => {
         // The list decides three tests out of fifty. A desk that cannot read it
         // — a 403 for a sales user — gets a panel that skips them, not an error.
         if (!isCanceled(thrown) && alive.current) setLoading(false);
+        return [];
       });
   }, []);
 
@@ -132,9 +136,10 @@ export function useSiteSeoIndex() {
     };
   }, [load]);
 
+  /** Reads the list again, whatever is cached; resolves with the rows once they are in. */
   const refresh = useCallback(() => {
     invalidateSiteSeoIndex();
-    load({ current: true });
+    return load({ current: true });
   }, [load]);
 
   return { rows, loading, refresh };

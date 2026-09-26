@@ -33,9 +33,10 @@ export function firstFailure(analysis) {
  * @param {object} props
  * @param {{score?: number|null, scoreBand?: string, testsPassed?: number,
  *   testsTotal?: number, analysis?: object}} [props.seo] the §9.6 branch
- * @param {(field: string|null) => void} [props.onOpen] "Fix SEO" — the host opens
- *   its SEO tab and focuses the first failing field ("Open the SEO tab" while
- *   nothing is failing)
+ * @param {(failure: {field: string|null, message: string}|null) => void} [props.onOpen]
+ *   "Fix SEO" — handed the first failing test's field and message, so the host
+ *   opens the tab that holds the field, focuses it and can say which test it
+ *   is fixing; `null` for "Open the SEO tab" while nothing is failing
  * @param {boolean} [props.compact] drops the heading (a card that has its own)
  */
 export default function SeoSummaryCard({ seo, onOpen, compact = false }) {
@@ -77,7 +78,9 @@ export default function SeoSummaryCard({ seo, onOpen, compact = false }) {
           icon={
             <Icon icon={failure ? 'mdi:magnify-scan' : 'mdi:arrow-right'} width="16" height="16" />
           }
-          onClick={() => onOpen(failure?.field ?? null)}
+          onClick={() =>
+            onOpen(failure ? { field: failure.field ?? null, message: failure.message } : null)
+          }
         >
           {failure ? 'Fix SEO' : 'Open the SEO tab'}
         </Button>

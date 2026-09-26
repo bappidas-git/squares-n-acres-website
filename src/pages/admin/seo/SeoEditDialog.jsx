@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
+import { useNavigate } from 'react-router-dom';
 
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
@@ -50,6 +51,7 @@ export default function SeoEditDialog({
   readOnly = false,
 }) {
   const toast = useToast();
+  const navigate = useNavigate();
   const service = serviceFor(row?.type);
 
   const [entity, setEntity] = useState(null);
@@ -227,7 +229,18 @@ export default function SeoEditDialog({
           seo={seo}
           onChange={handleChange}
           onFocusField={() => {
-            toast.info('That field is edited in the record’s own form.');
+            // The body, the images, the FAQs: the dialog edits the `seo` branch
+            // only, so a hint about the rest of the record opens the record's
+            // own form — unless that would drop SEO changes not saved yet.
+            if (dirty) {
+              toast.info(
+                'That field is edited in the record’s own form. Save or discard the SEO changes here first.'
+              );
+              return;
+            }
+            if (!service || !entity) return;
+            onClose?.();
+            navigate(service.adminPath(entity.id));
           }}
           variant="full"
           context={context}

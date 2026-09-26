@@ -59,7 +59,7 @@ const signatureOf = (result) =>
  * @param {boolean} [options.enabled]
  * @param {number} [options.delay]
  * @returns {{analysis: object, analysing: boolean, lastAnalyzedAt: string|null,
- *   reanalyse: () => void}}
+ *   reanalyse: (contextPatch?: object) => object}}
  */
 export default function useSeoAnalysis({
   entityType,
@@ -92,9 +92,12 @@ export default function useSeoAnalysis({
     [context?.siteIndex?.length, context?.seoSettings?.siteUrl]
   );
 
-  const run = useCallback(() => {
+  const run = useCallback((contextPatch) => {
     const current = latest.current;
-    const result = analyze(current.entityType, current.entity ?? {}, current.context ?? {});
+    const result = analyze(current.entityType, current.entity ?? {}, {
+      ...(current.context ?? {}),
+      ...(contextPatch ?? {}),
+    });
     const at = new Date().toISOString();
 
     setAnalysis(result);
@@ -119,14 +122,19 @@ export default function useSeoAnalysis({
     if (!enabled) return undefined;
     // `inputKey` and `contextKey` are what "the question changed" means; the
     // effect reads everything else through the ref.
-    const timer = setTimeout(run, delay);
+    const timer = setTimeout(() => run(), delay);
     return () => clearTimeout(timer);
   }, [inputKey, contextKey, delay, enabled, run]);
 
-  /** "Re-analyse" — the same work, without the wait. */
-  const reanalyse = useCallback(() => {
-    run();
-  }, [run]);
+  /**
+   * "Re-analyse" — the same work, without the wait, answering with the result
+   * so the button can say what it found.
+   *
+   * `contextPatch` is merged over the context of the last render: a site index
+   * that has just been read again is in the caller's hands before it is in a
+   * render, and the analysis the button reports must be the one against it.
+   */
+  const reanalyse = useCallback((contextPatch) => run(contextPatch), [run]);
 
   return { analysis, analysing: analysis === null, lastAnalyzedAt, reanalyse };
 }

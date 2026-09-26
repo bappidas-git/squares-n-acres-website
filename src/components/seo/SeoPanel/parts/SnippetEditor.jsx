@@ -1,20 +1,33 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import Button from '../../../ui/Button';
+import ConfirmDialog from '../../../ui/ConfirmDialog';
 import SeoMeter from './SeoMeter';
 import SlugField from '../../../admin/SlugField';
 import VariableMenu from './VariableMenu';
 import { TextField, TextareaField } from '../../../ui/FormField';
 import { buildVariables, generateDefaults, measureSnippet, resolveTemplate } from '../../../../seo';
+import { SEO } from '../../../../config/adminCopy';
 import { fieldId } from '../SeoPanel';
 import { useSeoPanel } from '../SeoPanelContext';
+import { useToast } from '../../../common/ToastProvider';
+import useLingering from '../../../../hooks/useLingering';
 
 import styles from '../SeoPanel.module.css';
 
 /** What a snippet field will accept before the API refuses it (`validateSeo`). */
 export const TITLE_MAX_LENGTH = 200;
 export const DESCRIPTION_MAX_LENGTH = 320;
+
+/** What each Generate button calls its field, and why it may have nothing to offer. */
+const GENERATED = {
+  title: { noun: 'SEO title', reason: 'the record has no title or name yet' },
+  description: {
+    noun: 'meta description',
+    reason: 'the record has no summary or body text to take one from',
+  },
+};
 
 /** The path the slug hangs off, per entity type, when the host does not say. */
 const SLUG_BASE = {
@@ -56,6 +69,12 @@ export default function SnippetEditor() {
     fixedPath,
   } = useSeoPanel();
 
+  const toast = useToast();
+  // The field a Generate is waiting to replace, with the text it would put
+  // there — asked before anything an editor wrote is thrown away.
+  const [replacing, setReplacing] = useState(null);
+  const [shownReplace, releaseReplace] = useLingering(replacing);
+
   const titleId = fieldId('seo.title');
   const descriptionId = fieldId('seo.description');
 
@@ -68,11 +87,35 @@ export default function SnippetEditor() {
   const title = measureSnippet(titlePreview, 'title');
   const description = measureSnippet(seo.description || '', 'description');
 
-  /** "Generate" — the record's own facts, and never over something written. */
+  /**
+   * "Generate" — the record's own facts. An empty box is filled at once; a box
+   * somebody wrote in is replaced only after a confirmation, and never with the
+   * same text in silence (prompt 51: the button rewrote what was there and
+   * looked dead).
+   */
   const generate = (key) => {
-    const made = generateDefaults(entityType, entity, seoSettings, { context });
-    const value = key === 'title' ? made.title : made.description;
-    if (value) setField(key, value);
+    const { noun, reason } = GENERATED[key];
+    const current = String(seo[key] ?? '').trim();
+    const made = generateDefaults(entityType, entity, seoSettings, {
+      context,
+      overwrite: Boolean(current),
+    });
+    const value = String(made[key] ?? '').trim();
+
+    if (!value) {
+      toast.info(SEO.panel.cannotGenerate(noun, reason));
+      return;
+    }
+    if (!current) {
+      setField(key, value);
+      toast.success(SEO.panel.generated);
+      return;
+    }
+    if (value === current) {
+      toast.info(SEO.panel.sameAsGenerated(noun));
+      return;
+    }
+    setReplacing({ key, value });
   };
 
   const base = slugBase ?? SLUG_BASE[entityType] ?? '/';
@@ -198,6 +241,22 @@ export default function SnippetEditor() {
           </p>
         )}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(replacing)}
+        title={shownReplace ? SEO.panel.replaceTitle(GENERATED[shownReplace.key].noun) : ''}
+        message={shownReplace ? SEO.panel.replaceMessage(GENERATED[shownReplace.key].noun) : ''}
+        confirmLabel={SEO.panel.replaceConfirm}
+        onExited={releaseReplace}
+        onClose={() => setReplacing(null)}
+        onConfirm={() => {
+          if (replacing) {
+            setField(replacing.key, replacing.value);
+            toast.success(SEO.panel.generated);
+          }
+          setReplacing(null);
+        }}
+      />
     </div>
   );
 }
