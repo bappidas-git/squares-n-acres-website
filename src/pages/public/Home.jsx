@@ -135,7 +135,10 @@ export default function Home() {
   usePrerenderReady(pageLoading);
 
   const blocks = useMemo(() => {
-    const list = Array.isArray(page?.blocks) ? page.blocks : [];
+    // A hidden band is off the home page too (prompt 51).
+    const list = (Array.isArray(page?.blocks) ? page.blocks : []).filter(
+      (block) => block?.hidden !== true
+    );
     return {
       features: list.find((block) => block.type === 'features')?.data ?? null,
       steps: list.find((block) => block.type === 'steps')?.data ?? null,

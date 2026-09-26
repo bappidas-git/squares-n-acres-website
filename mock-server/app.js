@@ -41,7 +41,12 @@ const { validateWrite } = require('./middleware/validate');
 const SEO_FILE_RE = /^\/(sitemap\.xml|sitemap-[a-z0-9-]+\.xml|robots\.txt|rss\.xml|llms\.txt)$/;
 
 /** The `/auth/*` endpoints that need a token; `login` is the only public one. */
-const PRIVATE_AUTH_PATHS = ['/api/auth/logout', '/api/auth/profile', '/api/auth/password'];
+const PRIVATE_AUTH_PATHS = [
+  '/api/auth/logout',
+  '/api/auth/profile',
+  '/api/auth/password',
+  '/api/auth/refresh',
+];
 
 /** Artificial latency, used to review skeletons and spinners (`MOCK_DELAY_MS`). */
 function delay(ms) {
@@ -118,7 +123,11 @@ function createApp({ router, config = defaultConfig, db = dbModule } = {}) {
   // Root mirrors: `/sitemap.xml` is rewritten onto `/api/sitemap.xml`, so the
   // sitemap router below answers both spellings from one implementation (D21).
   app.use((req, res, next) => {
-    if (req.method === 'GET' && SEO_FILE_RE.test(req.path)) req.url = `/api${req.url}`;
+    if (req.method === 'GET' && SEO_FILE_RE.test(req.path)) {
+      req.url = `/api${req.url}`;
+      // The index names its children where it was fetched (prompt 51).
+      req.seoFileAtRoot = true;
+    }
     next();
   });
 

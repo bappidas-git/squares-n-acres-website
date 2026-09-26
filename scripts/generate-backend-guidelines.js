@@ -161,6 +161,10 @@ const OPTIONAL = {
   'adminNewsletterSubscribers.exportCsv': 'the list is visible on screen',
   'sitemap.llms': 'nothing on the site reads it; crawlers do',
   'redirects.resolve': 'used by the smoke test; the SPA resolves client-side',
+  'properties.counts':
+    'the home page falls back to one `GET /properties?perPage=1` a tile on 404 or 501',
+  'adminHeaderMenus.checkSlug':
+    'nothing calls it: a menu’s slug is derived from its name and kept (422 on a clash)',
 };
 
 function supportMatrix() {
@@ -251,6 +255,7 @@ async function main() {
       notesCaching: section(notes, '01_api_contract.caching-headers'),
       notesCors: section(notes, '01_api_contract.cors'),
       notesRateLimiting: section(notes, '01_api_contract.rate-limiting'),
+      notesCounts: section(notes, '01_api_contract.category-counts'),
       notesPlanned: section(notes, '01_api_contract.planned-additions'),
     })
   );
@@ -297,9 +302,11 @@ async function main() {
       notesSitemaps: section(notes, '06_seo.sitemaps'),
       notesLastmod: section(notes, '06_seo.lastmod-and-caching'),
       notesRobots: section(notes, '06_seo.robotstxt'),
+      notesSitemapHost: section(notes, '06_seo.the-host-the-index-names'),
       notesRss: section(notes, '06_seo.rss'),
       notesLlms: section(notes, '06_seo.llmstxt'),
       notesRedirects: section(notes, '06_seo.redirects'),
+      notesNotFoundLog: section(notes, '06_seo.the-404-log'),
       notesCanonicalHost: section(notes, '06_seo.canonical-host'),
       notesEscaping: section(notes, '06_seo.escaping'),
       robotsDefault: robotsDefault(),

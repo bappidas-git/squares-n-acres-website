@@ -32,11 +32,13 @@ import { firstFieldMessage } from '../../../services/apiError';
 import { formatNumber } from '../../../utils/format';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import {
+  useAmenities,
   useDevelopers,
   useLocalities,
   usePropertyTypes,
   useSegments,
 } from '../../../hooks/useMasterData';
+import { useMasterData } from '../../../contexts/MasterDataContext';
 import { useToast } from '../../../components/common/ToastProvider';
 import { team } from '../../../services/masterDataService';
 import { viewUrlOf } from './publicUrl';
@@ -114,6 +116,9 @@ export default function PropertiesListPage() {
   const propertyTypes = usePropertyTypes({ activeOnly: false });
   const localities = useLocalities({ activeOnly: false });
   const developers = useDevelopers({ activeOnly: false });
+  // For the Amenity and Badge filters Master data's counts link to (prompt 51).
+  const amenities = useAmenities({ activeOnly: false });
+  const { badges } = useMasterData();
   // The advisors, for the Advisor filter the Team list links to (prompt 51).
   // A sales user cannot read the team's admin list; the filter still works
   // from a link, named by its id.
@@ -579,8 +584,17 @@ export default function PropertiesListPage() {
   );
 
   const filterFields = useMemo(
-    () => buildPropertyFilterFields({ segments, propertyTypes, localities, developers, agents }),
-    [segments, propertyTypes, localities, developers, agents]
+    () =>
+      buildPropertyFilterFields({
+        segments,
+        propertyTypes,
+        localities,
+        developers,
+        agents,
+        amenities,
+        badges,
+      }),
+    [segments, propertyTypes, localities, developers, agents, amenities, badges]
   );
 
   const filtered = hasActiveFilters(params);

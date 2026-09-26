@@ -8,6 +8,7 @@ import { makeImage } from '../initialState';
 import ImageGalleryEditor, { coverAfterRemoval } from '../components/ImageGalleryEditor';
 import { recordFolder } from '../../../media/useMediaUpload';
 import { propertyFieldId } from '../fieldFocus';
+import { useLocalities } from '../../../../../hooks/useMasterData';
 import { usePropertyFormContext } from '../PropertyFormContext';
 
 import styles from './PropertyTabs.module.css';
@@ -51,6 +52,11 @@ export default function MediaTab() {
 
   const images = values.images ?? [];
   const focusKeyword = String(values.seo?.focusKeyword ?? '').trim();
+  // What "Fill empty alt text" writes from: the title and where it is.
+  const localities = useLocalities({ activeOnly: false });
+  const localityName =
+    localities.find((entry) => String(entry.id) === String(values.location?.localityId ?? ''))
+      ?.name ?? '';
   const kind = videoKind(values.videoUrl);
   const youTube = youTubeId(values.videoUrl);
 
@@ -102,6 +108,7 @@ export default function MediaTab() {
             disabled={disabled}
             folder={folder}
             altHint={focusKeyword || null}
+            altSource={{ title: values.title, locality: localityName }}
             onAdd={addImages}
             onUpdate={(id, patch) => updateItem('images', id, patch)}
             onRemove={removeImage}

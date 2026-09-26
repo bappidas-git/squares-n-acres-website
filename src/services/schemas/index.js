@@ -33,6 +33,7 @@ const settings = require('./settings');
 const auth = require('./auth');
 const newsletter = require('./newsletter');
 const jobApplication = require('./jobApplication');
+const { notFoundReport } = require('./seo');
 
 /** Every key optional, one level deep — the `PATCH` variant of a write shape. */
 const allOptional = (shape) =>
@@ -60,6 +61,7 @@ const groups = {
   auth: { login: auth.login, profile: auth.profile, password: auth.password },
   newsletter,
   jobApplication,
+  notFound: { report: notFoundReport },
   settings: settings.siteSettings,
   seoSettings: settings.seoSettings,
   ...Object.fromEntries(

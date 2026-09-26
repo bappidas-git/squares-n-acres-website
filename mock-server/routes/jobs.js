@@ -26,6 +26,7 @@ const { stripHtml, unsafeMarkup } = require('../lib/html');
 const { makeCrudRouter } = require('../lib/crud');
 const { matchesQ } = require('../lib/filters');
 const { nextId } = require('../lib/ids');
+const { omit } = require('../lib/scope');
 const { notFound, validation } = require('../middleware/errors');
 const { paginate, toPositiveInt, DEFAULT_PER_PAGE_PUBLIC } = require('../lib/paginate');
 const { rateLimit } = require('../middleware/rateLimit');
@@ -105,6 +106,8 @@ module.exports = ({ db, getModel }) => {
 
   const jobs = () => db.getCollection('jobOpenings');
   const applications = () => db.getCollection('jobApplications');
+  /** An opening as a visitor reads it: who posted and who edited it stay in the panel. */
+  const publicJob = (job) => omit(job, getModel('jobOpenings').publicOmit ?? []);
 
   /* ---------------------------------------------------------------- *
    * Public
@@ -125,10 +128,7 @@ module.exports = ({ db, getModel }) => {
       perPage: toPositiveInt(first(req.query.perPage), DEFAULT_PER_PAGE_PUBLIC),
     });
 
-    res.ok(
-      data.map((job) => ({ ...job })),
-      meta
-    );
+    res.ok(data.map(publicJob), meta);
   });
 
   router.get('/jobs/slug/:slug', (req, res, next) => {
@@ -140,7 +140,7 @@ module.exports = ({ db, getModel }) => {
       return;
     }
 
-    res.ok({ ...job, isOpen: isOpen(job) });
+    res.ok({ ...publicJob(job), isOpen: isOpen(job) });
   });
 
   router.post('/jobs/:id/apply', rateLimit({ max: SUBMISSIONS_PER_MINUTE }), (req, res, next) => {
@@ -221,6 +221,8 @@ module.exports = ({ db, getModel }) => {
       // and the department filter offered both (QA-61).
       trimStrings: true,
       beforeSave: checkJob,
+      // A form opened before somebody else's save is refused (prompt 51).
+      staleGuard: 'job opening',
     })
   );
 

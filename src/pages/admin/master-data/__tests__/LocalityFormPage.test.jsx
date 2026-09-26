@@ -11,10 +11,12 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
 
+import ApiError from '../../../../services/apiError';
 import LocalityFormPage from '../LocalityFormPage';
 import masterDataService from '../../../../services/masterDataService';
 import redirectService from '../../../../services/redirectService';
 import renderWith from '../../../../test-utils';
+import storage from '../../../../utils/storage';
 
 jest.mock('../../../../services/redirectService');
 // `useBlocker` needs a data router; the test renders a `MemoryRouter`.
@@ -107,6 +109,8 @@ const saveButton = () => screen.getAllByRole('button', { name: 'Save' })[0];
 
 beforeEach(() => {
   jest.restoreAllMocks();
+  // A dirty form keeps a copy of itself on the way out (prompt 51).
+  window.localStorage.clear();
   mockMasterData.cities = [{ id: 1, name: 'Bengaluru', slug: 'bengaluru', isActive: true }];
   mockMasterData.loading = false;
   mockMasterData.refresh = jest.fn();
@@ -341,5 +345,68 @@ describe('LocalityFormPage (QA-60)', () => {
     await userEvent.keyboard('{Enter}');
     expect(await screen.findByText('A pincode is six digits, like 560066.')).toBeInTheDocument();
     expect(screen.queryByText('560066')).toBeNull();
+  });
+});
+
+describe('LocalityFormPage — kept work, and two editors (prompt 51)', () => {
+  it('offers back the copy a closed tab kept, and restores it', async () => {
+    storage.setItem(`sna_locality_draft:${RECORD.id}`, {
+      values: { ...RECORD, shortDescription: 'Typed before the tab closed.', seo: RECORD.seo },
+      savedAt: new Date(Date.parse(RECORD.updatedAt) + 60000).toISOString(),
+      version: RECORD.updatedAt,
+    });
+    renderForm();
+    await loaded();
+
+    expect(await screen.findByText(/A draft of this locality was saved/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Restore the draft' }));
+
+    expect(await screen.findByDisplayValue('Typed before the tab closed.')).toBeInTheDocument();
+  });
+
+  it('keeps a dirty form as a copy when it goes away', async () => {
+    const { unmount } = renderForm();
+    await loaded();
+    fireEvent.change(screen.getByDisplayValue(RECORD.name), { target: { value: 'Hebbal North' } });
+
+    unmount();
+
+    const copy = storage.getItem(`sna_locality_draft:${RECORD.id}`);
+    expect(copy.values.name).toBe('Hebbal North');
+    expect(copy.version).toBe(RECORD.updatedAt);
+  });
+
+  it('names the version it read, and a save over somebody else’s opens the dialog', async () => {
+    service.update.mockRejectedValueOnce(
+      new ApiError({
+        status: 409,
+        message: 'Manager User saved this locality after you opened it.',
+        data: {
+          conflict: 'stale',
+          current: {
+            updatedAt: '2026-09-02T00:00:00.000Z',
+            updatedBy: { id: 2, name: 'Manager User' },
+            updatedByName: 'Manager User',
+          },
+        },
+      })
+    );
+    renderForm();
+    await loaded();
+    fireEvent.change(screen.getByDisplayValue(RECORD.name), { target: { value: 'Hebbal North' } });
+
+    await userEvent.click(saveButton());
+
+    const dialog = await screen.findByRole('dialog', { name: 'Somebody else saved this locality' });
+    expect(within(dialog).getByText(/Manager User saved it/)).toBeInTheDocument();
+    const [id, body] = service.update.mock.calls[0];
+    expect(id).toBe(String(RECORD.id));
+    expect(body).toEqual(
+      expect.objectContaining({ updatedAt: RECORD.updatedAt, name: 'Hebbal North' })
+    );
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save mine anyway' }));
+    await waitFor(() => expect(service.update).toHaveBeenCalledTimes(2));
+    expect(service.update.mock.calls[1][1].updatedAt).toBe('2026-09-02T00:00:00.000Z');
   });
 });

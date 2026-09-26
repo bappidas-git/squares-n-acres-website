@@ -35,12 +35,31 @@ describe('propertyRules', () => {
         pricing: {},
       })
     ).toEqual({
-      images: 'A published listing needs at least one image with a description.',
+      // The image is there; its description is what is missing — under its own
+      // box since prompt 51, and asked for only now, as the listing goes live.
+      'images.0.alt': 'Describe this image — screen readers and search engines read it.',
       description:
         'A published listing needs a description of at least 300 characters (this one has 17).',
       shortDescription: 'A published listing needs a one-line summary.',
       'pricing.price': 'A published listing needs a price, a price range, or “Price on request”.',
     });
+    expect(publishProblems({ ...ready, images: [] })).toEqual({
+      images: 'A published listing needs at least one image with a description.',
+    });
+  });
+
+  it('counts the photographs that still need a description (prompt 51)', () => {
+    const listing = {
+      ...ready,
+      images: [
+        { url: 'https://images.test/a.jpg', alt: 'The court' },
+        { url: 'https://images.test/b.jpg', alt: '' },
+        { url: 'https://images.test/c.jpg', alt: null },
+      ],
+    };
+    expect(publishGaps(publishProblems(listing), listing)).toEqual([
+      '2 photographs without a description',
+    ]);
   });
 
   it('asks a rental for its rent, and takes "on request" or a whole range as a price', () => {

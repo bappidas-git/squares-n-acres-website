@@ -197,6 +197,9 @@ function checkEnvelope(shape, response, key) {
   if (shape === 'Csv') {
     return text.startsWith('﻿') ? null : 'expected a UTF-8 BOM';
   }
+  if (shape === 'NoContent') {
+    return text === '' ? null : 'expected no body';
+  }
 
   if (!isObject(json)) return 'expected a JSON envelope';
   if (!('data' in json)) return 'envelope has no `data` key';
@@ -331,6 +334,7 @@ const PUBLIC_CREATED = {
  */
 const SPECIAL = {
   'properties.list': () => ({ path: '/properties?perPage=2' }),
+  'properties.counts': () => ({ path: '/properties/counts?by=segment,listingType' }),
   'properties.suggestions': () => ({ path: '/properties/suggestions?q=whitefield' }),
   'properties.view': () => ({ body: {} }),
 
@@ -484,6 +488,23 @@ const SPECIAL = {
 
   // `resolve` needs a path to resolve, and the seed redirects `/blog`.
   'redirects.resolve': () => ({ path: '/redirects/resolve?path=/blog' }),
+  // The run's own subscriber, marked as somebody who asked to stop.
+  'adminNewsletterSubscribers.patch': () => ({ body: { status: 'unsubscribed' } }),
+  // An address nothing answers, reported the way the 404 page reports it.
+  'notFound.report': () => ({
+    body: { path: `/smoke-missing-${RUN_ID}`, referrer: 'https://www.google.com/' },
+  }),
+  // The run dismisses the address it reported itself, and nothing else.
+  'adminSeo.dismissNotFound': async () => {
+    const reported = `/smoke-dismissed-${RUN_ID}`;
+    await api('POST', '/not-found', { body: { path: reported } });
+    const listed = await api('GET', `/admin/seo/not-found?q=${encodeURIComponent(reported)}`, {
+      token: tokens.admin,
+    });
+    const line = (listed.json?.data ?? []).find((entry) => entry.path === reported);
+    if (!line) return { skip: 'the reported address was not listed' };
+    return { path: `/admin/seo/not-found/${line.id}` };
+  },
 
   // The import is an upsert keyed on `fromPath`, so it is pointed at the
   // redirect the walk already created: the run updates its own fixture rather
@@ -544,7 +565,8 @@ async function planFor(endpoint) {
     method: endpoint.method,
     path: resolvePath(endpoint),
     token: tokens[TOKEN_FOR[endpoint.auth] ?? 'admin'],
-    expect: isCreate(endpoint) ? 201 : 200,
+    // A report the API only takes note of answers 204 with no body (prompt 51).
+    expect: endpoint.response === 'NoContent' ? 204 : isCreate(endpoint) ? 201 : 200,
     body: undefined,
   };
 
@@ -658,6 +680,16 @@ async function targetedChecks() {
   const salesUsers = await api('GET', '/admin/users', { token: sales });
   check('rbac.403-sales-users', salesUsers.status === 403, `got ${salesUsers.status}`);
 
+  // "Stay signed in" (prompt 51): the run's own session, same token, later end.
+  const refreshed = await api('POST', '/auth/refresh', { token: sales });
+  check(
+    'auth.refresh-keeps-the-token',
+    refreshed.status === 200 &&
+      refreshed.json?.data?.token === sales &&
+      Number.isFinite(Date.parse(refreshed.json?.data?.expiresAt ?? '')),
+    `got ${refreshed.status}`
+  );
+
   // PATCH keeps what it did not mention (§5.8). The walk has already written
   // to this fixture, so the comparison is against what is stored now.
   const fixtureId = fixtures.adminProperties?.id;
@@ -721,6 +753,8 @@ async function targetedChecks() {
 
   const facets = threeBhk.json?.meta?.facets;
   check('facets.present', Boolean(facets?.propertyType && facets?.bedrooms), 'meta.facets');
+
+  await checkPropertyCounts();
 
   // The lead form: honeypot, validation, legacy sources (§5.11, D20).
   const honeypot = await api('POST', '/leads', {
@@ -825,6 +859,54 @@ async function targetedChecks() {
       marked.status === 200 && marked.json?.data?.affected === 1 && refused.status === 422,
       `got ${marked.status} / ${refused.status}`
     );
+
+    // A share link opens the run's inactive copy, and only with its token.
+    const issued = await api('POST', `/admin/properties/${copy.id}/preview-token`, {
+      token: admin,
+    });
+    const share = issued.json?.data?.token ?? '';
+    const closed = await api('GET', `/properties/slug/${encodeURIComponent(copy.slug)}`);
+    const opened = await api(
+      'GET',
+      `/properties/slug/${encodeURIComponent(copy.slug)}?previewToken=${encodeURIComponent(share)}`
+    );
+    check(
+      'properties.share-preview',
+      issued.status === 200 && closed.status === 404 && opened.status === 200,
+      `got ${issued.status} / ${closed.status} / ${opened.status}`
+    );
+  }
+
+  // A replace made from an older version is refused, and names who saved
+  // (prompt 51) — on the run's own locality. A second passes between the two
+  // saves: a store keeping `updated_at` to the second could not tell them apart.
+  const place = await createFixture('adminLocalities');
+  if (place?.id) {
+    const path = `/admin/localities/${place.id}`;
+    const opened = (await api('GET', path, { token: admin })).json?.data ?? place;
+    await sleep(1100);
+    const first = await api('PUT', path, {
+      token: admin,
+      body: { ...opened, shortDescription: 'Saved first.', updatedAt: opened.updatedAt },
+    });
+    const second = await api('PUT', path, {
+      token: admin,
+      body: {
+        ...opened,
+        shortDescription: 'Saved from the older copy.',
+        updatedAt: opened.updatedAt,
+      },
+    });
+    check(
+      'stale-guard.409-names-the-saver',
+      first.status === 200 &&
+        second.status === 409 &&
+        second.json?.data?.conflict === 'stale' &&
+        typeof second.json?.data?.current?.updatedByName === 'string',
+      `got ${first.status} / ${second.status}`
+    );
+  } else {
+    check('stale-guard.409-names-the-saver', false, 'could not create the run’s own locality');
   }
 
   const bulk = await api('POST', '/admin/properties/bulk', {
@@ -841,6 +923,22 @@ async function targetedChecks() {
 
   const index = await api('GET', '/sitemap.xml');
   check('sitemap.index-well-formed', /<sitemapindex/.test(index.text) && /<loc>/.test(index.text));
+
+  // The index names its children where it was fetched (prompt 51), so every
+  // one of them opens from here — on the API path as at the root.
+  const childLocs = [...index.text.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+  const elsewhere = childLocs.filter((loc) => !loc.startsWith(`${options.baseUrl}/`));
+  check(
+    'sitemap.children-on-the-fetch-origin',
+    childLocs.length > 0 && elsewhere.length === 0,
+    elsewhere.length > 0 ? `${elsewhere[0]} is not under ${options.baseUrl}` : ''
+  );
+  const firstChild = childLocs[0] ? await fetch(childLocs[0]).catch(() => null) : null;
+  check(
+    'sitemap.child-opens',
+    firstChild?.status === 200,
+    `${childLocs[0] ?? 'no child'} answered ${firstChild?.status ?? 'nothing'}`
+  );
 
   const properties = await api('GET', '/sitemap-properties.xml');
   check(
@@ -863,6 +961,47 @@ async function targetedChecks() {
     'redirects.resolve',
     resolved.status === 200 && typeof resolved.json?.data?.toPath === 'string',
     `got ${resolved.status}`
+  );
+
+  // A rule the site follows counts a hit (prompt 51): the Hits column was 0
+  // for every rule a visitor had been sent on by.
+  const rule = (await api('GET', '/redirects')).json?.data?.[0];
+  if (rule?.id) {
+    const before = (await api('GET', `/admin/redirects/${rule.id}`, { token: admin })).json?.data;
+    const hit = await api('POST', `/redirects/${rule.id}/hit`);
+    const after = (await api('GET', `/admin/redirects/${rule.id}`, { token: admin })).json?.data;
+    check(
+      'redirects.hit-counts',
+      hit.status === 204 && Number(after?.hits) === Number(before?.hits ?? 0) + 1,
+      `got ${hit.status}, ${before?.hits} → ${after?.hits}`
+    );
+  } else {
+    check('redirects.hit-counts', false, 'no active redirect to follow');
+  }
+
+  // The 404 log (prompt 51): an address counted once a visit, the panel
+  // ignored, and a dismissal taking it off the list.
+  const unknownPath = `/smoke-404-${RUN_ID}`;
+  await api('POST', '/not-found', {
+    body: { path: unknownPath, referrer: 'https://example.com/' },
+  });
+  await api('POST', '/not-found', { body: { path: `${unknownPath}/` } });
+  await api('POST', '/not-found', { body: { path: '/admin/nowhere' } });
+  const logged = await api('GET', `/admin/seo/not-found?q=${encodeURIComponent(unknownPath)}`, {
+    token: admin,
+  });
+  const line = (logged.json?.data ?? []).find((entry) => entry.path === unknownPath);
+  const ignored = await api('GET', '/admin/seo/not-found?q=nowhere', { token: admin });
+  const dismissed = line
+    ? await api('DELETE', `/admin/seo/not-found/${line.id}`, { token: admin })
+    : { status: 0 };
+  check(
+    'not-found.logged-counted-dismissed',
+    line?.count === 2 &&
+      line?.referrer === 'https://example.com/' &&
+      (ignored.json?.data ?? []).length === 0 &&
+      dismissed.status === 200,
+    `count ${line?.count}, dismissed ${dismissed.status}`
   );
 
   const dashboard = await api('GET', '/admin/dashboard', { token: admin });
@@ -1015,6 +1154,85 @@ async function targetedChecks() {
  * ------------------------------------------------------------------ */
 
 /** Signs in, or fails the run loudly — nothing else can work without this. */
+/**
+ * `GET /properties/counts` (prompt 51): the envelope, a dimension's keys, a
+ * filter narrowing the counts, an unknown dimension ignored — and the two
+ * requests the home page makes agreeing with the `perPage=1` totals the tiles
+ * used to ask for one by one.
+ */
+async function checkPropertyCounts() {
+  const listed = async (query) =>
+    (await api('GET', `/properties?perPage=1${query ? `&${query}` : ''}`)).json?.meta?.total;
+  const sum = (tally) =>
+    isObject(tally) ? Object.values(tally).reduce((total, count) => total + count, 0) : NaN;
+
+  const bySegment = await api('GET', '/properties/counts?by=segment');
+  const segments = bySegment.json?.data?.segment;
+  check(
+    'counts.envelope',
+    bySegment.status === 200 &&
+      isObject(segments) &&
+      bySegment.json?.meta === null &&
+      Object.keys(bySegment.json.data).join() === 'segment',
+    `got ${bySegment.status}`
+  );
+
+  const all = await listed('');
+  check(
+    'counts.segment-keys',
+    isObject(segments) &&
+      Object.keys(segments).length > 0 &&
+      Object.values(segments).every((count) => Number.isInteger(count) && count > 0) &&
+      sum(segments) === all,
+    `${sum(segments)} counted, ${all} listed`
+  );
+
+  const rentals = (await api('GET', '/properties/counts?by=propertyTypeId&listingType=rent')).json
+    ?.data?.propertyTypeId;
+  const rentTotal = await listed('listingType=rent');
+  check(
+    'counts.filter-narrows',
+    sum(rentals) === rentTotal && rentTotal < all,
+    `${sum(rentals)} counted, ${rentTotal} rentals listed`
+  );
+
+  const unknown = await api('GET', '/properties/counts?by=bogus,segment');
+  check(
+    'counts.unknown-dimension-ignored',
+    unknown.status === 200 &&
+      Object.keys(unknown.json?.data ?? {}).join() === 'segment' &&
+      JSON.stringify(unknown.json.data.segment) === JSON.stringify(segments),
+    `got ${unknown.status}`
+  );
+
+  // The home page's two questions, spot-checked tile by tile.
+  const totals = (await api('GET', '/properties/counts?by=segment,listingType,propertyTypeId')).json
+    ?.data;
+  const saleStatus = (await api('GET', '/properties/counts?by=constructionStatus&listingType=sale'))
+    .json?.data;
+  const typeId = Object.keys(totals?.propertyTypeId ?? {})[0];
+  const spots = [
+    [totals?.segment?.land ?? 0, await listed('segment=land')],
+    [totals?.segment?.commercial ?? 0, await listed('segment=commercial')],
+    [totals?.listingType?.rent ?? 0, rentTotal],
+    [totals?.propertyTypeId?.[typeId] ?? 0, await listed(`propertyTypeId=${typeId}`)],
+    [
+      saleStatus?.constructionStatus?.['ready-to-move'] ?? 0,
+      await listed('listingType=sale&constructionStatus=ready-to-move'),
+    ],
+    [
+      saleStatus?.constructionStatus?.['pre-launch'] ?? 0,
+      await listed('listingType=sale&constructionStatus=pre-launch'),
+    ],
+  ];
+  const off = spots.filter(([counted, total]) => counted !== total);
+  check(
+    'counts.match-the-list',
+    Boolean(totals && saleStatus && typeId) && off.length === 0,
+    off.map(([counted, total]) => `${counted} ≠ ${total}`).join(', ')
+  );
+}
+
 async function login(email, password, label) {
   const response = await api('POST', '/auth/login', { body: { email, password } });
   if (response.status !== 200 || !response.json?.data?.token) {
@@ -1241,6 +1459,7 @@ async function cleanup() {
  * parameters and the defaults of §5.6 do the rest.
  */
 const COMPARE_QUERY = {
+  'properties.counts': '?by=segment,listingType',
   'properties.suggestions': '?q=whitefield',
   'redirects.resolve': '?path=/blog',
   'adminSeo.overview': '?type=property&perPage=5',

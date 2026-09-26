@@ -46,6 +46,12 @@ screen writes this text back.
 
 ---
 
+## The host the index names
+
+{{notesSitemapHost}}
+
+---
+
 ## RSS
 
 {{notesRss}}
@@ -73,6 +79,12 @@ screen writes this text back.
 ### Captured — the list the SPA loads
 
 {{redirectsExample}}
+
+---
+
+## The 404 log
+
+{{notesNotFoundLog}}
 
 ---
 

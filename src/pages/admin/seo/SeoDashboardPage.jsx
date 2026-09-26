@@ -6,6 +6,7 @@ import AdminTabs, { AdminTabPanel } from '../../../components/admin/AdminTabs';
 import Button from '../../../components/ui/Button';
 import DataTable from '../../../components/admin/DataTable';
 import FilterBar from '../../../components/admin/FilterBar';
+import NotFoundTab from './NotFoundTab';
 import PATHS from '../../../routes/paths';
 import PageHeader from '../../../components/admin/PageHeader';
 import SeoBulkTools from './SeoBulkTools';
@@ -54,6 +55,8 @@ const TABS = [
   { key: 'entities', label: 'All records', icon: 'mdi:format-list-bulleted' },
   { key: 'duplicates', label: 'Duplicates', icon: 'mdi:content-duplicate' },
   { key: 'issues', label: 'Issues', icon: 'mdi:alert-circle-outline' },
+  // The addresses visitors reached that answered 404 (prompt 51).
+  { key: 'notFound', label: '404s', icon: 'mdi:link-variant-off' },
 ];
 
 const TAB_KEYS = TABS.map((entry) => entry.key);
@@ -417,6 +420,10 @@ export default function SeoDashboardPage() {
           onEdit={openEditor}
           onReanalyse={canEdit ? reanalyseAll : undefined}
         />
+      </AdminTabPanel>
+
+      <AdminTabPanel tabKey="notFound" value={tab}>
+        <NotFoundTab canEdit={canEdit} />
       </AdminTabPanel>
 
       <SeoEditDialog

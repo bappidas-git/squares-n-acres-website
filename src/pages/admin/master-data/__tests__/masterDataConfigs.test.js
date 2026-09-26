@@ -242,6 +242,62 @@ describe('property types', () => {
     expect(config.toPayload({ name: 'Villas' }, {})).toEqual({ name: 'Villas' });
   });
 
+  describe('the Rent and Commercial menu switches (prompt 51)', () => {
+    const loaded = propertyTypesConfig({ segments: SEGMENT_ROWS });
+    const shown = (values) =>
+      fieldsOf(loaded, { id: 2 })
+        .filter((field) => field.name.startsWith('showIn'))
+        .filter((field) => !field.visible || field.visible(values))
+        .map((field) => field.name);
+
+    it('offers the switch of the menu that lists the type’s kind of segment', () => {
+      expect(shown({ segment: 'residential' })).toEqual(['showInRentMenu']);
+      expect(shown({ segment: 'land' })).toEqual(['showInRentMenu']);
+      expect(shown({ segment: 'commercial' })).toEqual(['showInCommercialMenu']);
+      // A segment an editor added is filed by its kind.
+      expect(shown({ segment: 'industrial' })).toEqual(['showInCommercialMenu']);
+    });
+
+    it('starts a new type in neither menu', () => {
+      expect(loaded.newValues).toMatchObject({
+        showInRentMenu: false,
+        showInCommercialMenu: false,
+      });
+      const rent = fieldsOf(loaded).find((field) => field.name === 'showInRentMenu');
+      expect(rent).toMatchObject({ type: 'switch', defaultValue: false });
+    });
+
+    it('switches off a flag the type’s segment no longer offers', () => {
+      expect(
+        loaded.toPayload(
+          {
+            name: 'Villas',
+            segment: 'commercial',
+            showInRentMenu: true,
+            showInCommercialMenu: true,
+          },
+          { id: 2 }
+        )
+      ).toEqual({
+        name: 'Villas',
+        segment: 'commercial',
+        showInRentMenu: false,
+        showInCommercialMenu: true,
+      });
+      expect(
+        loaded.toPayload(
+          {
+            name: 'Villas',
+            segment: 'residential',
+            showInRentMenu: true,
+            showInCommercialMenu: true,
+          },
+          { id: 2 }
+        )
+      ).toMatchObject({ showInRentMenu: true, showInCommercialMenu: false });
+    });
+  });
+
   it('asks before moving a type that listings already carry', async () => {
     const usedBy = [
       { type: 'property', id: 1, title: 'Lakeview Heights' },

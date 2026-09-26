@@ -209,8 +209,15 @@ export default function TitlesMetaTab({ form, rows = [], context = {}, disabled 
             label="Site URL"
             value={values.siteUrl ?? ''}
             onChange={(event) => setField('siteUrl', event.target.value)}
+            onBlur={() => {
+              // Canonicals are built by appending a path, so the address is
+              // kept without a trailing slash.
+              if (typeof values.siteUrl !== 'string') return;
+              const trimmed = values.siteUrl.trim().replace(/\/+$/, '');
+              if (trimmed !== values.siteUrl) setField('siteUrl', trimmed);
+            }}
             error={getError('siteUrl')}
-            hint="The address canonicals, sitemaps and structured data are built from."
+            hint="The address canonicals, sitemaps and structured data are built from. This is the one place it changes — Site settings show it."
             disabled={disabled}
           />
         </FormColumn>

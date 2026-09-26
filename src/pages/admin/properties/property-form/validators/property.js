@@ -428,15 +428,11 @@ export function validateUnits(values) {
 export function validateMedia(values) {
   const { errors, add } = collector();
 
+  // A missing description is a publishing rule (prompt 51): a draft is saved
+  // without one, and going live asks for each (`config/propertyRules`).
   (values.images ?? []).forEach((image, index) => {
     if (isBlank(image.url)) return;
     checkUrl(add, `images.${index}.url`, image.url, 'The image address');
-    if (isBlank(image.alt)) {
-      add(
-        `images.${index}.alt`,
-        'Describe this image — screen readers and search engines read it.'
-      );
-    }
     checkLength(add, `images.${index}.alt`, image.alt, 'the description', LIMITS.imageAlt);
     checkLength(add, `images.${index}.caption`, image.caption, 'the caption', LIMITS.imageCaption);
   });

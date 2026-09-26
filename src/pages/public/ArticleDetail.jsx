@@ -11,6 +11,8 @@ import sanitizeHtml from '../../components/editor/sanitize';
 import useApi from '../../hooks/useApi';
 import { Breadcrumbs, Container, ErrorState, LazyImage } from '../../components/ui';
 import { ArticleDetailSkeleton } from '../../components/common/SkeletonLoaders';
+import DraftPreviewBanner, { DraftPreviewExpired } from '../../components/common/DraftPreview';
+import { DRAFT_PREVIEW_PARAM, takeDraftPreview } from '../../utils/draftPreview';
 import { SITE } from '../../config/site';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { ERRORS } from '../../config/copy';
@@ -77,15 +79,23 @@ export default function ArticleDetail() {
   const preview = searchParams.get('preview') || '';
   const [blockFaqs, setBlockFaqs] = useState([]);
 
+  // "Preview changes" (prompt 51): the editor's unsaved article, handed over
+  // through this browser's storage and taken once — nothing is fetched.
+  const draftId = searchParams.get(DRAFT_PREVIEW_PARAM) || '';
+  const draft = useMemo(() => (draftId ? takeDraftPreview(draftId, 'article') : null), [draftId]);
+
   const {
-    data: article,
-    loading,
+    data: fetched,
+    loading: fetching,
     error,
     refetch,
   } = useApi(
     (signal) => articleService.getBySlug(slug, preview ? { preview } : undefined, { signal }),
-    [slug, preview]
+    [slug, preview],
+    { enabled: !draftId }
   );
+  const article = draftId ? draft : fetched;
+  const loading = draftId ? false : fetching;
 
   // The prerender crawler saves this page once its primary query has settled
   // (§9.9) — settling on an error state counts, so a crawl never hangs on a
@@ -121,6 +131,8 @@ export default function ArticleDetail() {
 
   if (loading) return <ArticleDetailSkeleton />;
 
+  if (draftId && !draft) return <DraftPreviewExpired livePath={PATHS.article(slug)} />;
+
   // The API answers 404 for an unknown slug, for a draft or a scheduled piece
   // with no token, and for a token that has expired: all three are this page.
   if (error?.status === 404 || (!loading && !article)) {
@@ -137,8 +149,9 @@ export default function ArticleDetail() {
 
   const image = article.featuredImage ?? {};
   const seo = article.seo ?? {};
-  const previewing = Boolean(preview);
-  const unpublished = article.status !== 'published';
+  const previewing = Boolean(preview) && !draft;
+  // A preview of unsaved changes is never indexed, whatever the article's state.
+  const unpublished = article.status !== 'published' || Boolean(draft);
   const description = seo.description || article.excerpt || article.title;
   const crumbs = breadcrumbsFor('article', article);
   // The share bar needs an absolute address a visitor can paste anywhere; the
@@ -159,6 +172,7 @@ export default function ArticleDetail() {
         preloadImage={image.url ? { src: image.url, ratio: '21/9', sizes: '100vw' } : undefined}
       />
 
+      {draft ? <DraftPreviewBanner /> : null}
       {previewing ? (
         <div className={styles.previewBanner} role="status">
           <Icon icon="mdi:eye-outline" aria-hidden="true" />

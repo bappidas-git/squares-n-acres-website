@@ -219,6 +219,8 @@ const RESOURCES = [
     basePath: 'localities',
     collection: 'localities',
     schema: 'locality',
+    // A form opened before somebody else's save is refused, not replayed over it.
+    staleGuard: 'locality',
     needs: ['cities', 'properties'],
     noun: { one: 'locality', many: 'localities' },
     deleteGuard: 'locality',
@@ -364,6 +366,7 @@ const RESOURCES = [
     basePath: 'developers',
     collection: 'developers',
     schema: 'developer',
+    staleGuard: 'developer',
     needs: ['properties'],
     noun: { one: 'developer', many: 'developers' },
     deleteGuard: 'developer',
@@ -560,6 +563,7 @@ module.exports = ({ db, getModel }) => {
         // Every collection here is typed into a form, and the real API trims
         // what a form sends (Laravel's `TrimStrings`, QA-60).
         trimStrings: true,
+        staleGuard: resource.staleGuard ?? false,
         routes: resource.routes ?? null,
         noun: resource.noun,
       })

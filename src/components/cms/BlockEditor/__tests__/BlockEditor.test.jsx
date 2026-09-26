@@ -4,7 +4,7 @@
  * only show some block types — the home page — offers only those.
  */
 
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 
@@ -90,5 +90,47 @@ describe('homeBlockTypes', () => {
     expect(homeBlockTypes([])).toEqual(['features', 'steps']);
     expect(homeBlockTypes([{ type: 'steps' }])).toEqual(['features']);
     expect(homeBlockTypes([{ type: 'features' }, { type: 'steps' }])).toEqual([]);
+  });
+});
+
+describe('BlockEditor — mid-list work (prompt 51)', () => {
+  it('inserts a block below the one asked for, not at the end', async () => {
+    renderWith(<Host />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Insert a block below the rich text block' })
+    );
+    const dialog = await screen.findByRole('dialog', { name: 'Insert a block at position 2' });
+    await userEvent.click(within(dialog).getByRole('button', { name: /^FAQ/ }));
+
+    // The page behind the dialog is read once the dialog has gone.
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(cardToggle('1. Rich text')).toBeInTheDocument();
+    expect(cardToggle('2. FAQ')).toBeInTheDocument();
+    expect(cardToggle('3. Features')).toBeInTheDocument();
+  });
+
+  it('hides a block for now, says so on its card, and shows it again', async () => {
+    renderWith(<Host />);
+
+    const hide = screen.getByRole('button', { name: 'Hide the features block for now' });
+    expect(hide).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(hide);
+
+    expect(screen.getByText('Hidden')).toBeInTheDocument();
+    const show = screen.getByRole('button', { name: 'Show the features block on the page' });
+    expect(show).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(show);
+    expect(screen.queryByText('Hidden')).not.toBeInTheDocument();
+  });
+
+  it('offers no insert where there is nothing left to add — the home page', () => {
+    renderWith(
+      <Host
+        blocks={[BLOCKS[1], { id: 3, type: 'steps', order: 2, data: { items: [] } }]}
+        allowedTypes={[]}
+      />
+    );
+    expect(screen.queryByRole('button', { name: /Insert a block below/ })).not.toBeInTheDocument();
   });
 });

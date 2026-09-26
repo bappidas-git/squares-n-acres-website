@@ -147,9 +147,14 @@ describe('validatePricing', () => {
 });
 
 describe('validateMedia', () => {
-  it('asks for alt text on an image that has an address', () => {
+  it('leaves a missing description to the publishing rules, so a draft saves (prompt 51)', () => {
     const values = base({ images: [makeImage({ url: 'https://example.com/a.jpg' })] });
-    expect(validateMedia(values)['images.0.alt']).toMatch(/Describe/);
+    expect(validateMedia(values)['images.0.alt']).toBeUndefined();
+    // …and a description that is too long is still refused on any save.
+    const long = base({
+      images: [makeImage({ url: 'https://example.com/a.jpg', alt: 'x'.repeat(500) })],
+    });
+    expect(validateMedia(long)['images.0.alt']).toBeDefined();
   });
 
   it('says nothing about an empty row', () => {
@@ -331,13 +336,31 @@ describe('validateForActivation (PROP-04)', () => {
       images: [makeImage({ url: 'https://example.com/a.jpg', alt: 'The building' })],
     });
 
-  it('blocks a publication with no described image', () => {
+  it('blocks a publication with no image, keyed to the gallery', () => {
     const values = publishable();
-    values.images = [makeImage({ url: 'https://example.com/a.jpg' })];
+    values.images = [];
 
     // Keyed to the gallery, which prints it: `images.0.url` belonged to no
     // control, so the Media badge counted a message the tab never showed.
     expect(validateForActivation(values).errors.images).toMatch(/at least one image/);
+  });
+
+  it('blocks a publication until every image is described, each under its box (prompt 51)', () => {
+    const values = publishable();
+    values.images = [
+      makeImage({ url: 'https://example.com/a.jpg', alt: 'The living room', isCover: true }),
+      makeImage({ url: 'https://example.com/b.jpg' }),
+    ];
+
+    const { errors } = validateForActivation(values);
+    expect(errors['images.1.alt']).toMatch(/Describe this image/);
+    expect(errors['images.0.alt']).toBeUndefined();
+    expect(errors.images).toBeUndefined();
+
+    // The same gallery saves as a draft.
+    expect(validateForActivation({ ...values, isActive: false }).errors['images.1.alt']).toBe(
+      undefined
+    );
   });
 
   it('blocks a publication with a thin description', () => {

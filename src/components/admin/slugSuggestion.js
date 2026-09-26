@@ -19,6 +19,8 @@ import ApiError from '../../services/apiError';
  */
 export default async function withSlugSuggestion(thrown, slug, { checkSlug, excludeId } = {}) {
   if (thrown?.status !== 409 || !slug || typeof checkSlug !== 'function') return thrown;
+  // The other 409: somebody else saved the record first — nothing to do with the slug.
+  if (thrown?.data?.conflict === 'stale') return thrown;
 
   try {
     const envelope = await checkSlug(slug, { excludeId });

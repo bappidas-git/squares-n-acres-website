@@ -378,3 +378,94 @@ describe('UsersPage (QA-64)', () => {
     );
   });
 });
+
+describe('UsersPage — handing over and signing in (prompt 51)', () => {
+  const writeText = jest.fn();
+  beforeEach(() => {
+    writeText.mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+  });
+
+  it('generates a password for a new account and copies it with the address', async () => {
+    renderPage();
+    await click(await screen.findByRole('button', { name: 'Add user' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText(/^Email address/), {
+      target: { value: 'priya@squaresnacres.com' },
+    });
+
+    await click(within(dialog).getByRole('button', { name: 'Generate password' }));
+
+    const password = within(dialog).getByLabelText(/^Password/).value;
+    expect(password).toHaveLength(16);
+    expect(passwordProblem(password)).toBeNull();
+    expect(writeText).toHaveBeenCalledWith(
+      `E-mail: priya@squaresnacres.com\nTemporary password: ${password}`
+    );
+    expect(
+      await screen.findByText(/priya@squaresnacres.com with it is copied/)
+    ).toBeInTheDocument();
+  });
+
+  it('generates one in the reset dialog too, and says it when the clipboard is refused', async () => {
+    writeText.mockRejectedValue(new Error('denied'));
+    renderPage();
+    await click(await screen.findByRole('button', { name: 'Reset the password of Sales User' }));
+    const dialog = await screen.findByRole('dialog');
+
+    await click(within(dialog).getByRole('button', { name: 'Generate password' }));
+
+    const password = within(dialog).getByLabelText(/^New password/).value;
+    expect(password).toHaveLength(16);
+    expect(
+      await screen.findByText(
+        `The new password is ${password} — this browser did not let the page copy it.`
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('asks for your own new address twice, and saves only when both agree', async () => {
+    renderPage();
+    await click(await screen.findByRole('button', { name: 'Edit Admin User' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByLabelText(/^Retype the new e-mail/)).not.toBeInTheDocument();
+
+    fireEvent.change(within(dialog).getByLabelText(/^Email address/), {
+      target: { value: 'asha@squaresnacres.com' },
+    });
+    const retype = within(dialog).getByLabelText(/^Retype the new e-mail/);
+    fireEvent.change(retype, { target: { value: 'asha@squaresnacre.com' } });
+    await click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    expect(
+      await within(dialog).findByText('Type the new address again, exactly as above.')
+    ).toBeInTheDocument();
+    expect(userService.update).not.toHaveBeenCalled();
+
+    fireEvent.change(retype, { target: { value: 'asha@squaresnacres.com' } });
+    await click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(userService.update).toHaveBeenCalled());
+    const [, body] = userService.update.mock.calls[0];
+    expect(body.email).toBe('asha@squaresnacres.com');
+    expect(body).not.toHaveProperty('emailConfirm');
+  });
+
+  it('asks nothing more of somebody else’s address', async () => {
+    userService.update.mockImplementation(async (id, body) => ({ data: { ...SALES, ...body } }));
+    renderPage();
+    await click(await screen.findByRole('button', { name: 'Edit Sales User' }));
+    const dialog = await screen.findByRole('dialog');
+
+    fireEvent.change(within(dialog).getByLabelText(/^Email address/), {
+      target: { value: 'sam@squaresnacres.com' },
+    });
+    expect(within(dialog).queryByLabelText(/^Retype the new e-mail/)).not.toBeInTheDocument();
+    await click(within(dialog).getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(userService.update).toHaveBeenCalled());
+  });
+});

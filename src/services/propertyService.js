@@ -17,9 +17,36 @@ export const list = (params, opts) => http.request(endpoints.properties.list, { 
 export const featured = (params, opts) =>
   http.request(endpoints.properties.featured, { params, ...opts });
 
-/** One property by its public slug; 404 when it is inactive. */
-export const getBySlug = (slug, opts) =>
-  http.request(endpoints.properties.bySlug, { pathParams: { slug }, ...opts });
+/**
+ * How many live listings carry each value of the dimensions `params.by` names
+ * — `{ segment: { residential: 26 }, … }` — under the list's other filters
+ * (prompt 51). The home page's tiles, in one request each for two groups.
+ *
+ * @param {{by: string|string[]}} params plus any listing filter
+ * @param {object} [opts]
+ */
+export const counts = (params, opts) =>
+  http.request(endpoints.properties.counts, { params, ...opts });
+
+/**
+ * One property by its public slug; 404 when it is inactive — unless
+ * `previewToken` is that listing's share token (prompt 51).
+ */
+export const getBySlug = (slug, opts = {}) => {
+  const { previewToken, ...rest } = opts;
+  return http.request(endpoints.properties.bySlug, {
+    pathParams: { slug },
+    ...(previewToken ? { params: { previewToken } } : null),
+    ...rest,
+  });
+};
+
+/**
+ * A 24-hour share link for a listing that is not published yet (prompt 51):
+ * `{ token, expiresAt, url }`.
+ */
+export const previewToken = (id, opts) =>
+  http.request(endpoints.adminProperties.previewToken, { pathParams: { id }, ...opts });
 
 /** The editor's picks first, topped up to six (BUG-07/BUG-18). */
 export const similar = (id, params, opts) =>
@@ -87,6 +114,7 @@ export const checkSlug = (params, opts) =>
 
 const propertyService = {
   list,
+  counts,
   featured,
   getBySlug,
   similar,
@@ -103,6 +131,7 @@ const propertyService = {
   duplicate,
   bulk,
   checkSlug,
+  previewToken,
 };
 
 export default propertyService;

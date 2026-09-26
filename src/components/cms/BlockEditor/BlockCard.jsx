@@ -32,6 +32,10 @@ import styles from './BlockEditor.module.css';
  * @param {boolean} [props.disabled]
  * @param {boolean} [props.canDuplicate] `false` where a second one would never be
  *   shown — the home page's Features and Steps
+ * @param {() => void} [props.onInsertBelow] opens the picker for the place after
+ *   this block (prompt 51)
+ * @param {() => void} [props.onToggleHidden] "Hide for now" and back (prompt 51)
+ * @param {boolean} [props.canInsert] `false` when there is nothing left to add
  */
 export default function BlockCard({
   block,
@@ -41,9 +45,12 @@ export default function BlockCard({
   onChange,
   onDuplicate,
   onDelete,
+  onInsertBelow,
+  onToggleHidden,
   errors = {},
   disabled = false,
   canDuplicate = true,
+  canInsert = true,
 }) {
   const panelId = useId();
   const schema = blockSchema(block.type);
@@ -52,9 +59,14 @@ export default function BlockCard({
   const name = schema ? schema.label : 'Unsupported block';
   // "the hero block" reads well; "the unsupported block block" does not.
   const subject = schema ? `the ${name.toLowerCase()} block` : 'this unsupported block';
+  const hidden = block.hidden === true;
 
   return (
-    <div className={[styles.card, open ? styles.cardOpen : ''].filter(Boolean).join(' ')}>
+    <div
+      className={[styles.card, open ? styles.cardOpen : '', hidden ? styles.cardHidden : '']
+        .filter(Boolean)
+        .join(' ')}
+    >
       <div className={styles.cardHead}>
         <button
           type="button"
@@ -81,6 +93,13 @@ export default function BlockCard({
           />
         </button>
 
+        {hidden ? (
+          <span className={styles.hiddenBadge}>
+            <Icon icon="mdi:eye-off-outline" width="14" height="14" aria-hidden="true" />
+            Hidden
+          </span>
+        ) : null}
+
         {errorCount > 0 ? (
           <span className={styles.cardBadge}>
             <Icon icon="mdi:alert-circle-outline" width="14" height="14" aria-hidden="true" />
@@ -89,6 +108,31 @@ export default function BlockCard({
         ) : null}
 
         <span className={styles.cardActions}>
+          {schema && onToggleHidden ? (
+            <IconButton
+              label={hidden ? `Show ${subject} on the page` : `Hide ${subject} for now`}
+              size="sm"
+              disabled={disabled}
+              aria-pressed={hidden}
+              onClick={onToggleHidden}
+            >
+              <Icon
+                icon={hidden ? 'mdi:eye-outline' : 'mdi:eye-off-outline'}
+                width="18"
+                height="18"
+              />
+            </IconButton>
+          ) : null}
+          {onInsertBelow && canInsert ? (
+            <IconButton
+              label={`Insert a block below ${subject}`}
+              size="sm"
+              disabled={disabled}
+              onClick={onInsertBelow}
+            >
+              <Icon icon="mdi:table-row-plus-after" width="18" height="18" />
+            </IconButton>
+          ) : null}
           {schema && canDuplicate ? (
             <IconButton
               label={`Duplicate ${subject}`}

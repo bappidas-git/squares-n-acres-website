@@ -1120,6 +1120,9 @@ module.exports = function articles({ stamps, media, lookup, dates }) {
         slug: entry.slug,
       }),
       viewCount: entry.viewCount,
+      // The desk that manages the insights wrote them in (prompt 51).
+      createdBy: 2,
+      updatedBy: 2,
       ...stamps({
         createdDaysAgo:
           entry.status === 'scheduled'

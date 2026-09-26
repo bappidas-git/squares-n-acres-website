@@ -26,6 +26,12 @@
   color: var(--color-charcoal);
 }
 
+/* A field's own button, under its control — "Generate password" (prompt 51). */
+.fieldAction {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+}
+
 .formError {
   margin: 0;
 }

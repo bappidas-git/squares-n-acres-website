@@ -340,4 +340,94 @@ describe('AdminAuthContext', () => {
     expect(getValue().can('users', 'view')).toBe(false);
     expect(getValue().can('profile', 'view')).toBe(true);
   });
+
+  describe('the session ending (prompt 51)', () => {
+    const minutesFromNow = (minutes) => new Date(Date.now() + minutes * 60000).toISOString();
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('says so five minutes before the end, and "Stay signed in" gives it a full lifetime', async () => {
+      seedSession(userOf(), minutesFromNow(4));
+      authService.profile.mockResolvedValue({ data: userOf() });
+      const renewed = hoursFromNow(24);
+      authService.refresh.mockResolvedValue({
+        data: { token: 'seeded-token', expiresAt: renewed, user: userOf() },
+      });
+
+      const { getValue } = renderProvider();
+      await waitFor(() => expect(getValue().expiringSoon).toBe(true));
+
+      let extended;
+      await act(async () => {
+        extended = await getValue().staySignedIn();
+      });
+
+      expect(extended).toBe(true);
+      expect(authService.refresh).toHaveBeenCalledTimes(1);
+      expect(getValue().expiringSoon).toBe(false);
+      expect(getValue().expiresAt).toBe(renewed);
+      expect(storage.getItem(AUTH_STORAGE_KEYS.expiresAt)).toBe(renewed);
+      expect(screen.getByTestId('status')).toHaveTextContent('authenticated');
+    });
+
+    it('warns when the five minutes arrive, not before', async () => {
+      jest.useFakeTimers();
+      seedSession(userOf(), minutesFromNow(6));
+      authService.profile.mockResolvedValue({ data: userOf() });
+
+      const { getValue } = renderProvider();
+      await waitFor(() => expect(authService.profile).toHaveBeenCalled());
+      expect(getValue().expiringSoon).toBe(false);
+
+      act(() => {
+        jest.advanceTimersByTime(61000);
+      });
+      expect(getValue().expiringSoon).toBe(true);
+    });
+
+    it('takes the later end another tab’s "Stay signed in" wrote, instead of ending', async () => {
+      jest.useFakeTimers();
+      seedSession(userOf(), minutesFromNow(1));
+      authService.profile.mockResolvedValue({ data: userOf() });
+
+      const { getValue } = renderProvider();
+      await waitFor(() => expect(authService.profile).toHaveBeenCalled());
+      expect(getValue().expiringSoon).toBe(true);
+
+      const renewed = hoursFromNow(24);
+      act(() => {
+        storage.setItem(AUTH_STORAGE_KEYS.expiresAt, renewed);
+        window.dispatchEvent(
+          new StorageEvent('storage', {
+            key: AUTH_STORAGE_KEYS.expiresAt,
+            newValue: JSON.stringify(renewed),
+          })
+        );
+      });
+      expect(getValue().expiresAt).toBe(renewed);
+      expect(getValue().expiringSoon).toBe(false);
+
+      act(() => {
+        jest.advanceTimersByTime(2 * 60000);
+      });
+      expect(screen.getByTestId('status')).toHaveTextContent('authenticated');
+      expect(authService.logout).not.toHaveBeenCalled();
+    });
+
+    it('ends the session at its end when nobody stayed', async () => {
+      jest.useFakeTimers();
+      seedSession(userOf(), minutesFromNow(1));
+      authService.profile.mockResolvedValue({ data: userOf() });
+
+      renderProvider();
+      await waitFor(() => expect(authService.profile).toHaveBeenCalled());
+
+      await act(async () => {
+        jest.advanceTimersByTime(61000);
+      });
+      expect(screen.getByTestId('status')).toHaveTextContent('anonymous');
+    });
+  });
 });

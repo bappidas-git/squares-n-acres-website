@@ -34,6 +34,20 @@
   color: var(--color-info-dark);
 }
 
+/* Knowledge graph: "Copy from Site settings" and what it fills (prompt 51). */
+.syncRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.syncHint {
+  flex: 1 1 16rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
 .warning {
   background: var(--color-warning-bg);
   color: var(--color-warning-dark);

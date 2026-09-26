@@ -91,6 +91,12 @@ function testScript(endpoint, expectedStatus) {
       "  pm.expect(pm.response.text().trim()).to.not.eql('');",
       '});'
     );
+  } else if (endpoint.response === 'NoContent') {
+    lines.push(
+      "pm.test('no body (prompt 51)', function () {",
+      "  pm.expect(pm.response.text()).to.eql('');",
+      '});'
+    );
   } else if (endpoint.response === 'Null') {
     lines.push(
       "pm.test('an action envelope: null data and a message (§5.2)', function () {",
@@ -169,7 +175,13 @@ function savedResponse(endpoint, example) {
 
 /** One Postman request item. */
 function itemOf(endpoint, example) {
-  const expectedStatus = endpoint.method === 'POST' && endpoint.key.endsWith('.create') ? 201 : 200;
+  // A report the API only takes note of answers 204 with no body (prompt 51).
+  const expectedStatus =
+    endpoint.response === 'NoContent'
+      ? 204
+      : endpoint.method === 'POST' && endpoint.key.endsWith('.create')
+        ? 201
+        : 200;
   const role = TOKEN_FOR[endpoint.auth];
   // The credentials belong to the environment, not to the collection: changing
   // `email` and `password` there is how a reader signs in as another role.

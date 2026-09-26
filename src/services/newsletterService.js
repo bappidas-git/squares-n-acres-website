@@ -15,12 +15,16 @@ export const subscribe = (body, opts) =>
 export const adminList = (params, opts) =>
   http.request(endpoints.adminNewsletterSubscribers.list, { params, ...opts });
 
+/** `{ status }` — "Mark unsubscribed", and back (prompt 51). */
+export const patch = (id, body, opts) =>
+  http.request(endpoints.adminNewsletterSubscribers.patch, { pathParams: { id }, body, ...opts });
+
 export const remove = (id, opts) =>
   http.request(endpoints.adminNewsletterSubscribers.remove, { pathParams: { id }, ...opts });
 
 export const exportUrl = (params) =>
   buildUrl(endpoints.adminNewsletterSubscribers.exportCsv, {}, params);
 
-const newsletterService = { subscribe, adminList, remove, exportUrl };
+const newsletterService = { subscribe, adminList, patch, remove, exportUrl };
 
 export default newsletterService;

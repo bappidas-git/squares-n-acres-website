@@ -37,10 +37,14 @@ const { ApiError } = require('../middleware/errors');
 const { applyPropertyFilters, applyPropertySort, priceOf } = require('../lib/propertyFilters');
 const { checkSlug, ensureUniqueSlug, slugify } = require('../lib/slug');
 const { computeFacets } = require('../lib/facets');
+const { countBy, dimensionsOf, filtersOf } = require('../lib/propertyCounts');
 const { conflict, forbidden, notFound, validation } = require('../middleware/errors');
 const { countView } = require('../lib/viewCounter');
+const { issueToken, verifyToken } = require('../lib/previewTokens');
 const { clientIp } = require('../middleware/rateLimit');
 const { embedProperty } = require('../lib/embed');
+const { withEditorName } = require('../lib/editors');
+const { refuseStaleReplace } = require('../lib/staleGuard');
 const { inCsv, matchesQ } = require('../lib/filters');
 const { maxId, nextId } = require('../lib/ids');
 const {
@@ -293,7 +297,10 @@ module.exports = ({ db, getModel }) => {
 
   const present = (property, { admin, collections = source() }) => {
     const embedded = embedProperty(property, collections, { publicRead: !admin });
-    return admin ? embedded : publicProperty(embedded);
+    // The admin reads name whoever saved last (prompt 51); the public never.
+    return admin
+      ? withEditorName(embedded, db.getCollection('adminUsers'))
+      : publicProperty(embedded);
   };
 
   /** `perPage`, with `all` reserved for the admin routes (§5.6). */
@@ -417,38 +424,19 @@ module.exports = ({ db, getModel }) => {
 
   /**
    * A replace that names the version it was made from — the `updatedAt` its
-   * client read — is refused when the listing has been saved since (QA-62).
-   *
-   * `PUT` sends the whole record, so a form opened before somebody else's save
-   * wrote every field back as it had read it: the other editor's changes went,
-   * silently — a form left open un-featured a listing starred from the list
-   * meanwhile. The check is optional: a body without `updatedAt` replaces as
-   * before, which is also how the form's "Save mine anyway" goes through.
+   * client read — is refused when the listing has been saved since (QA-62):
+   * a form left open un-featured a listing starred from the list meanwhile.
+   * The rule, shared with every record form since prompt 51, is
+   * `lib/staleGuard.js`.
    *
    * @param {object} existing the stored record
    * @param {object} body the request body
-   * @throws {ApiError} 409 with `data.conflict: 'stale'` and who saved it last
    */
-  function refuseStaleReplace(existing, body) {
-    const expected = typeof body?.updatedAt === 'string' ? body.updatedAt : null;
-    if (!expected || !existing.updatedAt || expected === existing.updatedAt) return;
-
-    const editor = db
-      .getCollection('adminUsers')
-      .find((user) => sameId(user?.id, existing.updatedBy));
-    throw conflict(
-      editor?.name
-        ? `${editor.name} saved this listing after you opened it.`
-        : 'This listing was saved by somebody else after you opened it.',
-      undefined,
-      {
-        conflict: 'stale',
-        current: {
-          updatedAt: existing.updatedAt,
-          updatedBy: editor ? { id: editor.id, name: editor.name } : null,
-        },
-      }
-    );
+  function refuseStale(existing, body) {
+    refuseStaleReplace(existing, body, {
+      users: db.getCollection('adminUsers'),
+      noun: 'listing',
+    });
   }
 
   /** The entity slug and `seo.slug` are always the same string (§5.9). */
@@ -465,6 +453,17 @@ module.exports = ({ db, getModel }) => {
   router.get('/properties', (req, res) => {
     const items = applyPropertyFilters(active(), req.query, { source: source() });
     listResponse(res, items, req.query, { admin: false });
+  });
+
+  /**
+   * The live listings per value of each dimension `by` names, under the list's
+   * filters (prompt 51) — the home page's tiles in two requests. The answer is
+   * the same for every visitor, so shared caches may keep it five minutes.
+   */
+  router.get('/properties/counts', (req, res) => {
+    const items = applyPropertyFilters(active(), filtersOf(req.query), { source: source() });
+    res.set('Cache-Control', 'public, max-age=300');
+    res.ok(countBy(items, dimensionsOf(req.query.by)), null);
   });
 
   router.get('/properties/featured', (req, res) => {
@@ -546,7 +545,14 @@ module.exports = ({ db, getModel }) => {
   });
 
   router.get('/properties/slug/:slug', (req, res, next) => {
-    const property = active().find((row) => row.slug === req.params.slug);
+    // A share link opens an inactive listing for 24 hours (prompt 51): the
+    // token is bound to that one listing, and the page is still 404 without it.
+    const token = first(req.query.previewToken);
+    const property = rows().find(
+      (row) =>
+        row.slug === req.params.slug &&
+        (row.isActive === true || verifyToken(token, 'property', row.id))
+    );
     if (!property) {
       next(notFound());
       return;
@@ -747,6 +753,29 @@ module.exports = ({ db, getModel }) => {
     return affected;
   }
 
+  /** The site URL a share link is built on (§9.1). */
+  function siteUrl() {
+    const seo = db.getSingleton('seoSettings');
+    const settings = db.getSingleton('siteSettings');
+    return String(seo?.siteUrl ?? settings?.general?.siteUrl ?? '').replace(/\/+$/, '');
+  }
+
+  // A listing shown before it is published, to somebody who does not sign in
+  // (prompt 51): one token per listing, 24 hours, as articles and pages have.
+  router.post('/admin/properties/:id/preview-token', (req, res, next) => {
+    const property = find(req.params.id);
+    if (!property) {
+      next(notFound());
+      return;
+    }
+    const { token, expiresAt } = issueToken('property', property.id);
+    res.ok({
+      token,
+      expiresAt,
+      url: `${siteUrl()}/properties/${property.slug}?preview=${token}`,
+    });
+  });
+
   router.get('/admin/properties/check-slug', (req, res) => {
     const slug = String(first(req.query.slug) ?? '');
     const excludeId = first(req.query.excludeId) ?? null;
@@ -811,7 +840,7 @@ module.exports = ({ db, getModel }) => {
       if (!existing) throw notFound();
 
       const body = assignNestedIds({ ...(req.body ?? {}) });
-      refuseStaleReplace(existing, body);
+      refuseStale(existing, body);
       validateBody(schemas.getSchema('property.update'), body, { lookup: db.getCollection });
 
       const slug = resolveSlug(body, { existing });

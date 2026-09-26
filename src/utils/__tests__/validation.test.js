@@ -173,8 +173,17 @@ describe('validate', () => {
       const tooLong = `https://cdn.example.com/${'a'.repeat(473)}.png`;
       for (const [key, descriptor] of urls) {
         const found = validate({ value: tooLong }, { value: descriptor }).value;
-        expect([key, found]).toEqual([key, 'The value may not be greater than 500 characters.']);
+        // A url the API answers but never takes (`general.siteUrl`, prompt 51)
+        // is not checked on a write: it is dropped from the body instead.
+        const expected = descriptor.read
+          ? undefined
+          : 'The value may not be greater than 500 characters.';
+        expect([key, found]).toEqual([key, expected]);
       }
+      expect(urls.filter(([, descriptor]) => !descriptor.read).length).toBeGreaterThan(50);
+      expect(urls.filter(([, descriptor]) => descriptor.read).map(([key]) => key)).toEqual([
+        'settings.update:general.siteUrl',
+      ]);
     });
 
     it('checks array length', () => {

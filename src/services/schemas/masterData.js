@@ -101,6 +101,10 @@ const propertyType = {
   segment: segmentRef,
   icon: { type: 'string', required: true, maxLength: 80 },
   description: { type: 'string', nullable: true, maxLength: 500, default: null },
+  // The header's Rent and Commercial menus list the active types with these
+  // on, in their order (prompt 51).
+  showInRentMenu: { type: 'bool', default: false },
+  showInCommercialMenu: { type: 'bool', default: false },
   isActive: { type: 'bool', default: true },
   order: { type: 'int', min: 0, default: 0 },
   seo,

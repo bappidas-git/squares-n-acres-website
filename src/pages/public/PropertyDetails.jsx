@@ -112,7 +112,9 @@ const pixels = (value, fallback) => {
  *
  * An unpublished listing is readable at `?preview=admin` while somebody is
  * signed in to the admin, through the admin endpoint (prompt 21); the public
- * route answers 404, and so does this page.
+ * route answers 404, and so does this page. Any other `?preview=` value is a
+ * share link's token (prompt 51), which the public route honours for 24 hours
+ * for that one listing — for somebody who never signs in.
  */
 const PropertyDetails = () => {
   const { slug } = useParams();
@@ -121,7 +123,10 @@ const PropertyDetails = () => {
   const banks = useBanks();
   const headerHeight = pixels(useCssVar('--header-height', '64px'), 64);
 
-  const preview = searchParams.get('preview') === PREVIEW_TOKEN && isAuthenticated;
+  const previewParam = searchParams.get('preview');
+  const adminPreview = previewParam === PREVIEW_TOKEN && isAuthenticated;
+  const shareToken = previewParam && previewParam !== PREVIEW_TOKEN ? previewParam : null;
+  const preview = adminPreview || Boolean(shareToken);
 
   // The questions an editor dropped into the description are questions this
   // page answers, so they belong in its `FAQPage` beside the stored ones.
@@ -134,10 +139,10 @@ const PropertyDetails = () => {
     refetch,
   } = useApi(
     (signal) =>
-      preview
+      adminPreview
         ? propertyService.adminGetBySlug(slug, { signal })
-        : propertyService.getBySlug(slug, { signal }),
-    [slug, preview]
+        : propertyService.getBySlug(slug, { signal, previewToken: shareToken }),
+    [slug, adminPreview, shareToken]
   );
 
   // The prerender crawler saves this page once its primary query has settled
@@ -288,7 +293,7 @@ const PropertyDetails = () => {
         }
       />
 
-      {preview ? (
+      {adminPreview ? (
         <div className={styles.previewBanner} role="status">
           <Icon icon="mdi:eye-outline" aria-hidden="true" />
           <span>
@@ -299,6 +304,14 @@ const PropertyDetails = () => {
           <Link to={PATHS.adminPropertyEdit(property.id)} className={styles.previewLink}>
             Back to the form
           </Link>
+        </div>
+      ) : shareToken && unpublished ? (
+        <div className={styles.previewBanner} role="status">
+          <Icon icon="mdi:eye-outline" aria-hidden="true" />
+          <span>
+            Shared preview — this property is not published yet. The link works for 24 hours from
+            when it was made.
+          </span>
         </div>
       ) : null}
 

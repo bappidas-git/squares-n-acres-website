@@ -189,3 +189,19 @@ describe('the tab', () => {
     expect(screen.getByText('Admin and sign-in pages')).toBeInTheDocument();
   });
 });
+
+describe('the site URL', () => {
+  it('is kept without a trailing slash, since canonicals append a path to it', async () => {
+    renderWith(<Host />);
+    const field = screen.getByLabelText('Site URL');
+
+    await act(async () => {
+      await userEvent.clear(field);
+      await userEvent.type(field, 'https://www.squaresnacres.com/ ');
+      await userEvent.tab();
+    });
+
+    expect(field).toHaveValue('https://www.squaresnacres.com');
+    expect(screen.getByText(/This is the one place it changes/)).toBeInTheDocument();
+  });
+});

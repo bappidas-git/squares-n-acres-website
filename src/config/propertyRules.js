@@ -19,6 +19,16 @@
 const DESCRIPTION_MIN = 300;
 
 /**
+ * What an image without a description is told — only when the listing goes
+ * live (prompt 51): a draft with twenty-five photographs is saved as it is, and
+ * the descriptions are asked for when they are about to be read.
+ */
+const ALT_MESSAGE = 'Describe this image — screen readers and search engines read it.';
+
+/** `images.3.alt` — the key a missing description is refused under. */
+const ALT_KEY = /^images\.\d+\.alt$/;
+
+/**
  * The fields the rules read. A `PATCH` that sends none of them — a featured
  * star, a priority — is not asked: it changes nothing the rules are about.
  */
@@ -73,9 +83,13 @@ function publishProblems(property) {
   const images = Array.isArray(property?.images) ? property.images : [];
   // The gallery as a whole: with no image there is no `images.0` to hang the
   // message on.
-  if (!images.some((image) => !isBlank(image?.url) && !isBlank(image?.alt))) {
+  if (!images.some((image) => !isBlank(image?.url))) {
     found.images = 'A published listing needs at least one image with a description.';
   }
+  // …and every image it shows is described, each under its own box.
+  images.forEach((image, index) => {
+    if (!isBlank(image?.url) && isBlank(image?.alt)) found[`images.${index}.alt`] = ALT_MESSAGE;
+  });
 
   const length = plainText(property?.description).length;
   if (length < DESCRIPTION_MIN) {
@@ -110,6 +124,12 @@ function publishProblems(property) {
 function publishGaps(problems, property) {
   const gaps = [];
   if (problems.images) gaps.push('no photograph with a description');
+  const undescribed = Object.keys(problems).filter((key) => ALT_KEY.test(key)).length;
+  if (undescribed > 0) {
+    gaps.push(
+      `${undescribed} ${undescribed === 1 ? 'photograph' : 'photographs'} without a description`
+    );
+  }
   if (problems.description) {
     gaps.push(
       `${plainText(property?.description).length} of ${DESCRIPTION_MIN} characters of description`
@@ -133,6 +153,7 @@ const notReadyMessage = (property, gaps) =>
   `“${property?.title || 'This listing'}” is not ready to go live: ${gaps.join(', ')}.`;
 
 module.exports = {
+  ALT_MESSAGE,
   DESCRIPTION_MIN,
   PUBLISH_FIELDS,
   isPriced,

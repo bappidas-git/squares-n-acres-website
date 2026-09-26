@@ -53,7 +53,7 @@ fragment and then the query of a longer one — the `utm_*` values travel separa
 
 ### 5.4 Auth
 
-Header `Authorization: Bearer <token>`. `POST /auth/login { email, password }` → `{ data: { token, expiresAt, user: { id, name, email, role, avatarUrl, phone } } }`; `POST /auth/logout` revokes (200 `{data:null,message}`); `GET /auth/profile` → `{ data: user }` (401 when the token is missing/expired/revoked); `PUT /auth/profile { name, phone, avatarUrl }`; `PUT /auth/password { currentPassword, newPassword }` (422 `currentPassword` when wrong; `newPassword` min 8). Tokens expire after `MOCK_TOKEN_TTL_HOURS` (default 24) on the mock and per Sanctum config on Laravel. Client storage: `sna_auth_token`, `sna_auth_user`, `sna_auth_expires_at` (localStorage); expiry enforced client-side (timer + check on every route change → auto-logout with toast "Your session has expired. Please sign in again.") and server-side (401).
+Header `Authorization: Bearer <token>`. `POST /auth/login { email, password }` → `{ data: { token, expiresAt, user: { id, name, email, role, avatarUrl, phone } } }`; `POST /auth/logout` revokes (200 `{data:null,message}`); `POST /auth/refresh` gives the presented token a full lifetime again from now and answers what a sign-in answers — the same `token`, a later `expiresAt` (prompt 51: the admin offers "Stay signed in" five minutes before the end); `GET /auth/profile` → `{ data: user }` (401 when the token is missing/expired/revoked); `PUT /auth/profile { name, phone, avatarUrl }`; `PUT /auth/password { currentPassword, newPassword }` (422 `currentPassword` when wrong; `newPassword` min 8). Tokens expire after `MOCK_TOKEN_TTL_HOURS` (default 24) on the mock and per Sanctum config on Laravel. Client storage: `sna_auth_token`, `sna_auth_user`, `sna_auth_expires_at` (localStorage); expiry enforced client-side (timer + check on every route change → auto-logout with toast "Your session has expired. Please sign in again.") and server-side (401).
 
 **An account may be signed in on several devices at once** (QA-65). Each `POST /auth/login`
 issues a new token and revokes none of the account's others, so a second sign-in — a phone
@@ -153,7 +153,7 @@ Public list endpoints return only `isActive: true` records (and `status: 'publis
 
 **A switched-off team member answers for no listing** (QA-61): on a public property read, `agent` is filled from its `teamMemberId` only while that member `isActive`. Switched off — somebody who has left — they fill in nothing: the fields the listing typed itself still show, and with none typed `name`, `phone`, `whatsapp`, `email` and `photoUrl` read `null`, and the site draws no advisor card (it needs a way to reach somebody). It had gone on showing the name, photograph, phone and e-mail of a person who had left on every listing that named them. Admin reads are unchanged, so the property form still names the member.
 
-**Properties have no preview token.** `GET /properties/slug/:slug` answers 404 for an unpublished listing to everybody, signed in or not. An editor previews one at `/properties/<slug>?preview=admin`, which the public route serves only while an admin session exists: it reads the record through **`GET /admin/properties/slug/:slug`** — an ordinary admin endpoint behind the usual Bearer token — and marks the page `noindex, nofollow`. Nothing about the query string grants access; the token does. (Articles and pages keep their 24-hour signed tokens, D28: a draft article is shown to somebody who is not an editor.)
+**A property is previewed two ways** (prompt 51). `GET /properties/slug/:slug` answers 404 for an unpublished listing, signed in or not, unless the query carries **`previewToken`** — a live 24-hour share token for that listing, which **`POST /admin/properties/:id/preview-token`** issues as `{ token, expiresAt, url }` (the `url` is the listing's public address with `?preview=<token>`, the link an editor copies to send an owner or a colleague; a token for another listing, or an expired one, is 404 like no token). The site marks that page `noindex, nofollow` and counts no view. An editor still previews without a token at `/properties/<slug>?preview=admin`, which the public route serves only while an admin session exists: it reads the record through **`GET /admin/properties/slug/:slug`** — an ordinary admin endpoint behind the usual Bearer token. (Articles and pages keep their 24-hour signed tokens, D28.)
 
 **A gated file has no address in a public read** (QA-51 OPEN-1). While `brochureLeadGated` is on, every public property shape answers `brochureUrl: null` with `hasBrochure: true`; a document with `leadGated` on keeps its row with `url: null` and `hasFile: true`, and every document carries `hasFile`. The floor plans are always gated: every `floorPlans[]` row answers `imageUrl: null` and `pdfUrl: null` with `hasImage` / `hasPdf`, and every `unitConfigurations[]` row `floorPlanImageUrl: null` and `floorPlanPdfUrl: null` with `hasFloorPlanImage` / `hasFloorPlanPdf`. An open document or brochure whose address is also a gated file's — a floor plan's included — is gated with it, and a document whose address is the brochure's own is left out of `documents[]`. The photo gallery is not gated. The addresses are handed over by **`POST /properties/:id/documents/access`** to the token `POST /leads` answers a lead about that listing with (`access.token`, 24 hours, any lead about the listing — P24, P28). Admin reads are unchanged. The whole rule, with the Laravel sketch, is `docs/backend-notes/05_business_rules.md` → "Gated files".
 
@@ -191,8 +191,9 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 | Method | Path                      | Auth/role | Purpose                                                                  | Query                                                                                                                                                                                                                                                                                                                                                         | Body schema | Response shape     | Side effects                                                                     |
 | ------ | ------------------------- | --------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------ | -------------------------------------------------------------------------------- |
 | GET    | `/properties`             | public    | Public paginated property search with facets                             | `page`, `perPage`, `sort`, `order`, `q`, `listingType`, `segment`, `propertyTypeId`, `localityId`, `cityId`, `constructionStatus`, `availability`, `bedrooms`, `minPrice`, `maxPrice`, `minArea`, `maxArea`, `areaUnit`, `furnishing`, `facing`, `developerId`, `amenityIds`, `badgeIds`, `isFeatured`, `isVerified`, `reraRegistered`, `possessionBy`, `ids` | —           | `PropertyList`     | —                                                                                |
+| GET | `/properties/counts` | public | Live listings per value of each dimension in `by`, under the listing filters (prompt 51) | `by` (`segment`, `propertyTypeId`, `listingType`, `constructionStatus`, `localityId`; others ignored), `q` and every filter of `/properties` | — | `PropertyCounts` | `Cache-Control: public, max-age=300` |
 | GET    | `/properties/featured`    | public    | Featured properties, ordered by priority then recency                    | `perPage`, `listingType`, `segment`, `propertyTypeId`, `localityId`, `cityId`, `constructionStatus`, `availability`, `bedrooms`, `minPrice`, `maxPrice`, `minArea`, `maxArea`, `areaUnit`, `furnishing`, `facing`, `developerId`, `amenityIds`, `badgeIds`, `isFeatured`, `isVerified`, `reraRegistered`, `possessionBy`, `ids`                               | —           | `PropertyList`     | —                                                                                |
-| GET    | `/properties/slug/:slug`  | public    | Property details by slug; 404 when inactive                              | —                                                                                                                                                                                                                                                                                                                                                             | —           | `Property`         | —                                                                                |
+| GET | `/properties/slug/:slug` | public | Property details by slug; 404 when inactive unless `previewToken` is a live share token for it | `previewToken` | — | `Property` | — |
 | GET    | `/properties/:id/similar` | public    | Admin-selected similar properties, topped up to six by locality and type | `perPage`                                                                                                                                                                                                                                                                                                                                                     | —           | `PropertyList`     | —                                                                                |
 | POST   | `/properties/:id/view`    | public    | Count one property view; debounced per IP per hour                       | —                                                                                                                                                                                                                                                                                                                                                             | —           | `ViewCount`        | Increments `viewCount`; appends a `propertyViews` row; debounced per IP per hour |
 | POST   | `/properties/:id/documents/access` | public | The addresses of a listing’s files, for the token `POST /leads` answered a lead about it with | — | `property.documentAccess` | `DocumentAccess` | None — a read. 403 unless the token is live, names this listing and its lead still exists; 404 for an inactive listing |
@@ -207,6 +208,7 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 | GET    | `/amenities`              | public    | Amenities, optionally filtered by category                               | `page`, `perPage`, `sort`, `order`, `q`, `category`                                                                                                                                                                                                                                                                                                           | —           | `AmenityList`      | —                                                                                |
 | GET    | `/badges`                 | public    | Property badges                                                          | `page`, `perPage`, `sort`, `order`, `q`                                                                                                                                                                                                                                                                                                                       | —           | `BadgeList`        | —                                                                                |
 | GET    | `/banks`                  | public    | Home-loan partners for the finance section and the EMI calculator        | `page`, `perPage`, `sort`, `order`, `q`                                                                                                                                                                                                                                                                                                                       | —           | `BankList`         | —                                                                                |
+| GET | `/health` | public | Liveness: `{ status: "ok", time }` — the smoke test's first request, on either backend (prompt 51) | — | — | `Health` | — |
 
 #### Public — articles
 
@@ -240,6 +242,8 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 | GET    | `/settings`             | public    | The public subset of the site settings                                   | —                                                                                          | —                       | `Settings`        | —                                                                                                                                                                                                           |
 | GET    | `/seo/settings`         | public    | The public subset of the SEO settings used by <Seo> and the sitemap      | —                                                                                          | —                       | `SeoSettings`     | —                                                                                                                                                                                                           |
 | GET    | `/redirects`            | public    | Active redirects, resolved client-side by RedirectHandler                | —                                                                                          | —                       | `RedirectList`    | —                                                                                                                                                                                                           |
+| POST | `/redirects/:id/hit` | public | Count a visitor RedirectHandler sent on by an active rule (prompt 51) | — | — | `NoContent` | `hits` + 1; 404 for an unknown or inactive rule; 60 a minute per IP |
+| POST | `/not-found` | public | The 404 page reporting the address it was reached at, and from where (prompt 51) | — | `notFound.report` | `NoContent` | Counts the path for today (IST) in `notFoundLog`, 500 rows at most; the admin, `/api/`, `/static/`, asset files and redirected addresses are ignored; 30 a minute per IP |
 
 #### Public — sitemaps and feeds
 
@@ -260,6 +264,7 @@ names a key of `src/services/schemas/` (`getSchema('property.create')`).
 | Method | Path             | Auth/role | Purpose                                                               | Query | Body schema     | Response shape | Side effects                                        |
 | ------ | ---------------- | --------- | --------------------------------------------------------------------- | ----- | --------------- | -------------- | --------------------------------------------------- |
 | POST   | `/auth/login`    | public    | Exchange e-mail and password for a bearer token                       | —     | `auth.login`    | `AuthSession`  | Issues an `apiTokens` record and sets `lastLoginAt` |
+| POST | `/auth/refresh` | any role | Keep the current session: the same token, valid for a full lifetime from now | — | — | `AuthSession` | Moves the presented token's expiry; 401 when it is no longer live (prompt 51) |
 | POST   | `/auth/logout`   | any role  | Revoke the current token                                              | —     | —               | `Null`         | Revokes the presented token                         |
 | GET    | `/auth/profile`  | any role  | The signed-in user; 401 when the token is missing, expired or revoked | —     | —               | `User`         | —                                                   |
 | PUT    | `/auth/profile`  | any role  | Update the signed-in user’s own name, phone and avatar                | —     | `auth.profile`  | `User`         | —                                                   |
@@ -376,6 +381,7 @@ the login form stops at ten a minute. The sixth answers
 | POST | `/admin/properties/bulk` | admin · manager | Apply one action to several properties; five carry `payload` (prompt 51) | — | `bulk` | `BulkResult` | activate · deactivate · feature · unfeature · verify · unverify · delete · availability · assignAgent · setLocality · setPropertyType · setDeveloper |
 | GET    | `/admin/properties/check-slug`    | admin · manager | Check whether a property slug is free and suggest an alternative     | `slug`, `excludeId`                                                                                                                                                                                                                                                                                                                                                                                    | —                 | `SlugCheck`     | —                                                                                                                                                 |
 | POST   | `/admin/properties/:id/duplicate` | admin · manager | Copy a property as an inactive draft with a fresh slug               | —                                                                                                                                                                                                                                                                                                                                                                                                      | —                 | `Property`      | Creates an inactive copy: title `"<title> (Copy)"`, slug `<slug>-copy[-n]`, `isFeatured:false`, `viewCount:0`, `enquiryCount:0`, `seo.score:null` |
+| POST | `/admin/properties/:id/preview-token` | admin · manager | A 24-hour share link for a listing, published or not (prompt 51) | — | — | `PreviewToken` | Issues a token valid for 24 hours: `{ token, expiresAt, url }`; `GET /properties/slug/:slug?previewToken=` opens that listing until then |
 | GET | `/admin/leads` | any role | Lead list for the CRM; scoped to own and unassigned leads for sales | `page`, `perPage`, `sort`, `order`, `q`, `status`, `source`, `priority`, `assignedTo`, `propertyId`, `from`, `to`, `followUp`, `idleDays` | — | `LeadList` | `meta.followUp` counts the open leads that are overdue, due today, due within 7 days and without a follow-up (prompt 51) |
 | POST | `/admin/leads` | any role | Enter a lead by hand — a walk-in, a call, a portal lead | — | `lead.adminCreate` | `Lead` | A sales user’s lead is theirs; otherwise the colleague named, or auto-assigned; `created` activity "Added by …"; `note` becomes the first note (prompt 51) |
 | GET    | `/admin/leads/:id`                | any role        | One lead with its notes and activity timeline                        | —                                                                                                                                                                                                                                                                                                                                                                                                      | —                 | `Lead`          | —                                                                                                                                                 |
@@ -399,8 +405,10 @@ are in the business rules, "Property writes":
   and what each lacks. The bulk refusal is all or nothing.
 - **A replace from an older version.** `PUT /admin/properties/:id` may carry the
   `updatedAt` its client read; when the stored one differs the replace is refused
-  with 409 and `data: { conflict: 'stale', current: { updatedAt, updatedBy } }`.
-  A body without it replaces as before.
+  with 409 and `data: { conflict: 'stale', current: { updatedAt, updatedBy, updatedByName } }`.
+  A body without it replaces as before. Since prompt 51 the same holds for the
+  `PUT` of an article, a page, a locality, a developer and a job opening — each
+  now keeps `createdBy`/`updatedBy` and answers `updatedByName` on admin reads.
 - **`GET /properties/featured`** narrows the featured listings by the §5.7
   filters its registry entry declares.
 
@@ -746,6 +754,7 @@ A locality's `name` is unique within its city, case and spacing aside: a create,
 | PATCH  | `/admin/job-applications/:id`          | admin · manager | Move an application through the hiring statuses                      | —                                                                                                      | `jobApplication.patch` | `JobApplication`           | —                                                                |
 | DELETE | `/admin/job-applications/:id`          | admin · manager | Delete an application                                                | —                                                                                                      | —                      | `Null`                     | 409 with `data.usedBy` when the record is still referenced       |
 | GET    | `/admin/newsletter-subscribers`        | admin · manager | Newsletter subscribers                                               | `page`, `perPage`, `sort`, `order`, `q`, `status`                                                      | —                      | `NewsletterSubscriberList` | —                                                                |
+| PATCH | `/admin/newsletter-subscribers/:id` | admin · manager | Mark a subscriber unsubscribed — or subscribed again (prompt 51) | — | `newsletter.status` | `NewsletterSubscriber` | Changes `status` and nothing else; the admin's export leaves the unsubscribed out unless asked for them |
 | DELETE | `/admin/newsletter-subscribers/:id`    | admin · manager | Remove a subscriber                                                  | —                                                                                                      | —                      | `Null`                     | 409 with `data.usedBy` when the record is still referenced       |
 | GET    | `/admin/newsletter-subscribers/export` | admin · manager | CSV export of the filtered subscriber list                           | `q`, `status`                                                                                          | —                      | `Csv`                      | UTF-8 BOM CSV attachment                                         |
 
@@ -769,10 +778,10 @@ A locality's `name` is unique within its city, case and spacing aside: a create,
 | DELETE | `/admin/redirects/:id`  | admin · manager | Delete a redirect; 409 when it is still in use                                                 | —                                                                                                     | —                    | `Null`               | 409 with `data.usedBy` when the record is still referenced                                                                                                                                                                               |
 | POST   | `/admin/redirects/bulk` | admin · manager | Apply one action to several redirects                                                          | —                                                                                                     | `bulk`               | `BulkResult`         | activate · deactivate · delete (plus the resource’s own actions)                                                                                                                                                                         |
 | GET    | `/admin/seo/settings`   | admin · manager | The complete SEO settings singleton                                                            | —                                                                                                     | —                    | `SeoSettings`        | —                                                                                                                                                                                                                                        |
-| PUT    | `/admin/seo/settings`   | admin · manager | Replace the SEO settings; known keys are deep-merged                                           | —                                                                                                     | `seoSettings.update` | `SeoSettings`        | Deep-merges the known keys only; **403** when a manager changes `customHeadHtml` or `customBodyEndHtml`                                                                                                                                  |
+| PUT    | `/admin/seo/settings`   | admin · manager | Replace the SEO settings; known keys are deep-merged                                           | —                                                                                                     | `seoSettings.update` | `SeoSettings`        | Deep-merges the known keys only; **403** when a manager changes `customHeadHtml` or `customBodyEndHtml`; a `siteUrl` is copied to `siteSettings.general.siteUrl` (prompt 51) |
 | GET    | `/admin/seo/overview`   | admin · manager | Lightweight SEO rows for the dashboard and the uniqueness checks                               | `page`, `perPage`, `sort`, `order`, `q`, `type`, `scoreBand`, `index`                                 | —                    | `SeoOverviewRowList` | —                                                                                                                                                                                                                                        |
 | GET    | `/admin/settings`       | admin · manager | The complete site settings singleton, including the lead branch                                | —                                                                                                     | —                    | `Settings`           | —                                                                                                                                                                                                                                        |
-| PUT    | `/admin/settings`       | admin           | Replace the site settings; known keys are deep-merged                                          | —                                                                                                     | `settings.update`    | `Settings`           | Deep-merges the known keys only                                                                                                                                                                                                          |
+| PUT    | `/admin/settings`       | admin           | Replace the site settings; known keys are deep-merged                                          | —                                                                                                     | `settings.update`    | `Settings`           | Deep-merges the known keys only; ignores `general.siteUrl`, a read-only copy of `seoSettings.siteUrl` (prompt 51) |
 | POST | `/admin/settings/test-lead-alert` | admin | Send a test lead alert to the saved notification addresses | — | — | `LeadAlertTest` | `{ sentTo, sentAt }`; 422 when no address is saved; Laravel answers 502 when the mailer refuses (prompt 51) |
 | GET    | `/admin/users`          | admin · manager | List users for the admin table                                                                 | `page`, `perPage`, `sort`, `order`, `q`, `isActive`, `ids`, `role`                                    | —                    | `UserList`           | —                                                                                                                                                                                                                                        |
 | POST   | `/admin/users`          | admin           | Create a user                                                                                  | —                                                                                                     | `user.create`        | `User`               | 409 on a taken e-mail (any case); `password` 8+ with a letter and a digit                                                                                                                                                                         |
@@ -828,15 +837,28 @@ settings screen regenerates `llms.txt` with them.
 
 | Method | Path                      | Auth/role       | Purpose                                                                    | Query  | Body              | Response                |
 | ------ | ------------------------- | --------------- | -------------------------------------------------------------------------- | ------ | ----------------- | ----------------------- |
-| GET    | `/redirects/resolve`      | public          | The rule for one path, or 404; the only place `hits` is counted            | `path` | —                 | `Redirect`              |
+| GET    | `/redirects/resolve`      | public          | The rule for one path, or 404; counts a hit, as a followed rule does       | `path` | —                 | `Redirect`              |
 | POST   | `/admin/redirects/import` | admin · manager | Upsert redirects by `fromPath`; an unusable row is counted and skipped     | —      | `redirect.import` | `RedirectImportSummary` |
 | GET    | `/admin/redirects/export` | admin · manager | CSV of the whole redirect table                                            | —      | —                 | `Csv`                   |
 | GET    | `/admin/seo/llms-preview` | admin · manager | The `llms.txt` that "regenerate from data" would write, without storing it | —      | —                 | `LlmsPreview`           |
+| GET | `/admin/seo/not-found` | admin · manager | The addresses that answered 404, one line per path, the most reached first (prompt 51) | `page`, `perPage`, `q` | — | `NotFoundPathList` |
+| DELETE | `/admin/seo/not-found/:id` | admin · manager | Take a path off that list — every day of it; a new visit lists it again (prompt 51) | — | — | `Null` |
 
 `GET /redirects/resolve` answers **404** when no active rule matches the path, which is
 the answer "there is no redirect" rather than a failure; `redirectService.resolve()`
-resolves to `null` for it. It is the one endpoint that increments `hits`, so a path
-checked in the admin tester is a path with one more hit against it (D30, §9.10).
+resolves to `null` for it. It increments `hits`, so a path checked in the admin tester
+is a path with one more hit against it (D30, §9.10) — and since prompt 51 so does a rule
+the site follows: `RedirectHandler` reports it with `POST /redirects/:id/hit` (the public
+list carries each rule's `id` for it), so the Hits column counts visitors.
+
+**The 404 log** (prompt 51). The site's 404 page — an unknown route, and a detail page
+whose record answered 404 — reports `{ path, referrer }` to `POST /not-found` once a
+visit (never during the prerender crawl). The API keeps one row per path per Indian day
+with a count, the first and last time and the latest referrer, 500 rows at most (the ones
+seen longest ago go first), and leaves out the admin, `/api/`, `/static/`, asset files and
+any address an active redirect answers. `GET /admin/seo/not-found` sums the days into one
+line per path; the SEO dashboard's **404s** tab lists them with "Create redirect", which
+opens the redirects form on the address (`/admin/seo/redirects?create=<path>`).
 
 ---
 
@@ -902,8 +924,9 @@ Every writable field of `docs/DATA_MODEL.md` §6.1 plus the read-only embeds and
 `propertyType {id,name,slug,segment}`, `amenities[] {id,name,slug,icon,category}`,
 `badges[] {id,name,slug,color,icon}`, `location.locality {id,name,slug}`,
 `location.city {id,name,slug}`, `project.developer {id,name,slug,logoUrl}`, `viewCount`,
-`enquiryCount`, `publishedAt`, `createdAt`, `updatedAt`. Admin reads add `createdBy` and
-`updatedBy`. Public reads drop `agent.phone`, `agent.whatsapp` and `agent.email` unless
+`enquiryCount`, `publishedAt`, `createdAt`, `updatedAt`. Admin reads add `createdBy`,
+`updatedBy` and `updatedByName` — the name of the admin user who saved it last, `null` when
+nobody has (prompt 51). Public reads drop `agent.phone`, `agent.whatsapp` and `agent.email` unless
 `agent.showOnListing` is true.
 
 Public reads also carry no address for a file behind the lead form (§5.10): they add
@@ -1038,7 +1061,8 @@ active unit configurations.
 `readingTimeMinutes`, `wordCount` and `viewCount`. `ArticleSummary` (what `ArticleList`
 returns) drops `content`, `contentText`, `faqs`, `relatedArticleIds`,
 `relatedPropertyIds` and the full `seo` object, keeping `seo.title` and
-`seo.description`.
+`seo.description`. Admin reads add `createdBy`, `updatedBy` and `updatedByName` (prompt 51);
+public reads carry none of the three.
 
 **Writes (QA-55).** An article that is `published` or `scheduled` needs an `excerpt`, a
 `featuredImage.url` and 300 words in `content` — 422 on `excerpt`, `featuredImage.url` and
@@ -1070,7 +1094,9 @@ The rows are `ArticleSummary`, never the bodies.
 The fields of §6.2–§6.6 plus `seo` where the entity has one; `Locality`, `Developer`,
 `PropertyType`, `Amenity` and `Badge` add the computed `propertyCount` (active listings that
 carry the record), and `Locality` embeds `city {id,name,slug}`. `Amenity` and `Badge` can also
-be sorted by it (`sort=propertyCount`).
+be sorted by it (`sort=propertyCount`). `PropertyType` carries `showInRentMenu` and
+`showInCommercialMenu` (bool, default `false`, public): the header's Rent and Commercial
+menus are the active types with the flag on, in `order` (prompt 51).
 
 ### `ArticleCategory`, `ArticleTag`, `Author`
 
@@ -1093,8 +1119,9 @@ The rules are in `docs/backend-notes/05_business_rules.md` → "FAQs".
 
 ### `Page`
 
-The fields of §6.10: `blocks[] { id, type, order, data }` with the `data` shape of the
-block type, plus `seo` and the header/footer placement: `showInHeader`, `headerMenu` (a
+The fields of §6.10: `blocks[] { id, type, order, hidden, data }` with the `data` shape of
+the block type — a block with `hidden: true` stays on the record and is left out of the
+public read (prompt 51) — plus `seo` and the header/footer placement: `showInHeader`, `headerMenu` (a
 `headerMenus` slug), `headerSubmenu` (one of that menu's `submenus[].slug`, or `null` for
 the menu's own list), `showInFooter`, `footerColumn`, `order`.
 
@@ -1383,12 +1410,62 @@ At most five of each; `q` must be at least two characters.
 }
 ```
 
+### `NotFoundPath`
+
+One line of the 404 log (prompt 51) — `id` is the path's most recent row, the one a
+dismissal names; `redirectedTo` is where an active redirect now sends the address.
+
+```jsonc
+{
+  "id": 7,
+  "path": "/flats-in-hebal",
+  "count": 12,
+  "days": 3,
+  "firstSeenAt": "2026-09-20T05:00:00.000Z",
+  "lastSeenAt": "2026-09-25T05:00:00.000Z",
+  "referrer": "https://www.google.com/",
+  "redirectedTo": null
+}
+```
+
+### `NoContent`
+
+`204` with no body (prompt 51): `POST /redirects/:id/hit` and `POST /not-found` report
+something and have nothing to say back.
+
+### `Health`
+
+`GET /health` (prompt 51): `{ "data": { "status": "ok", "time": "2026-09-26T10:00:00.000Z" } }`.
+The mock adds `version`. Nothing on the site calls it; the smoke test asks it first, so a
+Laravel API answers it too — with no database round trip, so a load balancer can poll it.
+
+### `PropertyCounts`
+
+`GET /properties/counts` (prompt 51): for each dimension `by` names, the live listings per
+value, after every listing filter the request carries. Keys are strings; a value no live
+listing carries is absent (a tile reads it as 0); `meta` is `null`. The home page asks two
+questions — `?by=segment,listingType,propertyTypeId` for the Plots, Rent and Commercial tiles
+and the type tiles, and `?by=constructionStatus&listingType=sale` for the three sale-status
+tiles — and falls back to one `GET /properties?perPage=1` a tile when the endpoint answers
+404 or 501.
+
+```jsonc
+{
+  "data": {
+    "segment": { "residential": 26, "commercial": 5, "land": 9 },
+    "listingType": { "sale": 31, "rent": 7, "lease": 2 },
+    "propertyTypeId": { "1": 8, "2": 4, "9": 3 }
+  },
+  "meta": null
+}
+```
+
 ### `BulkResult`, `SlugCheck`, `PreviewToken`, `ViewCount`, `Null`
 
 ```jsonc
 { "data": { "affected": 4 }, "message": "4 properties updated." }          // BulkResult
 { "data": { "available": false, "suggestion": "lakeview-heights-2" } }     // SlugCheck
-{ "data": { "token": "…", "url": "https://…/insights/articles/…?preview=…" } } // PreviewToken
+{ "data": { "token": "…", "expiresAt": "…", "url": "https://…/insights/articles/…?preview=…" } } // PreviewToken
 { "data": { "viewCount": 413 } }                                            // ViewCount
 { "data": null, "message": "…" }                                            // Null
 ```

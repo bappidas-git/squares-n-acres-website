@@ -20,28 +20,65 @@ import { NAV } from '../copy';
 import { PRICE_BUCKETS_SALE } from '../enums';
 import { setKnownSegments } from '../segments';
 
+// The seeded types' menu flags and order (prompt 51): the Rent and Commercial
+// menus are the types with a flag on, in their order.
+const RENT = { showInRentMenu: true };
+const COMMERCIAL = { showInCommercialMenu: true };
+
 const propertyTypes = [
-  { id: 1, name: 'Apartments', slug: 'apartments', segment: 'residential', order: 1 },
-  { id: 2, name: 'Villas', slug: 'villas', segment: 'residential', order: 2 },
+  { id: 1, name: 'Apartments', slug: 'apartments', segment: 'residential', order: 1, ...RENT },
+  { id: 2, name: 'Villas', slug: 'villas', segment: 'residential', order: 2, ...RENT },
   {
     id: 3,
     name: 'Independent Houses',
     slug: 'independent-houses',
     segment: 'residential',
     order: 3,
+    ...RENT,
   },
-  { id: 4, name: 'PG / Co-living', slug: 'pg-co-living', segment: 'residential', order: 4 },
+  { id: 5, name: 'Penthouses', slug: 'penthouses', segment: 'residential', order: 5 },
+  {
+    id: 4,
+    name: 'PG / Co-living',
+    slug: 'pg-co-living',
+    segment: 'residential',
+    order: 17,
+    ...RENT,
+  },
   { id: 9, name: 'Residential Plots', slug: 'residential-plots', segment: 'land', order: 9 },
-  { id: 11, name: 'Office Spaces', slug: 'office-spaces', segment: 'commercial', order: 11 },
-  { id: 13, name: 'Retail Shops', slug: 'retail-shops', segment: 'commercial', order: 13 },
-  { id: 14, name: 'Warehouses', slug: 'warehouses', segment: 'commercial', order: 14 },
+  {
+    id: 11,
+    name: 'Office Spaces',
+    slug: 'office-spaces',
+    segment: 'commercial',
+    order: 11,
+    ...COMMERCIAL,
+  },
+  {
+    id: 13,
+    name: 'Retail Shops',
+    slug: 'retail-shops',
+    segment: 'commercial',
+    order: 12,
+    ...COMMERCIAL,
+  },
+  {
+    id: 14,
+    name: 'Warehouses',
+    slug: 'warehouses',
+    segment: 'commercial',
+    order: 13,
+    ...COMMERCIAL,
+  },
   {
     id: 12,
     name: 'Co-working Spaces',
     slug: 'co-working-spaces',
     segment: 'commercial',
-    order: 12,
+    order: 14,
+    ...COMMERCIAL,
   },
+  { id: 15, name: 'Industrial Sheds', slug: 'industrial-sheds', segment: 'commercial', order: 15 },
   {
     id: 99,
     name: 'Retired Type',
@@ -49,6 +86,7 @@ const propertyTypes = [
     segment: 'residential',
     order: 99,
     isActive: false,
+    ...RENT,
   },
 ];
 
@@ -248,6 +286,70 @@ describe('buildHeaderMenus', () => {
       '/commercial/co-working-spaces',
       '/lease',
     ]);
+  });
+
+  describe('the Rent and Commercial menus are the flagged types (prompt 51)', () => {
+    const typeLinks = (types, key) =>
+      hrefs(
+        menuByKey(buildHeaderMenus({ propertyTypes: types, localities, pages }), key).columns[0]
+          .links
+      );
+
+    it('lists a type an editor switches on, in its order, and drops one switched off', () => {
+      const edited = propertyTypes.map((type) => {
+        if (type.slug === 'penthouses') return { ...type, showInRentMenu: true };
+        if (type.slug === 'villas') return { ...type, showInRentMenu: false };
+        if (type.slug === 'industrial-sheds') return { ...type, showInCommercialMenu: true };
+        return type;
+      });
+
+      expect(typeLinks(edited, 'rent')).toEqual([
+        '/rent/apartments',
+        '/rent/independent-houses',
+        '/rent/penthouses',
+        '/rent/pg-co-living',
+        '/lease',
+      ]);
+      expect(typeLinks(edited, 'commercial')).toEqual([
+        '/commercial/office-spaces',
+        '/commercial/retail-shops',
+        '/commercial/warehouses',
+        '/commercial/co-working-spaces',
+        '/commercial/industrial-sheds',
+        '/lease',
+      ]);
+    });
+
+    it('follows the types’ order, not a list in the code', () => {
+      const reordered = propertyTypes.map((type) =>
+        type.slug === 'co-working-spaces' ? { ...type, order: 1 } : type
+      );
+      expect(typeLinks(reordered, 'commercial')[0]).toBe('/commercial/co-working-spaces');
+    });
+
+    it('leaves out a flag on a type of the kind the menu does not list', () => {
+      const crossed = propertyTypes.map((type) => {
+        if (type.slug === 'apartments') return { ...type, showInCommercialMenu: true };
+        if (type.slug === 'office-spaces') return { ...type, showInRentMenu: true };
+        return type;
+      });
+
+      expect(typeLinks(crossed, 'commercial')).not.toContain('/commercial/apartments');
+      expect(typeLinks(crossed, 'rent')).not.toContain('/rent/office-spaces');
+    });
+
+    it('keeps a flagged type that is switched off out, and a type with no flag at all', () => {
+      expect(typeLinks(propertyTypes, 'rent')).not.toContain('/rent/retired');
+      expect(typeLinks(propertyTypes, 'rent')).not.toContain('/rent/penthouses');
+    });
+
+    it('offers only the lease route when no type is flagged', () => {
+      const unflagged = propertyTypes.map(
+        ({ showInRentMenu: _rent, showInCommercialMenu: _commercial, ...type }) => type
+      );
+      expect(typeLinks(unflagged, 'rent')).toEqual(['/lease']);
+      expect(typeLinks(unflagged, 'commercial')).toEqual(['/lease']);
+    });
   });
 
   it('builds the page menus from the CMS and encodes a nested slug as a path', () => {

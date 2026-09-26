@@ -2,10 +2,12 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import MasterDataPage from '../../../components/admin/MasterDataPage';
+import ListingsCountLink from './ListingsCountLink';
 import PATHS from '../../../routes/paths';
 import SeoScoreChip from '../../../components/seo/SeoScoreChip';
 import { LazyImage } from '../../../components/ui';
 import { LOCALITY_ZONES } from '../../../config/enums';
+import propertyService from '../../../services/propertyService';
 import { adminCrud, localities } from '../../../services/masterDataService';
 import { formatDate, formatNumber } from '../../../utils/format';
 import { useMasterData } from '../../../contexts/MasterDataContext';
@@ -30,7 +32,7 @@ export default function LocalitiesPage() {
   const navigate = useNavigate();
   // The seven public lists are loaded once and cached (D93); a write here is
   // what makes that cache wrong, so it is refreshed from here.
-  const { refresh } = useMasterData();
+  const { refresh, localities: live } = useMasterData();
 
   const config = useMemo(
     () => ({
@@ -48,6 +50,21 @@ export default function LocalitiesPage() {
       activeToggle: true,
       featuredToggle: true,
       usageGuard: true,
+      // A locality listings still sit in: its delete offers to move them to
+      // another one first (prompt 51).
+      reassign: {
+        noun: 'locality',
+        candidates: (row) =>
+          live
+            .filter((locality) => String(locality.id) !== String(row.id))
+            .map((locality) => ({ value: String(locality.id), label: locality.name })),
+        move: (ids, value) =>
+          propertyService.bulk({
+            ids,
+            action: 'setLocality',
+            payload: { localityId: Number(value) },
+          }),
+      },
 
       columns: [
         {
@@ -99,7 +116,16 @@ export default function LocalitiesPage() {
           sortable: true,
           align: 'right',
           width: '110px',
-          render: (row) => formatNumber(row.propertyCount ?? 0),
+          // The count is the way to the listings it counts (prompt 51).
+          render: (row) => (
+            <ListingsCountLink
+              count={row.propertyCount}
+              param="localityId"
+              value={row.id}
+              describe={`in ${row.name}`}
+              className={styles.countLink}
+            />
+          ),
         },
         {
           key: 'seoScore',
@@ -196,7 +222,7 @@ export default function LocalitiesPage() {
         text: 'Add the neighbourhoods your listings sit in — they carry the guide pages and the home strip.',
       },
     }),
-    [navigate, refresh]
+    [live, navigate, refresh]
   );
 
   return <MasterDataPage config={config} />;

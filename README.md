@@ -129,7 +129,7 @@ Chrome; the ones marked **API** need `npm run mock` running in another terminal.
 
 | Script                    | What it does                                                          |
 | ------------------------- | --------------------------------------------------------------------- |
-| `npm run build`           | Production build into `build/`                                        |
+| `npm run build`           | Production build into `build/`, no source maps, then `postbuild`      |
 | `npm run build:ci`        | `build` with `CI=true`, so a warning fails the build                   |
 | `npm run build:prerender` | **browser, API** — `build`, then writes each public URL's rendered HTML |
 | `npm run analyze`         | Bundle report: chunk sizes against the performance budget              |
@@ -344,6 +344,22 @@ npm run analyze        # chunk sizes against the 300 KB gzip budget for main.js
 
 The build is a static site. Any web server can host it, as long as unknown paths are
 rewritten to `index.html` (`07_DEPLOYMENT.md` has the Nginx block).
+
+**No source maps.** `build` and `build:ci` set `GENERATE_SOURCEMAP=false`, so the deployed
+`static/` holds no `.map` files and the original source is not served to anyone who asks.
+For a debug build, run `react-scripts build` yourself with the variable unset.
+
+**`postbuild` settles `build/robots.txt`.** npm runs `scripts/postbuild.js` after `build` and
+`build:ci`; it reads `REACT_APP_API_URL` and `REACT_APP_SITE_URL` as the build does (the
+environment, then `.env.production.local`, `.env.local`, `.env.production`, `.env`):
+
+| The two addresses                  | `build/robots.txt`                                                                 |
+| ---------------------------------- | ---------------------------------------------------------------------------------- |
+| API address not set (fresh clone)  | left as committed — the development placeholder                                    |
+| one origin (the recommended layout) | **deleted** — the API serves `/robots.txt` on that host, and a file would shadow it |
+| two origins                        | the API's `robots.txt`, its `Sitemap:` lines on the API host; the seed's default, with a warning, when the API cannot be reached |
+
+`public/robots.txt` itself is never changed.
 
 ### Prerender (optional)
 

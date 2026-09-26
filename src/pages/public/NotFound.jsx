@@ -1,14 +1,16 @@
-import React, { useId } from 'react';
+import React, { useEffect, useId } from 'react';
 import { m } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import GlobalSearch from '../../components/common/GlobalSearch';
 import Logo from '../../components/ui/Logo';
 import PATHS from '../../routes/paths';
 import Seo from '../../components/seo/Seo';
+import seoService from '../../services/seoService';
 import usePrerenderReady from '../../hooks/usePrerenderReady';
 import { Button } from '../../components/ui';
 import { ERRORS, NAV } from '../../config/copy';
+import { isPrerendering } from '../../utils/prerender';
 
 import styles from './NotFound.module.css';
 
@@ -29,17 +31,38 @@ import styles from './NotFound.module.css';
  * either way. `<Seo type="notFound">` is `noindex, follow` (§9.3), so a wrong
  * address is never indexed while the links out of it still carry weight.
  *
+ * Every 404 a visitor meets is reported, with the page that linked to it
+ * (prompt 51): the SEO dashboard's 404s tab lists the addresses reached most,
+ * each one click from a redirect. The prerender crawl reports nothing.
+ *
  * @param {object} props
  * @param {string} [props.title]
  * @param {string} [props.subtitle]
  * @param {string} [props.description] the meta description
  */
+/** The visits already reported, for React's double run of effects in development. */
+const reportedVisits = new Set();
+
 const NotFound = ({
   title = ERRORS.notFound.title,
   subtitle = ERRORS.notFound.subtitle,
   description = ERRORS.notFound.description,
 }) => {
   const searchId = useId();
+  const location = useLocation();
+
+  // Once per visit to the address: a render twice over (React's development
+  // check) is one visit, a second navigation to it another.
+  useEffect(() => {
+    if (isPrerendering()) return;
+    const visit = `${location.key}:${location.pathname}`;
+    if (reportedVisits.has(visit)) return;
+    reportedVisits.add(visit);
+    seoService.reportNotFound({
+      path: location.pathname,
+      referrer: typeof document !== 'undefined' && document.referrer ? document.referrer : null,
+    });
+  }, [location.key, location.pathname]);
 
   // A 404 has no query to wait for, so it is ready the moment it renders. That
   // matters to the prerender crawl (§9.9): a sitemap that has gone stale would

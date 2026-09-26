@@ -137,6 +137,19 @@ describe('PageRenderer', () => {
       ]);
     });
 
+    it('leaves a hidden block off the page, and its band to the next (prompt 51)', () => {
+      const layout = layoutBlocks([
+        block(1, 'richText', 1),
+        { ...block(2, 'features', 2), hidden: true },
+        block(3, 'steps', 3),
+      ]);
+
+      expect(layout.map((entry) => [entry.block.type, entry.background])).toEqual([
+        ['richText', 'bg'],
+        ['steps', 'surface'],
+      ]);
+    });
+
     it('keeps a stats block that has figures', () => {
       const layout = layoutBlocks([block(1, 'stats', 1, { items: [{ value: '20', label: 'x' }] })]);
       expect(layout).toHaveLength(1);

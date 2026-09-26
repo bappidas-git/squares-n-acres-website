@@ -1,0 +1,128 @@
+/* The top bar's quick search (prompt 51). */
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 18rem;
+  max-width: 26rem;
+  min-width: 0;
+}
+
+.icon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--space-8) 0 var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--color-primary-ring);
+  outline-offset: 1px;
+  border-color: var(--color-primary);
+}
+
+.hint {
+  position: absolute;
+  right: var(--space-3);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.results {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  z-index: var(--z-dropdown);
+  width: min(32rem, calc(100vw - 2 * var(--space-4)));
+  max-height: min(70vh, 34rem);
+  overflow-y: auto;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.results[hidden] {
+  display: none;
+}
+
+.groupLabel {
+  margin: var(--space-2) var(--space-2) var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 44px;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.option:hover,
+.option[data-active] {
+  background: var(--color-primary-tint);
+}
+
+.optionLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.optionDetail {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.seeAll {
+  min-height: 36px;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary-dark);
+}
+
+.note {
+  margin: 0;
+  padding: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* A phone: the box takes the top bar's width while it is open. */
+.compact {
+  position: absolute;
+  inset: 0 var(--space-2);
+  z-index: var(--z-dropdown);
+  max-width: none;
+  background: var(--color-bg);
+}
+
+.compact .results {
+  width: 100%;
+}

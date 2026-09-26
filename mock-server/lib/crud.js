@@ -38,7 +38,9 @@ const {
 } = require('./paginate');
 const { compareValues, getPath, sortItems } = require('./sort');
 const { stripHtml } = require('./html');
+const { refuseStaleReplace } = require('./staleGuard');
 const { validateBody } = require('../middleware/validate');
+const { withEditorName } = require('./editors');
 const {
   buildDefaults,
   deepPatch,
@@ -379,6 +381,10 @@ function matchesFilter(record, descriptor, raw, context) {
  * @param {boolean} [options.trimStrings] trim the text a write sends before it
  *   is checked — Laravel's `TrimStrings` ({@link trimText}, QA-60). On for
  *   every collection of `routes/masterData.js`
+ * @param {string|false} [options.staleGuard] what a refused replace calls the
+ *   record — "page", "locality". A `PUT` that names the `updatedAt` its form
+ *   read is refused (409, `data.conflict: 'stale'`) when the record has been
+ *   saved since ({@link refuseStaleReplace}, prompt 51)
  * @param {Array<string>} [options.routes] the subset to build — `list`,
  *   `bySlug`, `adminList`, `create`, `get`, `update`, `patch`, `remove`,
  *   `bulk`, `checkSlug`. All of them by default; a resource whose contract
@@ -417,6 +423,7 @@ function makeCrudRouter(options) {
     publicScoped = Boolean(model.publicScope),
     settleOrder = false,
     trimStrings = false,
+    staleGuard = false,
     routes = null,
   } = options;
 
@@ -528,10 +535,20 @@ function makeCrudRouter(options) {
     return list && listShape ? listShape(output, { admin }) : output;
   }
 
+  /**
+   * A record with its embeds and counters — and, on an admin read of a record
+   * that keeps who saved it, that person's name (`updatedByName`, prompt 51).
+   */
+  function decorate(record, context) {
+    const read = afterRead ? afterRead(record, context) : { ...record };
+    return context.admin && hasField('updatedBy')
+      ? withEditorName(read, db.getCollection('adminUsers'))
+      : read;
+  }
+
   /** One record as a response returns it. */
   function present(record, { admin, collections = source(), query = {}, list = false } = {}) {
-    const context = { admin, collections, query, list };
-    const read = afterRead ? afterRead(record, context) : { ...record };
+    const read = decorate(record, { admin, collections, query, list });
     return scope(read, { admin, list });
   }
 
@@ -539,7 +556,7 @@ function makeCrudRouter(options) {
   function decoratedRows({ admin, collections, query }) {
     const visible = admin ? rows() : rows().filter(inPublicScope);
     const context = { admin, collections, query, list: true };
-    return visible.map((record) => (afterRead ? afterRead(record, context) : { ...record }));
+    return visible.map((record) => decorate(record, context));
   }
 
   /** Filters, `q` and `ids`, in the order §5.6 applies them. */
@@ -1022,6 +1039,12 @@ function makeCrudRouter(options) {
       try {
         const existing = find(req.params.id);
         if (!existing) throw notFound();
+        if (staleGuard) {
+          refuseStaleReplace(existing, req.body, {
+            users: db.getCollection('adminUsers'),
+            noun: staleGuard,
+          });
+        }
 
         const body = prepare(req.body, { existing, method: 'PUT' });
         validateBody(schemas.getSchema(`${schema}.update`), body, {

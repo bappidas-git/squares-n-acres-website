@@ -1,7 +1,7 @@
 import { Icon } from '@iconify/react';
 import { NodeViewWrapper } from '@tiptap/react';
 
-import { LEAD_SOURCES } from '../../../config/enums';
+import { SITE_LEAD_SOURCE_OPTIONS } from '../../../config/enums';
 import { SelectField, TextField, TextareaField } from '../../ui/FormField';
 import IconButton from '../../ui/IconButton';
 
@@ -62,7 +62,7 @@ export default function CtaBlockView({ node, updateAttributes, deleteNode, edito
           />
           <SelectField
             label="File enquiries as"
-            options={LEAD_SOURCES.options}
+            options={SITE_LEAD_SOURCE_OPTIONS}
             placeholder="Do not open the form"
             value={leadSource ?? ''}
             disabled={disabled}

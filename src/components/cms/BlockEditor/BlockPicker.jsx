@@ -24,8 +24,10 @@ import styles from './BlockEditor.module.css';
  *   home page renders one Features and one Steps block and nothing else, so it
  *   offers nothing else (prompt 51)
  * @param {string} [props.note] why the list is shorter than every type
+ * @param {number|null} [props.position] the place the block goes, when it is
+ *   inserted mid-list ("Insert below", prompt 51); the end of the page otherwise
  */
-export default function BlockPicker({ open, onClose, onPick, types, note }) {
+export default function BlockPicker({ open, onClose, onPick, types, note, position = null }) {
   const [query, setQuery] = useState('');
 
   const groups = useMemo(() => {
@@ -54,7 +56,7 @@ export default function BlockPicker({ open, onClose, onPick, types, note }) {
     <Modal
       open={open}
       onClose={onClose}
-      title="Add a block"
+      title={position ? `Insert a block at position ${position}` : 'Add a block'}
       description={note ?? 'Every band a page can be built from.'}
       size="lg"
       mobile="fullscreen"

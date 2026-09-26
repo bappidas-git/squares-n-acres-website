@@ -20,7 +20,9 @@ const siteSettings = {
       tagline: { type: 'string', maxLength: 200, default: '' },
       logoUrl: { type: 'url', nullable: true, default: null },
       iconUrl: { type: 'url', nullable: true, default: null },
-      siteUrl: { type: 'url', required: true },
+      // A copy of `seoSettings.siteUrl`, the one place the address changes
+      // (prompt 51): the API keeps it and ignores it in a `PUT`.
+      siteUrl: { type: 'url', read: true },
       defaultLanguage: { type: 'string', maxLength: 10, default: 'en-IN' },
       contactEmail: { type: 'email', required: true },
       contactPhone: { type: 'phone', required: true },

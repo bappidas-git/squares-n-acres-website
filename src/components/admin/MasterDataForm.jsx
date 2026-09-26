@@ -91,6 +91,11 @@ const FOCUSABLE_IN_COLUMN =
  *   records are — required when `seoPanel` is set
  * @param {object} [props.seoRecord] the record being edited, for the fields the
  *   panel shows but does not own (`id`, `updatedAt`)
+ *
+ * A field may also carry `visible(values)` — drawn only while it answers true,
+ * as the "Retype the new e-mail" of your own account (prompt 51) — and
+ * `action: { label, icon?, onClick(form) }`, a button under its control:
+ * "Generate password".
  */
 export default function MasterDataForm({
   fields = [],
@@ -145,18 +150,36 @@ export default function MasterDataForm({
         </FormColumn>
       ) : null}
 
-      {fields.map((field) => (
-        <FormColumn key={field.name} half={field.half} id={columnId(field.name)}>
-          <FormFieldControl
-            field={field}
-            form={form}
-            disabled={disabled || field.disabled}
-            checkSlug={checkSlug}
-            excludeId={excludeId}
-            slugBase={slugBase}
-          />
-        </FormColumn>
-      ))}
+      {fields
+        .filter((field) => !field.visible || field.visible(form.values))
+        .map((field) => (
+          <FormColumn key={field.name} half={field.half} id={columnId(field.name)}>
+            <FormFieldControl
+              field={field}
+              form={form}
+              disabled={disabled || field.disabled}
+              checkSlug={checkSlug}
+              excludeId={excludeId}
+              slugBase={slugBase}
+            />
+            {field.action ? (
+              <Button
+                variant="link"
+                size="sm"
+                className={styles.fieldAction}
+                disabled={disabled || field.disabled}
+                icon={
+                  field.action.icon ? (
+                    <Icon icon={field.action.icon} width="16" height="16" />
+                  ) : undefined
+                }
+                onClick={() => field.action.onClick(form)}
+              >
+                {field.action.label}
+              </Button>
+            ) : null}
+          </FormColumn>
+        ))}
       {seoPanel && seoEntityType ? (
         <FormColumn>
           <SeoPanel
@@ -280,13 +303,15 @@ export function FormFieldControl({ field, form, disabled, checkSlug, excludeId, 
       );
 
     case 'switch':
+      // A switch is on unless it says otherwise, as `isActive` is; one whose
+      // default is off (a menu flag) is on only when the record says so.
       return (
         <SwitchField
           label={field.label}
           hint={field.hint}
           error={error}
           disabled={disabled}
-          checked={value !== false}
+          checked={field.defaultValue === false ? value === true : value !== false}
           onChange={set}
         />
       );

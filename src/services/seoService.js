@@ -35,6 +35,34 @@ export const llmsPreview = (opts) => http.request(endpoints.adminSeo.llmsPreview
 export const llmsTxt = (opts) =>
   http.request(endpoints.sitemap.llms, { responseType: 'text', ...opts });
 
-const seoService = { settings, adminSettings, updateSettings, overview, llmsPreview, llmsTxt };
+/**
+ * The site's 404 page reporting where it was reached (prompt 51). Fire and
+ * forget: a report that fails changes nothing for the visitor.
+ *
+ * @param {{path: string, referrer?: string|null}} report
+ */
+export function reportNotFound(report) {
+  http.request(endpoints.notFound.report, { body: report }).catch(() => {});
+}
+
+/** The addresses that answered 404, one line per path, the most reached first. */
+export const notFoundList = (params, opts) =>
+  http.request(endpoints.adminSeo.notFound, { params, ...opts });
+
+/** A path off that list — every day of it. */
+export const dismissNotFound = (id, opts) =>
+  http.request(endpoints.adminSeo.dismissNotFound, { pathParams: { id }, ...opts });
+
+const seoService = {
+  settings,
+  adminSettings,
+  updateSettings,
+  overview,
+  llmsPreview,
+  llmsTxt,
+  reportNotFound,
+  notFoundList,
+  dismissNotFound,
+};
 
 export default seoService;

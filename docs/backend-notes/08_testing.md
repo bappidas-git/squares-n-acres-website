@@ -143,7 +143,9 @@ summary and no price is 422 with `images`, `description`, `shortDescription` and
 `PATCH { "isFeatured": true }` on a live listing is 200 without being asked; a bulk
 `activate` of one ready and one unready draft is 422 and activates neither; a `PUT`
 carrying an `updatedAt` other than the stored one is 409 with `data.conflict:
-'stale'` and writes nothing, and the same `PUT` without `updatedAt` is 200;
+'stale'` and writes nothing, and the same `PUT` without `updatedAt` is 200 — for
+an article, a page, a locality, a developer and a job opening as well, whose 409
+names the account that saved last in `data.current.updatedByName` (prompt 51);
 `GET /properties/featured?listingType=rent` answers only featured rentals; and a
 listing featured and published from the admin is in the home page's Featured row
 with ten others featured before it (QA-62).

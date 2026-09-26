@@ -31,6 +31,8 @@ const { countView } = require('../lib/viewCounter');
 const { embedArticle } = require('../lib/embed');
 const { goesLive, publishGaps, publishProblems } = require('../../src/config/articleRules');
 const { issueToken, verifyToken } = require('../lib/previewTokens');
+const { withEditorName } = require('../lib/editors');
+const { omit } = require('../lib/scope');
 const { makeCrudRouter } = require('../lib/crud');
 const { paginate, toPositiveInt, DEFAULT_PER_PAGE_PUBLIC } = require('../lib/paginate');
 const { readingTime, stripHtml, unsafeMarkup, wordCount } = require('../lib/html');
@@ -257,7 +259,8 @@ module.exports = ({ db, getModel }) => {
       db.write();
     }
 
-    res.ok(present(article));
+    // Who wrote it into the panel is the panel's business (prompt 51).
+    res.ok(omit(present(article), model.publicOmit ?? []));
   });
 
   /* ---------------------------------------------------------------- *
@@ -296,8 +299,10 @@ module.exports = ({ db, getModel }) => {
       schema: 'article',
       // The public routes above own `/articles`; the factory adds the admin half.
       publicPath: false,
-      collections: SOURCE_COLLECTIONS,
-      afterRead: (article, { collections }) => present(article, collections),
+      collections: [...SOURCE_COLLECTIONS, 'adminUsers'],
+      // The admin reads name whoever saved last (prompt 51).
+      afterRead: (article, { collections }) =>
+        withEditorName(present(article, collections), collections.adminUsers),
       listShape: (article) => adminRow(article),
       adminFilters: {
         status: { field: 'status', type: 'csv' },
@@ -316,6 +321,8 @@ module.exports = ({ db, getModel }) => {
         popular: '-viewCount',
       },
       defaultSort: 'updatedAt',
+      // A form opened before somebody else's save is refused (prompt 51).
+      staleGuard: 'article',
       beforeSave: deriveFromContent,
       // A bulk `publish` never reaches `beforeSave`, and an article that has
       // just gone live still needs the date it went live on (§6.8) — now, if

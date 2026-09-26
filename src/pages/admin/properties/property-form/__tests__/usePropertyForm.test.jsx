@@ -18,8 +18,11 @@ import { MemoryRouter } from 'react-router-dom';
 import ApiError from '../../../../../services/apiError';
 import ToastProvider from '../../../../../components/common/ToastProvider';
 import propertyService from '../../../../../services/propertyService';
+import redirectService from '../../../../../services/redirectService';
 import storage from '../../../../../utils/storage';
 import usePropertyForm, { draftKey } from '../usePropertyForm';
+import { SITE } from '../../../../../config/site';
+import { applySeoSideEffects } from '../../../../../components/seo/seoSideEffects';
 
 jest.mock('../../../../../services/propertyService', () => ({
   __esModule: true,
@@ -28,7 +31,13 @@ jest.mock('../../../../../services/propertyService', () => ({
     create: jest.fn(),
     adminGet: jest.fn(),
     checkSlug: jest.fn(),
+    previewToken: jest.fn(),
   },
+}));
+
+jest.mock('../../../../../services/redirectService', () => ({
+  __esModule: true,
+  default: { deactivateByFromPath: jest.fn(), upsertByFromPath: jest.fn() },
 }));
 
 jest.mock('../../../../../components/seo/seoSideEffects', () => ({
@@ -60,6 +69,91 @@ async function editProjectName(result, value = 'Lakeview Heights Phase II') {
 beforeEach(() => {
   jest.clearAllMocks();
   window.localStorage.clear();
+});
+
+describe('usePropertyForm — a live listing that moves (prompt 51)', () => {
+  const moveTo = async (result, slug) => {
+    await waitFor(() => expect(result.current.values.title).toBe(RECORD.title));
+    act(() => result.current.setFields({ slug, 'seo.slug': slug }));
+  };
+
+  beforeEach(() => {
+    // CRA resets every mock between tests: the side effects answer as they do.
+    applySeoSideEffects.mockResolvedValue({ ok: true, error: null });
+  });
+
+  it('leaves a 301 from the old address, on by default', async () => {
+    redirectService.deactivateByFromPath.mockResolvedValue({ data: null });
+    redirectService.upsertByFromPath.mockResolvedValue({ data: {} });
+    propertyService.update.mockResolvedValue({
+      data: { ...RECORD, slug: 'lakeview-heights-renamed', updatedAt: 'v2' },
+    });
+    const { result } = renderHook(
+      () => usePropertyForm({ propertyId: '1', record: RECORD, canRedirect: true }),
+      { wrapper }
+    );
+    await moveTo(result, 'lakeview-heights-renamed');
+
+    expect(result.current.slugMove).toEqual(
+      expect.objectContaining({
+        moved: true,
+        livePath: `/properties/${RECORD.slug}`,
+        redirect: true,
+      })
+    );
+    await act(() => result.current.save('save'));
+
+    expect(redirectService.upsertByFromPath).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fromPath: `/properties/${RECORD.slug}`,
+        toPath: '/properties/lakeview-heights-renamed',
+        statusCode: 301,
+      })
+    );
+  });
+
+  it('writes none when the switch is off, or the editor may not write redirects', async () => {
+    propertyService.update.mockResolvedValue({
+      data: { ...RECORD, slug: 'lakeview-heights-renamed', updatedAt: 'v2' },
+    });
+    const { result } = renderHook(
+      () => usePropertyForm({ propertyId: '1', record: RECORD, canRedirect: true }),
+      { wrapper }
+    );
+    await moveTo(result, 'lakeview-heights-renamed');
+    act(() => result.current.slugMove.setRedirect(false));
+    await act(() => result.current.save('save'));
+    expect(redirectService.upsertByFromPath).not.toHaveBeenCalled();
+
+    const { result: withoutSeo } = renderHook(
+      () => usePropertyForm({ propertyId: '1', record: RECORD }),
+      { wrapper }
+    );
+    await moveTo(withoutSeo, 'lakeview-heights-renamed');
+    await act(() => withoutSeo.current.save('save'));
+    expect(redirectService.upsertByFromPath).not.toHaveBeenCalled();
+  });
+});
+
+describe('usePropertyForm — the share link (prompt 51)', () => {
+  it('builds a 24-hour link to the saved listing on this site’s own address', async () => {
+    propertyService.previewToken.mockResolvedValue({
+      data: { token: 'tok 1', expiresAt: '2026-09-27T06:00:00.000Z', url: 'https://elsewhere' },
+    });
+    const { result } = renderForm();
+    await waitFor(() => expect(result.current.values.title).toBe(RECORD.title));
+
+    let link = null;
+    await act(async () => {
+      link = await result.current.shareLink();
+    });
+
+    expect(propertyService.previewToken).toHaveBeenCalledWith('1');
+    expect(link).toEqual({
+      url: `${SITE.url}/properties/${RECORD.slug}?preview=tok%201`,
+      expiresAt: '2026-09-27T06:00:00.000Z',
+    });
+  });
 });
 
 describe('usePropertyForm — the version check (QA-62)', () => {

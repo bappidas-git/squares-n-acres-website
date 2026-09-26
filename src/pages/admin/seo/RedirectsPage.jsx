@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import Switch from '@mui/material/Switch';
+import { useSearchParams } from 'react-router-dom';
 
 import Button from '../../../components/ui/Button';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
@@ -104,6 +105,24 @@ export default function RedirectsPage() {
   });
 
   const [editing, setEditing] = useState(null);
+
+  // "Create redirect" from SEO → 404s (prompt 51) opens the form on the
+  // address: `?create=/flats-in-hebal`. Read once, then taken out of the
+  // address, so a reload does not open the form again.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const asked = searchParams.get('create');
+  useEffect(() => {
+    if (!asked || !canEdit) return;
+    setEditing({ ...BLANK, fromPath: asked });
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete('create');
+        return next;
+      },
+      { replace: true }
+    );
+  }, [asked, canEdit, setSearchParams]);
   const [deleting, setDeleting] = useState(null);
   const [deletingBusy, setDeletingBusy] = useState(false);
   const [importing, setImporting] = useState(false);

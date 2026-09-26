@@ -11,6 +11,8 @@ const ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
  */
 const PUBLIC_PATHS = [
   'GET /properties',
+  'GET /health',
+  'GET /properties/counts',
   'GET /properties/featured',
   'GET /properties/slug/:slug',
   'GET /properties/:id/similar',
@@ -56,6 +58,8 @@ const PUBLIC_PATHS = [
   // Not in §5.14: the SEO desk's "Check a URL" tester, and the one endpoint
   // that counts a hit (prompt 37; see docs/API_CONTRACT.md).
   'GET /redirects/resolve',
+  'POST /redirects/:id/hit',
+  'POST /not-found',
   'POST /leads',
   'POST /newsletter/subscribe',
   'GET /sitemap.xml',
@@ -71,6 +75,7 @@ const PUBLIC_PATHS = [
 
 const AUTH_PATHS = [
   'POST /auth/login',
+  'POST /auth/refresh',
   'POST /auth/logout',
   'GET /auth/profile',
   'PUT /auth/profile',
@@ -81,6 +86,7 @@ const ADMIN_NAMED_PATHS = [
   'GET /admin/dashboard',
   'GET /admin/properties/slug/:slug',
   'POST /admin/properties/:id/duplicate',
+  'POST /admin/properties/:id/preview-token',
   'GET /admin/leads',
   'GET /admin/leads/:id',
   'PATCH /admin/leads/:id',
@@ -94,6 +100,7 @@ const ADMIN_NAMED_PATHS = [
   'PATCH /admin/job-applications/:id',
   'DELETE /admin/job-applications/:id',
   'GET /admin/newsletter-subscribers',
+  'PATCH /admin/newsletter-subscribers/:id',
   'DELETE /admin/newsletter-subscribers/:id',
   'GET /admin/newsletter-subscribers/export',
   'GET /admin/settings',
@@ -101,6 +108,8 @@ const ADMIN_NAMED_PATHS = [
   'GET /admin/seo/settings',
   'PUT /admin/seo/settings',
   'GET /admin/seo/overview',
+  'GET /admin/seo/not-found',
+  'DELETE /admin/seo/not-found/:id',
   // Added by prompt 37 for the SEO settings and redirects screens.
   'GET /admin/seo/llms-preview',
   'POST /admin/redirects/import',

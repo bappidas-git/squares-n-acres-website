@@ -46,6 +46,11 @@
   color: var(--color-text-muted);
 }
 
+/* "Changed under SEO → Settings", under the read-only site address. */
+.fieldLink {
+  margin-top: var(--space-2);
+}
+
 .mono {
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);

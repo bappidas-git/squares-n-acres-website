@@ -13,12 +13,15 @@ const ROLE = { error: 'alert', warning: 'alert' };
  * @param {'neutral'|'primary'|'success'|'warning'|'error'|'info'} [props.tone]
  * @param {React.ReactNode} [props.title]
  * @param {React.ReactNode} [props.icon]
+ * @param {React.ReactNode} [props.actions] buttons under the message — "Restore
+ *   the draft" / "Discard it"
  * @param {() => void} [props.onClose]
  */
 export default function Alert({
   tone = 'info',
   title,
   icon,
+  actions,
   onClose,
   closeLabel = 'Dismiss',
   className = '',
@@ -42,6 +45,7 @@ export default function Alert({
       <div className={styles.content}>
         {title ? <p className={styles.title}>{title}</p> : null}
         <div className={styles.message}>{children}</div>
+        {actions ? <div className={styles.actions}>{actions}</div> : null}
       </div>
       {onClose ? (
         <IconButton label={closeLabel} size="sm" className={styles.close} onClick={onClose}>

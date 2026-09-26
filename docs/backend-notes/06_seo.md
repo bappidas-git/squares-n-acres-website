@@ -64,9 +64,11 @@ Rules:
 - The `includeProperties` / `includeLocalities` / `includeDevelopers` /
   `includeArticles` / `includePages` switches drop a whole document; the index
   then omits it too.
-- URLs are absolute and built from `seoSettings.siteUrl`, **never** from the
-  request's `Host`. A sitemap fetched through a staging hostname must still name
-  the canonical one.
+- The **pages** a child sitemap lists are absolute and built from
+  `seoSettings.siteUrl`, **never** from the request's `Host`: a sitemap fetched
+  through a staging hostname must still name the canonical pages. The **index**
+  names its child documents where it was fetched, when that host is on the
+  allow-list — see "The host the index names" below.
 - Split at **50,000 URLs** or 50 MB per document. The index already exists, so
   splitting is `-properties-2.xml` and one more `<sitemap>` entry.
 
@@ -97,7 +99,8 @@ match.
 
 Served from `seoSettings.robotsTxt`, verbatim, with two substitutions at serve
 time: `%siteurl%` becomes `seoSettings.siteUrl`, and the per-type `Sitemap:`
-lines are appended after the index's.
+lines are appended after the index's — named by the same host rule as the
+index's children (below), so they open from wherever robots.txt was read.
 
 The shipped default allows everything except the admin, the shortlist and the two
 query shapes that create infinite crawl space, then names the twenty agents that
@@ -114,6 +117,50 @@ Two rules for the API:
 
 On a **staging** host the file must be the four-line blanket disallow instead.
 That is a deployment concern, not a data one: see `07_DEPLOYMENT.md`.
+
+## The host the index names
+
+The sitemap index lists its five children, and the robots.txt route appends a
+line per child. Both used to name them on `seoSettings.siteUrl` whatever host
+served the document — so `/api/sitemap.xml` read on the API host named children
+at the site's root, which in the two-host layout is the static site and answers
+none of them. Since prompt 51 they are named **where the document was fetched**
+— origin and path prefix, `https://api.example/api/sitemap-properties.xml` for
+an index read at `https://api.example/api/sitemap.xml` — but only when that
+origin is on the allow-list:
+
+- the origin of `seoSettings.siteUrl`;
+- the API's own origin (the mock reads `REACT_APP_API_URL`; Laravel, `APP_URL`);
+- `localhost`, `127.0.0.1` and `[::1]` on any port.
+
+Any other host falls back to `seoSettings.siteUrl`, exactly as before. These
+documents are cached for an hour, so a request with a forged `Host` or
+`X-Forwarded-Host` must never write its host into a document another visitor is
+served: the forwarded headers only **propose** the origin, and the list decides.
+The pages inside the children always carry `seoSettings.siteUrl`.
+
+In Laravel:
+
+- Trust the platform's proxy (`TrustProxies` with `at: '*'` behind a managed
+  load balancer, or its address) so `$request->getSchemeAndHttpHost()` sees the
+  public scheme and host, **and** enable `TrustHosts` with the site's and the
+  API's hosts, so a request for any other host is refused before it reaches the
+  route at all.
+- Compare `$request->getSchemeAndHttpHost()` with the allow-list; build the base
+  as that origin plus the prefix the route was reached under (`/api` or none),
+  else `seoSettings.siteUrl`.
+- The cached document now depends on the host, so the cache key does too:
+  `Cache::remember("sitemap:index:{$base}", …)` and `"robots:{$base}"`, and the
+  `sitemap:*` bust clears every host's copy.
+
+**A file shadows the route.** Apache serves a file that exists under `public/`
+before Laravel's front controller sees the request, and Nginx's
+`try_files $uri …` does the same: a `public/robots.txt` — the Laravel
+skeleton's, or the React build's placeholder — is what crawlers get, whatever
+the admin wrote. In the one-host layout the deploy removes it
+(`07_DEPLOYMENT.md`), and the frontend's `postbuild` deletes the build's copy
+whenever the site and the API share an origin; in the two-host layout the static
+site serves a `robots.txt` that `postbuild` rewrote from the API's.
 
 ## RSS
 
@@ -180,6 +227,45 @@ one at 4 p.m. without a deployment.
 
 Comparison is on the path only, query preserved, trailing slash normalised away,
 and case-insensitive. One hop only.
+
+**Hits** (prompt 51). Layer 3 counts too: when `RedirectHandler` follows a rule it
+calls `POST /redirects/:id/hit` (fire and forget — the visitor is already on their
+way), so the Hits column of SEO → Redirects is the number of visitors a rule has
+sent on, not only the tester's lookups. The public `GET /redirects` carries each
+rule's `id` for it. Answer `204`; `404` for an unknown or inactive rule; throttle
+per IP (`throttle:60,1`) and increment in the database, not in PHP:
+`Redirect::whereKey($id)->where('is_active', true)->increment('hits')`.
+
+## The 404 log
+
+The site's 404 page — an unknown route, and a detail page whose record is gone —
+reports `POST /not-found { path, referrer? }` once a visit (prompt 51); the
+prerender crawl never does. Keep a table `not_found_log` (`path`, `day` in IST,
+`count`, `referrer`, `first_seen_at`, `last_seen_at`, unique on `path, day`):
+
+```php
+// app/Http/Controllers/NotFoundReportController.php — throttle:30,1
+$path = '/'.trim(parse_url($request->string('path'), PHP_URL_PATH) ?? '', '/');
+if ($this->ignored($path)) return response()->noContent();   // /admin, /api/, /static/, asset files, an active redirect's from_path
+$day = now('Asia/Kolkata')->toDateString();
+DB::table('not_found_log')->upsert(
+    [['path' => $path, 'day' => $day, 'count' => 1, 'referrer' => $request->input('referrer'),
+      'first_seen_at' => now(), 'last_seen_at' => now()]],
+    ['path', 'day'],
+    ['count' => DB::raw('count + 1'), 'last_seen_at' => now(),
+     'referrer' => DB::raw('COALESCE(VALUES(referrer), referrer)')]
+);
+return response()->noContent();
+```
+
+Cap it: a scheduled job keeps the 500 rows seen most recently (`DELETE … ORDER BY
+last_seen_at LIMIT n` of the rest), so a crawler walking dead links cannot grow it.
+`GET /admin/seo/not-found` groups by `path` — `SUM(count)`, `COUNT(DISTINCT day)`,
+`MIN(first_seen_at)`, `MAX(last_seen_at)`, the latest referrer — ordered by the sum,
+and adds `redirectedTo` from an active redirect with that `from_path`; its `id` is the
+path's most recent row, and `DELETE /admin/seo/not-found/:id` deletes every row of
+that row's path. The SEO dashboard's **404s** tab is the reader: each address is one
+click from a redirect (`/admin/seo/redirects?create=<path>` opens the form on it).
 
 ## Canonical host
 

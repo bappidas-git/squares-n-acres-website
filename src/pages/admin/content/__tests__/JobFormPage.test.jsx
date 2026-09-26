@@ -8,7 +8,7 @@
  * here is the opening's own part and that it is wired to it.
  */
 
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
 
@@ -95,6 +95,8 @@ const saveButton = () => screen.getAllByRole('button', { name: 'Save' })[0];
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // A dirty form keeps a copy of itself on the way out (prompt 51).
+  window.localStorage.clear();
   careerService.adminJobGet.mockResolvedValue({ data: RECORD });
   careerService.adminJobList.mockResolvedValue({
     data: [RECORD, { ...RECORD, id: 4, department: 'Sales' }],
@@ -280,5 +282,51 @@ describe('the opening’s rules and body', () => {
       postedAt: null,
       closesAt: '2026-10-01',
     });
+  });
+});
+
+describe('JobFormPage — two editors, one opening (prompt 51)', () => {
+  it('names the version it read, and a save over somebody else’s opens the dialog', async () => {
+    const STORED = { ...RECORD, updatedAt: '2026-09-10T06:00:00.000Z' };
+    careerService.adminJobGet.mockResolvedValue({ data: STORED });
+    careerService.updateJob.mockRejectedValueOnce(
+      new ApiError({
+        status: 409,
+        message: 'Manager User saved this job opening after you opened it.',
+        data: {
+          conflict: 'stale',
+          current: {
+            updatedAt: '2026-09-11T06:00:00.000Z',
+            updatedBy: { id: 2, name: 'Manager User' },
+            updatedByName: 'Manager User',
+          },
+        },
+      })
+    );
+    renderForm();
+    await loaded();
+    fireEvent.change(screen.getByDisplayValue(RECORD.title), {
+      target: { value: 'Senior Property Analyst' },
+    });
+
+    await userEvent.click(saveButton());
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Somebody else saved this job opening',
+    });
+    expect(within(dialog).getByText(/Manager User saved it/)).toBeInTheDocument();
+    expect(careerService.updateJob).toHaveBeenCalledWith(
+      String(RECORD.id),
+      expect.objectContaining({ updatedAt: STORED.updatedAt })
+    );
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Somebody else saved this job opening' })
+      ).not.toBeInTheDocument()
+    );
+    expect(screen.getByDisplayValue('Senior Property Analyst')).toBeInTheDocument();
+    expect(careerService.updateJob).toHaveBeenCalledTimes(1);
   });
 });

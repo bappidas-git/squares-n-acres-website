@@ -3029,11 +3029,17 @@ describe('content writes (QA-61)', () => {
  * ------------------------------------------------------------------ */
 
 describe('redirects', () => {
-  it('serves only what the SPA matches on', async () => {
+  it('serves only what the SPA matches on, and the id it reports a hit by', async () => {
     await withServer(async ({ request }) => {
       const list = await request('GET', '/redirects');
       assert.ok(list.body.data.length > 0);
-      assert.deepEqual(Object.keys(list.body.data[0]).sort(), ['fromPath', 'statusCode', 'toPath']);
+      // `id` names the rule in `POST /redirects/:id/hit` (prompt 51).
+      assert.deepEqual(Object.keys(list.body.data[0]).sort(), [
+        'fromPath',
+        'id',
+        'statusCode',
+        'toPath',
+      ]);
     });
   });
 

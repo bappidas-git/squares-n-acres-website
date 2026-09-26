@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Icon } from '@iconify/react';
 
 import AdminTabs, { AdminTabPanel } from '../../../../components/admin/AdminTabs';
+import ConflictDialog from '../../../../components/admin/ConflictDialog';
+import DraftBanner from '../../../../components/admin/DraftBanner';
 import { Button, ConfirmDialog } from '../../../../components/ui';
 import useBreakpoint from '../../../../hooks/useBreakpoint';
-import ConflictDialog from './ConflictDialog';
-import DraftBanner from './DraftBanner';
 import ErrorSummary from './ErrorSummary';
 import StatusRail from './StatusRail';
 import TABS from './tabs';
@@ -64,6 +64,7 @@ export default function PropertyFormShell({ form }) {
     dismissConflict,
     overwriteConflict,
     reloadConflict,
+    slugMove,
   } = form;
 
   const strip = TABS.map((tab) => ({
@@ -107,6 +108,8 @@ export default function PropertyFormShell({ form }) {
     disabled: readOnly,
     isNew,
     propertyId,
+    // The Basics tab's "this address stops answering" and its 301 switch.
+    slugMove,
   };
 
   const rail = <StatusRail form={form} collapsible={!beside} />;
@@ -119,6 +122,7 @@ export default function PropertyFormShell({ form }) {
         <div className={styles.main}>
           <DraftBanner
             draft={draftOffer}
+            noun="listing"
             isNew={isNew}
             onRestore={restoreDraft}
             onDiscard={discardDraft}
@@ -189,6 +193,7 @@ export default function PropertyFormShell({ form }) {
 
       <ConflictDialog
         conflict={conflict}
+        noun="listing"
         busy={saving || busy}
         onKeepEditing={dismissConflict}
         onReload={reloadConflict}

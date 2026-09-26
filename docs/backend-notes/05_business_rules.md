@@ -91,6 +91,31 @@ counted under _every_ bedroom count it can be found under, exactly as the filter
 matches it; the other three facets count each property once. Sort each facet by
 count descending, then by label, so ties do not shuffle between requests.
 
+## Category counts
+
+`GET /properties/counts` (prompt 51) is the listing query with a `GROUP BY` in
+place of the page:
+
+```sql
+-- ?by=propertyTypeId&listingType=rent
+SELECT property_type_id AS value, COUNT(*) AS count
+FROM properties
+WHERE is_active = 1
+  AND listing_type = 'rent'          -- every filter of GET /properties, as there
+GROUP BY property_type_id;
+```
+
+- Build the `WHERE` with the same scope the list uses (`Property::query()
+  ->active()->filter($request)`), then run one grouped count per dimension in
+  `by` — `segment`, `property_type_id`, `listing_type`, `construction_status`,
+  `locality_id` — and answer `{ <dimension>: { "<value>": count } }`.
+- `by` names are the API's, camelCase; map each to its column. An unknown name
+  is skipped, a `NULL` value is left out, and a value with no listings is simply
+  absent.
+- The totals of one dimension add up to `meta.total` of the same filtered list,
+  and each count equals `meta.total` of that list with the value added as a
+  filter — the smoke test checks both.
+
 ## Similar properties
 
 `GET /properties/:id/similar` returns at most **six**:
@@ -116,8 +141,13 @@ featured, into the home page's Featured row.
 **Going live.** A listing whose stored result is `isActive: true` needs, each
 refused under its own 422 key:
 
-- an image with both a `url` and an `alt` — `images`: "A published listing needs
-  at least one image with a description."
+- at least one image — `images`: "A published listing needs at least one image
+  with a description." — and a description (`alt`) on **every** image it has,
+  each refused under its own key — `images.<n>.alt`: "Describe this image —
+  screen readers and search engines read it." (prompt 51: a draft is saved with
+  empty descriptions, and going live asks for them; `alt` is otherwise an
+  optional string of at most 200 characters, `''` when empty). The gaps sentence
+  counts them: "3 photographs without a description".
 - at least 300 characters of text in `description`, tags stripped and entities
   read as spaces — `description`: "A published listing needs a description of at
   least 300 characters (this one has _n_)."
@@ -154,6 +184,19 @@ client that is not a form can say it:
 }
 ```
 
+**Who saved it last** (prompt 51). The admin reads — the list and one listing —
+carry `updatedByName`, the name of the account in `updated_by`, joined on read;
+the public reads carry neither.
+
+**A live listing that moves** (prompt 51). When a published listing's slug
+changes, the admin offers — on by default — a 301 from `/properties/<old>` to
+`/properties/<new>`, written after the save through the ordinary redirects
+endpoints as a page's move is (the rule for the old address is looked up and
+patched, or created with `POST /admin/redirects`; a rule that sent the new
+address elsewhere is switched off first). The same holds for a published
+article, `/insights/articles/<old>` → `<new>`. The API needs nothing new; a rule
+it refuses is reported to the editor, never swallowed.
+
 **Bulk activate.** `POST /admin/properties/bulk { action: 'activate' }` asks the
 same rules of every listing it would put live, **all or nothing**, like the
 articles' bulk "publish": one refusal lists every listing in the way — `message`
@@ -168,7 +211,10 @@ to activate the ones that are ready.
 the listing was saved by somebody else in between, and the replace is refused
 rather than written: a `PUT` sends every field, so the older copy would silently
 undo the other save (a form left open un-featured a listing starred from the
-list meanwhile).
+list meanwhile). Since prompt 51 every record form sends it, and the same check
+guards the `PUT` of an **article**, a **page**, a **locality**, a **developer**
+and a **job opening** — each table gains `created_by` and `updated_by` for it,
+and the message names the record: "… saved this page after you opened it."
 
 ```jsonc
 // 409
@@ -176,7 +222,11 @@ list meanwhile).
   "message": "Admin User saved this listing after you opened it.",
   "data": {
     "conflict": "stale",
-    "current": { "updatedAt": "2026-09-25T06:12:03.412Z", "updatedBy": { "id": 1, "name": "Admin User" } },
+    "current": {
+      "updatedAt": "2026-09-25T06:12:03.412Z",
+      "updatedBy": { "id": 1, "name": "Admin User" },
+      "updatedByName": "Admin User",
+    },
   },
 }
 ```
@@ -186,6 +236,13 @@ Compare the value byte for byte with what this API itself serialises for
 as before: that is every client written before the check, and the form's "Save
 mine anyway". The slug's 409 is told apart by `errors.slug`; this one carries
 `data.conflict`. `PATCH` is not checked — it writes only the keys it sends.
+
+Keep `updated_at` precise enough to tell two saves apart: with MySQL's default
+second precision, two saves inside one second carry the same value and the
+second overwrites the first unchecked. Create the six tables with
+`$table->timestamps(6)` (microseconds) and serialise `updatedAt` from that
+column; one trait on the six controllers keeps the check and the message the
+same everywhere.
 
 ```php
 // app/Http/Controllers/Admin/PropertyController.php
@@ -198,6 +255,7 @@ public function update(PropertyRequest $request, Property $property)
             'data' => ['conflict' => 'stale', 'current' => [
                 'updatedAt' => $property->updated_at?->toJSON(),
                 'updatedBy' => $property->updatedBy?->only(['id', 'name']),
+                'updatedByName' => $property->updatedBy?->name,
             ]],
         ], 409);
     }
@@ -447,6 +505,21 @@ and so is `scheduled` with no `published_at` at all.
 `{ data: { token, url } }`. The token is valid **24 hours** and is bound to that
 one record.
 
+A listing's share link (prompt 51) is the same token, asked with
+`POST /admin/properties/:id/preview-token` (admin and manager) → `{ data: { token,
+expiresAt, url } }`, the URL being `<siteUrl>/properties/<slug>?preview=<token>`.
+`GET /properties/slug/:slug?previewToken=<token>` answers an **inactive** listing
+while the token is that listing's and unexpired, and 404 otherwise — a token for
+another listing opens nothing. The page shows a "Shared preview" strip and counts
+no view.
+
+"Preview changes" on a **published** article or page (prompt 51) involves no
+API at all: the admin writes the unsaved form to the browser's `localStorage`
+under `sna-draft-preview-<uuid>` and opens the public page with
+`?draftPreview=<uuid>`, which renders that record instead of fetching, marked
+"Previewing unsaved changes — not what visitors see", and deletes the key as it
+reads it — a second opening says the preview has expired.
+
 `GET /articles/slug/:slug?preview=<token>` and `GET /pages/slug/:slug?preview=<token>`
 return a draft or scheduled record when the token matches, and 404 when it does
 not. Nothing else changes: the response is the ordinary one, so the public page
@@ -463,6 +536,10 @@ not, so the list's bulk "Publish" — which never goes through the form — put 
 four-word draft with no picture and no excerpt on the site, and a request that
 never touched the admin could do the same. Every rule answers in **one** 422: a
 body that breaks three of them hears about all three.
+
+**Who wrote it in, who saved it last** (prompt 51). An article stores
+`created_by` and `updated_by` as a listing does; the admin reads carry
+`updatedByName`, joined on read, and the public reads carry none of the three.
 
 **Going live.** `published` and `scheduled` both put an article in front of a
 visitor (a scheduled article is a published one with a date on it, P33), so both
@@ -552,6 +629,12 @@ public function withValidator($validator): void
 ```
 
 ## Pages
+
+**A block hidden for now** (prompt 51). `blocks[].hidden` is an optional
+boolean (`false` by default): a hidden block stays on the page record, in the
+admin, and is left out of `GET /pages/slug/:slug` — the visitor's read — so
+the page renders what is left. The home record's Features and Steps bands
+follow the same rule.
 
 What the CMS pages must be (QA-56). The site answers some addresses itself and
 links to others by address, so not every page is the editor's to delete or move.
@@ -667,6 +750,16 @@ submenu, and a menu's own list comes first.
   `show_in_header` in the same transaction.
 - **`GET /header-menus`** answers the active menus, unpaginated, with a
   read-only `builtIn` flag; hidden menus keep their pages and links.
+- **The Rent and Commercial menus' types are flags on the type** (prompt 51):
+  `property_types.show_in_rent_menu` and `show_in_commercial_menu` (boolean,
+  default false, public on `GET /property-types`). The site lists the active
+  types with the flag on, in `order` — Rent a type of a residential or land
+  segment, Commercial a type of a commercial-kind segment; the admin form offers
+  only the switch its segment's kind allows and sends the other `false`. The
+  API stores them as sent; nothing else reads them. The seed turns them on for
+  the eight types the menus listed before (`apartments`, `villas`,
+  `independent-houses`, `pg-co-living`; `office-spaces`, `retail-shops`,
+  `warehouses`, `co-working-spaces`) and orders Co-working after Warehouses.
 
 ## Writes that change nothing
 
@@ -1252,6 +1345,17 @@ choice is a `segments` row, and an editor can add one — "Industrial",
   merge above is load-bearing — a Laravel `PUT` that replaced whole groups would
   bring the lost update back. The response is the whole stored record; the
   screen takes it as its new starting point.
+- **The site's address is kept once** (prompt 51): `seoSettings.siteUrl` is the
+  one editable copy (SEO → Settings). `siteSettings.general.siteUrl` is
+  read-only — a `PUT /admin/settings` ignores it, and a `PUT /admin/seo/settings`
+  that carries `siteUrl` writes the same value there, so both reads (and the
+  lead e-mails that link to a listing) agree. Store it once and answer it in
+  both places if that is simpler; the admin's Site settings screen only shows
+  it, with a link to SEO → Settings.
+- **The knowledge graph is not derived** from Site settings: the SEO screen
+  compares the two (name, phone, e-mail, address, map position, opening hours,
+  profiles), warns when they differ without blocking the save, and copies them
+  over on request. Both stay as sent.
 
 `leads` (prompt 51) holds `autoAssign` — `none`, `round-robin` or
 `listing-advisor` ([Leads](#leads)) — and `whatsappTemplate`, at most 500

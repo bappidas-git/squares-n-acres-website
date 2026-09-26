@@ -128,11 +128,13 @@ rather than breaking.
 
 {{supportMatrix}}
 
-One endpoint is **specified but not in the registry**, so it is in none of the
-tables above: `GET /properties/counts`, which replaces the twenty-five count
-requests the home page makes today. It is optional — the frontend keeps the
-per-tile fallback — and it is written up under **Planned additions** at the end
-of `01_API_CONTRACT.md`.
+`GET /properties/counts` is optional in the sense the table gives the word: the
+home page asks it two questions and, when it answers 404 or 501, falls back to
+one `GET /properties?perPage=1` a tile — the numbers are the same, only slower
+(`01_API_CONTRACT.md` → "Category counts"). Two further additions are specified
+but not yet in the registry, so they are in none of the tables above: the
+self-service password reset and the reCAPTCHA check, written up in
+`09_MEDIA_AND_EMAIL.md`.
 
 ---
 

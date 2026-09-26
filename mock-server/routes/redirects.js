@@ -3,13 +3,15 @@
  *
  *   GET  /api/redirects                  the active rules, as the SPA needs them
  *   GET  /api/redirects/resolve?path=    one lookup, and a `hits` increment
+ *   POST /api/redirects/:id/hit          a rule followed by a visitor (prompt 51)
  *   …plus the admin CRUD, `bulk`, `import` and `export` of §4.12.
  *
  * On a single-page application a redirect is a client-side `<Navigate replace>`
  * (D30): `RedirectHandler` loads the public list once and matches paths in the
- * browser, so the public payload is deliberately tiny — `fromPath`, `toPath`,
- * `statusCode` and nothing else. `resolve` exists for the smoke test and for
- * QA, and is the only place `hits` moves.
+ * browser, so the public payload is deliberately tiny — `id`, `fromPath`,
+ * `toPath` and `statusCode`. `hits` moves when `RedirectHandler` follows a rule
+ * and says so (`POST /redirects/:id/hit`, prompt 51 — the column read 0 for
+ * every rule a visitor had followed) and when `resolve` answers.
  *
  * Four rules keep the table sane, and all four answer 422 rather than storing
  * something that would loop a browser:
@@ -25,9 +27,16 @@ const express = require('express');
 const { makeCrudRouter } = require('../lib/crud');
 const { notFound, validation } = require('../middleware/errors');
 const { toCsv } = require('../lib/csv');
+const { rateLimit } = require('../middleware/rateLimit');
 
-/** The public row: what `RedirectHandler` matches on, and no more (§9.10). */
-const PUBLIC_FIELDS = ['fromPath', 'toPath', 'statusCode'];
+/**
+ * The public row: what `RedirectHandler` matches on, and the id it reports a
+ * followed rule by (§9.10, prompt 51).
+ */
+const PUBLIC_FIELDS = ['id', 'fromPath', 'toPath', 'statusCode'];
+
+/** How many followed redirects one address may report in a minute (prompt 51). */
+const HITS_PER_MINUTE = 60;
 
 /** The columns of `GET /admin/redirects/export`, in order. */
 const CSV_COLUMNS = [
@@ -130,6 +139,19 @@ module.exports = ({ db, getModel }) => {
     db.write();
 
     res.ok({ fromPath: match.fromPath, toPath: match.toPath, statusCode: match.statusCode });
+  });
+
+  // A rule the site just followed (prompt 51): fire-and-forget from
+  // `RedirectHandler`, so the Hits column counts visitors, not only the tester.
+  router.post('/redirects/:id/hit', rateLimit({ max: HITS_PER_MINUTE }), (req, res, next) => {
+    const match = rows().find((row) => row.isActive && sameId(row.id, req.params.id));
+    if (!match) {
+      next(notFound());
+      return;
+    }
+    match.hits = (match.hits ?? 0) + 1;
+    db.write();
+    res.status(204).end();
   });
 
   /* ---------------------------------------------------------------- *

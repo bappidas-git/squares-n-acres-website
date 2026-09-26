@@ -11,7 +11,8 @@ import {
   SwitchField,
 } from '../../../../components/ui';
 import { AVAILABILITY } from '../../../../config/enums';
-import { formatRelative, formatTime } from '../../../../utils/format';
+import { formatDateTime, formatRelative, formatTime } from '../../../../utils/format';
+import { firstFieldMessage } from '../../../../services/apiError';
 import { completenessTone } from './completeness';
 
 import styles from './StatusRail.module.css';
@@ -62,8 +63,34 @@ export default function StatusRail({ form, collapsible = false }) {
     save,
     duplicate,
     remove,
+    shareLink,
   } = form;
   const toast = useToast();
+
+  // "Copy share link (24 h)" (prompt 51): the link last made, shown as well as
+  // copied, for a browser that does not let a page write to the clipboard.
+  const [sharing, setSharing] = useState(false);
+  const [shared, setShared] = useState(null);
+  const copyShareLink = async () => {
+    setSharing(true);
+    let link = null;
+    try {
+      link = await shareLink?.();
+    } catch (thrown) {
+      toast.error(firstFieldMessage(thrown, 'The share link could not be made.'));
+      setSharing(false);
+      return;
+    }
+    setSharing(false);
+    if (!link) return;
+    setShared(link);
+    try {
+      await navigator.clipboard.writeText(link.url);
+      toast.success(`Share link copied — it works until ${formatDateTime(link.expiresAt)}.`);
+    } catch (_thrown) {
+      toast.info('This browser did not let the page copy it — copy the link below.');
+    }
+  };
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDuplicate, setConfirmDuplicate] = useState(false);
@@ -100,7 +127,12 @@ export default function StatusRail({ form, collapsible = false }) {
   const savedNotes = (
     <div className={styles.savedNotes}>
       <p className={styles.note} aria-live="polite">
-        {lastSavedAt ? `Last saved ${formatRelative(lastSavedAt)}` : 'Not saved yet'}
+        {lastSavedAt
+          ? `Last saved ${formatRelative(lastSavedAt)}${
+              // Who, since prompt 51 — the API names the account that saved.
+              state?.initial?.updatedByName ? ` by ${state.initial.updatedByName}` : ''
+            }`
+          : 'Not saved yet'}
         {dirty ? ' — with unsaved changes' : ''}
       </p>
       {draftSavedAt ? (
@@ -327,9 +359,32 @@ export default function StatusRail({ form, collapsible = false }) {
                 {SAVE_FIRST}
               </p>
             ) : published ? null : (
-              <p className={styles.note}>
-                Only you see this — the page answers 404 to everybody else until it is published.
-              </p>
+              <>
+                <p className={styles.note}>
+                  Only you see this — the page answers 404 to everybody else until it is published.
+                </p>
+                {readOnly ? null : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    loading={sharing}
+                    disabled={working}
+                    icon={<Icon icon="mdi:link-variant" width="16" height="16" />}
+                    onClick={copyShareLink}
+                  >
+                    Copy share link (24 h)
+                  </Button>
+                )}
+                {shared ? (
+                  <p className={styles.note}>
+                    Anybody with{' '}
+                    <a href={shared.url} target="_blank" rel="noopener noreferrer">
+                      this link
+                    </a>{' '}
+                    sees the listing until {formatDateTime(shared.expiresAt)}, signed in or not.
+                  </p>
+                ) : null}
+              </>
             )}
           </>
         ) : (

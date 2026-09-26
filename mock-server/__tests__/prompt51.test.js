@@ -766,3 +766,554 @@ describe('the properties bulk bar’s value-carrying actions', () => {
     });
   });
 });
+
+describe('image descriptions', () => {
+  it('are asked for when a listing goes live, not while it is a draft', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const live = LIVE_SEED.properties.find((row) => row.isActive && row.images.length > 1);
+      const undescribed = live.images.map((image, index) =>
+        index === 1 ? { ...image, alt: '' } : image
+      );
+
+      const refused = await request('PATCH', `/admin/properties/${live.id}`, {
+        token,
+        body: { images: undescribed },
+      });
+      assert.equal(refused.status, 422);
+      assert.match(refused.body.errors['images.1.alt'][0], /Describe this image/);
+
+      const draft = await request('PATCH', `/admin/properties/${live.id}`, {
+        token,
+        body: { isActive: false },
+      });
+      assert.equal(draft.status, 200);
+      const saved = await request('PATCH', `/admin/properties/${live.id}`, {
+        token,
+        body: { images: undescribed },
+      });
+      assert.equal(saved.status, 200, 'a draft saves with an empty description');
+      assert.equal(saved.body.data.images[1].alt, '');
+
+      const publish = await request('PATCH', `/admin/properties/${live.id}`, {
+        token,
+        body: { isActive: true },
+      });
+      assert.equal(publish.status, 422);
+      assert.deepEqual(publish.body.data.notReady[0].gaps, ['1 photograph without a description']);
+    });
+  });
+});
+
+describe('a listing’s share link', () => {
+  it('opens that inactive listing for 24 hours, and nothing else', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const [draft, other] = LIVE_SEED.properties.filter((row) => !row.isActive);
+      assert.ok(draft && other, 'the seed keeps two listings unpublished');
+
+      const closed = await request('GET', `/properties/slug/${draft.slug}`);
+      assert.equal(closed.status, 404);
+
+      const issued = await request('POST', `/admin/properties/${draft.id}/preview-token`, {
+        token,
+      });
+      assert.equal(issued.status, 200);
+      const { token: share, expiresAt, url } = issued.body.data;
+      assert.ok(share && expiresAt);
+      assert.match(url, new RegExp(`/properties/${draft.slug}\\?preview=`));
+      const hours = (Date.parse(expiresAt) - Date.now()) / 3600000;
+      assert.ok(hours > 23.9 && hours <= 24, `${hours} hours`);
+
+      const opened = await request(
+        'GET',
+        `/properties/slug/${draft.slug}?previewToken=${encodeURIComponent(share)}`
+      );
+      assert.equal(opened.status, 200);
+      assert.equal(opened.body.data.id, draft.id);
+
+      const elsewhere = await request(
+        'GET',
+        `/properties/slug/${other.slug}?previewToken=${encodeURIComponent(share)}`
+      );
+      assert.equal(elsewhere.status, 404, 'a token opens the listing it was made for only');
+
+      const sales = await login(SALES);
+      const refused = await request('POST', `/admin/properties/${draft.id}/preview-token`, {
+        token: sales,
+      });
+      assert.equal(refused.status, 403);
+    });
+  });
+});
+
+describe('a hidden block', () => {
+  it('is kept on the page record and left out of the public read', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+      const token = await login(ADMIN);
+      const page = LIVE_SEED.pages.find(
+        (row) => row.status === 'published' && (row.blocks ?? []).length > 1
+      );
+      const [first, ...rest] = page.blocks;
+
+      const saved = await request('PATCH', `/admin/pages/${page.id}`, {
+        token,
+        body: { blocks: [{ ...first, hidden: true }, ...rest] },
+      });
+      assert.equal(saved.status, 200);
+      const stored = saved.body.data.blocks.find((row) => row.id === first.id);
+      assert.equal(stored.hidden, true);
+
+      const visitor = await request('GET', `/pages/slug/${page.slug}`);
+      assert.equal(visitor.status, 200);
+      assert.ok(visitor.body.data.blocks.every((row) => row.id !== first.id));
+      assert.equal(visitor.body.data.blocks.length, rest.length);
+    });
+  });
+});
+
+describe('who saved a record last', () => {
+  it('is named on the admin reads of properties and articles, and nowhere public', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+      const admin = await login(ADMIN);
+      const listing = LIVE_SEED.properties.find((row) => row.isActive);
+      const property = await request('GET', `/admin/properties/${listing.id}`, { token: admin });
+      assert.equal(property.body.data.updatedByName, 'Admin User');
+      const row = (
+        await request('GET', `/admin/properties?perPage=all`, { token: admin })
+      ).body.data.find((entry) => entry.id === listing.id);
+      assert.equal(row.updatedByName, 'Admin User');
+      const publicListing = await request('GET', `/properties/slug/${listing.slug}`);
+      assert.ok(!('updatedByName' in publicListing.body.data));
+      assert.ok(!('updatedBy' in publicListing.body.data));
+
+      const piece = LIVE_SEED.articles.find((entry) => entry.status === 'published');
+      const manager = await login(MANAGER);
+      const saved = await request('PATCH', `/admin/articles/${piece.id}`, {
+        token: manager,
+        body: { isFeatured: !piece.isFeatured },
+      });
+      assert.equal(saved.status, 200);
+      assert.equal(saved.body.data.updatedByName, 'Manager User');
+      const publicArticle = await request('GET', `/articles/slug/${piece.slug}`);
+      assert.ok(!('updatedBy' in publicArticle.body.data));
+      assert.ok(!('createdBy' in publicArticle.body.data));
+      assert.ok(!('updatedByName' in publicArticle.body.data));
+    });
+  });
+});
+
+describe('a save made over somebody else’s', () => {
+  // Each with a change of its own: a replace that changes nothing writes
+  // nothing, and moves no version.
+  const RECORDS = [
+    {
+      noun: 'page',
+      path: '/admin/pages',
+      pick: (seed) => seed.pages.find((row) => row.slug === 'about'),
+      change: (record) => ({ title: `${record.title} (revised)` }),
+    },
+    {
+      noun: 'article',
+      path: '/admin/articles',
+      pick: (seed) => seed.articles.find((row) => row.status === 'draft'),
+      change: (record) => ({ title: `${record.title} (revised)` }),
+    },
+    {
+      noun: 'locality',
+      path: '/admin/localities',
+      pick: (seed) => seed.localities[0],
+      change: (record) => ({ shortDescription: `${record.shortDescription} Revised.` }),
+    },
+    {
+      noun: 'developer',
+      path: '/admin/developers',
+      pick: (seed) => seed.developers[0],
+      change: (record) => ({ shortDescription: `${record.shortDescription} Revised.` }),
+    },
+    {
+      noun: 'job opening',
+      path: '/admin/jobs',
+      pick: (seed) => seed.jobOpenings[0],
+      change: (record) => ({ title: `${record.title} (revised)` }),
+    },
+  ];
+
+  for (const { noun, path, pick, change } of RECORDS) {
+    it(`is refused on a ${noun}, naming who saved it, unless the form says to go ahead`, async () => {
+      await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+        const admin = await login(ADMIN);
+        const manager = await login(MANAGER);
+        const seeded = pick(LIVE_SEED);
+        assert.ok(seeded, `the seed carries a ${noun}`);
+
+        // Both open the form on the same version.
+        const opened = (await request('GET', `${path}/${seeded.id}`, { token: admin })).body.data;
+        assert.equal(
+          opened.updatedByName,
+          noun === 'article' || noun === 'job opening' ? 'Manager User' : 'Admin User'
+        );
+
+        // The manager saves first, naming the version they read.
+        const theirs = await request('PUT', `${path}/${seeded.id}`, {
+          token: manager,
+          body: { ...opened, ...change(opened), updatedAt: opened.updatedAt },
+        });
+        assert.equal(theirs.status, 200, JSON.stringify(theirs.body));
+        assert.equal(theirs.body.data.updatedByName, 'Manager User');
+
+        // The admin's save from the older version is refused, and says who.
+        const mine = await request('PUT', `${path}/${seeded.id}`, {
+          token: admin,
+          body: { ...opened, updatedAt: opened.updatedAt },
+        });
+        assert.equal(mine.status, 409);
+        assert.equal(mine.body.data.conflict, 'stale');
+        assert.equal(mine.body.data.current.updatedAt, theirs.body.data.updatedAt);
+        assert.equal(mine.body.data.current.updatedByName, 'Manager User');
+        assert.deepEqual(mine.body.data.current.updatedBy, { id: 2, name: 'Manager User' });
+        assert.equal(mine.body.message, `Manager User saved this ${noun} after you opened it.`);
+
+        // "Save mine anyway" names the version the refusal named.
+        const anyway = await request('PUT', `${path}/${seeded.id}`, {
+          token: admin,
+          body: { ...opened, updatedAt: mine.body.data.current.updatedAt },
+        });
+        assert.equal(anyway.status, 200);
+        assert.equal(anyway.body.data.updatedByName, 'Admin User');
+      });
+    });
+  }
+
+  it('keeps who saved a page out of its public read', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request }) => {
+      const read = await request('GET', '/pages/slug/about');
+      assert.equal(read.status, 200);
+      for (const key of ['createdBy', 'updatedBy', 'updatedByName']) {
+        assert.ok(!(key in read.body.data), `${key} is not public`);
+      }
+      const job = LIVE_SEED.jobOpenings.find((row) => row.isActive);
+      const opening = await request('GET', `/jobs/slug/${job.slug}`);
+      const openings = await request('GET', '/jobs');
+      for (const key of ['createdBy', 'updatedBy', 'updatedByName']) {
+        assert.ok(!(key in opening.body.data), `${key} is not public`);
+        assert.ok(
+          openings.body.data.every((row) => !(key in row)),
+          `${key} is not listed`
+        );
+      }
+      const locality = LIVE_SEED.localities.find((row) => row.isActive);
+      const place = await request('GET', `/localities/slug/${locality.slug}`);
+      for (const key of ['createdBy', 'updatedBy', 'updatedByName']) {
+        assert.ok(!(key in place.body.data), `${key} is not public`);
+      }
+    });
+  });
+});
+
+describe('staying signed in', () => {
+  it('gives the session a full lifetime again, with the same token', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request }) => {
+      const signedIn = await request('POST', '/auth/login', {
+        body: { email: 'admin@squaresnacres.com', password: 'Admin@123' },
+      });
+      assert.equal(signedIn.status, 200);
+      const { token, expiresAt } = signedIn.body.data;
+      await new Promise((resolve) => {
+        setTimeout(resolve, 20);
+      });
+
+      const refreshed = await request('POST', '/auth/refresh', { token });
+      assert.equal(refreshed.status, 200);
+      assert.equal(refreshed.body.data.token, token);
+      assert.ok(Date.parse(refreshed.body.data.expiresAt) > Date.parse(expiresAt));
+      assert.equal(refreshed.body.data.user.email, 'admin@squaresnacres.com');
+
+      const profile = await request('GET', '/auth/profile', { token });
+      assert.equal(profile.status, 200);
+    });
+  });
+
+  it('is refused without a live token', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+      assert.equal((await request('POST', '/auth/refresh')).status, 401);
+      const token = await login(ADMIN);
+      await request('POST', '/auth/logout', { token });
+      assert.equal((await request('POST', '/auth/refresh', { token })).status, 401);
+    });
+  });
+});
+
+describe('a redirect a visitor follows', () => {
+  it('counts a hit, and names its rule publicly by id', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+      const admin = await login(ADMIN);
+      const rules = (await request('GET', '/redirects')).body.data;
+      assert.ok(
+        rules.every(
+          (rule) => Object.keys(rule).sort().join(',') === 'fromPath,id,statusCode,toPath'
+        )
+      );
+
+      const rule = rules[0];
+      const before = (await request('GET', `/admin/redirects/${rule.id}`, { token: admin })).body
+        .data.hits;
+      const hit = await request('POST', `/redirects/${rule.id}/hit`);
+      assert.equal(hit.status, 204);
+      const after = (await request('GET', `/admin/redirects/${rule.id}`, { token: admin })).body
+        .data.hits;
+      assert.equal(after, before + 1);
+
+      assert.equal((await request('POST', '/redirects/999999/hit')).status, 404);
+    });
+  });
+});
+
+describe('the 404 log', () => {
+  it('counts an address once a visit, a day at a time, and lists it once', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+      const admin = await login(ADMIN);
+      const first = await request('POST', '/not-found', {
+        body: { path: '/flats-in-hebal?utm=x', referrer: 'https://www.google.com/' },
+      });
+      assert.equal(first.status, 204);
+      await request('POST', '/not-found', { body: { path: '/flats-in-hebal/' } });
+
+      const listed = await request('GET', '/admin/seo/not-found', { token: admin });
+      assert.equal(listed.status, 200);
+      const line = listed.body.data.find((entry) => entry.path === '/flats-in-hebal');
+      assert.equal(line.count, 2);
+      assert.equal(line.days, 1);
+      assert.equal(line.referrer, 'https://www.google.com/');
+      assert.equal(listed.body.meta.total, listed.body.data.length);
+    });
+  });
+
+  it('ignores the panel, the API, static files and redirected addresses', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+      const admin = await login(ADMIN);
+      const redirected = LIVE_SEED.redirects.find((rule) => rule.isActive).fromPath;
+      for (const path of [
+        '/admin/nowhere',
+        '/api/nothing',
+        '/static/js/main.old.js',
+        '/logo.png',
+        redirected,
+      ]) {
+        assert.equal((await request('POST', '/not-found', { body: { path } })).status, 204);
+      }
+      const listed = await request('GET', '/admin/seo/not-found', { token: admin });
+      assert.equal(listed.body.data.length, 0);
+
+      const refused = await request('POST', '/not-found', { body: { path: 'no-slash' } });
+      assert.equal(refused.status, 422);
+    });
+  });
+
+  it('keeps at most 500 rows, the ones seen longest ago going first', () => {
+    const { MAX_ROWS, recordVisit } = require('../lib/notFoundLog');
+    const rows = [];
+    const start = Date.parse('2026-09-01T00:00:00.000Z');
+    for (let index = 0; index < MAX_ROWS + 5; index += 1) {
+      recordVisit(rows, { path: `/gone-${index}`, now: new Date(start + index * 1000) });
+    }
+    assert.equal(rows.length, MAX_ROWS);
+    assert.ok(!rows.some((row) => row.path === '/gone-0'));
+    assert.ok(rows.some((row) => row.path === `/gone-${MAX_ROWS + 4}`));
+  });
+
+  it('is read and dismissed by the SEO desk only', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+      await request('POST', '/not-found', { body: { path: '/old-brochure-2019' } });
+      const sales = await login(SALES);
+      assert.equal((await request('GET', '/admin/seo/not-found', { token: sales })).status, 403);
+
+      const admin = await login(ADMIN);
+      const line = (await request('GET', '/admin/seo/not-found', { token: admin })).body.data[0];
+      const dismissed = await request('DELETE', `/admin/seo/not-found/${line.id}`, {
+        token: admin,
+      });
+      assert.equal(dismissed.status, 200);
+      assert.equal(
+        (await request('GET', '/admin/seo/not-found', { token: admin })).body.data.length,
+        0
+      );
+      assert.equal(
+        (await request('DELETE', `/admin/seo/not-found/${line.id}`, { token: admin })).status,
+        404
+      );
+    });
+  });
+});
+
+describe('a subscriber who asked to stop', () => {
+  it('is marked unsubscribed, the status being all a PATCH may change', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+      const admin = await login(ADMIN);
+      const subscriber = LIVE_SEED.newsletterSubscribers.find((row) => row.status === 'subscribed');
+      const marked = await request('PATCH', `/admin/newsletter-subscribers/${subscriber.id}`, {
+        token: admin,
+        body: { status: 'unsubscribed', email: 'someone.else@example.com' },
+      });
+      assert.equal(marked.status, 200);
+      assert.equal(marked.body.data.status, 'unsubscribed');
+      assert.equal(marked.body.data.email, subscriber.email);
+
+      const refused = await request('PATCH', `/admin/newsletter-subscribers/${subscriber.id}`, {
+        token: admin,
+        body: { status: 'paused' },
+      });
+      assert.equal(refused.status, 422);
+
+      const exported = await request(
+        'GET',
+        '/admin/newsletter-subscribers/export?status=subscribed',
+        {
+          token: admin,
+        }
+      );
+      assert.ok(!exported.text.includes(subscriber.email));
+
+      const sales = await login(SALES);
+      assert.equal(
+        (
+          await request('PATCH', `/admin/newsletter-subscribers/${subscriber.id}`, {
+            token: sales,
+            body: { status: 'subscribed' },
+          })
+        ).status,
+        403
+      );
+    });
+  });
+});
+
+describe('the site’s address', () => {
+  it('is changed under SEO settings, and Site settings answer the copy', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+      const admin = await login(ADMIN);
+      const saved = await request('PUT', '/admin/seo/settings', {
+        token: admin,
+        body: { siteUrl: 'https://staging.example' },
+      });
+      assert.equal(saved.status, 200);
+
+      const settings = await request('GET', '/admin/settings', { token: admin });
+      assert.equal(settings.body.data.general.siteUrl, 'https://staging.example');
+      assert.equal(
+        (await request('GET', '/settings')).body.data.general.siteUrl,
+        'https://staging.example'
+      );
+    });
+  });
+
+  it('is not written by a Site settings save', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+      const admin = await login(ADMIN);
+      const saved = await request('PUT', '/admin/settings', {
+        token: admin,
+        body: { general: { siteUrl: 'https://elsewhere.example', tagline: 'Homes, verified' } },
+      });
+      assert.equal(saved.status, 200);
+      assert.equal(saved.body.data.general.siteUrl, LIVE_SEED.seoSettings.siteUrl);
+      assert.equal(saved.body.data.general.tagline, 'Homes, verified');
+    });
+  });
+});
+
+describe('the Rent and Commercial menus', () => {
+  it('are flags on the property types, public, and seeded as the menus were', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request, login }) => {
+      const types = (await request('GET', '/property-types?perPage=100')).body.data;
+      const flagged = (flag) =>
+        types
+          .filter((type) => type[flag] === true)
+          .sort((left, right) => left.order - right.order)
+          .map((type) => type.slug);
+
+      assert.deepEqual(flagged('showInRentMenu'), [
+        'apartments',
+        'villas',
+        'independent-houses',
+        'pg-co-living',
+      ]);
+      assert.deepEqual(flagged('showInCommercialMenu'), [
+        'office-spaces',
+        'retail-shops',
+        'warehouses',
+        'co-working-spaces',
+      ]);
+
+      const admin = await login(ADMIN);
+      const penthouses = types.find((type) => type.slug === 'penthouses');
+      const patched = await request('PATCH', `/admin/property-types/${penthouses.id}`, {
+        token: admin,
+        body: { showInRentMenu: true },
+      });
+      assert.equal(patched.status, 200);
+      assert.equal(patched.body.data.showInRentMenu, true);
+
+      const refused = await request('PATCH', `/admin/property-types/${penthouses.id}`, {
+        token: admin,
+        body: { showInCommercialMenu: 'yes' },
+      });
+      assert.equal(refused.status, 422);
+    });
+  });
+});
+
+describe('GET /properties/counts', () => {
+  it('counts the live listings per value, under the list’s own filters', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request }) => {
+      const counted = await request('GET', '/properties/counts?by=segment,listingType');
+      assert.equal(counted.status, 200);
+      assert.equal(counted.headers.get('cache-control'), 'public, max-age=300');
+      assert.deepEqual(Object.keys(counted.body), ['data', 'meta']);
+      assert.equal(counted.body.meta, null);
+
+      const live = LIVE_SEED.properties.filter((property) => property.isActive);
+      const sum = (tally) => Object.values(tally).reduce((total, count) => total + count, 0);
+      assert.equal(sum(counted.body.data.segment), live.length);
+      assert.equal(sum(counted.body.data.listingType), live.length);
+      assert.equal(
+        counted.body.data.segment.residential,
+        live.filter((property) => property.segment === 'residential').length
+      );
+
+      // Every key is a string, and a value no live listing has is absent.
+      const byType = (await request('GET', '/properties/counts?by=propertyTypeId&listingType=rent'))
+        .body.data.propertyTypeId;
+      const rentals = live.filter((property) => property.listingType === 'rent');
+      assert.equal(sum(byType), rentals.length);
+      for (const [id, count] of Object.entries(byType)) {
+        const listed = await request(
+          'GET',
+          `/properties?perPage=1&listingType=rent&propertyTypeId=${id}`
+        );
+        assert.equal(listed.body.meta.total, count, `type ${id}`);
+      }
+    });
+  });
+
+  it('ignores a dimension it does not know, and answers the three status tiles', async () => {
+    await withServer({ seed: LIVE_SEED }, async ({ request }) => {
+      assert.deepEqual(
+        (await request('GET', '/properties/counts?by=bogus,segment')).body.data.segment,
+        (await request('GET', '/properties/counts?by=segment')).body.data.segment
+      );
+      assert.deepEqual((await request('GET', '/properties/counts?by=bogus')).body.data, {});
+      assert.deepEqual((await request('GET', '/properties/counts')).body.data, {});
+
+      const statuses = (
+        await request('GET', '/properties/counts?by=constructionStatus&listingType=sale')
+      ).body.data.constructionStatus;
+      for (const status of ['ready-to-move', 'under-construction', 'pre-launch']) {
+        const listed = await request(
+          'GET',
+          `/properties?perPage=1&listingType=sale&constructionStatus=${status}`
+        );
+        assert.equal(statuses[status] ?? 0, listed.body.meta.total, status);
+      }
+    });
+  });
+});

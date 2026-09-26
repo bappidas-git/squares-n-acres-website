@@ -3,12 +3,13 @@
  *
  *   POST /api/auth/login      e-mail + password → a bearer token
  *   POST /api/auth/logout     revokes the token that made the call
+ *   POST /api/auth/refresh    the same token, a full lifetime from now (prompt 51)
  *   GET  /api/auth/profile    the signed-in user
  *   PUT  /api/auth/profile    their own name, phone and avatar
  *   PUT  /api/auth/password   their own password
  *
  * Only `login` is public, and `mock-server/app.js` puts `requireAuth` in front
- * of the other four, so nothing here has to check a token itself.
+ * of the other five, so nothing here has to check a token itself.
  *
  * The seed's three accounts (§6.14) are the only way in on the mock; they are
  * listed, with the note that Laravel hashes what the seed stores in plain text,
@@ -110,6 +111,17 @@ module.exports = ({ db, config }) => {
     } catch (error) {
       next(error);
     }
+  });
+
+  // "Stay signed in" (prompt 51): the session the request carries runs a full
+  // lifetime again, from now — the same answer a sign-in gives.
+  router.post('/auth/refresh', (req, res, next) => {
+    const extended = tokens.extendToken(req.token?.token);
+    if (!extended) {
+      next(unauthorized());
+      return;
+    }
+    res.ok({ token: extended.token, expiresAt: extended.expiresAt, user: sessionUser(req.user) });
   });
 
   router.post('/auth/logout', (req, res) => {

@@ -12,6 +12,7 @@ import { ROLES } from '../../../config/enums';
 import { TextField } from '../../../components/ui/FormField';
 import { firstFieldMessage } from '../../../services/apiError';
 import { formatDate } from '../../../utils/format';
+import { generatePassword, handoverText } from '../../../utils/password';
 import { schemas } from '../../../services/schemas';
 import { useAdminAuth } from '../../../contexts/AdminAuthContext';
 import { useToast } from '../../../components/common/ToastProvider';
@@ -44,6 +45,36 @@ export function passwordProblem(password) {
 }
 
 const sameId = (left, right) => String(left) === String(right);
+
+/** An address as the API compares it. */
+const addressOf = (email) =>
+  String(email ?? '')
+    .trim()
+    .toLowerCase();
+
+/**
+ * Puts a temporary password where it is typed and the address with it on the
+ * clipboard, to send to the person (prompt 51). A browser that refuses the
+ * clipboard is told the password instead — the box shows only dots.
+ *
+ * @param {string} email
+ * @param {(password: string) => void} place writes it into the form
+ * @param {ReturnType<typeof useToast>} toast
+ */
+async function generateAndCopy(email, place, toast) {
+  const password = generatePassword();
+  place(password);
+  try {
+    await navigator.clipboard.writeText(handoverText(email, password));
+    toast.success(
+      email
+        ? `A new password is in the form, and ${email} with it is copied — send both to them.`
+        : 'A new password is in the form, and copied.'
+    );
+  } catch (_thrown) {
+    toast.info(`The new password is ${password} — this browser did not let the page copy it.`);
+  }
+}
 
 /** The fields of an account the admin header and "My profile" read. */
 const sessionFields = (record) => ({
@@ -203,6 +234,21 @@ export default function UsersPage() {
         return [
           { name: 'name', type: 'text', label: 'Full name', required: true, half: true },
           { name: 'email', type: 'email', label: 'Email address', required: true, half: true },
+          // Your own address is the one you sign in with: a typo in it locks you
+          // out, so a change is typed twice (prompt 51).
+          ...(isSelf
+            ? [
+                {
+                  name: 'emailConfirm',
+                  type: 'email',
+                  label: 'Retype the new e-mail address',
+                  required: true,
+                  half: true,
+                  hint: 'You sign in with it — a typo would lock you out.',
+                  visible: (values) => addressOf(values.email) !== addressOf(record.email),
+                },
+              ]
+            : []),
           {
             name: 'password',
             type: 'password',
@@ -212,6 +258,16 @@ export default function UsersPage() {
             hint: record?.id
               ? `Leave blank to keep the current password. ${PASSWORD_RULE}`
               : PASSWORD_RULE,
+            action: {
+              label: 'Generate password',
+              icon: 'mdi:dice-multiple-outline',
+              onClick: (form) =>
+                generateAndCopy(
+                  String(form.values.email ?? '').trim(),
+                  (password) => form.setField('password', password),
+                  toast
+                ),
+            },
           },
           {
             name: 'role',
@@ -233,10 +289,21 @@ export default function UsersPage() {
 
       // The API's rule, before the request: a new account's password, and a
       // new one typed into an existing account's form.
-      validate: (values) => {
-        if (!values.password) return {};
-        const problem = passwordProblem(values.password);
-        return problem ? { password: problem } : {};
+      validate: (values, record) => {
+        const found = {};
+        if (values.password) {
+          const problem = passwordProblem(values.password);
+          if (problem) found.password = problem;
+        }
+        const isSelf = record?.id !== undefined && sameId(record.id, currentUser?.id);
+        if (
+          isSelf &&
+          addressOf(values.email) !== addressOf(record.email) &&
+          addressOf(values.emailConfirm) !== addressOf(values.email)
+        ) {
+          found.emailConfirm = 'Type the new address again, exactly as above.';
+        }
+        return found;
       },
 
       afterSave: (saved) => {
@@ -248,6 +315,7 @@ export default function UsersPage() {
       toFormValues: (record) => ({
         name: record.name ?? '',
         email: record.email ?? '',
+        emailConfirm: '',
         password: '',
         role: record.role ?? 'sales',
         phone: record.phone ?? '',
@@ -264,6 +332,7 @@ export default function UsersPage() {
           avatarUrl: values.avatarUrl ? values.avatarUrl : null,
         };
         if (!payload.password) delete payload.password;
+        delete payload.emailConfirm;
         return payload;
       },
 
@@ -281,7 +350,7 @@ export default function UsersPage() {
         text: 'Add the people who will work in this panel.',
       },
     }),
-    [currentUser, updateUser]
+    [currentUser, toast, updateUser]
   );
 
   return (
@@ -303,6 +372,7 @@ export default function UsersPage() {
 
 /** Sets a new password for one account, without touching anything else. */
 function ResetPasswordDialog({ user, isSelf = false, onClose, onDone }) {
+  const toast = useToast();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -380,6 +450,24 @@ function ResetPasswordDialog({ user, isSelf = false, onClose, onDone }) {
             setError('');
           }}
         />
+        <Button
+          variant="link"
+          size="sm"
+          className={styles.generate}
+          disabled={saving}
+          onClick={() =>
+            generateAndCopy(
+              user?.email ?? '',
+              (next) => {
+                setPassword(next);
+                setError('');
+              },
+              toast
+            )
+          }
+        >
+          Generate password
+        </Button>
       </form>
     </Modal>
   );

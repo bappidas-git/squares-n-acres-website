@@ -1,8 +1,8 @@
 import {
   BLOCK_TYPES,
   CONSTRUCTION_STATUS,
-  LEAD_SOURCES,
   LISTING_TYPES,
+  SITE_LEAD_SOURCES,
   PARTNER_CATEGORIES,
 } from '../../../config/enums';
 
@@ -778,7 +778,7 @@ export function validateBlockData(type, data = {}) {
       continue;
     }
 
-    if (field.type === 'leadSource' && !isBlank(value) && !LEAD_SOURCES.values.includes(value)) {
+    if (field.type === 'leadSource' && !isBlank(value) && !SITE_LEAD_SOURCES.includes(value)) {
       errors[field.name] = 'That is not one of the lead sources this site files enquiries under.';
     }
   }

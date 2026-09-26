@@ -397,6 +397,11 @@ const SITE_LEAD_SOURCES = LEAD_SOURCES.values.filter(
   (value) => !ADMIN_LEAD_SOURCES.includes(value)
 );
 
+/** …as the options of a picker that files a site form's enquiries. */
+const SITE_LEAD_SOURCE_OPTIONS = LEAD_SOURCES.options.filter((option) =>
+  SITE_LEAD_SOURCES.includes(option.value)
+);
+
 /**
  * The 24 source values the boilerplate wrote, mapped onto `LEAD_SOURCES`
  * (decision D20). The seed converter rewrites stored leads through this map and
@@ -956,6 +961,7 @@ module.exports = {
   LEAD_OPEN_STATUSES,
   ADMIN_LEAD_SOURCES,
   SITE_LEAD_SOURCES,
+  SITE_LEAD_SOURCE_OPTIONS,
   REQUIREMENT_TIMELINES,
   // Content
   ARTICLE_STATUS,

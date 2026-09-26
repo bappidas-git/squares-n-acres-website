@@ -71,6 +71,27 @@ export function galleryAddMessage(added, skipped) {
 }
 
 /**
+ * "Fill empty alt text" (prompt 51): `<title> — <locality> — photo <n>` for each
+ * image that has an address and no description, `n` its place in the gallery.
+ * A start the editor improves on — an image already described is never
+ * touched.
+ *
+ * @param {Array<object>} images
+ * @param {{title?: string, locality?: string}} [source]
+ * @returns {Array<{id: string|number, alt: string}>} one patch per filled image
+ */
+export function fillEmptyAlts(images = [], { title, locality } = {}) {
+  const lead = [title, locality].map((part) => String(part ?? '').trim()).filter(Boolean);
+  return images
+    .map((image, index) => {
+      if (!String(image?.url ?? '').trim() || String(image?.alt ?? '').trim()) return null;
+      const photo = lead.length > 0 ? `photo ${index + 1}` : `Photo ${index + 1}`;
+      return { id: image.id, alt: [...lead, photo].join(' — ') };
+    })
+    .filter(Boolean);
+}
+
+/**
  * Which row has to become the cover once `id` is removed.
  *
  * A gallery is never left without one: the cover is what the card, the search
@@ -113,6 +134,8 @@ export function coverAfterRemoval(images = [], id) {
  * @param {(id: string|number) => void} props.onSetCover
  * @param {string} [props.folder] where this listing's uploads are filed —
  *   `properties/<slug>` (prompt 51)
+ * @param {{title?: string, locality?: string}} [props.altSource] what "Fill
+ *   empty alt text" writes from (prompt 51)
  */
 export default function ImageGalleryEditor({
   images = [],
@@ -121,6 +144,7 @@ export default function ImageGalleryEditor({
   disabled = false,
   folder = GALLERY_FOLDER,
   altHint,
+  altSource,
   onAdd,
   onUpdate,
   onRemove,
@@ -178,6 +202,20 @@ export default function ImageGalleryEditor({
     onUploaded: addPicked,
   });
   const missingAlt = images.filter((image) => String(image.alt ?? '').trim() === '').length;
+
+  const fillAlts = () => {
+    const patches = fillEmptyAlts(images, altSource);
+    if (patches.length === 0) {
+      toast.info('Every image is already described.');
+      return;
+    }
+    patches.forEach((patch) => onUpdate?.(patch.id, { alt: patch.alt }));
+    const message = `${patches.length} ${
+      patches.length === 1 ? 'image described' : 'images described'
+    } from the title and the locality — edit any of them.`;
+    toast.success(message);
+    setAnnouncement(message);
+  };
 
   const move = (from, to) => {
     if (disabled || to < 0 || to >= images.length || from === to) return;
@@ -256,7 +294,24 @@ export default function ImageGalleryEditor({
         ) : images.length > 0 ? (
           <span className={styles.described}> · every image described</span>
         ) : null}
+        {missingAlt > 0 && !disabled ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            className={styles.fillAlts}
+            icon={<Icon icon="mdi:text-box-edit-outline" width="16" height="16" />}
+            onClick={fillAlts}
+          >
+            Fill empty alt text
+          </Button>
+        ) : null}
       </p>
+      {missingAlt > 0 ? (
+        <p className={styles.altNote}>
+          A draft saves without descriptions; the listing needs one for every image before it goes
+          live.
+        </p>
+      ) : null}
 
       {galleryError ? (
         <p className={styles.galleryError} id={idFor('images')} tabIndex={-1} role="alert">
@@ -329,7 +384,6 @@ export default function ImageGalleryEditor({
                   <TextField
                     id={idFor(`images.${index}.alt`)}
                     label="Alt text"
-                    required
                     value={image.alt ?? ''}
                     error={altError}
                     disabled={disabled}

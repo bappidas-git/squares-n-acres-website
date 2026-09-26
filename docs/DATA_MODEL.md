@@ -94,7 +94,7 @@ Every rule that used to compare a segment with `'commercial'` or `'land'` — th
 
 ### 6.3 `propertyTypes`
 
-`name`, `slug` (**plural URL form**, D25: `apartments, villas, independent-houses, row-houses, penthouses, duplexes, studios, builder-floors, residential-plots, farm-land, office-spaces, co-working-spaces, retail-shops, warehouses, industrial-sheds, commercial-plots, pg-co-living`), `segment` (the slug of a `segments` record, §6.3a; seeded as residential for the first 8; `residential-plots` and `farm-land` → `land`; `office-spaces`…`industrial-sheds` → `commercial`; `commercial-plots` → `land`; `pg-co-living` → `residential`), `icon` (Iconify id), `description?`, `isActive`, `order`, `seo`, `propertyCount` (read: active listings of this type).
+`name`, `slug` (**plural URL form**, D25: `apartments, villas, independent-houses, row-houses, penthouses, duplexes, studios, builder-floors, residential-plots, farm-land, office-spaces, co-working-spaces, retail-shops, warehouses, industrial-sheds, commercial-plots, pg-co-living`), `segment` (the slug of a `segments` record, §6.3a; seeded as residential for the first 8; `residential-plots` and `farm-land` → `land`; `office-spaces`…`industrial-sheds` → `commercial`; `commercial-plots` → `land`; `pg-co-living` → `residential`), `icon` (Iconify id), `description?`, `showInRentMenu` / `showInCommercialMenu` (bool, default false — the header's Rent and Commercial menus list the active types with the flag on, in `order`; seeded on for `apartments, villas, independent-houses, pg-co-living` and `office-spaces, retail-shops, warehouses, co-working-spaces`, prompt 51), `isActive`, `order`, `seo`, `propertyCount` (read: active listings of this type).
 
 ### 6.4 `amenities` and `badges`
 
@@ -218,7 +218,7 @@ the menu's own list.
 ### 6.13 `siteSettings` (singleton object, not an array)
 
 ```
-general { siteName:'Squares N Acres', tagline, logoUrl, iconUrl, siteUrl, defaultLanguage:'en-IN', contactEmail, contactPhone, alternatePhone?, whatsappNumber, whatsappDefaultMessage,
+general { siteName:'Squares N Acres', tagline, logoUrl, iconUrl, siteUrl (read-only: a copy of `seoSettings.siteUrl`, which is the one place it changes — prompt 51), defaultLanguage:'en-IN', contactEmail, contactPhone, alternatePhone?, whatsappNumber, whatsappDefaultMessage,
           address { line1, line2?, locality?, city, state, pincode, country }, mapEmbedUrl?, latitude?, longitude?, workingHours[] { days, hours }, reraNumber?, gstNumber?, establishedYear? }
 hero { title, subtitle, backgroundImageUrl?, backgroundVideoUrl?, mobileImageUrl?, searchTabs[] (sale|rent|lease|commercial|plots), stats[] { label, value, suffix? } (empty = hidden), badges[] (strings) }
 navigation { headerCtaLabel:'Post Requirement', headerCtaHref:'#post-requirement', showCallButton:true, showWhatsappButton:true }
@@ -232,7 +232,7 @@ updatedAt
 
 Public subset (`GET /settings`): everything except `leads` and `integrations.recaptchaSiteKey`-style secrets (`integrations` public keys: `googleAnalyticsId`, `googleTagManagerId`, `facebookPixelId`, `googleMapsApiKey`, `cloudinaryCloudName`, `cloudinaryUploadPreset`, `recaptchaSiteKey` are all public by nature — there are no secrets in the model; `leads.*` is admin-only).
 
-### 6.14 `seoSettings` (singleton), `redirects`, `newsletterSubscribers`, `adminUsers`, `apiTokens`, `propertyViews`
+### 6.14 `seoSettings` (singleton), `redirects`, `newsletterSubscribers`, `adminUsers`, `apiTokens`, `propertyViews`, `notFoundLog`
 
 `seoSettings`: `siteUrl`, `separator` (`'|'`), `titleTemplates { default, home, property, listing, locality, developer, article, articleCategory, page, author, search }` (§9.5 defaults), `defaults { metaDescription, ogImageUrl, twitterCard:'summary_large_image', robots { index:true, follow:true } }`, `knowledgeGraph { type (Organization|RealEstateAgent|LocalBusiness), name, legalName?, logoUrl, description, phone, email, address { streetAddress, addressLocality, addressRegion, postalCode, addressCountry:'IN' }, geo { latitude, longitude }, openingHours[] (schema.org strings), priceRange?, areaServed[], sameAs[] }`, `verification { google?, bing?, pinterest?, yandex? }`, `robotsTxt` (string, §9.8 default), `llmsTxt` (string), `sitemap { enabled, includeProperties, includeLocalities, includeDevelopers, includeArticles, includePages, changefreq { property:'weekly', locality:'weekly', developer:'monthly', article:'monthly', page:'monthly' }, priority { property:0.8, locality:0.7, developer:0.6, article:0.6, page:0.5 }, excludeUrls[] }`, `breadcrumbs { enabled:true, homeLabel:'Home' }`, `noindex { searchResults:true, paginatedListings:false, filteredListings:true, adminAndAuth:true }`, `customHeadHtml?`, `customBodyEndHtml?`, `updatedAt`.
 `redirects`: `fromPath`, `toPath`, `statusCode` (301|302), `isActive`, `hits`, `note?`.
@@ -240,6 +240,7 @@ Public subset (`GET /settings`): everything except `leads` and `integrations.rec
 `adminUsers`: `name`, `email` (unique), `password` (**plaintext only in the mock seed**; Laravel hashes), `role` (`admin|manager|sales`), `phone?`, `avatarUrl?`, `isActive`, `lastLoginAt?`. Seed: `admin@squaresnacres.com / Admin@123`, `manager@squaresnacres.com / Manager@123`, `sales@squaresnacres.com / Sales@123` (mock only; documented for rotation).
 `apiTokens` (mock only): `userId`, `token` (48 chars), `expiresAt`, `createdAt`.
 `propertyViews` (optional analytics): `propertyId`, `viewedAt`, `referrer?` — the mock appends one record per counted view and the dashboard `viewsByDay` reads it.
+`notFoundLog` (prompt 51): `path`, `day` (IST date), `count`, `referrer?`, `firstSeenAt`, `lastSeenAt` — one row per path per day, written by `POST /not-found`, 500 rows at most (the ones seen longest ago go first); the SEO dashboard's 404s tab reads it.
 
 ### HOM → SNA field mapping
 
@@ -329,6 +330,7 @@ prompt adds.
 | `adminUsers`            | 1–5          | 3 (admin, manager, sales)             |
 | `apiTokens`             | from 1       | none — written at runtime by the mock |
 | `propertyViews`         | from 1       | none — written at runtime by the mock |
+| `notFoundLog`           | from 1       | none — written at runtime by the site's 404 page |
 
 Nested collections (`property.images`, `property.unitConfigurations`, `lead.notes`,
 `page.blocks`, …) carry their own integer `id`, unique inside the parent record only.

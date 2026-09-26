@@ -64,5 +64,29 @@ export function removeItem(key, options) {
   }
 }
 
-const storage = { getItem, setItem, removeItem };
+/**
+ * The keys that start with `prefix` — for a family of entries a feature tidies
+ * up after itself, such as the one-time hand-offs of "Preview changes"
+ * (prompt 51).
+ *
+ * @param {string} prefix
+ * @param {{ session?: boolean }} [options]
+ * @returns {Array<string>}
+ */
+export function keys(prefix, options) {
+  const store = area(options);
+  if (!store) return [];
+  try {
+    const found = [];
+    for (let index = 0; index < store.length; index += 1) {
+      const key = store.key(index);
+      if (typeof key === 'string' && key.startsWith(prefix)) found.push(key);
+    }
+    return found;
+  } catch {
+    return [];
+  }
+}
+
+const storage = { getItem, setItem, removeItem, keys };
 export default storage;

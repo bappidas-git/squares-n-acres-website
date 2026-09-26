@@ -48,7 +48,9 @@ function isEmptyBlock(block) {
  */
 export function layoutBlocks(blocks) {
   const ordered = (Array.isArray(blocks) ? blocks : [])
-    .filter((block) => block && typeof block.type === 'string')
+    // A block an editor has hidden stays on the page record and off the page
+    // (prompt 51).
+    .filter((block) => block && typeof block.type === 'string' && block.hidden !== true)
     .map((block, index) => ({ block, index }))
     .sort(
       (left, right) =>

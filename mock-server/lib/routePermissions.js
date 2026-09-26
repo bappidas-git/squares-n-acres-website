@@ -49,6 +49,8 @@ const SEGMENT_ACTIONS = {
   claim: 'edit',
   // Refiling a folder's records changes them (prompt 51).
   rename: 'edit',
+  // A share link is for those who may change the record (prompt 51).
+  'preview-token': 'edit',
 };
 
 /**

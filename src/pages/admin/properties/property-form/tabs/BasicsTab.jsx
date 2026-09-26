@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import FormSection, { FormColumn } from '../../../../../components/admin/FormSection';
 import MultiSelect from '../../../../../components/admin/MultiSelect';
 import SlugField from '../../../../../components/admin/SlugField';
+import SlugMoveNotice from '../../../../../components/admin/SlugMoveNotice';
 import {
   Button,
   ConfirmDialog,
@@ -120,7 +121,8 @@ function MasterDataActions({ addLabel, onAdd, manageLabel, manageHref }) {
  * segments themselves included, since they became master data too.
  */
 export default function BasicsTab() {
-  const { values, errors, setField, setFields, disabled, propertyId } = usePropertyFormContext();
+  const { values, errors, setField, setFields, disabled, propertyId, slugMove } =
+    usePropertyFormContext();
   const { can } = useAdminAuth();
   const { refresh } = useMasterData();
   const toast = useToast();
@@ -302,6 +304,16 @@ export default function BasicsTab() {
             // measured it.
             onChange={(slug) => setFields({ slug, 'seo.slug': slug })}
           />
+          {slugMove?.moved ? (
+            <SlugMoveNotice
+              livePath={slugMove.livePath}
+              noun="listing"
+              canRedirect={slugMove.canRedirect}
+              checked={slugMove.redirect}
+              disabled={disabled}
+              onChange={slugMove.setRedirect}
+            />
+          ) : null}
         </FormColumn>
       </FormSection>
 

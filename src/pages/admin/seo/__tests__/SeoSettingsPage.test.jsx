@@ -44,10 +44,11 @@ jest.mock('../../../../services/pageService', () => ({
   },
 }));
 
-/** The seed's record, as the API serves it. */
-const RECORD = JSON.parse(
+/** The seed, as the API serves it. */
+const SEED = JSON.parse(
   fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', '..', 'db.json'), 'utf-8')
-).seoSettings;
+);
+const RECORD = SEED.seoSettings;
 
 const ADMIN = {
   id: 1,
@@ -67,7 +68,7 @@ const siteSettings = {
   updateLocal: jest.fn(),
 };
 
-const renderPage = () => {
+const renderPage = (context = siteSettings) => {
   storage.setItem(AUTH_STORAGE_KEYS.token, 'seeded-token');
   storage.setItem(AUTH_STORAGE_KEYS.user, ADMIN);
   storage.setItem(
@@ -79,7 +80,7 @@ const renderPage = () => {
   return renderWith(
     <ToastProvider>
       <AdminAuthProvider>
-        <SiteSettingsContext.Provider value={siteSettings}>
+        <SiteSettingsContext.Provider value={context}>
           <SeoSettingsPage />
         </SiteSettingsContext.Provider>
       </AdminAuthProvider>
@@ -250,5 +251,63 @@ describe('a 422 from the API', () => {
     expect(
       screen.queryByText('The defaults.ogImageUrl must be a valid URL.')
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('the knowledge graph against Site settings (prompt 51)', () => {
+  const withSite = (patch) => ({
+    ...siteSettings,
+    settings: {
+      ...SEED.siteSettings,
+      general: { ...SEED.siteSettings.general, ...patch.general },
+      social: { ...SEED.siteSettings.social, ...patch.social },
+    },
+  });
+
+  it('says nothing while the two agree', async () => {
+    renderPage(withSite({}));
+    await screen.findByLabelText('Site URL');
+    openTab('Knowledge graph');
+
+    expect(screen.getByRole('button', { name: 'Copy from Site settings' })).toBeEnabled();
+    expect(screen.queryByText('Site settings say something else')).not.toBeInTheDocument();
+  });
+
+  it('names the fields that differ, copies them over, and saves them with the rest', async () => {
+    renderPage(
+      withSite({
+        general: { contactPhone: '+919800000099' },
+        social: { linkedin: 'https://www.linkedin.com/company/squaresnacres' },
+      })
+    );
+    await screen.findByLabelText('Site URL');
+    openTab('Knowledge graph');
+
+    expect(screen.getByText('Site settings say something else')).toBeInTheDocument();
+    expect(screen.getByText(/Phone and Profiles differ from Site settings/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy from Site settings' }));
+
+    expect(screen.getByLabelText('Phone')).toHaveValue('+919800000099');
+    expect(
+      await screen.findByText(
+        'Copied from Site settings: Phone and Profiles. Save the settings to publish them. “Sunday: By appointment” has no opening-hours form and was left out.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Site settings say something else')).not.toBeInTheDocument();
+
+    save();
+    await waitFor(() => expect(seoService.updateSettings).toHaveBeenCalled());
+    const sent = seoService.updateSettings.mock.calls[0][0].knowledgeGraph;
+    expect(sent.phone).toBe('+919800000099');
+    expect(sent.sameAs).toEqual(['https://www.linkedin.com/company/squaresnacres']);
+  });
+
+  it('cannot copy before Site settings have loaded', async () => {
+    renderPage({ ...siteSettings, settings: null });
+    await screen.findByLabelText('Site URL');
+    openTab('Knowledge graph');
+
+    expect(screen.getByRole('button', { name: 'Copy from Site settings' })).toBeDisabled();
   });
 });

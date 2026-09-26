@@ -8,6 +8,7 @@ import SeoScoreChip from '../../../components/seo/SeoScoreChip';
 import StatusChip from '../../../components/admin/StatusChip';
 import { ARTICLE_STATUS } from '../../../config/enums';
 import { formatDate, formatDateTime, formatNumber } from '../../../utils/format';
+import { savedBy } from '../savedBy';
 
 import styles from './ArticlesListPage.module.css';
 
@@ -212,7 +213,8 @@ export function buildArticleColumns() {
       width: '110px',
       hideBelow: 'lg',
       mobile: false,
-      render: (row) => formatDate(row.updatedAt),
+      // Who saved it, on hover (prompt 51).
+      render: (row) => <span title={savedBy(row)}>{formatDate(row.updatedAt)}</span>,
     },
   ];
 }

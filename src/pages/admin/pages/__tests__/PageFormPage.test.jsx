@@ -424,6 +424,25 @@ describe('PageFormPage', () => {
       expect(pageService.update).not.toHaveBeenCalled();
     });
 
+    it('previews a published page’s changes without saving them (prompt 51)', async () => {
+      renderForm();
+      const title = await loaded();
+
+      fireEvent.change(title, { target: { value: 'About us, rewritten' } });
+      await userEvent.click(screen.getAllByRole('button', { name: 'Preview changes' })[0]);
+
+      expect(pageService.update).not.toHaveBeenCalled();
+      expect(pageService.previewToken).not.toHaveBeenCalled();
+      const [path] = openInNewTab.mock.calls[0];
+      expect(path).toMatch(/^\/about\?draftPreview=/);
+      const id = decodeURIComponent(path.split('draftPreview=')[1]);
+      const kept = JSON.parse(window.localStorage.getItem(`sna-draft-preview-${id}`));
+      expect(kept).toMatchObject({
+        type: 'page',
+        record: { title: 'About us, rewritten', slug: 'about', status: 'published' },
+      });
+    });
+
     it('saves a changed page first, and says so on the button', async () => {
       renderForm({ record: DRAFT });
       const title = await loaded(DRAFT.title);
@@ -600,5 +619,94 @@ describe('PageFormPage', () => {
       expect(link).toHaveAttribute('href', '/admin/pages/menus');
       expect(link).toHaveAttribute('target', '_blank');
     });
+  });
+});
+
+describe('PageFormPage — two editors, one page (prompt 51)', () => {
+  const THEIRS_AT = '2026-09-15T07:00:00.000Z';
+  const stale = () =>
+    new ApiError({
+      status: 409,
+      message: 'Manager User saved this page after you opened it.',
+      data: {
+        conflict: 'stale',
+        current: {
+          updatedAt: THEIRS_AT,
+          updatedBy: { id: 2, name: 'Manager User' },
+          updatedByName: 'Manager User',
+        },
+      },
+    });
+
+  it('names the version it read, and answers a save over somebody else’s with the dialog', async () => {
+    pageService.update.mockRejectedValueOnce(stale());
+    renderForm();
+    const title = await loaded();
+
+    fireEvent.change(title, { target: { value: 'About Squares N Acres' } });
+    await userEvent.click(actionBar());
+
+    const dialog = await screen.findByRole('dialog', { name: 'Somebody else saved this page' });
+    expect(within(dialog).getByText(/Manager User saved it/)).toBeInTheDocument();
+    expect(lastUpdateBody().updatedAt).toBe(RECORD.updatedAt);
+    // The refusal is the dialog's to say, not a toast's.
+    expect(screen.queryByText(/saved this page after you opened it/)).not.toBeInTheDocument();
+
+    // "Save mine anyway" writes over the version the refusal named.
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save mine anyway' }));
+    await waitFor(() => expect(pageService.update).toHaveBeenCalledTimes(2));
+    expect(lastUpdateBody().updatedAt).toBe(THEIRS_AT);
+    expect(lastUpdateBody().title).toBe('About Squares N Acres');
+  });
+
+  it('loads their version and offers these edits back on top of it', async () => {
+    pageService.update.mockRejectedValueOnce(stale());
+    renderForm();
+    const title = await loaded();
+    fireEvent.change(title, { target: { value: 'About Squares N Acres' } });
+    await userEvent.click(actionBar());
+    const dialog = await screen.findByRole('dialog', { name: 'Somebody else saved this page' });
+
+    pageService.adminGet.mockResolvedValue({
+      data: { ...RECORD, order: 7, updatedAt: THEIRS_AT },
+    });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Load their version' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Somebody else saved this page' })
+      ).not.toBeInTheDocument()
+    );
+
+    expect(
+      await screen.findByText('Unsaved changes were found in this browser')
+    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue(RECORD.title)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Restore the draft' }));
+    expect(await screen.findByDisplayValue('About Squares N Acres')).toBeInTheDocument();
+
+    await userEvent.click(actionBar());
+    await waitFor(() => expect(pageService.update).toHaveBeenCalledTimes(2));
+    // Their order, this editor's title, against their version.
+    expect(lastUpdateBody()).toEqual(
+      expect.objectContaining({ title: 'About Squares N Acres', order: 7, updatedAt: THEIRS_AT })
+    );
+  });
+
+  it('offers back the copy a closed tab kept, and keeps none once saved', async () => {
+    storage.setItem(`sna_page_draft:${RECORD.id}`, {
+      values: { ...RECORD, title: 'About us, before the tab closed' },
+      savedAt: new Date(Date.parse(RECORD.updatedAt) + 60000).toISOString(),
+      version: RECORD.updatedAt,
+    });
+    renderForm();
+    await loaded();
+
+    expect(await screen.findByText(/A draft of this page was saved/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Restore the draft' }));
+    expect(await screen.findByDisplayValue('About us, before the tab closed')).toBeInTheDocument();
+
+    await userEvent.click(actionBar());
+    await waitFor(() => expect(pageService.update).toHaveBeenCalled());
+    await waitFor(() => expect(storage.getItem(`sna_page_draft:${RECORD.id}`)).toBeNull());
   });
 });

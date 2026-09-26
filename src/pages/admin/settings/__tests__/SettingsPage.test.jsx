@@ -252,6 +252,23 @@ it('sends what changed, and nothing it did not (QA-64)', async () => {
   expect(await screen.findByText(/site settings saved/i)).toBeInTheDocument();
 });
 
+it('shows the site address SEO settings keep, and never sends it (prompt 51)', async () => {
+  renderAs('admin');
+
+  const siteUrl = await screen.findByLabelText(/site url/i);
+  expect(siteUrl).toHaveValue('https://www.squaresnacres.com');
+  expect(siteUrl).toBeDisabled();
+  expect(screen.getByRole('link', { name: /changed under seo → settings/i })).toHaveAttribute(
+    'href',
+    '/admin/seo/settings'
+  );
+
+  await type(screen.getByLabelText(/tagline/i), 'Homes, verified');
+  await save();
+  await waitFor(() => expect(settingsService.update).toHaveBeenCalled());
+  expect(settingsService.update.mock.calls[0][0].general).not.toHaveProperty('siteUrl');
+});
+
 it('refuses a measurement id that is not one, on the tab that holds it', async () => {
   renderAs('admin');
   await screen.findByLabelText(/site name/i);

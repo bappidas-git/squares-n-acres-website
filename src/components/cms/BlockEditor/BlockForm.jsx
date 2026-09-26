@@ -20,7 +20,7 @@ import {
   TextareaField,
   UrlField,
 } from '../../ui';
-import { LEAD_SOURCES } from '../../../config/enums';
+import { SITE_LEAD_SOURCE_OPTIONS } from '../../../config/enums';
 import { fieldApplies, readField, writeField } from './blockSchemas';
 import { isCanceled } from '../../../services/apiError';
 import { useMasterData } from '../../../contexts/MasterDataContext';
@@ -208,7 +208,7 @@ export function BlockField({
           {...shared}
           {...selectChoices(
             { ...field, placeholder: field.required ? 'Select a source' : 'Do not open the form' },
-            LEAD_SOURCES.options
+            SITE_LEAD_SOURCE_OPTIONS
           )}
           value={value ?? ''}
           onChange={(event) => onChange(event.target.value || null)}

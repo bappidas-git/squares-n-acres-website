@@ -442,6 +442,9 @@ async function captureExamples({ baseUrl, accounts, log = () => {} }) {
    */
   const SPECIAL = {
     'properties.list': () => ({ path: '/properties?perPage=2&listingType=sale' }),
+    'properties.counts': () => ({
+      path: '/properties/counts?by=segment,listingType,propertyTypeId',
+    }),
     'properties.featured': () => ({ path: '/properties/featured?perPage=2' }),
     'properties.similar': () => ({ path: '/properties/1/similar?perPage=2' }),
     'properties.view': () => ({ body: {} }),
@@ -518,6 +521,21 @@ async function captureExamples({ baseUrl, accounts, log = () => {} }) {
       },
     }),
     'redirects.resolve': () => ({ path: '/redirects/resolve?path=/blog' }),
+    'adminNewsletterSubscribers.patch': () => ({ body: { status: 'unsubscribed' } }),
+    'notFound.report': () => ({
+      body: { path: '/flats-in-hebal', referrer: 'https://www.google.com/' },
+    }),
+    // The example dismisses the address the capture itself reported.
+    'adminSeo.dismissNotFound': async () => {
+      await api('POST', '/not-found', { body: { path: '/old-brochure-2019' } });
+      const listed = await api('GET', '/admin/seo/not-found?q=old-brochure-2019', {
+        token: tokens.admin,
+      });
+      const line = (listed.json?.data ?? []).find((entry) => entry.path === '/old-brochure-2019');
+      return line
+        ? { path: `/admin/seo/not-found/${line.id}` }
+        : { skip: 'the reported address was not listed' };
+    },
     'adminMedia.list': () => ({ path: '/admin/media?perPage=2' }),
     'adminUsers.list': () => ({ path: '/admin/users?perPage=2' }),
   };

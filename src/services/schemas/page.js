@@ -17,9 +17,9 @@
 const {
   BLOCK_TYPES,
   FOOTER_COLUMNS,
-  LEAD_SOURCES,
   PAGE_STATUS,
   PAGE_TEMPLATES,
+  SITE_LEAD_SOURCES,
 } = require('../../config/enums');
 const { headerMenuRef } = require('./refs');
 const { seo } = require('./seo');
@@ -85,11 +85,14 @@ const create = {
         id: { type: 'int', required: true },
         type: { type: 'enum', enum: BLOCK_TYPES.values, required: true },
         order: { type: 'int', min: 0, default: 0 },
+        // Kept on the page and left off it — "hide for now" (prompt 51).
+        hidden: { type: 'bool', default: false },
         data: { type: 'object', default: {} },
       },
     },
   },
-  leadSource: { type: 'enum', enum: LEAD_SOURCES.values, nullable: true, default: null },
+  // A site form's source — never one of the desk's own (prompt 51).
+  leadSource: { type: 'enum', enum: SITE_LEAD_SOURCES, nullable: true, default: null },
   // The shared `seo` shape, with the one field a page widens (see above).
   seo: { ...seo, shape: { ...seo.shape, slug: pathSlug({ default: '' }) } },
   // Capped so that a stray keystroke cannot store a number the column will

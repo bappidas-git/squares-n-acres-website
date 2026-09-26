@@ -1,13 +1,20 @@
+import { useMemo } from 'react';
+import { Icon } from '@iconify/react';
+
+import Alert from '../../../../components/ui/Alert';
+import Button from '../../../../components/ui/Button';
 import FormSection, { FormColumn } from '../../../../components/admin/FormSection';
 import ImageField from '../../../../components/admin/ImageField';
 import MultiSelect from '../../../../components/admin/MultiSelect';
 import styles from '../SeoSettingsPage.module.css';
+import { copyFromSiteSettings, graphMismatches, listOf } from './knowledgeGraphSync';
 import {
   NumberField,
   SelectField,
   TextField,
   TextareaField,
 } from '../../../../components/ui/FormField';
+import { useToast } from '../../../../components/common/ToastProvider';
 
 /** The three types §6.14 allows, and what each one claims. */
 export const ORGANISATION_TYPES = [
@@ -38,15 +45,46 @@ export const OPENING_HOURS_SUGGESTIONS = [
  * "Squares and Acres" are two businesses as far as the reconciliation is
  * concerned, and it silently believes neither.
  *
+ * Site settings say most of it too — the name, the phone, the address, the
+ * hours, the profiles — and the two were typed separately (prompt 51). So the
+ * tab says which of its fields Site settings put differently, without
+ * stopping a save, and copies them over in one click.
+ *
  * @param {object} props
  * @param {ReturnType<typeof import('../../../../hooks/useForm').default>} props.form
- * @param {{localities?: Array<object>, cities?: Array<object>}} [props.context] master data,
- *   so “areas served” offers the localities the site already covers
+ * @param {{localities?: Array<object>, cities?: Array<object>, siteSettings?: object|null}}
+ *   [props.context] master data, so “areas served” offers the localities the site already
+ *   covers, and the site settings the graph is compared with
  * @param {boolean} [props.disabled]
  */
 export default function KnowledgeGraphTab({ form, context = {}, disabled = false }) {
+  const toast = useToast();
   const { values, setField, getError } = form;
   const graph = values.knowledgeGraph ?? {};
+  const siteSettings = context.siteSettings ?? null;
+
+  const differing = useMemo(
+    () => graphMismatches(values.knowledgeGraph ?? {}, siteSettings),
+    [values.knowledgeGraph, siteSettings]
+  );
+
+  const copyFromSite = () => {
+    const { graph: next, copied, leftOut } = copyFromSiteSettings(graph, siteSettings);
+    const unlisted =
+      leftOut.length > 0
+        ? ` ${listOf(leftOut.map((line) => `“${line}”`))} ${
+            leftOut.length === 1 ? 'has' : 'have'
+          } no opening-hours form and ${leftOut.length === 1 ? 'was' : 'were'} left out.`
+        : '';
+    if (copied.length === 0) {
+      toast.info(`The knowledge graph already says what Site settings say.${unlisted}`);
+      return;
+    }
+    setField('knowledgeGraph', next);
+    toast.success(
+      `Copied from Site settings: ${listOf(copied)}. Save the settings to publish them.${unlisted}`
+    );
+  };
 
   const set = (path, value) => setField(`knowledgeGraph.${path}`, value);
   const error = (path) => getError(`knowledgeGraph.${path}`);
@@ -64,6 +102,32 @@ export default function KnowledgeGraphTab({ form, context = {}, disabled = false
         These values are published on every page as structured data. They must match the Google
         Business Profile exactly — the same name, the same address, the same phone number.
       </p>
+
+      <div className={styles.syncRow}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={copyFromSite}
+          disabled={disabled || !siteSettings}
+          icon={<Icon icon="mdi:content-copy" width="16" height="16" />}
+        >
+          Copy from Site settings
+        </Button>
+        <span className={styles.syncHint}>
+          {siteSettings
+            ? 'Fills the name, phone, e-mail, address, map position, opening hours and profiles from Site settings — General, Contact, and Navigation & footer.'
+            : 'Site settings have not loaded, so there is nothing to copy yet.'}
+        </span>
+      </div>
+
+      {differing.length > 0 ? (
+        <Alert tone="warning" title="Site settings say something else">
+          {listOf(differing.map((field) => field.label))}{' '}
+          {differing.length === 1 ? 'differs' : 'differ'} from Site settings. Search engines trust
+          neither when the site and its structured data disagree — copy them over, or correct Site
+          settings. Saving is not blocked.
+        </Alert>
+      ) : null}
 
       <FormSection title="The organisation">
         <FormColumn half>

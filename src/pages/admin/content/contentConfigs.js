@@ -806,6 +806,8 @@ export const teamConfig = ({ onMutated, intercept } = {}) => ({
             to={`${PATHS.adminProperties}?agentId=${row.id}`}
             title={`The listings ${row.name} answers for`}
             aria-label={`${formatNumber(row.listingCount)} listings of ${row.name}`}
+            // The row opens the member; the count opens their listings.
+            onClick={(event) => event.stopPropagation()}
           >
             {formatNumber(row.listingCount)}
           </Link>

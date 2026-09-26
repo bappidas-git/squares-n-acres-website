@@ -195,3 +195,14 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* "Fill empty alt text" beside the count, and the rule it answers (prompt 51). */
+.fillAlts {
+  margin-left: auto;
+}
+
+.altNote {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}

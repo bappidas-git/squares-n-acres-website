@@ -15,6 +15,8 @@ import { ErrorState } from '../../components/ui';
 import { breadcrumbsFor } from '../../seo/breadcrumbs';
 import { ERRORS } from '../../config/copy';
 import { CmsPageSkeleton } from '../../components/common/SkeletonLoaders';
+import DraftPreviewBanner, { DraftPreviewExpired } from '../../components/common/DraftPreview';
+import { DRAFT_PREVIEW_PARAM, takeDraftPreview } from '../../utils/draftPreview';
 import { HOME_PAGE_SLUG } from '../../config/pages';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 
@@ -99,17 +101,24 @@ export default function CmsPage({ slug: fixedSlug, prefix = '' }) {
   // admin list linked to as "the home page" (QA-56).
   const isHome = slug === HOME_PAGE_SLUG;
 
+  // "Preview changes" (prompt 51): the editor's unsaved page, handed over
+  // through this browser's storage and taken once — nothing is fetched.
+  const draftId = searchParams.get(DRAFT_PREVIEW_PARAM) || '';
+  const draftPage = useMemo(() => (draftId ? takeDraftPreview(draftId, 'page') : null), [draftId]);
+
   const {
-    data: page,
-    loading,
+    data: fetched,
+    loading: fetching,
     error,
     refetch,
   } = useApi(
     (signal) =>
       pageService.getBySlug(slug, previewToken ? { preview: previewToken } : undefined, { signal }),
     [slug, previewToken],
-    { enabled: Boolean(slug) && !reserved && !isHome }
+    { enabled: Boolean(slug) && !reserved && !isHome && !draftId }
   );
+  const page = draftId ? draftPage : fetched;
+  const loading = draftId ? false : fetching;
 
   // The prerender crawler saves this page once its primary query has settled
   // (§9.9) — settling on an error state counts, so a crawl never hangs on a
@@ -124,6 +133,7 @@ export default function CmsPage({ slug: fixedSlug, prefix = '' }) {
   }
   if (!slug || reserved) return <NotFound />;
   if (loading) return <CmsPageSkeleton />;
+  if (draftId && !draftPage) return <DraftPreviewExpired livePath={PATHS.page(slug)} />;
 
   // A failure that is *not* a 404 is an outage, not a missing page: answering
   // "page not found" for an address that exists would be a lie, and it would
@@ -144,8 +154,9 @@ export default function CmsPage({ slug: fixedSlug, prefix = '' }) {
     return <NotFound {...ERRORS.notFound.pages.cms} />;
   }
 
-  const previewing = Boolean(previewToken);
-  const draft = page.status !== 'published';
+  const previewing = Boolean(previewToken) && !draftPage;
+  // A preview of unsaved changes is never indexed, whatever the page's state.
+  const draft = page.status !== 'published' || Boolean(draftPage);
   const seo = page.seo ?? {};
   const description = seo.description || page.blocks?.[0]?.data?.subtitle || page.title;
 
@@ -160,6 +171,7 @@ export default function CmsPage({ slug: fixedSlug, prefix = '' }) {
         overrides={draft ? { noindex: true } : undefined}
       />
 
+      {draftPage ? <DraftPreviewBanner /> : null}
       {previewing ? (
         <div className={styles.previewBanner} role="status">
           <Icon icon="mdi:eye-outline" aria-hidden="true" />

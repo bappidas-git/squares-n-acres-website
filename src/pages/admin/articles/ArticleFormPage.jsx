@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import AdminTabs, { AdminTabPanel } from '../../../components/admin/AdminTabs';
+import ConflictDialog from '../../../components/admin/ConflictDialog';
+import DraftBanner from '../../../components/admin/DraftBanner';
 import ArticleChecksCard from './ArticleChecksCard';
 import ArticleFaqsCard from './ArticleFaqsCard';
 import ArticleImageCard from './ArticleImageCard';
@@ -16,6 +18,7 @@ import SeoSummaryCard from '../../../components/seo/SeoPanel/SeoSummaryCard';
 import PageHeader from '../../../components/admin/PageHeader';
 import RichTextField from '../../../components/editor/RichTextField';
 import SlugField from '../../../components/admin/SlugField';
+import SlugMoveNotice from '../../../components/admin/SlugMoveNotice';
 import { toSeoPaths } from '../../../components/seo/seoValues';
 import articleService from '../../../services/articleService';
 import useApi from '../../../hooks/useApi';
@@ -23,7 +26,6 @@ import useArticleForm, { EXCERPT_MAX_LENGTH, TITLE_MAX_LENGTH } from './useArtic
 import useArticleTaxonomy from './useArticleTaxonomy';
 import useBreakpoint from '../../../hooks/useBreakpoint';
 import {
-  Alert,
   Button,
   ConfirmDialog,
   EmptyState,
@@ -121,7 +123,13 @@ export default function ArticleFormPage() {
   } = useApi((signal) => articleService.adminGet(id, { signal }), [id], { enabled: isEdit });
 
   const taxonomy = useArticleTaxonomy();
-  const form = useArticleForm({ articleId: id ?? null, record, readOnly });
+  // A moved published article's 301 is a row of SEO → Redirects (prompt 51).
+  const form = useArticleForm({
+    articleId: id ?? null,
+    record,
+    readOnly,
+    canRedirect: can('seo', 'edit'),
+  });
 
   const [activeTab, setActiveTab] = useState('content');
   // "Generate from content" over an excerpt somebody wrote asks first: the
@@ -188,6 +196,7 @@ export default function ArticleFormPage() {
     draftOffer,
     restoreDraft,
     discardDraft,
+    isNew,
   } = form;
 
   // An article that is already live has one obvious write — save it — so "Save"
@@ -275,7 +284,14 @@ export default function ArticleFormPage() {
 
   const rail = (
     <div className={styles.rail}>
-      <ArticleStatusCard form={form} />
+      <ArticleStatusCard
+        form={form}
+        lookup={{
+          categories: taxonomy.categories,
+          authors: taxonomy.authors,
+          tags: taxonomy.tags,
+        }}
+      />
       <aside className={styles.card} aria-labelledby="article-seo">
         <h2 className={styles.cardTitle} id="article-seo">
           Search engines
@@ -324,7 +340,13 @@ export default function ArticleFormPage() {
             if (!readOnly) save('save');
           }}
         >
-          <DraftBanner draft={draftOffer} onRestore={restoreDraft} onDiscard={discardDraft} />
+          <DraftBanner
+            draft={draftOffer}
+            noun="article"
+            isNew={isNew}
+            onRestore={restoreDraft}
+            onDiscard={discardDraft}
+          />
 
           <AdminTabs
             label="Article sections"
@@ -368,6 +390,16 @@ export default function ArticleFormPage() {
                   checkSlug={checkArticleSlug}
                   onChange={(next) => setField('slug', next)}
                 />
+                {form.slugMove.moved ? (
+                  <SlugMoveNotice
+                    livePath={form.slugMove.livePath}
+                    noun="article"
+                    canRedirect={form.slugMove.canRedirect}
+                    checked={form.slugMove.redirect}
+                    disabled={readOnly || saving}
+                    onChange={form.slugMove.setRedirect}
+                  />
+                ) : null}
               </FormColumn>
 
               <FormColumn>
@@ -468,6 +500,15 @@ export default function ArticleFormPage() {
         {beside ? <div className={styles.railColumn}>{rail}</div> : null}
       </div>
 
+      <ConflictDialog
+        conflict={form.conflict}
+        noun="article"
+        busy={saving || form.conflictBusy}
+        onKeepEditing={form.dismissConflict}
+        onReload={form.reloadConflict}
+        onOverwrite={form.overwriteConflict}
+      />
+
       <ConfirmDialog
         open={replaceExcerpt}
         title="Replace the excerpt?"
@@ -522,44 +563,6 @@ function PrimaryAction({ form }) {
     >
       {scheduling ? 'Schedule' : 'Publish now'}
     </Button>
-  );
-}
-
-/**
- * "Restore unsaved changes from 5 minutes ago?"
- *
- * The form writes a draft to this browser every ten seconds while it is dirty,
- * so a closed tab, a reload or a crash does not cost an afternoon's writing. On
- * the next visit the draft is **offered**, never applied: the record on the
- * server is the truth until an editor says otherwise.
- *
- * @param {object} props
- * @param {{savedAt: string}|null} props.draft
- * @param {() => void} props.onRestore
- * @param {() => void} props.onDiscard
- */
-function DraftBanner({ draft, onRestore, onDiscard }) {
-  if (!draft) return null;
-
-  return (
-    <Alert
-      tone="warning"
-      title="Unsaved changes were found in this browser"
-      icon={<Icon icon="mdi:history" width="20" height="20" />}
-    >
-      <p>
-        A draft of this article was saved in this browser after the last time it reached the server.
-        Restore it, or discard it and keep what is saved.
-      </p>
-      <div className={styles.draftActions}>
-        <Button size="sm" onClick={onRestore}>
-          Restore the draft
-        </Button>
-        <Button size="sm" variant="ghost" onClick={onDiscard}>
-          Discard it
-        </Button>
-      </div>
-    </Alert>
   );
 }
 

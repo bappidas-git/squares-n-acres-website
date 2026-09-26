@@ -24,6 +24,12 @@ poor specification.
 
 ---
 
+## Category counts
+
+{{categoryCounts}}
+
+---
+
 ## Similar properties
 
 {{similarProperties}}

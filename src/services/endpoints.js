@@ -102,6 +102,25 @@ const PROPERTY_LIST_QUERY = {
 };
 
 /**
+ * What `GET /properties/counts` counts by (prompt 51): `by` names one or more,
+ * and any other name in it is ignored. The mock reads the list from here.
+ */
+const PROPERTY_COUNT_DIMENSIONS = [
+  'segment',
+  'propertyTypeId',
+  'listingType',
+  'constructionStatus',
+  'localityId',
+];
+
+/** `by`, plus the list's own filters, applied before counting. */
+const PROPERTY_COUNTS_QUERY = {
+  by: `csv:enum:${PROPERTY_COUNT_DIMENSIONS.join(',')}`,
+  q: 'string',
+  ...PROPERTY_FILTERS,
+};
+
+/**
  * The uniform admin CRUD group of §5.14 ("same CRUD + bulk, + check-slug where
  * slugged"): list, create, get, update, patch, remove, bulk and — for slugged
  * resources — checkSlug.
@@ -224,6 +243,19 @@ const properties = {
     response: 'PropertyList',
     example: 1,
   },
+  counts: {
+    key: 'properties.counts',
+    method: 'GET',
+    path: '/properties/counts',
+    auth: 'public',
+    module: 'properties',
+    description:
+      'Live listings per value of each dimension in `by`, under the listing filters; cacheable for five minutes',
+    query: PROPERTY_COUNTS_QUERY,
+    body: null,
+    response: 'PropertyCounts',
+    example: 1,
+  },
   featured: {
     key: 'properties.featured',
     method: 'GET',
@@ -242,8 +274,9 @@ const properties = {
     path: '/properties/slug/:slug',
     auth: 'public',
     module: 'properties',
-    description: 'Property details by slug; 404 when inactive',
-    query: {},
+    description:
+      'Property details by slug; 404 when inactive, unless `previewToken` is that listing’s share token',
+    query: { previewToken: 'string' },
     body: null,
     response: 'Property',
     example: 'lakeview-heights-3-bhk-whitefield',
@@ -817,10 +850,60 @@ const redirects = {
     path: '/redirects/resolve',
     auth: 'public',
     module: 'seo',
-    description: 'The active rule for one path, or 404; the only place hits are counted',
+    description: 'The active rule for one path, or 404; counts a hit, like a followed rule',
     query: { path: 'string' },
     body: null,
     response: 'Redirect',
+    example: null,
+  },
+  hit: {
+    key: 'redirects.hit',
+    method: 'POST',
+    path: '/redirects/:id/hit',
+    auth: 'public',
+    module: 'seo',
+    description:
+      'Count a visitor RedirectHandler sent on by an active rule; 204, rate-limited, 404 for an unknown or inactive rule (prompt 51)',
+    query: {},
+    body: null,
+    response: 'NoContent',
+    example: 1,
+  },
+};
+
+/** The site's 404 page reporting where it was reached (prompt 51). */
+const notFound = {
+  report: {
+    key: 'notFound.report',
+    method: 'POST',
+    path: '/not-found',
+    auth: 'public',
+    module: 'seo',
+    description:
+      'The 404 page reporting the address it was reached at; 204, rate-limited — the admin, the API, static files and redirected addresses are ignored (prompt 51)',
+    query: {},
+    body: 'notFound.report',
+    response: 'NoContent',
+    example: null,
+  },
+};
+
+/**
+ * The API's own liveness (prompt 51). The site never asks it; the smoke test's
+ * first request does — against the mock and against Laravel alike — and so
+ * does a load balancer's health check.
+ */
+const system = {
+  health: {
+    key: 'system.health',
+    method: 'GET',
+    path: '/health',
+    auth: 'public',
+    module: 'system',
+    description: 'Liveness: `{ status: "ok", time }` — the first request of the smoke test',
+    query: {},
+    body: null,
+    response: 'Health',
     example: null,
   },
 };
@@ -953,6 +1036,19 @@ const auth = {
     response: 'AuthSession',
     example: null,
   },
+  refresh: {
+    key: 'auth.refresh',
+    method: 'POST',
+    path: '/auth/refresh',
+    auth: 'user',
+    module: 'auth',
+    description:
+      'Keep the current session: the same token, valid for a full lifetime from now — the answer a sign-in gives (prompt 51)',
+    query: {},
+    body: null,
+    response: 'AuthSession',
+    example: null,
+  },
   logout: {
     key: 'auth.logout',
     method: 'POST',
@@ -1066,6 +1162,19 @@ const adminProperties = {
     body: null,
     response: 'Property',
     example: 'lakeview-heights-3-bhk-whitefield',
+  },
+  // A share link for a listing before it is published (prompt 51).
+  previewToken: {
+    key: 'adminProperties.previewToken',
+    method: 'POST',
+    path: '/admin/properties/:id/preview-token',
+    auth: 'manager',
+    module: 'properties',
+    description: 'A 24-hour share token and URL that opens an inactive property on the site',
+    query: {},
+    body: null,
+    response: 'PreviewToken',
+    example: 1,
   },
   duplicate: {
     key: 'adminProperties.duplicate',
@@ -1553,6 +1662,19 @@ const adminNewsletterSubscribers = {
     response: 'NewsletterSubscriberList',
     example: 1,
   },
+  patch: {
+    key: 'adminNewsletterSubscribers.patch',
+    method: 'PATCH',
+    path: '/admin/newsletter-subscribers/:id',
+    auth: 'manager',
+    module: 'content',
+    description:
+      'Mark a subscriber unsubscribed — or subscribed again; the status is all it changes (prompt 51)',
+    query: {},
+    body: 'newsletter.status',
+    response: 'NewsletterSubscriber',
+    example: 1,
+  },
   remove: {
     key: 'adminNewsletterSubscribers.remove',
     method: 'DELETE',
@@ -1756,6 +1878,32 @@ const adminSeo = {
     response: 'SeoOverviewRowList',
     example: null,
   },
+  notFound: {
+    key: 'adminSeo.notFound',
+    method: 'GET',
+    path: '/admin/seo/not-found',
+    auth: 'manager',
+    module: 'seo',
+    description:
+      'The addresses visitors reached that answered 404, one line per path, the most reached first (prompt 51)',
+    query: { page: 'int', perPage: 'int', q: 'string' },
+    body: null,
+    response: 'NotFoundPathList',
+    example: null,
+  },
+  dismissNotFound: {
+    key: 'adminSeo.dismissNotFound',
+    method: 'DELETE',
+    path: '/admin/seo/not-found/:id',
+    auth: 'manager',
+    module: 'seo',
+    description:
+      'Take a path off the 404 list — every day of it; a new visit puts it back (prompt 51)',
+    query: {},
+    body: null,
+    response: 'Null',
+    example: null,
+  },
 };
 
 const adminSettings = {
@@ -1850,6 +1998,8 @@ const endpoints = {
   settings,
   seo,
   redirects,
+  notFound,
+  system,
   sitemap,
   auth,
   dashboard,
@@ -1889,4 +2039,4 @@ const allEndpoints = () => Object.values(endpoints).flatMap((group) => Object.va
 /** One entry by its `group.action` key, or `undefined`. */
 const findEndpoint = (key) => allEndpoints().find((entry) => entry.key === key);
 
-module.exports = { endpoints, allEndpoints, findEndpoint };
+module.exports = { endpoints, allEndpoints, findEndpoint, PROPERTY_COUNT_DIMENSIONS };

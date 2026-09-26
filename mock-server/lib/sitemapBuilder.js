@@ -355,9 +355,9 @@ function renderSitemapIndex(children) {
  * @param {number} [now]
  * @returns {Array<{name: string, loc: string, lastmod: string|null}>}
  */
-function sitemapIndexChildren(data, now = Date.now()) {
+function sitemapIndexChildren(data, now = Date.now(), base = null) {
   const sets = sitemapSets(data, now);
-  const siteUrl = data.seoSettings?.siteUrl ?? '';
+  const siteUrl = base ?? data.seoSettings?.siteUrl ?? '';
 
   return CHILD_SITEMAPS.map((name) => ({
     name,
@@ -435,14 +435,18 @@ function renderRss(data, now = Date.now()) {
 
 /**
  * `robots.txt`: the stored document with `%siteurl%` resolved and one
- * `Sitemap:` line per child sitemap appended (§9.8).
+ * `Sitemap:` line per child sitemap appended (§9.8) — named on `base`, the
+ * address the request came in on when it is an allowed one
+ * (`lib/sitemapHost.js`), `seoSettings.siteUrl` otherwise.
  *
  * @param {object} data
+ * @param {string|null} [base]
  * @returns {string}
  */
-function renderRobots(data) {
+function renderRobots(data, base = null) {
   const siteUrl = String(data.seoSettings?.siteUrl ?? '').replace(/\/+$/, '');
   const stored = String(data.seoSettings?.robotsTxt ?? '').replace(/%siteurl%/gi, siteUrl);
+  const childBase = base ?? siteUrl;
 
   const lines = stored.split('\n');
   const declared = new Set(
@@ -451,7 +455,7 @@ function renderRobots(data) {
       .map((line) => line.split(':').slice(1).join(':').trim())
   );
 
-  const extra = CHILD_SITEMAPS.map((name) => absoluteUrl(siteUrl, `/sitemap-${name}.xml`))
+  const extra = CHILD_SITEMAPS.map((name) => absoluteUrl(childBase, `/sitemap-${name}.xml`))
     .filter((url) => !declared.has(url))
     .map((url) => `Sitemap: ${url}`);
 

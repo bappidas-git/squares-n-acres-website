@@ -17,7 +17,7 @@ import renderWith from '../../../../test-utils';
 
 jest.mock('../../../../services/newsletterService', () => ({
   __esModule: true,
-  default: { adminList: jest.fn(), remove: jest.fn() },
+  default: { adminList: jest.fn(), patch: jest.fn(), remove: jest.fn() },
 }));
 
 const ROW = {
@@ -47,6 +47,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   newsletterService.adminList.mockResolvedValue(envelope([ROW]));
   newsletterService.remove.mockResolvedValue({ data: null, message: 'Deleted' });
+  newsletterService.patch.mockResolvedValue({ data: { ...ROW, status: 'unsubscribed' } });
 });
 
 describe('NewsletterSubscribersPage (QA-61)', () => {
@@ -59,9 +60,10 @@ describe('NewsletterSubscribersPage (QA-61)', () => {
     expect(call).toMatchObject({ sort: 'createdAt', order: 'desc', q: 'tan' });
     expect(screen.queryByText(/bogus/)).toBeNull();
 
+    // No status the list can show, so the file is the subscribed addresses (prompt 51).
     expect(
       exportParamsOf(sanitiseSubscriberParams({ status: 'bogus', q: 'tan', page: 2 }))
-    ).toEqual({ q: 'tan' });
+    ).toEqual({ q: 'tan', status: 'subscribed' });
   });
 
   it('says "removed", and steps back a page when it removes the last row of one', async () => {
@@ -100,5 +102,39 @@ describe('NewsletterSubscribersPage (QA-61)', () => {
     render('/admin/newsletter?page=4');
 
     expect(await screen.findByRole('button', { name: 'Go to first page' })).toBeInTheDocument();
+  });
+});
+
+describe('NewsletterSubscribersPage — who receives it (prompt 51)', () => {
+  it('exports the subscribed addresses unless a status is chosen, and says so', async () => {
+    render();
+    expect(
+      await screen.findByRole('button', { name: 'Export subscribed (CSV)' })
+    ).toBeInTheDocument();
+    expect(exportParamsOf({})).toEqual({ status: 'subscribed' });
+    expect(exportParamsOf({ status: 'unsubscribed' })).toEqual({ status: 'unsubscribed' });
+  });
+
+  it('marks somebody unsubscribed, and reads the list again', async () => {
+    render();
+    await userEvent.click(await screen.findByRole('button', { name: 'Mark unsubscribed' }));
+
+    await waitFor(() =>
+      expect(newsletterService.patch).toHaveBeenCalledWith(12, { status: 'unsubscribed' })
+    );
+    expect(
+      await screen.findByText('“tanvi@example.com” is unsubscribed, and leaves the export.')
+    ).toBeInTheDocument();
+    expect(newsletterService.adminList).toHaveBeenCalledTimes(2);
+  });
+
+  it('offers to subscribe again somebody who stopped', async () => {
+    newsletterService.adminList.mockResolvedValue(envelope([{ ...ROW, status: 'unsubscribed' }]));
+    render();
+    await userEvent.click(await screen.findByRole('button', { name: 'Mark subscribed again' }));
+
+    await waitFor(() =>
+      expect(newsletterService.patch).toHaveBeenCalledWith(12, { status: 'subscribed' })
+    );
   });
 });

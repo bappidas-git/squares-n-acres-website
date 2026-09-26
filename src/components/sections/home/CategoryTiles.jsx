@@ -17,9 +17,12 @@ import { formatNumber } from '../../../utils/format';
  * nothing at all, so the "Lease office space" tile used to return an empty
  * search (BUG-10, D92).
  *
- * The counts come from `GET /properties?perPage=1` (`meta.total`), cached for
- * five minutes. A count that has not arrived, or whose request failed, is not
- * drawn: no tile ever says "0" when the truth is "we do not know yet" (§7).
+ * The counts come from `GET /properties/counts` — two requests for this row
+ * and the type grid below it together, cached for five minutes — and from
+ * `GET /properties?perPage=1` per tile against an API without that endpoint
+ * (`useCategoryCounts`). A count that has not arrived, or whose request
+ * failed, is not drawn: no tile ever says "0" when the truth is "we do not
+ * know yet" (§7).
  */
 
 /** The tiles, with the filters each one counts. */

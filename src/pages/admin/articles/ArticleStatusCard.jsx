@@ -2,7 +2,7 @@ import { Icon } from '@iconify/react';
 
 import { Alert, Button, DateField, RadioGroup, SwitchField } from '../../../components/ui';
 import { ARTICLE_STATUS } from '../../../config/enums';
-import { formatDate, formatDateTime } from '../../../utils/format';
+import { formatDate, formatDateTime, formatRelative } from '../../../utils/format';
 
 import styles from './ArticleFormPage.module.css';
 
@@ -23,9 +23,22 @@ import styles from './ArticleFormPage.module.css';
  * @param {object} props
  * @param {ReturnType<import('./useArticleForm').default>} props.form
  */
-export default function ArticleStatusCard({ form }) {
-  const { values, errors, setField, readOnly, saving, previewing, preview, publicPath, isNew } =
-    form;
+export default function ArticleStatusCard({ form, lookup }) {
+  const {
+    values,
+    errors,
+    setField,
+    readOnly,
+    saving,
+    previewing,
+    preview,
+    previewChanges,
+    publicPath,
+    isNew,
+    record,
+  } = form;
+  // A published article is previewed without saving it live (prompt 51).
+  const liveNow = !isNew && record?.status === 'published';
 
   const status = values.status ?? 'draft';
   const scheduled = status === 'scheduled';
@@ -98,16 +111,28 @@ export default function ArticleStatusCard({ form }) {
       />
 
       <div className={styles.cardActions}>
-        <Button
-          variant="outline"
-          size="sm"
-          loading={previewing}
-          disabled={saving || readOnly}
-          icon={<Icon icon="mdi:eye-outline" width="16" height="16" />}
-          onClick={preview}
-        >
-          Preview
-        </Button>
+        {liveNow ? (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={saving || readOnly}
+            icon={<Icon icon="mdi:eye-outline" width="16" height="16" />}
+            onClick={() => previewChanges(lookup)}
+          >
+            Preview changes
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            loading={previewing}
+            disabled={saving || readOnly}
+            icon={<Icon icon="mdi:eye-outline" width="16" height="16" />}
+            onClick={() => preview()}
+          >
+            Preview
+          </Button>
+        )}
         {published && publicPath && !isNew ? (
           <Button
             variant="ghost"
@@ -121,10 +146,19 @@ export default function ArticleStatusCard({ form }) {
           </Button>
         ) : null}
       </div>
+      {!isNew && values.updatedAt ? (
+        <p className={styles.cardNote}>
+          {`Last saved ${formatRelative(values.updatedAt)}${
+            values.updatedByName ? ` by ${values.updatedByName}` : ''
+          }.`}
+        </p>
+      ) : null}
       <p className={styles.cardNote}>
-        {isNew
-          ? 'A preview saves the article first, then opens it behind a private link that lasts 24 hours.'
-          : 'The preview link lasts 24 hours and works while the article is still a draft.'}
+        {liveNow
+          ? 'Shows your unsaved changes on the live page in a new tab — in this browser only, and once. Nothing is saved; visitors keep seeing the saved article.'
+          : isNew
+            ? 'A preview saves the article first, then opens it behind a private link that lasts 24 hours.'
+            : 'The preview link lasts 24 hours and works while the article is still a draft.'}
       </p>
     </aside>
   );

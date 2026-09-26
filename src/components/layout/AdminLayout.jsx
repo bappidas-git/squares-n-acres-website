@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Drawer } from '@mui/material';
 import { Outlet, useLocation } from 'react-router-dom';
 
@@ -8,13 +8,23 @@ import ErrorBoundary from '../common/ErrorBoundary';
 import Seo from '../seo/Seo';
 import useBreakpoint from '../../hooks/useBreakpoint';
 import { BRAND } from '../../config/site';
-import { LeadNotificationsProvider } from '../../contexts/LeadNotificationsContext';
+import {
+  LeadNotificationsProvider,
+  useLeadNotifications,
+} from '../../contexts/LeadNotificationsContext';
 import PATHS from '../../routes/paths';
 import { PageLoader } from '../common/SkeletonLoaders';
 import { getAdminPageTitle } from '../../routes/adminRouteConfig';
 import { getItem, setItem } from '../../utils/storage';
+import { useAdminAuth } from '../../contexts/AdminAuthContext';
 
 import styles from './AdminLayout.module.css';
+
+/**
+ * "Your session ends in 4 minutes" is only ever drawn in a session's last five
+ * minutes, so it is fetched then and not with the entry chunk (prompt 51).
+ */
+const SessionExpiryNotice = lazy(() => import('./SessionExpiryNotice'));
 
 /**
  * The admin shell: sidebar, topbar and the scrolling page canvas.
@@ -62,6 +72,11 @@ const AdminShell = () => {
   const mainRef = useRef(null);
 
   const title = getAdminPageTitle(location.pathname);
+  // The tab says how many new leads wait while the bell has news — "(3) Leads
+  // — Admin" in a background tab — and stops once they are seen (prompt 51).
+  const { newLeadCount, hasUnseen } = useLeadNotifications();
+  const waiting = hasUnseen && newLeadCount > 0 ? `(${newLeadCount}) ` : '';
+  const { expiringSoon } = useAdminAuth();
 
   // The shell stays mounted from one screen to the next (`RouteBoundary`), and
   // the sidebar keeps its scroll position with it. What a remount used to do
@@ -91,7 +106,7 @@ const AdminShell = () => {
     <div className={styles.shell}>
       <Seo
         type="admin"
-        title={`${title} — Admin`}
+        title={`${waiting}${title} — Admin`}
         description={`${title} — ${BRAND.name} admin panel.`}
       />
 
@@ -135,6 +150,11 @@ const AdminShell = () => {
           onToggleCollapse={toggleCollapsed}
           onOpenDrawer={() => setDrawerOpen(true)}
         />
+        {expiringSoon ? (
+          <Suspense fallback={null}>
+            <SessionExpiryNotice />
+          </Suspense>
+        ) : null}
 
         <main ref={mainRef} id="admin-main" tabIndex={-1} className={styles.main}>
           <div
