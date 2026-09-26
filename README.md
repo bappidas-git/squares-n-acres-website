@@ -130,7 +130,7 @@ Chrome; the ones marked **API** need `npm run mock` running in another terminal.
 | Script                    | What it does                                                          |
 | ------------------------- | --------------------------------------------------------------------- |
 | `npm run build`           | Production build into `build/`, no source maps, then `postbuild`      |
-| `npm run build:ci`        | `build` with `CI=true`, so a warning fails the build                   |
+| `npm run build:ci`        | `build` with `CI=true`, so a warning fails the build; then `postbuild:ci`, the same step |
 | `npm run build:prerender` | **browser, API** — `build`, then writes each public URL's rendered HTML |
 | `npm run analyze`         | Bundle report: chunk sizes against the performance budget              |
 
@@ -139,10 +139,10 @@ Chrome; the ones marked **API** need `npm run mock` running in another terminal.
 | Script                | What it does                                                        |
 | --------------------- | ------------------------------------------------------------------- |
 | `npm test`            | Jest in watch mode                                                  |
-| `npm run test:ci`     | Jest once, no watch (3 344 tests)                                   |
+| `npm run test:ci`     | Jest once, no watch (4 596 tests)                                   |
 | `npm run test:mock`   | `node --test` over the mock server's own tests                      |
 | `npm run test:scripts`| `node --test` over the repository tooling's tests                   |
-| `npm run smoke`       | **API** — walks the endpoint registry against a running API         |
+| `npm run smoke`       | **API** — walks the endpoint registry against a running API; writes only to this machine unless `--allow-writes` (staging) |
 | `npm run e2e`         | Playwright end-to-end specs (optional; needs Node ≥ 20 and browsers)|
 
 ### Checking
@@ -158,8 +158,8 @@ Chrome; the ones marked **API** need `npm run mock` running in another terminal.
 | `npm run check:traces:report` | The same scan, totals only, always exits 0                            |
 | `npm run check:endpoints`     | Fails when a component builds a URL instead of using the registry     |
 | `npm run check:contrast`      | Asserts every text/background pair meets WCAG AA                      |
-| `npm run check:env`           | Asserts `.env.example` documents every variable the code reads        |
-| `npm run check:guidelines`    | Asserts the handover package covers every endpoint and model          |
+| `npm run check:env`           | Asserts `.env.example` documents every variable the code reads, and that builds publish no source maps |
+| `npm run check:guidelines`    | Asserts the handover package covers every endpoint and model, and that its `smoke/` matches its sources |
 | `npm run validate:seed`       | Validates `db.json` against the model descriptors                     |
 | `npm run check:links`         | **browser** — follows every internal link and reports the broken ones |
 | `npm run check:jsonld`        | **browser** — parses and validates every page's structured data       |
@@ -173,6 +173,7 @@ Chrome; the ones marked **API** need `npm run mock` running in another terminal.
 | `npm run seed:build`                    | Rebuilds `db.json` deterministically from `scripts/seed/`        |
 | `npm run generate:brand-assets`         | Re-downloads the brand PNGs into `public/brand/`                 |
 | `npm run generate:backend-guidelines`   | **API** — regenerates `backend_developer_guidelines/`            |
+| `npm run generate:smoke-bundle`         | Rebuilds `backend_developer_guidelines/smoke/` alone             |
 | `npm run eject`                         | CRA eject — **not used**, and it cannot be undone                |
 
 `check:all` is the one to run before every commit:
@@ -307,7 +308,7 @@ a byte-identical file and a change to one data module produces a diff you can re
 ## Testing
 
 ```bash
-npm run test:ci      # 3 344 Jest tests over src/
+npm run test:ci      # 4 596 Jest tests over src/
 npm run test:mock    # the mock server's own node:test suites
 npm run test:scripts # the repository tooling's node:test suites
 ```
@@ -319,18 +320,24 @@ Two suites need a server, and are run explicitly:
 
 ```bash
 npm run mock         # terminal 1
-npm run smoke        # terminal 2 — 282 checks over the endpoint registry
+npm run smoke        # terminal 2 — 335 checks over the endpoint registry
 npm run e2e          # Playwright (optional; installs its own browsers)
 ```
 
-`smoke` is also the parity tool — it can walk any base URL, and compare two:
+`smoke` is also the parity tool — it can walk any base URL, and compare two. It **writes
+only to this machine**: against any other host it runs the read-only subset and says what it
+skipped, unless `--allow-writes` is passed — which is for staging, never production:
 
 ```bash
-npm run smoke -- --baseUrl=https://api.squaresnacres.com/api
-npm run smoke -- --baseUrl=https://api.squaresnacres.com/api --compare=http://localhost:4000/api
+npm run smoke -- --baseUrl=https://staging.example/api --allow-writes     # staging: the full walk
+npm run smoke -- --baseUrl=<production API> --email=<admin> --password=<…> \
+  --managerEmail=<manager> --managerPassword=<…> --salesEmail=<sales> --salesPassword=<…>
+npm run smoke -- --baseUrl=<production API> --email=<admin> --password=<…> \
+  --compare=http://localhost:4000/api --compareEmail=admin@squaresnacres.com --comparePassword=Admin@123
 ```
 
 An empty difference table is the signal that the frontend cannot tell the two backends apart.
+The same walk ships in the handover package as `smoke/`, runnable with Node alone.
 
 ---
 
@@ -343,11 +350,13 @@ npm run analyze        # chunk sizes against the 300 KB gzip budget for main.js
 ```
 
 The build is a static site. Any web server can host it, as long as unknown paths are
-rewritten to `index.html` (`07_DEPLOYMENT.md` has the Nginx block).
+rewritten to the SPA shell — `index.spa.html` after `build:prerender`, `index.html` after a
+plain build (`07_DEPLOYMENT.md` has the Laravel fallback and the Nginx block).
 
 **No source maps.** `build` and `build:ci` set `GENERATE_SOURCEMAP=false`, so the deployed
 `static/` holds no `.map` files and the original source is not served to anyone who asks.
-For a debug build, run `react-scripts build` yourself with the variable unset.
+For a debug build, run `npx react-scripts build` yourself with the variable unset — and
+never deploy it.
 
 **`postbuild` settles `build/robots.txt`.** npm runs `scripts/postbuild.js` after `build` and
 `build:ci`; it reads `REACT_APP_API_URL` and `REACT_APP_SITE_URL` as the build does (the
@@ -384,24 +393,31 @@ there is no hydration contract to break.
 
 ## Deployment
 
-The production build is a static site served by any web server. The full procedure — the
-Nginx server blocks for the site and the API, the security headers, the release-directory
-layout, the rollback and the API's own go-live list — is in
+The production build is a static site. The client hosts on **Cloudways**, and
+[`docs/DEPLOYMENT_CLOUDWAYS.md`](./docs/DEPLOYMENT_CLOUDWAYS.md) is the frontend's half of
+it: the two layouts — one Laravel application serving the API and this build on one host
+(recommended), or two applications on two hosts — the `.env.production` lines, the build,
+what to upload where and what `postbuild` did to `robots.txt`. The full procedure — the
+Laravel application, `.htaccess`, cron, queue, Varnish, the go-live list, and the
+self-managed Nginx alternative — is in
 [`backend_developer_guidelines/07_DEPLOYMENT.md`](./backend_developer_guidelines/07_DEPLOYMENT.md).
 
 The frontend's release list is [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md).
 
-One thing the web server must do, beyond serving files: proxy `/robots.txt`,
-`/sitemap*.xml`, `/rss.xml` and `/llms.txt` to the API, which generates them from live data.
-Serving the placeholder `public/robots.txt` in production would be a launch bug.
+One thing the host must do, beyond serving files: answer `/robots.txt`, `/sitemap*.xml`,
+`/rss.xml` and `/llms.txt` from the API, which generates them from live data — as Laravel
+routes on one host, or through the `robots.txt` that `postbuild` writes (and a proxy, on
+Nginx) on two. Serving the placeholder `public/robots.txt` in production would be a launch
+bug.
 
 ### Switch-over
 
 Pointing the site at the Laravel API is **one line and a rebuild**:
 
 ```bash
-# .env.production, on the build machine
-REACT_APP_API_URL=https://api.squaresnacres.com/api
+# .env.production, on the build machine — one of the two
+REACT_APP_API_URL=https://www.squaresnacres.com/api   # the site and the API on one host
+REACT_APP_API_URL=https://api.squaresnacres.com/api   # the API on a host of its own
 ```
 
 ```bash
@@ -415,7 +431,10 @@ Reverting to the mock is the same line in reverse.
 
 Before cutting over, prove the new API answers the same contract with
 `npm run smoke -- --compare=…` as under [Testing](#testing). An empty difference table is
-the go signal.
+the go signal. Against any host but this machine the smoke test only reads unless
+`--allow-writes` is passed — that is for staging; production gets the read checks and the
+comparison, with `--email`/`--password` for its admin and `--compareEmail`/`--comparePassword`
+for the mock once the seed passwords are rotated.
 
 ---
 
@@ -433,8 +452,10 @@ it is **generated** — never edited by hand:
 | `04_DATA_MODELS.md`, `schema.sql`                     | every collection and field; the MySQL 8 DDL                                         |
 | `05_BUSINESS_RULES.md`                                | the formulas: search, facets, leads, dashboard, exports, guards                     |
 | `06_SEO_SITEMAP_ROBOTS.md`                            | the nine documents the API serves to crawlers                                       |
-| `07_DEPLOYMENT.md`                                    | environment, Nginx, security headers, switch-over, rollback, go-live                |
-| `08_TESTING_AND_PARITY.md`                            | how to prove the two backends answer the same                                       |
+| `07_DEPLOYMENT.md`                                    | Cloudways (one host or two), the self-managed Nginx alternative, go-live            |
+| `08_TESTING_AND_PARITY.md`                            | how to prove the two backends answer the same — and what never runs on production   |
+| `09_MEDIA_AND_EMAIL.md`                               | Cloudinary's server side, the lead e-mail, the two planned additions                |
+| `smoke/`                                              | the smoke test with everything it needs: `node smoke/smoke-api.js`, no install      |
 | `postman_collection.json`, `postman_environment.json` | every endpoint as a request, with tests and saved responses                         |
 | `openapi.yaml`                                        | OpenAPI 3.1 for tooling                                                             |
 | `db.json`, `seed-mapping.md`                          | the seed, and how to import it into MySQL                                           |
@@ -450,8 +471,11 @@ npm run check:guidelines                # registry ↔ docs ↔ Postman ↔ Open
 **To change the package, change its sources.** Prose lives in `docs/backend-notes/*.md`;
 facts live in `src/services/endpoints.js`, `src/services/schemas/`, `src/config/enums.js`
 and `mock-server/schemas/models.js`. An edit to a generated file is thrown away by the next
-run. The generator is deterministic — two runs produce no diff, and the only line that moves
-between commits is `generatedFrom: <commit>`.
+run. The generator is deterministic — two runs against a fresh mock produce no diff, and the
+only line that moves between commits is `generatedFrom: <commit>`. It refuses to write when
+a `##` section of the notes reaches no template, when the Postman collection is not green
+against the mock, or outside a git checkout. `npm run generate:smoke-bundle` rebuilds
+`smoke/` alone.
 
 ---
 

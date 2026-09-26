@@ -202,7 +202,12 @@ describe('the registry', () => {
 describe('every entry', () => {
   it('carries the full entry shape', () => {
     all.forEach((entry) => {
-      expect(Object.keys(entry).sort()).toEqual(
+      // `status` is the one optional key: it names a success that is not 200.
+      expect(
+        Object.keys(entry)
+          .filter((key) => key !== 'status')
+          .sort()
+      ).toEqual(
         [
           'auth',
           'body',
@@ -220,6 +225,29 @@ describe('every entry', () => {
       expect(entry.response.length).toBeGreaterThan(0);
       expect(typeof entry.query).toBe('object');
     });
+  });
+
+  // Prompt 51: the smoke test, the Postman tests and the OpenAPI responses read
+  // a success status from the registry, so an entry that has one says so — and
+  // says nothing when it is the 200 every other entry answers.
+  it('declares a success status other than 200 exactly where one is answered', () => {
+    const declared = Object.fromEntries(
+      all.filter((entry) => 'status' in entry).map((entry) => [entry.key, entry.status])
+    );
+    Object.values(declared).forEach((status) => expect([201, 204]).toContain(status));
+    expect(declared).toMatchObject({
+      'leads.create': 201,
+      'jobs.apply': 201,
+      'adminProperties.create': 201,
+      'adminProperties.duplicate': 201,
+      'adminLeads.create': 201,
+      'redirects.hit': 204,
+      'notFound.report': 204,
+    });
+    // A POST that files a new record of an admin resource answers 201.
+    all
+      .filter((entry) => entry.key.startsWith('admin') && entry.key.endsWith('.create'))
+      .forEach((entry) => expect([entry.key, entry.status]).toEqual([entry.key, 201]));
   });
 
   it('uses an allowed method', () => {

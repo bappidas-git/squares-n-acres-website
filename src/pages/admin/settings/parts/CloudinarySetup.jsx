@@ -135,12 +135,13 @@ export default function CloudinarySetup({
             file.
           </li>
           <li>
-            Set the preset’s <strong>folder</strong> to <code>sna</code> — the library files each
-            upload under <code>sna/&lt;folder&gt;</code>.
+            Leave the preset’s <strong>folder</strong> empty. The library files each upload under{' '}
+            <code>sna/&lt;folder&gt;</code> itself, and a folder set on the preset would replace
+            that path for every file.
           </li>
           <li>
-            Recommended: cap the file size at about 10 MB (100 MB if you upload videos) and limit
-            the allowed formats to the ones this library takes: {FORMATS}.
+            Recommended: limit the allowed formats to the ones this library takes: {FORMATS}. A
+            preset cannot cap file sizes — the library checks them before it uploads.
           </li>
           <li>
             Save the preset, paste the cloud name and the preset’s name into the two boxes above,

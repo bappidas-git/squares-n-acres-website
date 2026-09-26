@@ -18,6 +18,11 @@
  *      `.env.example` documents
  *   5. required variables ship with a working local value; optional ones are
  *      empty or carry their documented default
+ *   6. the production builds publish no source maps — `build` and `build:ci`
+ *      set `GENERATE_SOURCEMAP=false`, and no committed env file turns them
+ *      back on (prompt 51: nothing did, and every `.map` would have shipped)
+ *   7. every variable the end-to-end suite reads is documented in
+ *      `e2e/README.md`, which is where somebody running it looks (prompt 51)
  *
  * It reads only files, so it needs no server and belongs in `check:all`.
  */
@@ -30,6 +35,13 @@ const EXAMPLE = path.join(ROOT, '.env.example');
 
 /** The trees whose `process.env` reads must be documented. */
 const SCANNED = ['src', 'mock-server', 'scripts'];
+
+/** The end-to-end suite: its variables are documented in its own README. */
+const E2E_SCANNED = ['e2e'];
+const E2E_README = path.join(ROOT, 'e2e', 'README.md');
+
+/** The npm scripts that build what is deployed, and must publish no source map. */
+const PRODUCTION_BUILDS = ['build', 'build:ci'];
 
 const SCANNED_EXTENSIONS = new Set(['.js', '.jsx']);
 
@@ -119,11 +131,11 @@ function sourceFiles(dir, found = []) {
  * Matches the dotted and the bracketed form of a `process.env` read alike.
  * (Written without a literal example on purpose: this file is scanned too.)
  */
-function readVariables() {
+function readVariables(dirs = SCANNED) {
   const pattern = /process\.env(?:\.([A-Za-z_][A-Za-z0-9_]*)|\[\s*['"]([^'"]+)['"]\s*\])/g;
   const reads = new Map();
 
-  for (const dir of SCANNED) {
+  for (const dir of dirs) {
     for (const file of sourceFiles(path.join(ROOT, dir))) {
       const text = fs.readFileSync(file, 'utf8');
       for (const match of text.matchAll(pattern)) {
@@ -251,6 +263,34 @@ function main() {
     MUST_BE_EMPTY,
     (name) => declared.has(name) && declared.get(name).value === '',
     (name) => `${name} is "${declared.get(name)?.value ?? '(absent)'}", expected empty`
+  );
+
+  /* 6 — no source map is published */
+  const scripts =
+    JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).scripts ?? {};
+  checkAll(
+    'production builds set GENERATE_SOURCEMAP=false',
+    PRODUCTION_BUILDS,
+    (name) => /\bGENERATE_SOURCEMAP=false\b/.test(scripts[name] ?? ''),
+    (name) => `"${name}": ${scripts[name] ?? '(absent)'}`
+  );
+  const mapsOn = ['.env.example', '.env.development', '.env.production.example']
+    .map((name) => [name, parseEnv(path.join(ROOT, name)).get('GENERATE_SOURCEMAP')?.value])
+    .filter(([, value]) => value !== undefined && value !== 'false');
+  check(
+    'no env file turns source maps back on',
+    mapsOn.length === 0,
+    mapsOn.map(([name, value]) => `${name} sets GENERATE_SOURCEMAP=${value}`).join('; ')
+  );
+
+  /* 7 — the end-to-end suite's variables are where its readers look */
+  const e2eReadme = fs.existsSync(E2E_README) ? fs.readFileSync(E2E_README, 'utf8') : '';
+  const e2eReads = readVariables(E2E_SCANNED);
+  checkAll(
+    'variables the e2e suite reads, documented in e2e/README.md',
+    [...e2eReads.keys()].filter((name) => !TOOLCHAIN.has(name)).sort(),
+    (name) => e2eReadme.includes(`\`${name}\``),
+    (name) => `${name} (read in ${[...e2eReads.get(name)].slice(0, 2).join(', ')})`
   );
 
   report(documentable.length, declared.size);

@@ -5,14 +5,27 @@
 > generatedFrom: {{generatedFrom}}
 
 The promise of this package is that the frontend cannot tell the mock and the
-Laravel API apart. Here is how to prove it — and the tooling that does most of
-the work for you.
+Laravel API apart. Here is how to prove it — the tooling that does most of the
+work for you, and the one rule it enforces: the checks that write run on your
+machine and on staging, and production only ever gets the ones that read.
 
 ---
 
 ## Running both side by side
 
 {{runningBoth}}
+
+---
+
+## The smoke bundle
+
+{{theSmokeBundle}}
+
+---
+
+## Write safety
+
+{{writeSafety}}
 
 ---
 

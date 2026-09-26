@@ -11,12 +11,15 @@
  *
  *   1. every file of BDG-02 exists and is not empty
  *   2. every registry entry appears in `03_ENDPOINTS.md`, the Postman
- *      collection and `openapi.yaml`
+ *      collection and `openapi.yaml` — and nothing else does: each counts
+ *      exactly the registry's endpoints
  *   3. every collection appears in `04_DATA_MODELS.md` and `schema.sql`
  *   4. every `##` heading of `docs/backend-notes/` reached the package
  *   5. every endpoint carries a captured example
  *   6. `db.json` is byte-identical to the repository seed
  *   7. nothing carries a stale brand trace or an undocumented host
+ *   8. `smoke/` is exactly what `generate-smoke-bundle.js` writes (prompt 51)
+ *   9. every document names the one git commit it was generated from
  *
  * It reads only files, so it needs no server and belongs in `check:all`.
  */
@@ -30,6 +33,7 @@ const { MODELS } = require('../mock-server/schemas/models');
 const { MAPPING } = require('./lib/guidelines/sql');
 const { tableOf } = require('./lib/guidelines/rules');
 const { readNotes } = require('./lib/guidelines/merge');
+const { bundleFiles } = require('./generate-smoke-bundle');
 
 const ROOT = path.resolve(__dirname, '..');
 const OUT = path.join(ROOT, 'backend_developer_guidelines');
@@ -47,6 +51,10 @@ const REQUIRED_FILES = [
   '06_SEO_SITEMAP_ROBOTS.md',
   '07_DEPLOYMENT.md',
   '08_TESTING_AND_PARITY.md',
+  '09_MEDIA_AND_EMAIL.md',
+  'smoke/README.md',
+  'smoke/package.json',
+  'smoke/smoke-api.js',
   'postman_collection.json',
   'postman_environment.json',
   'openapi.yaml',
@@ -86,8 +94,12 @@ const ALLOWED_HOSTS = new Set([
   'api.squaresnacres.com',
 ]);
 
-/** Files whose content is data rather than prose, and is checked differently. */
-const DATA_FILES = new Set(['db.json']);
+/**
+ * Files whose content is data or code rather than prose, and is checked
+ * differently: the seed byte for byte (6), the smoke bundle's code against its
+ * sources (8).
+ */
+const DATA_FILES = new Set(['db.json', 'smoke/package.json', 'smoke/smoke-api.js']);
 
 /* ------------------------------------------------------------------ *
  * Reporting
@@ -166,6 +178,39 @@ function main() {
     'operations in openapi.yaml',
     endpoints.map((e) => e.key),
     (key) => openapi.includes(`operationId: ${key}`)
+  );
+
+  // …and nothing the registry does not have: each counts exactly its endpoints.
+  const keys = new Set(endpoints.map((e) => e.key));
+  const counted = {
+    '03_ENDPOINTS.md': new Set(
+      [...endpointsDoc.matchAll(/^### (GET|POST|PUT|PATCH|DELETE) (\S+)$/gm)].map(
+        (match) => `${match[1]} ${match[2]}`
+      )
+    ).size,
+    'openapi.yaml': new Set([...openapi.matchAll(/operationId: (\S+)/g)].map((match) => match[1]))
+      .size,
+    'postman_collection.json': new Set(
+      [...postmanText.matchAll(/\*\*Registry key\*\* `([^`]+)`/g)].map((match) => match[1])
+    ).size,
+  };
+  const strays = [...postmanText.matchAll(/\*\*Registry key\*\* `([^`]+)`/g)]
+    .map((match) => match[1])
+    .concat([...openapi.matchAll(/operationId: (\S+)/g)].map((match) => match[1]))
+    .filter((key) => !keys.has(key));
+  const wrongCounts = Object.entries(counted).filter(([, count]) => count !== endpoints.length);
+  const readmeCount = read('README.md').includes(
+    `\`src/services/endpoints.js\` — ${endpoints.length} entries`
+  );
+  const countProblems = [
+    ...wrongCounts.map(([name, count]) => `${name} has ${count}`),
+    ...[...new Set(strays)].slice(0, 6).map((key) => `${key} is not in the registry`),
+    ...(readmeCount ? [] : ['README.md states another count']),
+  ];
+  check(
+    `endpoint count is the registry's (${endpoints.length}) in every document`,
+    countProblems.length === 0,
+    countProblems.join('; ')
   );
 
   /* 3 — every collection, twice over */
@@ -269,7 +314,54 @@ function main() {
   }
   check('no stale traces or undocumented hosts', stale.length === 0, stale.slice(0, 8).join('; '));
 
+  /* 8 — the smoke bundle is what the generator writes, and nothing else */
+  const expectedBundle = bundleFiles();
+  const bundleDirectory = path.join(OUT, 'smoke');
+  const onDisk = listFiles(bundleDirectory);
+  const bundleProblems = [
+    ...[...expectedBundle.keys()]
+      .filter((name) => !onDisk.includes(name))
+      .map((name) => `missing ${name}`),
+    ...onDisk.filter((name) => !expectedBundle.has(name)).map((name) => `unexpected ${name}`),
+    ...[...expectedBundle.entries()]
+      .filter(([name]) => onDisk.includes(name))
+      .filter(
+        ([name, contents]) => fs.readFileSync(path.join(bundleDirectory, name), 'utf8') !== contents
+      )
+      .map(([name]) => `stale ${name}`),
+  ];
+  check(
+    `smoke/ matches its sources (${expectedBundle.size} files)`,
+    bundleProblems.length === 0,
+    bundleProblems.slice(0, 8).join('; ')
+  );
+
+  /* 9 — one commit, named everywhere */
+  const commits = REQUIRED_FILES.filter(
+    (name) => name.endsWith('.md') && !name.startsWith('smoke/')
+  )
+    .map((name) => [name, /generatedFrom: (\S+)/.exec(read(name))?.[1] ?? '(none)'])
+    .concat([['openapi.yaml', /generatedFrom: (\S+)/.exec(openapi)?.[1] ?? '(none)']]);
+  const named = new Set(commits.map(([, commit]) => commit));
+  check(
+    'every document names one git commit',
+    named.size === 1 && commits.every(([, commit]) => /^[0-9a-f]{7,40}$/.test(commit)),
+    [...named].join(', ')
+  );
+
   report();
+}
+
+/** Every file under a directory, relative to it, with `/` separators. */
+function listFiles(directory, prefix = '') {
+  if (!fs.existsSync(directory)) return [];
+  return fs
+    .readdirSync(directory, { withFileTypes: true })
+    .flatMap((entry) =>
+      entry.isDirectory()
+        ? listFiles(path.join(directory, entry.name), `${prefix}${entry.name}/`)
+        : [`${prefix}${entry.name}`]
+    );
 }
 
 /** The text of one `###` section of a Markdown document. */

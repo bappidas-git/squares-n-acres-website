@@ -124,7 +124,7 @@ is the client's real business. Each has to be replaced or deleted.
 | Meta (Facebook) pixel ID | empty | Admin → Settings → Integrations | no | Only if the client runs Meta ads. It is a third-party tracker — the privacy policy (§4) has to mention it. |
 | Google Maps browser key | empty | Admin → Settings → Integrations | no | Without it the contact map falls back to the embed URL, then to the coordinates. Restrict the key to the production referrer before using it. |
 | Cloudinary cloud name | empty | Admin → Settings → Integrations | no | Needed for uploads from the media library; without it the library still accepts a pasted URL. (The seeded **logo** URL is served from the brand's own Cloudinary cloud — that is unrelated to this setting.) |
-| Cloudinary unsigned upload preset | empty | Admin → Settings → Integrations | no | Required together with the cloud name. Must be an **unsigned** preset, and scoped to a folder. |
+| Cloudinary unsigned upload preset | empty | Admin → Settings → Integrations | no | Required together with the cloud name. Must be an **unsigned** preset with its folder left empty and its allowed formats limited — the walkthrough beside the box says how, and "Test uploads" proves it before saving. The package's `09_MEDIA_AND_EMAIL.md` covers the rest (résumés, orphans). |
 | reCAPTCHA site key | empty | Admin → Settings → Integrations | no | **Not wired to a verifier** — deferred past 1.0 (`docs/DECISIONS.md`). The honeypot and the rate limit protect the forms today. Setting a key only shows the notice under the newsletter form; it does not add verification. |
 
 ## 8. Environment — a developer, on the build machine (_build_)

@@ -4,8 +4,58 @@
 > `docs/backend-notes/07_deployment.md` — do not edit that copy, edit the notes.
 > generatedFrom: {{generatedFrom}}
 
-Two applications: a static React build and a Laravel API. They share nothing but
-the contract, and the only thing binding them is `REACT_APP_API_URL`.
+A static React build and a Laravel API. They share nothing but the contract,
+and the only thing binding them is the build's `REACT_APP_API_URL`. The client
+hosts on Cloudways: the first eight sections are that deployment, in the order
+the work happens; the last is the same site on a server you run yourself.
+
+---
+
+## Hosting on Cloudways — choose a layout
+
+{{hostingOnCloudwaysChooseALayout}}
+
+---
+
+## Layout A — server and application
+
+{{layoutAServerAndApplication}}
+
+---
+
+## Layout A — Laravel application
+
+{{layoutALaravelApplication}}
+
+---
+
+## Layout A — deploying the site
+
+{{layoutADeployingTheSite}}
+
+---
+
+## Layout B — the static application
+
+{{layoutBTheStaticApplication}}
+
+---
+
+## Cloudways specifics that bite
+
+{{cloudwaysSpecificsThatBite}}
+
+---
+
+## Switch-over on Cloudways
+
+{{switchOverOnCloudways}}
+
+---
+
+## Go-live checklist — Cloudways
+
+{{goLiveChecklistCloudways}}
 
 ---
 
@@ -15,36 +65,6 @@ the contract, and the only thing binding them is `REACT_APP_API_URL`.
 
 ---
 
-## Nginx — the site
+## Self-managed server (Nginx)
 
-{{nginxTheSite}}
-
----
-
-## Nginx — the API
-
-{{nginxTheApi}}
-
----
-
-## Security headers
-
-{{securityHeaders}}
-
----
-
-## Switch-over
-
-{{switchOver}}
-
----
-
-## Rollback
-
-{{rollback}}
-
----
-
-## Go-live checklist
-
-{{goLiveChecklist}}
+{{selfManagedServerNginx}}

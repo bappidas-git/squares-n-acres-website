@@ -12,6 +12,13 @@
  * is the `## Token lifetime` section of `docs/backend-notes/02_auth.md` — and
  * the generator fails when the section is missing, so a template can never
  * render a hole.
+ *
+ * It fails the other way round too (prompt 51): a section somebody wrote that
+ * no template places is an error that names it — the 404 log and the pages'
+ * rules were written into the notes and never reached the package. `section()`
+ * records every section it hands out, `render()` refuses a note value its
+ * template has no placeholder for, and `unplacedSections()` lists the ones no
+ * template asked for at all.
  */
 
 const fs = require('fs');
@@ -112,7 +119,24 @@ function section(notes, reference) {
     );
   }
 
+  if (!notes[PLACED]) Object.defineProperty(notes, PLACED, { value: new Set() });
+  notes[PLACED].add(reference);
   return found.body;
+}
+
+/** Where `section()` records what it handed out — out of sight of `Object.keys`. */
+const PLACED = Symbol('placed sections');
+
+/**
+ * The sections of the notes no template asked for: each is a heading somebody
+ * wrote that would never reach the package.
+ *
+ * @param {object} notes the map {@link readNotes} returned, after every render
+ * @returns {string[]} `<stem>.<anchor>`, sorted
+ */
+function unplacedSections(notes) {
+  const placed = notes[PLACED] ?? new Set();
+  return sectionKeys(notes).filter((key) => !placed.has(key));
 }
 
 /** Every `<stem>.<anchor>` a notes directory offers, sorted. */
@@ -129,14 +153,28 @@ const sectionKeys = (notes) =>
  * Renders a template: `{{token}}` is replaced by `values[token]`.
  *
  * A token with no value is an error rather than an empty string, so a
- * generated document can never contain `undefined` or a silent gap.
+ * generated document can never contain `undefined` or a silent gap — and a
+ * value in `placed` the template has no token for is an error too, so a
+ * section of the notes is never dropped on the way (prompt 51).
  *
  * @param {string} template the template's text
  * @param {Record<string, string>} values
  * @param {string} name the template's file name, for the error message
+ * @param {{placed?: string[]}} [options] the values that must each have a token
  * @returns {string}
  */
-function render(template, values, name) {
+function render(template, values, name, { placed = [] } = {}) {
+  const tokens = new Set(
+    [...String(template).matchAll(/\{\{([a-zA-Z0-9_.-]+)\}\}/g)].map((match) => match[1])
+  );
+  const unplaced = placed.filter((token) => !tokens.has(token));
+  if (unplaced.length > 0) {
+    throw new Error(
+      `${name} has no placeholder for ${unplaced.map((token) => `{{${token}}}`).join(', ')} — ` +
+        'add each where its section belongs, or the notes behind it never reach the package.'
+    );
+  }
+
   const missing = [];
 
   const out = String(template).replace(/\{\{([a-zA-Z0-9_.-]+)\}\}/g, (match, token) => {
@@ -155,4 +193,4 @@ function render(template, values, name) {
   return out;
 }
 
-module.exports = { readNotes, render, section, sectionKeys, splitSections };
+module.exports = { readNotes, render, section, sectionKeys, splitSections, unplacedSections };

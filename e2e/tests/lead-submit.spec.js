@@ -97,7 +97,7 @@ test.describe('submitting a lead', () => {
 
     await signIn('admin');
     await page.goto('/admin/leads');
-    await page.getByLabel('Search').fill(PHONE);
+    await page.getByLabel('Search', { exact: true }).fill(PHONE);
 
     const row = page.getByRole('row', { name: new RegExp(NAME) });
     await expect(row).toBeVisible({ timeout: 20_000 });
@@ -219,7 +219,7 @@ test.describe('submitting a lead', () => {
 
     await signIn('admin');
     await page.goto('/admin/leads');
-    await page.getByLabel('Search').fill(PHONE);
+    await page.getByLabel('Search', { exact: true }).fill(PHONE);
 
     await expect(page.getByRole('row', { name: new RegExp(NAME) }).first()).toBeVisible({
       timeout: 20_000,

@@ -1,12 +1,13 @@
 # End-to-end suite (Playwright)
 
-Fifteen specs that drive the real application in a real browser, against the
+Eighteen specs that drive the real application in a real browser, against the
 real mock API: **login**, **create a property**, **view a property**, **submit
 a lead**, **filter the listing** and **shortlist** (prompt 44), plus **publish
 an article**, **the SEO panel**, **publish a CMS page** and **site settings**
 (prompt 45), **the header menus** (QA-56), **the FAQ screen** (QA-59), **the
-Content screens** (QA-61), **featuring and publishing a property** (QA-62) and
-**the media library** (QA-63).
+Content screens** (QA-61), **featuring and publishing a property** (QA-62),
+**the media library** (QA-63), **my profile** (QA-65), and **the SEO panel's
+actions** and **media folders** (prompt 51).
 They are the only tests in the repository that exercise the browser; everything
 else is Jest in jsdom.
 
@@ -25,6 +26,30 @@ npx playwright show-report        # the HTML report of the last CI run
 | **Node ≥ 20**                | `@playwright/test@1.63.0` does not support Node 18 (D6).                                                                                            |
 | **A browser**                | `npx playwright install chromium` — about 150 MB, downloaded once. A machine that already has Chrome can point `CHROME_PATH` at it instead (below). |
 | **Ports 3000 and 4000 free** | The suite starts `npm run mock` and `npm start` itself.                                                                                             |
+
+### `E2E_BASE_URL` and `E2E_API_URL`
+
+Where the suite finds the site and the API. They default to the two servers it
+starts itself:
+
+| Variable       | Default                     | Read by                                                                                              |
+| -------------- | --------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `E2E_BASE_URL` | `http://localhost:3000`     | `playwright.config.js` — every `page.goto`, and the development server it waits for                  |
+| `E2E_API_URL`  | `http://localhost:4000/api` | `playwright.config.js` (the mock it waits for) and `fixtures/auth.js` (sign-ins, fixtures, clean-up) |
+
+Set them to run the suite against servers already running elsewhere on the
+machine — a production build on `http://localhost:5000`, or the mock on another
+port:
+
+```
+E2E_BASE_URL=http://localhost:5000 E2E_API_URL=http://localhost:4100/api npm run e2e
+```
+
+Both servers are **reused** when they answer. When one does not, the suite runs
+`npm start` or `npm run mock` — which listen on 3000 and 4000 — and waits for
+the URL, so a server on any other address must already be up. The suite writes
+and deletes records through `E2E_API_URL`: point it at the mock or a staging
+copy, never production.
 
 ### `CHROME_PATH`
 

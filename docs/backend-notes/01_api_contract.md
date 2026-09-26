@@ -68,8 +68,13 @@ switched off wholesale without breaking a single screen.
 
 ## CORS
 
-The site and the API are separate origins, so every public read is a
-cross-origin request.
+**On one host** — the recommended layout, where one Laravel application serves
+the API under `/api` and the site beside it (`07_DEPLOYMENT.md`, Layout A) —
+the browser never makes a cross-origin request, and nothing below is needed
+beyond Laravel's defaults. **On two hosts** (Layout B, the API on `api.`) every
+public read is a cross-origin request, and the API answers it like this —
+Laravel 11 ships no `config/cors.php` until `php artisan config:publish cors`
+writes one:
 
 ```php
 // config/cors.php

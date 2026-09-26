@@ -97,7 +97,7 @@ test.describe('creating and publishing a property', () => {
 
     /* ---- It is in the table, and it is on the site ---- */
     await page.goto('/admin/properties');
-    await page.getByLabel('Search').fill(`E2E Playwright Apartment ${STAMP}`);
+    await page.getByLabel('Search', { exact: true }).fill(`E2E Playwright Apartment ${STAMP}`);
     await expect(page.getByRole('link', { name: TITLE })).toBeVisible({ timeout: 20_000 });
 
     await page.goto(`/properties/${SLUG}`);

@@ -497,6 +497,26 @@ async function captureExamples({ baseUrl, accounts, log = () => {} }) {
       skip: noteId ? false : 'no note was created',
     }),
     'adminLeads.exportCsv': () => ({ path: '/admin/leads/export?status=new' }),
+    // The desk's own entry (prompt 51): a walk-in, with the note it arrives
+    // with. The capture deletes the lead again with the other throwaways.
+    'adminLeads.create': () => ({
+      body: {
+        name: 'Example Walk-in',
+        phone: '9876543213',
+        source: 'walk-in',
+        propertyId: 1,
+        note: 'Walked in after seeing the hoarding; wants a 3 BHK near the lake.',
+      },
+    }),
+    // A call logged on the run's own lead, not on one of the seed's.
+    'adminLeads.logActivity': () => ({
+      path: `/admin/leads/${fixtures.adminLeads?.id ?? 1}/activities`,
+      body: {
+        type: 'call',
+        outcome: 'Interested — wants a site visit',
+        note: 'Asked for the floor plans of the 3 BHK.',
+      },
+    }),
     'adminNewsletterSubscribers.exportCsv': () => ({
       path: '/admin/newsletter-subscribers/export',
     }),
@@ -537,6 +557,17 @@ async function captureExamples({ baseUrl, accounts, log = () => {} }) {
         : { skip: 'the reported address was not listed' };
     },
     'adminMedia.list': () => ({ path: '/admin/media?perPage=2' }),
+    // The run's own file is filed first (uncaptured), so the rename moves it
+    // and nothing of the seed's.
+    'adminMedia.renameFolder': async () => {
+      const file = fixtures.adminMedia;
+      if (!file) return { skip: 'the run could not create a file of its own' };
+      await api('PATCH', `/admin/media/${file.id}`, {
+        token: tokens.admin,
+        body: { folder: 'examples/brochures' },
+      });
+      return { body: { from: 'examples/brochures', to: 'examples/archive' } };
+    },
     'adminUsers.list': () => ({ path: '/admin/users?perPage=2' }),
   };
 
@@ -594,8 +625,8 @@ async function captureExamples({ baseUrl, accounts, log = () => {} }) {
 
     // A documented `DELETE` must not take the seed away, and it must not take
     // away the fixture the endpoints after it still need: every one of them is
-    // pointed at a copy made for it alone.
-    if (endpoint.method === 'DELETE' && endpoint.path.endsWith('/:id')) {
+    // pointed at a copy made for it alone — unless its plan makes its own.
+    if (endpoint.method === 'DELETE' && endpoint.path.endsWith('/:id') && !SPECIAL[endpoint.key]) {
       const victim = spec ? await makeFixture(group) : await publicFixture(group);
       if (!victim) return { skip: `no ${group} record to delete` };
       base.path = endpoint.path.replace(':id', String(victim.id));
@@ -653,9 +684,12 @@ async function captureExamples({ baseUrl, accounts, log = () => {} }) {
       });
     }
 
-    const madeBy = WRITABLE[groupOf(endpoint)];
+    // A create's record lives under its group's path — or, for a group with no
+    // fixture of its own (the desk's `POST /admin/leads`), under the create's.
+    const madeBy =
+      WRITABLE[groupOf(endpoint)]?.path ?? (endpoint.path.includes(':') ? null : endpoint.path);
     if (isCreate(endpoint) && madeBy && response.json?.data?.id) {
-      created.unshift(`${madeBy.path}/${response.json.data.id}`);
+      created.unshift(`${madeBy}/${response.json.data.id}`);
     }
 
     if (done % 40 === 0) log(`captured ${done} endpoints`);

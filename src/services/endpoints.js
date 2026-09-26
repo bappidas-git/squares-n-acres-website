@@ -58,6 +58,13 @@ const {
 const enumOf = (subject) => `enum:${subject.values.join(',')}`;
 const csvEnumOf = (subject) => `csv:enum:${subject.values.join(',')}`;
 
+/*
+ * An entry's `status` is the success it answers with when it is not 200: 201
+ * for a write that creates a record, 204 for a report with nothing to say back
+ * (prompt 51). The smoke test, the Postman collection and the OpenAPI document
+ * all read it from here.
+ */
+
 /** Parameters every paginated list accepts (§5.6). */
 const LIST_QUERY = {
   page: 'int',
@@ -168,6 +175,7 @@ const adminResource = ({
       description: `Create a ${singular}`,
       body: `${schema}.create`,
       response,
+      status: 201,
     }),
     get: entry('get', {
       method: 'GET',
@@ -767,6 +775,7 @@ const jobs = {
     query: {},
     body: 'jobApplication.create',
     response: 'JobApplication',
+    status: 201,
     example: 1,
   },
 };
@@ -782,6 +791,7 @@ const leads = {
     query: {},
     body: 'lead.create',
     response: 'LeadCreated',
+    status: 201,
     example: 1,
   },
 };
@@ -867,6 +877,7 @@ const redirects = {
     query: {},
     body: null,
     response: 'NoContent',
+    status: 204,
     example: 1,
   },
 };
@@ -884,6 +895,7 @@ const notFound = {
     query: {},
     body: 'notFound.report',
     response: 'NoContent',
+    status: 204,
     example: null,
   },
 };
@@ -1186,6 +1198,7 @@ const adminProperties = {
     query: {},
     body: null,
     response: 'Property',
+    status: 201,
     example: 1,
   },
 };
@@ -1228,6 +1241,7 @@ const adminLeads = {
     query: {},
     body: 'lead.adminCreate',
     response: 'Lead',
+    status: 201,
     example: null,
   },
   logActivity: {
@@ -1902,7 +1916,7 @@ const adminSeo = {
     query: {},
     body: null,
     response: 'Null',
-    example: null,
+    example: 1,
   },
 };
 
@@ -1917,7 +1931,7 @@ const adminSettings = {
     query: {},
     body: null,
     response: 'Settings',
-    example: null,
+    example: 1,
   },
   update: {
     key: 'adminSettings.update',
@@ -1929,7 +1943,7 @@ const adminSettings = {
     query: {},
     body: 'settings.update',
     response: 'Settings',
-    example: null,
+    example: 1,
   },
   // "Send a test alert" beside the notification addresses (prompt 51).
   testLeadAlert: {
@@ -1943,7 +1957,7 @@ const adminSettings = {
     query: {},
     body: null,
     response: 'LeadAlertTest',
-    example: null,
+    example: 1,
   },
 };
 

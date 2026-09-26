@@ -15,6 +15,7 @@ const { allEndpoints, PROPERTY_COUNT_DIMENSIONS } = require('../../../src/servic
 const schemas = require('../../../src/services/schemas');
 const { document } = require('./yaml');
 const { maxLengthOf } = require('../../../src/services/schemas/limits');
+const { successStatus } = require('./fixtures');
 
 /** The response shape names that are a collection of §6. */
 const SHAPE_COLLECTIONS = {
@@ -511,7 +512,9 @@ const pathParameters = (endpoint) =>
 
 /** The responses an endpoint can answer with. */
 function responsesFor(endpoint, example) {
-  const ok = endpoint.method === 'POST' && endpoint.key.endsWith('.create') ? '201' : '200';
+  // The registry's own success: 201 for a record created, 204 for the two
+  // public reports (below), 200 otherwise (prompt 51).
+  const ok = String(successStatus(endpoint));
   const text = TEXT_SHAPES[endpoint.response];
   const responses = {};
   const noContent = endpoint.response === 'NoContent';
@@ -681,7 +684,15 @@ function buildSpec({ generatedFrom, version, examples = {} }) {
     },
     servers: [
       { url: 'http://localhost:4000/api', description: 'Local mock server (`npm run mock`)' },
-      { url: 'https://api.squaresnacres.com/api', description: 'Production' },
+      { url: 'https://staging.example/api', description: 'Staging (a placeholder host)' },
+      {
+        url: 'https://www.squaresnacres.com/api',
+        description: 'Production — the site and the API on one host (Layout A of 07_DEPLOYMENT.md)',
+      },
+      {
+        url: 'https://api.squaresnacres.com/api',
+        description: 'Production — the API on a host of its own (Layout B)',
+      },
     ],
     tags: modules.map((name) => ({ name, description: `Endpoints of the ${name} module` })),
     paths: sorted(paths),

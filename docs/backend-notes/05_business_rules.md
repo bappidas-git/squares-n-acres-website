@@ -965,6 +965,14 @@ duplicateOf, isActive, status, updatedAt }`. `perPage=all` is allowed.
   written a description for are not duplicates of each other.
 - `scoreBand` filters on the stored band: `good` ≥ 81, `ok` 51–80, `poor` ≤ 50,
   `none` not analysed.
+- **`missing`** (prompt 51) is a comma-separated list of `focusKeyword`,
+  `description` and `title` (anything else ignored): a row is kept when **any**
+  of the named `seo` fields is empty or blank — analysed or not. The overview's
+  "No focus keyword" and "No meta description" cards open the list with it; they
+  used to open the issues tab, which lists analysed records only.
+- **`sort=lastAnalyzedAt`** orders by `seo.lastAnalyzedAt`, newest first —
+  what the "Last analysed" column shows; `sort=updatedAt` stays the last save.
+  Never-analysed rows sort last either way.
 
 ## Admin users
 
@@ -1233,6 +1241,12 @@ What the Content screens' writes keep, and what a public read shows (QA-61).
   `"Sales"`, and the department filter and the careers page offered both.
   Laravel's `TrimStrings` covers it; the mock turns `trimStrings` on for
   `routes/jobs.js`.
+- **The admin list filters on `employmentType`** (prompt 51) — a comma-separated
+  list of `EMPLOYMENT_TYPES` values (`full-time`, `part-time`, `contract`,
+  `internship`), beside `department`. The screen's
+  "Type" select always sent it, and an undeclared filter is ignored, so it
+  filtered nothing: `GET /admin/jobs?employmentType=full-time,contract` keeps
+  those two kinds.
 - **An opening's description has words and runs nothing.** Empty once its
   markup is stripped — an emptied bullet or heading, `<ul><li><p></p></li></ul>`
   — is 422 on `description` ("The description field is required."), and the
@@ -1387,6 +1401,19 @@ it without a private endpoint to hold it.
 - `statusCode` is 301 or 302 only.
 - The real 301 belongs at the web server (see `07_DEPLOYMENT.md`); the endpoint
   is how the admin manages the list and how the SPA covers the gap.
+- **The export follows the list** (prompt 51): `GET /admin/redirects/export`
+  takes the list's own `isActive` (`true`/`false`) and `q` (a case-insensitive
+  substring of `fromPath`, `toPath` or `note`), so an export pressed over
+  "Inactive" or a search carries what the screen shows. Without them it carries
+  every rule, as before.
+- **An import row is a rule in force as it reads** (prompt 51). A row whose
+  `fromPath` matches a stored rule updates it — `toPath`, `statusCode`,
+  **`isActive: true`** (a rule switched off is switched on again) and, when the
+  row carries a `note`, that note (blank clears it); a new `fromPath` creates a
+  rule. Rows that would be refused — no leading `/`, an empty target, a target
+  equal to the source, a status other than 301 or 302 — are counted in
+  `skipped` and the rest go through: the answer is `{ created, updated,
+  skipped }`.
 
 ## Newsletter and spam
 
@@ -1395,6 +1422,15 @@ it without a private endpoint to hold it.
   never a second row. A new address answers **201** with the record.
 - An address that unsubscribed and comes back is **re-subscribed**: set
   `status` back to `subscribed` rather than creating a row.
+- **Marking somebody unsubscribed** (prompt 51):
+  `PATCH /admin/newsletter-subscribers/:id { "status": "unsubscribed" }`
+  (admin and manager) — `status` is `subscribed` or `unsubscribed`, 422 on
+  `status` otherwise, 404 for an unknown id — answers the record; a status it
+  already has changes nothing, `updated_at` included. It is the only field the
+  admin writes on a subscriber. Somebody who asked to stop is kept as
+  `unsubscribed` rather than deleted, so a later subscribe is theirs to make
+  (the rule above), and an export filtered to `status=subscribed` leaves them
+  out.
 - The address is compared case-insensitively and trimmed.
 - The honeypot `website` field applies here, on `POST /leads` and on
   `POST /jobs/:id/apply`: non-empty means a bot, so answer **200**

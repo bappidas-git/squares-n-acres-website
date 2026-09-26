@@ -26,11 +26,31 @@
  *
  *   node scripts/smoke-api.js --baseUrl=https://api.example.com/api --verbose
  *   node scripts/smoke-api.js --email=admin@… --password=…
+ *
+ * **Write safety** (prompt 51). The walk creates, edits and deletes records,
+ * so it writes only to this machine (`localhost`, `127.*`, `[::1]`) unless
+ * `--allow-writes` says otherwise — which is for **staging**. Against any other
+ * host it runs the read-only subset: every `GET` of the registry but the one
+ * that counts a hit, and the checks that only read; it prints what it left out
+ * and why. `--read-only` asks for that subset on this machine too. Production
+ * only ever gets the read checks and `--compare`.
+ *
+ *   node scripts/smoke-api.js --baseUrl=https://staging.example/api --allow-writes
+ *   node scripts/smoke-api.js --baseUrl=https://www.example.com/api \
+ *     --compare=http://localhost:4000/api --email=… --password=… \
+ *     --compareEmail=admin@squaresnacres.com --comparePassword=Admin@123
  */
 
 const { allEndpoints } = require('../src/services/endpoints');
 const schemas = require('../src/services/schemas');
-const { TOKEN_FOR, WRITABLE, groupOf, isCreate, sampleBody } = require('./lib/guidelines/fixtures');
+const {
+  TOKEN_FOR,
+  WRITABLE,
+  groupOf,
+  isCreate,
+  sampleBody,
+  successStatus,
+} = require('./lib/guidelines/fixtures');
 
 /* ------------------------------------------------------------------ *
  * Arguments
@@ -46,28 +66,67 @@ const DEFAULTS = {
   salesPassword: 'Sales@123',
   verbose: false,
   // `--compare=<url>` puts the run in comparison mode: the same reads are sent
-  // to `--baseUrl` and to this one, and only the differences are printed.
+  // to `--baseUrl` and to this one, and only the differences are printed. The
+  // compared server signs in with its own credentials when they differ — after
+  // a rotation, production's are not the seed's.
   compare: '',
+  compareEmail: '',
+  comparePassword: '',
+  // Writes are for this machine and for staging (see the header).
+  allowWrites: false,
+  readOnly: false,
 };
 
-/** `--key=value` and bare `--flag`, with the documented defaults underneath. */
+/** `--key=value`, `--kebab-key=value` and bare `--flag`, over the defaults. */
 function parseArgs(argv) {
   const options = { ...DEFAULTS };
 
   for (const argument of argv) {
-    const match = /^--([a-zA-Z]+)(?:=(.*))?$/.exec(argument);
+    const match = /^--([a-zA-Z][a-zA-Z-]*)(?:=(.*))?$/.exec(argument);
     if (!match) continue;
-    const [, key, value] = match;
+    const key = match[1].replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
     if (!(key in options)) continue;
-    options[key] = value === undefined ? true : value;
+    options[key] = match[2] === undefined ? true : match[2];
   }
 
   options.baseUrl = String(options.baseUrl).replace(/\/+$/, '');
   options.compare = options.compare ? String(options.compare).replace(/\/+$/, '') : '';
+  options.allowWrites = options.allowWrites === true || options.allowWrites === 'true';
+  options.readOnly = options.readOnly === true || options.readOnly === 'true';
   return options;
 }
 
 const options = parseArgs(process.argv.slice(2));
+
+/** This machine, on any port — the only host a run writes to unasked. */
+const LOCAL_HOST = /^(localhost|127(?:\.\d{1,3}){3}|\[::1\])$/i;
+
+/**
+ * Whether the run may write to the server behind a base URL: this machine, or
+ * a host `--allow-writes` names — never when `--read-only` says so.
+ *
+ * @param {string} baseUrl
+ * @param {{readOnly?: boolean, allowWrites?: boolean}} [flags] the run's options
+ * @returns {boolean}
+ */
+function mayWriteTo(baseUrl, flags = options) {
+  if (flags.readOnly) return false;
+  if (flags.allowWrites) return true;
+  try {
+    return LOCAL_HOST.test(new URL(baseUrl).hostname);
+  } catch {
+    return false;
+  }
+}
+
+/** Whether this run writes: the answer for `--baseUrl`. */
+const WRITES = mayWriteTo(options.baseUrl);
+
+/** The one registry read that changes something — it counts a hit on the rule. */
+const COUNTS_ON_READ = new Set(['redirects.resolve']);
+
+/** What a read-only run left out, for the note under the table. */
+const skipped = { endpoints: [], checks: [], requests: [] };
 
 /* ------------------------------------------------------------------ *
  * Reporting
@@ -118,6 +177,14 @@ function printTable() {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** A `GET` that changes nothing — every one but a redirect lookup, which counts a hit. */
+const isRead = (method, path) =>
+  (method === 'GET' || method === 'HEAD') && !String(path).startsWith('/redirects/resolve');
+
+/** Signing in and out: what any read of an admin screen needs first. */
+const isSession = (method, path) =>
+  method === 'POST' && /^\/auth\/(login|logout)(\?|$)/.test(String(path));
+
 /** The longest the run will wait out a rate-limit window, in seconds. */
 const MAX_RETRY_WAIT = 65;
 
@@ -136,6 +203,15 @@ const MAX_RETRY_WAIT = 65;
  */
 async function api(method, path, { token, body, retry = true, baseUrl } = {}) {
   const base = baseUrl ?? options.baseUrl;
+
+  // The last line of write safety: whatever a check forgot, a request that
+  // writes never leaves for a host the run may not write to. Signing in and
+  // out is a session, not data.
+  if (!mayWriteTo(base) && !isRead(method, path) && !isSession(method, path)) {
+    skipped.requests.push(`${method} ${path}`);
+    return { status: 0, text: '', json: null, headers: new Headers(), blocked: true };
+  }
+
   const response = await fetch(`${base}${path}`, {
     method,
     headers: {
@@ -240,7 +316,7 @@ let counter = 0;
 const nextSeed = () => `${RUN_ID}${(counter += 1)}`;
 
 /*
- * `sampleValue`, `sampleBody`, `WRITABLE`, `CREATES` and `TOKEN_FOR` live in
+ * `sampleValue`, `sampleBody`, `WRITABLE`, `successStatus` and `TOKEN_FOR` live in
  * `scripts/lib/guidelines/fixtures.js`: the guidelines generator captures the
  * documented examples with exactly the same bodies this run sends, and two
  * copies of the same knowledge would drift.
@@ -409,7 +485,8 @@ const SPECIAL = {
     return { token: session.json?.data?.token };
   },
 
-  'auth.profile': () => ({ token: tokens.smoke }),
+  // A read-only run makes no account of its own, and reads the admin's profile.
+  'auth.profile': () => ({ token: tokens.smoke ?? tokens.admin }),
   'auth.updateProfile': () => ({
     token: tokens.smoke,
     body: { name: 'Smoke Test User', phone: '9876543212', avatarUrl: null },
@@ -565,8 +642,9 @@ async function planFor(endpoint) {
     method: endpoint.method,
     path: resolvePath(endpoint),
     token: tokens[TOKEN_FOR[endpoint.auth] ?? 'admin'],
-    // A report the API only takes note of answers 204 with no body (prompt 51).
-    expect: endpoint.response === 'NoContent' ? 204 : isCreate(endpoint) ? 201 : 200,
+    // The registry says what a success is: 201 for a create, 204 for a report
+    // the API only takes note of (prompt 51), 200 otherwise.
+    expect: successStatus(endpoint),
     body: undefined,
   };
 
@@ -611,6 +689,16 @@ async function planFor(endpoint) {
 
 /** Sends one planned request and records the row. */
 async function runEndpoint(endpoint) {
+  // A read-only run walks the reads alone — not the one read that counts — and
+  // signing in and out, which every read of the panel needs anyway.
+  const readOnlyEntry =
+    (endpoint.method === 'GET' && !COUNTS_ON_READ.has(endpoint.key)) ||
+    isSession(endpoint.method, endpoint.path);
+  if (!WRITES && !readOnlyEntry) {
+    skipped.endpoints.push(endpoint);
+    return;
+  }
+
   const plan = await planFor(endpoint);
 
   if (plan.skip) {
@@ -666,6 +754,22 @@ function check(name, ok, note = '') {
   });
 }
 
+/**
+ * A group of checks that writes. A read-only run does not run it at all — a
+ * check that depends on a write it never made would fail for the wrong reason
+ * — and names its checks under the table instead.
+ *
+ * @param {string[]} names the checks the group records
+ * @param {() => Promise<void>} run
+ */
+async function writing(names, run) {
+  if (!WRITES) {
+    skipped.checks.push(...names);
+    return;
+  }
+  await run();
+}
+
 /** The targeted assertions of §4.14. */
 async function targetedChecks() {
   const admin = tokens.admin;
@@ -674,70 +778,88 @@ async function targetedChecks() {
   const noToken = await api('GET', '/admin/properties');
   check('rbac.401-without-token', noToken.status === 401, `got ${noToken.status}`);
 
-  const salesCreate = await api('POST', '/admin/properties', { token: sales, body: {} });
-  check('rbac.403-sales-create-property', salesCreate.status === 403, `got ${salesCreate.status}`);
+  await writing(['rbac.403-sales-create-property'], async () => {
+    const salesCreate = await api('POST', '/admin/properties', { token: sales, body: {} });
+    check(
+      'rbac.403-sales-create-property',
+      salesCreate.status === 403,
+      `got ${salesCreate.status}`
+    );
+  });
 
   const salesUsers = await api('GET', '/admin/users', { token: sales });
   check('rbac.403-sales-users', salesUsers.status === 403, `got ${salesUsers.status}`);
 
   // "Stay signed in" (prompt 51): the run's own session, same token, later end.
-  const refreshed = await api('POST', '/auth/refresh', { token: sales });
-  check(
-    'auth.refresh-keeps-the-token',
-    refreshed.status === 200 &&
-      refreshed.json?.data?.token === sales &&
-      Number.isFinite(Date.parse(refreshed.json?.data?.expiresAt ?? '')),
-    `got ${refreshed.status}`
-  );
-
-  // PATCH keeps what it did not mention (§5.8). The walk has already written
-  // to this fixture, so the comparison is against what is stored now.
-  const fixtureId = fixtures.adminProperties?.id;
-  const stored = fixtureId
-    ? (await api('GET', `/admin/properties/${fixtureId}`, { token: admin })).json?.data
-    : null;
+  await writing(['auth.refresh-keeps-the-token'], async () => {
+    const refreshed = await api('POST', '/auth/refresh', { token: sales });
+    check(
+      'auth.refresh-keeps-the-token',
+      refreshed.status === 200 &&
+        refreshed.json?.data?.token === sales &&
+        Number.isFinite(Date.parse(refreshed.json?.data?.expiresAt ?? '')),
+      `got ${refreshed.status}`
+    );
+  });
 
   // The slug of the fixture the block below switches off, for the admin preview.
   let inactiveSlug = null;
 
-  if (stored) {
-    const patched = await api('PATCH', `/admin/properties/${stored.id}`, {
-      token: admin,
-      body: { isFeatured: true },
-    });
-    check(
+  await writing(
+    [
       'patch.keeps-untouched-fields',
-      patched.json?.data?.title === stored.title && patched.json?.data?.isFeatured === true,
-      `title "${patched.json?.data?.title}" vs "${stored.title}"`
-    );
-
-    // A `PUT` states the whole record, so it carries every required field; the
-    // optional ones it leaves out — `isFeatured`, which the `PATCH` above just
-    // set — come back at their model defaults.
-    const replaced = await api('PUT', `/admin/properties/${stored.id}`, {
-      token: admin,
-      body: {
-        ...sampleBody(schemas.getSchema('property.create'), nextSeed()),
-        title: 'Smoke replaced listing title',
-        propertyTypeId: 1,
-        location: { localityId: 1, cityId: 1 },
-      },
-    });
-    check(
       'put.fills-defaults',
-      replaced.status === 200 && replaced.json?.data?.isFeatured === false,
-      `status ${replaced.status}, isFeatured=${replaced.json?.data?.isFeatured}`
-    );
+      'slug.404-for-inactive',
+      'admin-slug.previews-inactive',
+    ],
+    async () => {
+      // PATCH keeps what it did not mention (§5.8). The walk has already written
+      // to this fixture, so the comparison is against what is stored now.
+      const fixtureId = fixtures.adminProperties?.id;
+      const stored = fixtureId
+        ? (await api('GET', `/admin/properties/${fixtureId}`, { token: admin })).json?.data
+        : null;
 
-    // An inactive listing is not public, and a 404 says nothing about why.
-    await api('PATCH', `/admin/properties/${stored.id}`, {
-      token: admin,
-      body: { isActive: false },
-    });
-    const hidden = await api('GET', `/properties/slug/${replaced.json?.data?.slug}`);
-    check('slug.404-for-inactive', hidden.status === 404, `got ${hidden.status}`);
-    inactiveSlug = replaced.json?.data?.slug ?? null;
-  }
+      if (stored) {
+        const patched = await api('PATCH', `/admin/properties/${stored.id}`, {
+          token: admin,
+          body: { isFeatured: true },
+        });
+        check(
+          'patch.keeps-untouched-fields',
+          patched.json?.data?.title === stored.title && patched.json?.data?.isFeatured === true,
+          `title "${patched.json?.data?.title}" vs "${stored.title}"`
+        );
+
+        // A `PUT` states the whole record, so it carries every required field; the
+        // optional ones it leaves out — `isFeatured`, which the `PATCH` above just
+        // set — come back at their model defaults.
+        const replaced = await api('PUT', `/admin/properties/${stored.id}`, {
+          token: admin,
+          body: {
+            ...sampleBody(schemas.getSchema('property.create'), nextSeed()),
+            title: 'Smoke replaced listing title',
+            propertyTypeId: 1,
+            location: { localityId: 1, cityId: 1 },
+          },
+        });
+        check(
+          'put.fills-defaults',
+          replaced.status === 200 && replaced.json?.data?.isFeatured === false,
+          `status ${replaced.status}, isFeatured=${replaced.json?.data?.isFeatured}`
+        );
+
+        // An inactive listing is not public, and a 404 says nothing about why.
+        await api('PATCH', `/admin/properties/${stored.id}`, {
+          token: admin,
+          body: { isActive: false },
+        });
+        const hidden = await api('GET', `/properties/slug/${replaced.json?.data?.slug}`);
+        check('slug.404-for-inactive', hidden.status === 404, `got ${hidden.status}`);
+        inactiveSlug = replaced.json?.data?.slug ?? null;
+      }
+    }
+  );
 
   const threeBhk = await api('GET', '/properties?bedrooms=3&perPage=50');
   const impure = (threeBhk.json?.data ?? []).filter((row) => {
@@ -757,38 +879,43 @@ async function targetedChecks() {
   await checkPropertyCounts();
 
   // The lead form: honeypot, validation, legacy sources (§5.11, D20).
-  const honeypot = await api('POST', '/leads', {
-    body: {
-      name: 'Robot',
-      phone: '9876543210',
-      source: 'contact-page',
-      website: 'http://spam.example',
-    },
-  });
-  check(
-    'leads.honeypot',
-    honeypot.status === 200 && honeypot.json?.data === null,
-    `got ${honeypot.status}`
-  );
+  await writing(
+    ['leads.honeypot', 'leads.422-bad-phone', 'leads.legacy-source-mapped'],
+    async () => {
+      const honeypot = await api('POST', '/leads', {
+        body: {
+          name: 'Robot',
+          phone: '9876543210',
+          source: 'contact-page',
+          website: 'http://spam.example',
+        },
+      });
+      check(
+        'leads.honeypot',
+        honeypot.status === 200 && honeypot.json?.data === null,
+        `got ${honeypot.status}`
+      );
 
-  const badPhone = await api('POST', '/leads', {
-    body: { name: 'Smoke Test', phone: '12345', source: 'contact-page' },
-  });
-  check(
-    'leads.422-bad-phone',
-    badPhone.status === 422 && Boolean(badPhone.json?.errors?.phone),
-    `got ${badPhone.status}`
-  );
+      const badPhone = await api('POST', '/leads', {
+        body: { name: 'Smoke Test', phone: '12345', source: 'contact-page' },
+      });
+      check(
+        'leads.422-bad-phone',
+        badPhone.status === 422 && Boolean(badPhone.json?.errors?.phone),
+        `got ${badPhone.status}`
+      );
 
-  const legacy = await api('POST', '/leads', {
-    body: { name: 'Smoke Legacy', phone: '9876543210', source: 'property_enquiry' },
-  });
-  check(
-    'leads.legacy-source-mapped',
-    legacy.status === 201 && legacy.json?.data?.source === 'property-enquiry',
-    `source=${legacy.json?.data?.source}`
+      const legacy = await api('POST', '/leads', {
+        body: { name: 'Smoke Legacy', phone: '9876543210', source: 'property_enquiry' },
+      });
+      check(
+        'leads.legacy-source-mapped',
+        legacy.status === 201 && legacy.json?.data?.source === 'property-enquiry',
+        `source=${legacy.json?.data?.source}`
+      );
+      if (legacy.json?.data?.id) created.unshift({ path: `/admin/leads/${legacy.json.data.id}` });
+    }
   );
-  if (legacy.json?.data?.id) created.unshift({ path: `/admin/leads/${legacy.json.data.id}` });
 
   const slugCheck = await api(
     'GET',
@@ -834,86 +961,97 @@ async function targetedChecks() {
     );
   }
 
-  const duplicate = await api('POST', '/admin/properties/1/duplicate', { token: admin });
-  check(
-    'duplicate.creates-draft',
-    duplicate.status === 201 && duplicate.json?.data?.isActive === false
-  );
-  if (duplicate.json?.data?.id)
-    created.unshift({ path: `/admin/properties/${duplicate.json.data.id}` });
-
-  // The value-carrying bulk actions (prompt 51), on the run's own copy only.
-  const copy = duplicate.json?.data ?? null;
-  if (copy?.id) {
-    const target = copy.availability === 'sold' ? 'reserved' : 'sold';
-    const marked = await api('POST', '/admin/properties/bulk', {
-      token: admin,
-      body: { ids: [copy.id], action: 'availability', payload: { availability: target } },
-    });
-    const refused = await api('POST', '/admin/properties/bulk', {
-      token: admin,
-      body: { ids: [copy.id], action: 'assignAgent', payload: { agentId: 999999 } },
-    });
-    check(
+  await writing(
+    [
+      'duplicate.creates-draft',
       'bulk.payload-actions',
-      marked.status === 200 && marked.json?.data?.affected === 1 && refused.status === 422,
-      `got ${marked.status} / ${refused.status}`
-    );
-
-    // A share link opens the run's inactive copy, and only with its token.
-    const issued = await api('POST', `/admin/properties/${copy.id}/preview-token`, {
-      token: admin,
-    });
-    const share = issued.json?.data?.token ?? '';
-    const closed = await api('GET', `/properties/slug/${encodeURIComponent(copy.slug)}`);
-    const opened = await api(
-      'GET',
-      `/properties/slug/${encodeURIComponent(copy.slug)}?previewToken=${encodeURIComponent(share)}`
-    );
-    check(
       'properties.share-preview',
-      issued.status === 200 && closed.status === 404 && opened.status === 200,
-      `got ${issued.status} / ${closed.status} / ${opened.status}`
-    );
-  }
-
-  // A replace made from an older version is refused, and names who saved
-  // (prompt 51) — on the run's own locality. A second passes between the two
-  // saves: a store keeping `updated_at` to the second could not tell them apart.
-  const place = await createFixture('adminLocalities');
-  if (place?.id) {
-    const path = `/admin/localities/${place.id}`;
-    const opened = (await api('GET', path, { token: admin })).json?.data ?? place;
-    await sleep(1100);
-    const first = await api('PUT', path, {
-      token: admin,
-      body: { ...opened, shortDescription: 'Saved first.', updatedAt: opened.updatedAt },
-    });
-    const second = await api('PUT', path, {
-      token: admin,
-      body: {
-        ...opened,
-        shortDescription: 'Saved from the older copy.',
-        updatedAt: opened.updatedAt,
-      },
-    });
-    check(
       'stale-guard.409-names-the-saver',
-      first.status === 200 &&
-        second.status === 409 &&
-        second.json?.data?.conflict === 'stale' &&
-        typeof second.json?.data?.current?.updatedByName === 'string',
-      `got ${first.status} / ${second.status}`
-    );
-  } else {
-    check('stale-guard.409-names-the-saver', false, 'could not create the run’s own locality');
-  }
+      'bulk.reports-affected',
+    ],
+    async () => {
+      const duplicate = await api('POST', '/admin/properties/1/duplicate', { token: admin });
+      check(
+        'duplicate.creates-draft',
+        duplicate.status === 201 && duplicate.json?.data?.isActive === false
+      );
+      if (duplicate.json?.data?.id)
+        created.unshift({ path: `/admin/properties/${duplicate.json.data.id}` });
 
-  const bulk = await api('POST', '/admin/properties/bulk', {
-    token: admin,
-    body: { ids: [999999], action: 'activate' },
-  });
-  check('bulk.reports-affected', bulk.status === 200 && bulk.json?.data?.affected === 0);
+      // The value-carrying bulk actions (prompt 51), on the run's own copy only.
+      const copy = duplicate.json?.data ?? null;
+      if (copy?.id) {
+        const target = copy.availability === 'sold' ? 'reserved' : 'sold';
+        const marked = await api('POST', '/admin/properties/bulk', {
+          token: admin,
+          body: { ids: [copy.id], action: 'availability', payload: { availability: target } },
+        });
+        const refused = await api('POST', '/admin/properties/bulk', {
+          token: admin,
+          body: { ids: [copy.id], action: 'assignAgent', payload: { agentId: 999999 } },
+        });
+        check(
+          'bulk.payload-actions',
+          marked.status === 200 && marked.json?.data?.affected === 1 && refused.status === 422,
+          `got ${marked.status} / ${refused.status}`
+        );
+
+        // A share link opens the run's inactive copy, and only with its token.
+        const issued = await api('POST', `/admin/properties/${copy.id}/preview-token`, {
+          token: admin,
+        });
+        const share = issued.json?.data?.token ?? '';
+        const closed = await api('GET', `/properties/slug/${encodeURIComponent(copy.slug)}`);
+        const opened = await api(
+          'GET',
+          `/properties/slug/${encodeURIComponent(copy.slug)}?previewToken=${encodeURIComponent(share)}`
+        );
+        check(
+          'properties.share-preview',
+          issued.status === 200 && closed.status === 404 && opened.status === 200,
+          `got ${issued.status} / ${closed.status} / ${opened.status}`
+        );
+      }
+
+      // A replace made from an older version is refused, and names who saved
+      // (prompt 51) — on the run's own locality. A second passes between the two
+      // saves: a store keeping `updated_at` to the second could not tell them apart.
+      const place = await createFixture('adminLocalities');
+      if (place?.id) {
+        const path = `/admin/localities/${place.id}`;
+        const opened = (await api('GET', path, { token: admin })).json?.data ?? place;
+        await sleep(1100);
+        const first = await api('PUT', path, {
+          token: admin,
+          body: { ...opened, shortDescription: 'Saved first.', updatedAt: opened.updatedAt },
+        });
+        const second = await api('PUT', path, {
+          token: admin,
+          body: {
+            ...opened,
+            shortDescription: 'Saved from the older copy.',
+            updatedAt: opened.updatedAt,
+          },
+        });
+        check(
+          'stale-guard.409-names-the-saver',
+          first.status === 200 &&
+            second.status === 409 &&
+            second.json?.data?.conflict === 'stale' &&
+            typeof second.json?.data?.current?.updatedByName === 'string',
+          `got ${first.status} / ${second.status}`
+        );
+      } else {
+        check('stale-guard.409-names-the-saver', false, 'could not create the run’s own locality');
+      }
+
+      const bulk = await api('POST', '/admin/properties/bulk', {
+        token: admin,
+        body: { ids: [999999], action: 'activate' },
+      });
+      check('bulk.reports-affected', bulk.status === 200 && bulk.json?.data?.affected === 0);
+    }
+  );
 
   const csv = await api('GET', '/admin/leads/export', { token: admin });
   check('csv.bom', csv.text.startsWith('﻿'), 'leads export');
@@ -956,52 +1094,61 @@ async function targetedChecks() {
   const llms = await api('GET', '/llms.txt');
   check('llms.heading', llms.text.trimStart().startsWith('#'));
 
-  const resolved = await api('GET', '/redirects/resolve?path=/blog');
-  check(
-    'redirects.resolve',
-    resolved.status === 200 && typeof resolved.json?.data?.toPath === 'string',
-    `got ${resolved.status}`
-  );
+  // A lookup counts a hit, a followed rule counts one, a 404 is logged: all
+  // three change what the server holds.
+  await writing(
+    ['redirects.resolve', 'redirects.hit-counts', 'not-found.logged-counted-dismissed'],
+    async () => {
+      const resolved = await api('GET', '/redirects/resolve?path=/blog');
+      check(
+        'redirects.resolve',
+        resolved.status === 200 && typeof resolved.json?.data?.toPath === 'string',
+        `got ${resolved.status}`
+      );
 
-  // A rule the site follows counts a hit (prompt 51): the Hits column was 0
-  // for every rule a visitor had been sent on by.
-  const rule = (await api('GET', '/redirects')).json?.data?.[0];
-  if (rule?.id) {
-    const before = (await api('GET', `/admin/redirects/${rule.id}`, { token: admin })).json?.data;
-    const hit = await api('POST', `/redirects/${rule.id}/hit`);
-    const after = (await api('GET', `/admin/redirects/${rule.id}`, { token: admin })).json?.data;
-    check(
-      'redirects.hit-counts',
-      hit.status === 204 && Number(after?.hits) === Number(before?.hits ?? 0) + 1,
-      `got ${hit.status}, ${before?.hits} → ${after?.hits}`
-    );
-  } else {
-    check('redirects.hit-counts', false, 'no active redirect to follow');
-  }
+      // A rule the site follows counts a hit (prompt 51): the Hits column was 0
+      // for every rule a visitor had been sent on by.
+      const rule = (await api('GET', '/redirects')).json?.data?.[0];
+      if (rule?.id) {
+        const before = (await api('GET', `/admin/redirects/${rule.id}`, { token: admin })).json
+          ?.data;
+        const hit = await api('POST', `/redirects/${rule.id}/hit`);
+        const after = (await api('GET', `/admin/redirects/${rule.id}`, { token: admin })).json
+          ?.data;
+        check(
+          'redirects.hit-counts',
+          hit.status === 204 && Number(after?.hits) === Number(before?.hits ?? 0) + 1,
+          `got ${hit.status}, ${before?.hits} → ${after?.hits}`
+        );
+      } else {
+        check('redirects.hit-counts', false, 'no active redirect to follow');
+      }
 
-  // The 404 log (prompt 51): an address counted once a visit, the panel
-  // ignored, and a dismissal taking it off the list.
-  const unknownPath = `/smoke-404-${RUN_ID}`;
-  await api('POST', '/not-found', {
-    body: { path: unknownPath, referrer: 'https://example.com/' },
-  });
-  await api('POST', '/not-found', { body: { path: `${unknownPath}/` } });
-  await api('POST', '/not-found', { body: { path: '/admin/nowhere' } });
-  const logged = await api('GET', `/admin/seo/not-found?q=${encodeURIComponent(unknownPath)}`, {
-    token: admin,
-  });
-  const line = (logged.json?.data ?? []).find((entry) => entry.path === unknownPath);
-  const ignored = await api('GET', '/admin/seo/not-found?q=nowhere', { token: admin });
-  const dismissed = line
-    ? await api('DELETE', `/admin/seo/not-found/${line.id}`, { token: admin })
-    : { status: 0 };
-  check(
-    'not-found.logged-counted-dismissed',
-    line?.count === 2 &&
-      line?.referrer === 'https://example.com/' &&
-      (ignored.json?.data ?? []).length === 0 &&
-      dismissed.status === 200,
-    `count ${line?.count}, dismissed ${dismissed.status}`
+      // The 404 log (prompt 51): an address counted once a visit, the panel
+      // ignored, and a dismissal taking it off the list.
+      const unknownPath = `/smoke-404-${RUN_ID}`;
+      await api('POST', '/not-found', {
+        body: { path: unknownPath, referrer: 'https://example.com/' },
+      });
+      await api('POST', '/not-found', { body: { path: `${unknownPath}/` } });
+      await api('POST', '/not-found', { body: { path: '/admin/nowhere' } });
+      const logged = await api('GET', `/admin/seo/not-found?q=${encodeURIComponent(unknownPath)}`, {
+        token: admin,
+      });
+      const line = (logged.json?.data ?? []).find((entry) => entry.path === unknownPath);
+      const ignored = await api('GET', '/admin/seo/not-found?q=nowhere', { token: admin });
+      const dismissed = line
+        ? await api('DELETE', `/admin/seo/not-found/${line.id}`, { token: admin })
+        : { status: 0 };
+      check(
+        'not-found.logged-counted-dismissed',
+        line?.count === 2 &&
+          line?.referrer === 'https://example.com/' &&
+          (ignored.json?.data ?? []).length === 0 &&
+          dismissed.status === 200,
+        `count ${line?.count}, dismissed ${dismissed.status}`
+      );
+    }
   );
 
   const dashboard = await api('GET', '/admin/dashboard', { token: admin });
@@ -1046,14 +1193,17 @@ async function targetedChecks() {
     `meta.followUp: ${buckets.join(', ') || 'missing'}`
   );
 
-  const duplicateSubscriber = await api('POST', '/newsletter/subscribe', {
-    body: { email: 'subscriber.one@example.com' },
+  // Against a server without the seed's subscriber this one would subscribe.
+  await writing(['newsletter.dedupe'], async () => {
+    const duplicateSubscriber = await api('POST', '/newsletter/subscribe', {
+      body: { email: 'subscriber.one@example.com' },
+    });
+    check(
+      'newsletter.dedupe',
+      duplicateSubscriber.status === 200 && duplicateSubscriber.json?.data === null,
+      `got ${duplicateSubscriber.status}`
+    );
   });
-  check(
-    'newsletter.dedupe',
-    duplicateSubscriber.status === 200 && duplicateSubscriber.json?.data === null,
-    `got ${duplicateSubscriber.status}`
-  );
 
   const overview = await api('GET', '/admin/seo/overview?perPage=all', { token: admin });
   const row = (overview.json?.data ?? [])[0];
@@ -1065,26 +1215,28 @@ async function targetedChecks() {
 
   // A draft is invisible until its preview link says otherwise (D28). The
   // walk replaced this article, so its slug is read back rather than assumed.
-  const articleId = fixtures.adminArticles?.id;
-  const draft = articleId
-    ? (await api('GET', `/admin/articles/${articleId}`, { token: admin })).json?.data
-    : null;
+  await writing(['preview.token-opens-draft'], async () => {
+    const articleId = fixtures.adminArticles?.id;
+    const draft = articleId
+      ? (await api('GET', `/admin/articles/${articleId}`, { token: admin })).json?.data
+      : null;
 
-  if (draft) {
-    const blocked = await api('GET', `/articles/slug/${draft.slug}`);
-    const tokenResponse = await api('GET', `/admin/articles/${draft.id}/preview-token`, {
-      token: admin,
-    });
-    const preview = await api(
-      'GET',
-      `/articles/slug/${draft.slug}?preview=${tokenResponse.json?.data?.token}`
-    );
-    check(
-      'preview.token-opens-draft',
-      blocked.status === 404 && preview.status === 200,
-      `draft ${blocked.status}, preview ${preview.status}`
-    );
-  }
+    if (draft) {
+      const blocked = await api('GET', `/articles/slug/${draft.slug}`);
+      const tokenResponse = await api('GET', `/admin/articles/${draft.id}/preview-token`, {
+        token: admin,
+      });
+      const preview = await api(
+        'GET',
+        `/articles/slug/${draft.slug}?preview=${tokenResponse.json?.data?.token}`
+      );
+      check(
+        'preview.token-opens-draft',
+        blocked.status === 404 && preview.status === 200,
+        `draft ${blocked.status}, preview ${preview.status}`
+      );
+    }
+  });
 
   // The pair either side of one article, in publication order within its
   // category (prompt 34). The seed's second Legal & RERA piece has one on each
@@ -1109,18 +1261,34 @@ async function targetedChecks() {
     );
   }
 
-  const localityInUse = await api('DELETE', '/admin/localities/1', { token: admin });
-  check(
-    'delete-guard.409-with-usedBy',
-    localityInUse.status === 409 && Array.isArray(localityInUse.json?.data?.usedBy),
-    `got ${localityInUse.status}`
-  );
+  // A refused delete is still a delete sent: against a server whose locality 1
+  // nothing uses, it would go through.
+  await writing(
+    [
+      'delete-guard.409-with-usedBy',
+      'media.delete-guard-409',
+      'media.force-delete',
+      'media.folder-counts',
+      'media.bulk-move-reports-missing',
+      'media.rename-collision-422',
+      'media.rename-merge',
+      'media.usage-unused',
+    ],
+    async () => {
+      const localityInUse = await api('DELETE', '/admin/localities/1', { token: admin });
+      check(
+        'delete-guard.409-with-usedBy',
+        localityInUse.status === 409 && Array.isArray(localityInUse.json?.data?.usedBy),
+        `got ${localityInUse.status}`
+      );
 
-  // Media's own guard: a file something still shows cannot be removed from the
-  // library without saying so, and `?force=true` is the editor's answer to the
-  // list it is shown (prompt 39 §5).
-  await checkMediaForceDelete(admin);
-  await checkMediaFolders(admin);
+      // Media's own guard: a file something still shows cannot be removed from the
+      // library without saying so, and `?force=true` is the editor's answer to the
+      // list it is shown (prompt 39 §5).
+      await checkMediaForceDelete(admin);
+      await checkMediaFolders(admin);
+    }
+  );
 
   const authors = await api('GET', '/authors');
   check(
@@ -1130,30 +1298,27 @@ async function targetedChecks() {
   );
 
   // Settings merge known keys only (§4.7).
-  const before = await api('GET', '/admin/settings', { token: admin });
-  const merged = await api('PUT', '/admin/settings', {
-    token: admin,
-    body: { general: { siteName: before.json?.data?.general?.siteName }, unknownKey: 1 },
-  });
-  check(
-    'settings.deep-merge',
-    merged.json?.data?.general?.tagline === before.json?.data?.general?.tagline &&
-      !('unknownKey' in (merged.json?.data ?? {})),
-    'general.tagline survived, unknownKey dropped'
-  );
+  await writing(['settings.deep-merge', 'settings.manager-403'], async () => {
+    const before = await api('GET', '/admin/settings', { token: admin });
+    const merged = await api('PUT', '/admin/settings', {
+      token: admin,
+      body: { general: { siteName: before.json?.data?.general?.siteName }, unknownKey: 1 },
+    });
+    check(
+      'settings.deep-merge',
+      merged.json?.data?.general?.tagline === before.json?.data?.general?.tagline &&
+        !('unknownKey' in (merged.json?.data ?? {})),
+      'general.tagline survived, unknownKey dropped'
+    );
 
-  const managerSettings = await api('PUT', '/admin/settings', {
-    token: tokens.manager,
-    body: { general: { siteName: 'Nope' } },
+    const managerSettings = await api('PUT', '/admin/settings', {
+      token: tokens.manager,
+      body: { general: { siteName: 'Nope' } },
+    });
+    check('settings.manager-403', managerSettings.status === 403, `got ${managerSettings.status}`);
   });
-  check('settings.manager-403', managerSettings.status === 403, `got ${managerSettings.status}`);
 }
 
-/* ------------------------------------------------------------------ *
- * Setup and teardown
- * ------------------------------------------------------------------ */
-
-/** Signs in, or fails the run loudly — nothing else can work without this. */
 /**
  * `GET /properties/counts` (prompt 51): the envelope, a dimension's keys, a
  * filter narrowing the counts, an unknown dimension ignored — and the two
@@ -1233,6 +1398,11 @@ async function checkPropertyCounts() {
   );
 }
 
+/* ------------------------------------------------------------------ *
+ * Setup and teardown
+ * ------------------------------------------------------------------ */
+
+/** Signs in, or fails the run loudly — nothing else can work without this. */
 async function login(email, password, label) {
   const response = await api('POST', '/auth/login', { body: { email, password } });
   if (response.status !== 200 || !response.json?.data?.token) {
@@ -1261,6 +1431,9 @@ async function setup() {
   tokens.admin = await login(options.email, options.password, 'admin');
   tokens.manager = await login(options.managerEmail, options.managerPassword, 'manager');
   tokens.sales = await login(options.salesEmail, options.salesPassword, 'sales');
+
+  // Fixtures are writes: a read-only run reads what the server already holds.
+  if (!WRITES) return;
 
   for (const group of Object.keys(WRITABLE)) {
     fixtures[group] = await createFixture(group);
@@ -1434,6 +1607,52 @@ async function checkMediaFolders(admin) {
   );
 }
 
+/** Ends the three sessions the run signed in with — nothing of the run is left behind. */
+async function signOut() {
+  for (const role of ['admin', 'manager', 'sales']) {
+    if (tokens[role]) await api('POST', '/auth/logout', { token: tokens[role] });
+  }
+}
+
+/** Under the table of a read-only run: what it left out, and why. */
+function printSkipped() {
+  const host = (() => {
+    try {
+      return new URL(options.baseUrl).host;
+    } catch {
+      return options.baseUrl;
+    }
+  })();
+  console.log(
+    `\nReads only: ${
+      options.readOnly ? '--read-only was passed' : `${host} is not this machine`
+    }, and --allow-writes was not, so nothing was written.`
+  );
+  const byMethod = {};
+  for (const endpoint of skipped.endpoints) {
+    byMethod[endpoint.method] = (byMethod[endpoint.method] ?? 0) + 1;
+  }
+  const counted = Object.entries(byMethod)
+    .map(([method, count]) => `${count} ${method}`)
+    .join(', ');
+  console.log(
+    `  Not sent: ${skipped.endpoints.length} registry entries that write (${counted}` +
+      '; the GET is redirects.resolve, which counts a hit).'
+  );
+  if (options.verbose) {
+    console.log(`    ${skipped.endpoints.map((endpoint) => endpoint.key).join(', ')}`);
+  }
+  console.log(
+    `  Not run: ${skipped.checks.length} checks that write: ${skipped.checks.join(', ')}.`
+  );
+  if (skipped.requests.length > 0) {
+    console.log(`  Refused on the way out: ${skipped.requests.join(', ')}.`);
+  }
+  console.log(
+    '  Run the full walk on staging with --allow-writes. Production gets these read checks and --compare.'
+  );
+}
+
 /** Removes everything the run created, newest first. */
 async function cleanup() {
   let removed = 0;
@@ -1520,31 +1739,39 @@ async function compareRun() {
   const [left, right] = [options.baseUrl, options.compare];
   console.log(`Comparing\n  A: ${left}\n  B: ${right}\n`);
 
-  const sessions = {};
-  for (const [role, email, password] of [
-    ['admin', options.email, options.password],
-    ['manager', options.managerEmail, options.managerPassword],
-    ['sales', options.salesEmail, options.salesPassword],
-  ]) {
-    const a = await api('POST', '/auth/login', { body: { email, password }, baseUrl: left });
-    const b = await api('POST', '/auth/login', { body: { email, password }, baseUrl: right });
-    if (a.status !== 200 || b.status !== 200) {
-      throw new Error(
-        `Cannot sign in as ${role}: A answered ${a.status}, B answered ${b.status}. ` +
-          'Both servers need the same accounts before they can be compared.'
-      );
-    }
-    sessions[role] = { a: a.json?.data?.token, b: b.json?.data?.token };
+  // One admin session a side: an admin reads everything, and what is compared
+  // is shapes, not what a role may see. After a rotation the two servers hold
+  // different passwords, so B signs in with its own when it is given them.
+  const a = await api('POST', '/auth/login', {
+    body: { email: options.email, password: options.password },
+    baseUrl: left,
+  });
+  const b = await api('POST', '/auth/login', {
+    body: {
+      email: options.compareEmail || options.email,
+      password: options.comparePassword || options.password,
+    },
+    baseUrl: right,
+  });
+  if (a.status !== 200 || b.status !== 200) {
+    throw new Error(
+      `Cannot sign in as an admin: A answered ${a.status}, B answered ${b.status}. ` +
+        "Pass A's admin as --email/--password and B's as --compareEmail/--comparePassword."
+    );
   }
+  const admin = { a: a.json?.data?.token, b: b.json?.data?.token };
 
   const differences = [];
-  const reads = allEndpoints().filter((endpoint) => endpoint.method === 'GET');
+  // A redirect lookup counts a hit: it is compared only where both may be written to.
+  const writable = mayWriteTo(left) && mayWriteTo(right);
+  const reads = allEndpoints().filter(
+    (endpoint) => endpoint.method === 'GET' && (writable || !COUNTS_ON_READ.has(endpoint.key))
+  );
   let identical = 0;
 
   for (const endpoint of reads) {
-    const role = TOKEN_FOR[endpoint.auth];
     const path = `${resolvePath(endpoint)}${COMPARE_QUERY[endpoint.key] ?? ''}`;
-    const session = role ? sessions[role] : { a: undefined, b: undefined };
+    const session = TOKEN_FOR[endpoint.auth] ? admin : { a: undefined, b: undefined };
 
     // eslint-disable-next-line no-await-in-loop -- the walk is a sequence on purpose
     const [a, b] = await Promise.all([
@@ -1597,6 +1824,11 @@ async function compareRun() {
     }
   }
 
+  await Promise.all([
+    api('POST', '/auth/logout', { token: admin.a, baseUrl: left }),
+    api('POST', '/auth/logout', { token: admin.b, baseUrl: right }),
+  ]);
+
   if (differences.length === 0) {
     console.log(`${identical}/${reads.length} reads answer the same shape. No differences.`);
     return;
@@ -1634,7 +1866,11 @@ async function main() {
     return;
   }
 
-  console.log(`Smoke testing ${options.baseUrl}\n`);
+  console.log(
+    WRITES
+      ? `Smoke testing ${options.baseUrl}\n`
+      : `Smoke testing ${options.baseUrl} — reads only\n`
+  );
 
   await setup();
 
@@ -1645,11 +1881,13 @@ async function main() {
 
   await targetedChecks();
   await cleanup();
+  await signOut();
 
   printTable();
 
   const passed = rows.filter((row) => row.ok).length;
   console.log(`\n${passed}/${rows.length} checks passed, ${rows.length - passed} failed.`);
+  if (!WRITES) printSkipped();
 
   if (failures.length > 0) {
     console.log('\nFailures:');
@@ -1664,7 +1902,11 @@ async function main() {
   process.exitCode = failures.length > 0 ? 1 : 0;
 }
 
-main().catch((error) => {
-  console.error(`\n${error.message}`);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(`\n${error.message}`);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { mayWriteTo, parseArgs };
