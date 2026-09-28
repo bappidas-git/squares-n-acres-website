@@ -22,9 +22,6 @@ final class ArticleRules
     /** An article needs this many words before it may go live. */
     public const PUBLISH_MIN_WORDS = 300;
 
-    /** Below this the form's rail says so, but the save goes through. */
-    public const RECOMMENDED_MIN_WORDS = 600;
-
     /** Whether a status puts the article in front of a visitor. */
     public static function goesLive(mixed $status): bool
     {
