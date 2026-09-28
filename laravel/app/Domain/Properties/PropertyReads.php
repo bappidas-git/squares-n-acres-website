@@ -173,12 +173,8 @@ final class PropertyReads
 
     private function localityName(mixed $id): ?string
     {
-        foreach ($this->store->all('localities') as $locality) {
-            if (self::sameId($locality['id'], $id)) {
-                return $locality['name'] ?? null;
-            }
-        }
+        $locality = is_int($id) ? $this->store->find('localities', $id) : null;
 
-        return null;
+        return $locality['name'] ?? null;
     }
 }

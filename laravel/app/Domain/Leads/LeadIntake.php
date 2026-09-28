@@ -40,10 +40,10 @@ final class LeadIntake
     }
 
     /**
-     * `POST /leads` — validated, stored and assigned.
+     * `POST /leads` — validated, stored and assigned. Returns the stored lead
+     * and the `access` to the gated files of the active listing it names.
      *
-     * @return array{0: array, 1: ?array} the stored lead, and the `access` to
-     *   the gated files of the active listing it names
+     * @return array{0: array, 1: ?array}
      */
     public function fromSite(array $body, ?string $ip, ?string $userAgent): array
     {

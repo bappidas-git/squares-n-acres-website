@@ -14,6 +14,7 @@ use App\Support\Text\Slug;
 use App\Support\Time\Clock;
 use App\Support\Validation\Documents;
 use App\Support\Validation\SchemaValidator;
+use Closure;
 use Illuminate\Support\Facades\DB;
 use stdClass;
 
@@ -69,7 +70,6 @@ final class PropertyWriter
             $record = $this->build($body, null, 'POST', $user);
             self::refuseUnready($record, 'POST', $body);
             $slug = $this->resolveSlug($body, null);
-            unset($record['id']);
 
             // A title that makes no slug is named after the id, which the insert gives.
             $stored = $this->store->insert('properties', $slug === null ? $record : $this->claimSlug($record, $slug));
@@ -92,7 +92,7 @@ final class PropertyWriter
             $this->refuseDanglingReferences($body);
 
             $slug = $this->resolveSlug($body, $existing) ?? $this->fallbackSlug($existing['id']);
-            $record = self::applySlug($this->build($body, $existing, 'PUT', $user), $slug);
+            $record = $this->build($body, $existing, 'PUT', $user);
             self::refuseUnready($record, 'PUT', $body);
 
             $stored = $this->store->update('properties', $this->claimSlug($record, $slug), $existing);
@@ -116,7 +116,7 @@ final class PropertyWriter
             $slug = array_key_exists('slug', $body)
                 ? $this->resolveSlug(['slug' => $body['slug'], 'title' => $body['title'] ?? $existing['title'] ?? null], $existing) ?? $this->fallbackSlug($existing['id'])
                 : $existing['slug'];
-            $record = self::applySlug($this->build($body, $existing, 'PATCH', $user), $slug);
+            $record = $this->build($body, $existing, 'PATCH', $user);
             self::refuseUnready($record, 'PATCH', $body);
 
             $stored = $this->store->update('properties', $this->claimSlug($record, $slug), $existing);
@@ -170,7 +170,7 @@ final class PropertyWriter
                 'lastAnalyzedAt' => null,
             ];
 
-            $stored = $this->store->insert('properties', $this->claimSlug(self::applySlug($copy, $slug), $slug));
+            $stored = $this->store->insert('properties', $this->claimSlug($copy, $slug));
             ApiLog::info('properties', "Duplicated #{$existing['id']} as #{$stored['id']}", ['slug' => $slug, 'by' => $user['id'] ?? null]);
 
             return $stored;
@@ -439,7 +439,7 @@ final class PropertyWriter
     }
 
     /** `exists` rules read another collection through this. */
-    private function lookup(): \Closure
+    private function lookup(): Closure
     {
         return fn (string $collection) => $this->store->all($collection);
     }
@@ -486,17 +486,9 @@ final class PropertyWriter
         return Slug::unique($this->store->all('properties'), "property-{$id}", $id);
     }
 
-    /** The entity slug and `seo.slug` are always the same string (§5.9). */
-    private static function applySlug(array $record, string $slug): array
-    {
-        $record['slug'] = $slug;
-        $record['seo'] = [...Js::entries($record['seo'] ?? null), 'slug' => $slug];
-
-        return $record;
-    }
-
     /**
-     * The record with its slug, once no deleted listing holds that slug.
+     * The record with its slug — the entity slug and `seo.slug` are always the
+     * same string (§5.9) — once no deleted listing holds it.
      *
      * A deleted listing's address is free again, as it is in the mock, which
      * forgets a deleted record. MySQL keeps the soft-deleted row under the
@@ -505,13 +497,15 @@ final class PropertyWriter
      */
     private function claimSlug(array $record, string $slug): array
     {
-        $holders = Property::onlyTrashed()->where('slug', $slug)->pluck('id');
-        foreach ($holders as $id) {
+        foreach (Property::onlyTrashed()->where('slug', $slug)->pluck('id') as $id) {
             Property::onlyTrashed()->toBase()->where('id', $id)->update(['slug' => substr("~{$id}~{$slug}", 0, Slug::MAX_LENGTH)]);
             ApiLog::debug('properties', "Deleted #{$id} gave up the slug {$slug}");
         }
 
-        return self::applySlug($record, $slug);
+        $record['slug'] = $slug;
+        $record['seo'] = [...Js::entries($record['seo'] ?? null), 'slug' => $slug];
+
+        return $record;
     }
 
     /** The site a share link is built on (§9.1). */

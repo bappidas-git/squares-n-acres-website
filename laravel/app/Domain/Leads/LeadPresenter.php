@@ -55,12 +55,6 @@ final class LeadPresenter
         return $this->withAuthors($embedded);
     }
 
-    /** The name of an admin user, or null. */
-    public function userName(mixed $id): ?string
-    {
-        return $id === null ? null : ($this->store->find('adminUsers', $id)['name'] ?? null);
-    }
-
     private function adminRow(array $lead, array $duplicates): array
     {
         $embedded = $this->embed->lead($lead);
@@ -78,11 +72,16 @@ final class LeadPresenter
             return $lead;
         }
         $lead['activities'] = array_map(
-            fn (array $activity) => [...$activity, 'createdByName' => $this->userName($activity['createdBy'] ?? null)],
+            fn (array $activity) => [...$activity, 'createdByName' => $this->authorName($activity['createdBy'] ?? null)],
             $lead['activities'],
         );
 
         return $lead;
+    }
+
+    private function authorName(mixed $id): ?string
+    {
+        return $id === null ? null : ($this->store->find('adminUsers', $id)['name'] ?? null);
     }
 
     /**

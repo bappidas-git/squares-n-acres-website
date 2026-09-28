@@ -65,16 +65,15 @@ class AdminLeadController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = $this->query($request);
-        $user = $this->userDocument($request);
         $now = LeadFilters::now();
-        $scoped = LeadScope::visible($this->store->all('leads'), $user);
-        $leads = LeadFilters::sort(LeadFilters::apply($scoped, $query, $user, $now), $query->first('sort'), $query->first('order'));
-
         $perPage = $query->first('perPage') === 'all' ? null : Paginator::positiveInt($query->first('perPage'), Paginator::DEFAULT_PER_PAGE_ADMIN);
-        [$page, $meta] = Paginator::paginate($leads, $query->first('page'), $perPage);
+        [$page, $meta] = Paginator::paginate($this->queryLeads($request, $now), $query->first('page'), $perPage);
+
         // The worklist chips count the view with every filter but their own,
         // so they keep their numbers while one of them is chosen.
-        $followUp = LeadFilters::followUpCounts(LeadFilters::apply($scoped, $query->without('followUp'), $user, $now), $now);
+        $user = $this->userDocument($request);
+        $view = LeadFilters::apply(LeadScope::visible($this->store->all('leads'), $user), $query->without('followUp'), $user, $now);
+        $followUp = LeadFilters::followUpCounts($view, $now);
 
         return Envelope::list($this->presenter->rows($page), [...$meta, 'followUp' => $followUp]);
     }
@@ -164,10 +163,15 @@ class AdminLeadController extends Controller
 
         $user = $this->userDocument($request);
         if ($user['role'] === 'sales') {
-            if (array_diff(array_keys($changes), LeadChanges::SALES_PATCHABLE) !== []) {
+            $refused = array_diff(array_keys($changes), LeadChanges::SALES_PATCHABLE);
+            if ($refused !== []) {
+                ApiLog::info('leads', "PATCH #{$lead['id']} refused: a sales user may not change ".implode(', ', $refused));
+
                 throw ApiException::forbidden();
             }
             if (array_intersect(LeadChanges::DETAIL_FIELDS, array_keys($changes)) !== [] && Js::string($lead['assignedTo']) !== Js::string($user['id'])) {
+                ApiLog::info('leads', "PATCH #{$lead['id']} refused: the details of a lead that is not theirs");
+
                 throw ApiException::forbidden('You can correct the details of your own leads only.');
             }
         }
@@ -177,6 +181,9 @@ class AdminLeadController extends Controller
         LeadReferences::assertStorable($changes);
 
         $changed = $this->changes->apply($lead, LeadChanges::settleLostReason($lead, $changes), $user);
+        if ($changed === null) {
+            ApiLog::debug('leads', "PATCH #{$lead['id']} changes nothing — not written");
+        }
 
         return Envelope::ok($this->presenter->admin($changed === null ? $lead : $this->save($changed, $lead, 'updated')));
     }
@@ -203,6 +210,8 @@ class AdminLeadController extends Controller
             throw ApiException::forbidden();
         }
         if ($lead['assignedTo'] !== null) {
+            ApiLog::info('leads', "Claim of #{$lead['id']} refused: already assigned");
+
             throw ApiException::conflict('This lead is already assigned.', ['assignedTo' => ['This lead is already assigned.']]);
         }
 
@@ -282,8 +291,10 @@ class AdminLeadController extends Controller
     /** The lead a route addresses, or a 404 — including "not in your scope". */
     private function findInScope(Request $request, string $id): array
     {
-        $lead = $this->store->find('leads', $id);
-        if ($lead === null || ! LeadScope::canSee($lead, $this->userDocument($request))) {
+        $lead = $this->store->find('leads', $id) ?? throw ApiException::notFound();
+        if (! LeadScope::canSee($lead, $this->userDocument($request))) {
+            ApiLog::info('leads', "Lead #{$lead['id']} is outside the sales scope — answered 404");
+
             throw ApiException::notFound();
         }
 
@@ -291,11 +302,11 @@ class AdminLeadController extends Controller
     }
 
     /** The leads a request may see, after scope, filters and sorting — the list's and the export's. */
-    private function queryLeads(Request $request): array
+    private function queryLeads(Request $request, ?int $now = null): array
     {
         $query = $this->query($request);
         $user = $this->userDocument($request);
-        $leads = LeadFilters::apply(LeadScope::visible($this->store->all('leads'), $user), $query, $user);
+        $leads = LeadFilters::apply(LeadScope::visible($this->store->all('leads'), $user), $query, $user, $now);
 
         return LeadFilters::sort($leads, $query->first('sort'), $query->first('order'));
     }
