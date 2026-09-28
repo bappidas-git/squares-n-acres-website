@@ -74,7 +74,7 @@ final class PropertyWriter
             // A title that makes no slug is named after the id, which the insert gives.
             $stored = $this->store->insert('properties', $slug === null ? $record : $this->claimSlug($record, $slug));
             if ($slug === null) {
-                $stored = $this->store->update('properties', $this->claimSlug($stored, $this->fallbackSlug($stored['id'])), $stored);
+                $stored = $this->update($this->claimSlug($stored, $this->fallbackSlug($stored['id'])), $stored);
             }
             ApiLog::info('properties', "Created #{$stored['id']}", ['slug' => $stored['slug'], 'isActive' => $stored['isActive'], 'by' => $user['id'] ?? null]);
 
@@ -95,7 +95,7 @@ final class PropertyWriter
             $record = $this->build($body, $existing, 'PUT', $user);
             self::refuseUnready($record, 'PUT', $body);
 
-            $stored = $this->store->update('properties', $this->claimSlug($record, $slug), $existing);
+            $stored = $this->update($this->claimSlug($record, $slug), $existing);
             ApiLog::info('properties', "Replaced #{$stored['id']}", ['isActive' => $stored['isActive'], 'by' => $user['id'] ?? null]);
 
             return $stored;
@@ -119,7 +119,7 @@ final class PropertyWriter
             $record = $this->build($body, $existing, 'PATCH', $user);
             self::refuseUnready($record, 'PATCH', $body);
 
-            $stored = $this->store->update('properties', $this->claimSlug($record, $slug), $existing);
+            $stored = $this->update($this->claimSlug($record, $slug), $existing);
             ApiLog::info('properties', "Patched #{$stored['id']}", ['fields' => array_keys($body), 'by' => $user['id'] ?? null]);
             if (($existing['isActive'] ?? false) !== ($stored['isActive'] ?? false)) {
                 ApiLog::info('properties', "#{$stored['id']} ".($stored['isActive'] ? 'published' : 'switched off'));
@@ -210,12 +210,26 @@ final class PropertyWriter
                 }
                 $kept = array_values(array_filter($ids, fn ($id) => ! PropertyReads::sameId($id, $property['id'])));
                 if (count($kept) !== count($ids)) {
-                    $this->store->update('properties', [...$other, 'similarPropertyIds' => $kept], $other);
+                    $this->update([...$other, 'similarPropertyIds' => $kept], $other);
                 }
             }
             $this->store->delete('properties', $property['id']);
         });
         ApiLog::info('properties', "Deleted #{$property['id']}");
+    }
+
+    /**
+     * Writes a listing's document back over the one read. The counters are
+     * the database's own — a view or a lead counted since the read must not
+     * be written over with the value read (05_BUSINESS_RULES.md → "Counters"),
+     * so the row keeps whatever it holds now.
+     */
+    public function update(array $record, array $before): array
+    {
+        return $this->store->update('properties', $record, $before, [
+            'view_count' => DB::raw('view_count'),
+            'enquiry_count' => DB::raw('enquiry_count'),
+        ]);
     }
 
     /**

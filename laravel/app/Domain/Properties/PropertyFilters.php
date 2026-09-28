@@ -161,6 +161,13 @@ final class PropertyFilters
                 $lists[$name] = $values;
             }
         }
+        if (isset($lists['bedrooms'])) {
+            // The counts asked for; `bedrooms=abc` asks for none and so matches nothing.
+            $lists['bedrooms'] = array_values(array_filter(
+                array_map(fn (string $value) => Js::toNumber($value), $lists['bedrooms']),
+                fn ($count) => $count !== null && is_finite((float) $count),
+            ));
+        }
         $flags = [];
         foreach ([...self::FLAGS, ...($admin ? ['isActive'] : [])] as $flag) {
             $wanted = Filters::bool($query->get($flag));
@@ -180,7 +187,8 @@ final class PropertyFilters
             'minArea' => self::asNumber($query->get('minArea')),
             'maxArea' => self::asNumber($query->get('maxArea')),
             'areaUnit' => $query->first('areaUnit') ?? 'sqft',
-            'possession' => self::isFilled($possessionBy) ? ['deadline' => self::endOfMonth($possessionBy)] : null,
+            'possessionBy' => self::isFilled($possessionBy),
+            'deadline' => self::isFilled($possessionBy) ? self::endOfMonth($possessionBy) : null,
             'q' => Js::trim($query->first('q') ?? ''),
         ];
     }
@@ -229,10 +237,9 @@ final class PropertyFilters
 
         // Something you can move into is available by any date (§5.7).
         $ready = in_array($property['constructionStatus'] ?? null, ['ready-to-move', 'resale'], true);
-        if ($criteria['possession'] !== null && ! $ready) {
-            $deadline = $criteria['possession']['deadline'];
+        if ($criteria['possessionBy'] && ! $ready) {
             $possession = Clock::ms($property['possessionDate'] ?? null);
-            if ($deadline === null || $possession === null || $possession > $deadline) {
+            if ($criteria['deadline'] === null || $possession === null || $possession > $criteria['deadline']) {
                 return false;
             }
         }
@@ -259,16 +266,12 @@ final class PropertyFilters
     }
 
     /** `bedrooms=3` matches 3 exactly; `5` (the last bucket) five or more. */
-    private static function matchesBedrooms(array $property, array $values): bool
+    private static function matchesBedrooms(array $property, array $wanted): bool
     {
         $counts = self::bedroomsOf($property);
-        foreach ($values as $value) {
-            $wanted = Js::toNumber($value);
-            if ($wanted === null || ! is_finite((float) $wanted)) {
-                continue;
-            }
+        foreach ($wanted as $value) {
             foreach ($counts as $count) {
-                if ($wanted >= self::MAX_BEDROOM_BUCKET ? $count >= $wanted : $count == $wanted) {
+                if ($value >= self::MAX_BEDROOM_BUCKET ? $count >= $value : $count == $value) {
                     return true;
                 }
             }

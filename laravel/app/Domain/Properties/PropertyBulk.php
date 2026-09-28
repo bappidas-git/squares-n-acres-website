@@ -61,6 +61,8 @@ final class PropertyBulk
         SchemaValidator::validate(Contract::schema('bulk'), $body);
         $action = $body['action'];
         if (! isset(self::PAYLOAD_ACTIONS[$action]) && ! array_key_exists($action, self::ACTIONS)) {
+            ApiLog::info('properties', "Bulk {$action} refused: not an action of the listings");
+
             throw ApiException::validation(['action' => 'The selected action is invalid.']);
         }
 
@@ -105,7 +107,7 @@ final class PropertyBulk
             if (($updated['isActive'] ?? false) && ! ($updated['publishedAt'] ?? null)) {
                 $updated['publishedAt'] = $now;
             }
-            $this->store->update('properties', $updated, $property);
+            $this->writer->update($updated, $property);
         }
 
         return count($targets);
@@ -162,33 +164,38 @@ final class PropertyBulk
     {
         $rule = self::PAYLOAD_ACTIONS[$action];
         $field = "payload.{$rule['key']}";
+        $refuse = function (string $message) use ($action, $field): ApiException {
+            ApiLog::info('properties', "Bulk {$action} refused", [$field => $message]);
+
+            return ApiException::validation([$field => $message]);
+        };
+
         $value = Js::get($payload, $rule['key']);
         if (! Js::has($payload, $rule['key']) || ($value === null && ! ($rule['nullable'] ?? false))) {
-            throw ApiException::validation([$field => "The {$field} field is required."]);
+            throw $refuse("The {$field} field is required.");
         }
 
         $record = null;
         if ($action === 'availability') {
             if (! in_array($value, Contract::enumValues('AVAILABILITY'), true)) {
-                throw ApiException::validation([$field => 'The selected availability is invalid.']);
+                throw $refuse('The selected availability is invalid.');
             }
         } elseif ($value !== null) {
             if (! Js::isInteger($value)) {
-                throw ApiException::validation([$field => "The {$field} must be an integer."]);
+                throw $refuse("The {$field} must be an integer.");
             }
-            $record = $this->store->find($rule['collection'], $value)
-                ?? throw ApiException::validation([$field => "The selected {$field} is invalid."]);
+            $record = $this->store->find($rule['collection'], $value) ?? throw $refuse("The selected {$field} is invalid.");
             if (($rule['activeOnly'] ?? false) && ($record['isActive'] ?? null) === false) {
-                throw ApiException::validation([$field => Js::string($record['name'] ?? null).' is switched off in Team.']);
+                throw $refuse(Js::string($record['name'] ?? null).' is switched off in Team.');
             }
         }
 
         if ($action === 'setPropertyType') {
             $other = count(array_filter($targets, fn (array $property) => ($property['segment'] ?? null) !== ($record['segment'] ?? null)));
             if ($other > 0) {
-                throw ApiException::validation([$field => Js::string($record['name'] ?? null).' is a '.Js::string($record['segment'] ?? null)
+                throw $refuse(Js::string($record['name'] ?? null).' is a '.Js::string($record['segment'] ?? null)
                     ." type, and {$other} of the selected ".($other === 1 ? 'listing is' : 'listings are')
-                    .' not — change '.($other === 1 ? 'it' : 'those').' in the form.']);
+                    .' not — change '.($other === 1 ? 'it' : 'those').' in the form.');
             }
         }
 
@@ -199,7 +206,7 @@ final class PropertyBulk
                 continue;
             }
             $updated = [...self::write($action, $property, $value, $record), 'updatedBy' => $user['id'] ?? null, 'updatedAt' => $now];
-            $this->store->update('properties', $updated, $property);
+            $this->writer->update($updated, $property);
             $affected++;
         }
 

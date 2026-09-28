@@ -150,7 +150,7 @@ class PropertyController extends Controller
     /** A listing a public route may act on: it exists and it is live. */
     private function liveListing(string $id): array
     {
-        $property = $this->reads->find($id);
+        $property = $this->store->find('properties', $id);
         if ($property === null || ! ($property['isActive'] ?? false)) {
             throw ApiException::notFound();
         }

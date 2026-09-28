@@ -5,6 +5,7 @@ namespace App\Domain\Properties;
 use App\Crud\Editors;
 use App\Domain\Embed;
 use App\Store\DocumentStore;
+use App\Support\Debug\ApiLog;
 use App\Support\Js;
 use App\Support\Query\Filters;
 use App\Support\Query\Paginator;
@@ -50,14 +51,6 @@ final class PropertyReads
         return array_values(array_filter($this->rows(), fn (array $property) => (bool) ($property['isActive'] ?? false)));
     }
 
-    /** One listing by the id a path names, compared as text: `/properties/01` names nothing. */
-    public function find(string|int $id): ?array
-    {
-        $property = $this->store->find('properties', $id);
-
-        return $property !== null && self::sameId($property['id'], $id) ? $property : null;
-    }
-
     /** One listing by slug, whatever its state (the admin preview). */
     public function findBySlug(string $slug): ?array
     {
@@ -91,6 +84,7 @@ final class PropertyReads
             ? array_values($items)
             : PropertyFilters::sort($items, $query->first('sort'), $query->first('order'));
         [$page, $meta] = Paginator::paginate($sorted, $query->first('page'), Paginator::pageSize($query, $admin));
+        ApiLog::debug('properties', 'Listed', ['admin' => $admin, 'total' => $meta['total'], 'page' => $meta['page']]);
 
         return [
             array_map(fn (array $property) => $this->present($property, $admin), $page),

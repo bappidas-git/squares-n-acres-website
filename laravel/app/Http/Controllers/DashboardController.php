@@ -22,7 +22,7 @@ class DashboardController extends Controller
         $user = $this->userDocument($request);
         $range = $this->query($request)->first('range');
         $data = ApiLog::measure('dashboard', fn () => $dashboard->build($user, $range));
-        ApiLog::debug('dashboard', "Built for a {$user['role']} user", ['range' => $range, 'leads' => $data['stats']['leadsTotal']]);
+        ApiLog::debug('dashboard', "Built for {$user['role']} #{$user['id']}", ['range' => $range, 'leads' => $data['stats']['leadsTotal']]);
 
         return Envelope::ok($data);
     }

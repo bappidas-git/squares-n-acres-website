@@ -129,6 +129,6 @@ class AdminPropertyController extends Controller
 
     private function listing(string $id): array
     {
-        return $this->reads->find($id) ?? throw ApiException::notFound();
+        return $this->store->find('properties', $id) ?? throw ApiException::notFound();
     }
 }
