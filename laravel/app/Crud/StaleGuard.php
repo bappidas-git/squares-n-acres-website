@@ -28,7 +28,8 @@ final class StaleGuard
     {
         $expected = is_string($body['updatedAt'] ?? null) ? $body['updatedAt'] : null;
         $stored = $existing['updatedAt'] ?? null;
-        if ($expected === null || $stored === null || $expected === $stored) {
+        // An empty value names no version (`!expected` in the mock): the replace goes through.
+        if ($expected === null || $expected === '' || $stored === null || $stored === '' || $expected === $stored) {
             return;
         }
 
