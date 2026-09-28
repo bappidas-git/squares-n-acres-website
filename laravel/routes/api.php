@@ -40,3 +40,7 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     // before it is a 404: no token is a 401, a path with no rule a 403.
     Route::any('{path}', fn () => throw ApiException::notFound())->where('path', '.*');
 });
+
+// Any other /api path is the contract's 404, answered by a route like every
+// other request (so it is logged in full), whatever the method.
+Route::any('{path}', fn () => throw ApiException::notFound())->where('path', '.*');

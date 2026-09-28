@@ -5,7 +5,6 @@ use App\Http\Middleware\AdminPermission;
 use App\Http\Middleware\AuthenticateToken;
 use App\Http\Middleware\ForceNoindex;
 use App\Http\Middleware\Honeypot;
-use App\Http\Middleware\LogApiTraffic;
 use App\Http\Middleware\ParseJsonBody;
 use App\Http\Middleware\SecurityHeaders;
 use App\Support\Api\ApiException;
@@ -32,10 +31,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // TLS ends at the platform's proxy: trust its X-Forwarded-* headers.
         $middleware->trustProxies(at: '*');
-
-        // Every API request and its response are logged — to the Debugbar and
-        // the `api` channel — before routing, so a 404 is logged as well.
-        $middleware->prepend(LogApiTraffic::class);
 
         // The API's JSON body, read the way the contract means it; and on
         // staging (SEO_FORCE_NOINDEX) every public read says noindex.

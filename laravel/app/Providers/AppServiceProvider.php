@@ -3,12 +3,14 @@
 namespace App\Providers;
 
 use App\Crud\Resources;
+use App\Http\Middleware\LogApiTraffic;
 use App\Store\DocumentStore;
 use App\Support\Api\ApiException;
 use App\Support\Api\Envelope;
 use App\Support\Debug\ApiLog;
 use App\Support\Js;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -25,6 +27,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
+
+        // Every API request and its response are logged — to the Debugbar and
+        // the `api` channel — as a global middleware, so a 404 is logged too.
+        // Pushed here, after the Debugbar's own middleware registered itself
+        // (package providers boot first), so the log runs inside the
+        // Debugbar's request and its entries land in the stored data.
+        $this->app->make(HttpKernel::class)->pushMiddleware(LogApiTraffic::class);
     }
 
     /**
