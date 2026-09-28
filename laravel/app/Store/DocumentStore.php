@@ -85,10 +85,17 @@ final class DocumentStore
         return array_values($this->load($collection));
     }
 
-    /** One document by id, or null. */
+    /**
+     * One document by id, or null. An id matches when it reads as the stored
+     * one — `String(a) === String(b)`, as the mock compares them — so `01`
+     * and ` 1` name nothing.
+     */
     public function find(string $collection, mixed $id): ?array
     {
-        if ($id === null || $id === '' || ! is_numeric($id)) {
+        if (is_float($id) && floor($id) === $id) {
+            $id = (int) $id;
+        }
+        if (! is_int($id) && ! (is_string($id) && preg_match('/^(0|[1-9]\d*)$/', $id))) {
             return null;
         }
 
