@@ -59,7 +59,7 @@
     "mock": "node mock-server/server.js",
     "mock:watch": "node --watch --watch-preserve-output mock-server/server.js",
     "mock:reset": "node mock-server/reset.js",
-    "dev": "concurrently -n mock,web -c blue,green \"npm run mock:watch\" \"npm start\"",
+    "dev": "concurrently -n mock,web -c blue,green \"npm run mock:watch\" \"node scripts/claim-web-port.js && npm start\"",
     "build": "cross-env GENERATE_SOURCEMAP=false react-scripts build",
     "postbuild": "node scripts/postbuild.js",
     "build:ci": "cross-env CI=true GENERATE_SOURCEMAP=false react-scripts build",

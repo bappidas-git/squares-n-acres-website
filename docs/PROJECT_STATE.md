@@ -242,7 +242,7 @@ The renormalisation is therefore invisible in the diff.
 | Script                  | Command                                                                                                         | Added by                        |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------- |
 | `start`                 | `react-scripts start`                                                                                           | boilerplate                     |
-| `dev`                   | `concurrently -n mock,web -c blue,green "npm run mock:watch" "npm start"`                                       | boilerplate (replaced in 06, QA-54) |
+| `dev`                   | `concurrently -n mock,web -c blue,green "npm run mock:watch" "node scripts/claim-web-port.js && npm start"`     | boilerplate (replaced in 06, QA-54, QA-66) |
 | `mock`                  | `node mock-server/server.js`                                                                                    | 06                              |
 | `mock:watch`            | `node --watch --watch-preserve-output mock-server/server.js`                                                    | QA-54                           |
 | `mock:reset`            | `node mock-server/reset.js`                                                                                     | 06                              |
@@ -7741,5 +7741,25 @@ the edge of the screen; the rows snap from the gutter now. Verified in Chromium
 with one city and with two: the chips, the URL, Back, a direct
 `?city=bongaigaon&zone=north`, 390 px without horizontal scroll, and the
 prerendered page of each.
+
+### After 1.1.0 — `npm run dev` takes port 3000 back from a leftover web dev server (QA-66, 2026-09-28)
+
+Reported after prompt 51: localhost stopped working when `npm run dev` was run.
+The code on `main` starts and serves — every public and admin route on a fresh
+clone, both halves under Node 18 to 26, and the screens sampled from a
+pre-prompt-51 runtime database and browser state and with a pull landing under
+a running `npm run dev` (`docs/QA/66-localhost-after-prompt-51.md`). What fails is a
+web dev server from an earlier session still holding port 3000: under
+`concurrently` `react-scripts start` cannot offer another port, so it printed
+"Something is already running on port 3000." and exited with code 0, and the
+browser kept showing the old server — which, if it missed part of prompt 51's
+moves, stays on "Failed to compile". The mock has taken its port back since
+QA-57; the web half now does too. `npm run dev` first runs
+`scripts/claim-web-port.js`: a dev server of this project is asked to stop
+through `GET/POST /__web/*` (`src/setupProxy.js`, loaded by the dev server
+only) or, from before those routes, found by its process and stopped; any
+other program is left alone and named, with the command to stop it
+(`scripts/lib/webTakeover.js`, QA-66 in `DECISIONS.md`). No API, schema or
+seed change; the handover package is unaffected.
 
 **Next prompt: none. 1.1.0 is tagged.**
