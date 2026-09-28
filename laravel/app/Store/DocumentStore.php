@@ -3,6 +3,7 @@
 namespace App\Store;
 
 use App\Models;
+use App\Support\Api\ApiException;
 use App\Support\Debug\ApiLog;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -117,6 +118,7 @@ final class DocumentStore
     {
         $mapper = TableMapper::for($collection);
         unset($document['id']);
+        self::assertStorable($mapper, $document);
 
         $id = DB::transaction(function () use ($mapper, $document, $extra) {
             $id = (int) self::query($mapper->table())->insertGetId([...$mapper->toRow($document), ...$extra]);
@@ -157,6 +159,7 @@ final class DocumentStore
     {
         $mapper = TableMapper::for($collection);
         $id = (int) $document['id'];
+        self::assertStorable($mapper, $document);
 
         DB::transaction(function () use ($mapper, $document, $before, $id, $extra) {
             self::queryWithTrashed($mapper->table())->where('id', $id)->update([...$mapper->toRow($document), ...$extra]);
@@ -240,6 +243,7 @@ final class DocumentStore
     public function saveSingleton(string $collection, array $document): array
     {
         $mapper = TableMapper::for($collection);
+        self::assertStorable($mapper, $document);
         $row = $mapper->toRow($document);
         $exists = self::query($mapper->table())->where('id', 1)->exists();
         if ($exists) {
@@ -367,6 +371,20 @@ final class DocumentStore
             unset($this->documents[$collection][$id]);
         } else {
             $this->documents[$collection][$id] = $fresh;
+        }
+    }
+
+    /**
+     * A document holding what its tables cannot (TableMapper::storageProblems)
+     * is refused with a 422 naming each field, before anything is written.
+     */
+    private static function assertStorable(TableMapper $mapper, array $document): void
+    {
+        $problems = $mapper->storageProblems($document);
+        if ($problems !== []) {
+            ApiLog::info('store', "Refused a {$mapper->table()} write its columns cannot hold", ['errors' => $problems]);
+
+            throw ApiException::validation($problems);
         }
     }
 

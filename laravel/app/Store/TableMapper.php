@@ -310,6 +310,113 @@ final class TableMapper
         return $rows;
     }
 
+    /**
+     * What a document holds that its tables cannot: a number beyond an
+     * integer or decimal column's range, a string longer than its column, a
+     * moment `DATETIME(3)` cannot hold, or no value where the column needs
+     * one. The contract's validation is the mock's, and the mock stores any
+     * of these; here each would fail the write in MySQL's strict mode with a
+     * 500, so the store refuses the document first with a 422 naming the
+     * field (DocumentStore). A value MySQL would accept is never flagged.
+     *
+     * @return array<string, array<int, string>> document path → messages
+     */
+    public function storageProblems(array $document): array
+    {
+        $problems = [];
+        foreach ($this->main['columns'] as $column) {
+            if (isset($column['path']) && ! in_array($column['name'], ['id', 'deleted_at'], true)
+                && ! in_array($column['role'] ?? null, ['secret', 'timestamp'], true)) {
+                self::checkFits($column, self::pathValue($document, $column['path']), $column['path'], $problems);
+            }
+        }
+        foreach ($this->children as $field => $table) {
+            foreach (Js::isList($document[$field] ?? null) ? $document[$field] : [] as $index => $item) {
+                $item = Js::entries($item);
+                foreach ($table['columns'] as $column) {
+                    if ($column['name'] === 'local_id') {
+                        if (Js::isInteger($item['id'] ?? null)) {
+                            self::checkFits($column, $item['id'], "{$field}.{$index}.id", $problems);
+                        }
+                    } elseif (isset($column['path']) && ! in_array($column['role'] ?? null, ['parent', 'timestamp'], true)) {
+                        self::checkFits($column, $item[$column['path']] ?? null, "{$field}.{$index}.{$column['path']}", $problems);
+                    }
+                }
+            }
+        }
+        foreach ($this->pivots as $field => $table) {
+            $related = self::column($table, $this->pivotRelatedKey($field));
+            foreach (Js::isList($document[$field] ?? null) ? $document[$field] : [] as $index => $id) {
+                if ($related !== null && Js::isInteger($id)) {
+                    self::checkFits($related, $id, "{$field}.{$index}", $problems);
+                }
+            }
+        }
+
+        return $problems;
+    }
+
+    /** Adds the message for a value its column cannot hold, as `toColumn()` would write it. */
+    private static function checkFits(array $column, mixed $value, string $path, array &$problems): void
+    {
+        $stored = self::toColumn($column, $value);
+        $message = match ($column['kind']) {
+            'int', 'number' => Js::isNumber($value) || (is_string($value) && is_numeric($value))
+                ? self::rangeProblem($column['type'], $value + 0, $path) : null,
+            'string' => is_string($stored) ? self::lengthProblem($column['type'], $stored, $path) : null,
+            'date', 'datetime' => match (true) {
+                $stored === '' && $value === null => "The {$path} field is required.",
+                $stored === '' || ($column['kind'] === 'datetime' && $value !== null && ! Clock::isStorable($value)) => "The {$path} is not a valid date.",
+                default => null,
+            },
+            default => null,
+        };
+        if ($message !== null) {
+            $problems[$path] = [$message];
+        }
+    }
+
+    /** An integer or `DECIMAL(p,s)` column's range, as MySQL checks it (a decimal after rounding to its scale). */
+    private static function rangeProblem(string $type, int|float $number, string $path): ?string
+    {
+        if (preg_match('/^DECIMAL\((\d+),(\d+)\)/', $type, $match)) {
+            $scale = (int) $match[2];
+            $max = 10 ** ((int) $match[1] - $scale) - 10 ** -$scale;
+            [$min, $number] = [-$max, round($number, $scale)];
+            [$minText, $maxText] = [number_format($min, $scale, '.', ''), number_format($max, $scale, '.', '')];
+        } else {
+            [$min, $max] = match (true) {
+                str_starts_with($type, 'TINYINT UNSIGNED') => [0, 255],
+                str_starts_with($type, 'INT UNSIGNED') => [0, 4294967295],
+                str_starts_with($type, 'INT') => [-2147483648, 2147483647],
+                str_starts_with($type, 'BIGINT UNSIGNED') => [0, 18446744073709551615],
+                default => [null, null],
+            };
+            if ($min === null) {
+                return null;
+            }
+            [$minText, $maxText] = [Js::string($min), $max > PHP_INT_MAX ? '18446744073709551615' : Js::string($max)];
+        }
+
+        return match (true) {
+            $number < $min => "The {$path} must be at least {$minText}.",
+            $number > $max => "The {$path} may not be greater than {$maxText}.",
+            default => null,
+        };
+    }
+
+    /** A `VARCHAR(n)` counts characters; a `TEXT` holds 65,535 bytes. */
+    private static function lengthProblem(string $type, string $stored, string $path): ?string
+    {
+        $limit = match (true) {
+            (bool) preg_match('/^VARCHAR\((\d+)\)/', $type, $match) => mb_strlen($stored) > (int) $match[1] ? (int) $match[1] : null,
+            $type === 'TEXT' => strlen($stored) > 65535 ? 65535 : null,
+            default => null,
+        };
+
+        return $limit === null ? null : "The {$path} may not be greater than {$limit} characters.";
+    }
+
     /** The related-id column of a pivot (`amenity_id`). */
     public function pivotRelatedKey(string $field): string
     {

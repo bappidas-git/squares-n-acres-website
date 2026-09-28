@@ -83,8 +83,9 @@ comments say: flattened objects become columns (`location.address` ↔ `address`
 rows (`property_images`, `lead_notes`…), id lists become pivots (`property_amenity`…), everything else nested stays
 a JSON column (`seo`, `sectionVisibility`, settings groups). `App\Store\DocumentStore` loads a collection's
 documents once per request through the Eloquent models' queries (their soft-delete scope included) and writes a
-document back as its row, its child rows and its pivots in one transaction. Documents read back identical to
-`db.json` — the seeder's import is verified record by record.
+document back as its row, its child rows and its pivots in one transaction — after checking that every value fits
+its column, so a write the tables cannot hold is a 422 naming the field rather than a database error. Documents
+read back identical to `db.json` — the seeder's import is verified record by record.
 
 **One CRUD engine.** Twenty resources are the same eight endpoints over — a public list and slug lookup, the admin
 list, create, read, replace, patch, delete, bulk, check-slug — so they are written once in
@@ -176,6 +177,9 @@ still differs is listed here; each difference comes from what MySQL can hold, or
   and when it was written, and name an author who exists;
 - a moment `DATETIME(3)` cannot hold — a year after 9999 or before 0, which `Date.parse` accepts
   (`+010000-01-01T00:00:00Z`) — "is not a valid date.";
+- any other value its column cannot hold — an item `id` below 0 or above 4294967295, an `order` beyond an `INT`, a
+  string longer than its `VARCHAR` (a phone padded with spaces passes the phone rule, which ignores them) — is
+  refused before anything is written, naming the field (`TableMapper::storageProblems()`);
 - redirect-import rows longer than their columns are counted as `skipped`; duplicating a listing whose title is
   over 193 characters shortens the title so " (Copy)" fits; a lead's user agent is cut to 500 characters.
 
