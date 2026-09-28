@@ -33,10 +33,9 @@ class PageController extends Controller
 
     public function previewToken(string $id): JsonResponse
     {
-        $reads = $this->reads();
-        $page = $reads->find($id) ?? throw ApiException::notFound();
+        $page = $this->store->find('pages', $id) ?? throw ApiException::notFound();
 
-        return Envelope::ok($reads->previewToken($page));
+        return Envelope::ok($this->reads()->previewToken($page));
     }
 
     private function reads(): PageReads

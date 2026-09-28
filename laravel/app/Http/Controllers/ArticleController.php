@@ -72,19 +72,16 @@ class ArticleController extends Controller
 
     public function show(Request $request, string $id): JsonResponse
     {
-        $reads = $this->reads();
-        $reads->settle();
-        $reads->find($id) ?? throw ApiException::notFound();
+        $this->reads()->settle();
 
         return $this->resource()->handleGet($id, $this->query($request));
     }
 
     public function previewToken(string $id): JsonResponse
     {
-        $reads = $this->reads();
-        $article = $reads->find($id) ?? throw ApiException::notFound();
+        $article = $this->store->find('articles', $id) ?? throw ApiException::notFound();
 
-        return Envelope::ok($reads->previewToken($article));
+        return Envelope::ok($this->reads()->previewToken($article));
     }
 
     private function reads(): ArticleReads

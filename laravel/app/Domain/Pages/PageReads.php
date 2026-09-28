@@ -99,14 +99,6 @@ final class PageReads
         ];
     }
 
-    /** One page by its id as the path spells it (`String(id)`), or null. */
-    public function find(string $id): ?array
-    {
-        $page = $this->store->find('pages', $id);
-
-        return $page !== null && Js::string($page['id']) === $id ? $page : null;
-    }
-
     /**
      * `GET /admin/pages/:id/preview-token`: a 24-hour token bound to this page
      * and the link that opens it — the site root for the home record.

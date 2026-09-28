@@ -108,14 +108,6 @@ final class ArticleReads
         return array_diff_key($article, array_flip(self::LIST_OMIT));
     }
 
-    /** One article by its id as the path spells it (`String(id)`), or null. */
-    public function find(string $id): ?array
-    {
-        $article = $this->store->find('articles', $id);
-
-        return $article !== null && Js::string($article['id']) === $id ? $article : null;
-    }
-
     /**
      * `GET /articles`: the live articles, filtered (§5.14), `newest` first or
      * `popular`, as summary rows.
@@ -168,7 +160,7 @@ final class ArticleReads
     public function adjacent(string $id, QueryParams $query): array
     {
         $this->settle();
-        $article = $this->find($id);
+        $article = $this->store->find('articles', $id);
         if ($article === null || ! ArticleVisibility::isLive($article)) {
             throw ApiException::notFound();
         }
