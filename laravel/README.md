@@ -2,15 +2,17 @@
 
 The API the Squares N Acres website and admin panel run on: **Laravel 12**, **MySQL 8**, **Sanctum**
 bearer tokens. It implements the contract of [`../backend_developer_guidelines/`](../backend_developer_guidelines/)
-— the 274 operations of `openapi.yaml` — and answers exactly as the reference implementation, the Node mock
+— the 274 operations of `openapi.yaml` — and answers as the reference implementation, the Node mock
 server in [`../mock-server/`](../mock-server/), does: same statuses, same envelopes, same keys, same values,
-same error messages. The website cannot tell the two apart; that is the acceptance test.
+same error messages. The website cannot tell the two apart; that is the acceptance test. The few places where
+MySQL makes it answer differently are listed under [Where it differs from the mock](#where-it-differs-from-the-mock).
 
 - [Quick start](#quick-start)
 - [How it is built](#how-it-is-built)
 - [Request and response logging — the Debugbar](#request-and-response-logging--the-debugbar)
 - [Deviations from schema.sql](#deviations-from-schemasql)
-- [Rate limits, schedule, staging](#rate-limits-schedule-staging)
+- [Where it differs from the mock](#where-it-differs-from-the-mock)
+- [Rate limits, hosts, schedule, staging](#rate-limits-hosts-schedule-staging)
 - [Testing and parity](#testing-and-parity)
 - [Regenerating the contract](#regenerating-the-contract)
 
@@ -60,7 +62,7 @@ app/Store/                 DocumentStore + TableMapper — the contract's JSON d
 app/Crud/                  the generic CRUD engine, its resource definitions, delete guards, ordering
 app/Domain/                the business rules per module (properties, leads, articles, SEO…)
 app/Http/Controllers/      thin controllers: request → domain → envelope
-app/Http/Middleware/       traffic logging, JSON body, bearer auth, role matrix, honeypot, headers
+app/Http/Middleware/       traffic logging, JSON body, bearer auth, role matrix, honeypot, headers, CORS
 app/Support/               the ported semantics: validation, slugs, HTML, IST, query/sort/pagination, CSV
 routes/api.php             /api — module route files in routes/api/*.php, then the generic CRUD routes
 routes/seo-root.php        /sitemap.xml, /robots.txt, /rss.xml, /llms.txt at the root
@@ -149,15 +151,58 @@ foreign key, with these changes — each also listed in `resources/contract/tabl
 | `property_amenity`, `property_badge` gain `position` | the order the editor chose, as `property_similar` and `article_tag` already keep |
 | `personal_access_tokens` is Sanctum's own table | the mock's token store (`apiTokens`) is not imported (`seed-mapping.md`) |
 
-Two behaviours worth knowing: MySQL's `JSON` type stores an object's keys sorted, so the keys inside a JSON
-column (`seo`, a settings group) come back in a different order than they were written — JSON key order carries
-no meaning, and every value is kept exactly. The four soft-deleted tables (`properties`, `articles`, `pages`,
-`leads`) keep a deleted record's row with `deleted_at` set; the API never reads it again, and a master-data record
-that only a deleted record still names is refused with a 409 rather than a database error.
+Two behaviours worth knowing: MySQL's `JSON` type stores an object's keys sorted, so the mapper puts the keys of
+a JSON column (`seo`, `utm`, a settings group) back in the order the contract lists them — the order the mock
+answers in. Only an object the contract gives no shape (a page block's `data`, a lead's `meta`) comes back with
+MySQL's order; JSON key order carries no meaning, and every value is kept exactly. The four soft-deleted tables
+(`properties`, `articles`, `pages`, `leads`) keep a deleted record's row with `deleted_at` set; the API never reads
+it again, and a master-data record that only a deleted record still names is refused with a 409 rather than a
+database error.
 
 ---
 
-## Rate limits, schedule, staging
+## Where it differs from the mock
+
+Every endpoint was compared with the mock value by value (see [Testing and parity](#testing-and-parity)). What
+still differs is listed here; each difference comes from what MySQL can hold, or is a mock quirk not copied.
+
+**Refused where the mock stores what the tables cannot hold** — a 422 in the usual shape, never a 500:
+
+- an id that names no record: a listing's `propertyTypeId`, `location.localityId`/`cityId`,
+  `project.developerId`, `agent.teamMemberId`, `amenityIds.*`, `badgeIds.*`, `similarPropertyIds.*`, and a lead's
+  `propertyId`/`articleId` ("The selected … is invalid.", the `exists` rules of `03_ENDPOINTS.md`); a lead may still
+  name a soft-deleted listing or article, as an enquiry from a stale page does;
+- `notes` sent in a lead `PATCH` (the mock lets any field of the lead model through) must each carry an id, the text
+  and when it was written, and name an author who exists;
+- a moment `DATETIME(3)` cannot hold — a year after 9999 or before 0, which `Date.parse` accepts
+  (`+010000-01-01T00:00:00Z`) — "is not a valid date.";
+- redirect-import rows longer than their columns are counted as `skipped`; duplicating a listing whose title is
+  over 193 characters shortens the title so " (Copy)" fits; a lead's user agent is cut to 500 characters.
+
+**Stored the way the tables store it:**
+
+- ids are never reused: the mock gives a new record `max(id) + 1`, so after deleting the newest record the two
+  servers number the next one differently;
+- an array item sent with some of its fields only (an image as `{url, alt}`, a page block without `hidden`) reads
+  back with every field, the missing ones at their defaults, and keys the contract does not name are dropped;
+- id lists hold each id once (`amenityIds: [1, 1, 2]` reads back `[1, 2]`; `tagIds` likewise);
+- dates read back in the contract's ISO form (`2026-10-01` → `2026-10-01T00:00:00.000Z`), and a lead's
+  `followUpAt` is compared by instant — the same moment spelled differently is not a change;
+- a desk lead sent without `source` gets the schema's default, `walk-in` (the mock stores none);
+- media records have no `updatedBy` (the mock adds one to records written through the API).
+
+**Mock quirks not copied:** `?sort=constructor` (or another `Object.prototype` name) falls back to the documented
+default sort; a trailing slash (`/pages/slug/about/`) finds the page; `/api/SITEMAP.xml` is not a route (Laravel's
+routes are case-sensitive); `GET /redirects/:id`, which the mock answers from its generic fallback, is not a
+contract endpoint; `Cache-Control` reads `max-age=…, public` (Symfony's order).
+
+**Only here:** the lead alert e-mail; the honeypot answers before the rate limiter, so bots do not use up the form
+budget (the mock counts them); the view-counting windows live in the cache and survive a restart; the host check
+below.
+
+---
+
+## Rate limits, hosts, schedule, staging
 
 | Limit | Key | Config |
 | --- | --- | --- |
@@ -168,7 +213,13 @@ that only a deleted record still names is refused with a 409 rather than a datab
 | `POST /redirects/:id/hit` — 60 / min, `POST /not-found` — 30 / min | IP | `RATE_LIMIT_REDIRECT_HITS`, `RATE_LIMIT_NOT_FOUND` |
 
 Over a limit: 429, `Retry-After`, "Too many requests. Please try again in a minute." (the password change says
-what it refuses).
+what it refuses). The limits are read per request, so a test can lower one with `config()`.
+
+**Hosts.** Outside the local environment and tests, the API answers only for its own hosts (`07_DEPLOYMENT.md` →
+`trustHosts`): `TRUSTED_HOSTS`, comma-separated, or — unset — the hosts of `APP_URL` and `SITE_URL`. A request for
+any other host (a forged `Host` or `X-Forwarded-Host`) is a 400 before it reaches a route. Add the host the
+platform's health check sends, if it sends another. CORS (`config/cors.php`, `CORS_ALLOWED_ORIGINS`) allows the
+site's origins only, with the same paths for every host.
 
 The schedule (`routes/console.php`, run by `php artisan schedule:run` every minute): `articles:publish-scheduled`
 every minute, `sanctum:prune-expired --hours=48` daily, `sna:prune` hourly (listing views beyond 90 days, the 404 log
@@ -204,8 +255,9 @@ stale-save guard…) and deletes what it created. The comparison sends every rea
 the differences of shape. During development every endpoint was also compared **value by value** with the mock
 over the same seed.
 
-For repeated local smoke runs, raise `RATE_LIMIT_LOGIN` and `RATE_LIMIT_ADMIN` in `.env`: one run signs in several
-times and makes a few hundred admin requests.
+For repeated local smoke runs, raise `RATE_LIMIT_LOGIN`, `RATE_LIMIT_ADMIN` and `RATE_LIMIT_PUBLIC_FORMS` in `.env`:
+one run signs in several times, makes a few hundred admin requests and sends a handful of enquiries. (The mock
+limits its forms to 10 a minute too, so a second run against it within the minute gets 429s.)
 
 ---
 

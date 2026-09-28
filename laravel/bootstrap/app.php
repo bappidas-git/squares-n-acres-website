@@ -4,6 +4,7 @@ use App\Exceptions\ApiExceptionRenderer;
 use App\Http\Middleware\AdminPermission;
 use App\Http\Middleware\AuthenticateToken;
 use App\Http\Middleware\ForceNoindex;
+use App\Http\Middleware\HandleCors;
 use App\Http\Middleware\Honeypot;
 use App\Http\Middleware\ParseJsonBody;
 use App\Http\Middleware\SecurityHeaders;
@@ -11,6 +12,7 @@ use App\Support\Api\ApiException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\HandleCors as FrameworkHandleCors;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Route;
@@ -29,8 +31,16 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // TLS ends at the platform's proxy: trust its X-Forwarded-* headers.
+        // TLS ends at the platform's proxy: trust its X-Forwarded-* headers …
         $middleware->trustProxies(at: '*');
+        // … and answer only for the site's own hosts (config/sna.php → trusted_hosts).
+        $middleware->trustHosts(at: fn () => array_map(
+            fn (string $host) => '^'.preg_quote($host).'$',
+            config('sna.trusted_hosts'),
+        ), subdomains: false);
+
+        // CORS paths are one list for every host (see the class).
+        $middleware->replace(FrameworkHandleCors::class, HandleCors::class);
 
         // The API's JSON body, read the way the contract means it; and on
         // staging (SEO_FORCE_NOINDEX) every public read says noindex.

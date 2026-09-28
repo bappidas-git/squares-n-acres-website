@@ -23,8 +23,12 @@ abstract class Controller
     protected function body(Request $request): array
     {
         $body = $request->attributes->get(ParseJsonBody::ATTRIBUTE);
+        $fields = Js::isPlainObject($body) ? Js::entries($body) : [];
 
-        return Js::isPlainObject($body) ? Js::entries($body) : [];
+        // `{"0": …}` is an object, but its entries would read as a list and
+        // fail validation as "not an object". No field of the contract is a
+        // number, so such a body names nothing: it is `{}`, as on the mock.
+        return array_is_list($fields) ? [] : $fields;
     }
 
     /** The decoded JSON body as sent: an object, a list, or null. */

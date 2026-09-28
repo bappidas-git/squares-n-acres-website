@@ -32,6 +32,21 @@ return [
     'api_url' => env('APP_URL'),
 
     /*
+    | The hosts the application answers for (07_DEPLOYMENT.md → `trustHosts`):
+    | a request naming any other host is a 400 before it reaches a route, so a
+    | forged Host never gets near a document. TRUSTED_HOSTS is a comma-separated
+    | list; unset, it is the hosts of APP_URL and SITE_URL. Laravel applies it
+    | outside the local environment and tests only.
+    */
+    'trusted_hosts' => array_values(array_unique(array_filter(array_map(
+        fn (string $host) => strtolower(trim($host)),
+        explode(',', (string) env('TRUSTED_HOSTS', implode(',', array_map(
+            fn (mixed $url) => (string) parse_url((string) $url, PHP_URL_HOST),
+            [env('APP_URL'), env('SITE_URL', 'https://www.squaresnacres.com')],
+        )))),
+    )))),
+
+    /*
     | Staging blocks crawlers by environment, not by data (07_DEPLOYMENT.md →
     | "Cloudways specifics that bite").
     */

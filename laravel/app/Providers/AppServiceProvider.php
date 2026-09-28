@@ -43,7 +43,8 @@ class AppServiceProvider extends ServiceProvider
      */
     private function configureRateLimiting(): void
     {
-        $limits = config('sna.rate_limits');
+        // Read per request, so a limit changed at run time (a test) applies.
+        $perMinute = fn (string $name) => Limit::perMinute((int) config("sna.rate_limits.{$name}"));
         $tooMany = fn (string $message = ApiException::TOO_MANY) => function (Request $request, array $headers) use ($message) {
             ApiLog::warning('throttle', "429 {$request->method()} /{$request->path()}", ['retryAfter' => $headers['Retry-After'] ?? null]);
 
@@ -51,35 +52,35 @@ class AppServiceProvider extends ServiceProvider
         };
 
         // The three anonymous writes: ten a minute per IP, per form.
-        RateLimiter::for('public-forms', fn (Request $request) => Limit::perMinute($limits['public_forms_per_minute'])
+        RateLimiter::for('public-forms', fn (Request $request) => $perMinute('public_forms_per_minute')
             ->by('form:'.$request->route()?->uri().'|'.$request->ip())
             ->response($tooMany()));
 
         // Signing in: five a minute, keyed on the address plus the IP.
-        RateLimiter::for('login', function (Request $request) use ($limits, $tooMany) {
+        RateLimiter::for('login', function (Request $request) use ($perMinute, $tooMany) {
             $email = Js::get($request->attributes->get('jsonBody'), 'email');
             $email = is_string($email) ? Js::lower(Js::trim($email)) : '';
 
-            return Limit::perMinute($limits['login_per_minute'])
+            return $perMinute('login_per_minute')
                 ->by('login:'.$email.'|'.$request->ip())
                 ->response($tooMany());
         });
 
         // Changing the password takes the current one: five tries a minute per account.
-        RateLimiter::for('password', fn (Request $request) => Limit::perMinute($limits['password_per_minute'])
+        RateLimiter::for('password', fn (Request $request) => $perMinute('password_per_minute')
             ->by('password:'.$request->user()?->getKey())
             ->response($tooMany('Too many attempts to change the password. Try again in a minute.')));
 
         // Signed-in routes are throttled by user, not by IP (an office shares one address).
-        RateLimiter::for('admin', fn (Request $request) => Limit::perMinute($limits['admin_per_minute'])
+        RateLimiter::for('admin', fn (Request $request) => $perMinute('admin_per_minute')
             ->by('admin:'.($request->user()?->getKey() ?? $request->ip()))
             ->response($tooMany()));
 
-        RateLimiter::for('redirect-hits', fn (Request $request) => Limit::perMinute($limits['redirect_hits_per_minute'])
+        RateLimiter::for('redirect-hits', fn (Request $request) => $perMinute('redirect_hits_per_minute')
             ->by('hit:'.$request->ip())
             ->response($tooMany()));
 
-        RateLimiter::for('not-found-reports', fn (Request $request) => Limit::perMinute($limits['not_found_per_minute'])
+        RateLimiter::for('not-found-reports', fn (Request $request) => $perMinute('not_found_per_minute')
             ->by('404:'.$request->ip())
             ->response($tooMany()));
     }

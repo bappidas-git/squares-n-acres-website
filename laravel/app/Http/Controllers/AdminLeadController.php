@@ -179,6 +179,7 @@ class AdminLeadController extends Controller
             $this->assignment->assertAssignable($changes['assignedTo'], 'assignedTo', $lead['assignedTo']);
         }
         LeadReferences::assertStorable($changes);
+        LeadReferences::assertStorableNotes($changes);
 
         $changed = $this->changes->apply($lead, LeadChanges::settleLostReason($lead, $changes), $user);
         if ($changed === null) {

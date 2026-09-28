@@ -38,6 +38,9 @@ class PortedSemanticsTest extends TestCase
         $this->assertSame(2, Js::length('😀'));
         $this->assertTrue(Js::isInteger(5.0));
         $this->assertSame(1, Js::parseInt('1e3'));
+        $this->assertSame(16, Js::toNumber(' 0x10 '));
+        $this->assertSame(3, Js::toNumber('0b11'));
+        $this->assertNull(Js::toNumber('-0x10'));
         $this->assertLessThan(0, Sorter::compare('item 2', 'item 10'));
         $this->assertLessThan(0, Sorter::compare(true, false));
         $this->assertSame(['b', null], array_column(Sorter::sort([['v' => null], ['v' => 'b']], 'v', 'desc'), 'v'));

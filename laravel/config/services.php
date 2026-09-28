@@ -39,7 +39,7 @@ return [
         'key_secret' => env('RAZORPAY_KEY_SECRET'),
     ],
     'mailchimp' => [
-    'transactional_key' => env('MAILCHIMP_TRANSACTIONAL_KEY'),
+        'transactional_key' => env('MAILCHIMP_TRANSACTIONAL_KEY'),
     ],
 
 ];

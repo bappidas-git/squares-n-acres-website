@@ -230,7 +230,8 @@ final class SchemaValidator
                 ? null : "The selected {$key} is invalid.",
             'date' => is_string($value) && preg_match(self::DATE, $value) && Clock::isValid($value)
                 ? null : "The {$key} does not match the format Y-m-d.",
-            'datetime' => is_string($value) && Clock::isValid($value) ? null : "The {$key} is not a valid date.",
+            // A moment the column cannot hold is as unreadable as one that does not parse.
+            'datetime' => is_string($value) && Clock::isStorable($value) ? null : "The {$key} is not a valid date.",
             'email' => is_string($value) && preg_match(self::EMAIL, $value)
                 ? null : "The {$key} must be a valid email address.",
             'phone' => is_string($value) && preg_match(self::INDIAN_MOBILE, (string) preg_replace('/[\s-]/', '', $value))

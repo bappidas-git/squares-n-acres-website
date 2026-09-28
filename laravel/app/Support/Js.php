@@ -164,6 +164,14 @@ final class Js
         if ($text === '') {
             return 0;
         }
+        // `Number('0x10')` is 16, and the binary and octal forms read the same way; none takes a sign.
+        if (preg_match('/^0(?:[xX]([0-9a-fA-F]+)|[bB]([01]+)|[oO]([0-7]+))$/', $text, $match)) {
+            return match (true) {
+                ($match[1] ?? '') !== '' => hexdec($match[1]),
+                ($match[2] ?? '') !== '' => bindec($match[2]),
+                default => octdec($match[3]),
+            };
+        }
         if (! is_numeric($text)) {
             return null;
         }

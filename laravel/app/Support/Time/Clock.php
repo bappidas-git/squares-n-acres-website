@@ -79,6 +79,18 @@ final class Clock
         return self::parse($value) !== null;
     }
 
+    /**
+     * Whether a `DATETIME(3)` column can hold the instant. `Date.parse` reads
+     * years far beyond MySQL's 0000–9999 (`+010000-01-01T00:00:00Z`), and
+     * such a value would fail the write.
+     */
+    public static function isStorable(mixed $value): bool
+    {
+        $year = self::parse($value)?->year;
+
+        return $year !== null && $year >= 0 && $year <= 9999;
+    }
+
     /** An instant as the contract writes it; null stays null. */
     public static function iso(mixed $value): ?string
     {

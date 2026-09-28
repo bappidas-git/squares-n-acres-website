@@ -117,7 +117,10 @@ final class TableMapper
             $field = $entry['field'];
             switch ($entry['type']) {
                 case 'column':
-                    $document[$field] = self::fromColumn($entry['column'], $row[$entry['column']['name']] ?? null);
+                    $document[$field] = self::inContractOrder(
+                        self::fromColumn($entry['column'], $row[$entry['column']['name']] ?? null),
+                        $entry['descriptor'] ?? null,
+                    );
                     break;
                 case 'object':
                     $document[$field] = $this->build($entry['layout'], $row, [], []);
@@ -155,11 +158,45 @@ final class TableMapper
                 continue;
             }
             if (isset($byPath[$field])) {
-                $item[$field] = self::fromColumn($byPath[$field], $row[$byPath[$field]['name']] ?? null);
+                $item[$field] = self::inContractOrder(
+                    self::fromColumn($byPath[$field], $row[$byPath[$field]['name']] ?? null),
+                    is_array($descriptor) ? $descriptor : null,
+                );
             }
         }
 
         return $item;
+    }
+
+    /**
+     * A JSON column's value with its keys in the order the contract lists
+     * them. MySQL's JSON type keeps an object's keys sorted, so a `utm` written
+     * as `source, medium, campaign, term, content` would read back starting
+     * with `term`; the mock answers in the order it was written, which is the
+     * contract's. Keys the contract does not name follow, as stored.
+     */
+    private static function inContractOrder(mixed $value, ?array $descriptor): mixed
+    {
+        if ($descriptor === null || ! is_array($value) || $value === []) {
+            return $value;
+        }
+        if (array_is_list($value)) {
+            $items = is_array($descriptor['items'] ?? null) ? $descriptor['items'] : null;
+
+            return $items === null ? $value : array_map(fn (mixed $item) => self::inContractOrder($item, $items), $value);
+        }
+        if (! is_array($descriptor['shape'] ?? null)) {
+            return $value;
+        }
+
+        $ordered = [];
+        foreach ($descriptor['shape'] as $key => $child) {
+            if (array_key_exists($key, $value)) {
+                $ordered[$key] = self::inContractOrder($value[$key], is_array($child) ? $child : null);
+            }
+        }
+
+        return $ordered + $value;
     }
 
     /** A raw column value as the document holds it. */
@@ -358,7 +395,7 @@ final class TableMapper
                 continue;
             }
             if (isset($byPath[$path])) {
-                $layout[] = ['field' => $field, 'type' => 'column', 'column' => $byPath[$path]];
+                $layout[] = ['field' => $field, 'type' => 'column', 'column' => $byPath[$path], 'descriptor' => is_array($descriptor) ? $descriptor : null];
 
                 continue;
             }
