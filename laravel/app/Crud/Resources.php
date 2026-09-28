@@ -2,7 +2,14 @@
 
 namespace App\Crud;
 
+use App\Crud\Definitions\Articles;
+use App\Crud\Definitions\HeaderMenus;
+use App\Crud\Definitions\Jobs;
 use App\Crud\Definitions\MasterData;
+use App\Crud\Definitions\Media;
+use App\Crud\Definitions\Newsletter;
+use App\Crud\Definitions\Pages;
+use App\Crud\Definitions\Redirects;
 use App\Store\DocumentStore;
 use InvalidArgumentException;
 
@@ -22,6 +29,13 @@ final class Resources
     /** @var array<int, class-string> */
     public const PROVIDERS = [
         MasterData::class,
+        Articles::class,
+        Pages::class,
+        HeaderMenus::class,
+        Jobs::class,
+        Media::class,
+        Newsletter::class,
+        Redirects::class,
     ];
 
     /** @var array<string, array>|null */
