@@ -102,7 +102,7 @@ class PropertyController extends Controller
         throw ApiException::notFound();
     }
 
-    public function similar(Request $request, string $id): JsonResponse
+    public function similar(string $id): JsonResponse
     {
         $property = $this->liveListing($id);
         $similar = $this->reads->similar($property);
