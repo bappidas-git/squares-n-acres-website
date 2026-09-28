@@ -73,6 +73,17 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // One line per API request and response (App\Http\Middleware\LogApiTraffic)
+        // and the decisions the services log along the way (App\Support\Debug\ApiLog).
+        // Kept whether or not the Debugbar is enabled, so production has a trail.
+        'api' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/api.log'),
+            'level' => env('API_LOG_LEVEL', env('LOG_LEVEL', 'debug')),
+            'days' => env('API_LOG_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
