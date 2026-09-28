@@ -137,14 +137,16 @@ final class TableMapper
         return $document;
     }
 
+    /** @var array<string, array<string, array>> child table → path → column */
+    private array $childColumns = [];
+
     private function childDocument(array $table, array $shape, array $row): array
     {
-        $byPath = [];
-        foreach ($table['columns'] as $column) {
-            if (isset($column['path'])) {
-                $byPath[$column['path']] = $column;
-            }
-        }
+        $byPath = $this->childColumns[$table['name']] ??= array_column(
+            array_filter($table['columns'], fn (array $column) => isset($column['path'])),
+            null,
+            'path',
+        );
         $item = [];
         foreach ($shape as $field => $descriptor) {
             if ($field === 'id') {

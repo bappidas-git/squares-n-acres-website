@@ -3,6 +3,7 @@
 use App\Crud\Resources;
 use App\Http\Controllers\HealthController;
 use App\Routing\CrudRoutes;
+use App\Support\Api\ApiException;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -34,4 +35,8 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     foreach (Resources::keys() as $key) {
         CrudRoutes::adminRoutes($key);
     }
+
+    // Any other admin path is authenticated and role-checked like the rest
+    // before it is a 404: no token is a 401, a path with no rule a 403.
+    Route::any('{path}', fn () => throw ApiException::notFound())->where('path', '.*');
 });

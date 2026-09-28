@@ -3,6 +3,7 @@
 use App\Exceptions\ApiExceptionRenderer;
 use App\Http\Middleware\AdminPermission;
 use App\Http\Middleware\AuthenticateToken;
+use App\Http\Middleware\ForceNoindex;
 use App\Http\Middleware\Honeypot;
 use App\Http\Middleware\LogApiTraffic;
 use App\Http\Middleware\ParseJsonBody;
@@ -36,9 +37,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // the `api` channel — before routing, so a 404 is logged as well.
         $middleware->prepend(LogApiTraffic::class);
 
-        // The API's JSON body, read the way the contract means it.
+        // The API's JSON body, read the way the contract means it; and on
+        // staging (SEO_FORCE_NOINDEX) every public read says noindex.
         $middleware->group('api', [
             ParseJsonBody::class,
+            ForceNoindex::class,
             SubstituteBindings::class,
         ]);
 
