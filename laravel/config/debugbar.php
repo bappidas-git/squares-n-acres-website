@@ -167,11 +167,13 @@ return [
         'time'            => env('DEBUGBAR_COLLECTORS_TIME', true),             // Time Datalogger
         'memory'          => env('DEBUGBAR_COLLECTORS_MEMORY', true),           // Memory usage
         'exceptions'      => env('DEBUGBAR_COLLECTORS_EXCEPTIONS', true),       // Exception displayer
-        'log'             => env('DEBUGBAR_COLLECTORS_LOG', true),              // Logs from Monolog (merged in messages if enabled)
+        // Off: App\Support\Debug\ApiLog writes its labelled messages to the
+        // Debugbar itself, and mirroring Monolog would print every line twice.
+        'log'             => env('DEBUGBAR_COLLECTORS_LOG', false),             // Logs from Monolog (merged in messages if enabled)
         'db'              => env('DEBUGBAR_COLLECTORS_DB', true),               // Show database (PDO) queries and bindings
         'views'           => env('DEBUGBAR_COLLECTORS_VIEWS', true),            // Views with their data
         'route'           => env('DEBUGBAR_COLLECTORS_ROUTE', true),           // Current route information
-        'auth'            => env('DEBUGBAR_COLLECTORS_AUTH', false),            // Display Laravel authentication status
+        'auth'            => env('DEBUGBAR_COLLECTORS_AUTH', true),             // Display Laravel authentication status
         'gate'            => env('DEBUGBAR_COLLECTORS_GATE', true),             // Display Laravel Gate checks
         'session'         => env('DEBUGBAR_COLLECTORS_SESSION', false),         // Display session data
         'symfony_request' => env('DEBUGBAR_COLLECTORS_SYMFONY_REQUEST', true),  // Only one can be enabled..
@@ -179,7 +181,7 @@ return [
         'laravel'         => env('DEBUGBAR_COLLECTORS_LARAVEL', true),          // Laravel version and environment
         'events'          => env('DEBUGBAR_COLLECTORS_EVENTS', false),          // All events fired
         'default_request' => env('DEBUGBAR_COLLECTORS_DEFAULT_REQUEST', false), // Regular or special Symfony request logger
-        'logs'            => env('DEBUGBAR_COLLECTORS_LOGS', true),            // Add the latest log messages
+        'logs'            => env('DEBUGBAR_COLLECTORS_LOGS', false),           // Add the latest log messages
         'files'           => env('DEBUGBAR_COLLECTORS_FILES', false),           // Show the included files
         'config'          => env('DEBUGBAR_COLLECTORS_CONFIG', false),          // Display config settings
         'cache'           => env('DEBUGBAR_COLLECTORS_CACHE', false),           // Display cache events

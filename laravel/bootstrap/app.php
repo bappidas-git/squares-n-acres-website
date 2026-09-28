@@ -1,8 +1,19 @@
 <?php
 
+use App\Exceptions\ApiExceptionRenderer;
+use App\Http\Middleware\AdminPermission;
+use App\Http\Middleware\AuthenticateToken;
+use App\Http\Middleware\Honeypot;
+use App\Http\Middleware\LogApiTraffic;
+use App\Http\Middleware\ParseJsonBody;
+use App\Http\Middleware\SecurityHeaders;
+use App\Support\Api\ApiException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -10,10 +21,49 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: function () {
+            // The crawler documents answer at the root as well as under /api
+            // (01_API_CONTRACT.md §5.13), from the same controller, with the
+            // API's middleware rather than the web group's sessions and CSRF.
+            Route::middleware('api')->group(base_path('routes/seo-root.php'));
+        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // TLS ends at the platform's proxy: trust its X-Forwarded-* headers.
+        $middleware->trustProxies(at: '*');
+
+        // Every API request and its response are logged — to the Debugbar and
+        // the `api` channel — before routing, so a 404 is logged as well.
+        $middleware->prepend(LogApiTraffic::class);
+
+        // The API's JSON body, read the way the contract means it.
+        $middleware->group('api', [
+            ParseJsonBody::class,
+            SubstituteBindings::class,
+        ]);
+
+        $middleware->alias([
+            'auth.token' => AuthenticateToken::class,
+            'permission' => AdminPermission::class,
+            'honeypot' => Honeypot::class,
+        ]);
+
+        // Every /api/admin route: a bearer token, the role matrix, 120 a minute per user.
+        $middleware->group('admin', [
+            AuthenticateToken::class,
+            AdminPermission::class,
+            'throttle:admin',
+        ]);
+
+        $middleware->append(SecurityHeaders::class);
+
+        // The API trims per field where the contract says so (TrimStrings is
+        // the mock's `trimStrings` option); an empty string stays a string.
+        $middleware->trimStrings(except: [fn (Request $request) => $request->is('api/*')]);
+        $middleware->convertEmptyStringsToNull(except: [fn (Request $request) => $request->is('api/*')]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Known failures are answers, not errors worth a stack trace in the log.
+        $exceptions->dontReport([ApiException::class]);
+        $exceptions->render(new ApiExceptionRenderer);
     })->create();
