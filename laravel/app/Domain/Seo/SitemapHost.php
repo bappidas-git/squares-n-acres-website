@@ -39,7 +39,7 @@ final class SitemapHost
             return $origin.$prefix;
         }
 
-        return (string) preg_replace('~/+$~', '', $siteUrl);
+        return (string) preg_replace('~/+\z~', '', $siteUrl);
     }
 
     /**
@@ -50,9 +50,14 @@ final class SitemapHost
     public static function requestOrigin(Request $request): ?string
     {
         $https = (string) $request->server('HTTPS', '');
-        $proto = self::firstOf($request->headers->get('X-Forwarded-Proto'))
-            ?: ($https !== '' && strtolower($https) !== 'off' ? 'https' : 'http');
-        $host = self::firstOf($request->headers->get('X-Forwarded-Host')) ?: (string) $request->headers->get('Host', '');
+        $proto = self::firstOf($request->headers->get('X-Forwarded-Proto'));
+        if ($proto === '') {
+            $proto = $https !== '' && strtolower($https) !== 'off' ? 'https' : 'http';
+        }
+        $host = self::firstOf($request->headers->get('X-Forwarded-Host'));
+        if ($host === '') {
+            $host = (string) $request->headers->get('Host', '');
+        }
         if ($host === '' || ! preg_match('/^https?$/i', $proto)) {
             return null;
         }
