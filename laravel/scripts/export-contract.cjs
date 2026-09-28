@@ -324,7 +324,7 @@ function assignPaths(tables) {
         continue;
       }
       if (table.kind === 'pivot') {
-        column.role = column.name.startsWith(`${singular(table.collection)}_`) ? 'parent' : 'related';
+        column.role = column.name === `${singular(table.collection)}_id` ? 'parent' : 'related';
         continue;
       }
       if (table.kind === 'child' && table.field === 'unitConfigurations' && column.name === 'order') {

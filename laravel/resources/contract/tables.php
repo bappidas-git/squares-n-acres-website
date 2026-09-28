@@ -5678,7 +5678,7 @@ return [
                 'default' => null,
                 'autoIncrement' => false,
                 'comment' => null,
-                'role' => 'parent',
+                'role' => 'related',
             ],
             [
                 'name' => 'position',

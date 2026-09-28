@@ -19,8 +19,13 @@ use stdClass;
  */
 final class JsonValue
 {
-    /** The flags every response and every stored JSON column is written with. */
-    public const ENCODE_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
+    /**
+     * The flags every response and every stored JSON column is written with:
+     * the text as JavaScript's `JSON.stringify` writes it — slashes and
+     * non-ASCII characters left as they are, and a whole number without a
+     * `.0` (`12400000`, not `12400000.0`).
+     */
+    public const ENCODE_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE;
 
     /**
      * Decodes a JSON document, keeping objects that PHP arrays cannot represent.
