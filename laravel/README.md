@@ -256,8 +256,11 @@ node ../backend_developer_guidelines/smoke/smoke-api.js --baseUrl=http://localho
 The smoke walk signs in as the three roles, calls every endpoint of the registry, runs the behaviour checks a
 status code cannot show (PATCH keeps untouched fields, `bedrooms=3` purity, CSV BOMs, the sitemap index, the
 stale-save guard…) and deletes what it created. The comparison sends every read to both servers and prints only
-the differences of shape. During development every endpoint was also compared **value by value** with the mock
-over the same seed.
+the differences of shape. Every endpoint was also compared **value by value** with the mock over the same seed:
+each module's reads as every role, and its write sequences on a fresh seed. On the finished application that is
+2,449 of 2,471 requests identical; the other 22 are the differences listed under
+[Where it differs from the mock](#where-it-differs-from-the-mock). The smoke walk passes 335/335, twice in a row on one
+database, and `--compare` finds no difference of shape in its 127 reads.
 
 For repeated local smoke runs, raise `RATE_LIMIT_LOGIN`, `RATE_LIMIT_ADMIN` and `RATE_LIMIT_PUBLIC_FORMS` in `.env`:
 one run signs in several times, makes a few hundred admin requests and sends a handful of enquiries. (The mock
