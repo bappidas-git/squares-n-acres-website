@@ -104,6 +104,13 @@ web app never goes on talking to a route map from before the pull. It says so in
 of output. A copy running this very code is left alone, and a port held by any other program is
 never touched: the mock exits and says what holds it.
 
+`npm run dev` does the same for the web dev server on port 3000 (QA-66). Before it starts one, a
+web dev server this project left running there — from an earlier `npm run dev`, a terminal that
+was closed, or a Ctrl+C that never reached it — is stopped (`Stopped an older web dev server
+(pid …)`), so the new one always serves the code on disk. Running `npm run dev` again is
+therefore how to get a fresh web dev server. A port held by any other program is never touched:
+the web half exits with code 1 and names the process and how to stop it.
+
 If a screen ever meets an API older than itself anyway, it says so, and says how to restart it,
 instead of "You do not have permission…" ([Troubleshooting](#troubleshooting)).
 
@@ -122,7 +129,7 @@ Chrome; the ones marked **API** need `npm run mock` running in another terminal.
 | `npm run mock`         | Mock API on port 4000, over the runtime copy of the seed; reloads its own code when it changes |
 | `npm run mock:watch`   | `mock`, restarted whenever a file it loads changes (`node --watch`) |
 | `npm run mock:reset`   | Restores the runtime database from `db.json` — see [Seed](#the-seed-and-the-runtime-database) |
-| `npm run dev`          | `mock:watch` and `start` together, via `concurrently`            |
+| `npm run dev`          | `mock:watch` and `start` together, via `concurrently`; first takes port 3000 back from a web dev server this project left running (`scripts/claim-web-port.js`) |
 | `npm run serve:build`  | Serves `build/` statically on port 5000, with SPA fallback       |
 
 ### Building
@@ -572,19 +579,27 @@ enforces `endOfLine: 'lf'`. If a diff shows every line changed, the file was sav
 
 ## Troubleshooting
 
-**`Something is already running on port 3000` / `EADDRINUSE :4000`.** A previous run did not
-stop. Find and stop it, or move the port:
+**localhost:3000 shows old code, a "Failed to compile" that no longer matches the files, or
+nothing — and `npm run dev` says `Something is already running on port 3000`, `Port 3000 is in
+use by …` or `EADDRINUSE :4000`.** A process from an earlier session still holds the port: an
+`npm run dev` left running across a pull, a closed terminal, or a Ctrl+C that never reached its
+children (common on Windows). Run `npm run dev` again. Since QA-66 it stops a web dev server this
+project left on port 3000 and starts a fresh one (`Stopped an older web dev server (pid …)`), as
+the mock has done on port 4000 since QA-57. When it names another program instead, stop that
+program (the message gives the command), then run `npm run dev` again. By hand:
 
 ```bash
-lsof -ti:4000 | xargs kill          # macOS/Linux
+lsof -ti:3000 | xargs kill          # macOS/Linux (4000 for the mock)
 ```
 
 ```powershell
-Get-NetTCPConnection -LocalPort 4000 | Select-Object -ExpandProperty OwningProcess | Stop-Process
+Get-NetTCPConnection -LocalPort 3000 | Select-Object -ExpandProperty OwningProcess | Stop-Process
 ```
 
-The mock's port is `MOCK_PORT`; change `REACT_APP_API_URL` to match when you move it. CRA
-offers another port for the web app on its own.
+Do not move the web app to another port to get around it. `react-scripts start` offers one only
+when it runs on its own in a terminal, never under `npm run dev`, and the mock accepts calls from
+the development server on port 3000 only (CORS), so every request from another port fails. The
+mock's own port is `MOCK_PORT`; change `REACT_APP_API_URL` to match when you move it.
 
 **A screen says "The API at localhost:4000 is running older code than this web app" — or,
 before QA-58, "You do not have permission to perform this action." to the admin.** The web app

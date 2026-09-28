@@ -97,10 +97,25 @@ function sourceRevision({ root, modules = Object.keys(require.cache) }) {
  * without a preflight that nothing here answers. A page on another site can
  * therefore not stop the developer's mock.
  *
- * @param {{identity: () => object, onShutdown: (requester: object) => void}} options
+ * The web dev server answers the same two routes below `/__web`, with its own
+ * header (`scripts/lib/webTakeover.js`, QA-66): `basePath`, `takeoverHeader`
+ * and `refusal` say whose routes these are, and default to the mock's.
+ *
+ * @param {object} options
+ * @param {() => object} options.identity
+ * @param {(requester: object) => void} options.onShutdown
+ * @param {string} [options.basePath]
+ * @param {string} [options.takeoverHeader] lower-case, as Node reads headers
+ * @param {string} [options.refusal] the message of a refused shutdown
  * @returns {import('http').RequestListener & {handles: (url: string) => boolean}}
  */
-function controlRoutes({ identity, onShutdown }) {
+function controlRoutes({
+  identity,
+  onShutdown,
+  basePath = CONTROL_PATH,
+  takeoverHeader = TAKEOVER_HEADER,
+  refusal = 'Only a mock API starting on this machine may stop this one.',
+}) {
   const send = (res, status, body) => {
     res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
     res.end(JSON.stringify(body));
@@ -109,15 +124,15 @@ function controlRoutes({ identity, onShutdown }) {
   const handler = (req, res) => {
     const url = String(req.url ?? '').split('?')[0];
 
-    if (url === `${CONTROL_PATH}/identity` && req.method === 'GET') {
+    if (url === `${basePath}/identity` && req.method === 'GET') {
       send(res, 200, { data: identity() });
       return;
     }
 
-    if (url === `${CONTROL_PATH}/shutdown` && req.method === 'POST') {
+    if (url === `${basePath}/shutdown` && req.method === 'POST') {
       const local = LOOPBACK.has(req.socket?.remoteAddress);
-      if (!local || req.headers.origin !== undefined || req.headers[TAKEOVER_HEADER] !== '1') {
-        send(res, 403, { message: 'Only a mock API starting on this machine may stop this one.' });
+      if (!local || req.headers.origin !== undefined || req.headers[takeoverHeader] !== '1') {
+        send(res, 403, { message: refusal });
         return;
       }
       let raw = '';
@@ -142,7 +157,7 @@ function controlRoutes({ identity, onShutdown }) {
     send(res, 404, { message: 'Not found' });
   };
 
-  handler.handles = (url) => String(url ?? '').startsWith(`${CONTROL_PATH}/`);
+  handler.handles = (url) => String(url ?? '').startsWith(`${basePath}/`);
   return handler;
 }
 
@@ -151,8 +166,9 @@ function controlRoutes({ identity, onShutdown }) {
  * ------------------------------------------------------------------ */
 
 /**
- * One HTTP exchange with whatever holds the port, as `{status, body}`, or
- * `null` when nothing answered in time. Plain `http`: the mock has no client
+ * One HTTP exchange with whatever holds the port, as `{status, body, text}` —
+ * `body` parsed as JSON (`null` when it is not), `text` as it came — or `null`
+ * when nothing answered in time. Plain `http`: the mock has no client
  * dependency, and a proxy must never stand between two local processes.
  */
 function exchange(url, { method = 'GET', headers = {}, body, timeoutMs = 1500 } = {}) {
@@ -182,7 +198,7 @@ function exchange(url, { method = 'GET', headers = {}, body, timeoutMs = 1500 } 
           } catch {
             parsed = null;
           }
-          resolve({ status: response.statusCode, body: parsed });
+          resolve({ status: response.statusCode, body: parsed, text: raw });
         });
       }
     );
