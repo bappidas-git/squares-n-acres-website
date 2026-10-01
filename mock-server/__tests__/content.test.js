@@ -1395,6 +1395,38 @@ describe('FAQs (QA-59)', () => {
   });
 });
 
+describe('testimonials of one listing', () => {
+  it('answers GET /testimonials?propertyId= with the active quotes tied to it', async () => {
+    // The fixture ties testimonial 1 to listing 1 and testimonial 2 to listing
+    // 3; two more are added to listing 1, one of them switched off.
+    const seed = seedWith({
+      testimonials: (rows) => {
+        rows.push(
+          { ...rows[0], id: 3, name: 'C. Shah', order: 3 },
+          { ...rows[0], id: 4, name: 'D. Nair', order: 4, isActive: false }
+        );
+      },
+    });
+
+    await withServer({ seed }, async ({ request, login }) => {
+      const own = await request('GET', '/testimonials?propertyId=1&sort=order&perPage=all');
+      assert.equal(own.status, 200);
+      // The inactive one is not public.
+      assert.deepEqual(ids(own), [1, 3]);
+
+      assert.deepEqual(ids(await request('GET', '/testimonials?propertyId=3')), [2]);
+      assert.deepEqual(ids(await request('GET', '/testimonials?propertyId=99999')), []);
+
+      // The admin list takes the same filter, and shows the inactive one too.
+      const token = await login(ADMIN);
+      const admin = await request('GET', '/admin/testimonials?propertyId=1&perPage=all', {
+        token,
+      });
+      assert.deepEqual(ids(admin).sort(), [1, 3, 4]);
+    });
+  });
+});
+
 describe('the other drag-ordered collections settle on write (QA-59)', () => {
   /**
    * Every master-data and content collection whose `order` the admin drags,

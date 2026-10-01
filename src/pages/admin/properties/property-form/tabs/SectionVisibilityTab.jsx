@@ -95,7 +95,7 @@ export default function SectionVisibilityTab() {
                 onChange={(next) => setField(`sectionVisibility.${row.key}`, next === true)}
               />
               {/* The chip carries the section's name for a screen reader: "Hidden"
-                  on its own, eighteen times over, says nothing. */}
+                  on its own, nineteen times over, says nothing. */}
               <Chip
                 tone={
                   !row.hint

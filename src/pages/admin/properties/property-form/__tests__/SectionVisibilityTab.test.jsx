@@ -10,7 +10,7 @@ import SectionVisibilityTab from '../tabs/SectionVisibilityTab';
 import reducer, { actions, createFormState } from '../reducer';
 
 /**
- * The eighteen toggles against the real reducer.
+ * The nineteen toggles against the real reducer.
  *
  * What matters is what reaches `sectionVisibility` — the boilerplate wrote
  * `!value` over a key it read as `!== false`, so the first press of an absent
@@ -81,9 +81,9 @@ describe('the rows', () => {
     renderWith(<Harness />);
 
     const switches = screen.getAllByRole('switch');
-    expect(switches).toHaveLength(18);
+    expect(switches).toHaveLength(19);
     expect(switches.map((control) => control.getAttribute('aria-checked'))).toEqual(
-      Array(18).fill('true')
+      Array(19).fill('true')
     );
     expect(
       SECTION_DEFINITIONS.every((section) => screen.getByRole('switch', { name: section.label }))
@@ -94,8 +94,8 @@ describe('the rows', () => {
     renderWith(
       <Harness patch={{ description: '<p>A home.</p>', videoUrl: 'https://youtu.be/x' }} />
     );
-    // Overview, video and enquiry hold something; the other fifteen do not.
-    expect(screen.getByText('3 of 18 sections show on the page')).toBeInTheDocument();
+    // Overview, video and enquiry hold something; the other sixteen do not.
+    expect(screen.getByText('3 of 19 sections show on the page')).toBeInTheDocument();
   });
 });
 
@@ -139,7 +139,7 @@ describe('enable all / disable all', () => {
     renderWith(<Harness patch={{ sectionVisibility: { overview: false } }} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Disable all' }));
-    expect(Object.keys(stored())).toHaveLength(18);
+    expect(Object.keys(stored())).toHaveLength(19);
     expect(Object.values(stored()).every((value) => value === false)).toBe(true);
 
     await userEvent.click(screen.getByRole('button', { name: 'Enable all' }));

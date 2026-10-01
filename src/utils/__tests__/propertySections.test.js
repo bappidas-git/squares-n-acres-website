@@ -10,7 +10,7 @@ import {
 
 /**
  * The rules the admin tab and the public page both read. Every one of the
- * eighteen is asserted twice — once with the data it needs and once without —
+ * nineteen is asserted twice — once with the data it needs and once without —
  * because "the section is empty" is exactly the case both callers get wrong.
  */
 
@@ -47,9 +47,9 @@ const has = (key, patch, context) => sectionByKey(key).hasData(blank(patch), con
 const keys = (property, context) => getVisibleSections(property, context).map((row) => row.key);
 
 describe('the definitions', () => {
-  it('describes exactly the eighteen keys of the contract', () => {
+  it('describes exactly the nineteen keys of the contract', () => {
     expect([...SECTION_KEYS].sort()).toEqual([...CONTRACT_SECTION_KEYS].sort());
-    expect(SECTION_DEFINITIONS).toHaveLength(18);
+    expect(SECTION_DEFINITIONS).toHaveLength(19);
   });
 
   it('gives every section a label, a description and an anchor', () => {
@@ -207,6 +207,13 @@ describe('what a section needs', () => {
     expect(has('similar', { similarPropertyIds: [2] }, { similarAvailable: false })).toBe(false);
   });
 
+  it('testimonials follow what the API answered, and nothing without a request', () => {
+    // The tie is made on the testimonial, so the record cannot say on its own.
+    expect(has('testimonials', {})).toBe(false);
+    expect(has('testimonials', {}, { testimonialsAvailable: true })).toBe(true);
+    expect(has('testimonials', {}, { testimonialsAvailable: false })).toBe(false);
+  });
+
   it('the enquiry section is always available (D86)', () => {
     expect(has('enquiry', {})).toBe(true);
   });
@@ -271,6 +278,24 @@ describe('getSectionHints', () => {
     expect(picked).toMatchObject({ hasData: true, automatic: false, hint: '' });
   });
 
+  it('calls "Testimonials" automatic when the caller has not asked the API', () => {
+    // The admin form makes no request, and the tie lives on the testimonial.
+    const row = getSectionHints(blank()).find((entry) => entry.key === 'testimonials');
+    expect(row).toMatchObject({ enabled: true, hasData: false, automatic: true });
+    expect(row.hint).toBe('Automatic — testimonials tied to this listing in Content → Testimonials');
+
+    const none = getSectionHints(blank(), { testimonialsAvailable: false }).find(
+      (entry) => entry.key === 'testimonials'
+    );
+    expect(none).toMatchObject({ hasData: false, automatic: false });
+    expect(none.hint).toBe('No data yet — tie a testimonial to it in Content → Testimonials');
+
+    const some = getSectionHints(blank(), { testimonialsAvailable: true }).find(
+      (entry) => entry.key === 'testimonials'
+    );
+    expect(some).toMatchObject({ hasData: true, visible: true, hint: '' });
+  });
+
   it('says why construction progress stays hidden on a finished building', () => {
     const row = getSectionHints(
       blank({ constructionStatus: 'ready-to-move', constructionProgressPercent: 100 })
@@ -329,7 +354,7 @@ describe('getSectionHints', () => {
   });
 
   it('survives being handed nothing', () => {
-    expect(getSectionHints(null)).toHaveLength(18);
+    expect(getSectionHints(null)).toHaveLength(19);
     expect(getSectionHints(undefined).every((row) => row.enabled)).toBe(true);
   });
 });

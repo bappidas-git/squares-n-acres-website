@@ -7762,4 +7762,20 @@ other program is left alone and named, with the command to stop it
 (`scripts/lib/webTakeover.js`, QA-66 in `DECISIONS.md`). No API, schema or
 seed change; the handover package is unaffected.
 
+### After 1.1.0 — a property page shows the testimonials tied to it (2026-10-01)
+
+The testimonial form's "Property" box stored `propertyId`, and no page read it.
+`GET /testimonials?propertyId=` now answers a listing's active quotes (the mock's
+`publicFilters`, the registry, `docs/API_CONTRACT.md`; the admin list takes the
+same filter), and `PropertyDetails` prints them in a new `testimonials` section
+(`components/sections/property/TestimonialsSection.jsx`) between FAQs and
+Similar properties: the shared carousel, two cards across the main column, the
+project's name in the heading and the mean rating beside it. `sectionVisibility`
+has nineteen keys (`SECTION_VISIBILITY_KEYS`, `SECTION_DEFINITIONS`, the seed);
+the section, its navigation item and the review markup appear only when a quote
+survives D41's filter. Seed: testimonial 1 is tied to property 1, so
+`/properties/lakeview-heights-3-bhk-whitefield` shows the section in development. `db.json`
+gains `sectionVisibility.testimonials: true` on every listing; the handover
+package is regenerated.
+
 **Next prompt: none. 1.1.0 is tagged.**
