@@ -43118,7 +43118,7 @@
     {
       "id": 1,
       "name": "Admin User",
-      "email": "admin@squaresnacres.com",
+      "email": "@squaresnacreadmins.com",
       "password": "Admin@123",
       "role": "admin",
       "phone": "9880000010",
