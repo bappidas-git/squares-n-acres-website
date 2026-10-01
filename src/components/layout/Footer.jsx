@@ -88,9 +88,11 @@ export default function Footer() {
   const newsletterEnabled =
     settings?.newsletter?.enabled !== false && footer.showNewsletter !== false;
 
-  // The firm's own registrations (§6.13 `general`), not a listing's: a RERA
+  // The firm's own particulars (§6.13 `general`), not a listing's: a RERA
   // registration is required to be displayed, and the footer is where it goes.
+  // The founding year leads the line and stays hidden until it is confirmed.
   const registration = [
+    general.establishedYear ? `${FOOTER.establishedPrefix} ${general.establishedYear}` : '',
     general.reraNumber ? `${FOOTER.reraPrefix} ${general.reraNumber}` : '',
     general.gstNumber ? `${FOOTER.gstPrefix} ${general.gstNumber}` : '',
   ].filter(Boolean);

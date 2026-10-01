@@ -332,6 +332,7 @@ const FOOTER = {
   landmark: 'Footer',
   /** `%year%` and `%siteName%` are filled in by the component. */
   copyright: '© %year% %siteName%. All rights reserved.',
+  establishedPrefix: 'Est.',
   reraPrefix: 'RERA',
   gstPrefix: 'GST',
 };

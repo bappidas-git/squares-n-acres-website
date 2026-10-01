@@ -33,6 +33,9 @@ function organizationNode(_input = {}, context = {}) {
       all.findIndex((other) => formatPhoneForTel(other) === formatPhoneForTel(phone)) === index
   );
 
+  // The founding year is kept with the firm's other particulars in Site settings.
+  const established = context.siteSettings?.general?.establishedYear;
+
   return compact({
     '@type': knowledge.type || 'Organization',
     '@id': organizationId(siteUrl),
@@ -44,6 +47,7 @@ function organizationNode(_input = {}, context = {}) {
       : undefined,
     image: absolute(siteUrl, knowledge.logoUrl),
     description: knowledge.description,
+    foundingDate: established ? String(established) : undefined,
     telephone: phones.length > 1 ? phones : phones[0],
     email: knowledge.email,
     address: compact({
