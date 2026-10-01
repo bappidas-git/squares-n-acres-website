@@ -236,7 +236,7 @@ const NEARBY_CATEGORIES = makeEnum([
   { value: 'other', label: 'Other', icon: 'mdi:map-marker-outline' },
 ]);
 
-/** The 18 property-detail sections, in the order the page renders them. */
+/** The 19 property-detail sections, in the order the page renders them. */
 const SECTION_VISIBILITY_KEYS = [
   { key: 'overview', label: 'Overview' },
   { key: 'highlights', label: 'Highlights' },
@@ -254,6 +254,7 @@ const SECTION_VISIBILITY_KEYS = [
   { key: 'location', label: 'Location' },
   { key: 'finance', label: 'Finance & EMI' },
   { key: 'faqs', label: 'FAQs' },
+  { key: 'testimonials', label: 'Testimonials' },
   { key: 'similar', label: 'Similar Properties' },
   { key: 'enquiry', label: 'Enquiry' },
 ];

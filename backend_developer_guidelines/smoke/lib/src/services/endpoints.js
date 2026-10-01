@@ -657,7 +657,9 @@ const testimonials = {
     auth: 'public',
     module: 'content',
     description: 'Active testimonials',
-    query: { ...LIST_QUERY, isFeatured: 'bool', ids: 'csv:int' },
+    // `propertyId` is how a property page asks for the quotes tied to that
+    // listing — the "Property" box of the testimonial form.
+    query: { ...LIST_QUERY, isFeatured: 'bool', propertyId: 'int', ids: 'csv:int' },
     body: null,
     response: 'TestimonialList',
     example: 1,
@@ -1544,7 +1546,7 @@ const adminTestimonials = adminResource({
   schema: 'testimonial',
   response: 'Testimonial',
   slugged: false,
-  query: { isFeatured: 'bool', isSample: 'bool' },
+  query: { isFeatured: 'bool', isSample: 'bool', propertyId: 'int' },
 });
 
 const adminTeam = adminResource({

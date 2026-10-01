@@ -8,7 +8,7 @@ info:
     `src/services/endpoints.js`, `src/services/schemas/` and
     `mock-server/schemas/models.js`. Do not edit by hand.
 
-    generatedFrom: 00d22a1
+    generatedFrom: eaa35f2
 
     Read `01_API_CONTRACT.md` first: the envelopes of §5.2, the error body
     of §5.3 and the pagination of §5.6 apply to every operation below and
@@ -5612,20 +5612,20 @@ paths:
                     leadsTotal: 40
                     leadsNew: 14
                     leadsToday: 0
-                    leadsThisMonth: 15
-                    leadsLastMonth: 17
+                    leadsThisMonth: 0
+                    leadsLastMonth: 15
                     conversionRate: 10
                     articlesPublished: 10
                     articlesDraft: 1
                     viewsThisMonth: 0
-                    enquiriesThisMonth: 6
+                    enquiriesThisMonth: 0
                     subscribers: 10
                   trends:
                     leadsByDay:
                       - date: 2026-01-15
-                        count: 1
+                        count: 0
                       - date: 2026-01-15
-                        count: 1
+                        count: 2
                       - …28 more (trimmed for this example)
                     leadsBySource:
                       - source: property-enquiry
@@ -13689,6 +13689,7 @@ paths:
                       location: true
                       finance: false
                       faqs: true
+                      testimonials: true
                       similar: true
                       enquiry: true
                     agent:
@@ -14048,6 +14049,7 @@ paths:
                       location: true
                       finance: true
                       faqs: true
+                      testimonials: true
                       similar: true
                       enquiry: true
                     agent:
@@ -14350,6 +14352,7 @@ paths:
                     location: true
                     finance: true
                     faqs: true
+                    testimonials: true
                     similar: true
                     enquiry: true
                   agent:
@@ -14723,6 +14726,7 @@ paths:
                     location: true
                     finance: true
                     faqs: true
+                    testimonials: true
                     similar: true
                     enquiry: true
                   agent:
@@ -15005,6 +15009,7 @@ paths:
                     location: true
                     finance: true
                     faqs: true
+                    testimonials: true
                     similar: true
                     enquiry: true
                   agent:
@@ -15260,6 +15265,7 @@ paths:
                     location: true
                     finance: true
                     faqs: true
+                    testimonials: true
                     similar: true
                     enquiry: true
                   agent:
@@ -15691,6 +15697,7 @@ paths:
                     location: true
                     finance: true
                     faqs: true
+                    testimonials: true
                     similar: true
                     enquiry: true
                   agent:
@@ -16238,6 +16245,7 @@ paths:
                     location: true
                     finance: true
                     faqs: true
+                    testimonials: true
                     similar: true
                     enquiry: true
                   agent:
@@ -18431,12 +18439,28 @@ paths:
                   - data
                   - meta
               example:
-                data: []
+                data:
+                  - id: 2
+                    path: /localities/whitefield
+                    count: 1
+                    firstSeenAt: 2026-01-15T09:30:00.000Z
+                    lastSeenAt: 2026-01-15T09:30:00.000Z
+                    referrer: null
+                    days: 1
+                    redirectedTo: null
+                  - id: 1
+                    path: /flats-in-hebal
+                    count: 1
+                    firstSeenAt: 2026-01-15T09:30:00.000Z
+                    lastSeenAt: 2026-01-15T09:30:00.000Z
+                    referrer: https://www.google.com/
+                    days: 1
+                    redirectedTo: null
                 meta:
                   page: 1
                   perPage: 20
-                  total: 0
-                  totalPages: 0
+                  total: 2
+                  totalPages: 1
         '401':
           description: the token is missing, expired or revoked (§5.4)
           content:
@@ -20031,6 +20055,11 @@ paths:
           schema:
             type: integer
         - name: perPage
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: propertyId
           in: query
           required: false
           schema:
@@ -24682,6 +24711,7 @@ paths:
                       location: true
                       finance: true
                       faqs: true
+                      testimonials: true
                       similar: true
                       enquiry: true
                     agent:
@@ -24957,6 +24987,7 @@ paths:
                       location: true
                       finance: true
                       faqs: true
+                      testimonials: true
                       similar: true
                       enquiry: true
                     agent:
@@ -25452,6 +25483,7 @@ paths:
                       location: true
                       finance: true
                       faqs: true
+                      testimonials: true
                       similar: true
                       enquiry: true
                     agent:
@@ -25802,6 +25834,7 @@ paths:
                       location: true
                       finance: true
                       faqs: true
+                      testimonials: true
                       similar: true
                       enquiry: true
                     agent:
@@ -26522,6 +26555,7 @@ paths:
                       location: true
                       finance: false
                       faqs: true
+                      testimonials: true
                       similar: true
                       enquiry: true
                     agent:
@@ -26871,6 +26905,7 @@ paths:
                       location: true
                       finance: true
                       faqs: true
+                      testimonials: true
                       similar: true
                       enquiry: true
                     agent:
@@ -27246,6 +27281,7 @@ paths:
                     location: true
                     finance: true
                     faqs: true
+                    testimonials: true
                     similar: true
                     enquiry: true
                   agent:
@@ -28305,6 +28341,11 @@ paths:
           schema:
             type: integer
         - name: perPage
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: propertyId
           in: query
           required: false
           schema:
@@ -44182,6 +44223,9 @@ components:
             faqs:
               type: boolean
               default: true
+            testimonials:
+              type: boolean
+              default: true
             similar:
               type: boolean
               default: true
@@ -44205,6 +44249,7 @@ components:
             location: true
             finance: true
             faqs: true
+            testimonials: true
             similar: true
             enquiry: true
         agent:
@@ -45678,6 +45723,9 @@ components:
             faqs:
               type: boolean
               default: true
+            testimonials:
+              type: boolean
+              default: true
             similar:
               type: boolean
               default: true
@@ -45701,6 +45749,7 @@ components:
             location: true
             finance: true
             faqs: true
+            testimonials: true
             similar: true
             enquiry: true
         agent:
@@ -47056,6 +47105,9 @@ components:
             faqs:
               type: boolean
               default: true
+            testimonials:
+              type: boolean
+              default: true
             similar:
               type: boolean
               default: true
@@ -47079,6 +47131,7 @@ components:
             location: true
             finance: true
             faqs: true
+            testimonials: true
             similar: true
             enquiry: true
         agent:
@@ -50019,6 +50072,9 @@ components:
             faqs:
               type: boolean
               default: true
+            testimonials:
+              type: boolean
+              default: true
             similar:
               type: boolean
               default: true
@@ -50042,6 +50098,7 @@ components:
             location: true
             finance: true
             faqs: true
+            testimonials: true
             similar: true
             enquiry: true
         agent:
