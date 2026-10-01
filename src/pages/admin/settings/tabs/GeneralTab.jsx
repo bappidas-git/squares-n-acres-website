@@ -176,7 +176,7 @@ export default function GeneralTab({ form, disabled = false }) {
         </FormColumn>
       </FormSection>
 
-      <FormSection title="The firm" description="Displayed in the footer and on property pages.">
+      <FormSection title="The firm" description="Displayed in the footer of every page.">
         <FormColumn half>
           <NumberField
             label="Established in"
@@ -188,7 +188,7 @@ export default function GeneralTab({ form, disabled = false }) {
               set('establishedYear', event.target.value === '' ? null : Number(event.target.value))
             }
             error={error('establishedYear')}
-            hint={`Between 1900 and ${CURRENT_YEAR}; leave it empty until the year is confirmed.`}
+            hint={`Shown in the footer as “Est. <year>” and given to search engines as the founding date. Between 1900 and ${CURRENT_YEAR}; leave it empty until the year is confirmed.`}
             disabled={disabled}
           />
         </FormColumn>
@@ -198,7 +198,7 @@ export default function GeneralTab({ form, disabled = false }) {
             value={general.reraNumber ?? ''}
             onChange={(event) => set('reraNumber', event.target.value)}
             error={error('reraNumber')}
-            hint="Displayed in the footer and on property pages."
+            hint="Displayed in the footer of every page."
             disabled={disabled}
           />
         </FormColumn>
@@ -208,7 +208,7 @@ export default function GeneralTab({ form, disabled = false }) {
             value={general.gstNumber ?? ''}
             onChange={(event) => set('gstNumber', event.target.value)}
             error={error('gstNumber')}
-            hint="Displayed in the footer and on property pages."
+            hint="Displayed in the footer of every page."
             disabled={disabled}
           />
         </FormColumn>

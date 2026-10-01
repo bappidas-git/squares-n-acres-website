@@ -82,6 +82,16 @@ describe('the organisation and the site', () => {
     expect(same.telephone).toBe(organization.telephone);
   });
 
+  it('carry the founding year from Site settings, and leave it out while it is empty', () => {
+    expect(organization.foundingDate).toBeUndefined();
+    const founded = organizationNode(
+      {},
+      { ...context, siteSettings: { general: { establishedYear: 1933 } } }
+    );
+    expect(founded.foundingDate).toBe('1933');
+    expect(valid(founded).valid).toBe(true);
+  });
+
   it('publish the site with a search action pointing at the listings', () => {
     expect(website['@id']).toBe(`${SITE}/#website`);
     expect(website.publisher).toEqual({ '@id': `${SITE}/#organization` });
