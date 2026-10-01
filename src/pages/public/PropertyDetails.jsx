@@ -188,7 +188,8 @@ const PropertyDetails = () => {
   // testimonial form. Fetched here, like the similar row, so that the
   // navigation offers the item only when there is a quote to scroll to; and
   // counted after the D41 filter, so a sample alone offers nothing in a
-  // production build.
+  // production build. The tie is checked again on the answer: an API that
+  // ignores `propertyId` returns every testimonial.
   const { data: testimonialData } = useApi(
     (signal) =>
       masterDataService.testimonials.list(
@@ -198,7 +199,10 @@ const PropertyDetails = () => {
     [property?.id],
     { enabled: Boolean(property?.id), initialData: [] }
   );
-  const testimonials = useMemo(() => shownTestimonials(testimonialData), [testimonialData]);
+  const testimonials = useMemo(
+    () => shownTestimonials(testimonialData, property?.id),
+    [testimonialData, property?.id]
+  );
 
   // The listing as its sections read it: its own questions, then its type's.
   const shown = useMemo(

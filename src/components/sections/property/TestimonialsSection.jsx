@@ -10,18 +10,35 @@ import styles from './TestimonialsSection.module.css';
 const ITEMS_PER_VIEW = { xs: 1.1, sm: 2, md: 2, lg: 2 };
 
 /**
- * The testimonials a property page may show: active, and not a seeded sample
- * in a production build (D41). The page counts these, not the API's answer,
- * before it offers the section — a listing whose only quote is a sample has
- * nothing to scroll to on the live site.
+ * The testimonials a property page may show: tied to this listing, active, and
+ * not a seeded sample in a production build (D41). The page counts these, not
+ * the API's answer, before it offers the section — a listing whose only quote
+ * is a sample has nothing to scroll to on the live site.
+ *
+ * The tie is checked here as well as asked of the API: an API that does not
+ * know the `propertyId` filter (an older mock, a backend without it) answers
+ * with every testimonial, and the page would print quotes no editor tied to
+ * this listing.
  *
  * Exported for the page and the unit test.
  *
  * @param {Array<object>} testimonials `GET /testimonials?propertyId=`
+ * @param {number|string} [propertyId] the listing being viewed; left out, the
+ *   tie is not checked
  * @returns {Array<object>}
  */
-export function shownTestimonials(testimonials) {
-  return (Array.isArray(testimonials) ? testimonials : []).filter(isRenderable);
+export function shownTestimonials(testimonials, propertyId) {
+  const tied =
+    propertyId === undefined || propertyId === null
+      ? () => true
+      : (testimonial) =>
+          testimonial?.propertyId !== null &&
+          testimonial?.propertyId !== undefined &&
+          String(testimonial.propertyId) === String(propertyId);
+
+  return (Array.isArray(testimonials) ? testimonials : []).filter(
+    (testimonial) => isRenderable(testimonial) && tied(testimonial)
+  );
 }
 
 /** The mean rating, to one decimal place; `null` when nothing is rated. */
@@ -51,7 +68,10 @@ export function averageRating(testimonials) {
  * @param {'bg'|'surface'} [props.background]
  */
 export default function TestimonialsSection({ property, testimonials = [], background = 'bg' }) {
-  const shown = useMemo(() => shownTestimonials(testimonials), [testimonials]);
+  const shown = useMemo(
+    () => shownTestimonials(testimonials, property?.id),
+    [testimonials, property?.id]
+  );
 
   if (shown.length === 0) return null;
 

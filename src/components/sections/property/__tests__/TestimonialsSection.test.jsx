@@ -34,6 +34,19 @@ describe('shownTestimonials', () => {
     expect(shownTestimonials(rows).map((row) => row.id)).toEqual([1]);
   });
 
+  it('keeps only the quotes tied to the listing, whatever the API answered with', () => {
+    const rows = [
+      quote(),
+      quote({ id: 2, propertyId: 7 }),
+      quote({ id: 3, propertyId: null }),
+      quote({ id: 4, propertyId: undefined }),
+      quote({ id: 5, propertyId: '1' }),
+    ];
+
+    expect(shownTestimonials(rows, 1).map((row) => row.id)).toEqual([1, 5]);
+    expect(shownTestimonials(rows, 7).map((row) => row.id)).toEqual([2]);
+  });
+
   it('is empty for anything that is not a list', () => {
     expect(shownTestimonials(undefined)).toEqual([]);
     expect(shownTestimonials({ data: [] })).toEqual([]);
@@ -51,6 +64,18 @@ describe('averageRating', () => {
 });
 
 describe('TestimonialsSection', () => {
+  it('leaves out a quote tied to another listing', () => {
+    renderWith(
+      <TestimonialsSection
+        property={property}
+        testimonials={[quote(), quote({ id: 2, name: 'S. Menon', propertyId: 9 })]}
+      />
+    );
+
+    expect(screen.getByText('R. Kumar')).toBeInTheDocument();
+    expect(screen.queryByText('S. Menon')).not.toBeInTheDocument();
+  });
+
   it('names the project, shows the quotes and the clients’ mean rating', () => {
     renderWith(
       <TestimonialsSection
