@@ -34,7 +34,8 @@ export function isRenderable(testimonial) {
 
 /**
  * The testimonial carousel, shared by the home page (prompt 27), the About
- * page (prompt 30) and the CMS `testimonials` block.
+ * page (prompt 30), the CMS `testimonials` block and a property page's own
+ * testimonials, where the page's section heading replaces this one.
  *
  * The section hides itself when nothing survives the filtering — an empty
  * band of quotation marks says less than no band at all (§8.2).
@@ -44,12 +45,15 @@ export function isRenderable(testimonial) {
  * @param {string} [props.title]
  * @param {string} [props.subtitle]
  * @param {string} [props.eyebrow]
+ * @param {object} [props.itemsPerView] cards per view by breakpoint — a
+ *   property page's column is narrower than the full-width band
  */
 export default function TestimonialsSection({
   items = [],
   title = 'What our clients say',
   subtitle = '',
   eyebrow = '',
+  itemsPerView = ITEMS_PER_VIEW,
   className = '',
 }) {
   const [reading, setReading] = useState(null);
@@ -64,7 +68,7 @@ export default function TestimonialsSection({
         <SectionHeader eyebrow={eyebrow} title={title} subtitle={subtitle} align="center" />
       ) : null}
 
-      <Carousel itemsPerView={ITEMS_PER_VIEW} label="Client testimonials" className={styles.rail}>
+      <Carousel itemsPerView={itemsPerView} label="Client testimonials" className={styles.rail}>
         {visible.map((testimonial) => (
           <TestimonialCard
             key={testimonial.id}

@@ -166,7 +166,7 @@ export const makeOtherCharge = (patch = {}) => ({
  * Sub-objects
  * ------------------------------------------------------------------ */
 
-/** All eighteen section toggles, on (§6.1). */
+/** All nineteen section toggles, on (§6.1). */
 export const createSectionVisibility = () =>
   Object.fromEntries(SECTION_VISIBILITY_KEYS.map(({ key }) => [key, true]));
 

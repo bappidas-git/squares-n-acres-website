@@ -36,6 +36,9 @@ import RecentlyViewedSection from '../../components/sections/property/RecentlyVi
 import SectionNav, { sectionElementId } from '../../components/sections/property/SectionNav';
 import SimilarSection from '../../components/sections/property/SimilarSection';
 import SpecificationsSection from '../../components/sections/property/SpecificationsSection';
+import TestimonialsSection, {
+  shownTestimonials,
+} from '../../components/sections/property/TestimonialsSection';
 import TitleBlock from '../../components/sections/property/TitleBlock';
 import UnitConfigurationsSection from '../../components/sections/property/UnitConfigurationsSection';
 import masterDataService from '../../services/masterDataService';
@@ -54,10 +57,13 @@ const PREVIEW_TOKEN = 'admin';
 /** How many of its type's library questions a listing shows (QA-59). */
 const TYPE_FAQ_LIMIT = 20;
 
+/** How many of the testimonials tied to a listing its page shows. */
+const TESTIMONIAL_LIMIT = 12;
+
 /**
  * The component each `sectionVisibility` key is printed by.
  *
- * Sixteen of the eighteen keys of §6.1 are here; the other two are
+ * Seventeen of the nineteen keys of §6.1 are here; the other two are
  * `MEDIA_SECTION_KEYS`, whose content is the gallery at the top of the page.
  * Between the two lists every key a listing can switch on has somewhere to be,
  * which is what the section navigation promises when it offers the item.
@@ -77,6 +83,7 @@ const SECTION_COMPONENTS = {
   location: LocationSection,
   finance: FinanceSection,
   faqs: FaqsSection,
+  testimonials: TestimonialsSection,
   similar: SimilarSection,
   enquiry: EnquirySection,
 };
@@ -106,7 +113,7 @@ const pixels = (value, fallback) => {
  * a section with no data is a section that is not here, and is not in the
  * navigation either (BUG-05).
  *
- * Under the eighteen sections comes "Recently viewed", which belongs to the
+ * Under the nineteen sections comes "Recently viewed", which belongs to the
  * visitor rather than to the listing and therefore has no toggle and no
  * navigation item.
  *
@@ -177,6 +184,22 @@ const PropertyDetails = () => {
     { enabled: Boolean(propertyTypeId), initialData: [] }
   );
 
+  // The testimonials tied to this listing — the "Property" box of the
+  // testimonial form. Fetched here, like the similar row, so that the
+  // navigation offers the item only when there is a quote to scroll to; and
+  // counted after the D41 filter, so a sample alone offers nothing in a
+  // production build.
+  const { data: testimonialData } = useApi(
+    (signal) =>
+      masterDataService.testimonials.list(
+        { propertyId: property?.id, sort: 'order', order: 'asc', perPage: TESTIMONIAL_LIMIT },
+        { signal }
+      ),
+    [property?.id],
+    { enabled: Boolean(property?.id), initialData: [] }
+  );
+  const testimonials = useMemo(() => shownTestimonials(testimonialData), [testimonialData]);
+
   // The listing as its sections read it: its own questions, then its type's.
   const shown = useMemo(
     () => (property ? { ...property, faqs: withTypeFaqs(property.faqs, typeFaqs) } : property),
@@ -244,9 +267,10 @@ const PropertyDetails = () => {
         ? getVisibleSections(shown, {
             banksAvailable: banks.length > 0,
             similarAvailable: similarProperties.length > 0,
+            testimonialsAvailable: testimonials.length > 0,
           })
         : [],
-    [shown, banks.length, similarProperties.length]
+    [shown, banks.length, similarProperties.length, testimonials.length]
   );
 
   if (loading) return <PropertyDetailSkeleton />;
@@ -270,6 +294,7 @@ const PropertyDetails = () => {
   const faqs = [...shown.faqs, ...blockFaqs];
 
   const visibility = property.sectionVisibility ?? {};
+  const showsTestimonials = visibleSections.some((section) => section.key === 'testimonials');
 
   return (
     <>
@@ -279,6 +304,10 @@ const PropertyDetails = () => {
         description={property.seo?.description || property.shortDescription || property.title}
         breadcrumbs={crumbs}
         faqs={faqs}
+        // Review markup describes reviews a visitor can read, so only while
+        // the section shows; and only the genuine ones — the samples are
+        // dropped inside the engine (D41, §9.3), as on the home page.
+        testimonials={showsTestimonials ? testimonials : null}
         overrides={unpublished ? { noindex: true } : undefined}
         // The gallery's cover is this page's LCP, and the gallery is inside
         // the route's lazy chunk. Naming it in the head starts the download
@@ -363,6 +392,13 @@ const PropertyDetails = () => {
                   key={section.key}
                   property={property}
                   properties={similarProperties}
+                  background={background}
+                />
+              ) : section.key === 'testimonials' ? (
+                <Section
+                  key={section.key}
+                  property={property}
+                  testimonials={testimonials}
                   background={background}
                 />
               ) : section.key === 'overview' ? (

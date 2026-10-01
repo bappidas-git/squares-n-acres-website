@@ -59,7 +59,7 @@ describe('identity and read-only fields', () => {
     expect(payload.area.areaUnit).toBe('sqft');
     expect(payload.configuration.servantRoom).toBe(false);
     expect(payload.project.approvals).toEqual([]);
-    expect(Object.keys(payload.sectionVisibility)).toHaveLength(18);
+    expect(Object.keys(payload.sectionVisibility)).toHaveLength(19);
     expect(payload.seo.robots.index).toBe(true);
   });
 });

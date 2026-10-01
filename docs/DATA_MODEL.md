@@ -69,7 +69,7 @@ Column legend: **Type** · **Null** (Y/N) · **Default** · **Enum/notes**. Ever
 | `constructionProgressPercent` | int | Y | null | 0–100 |
 | `faqs` | object[] | N | `[]` | `{ id, question, answer (HTML), order }` |
 | `similarPropertyIds` | int[] | N | `[]` | max 6, ordered |
-| `sectionVisibility` | object | N | all true | keys `overview, highlights, specifications, amenities, unitConfigurations, floorPlans, gallery, video, virtualTour, documents, construction, builder, nearby, location, finance, faqs, similar, enquiry` (bool each). The labels, the order the page prints them in and the data each one needs are `src/utils/propertySections.js` (`SECTION_DEFINITIONS`); a section renders only when its key is not `false` **and** `hasData()` is true |
+| `sectionVisibility` | object | N | all true | keys `overview, highlights, specifications, amenities, unitConfigurations, floorPlans, gallery, video, virtualTour, documents, construction, builder, nearby, location, finance, faqs, testimonials, similar, enquiry` (bool each; a record without `testimonials` reads it as `true`). The labels, the order the page prints them in and the data each one needs are `src/utils/propertySections.js` (`SECTION_DEFINITIONS`); a section renders only when its key is not `false` **and** `hasData()` is true |
 | `agent` | object | N | `{showOnListing:false}` | `{ teamMemberId?, name?, phone?, whatsapp?, email?, photoUrl?, showOnListing }` |
 | `seo` | object | N | §9.6 defaults | §9.6 |
 | `isActive` | bool | N | false | |
@@ -129,7 +129,7 @@ MB-02) — and it is capped at the page's own 120 characters.
 ### 6.9 `faqs`, `testimonials`, `teamMembers`, `partners`
 
 `faqs`: `question` (trimmed; unique within its `category`, ignoring case, spacing and a final "?"), `answer` (HTML with words in it — no script, handler or `javascript:` link), `category` (`buying|selling|renting|home-loan|legal|rera|nri|general`), `order` (0–100 000; a position, `1..n` after every write that places one), `isActive`, `showOnHome` (bool), `propertyTypeId?` (an existing property type; the FAQ is then listed on that type's property pages). QA-59.
-`testimonials`: `name`, `designation?`, `location?`, `rating` (1–5), `message`, `avatarUrl?`, `propertyId?`, `isFeatured`, `isActive`, `order`, `isSample` (true in seed; sample records never render in production builds).
+`testimonials`: `name`, `designation?`, `location?`, `rating` (1–5), `message`, `avatarUrl?`, `propertyId?` (the listing this client bought or rented; its property page shows the testimonial, `GET /testimonials?propertyId=`), `isFeatured`, `isActive`, `order`, `isSample` (true in seed; sample records never render in production builds).
 `teamMembers`: `name`, `slug`, `designation`, `phone?`, `whatsapp?`, `email?`, `photoUrl?`, `bio?`, `reraId?`, `socialLinks` (object), `order`, `isActive`, `showOnAbout`.
 `partners`: `name`, `logoUrl`, `websiteUrl?`, `category` (`developer|bank|legal|interior|other`), `order`, `isActive`.
 

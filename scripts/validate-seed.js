@@ -15,7 +15,7 @@
  *   4. every foreign key resolves — `localityId`, `amenityIds[]`,
  *      `similarPropertyIds[]`, `faq.faqIds` inside a page block, and the rest;
  *   5. the structural rules the schema cannot express: exactly one `isCover`
- *      per non-empty `images[]`, all 18 `sectionVisibility` keys, the §9.6
+ *      per non-empty `images[]`, all 19 `sectionVisibility` keys, the §9.6
  *      `seo` shape, a `media` record for every image, document and video URL
  *      the seed mentions anywhere;
  *   6. the §10 "seed quality" rules — what an active listing must carry, how

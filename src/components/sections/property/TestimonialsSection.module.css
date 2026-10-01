@@ -1,0 +1,9 @@
+.summary {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* On a tinted band the cards take the page colour, as the FAQ accordion does. */
+.onSurface {
+  --testimonial-card-bg: var(--color-bg);
+}

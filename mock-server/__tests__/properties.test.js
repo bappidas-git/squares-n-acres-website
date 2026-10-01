@@ -838,7 +838,7 @@ describe('/admin/properties', () => {
       );
       assert.equal(property.images.filter((image) => image.isCover).length, 1);
       assert.equal(property.pricing.currency, 'INR', 'nested defaults are filled');
-      assert.equal(Object.keys(property.sectionVisibility).length, 18);
+      assert.equal(Object.keys(property.sectionVisibility).length, 19);
       assert.equal(property.viewCount, 0);
     });
   });

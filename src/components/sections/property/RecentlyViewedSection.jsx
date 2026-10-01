@@ -7,7 +7,7 @@ import recentlyViewed from '../../../utils/recentlyViewed';
 /**
  * "Recently viewed", at the foot of a property page.
  *
- * It is not one of the eighteen `sectionVisibility` keys and has no navigation
+ * It is not one of the nineteen `sectionVisibility` keys and has no navigation
  * item: it belongs to the visitor rather than to the listing, so an editor has
  * nothing to switch and the sub-navigation has nothing to promise. The section
  * renders only once the browser has a history to show, and never includes the

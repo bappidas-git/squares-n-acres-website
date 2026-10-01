@@ -479,7 +479,12 @@ const RESOURCES = [
     schema: 'testimonial',
     noun: { one: 'testimonial', many: 'testimonials' },
     deleteGuard: 'testimonial',
-    publicFilters: { isFeatured: { field: 'isFeatured', type: 'bool' } },
+    publicFilters: {
+      isFeatured: { field: 'isFeatured', type: 'bool' },
+      // A property page's own quotes: the listing the testimonial form ties
+      // the client to.
+      propertyId: { field: 'propertyId' },
+    },
     // Sample records are seeded placeholders (D41): the public site drops them
     // in a production build, and this is how an editor finds them to replace.
     adminFilters: { isSample: { field: 'isSample', type: 'bool' } },

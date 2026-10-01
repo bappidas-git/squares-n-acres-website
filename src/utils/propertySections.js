@@ -1,5 +1,5 @@
 /**
- * The eighteen sections of a property page: what each one is called, what it
+ * The nineteen sections of a property page: what each one is called, what it
  * needs before it has anything to show, and whether it is showing
  * (00_MASTER_CONTEXT.md §6.1 `sectionVisibility`, D39, D86).
  *
@@ -49,20 +49,24 @@ const hasProjectSnapshot = (property) =>
   property.reraRegistered === true;
 
 /**
- * The eighteen sections in the order the public page prints them.
+ * The nineteen sections in the order the public page prints them.
  *
- * `key` is the `sectionVisibility` key of §6.1 — the eighteen of
+ * `key` is the `sectionVisibility` key of §6.1 — the nineteen of
  * `SECTION_VISIBILITY_KEYS`, no more and no fewer; `anchor` is the `id` the
  * section is scrolled to; `hasData(property, context)` is what the listing owes
  * the section before it can render.
  *
- * `context` carries the two facts a property record cannot answer on its own:
+ * `context` carries the three facts a property record cannot answer on its own:
  * `banksAvailable` (is any lender active? — without one the finance section has
- * nothing to compare, §6.6) and `similarAvailable` (did `GET /properties/:id/
+ * nothing to compare, §6.6), `similarAvailable` (did `GET /properties/:id/
  * similar` answer with anything? — the endpoint applies the editor's picks and
- * then tops the list up by locality and type, so only it knows, §5.14). Leaving
+ * then tops the list up by locality and type, so only it knows, §5.14) and
+ * `testimonialsAvailable` (did `GET /testimonials?propertyId=` answer with a
+ * quote this build may show? — the tie is made on the testimonial, in Content →
+ * Testimonials, so the listing's record does not carry it). Leaving
  * `similarAvailable` out — which the admin's visibility tab does, having made
- * no such request — falls back to the editor's own picks.
+ * no such request — falls back to the editor's own picks; leaving
+ * `testimonialsAvailable` out leaves the section without data.
  *
  * @type {Array<{key: string, label: string, description: string, anchor: string,
  *   hasData: (property: object, context: object) => boolean}>}
@@ -200,6 +204,13 @@ export const SECTION_DEFINITIONS = [
     hasData: (property) => list(property.faqs).length > 0,
   },
   {
+    key: 'testimonials',
+    label: 'Testimonials',
+    description: 'What clients who bought or rented here say — the testimonials tied to it.',
+    anchor: 'testimonials',
+    hasData: (property, context = {}) => context.testimonialsAvailable === true,
+  },
+  {
     key: 'similar',
     label: 'Similar properties',
     description: 'Your picks first; the API tops them up to six.',
@@ -229,7 +240,8 @@ export const isSectionEnabled = (property, key) => property?.sectionVisibility?.
  * The sections a listing actually shows, in page order.
  *
  * @param {object} property a record of §6.1, or the property form's values
- * @param {{banksAvailable?: boolean, similarAvailable?: boolean}} [context]
+ * @param {{banksAvailable?: boolean, similarAvailable?: boolean,
+ *   testimonialsAvailable?: boolean}} [context]
  * @returns {Array<{key: string, label: string, anchor: string}>}
  */
 export function getVisibleSections(property, context = {}) {
@@ -261,8 +273,15 @@ const SOURCE = {
   location: 'choose a locality in Location',
   finance: 'set a price in Pricing',
   faqs: 'add a question in FAQs',
+  testimonials: 'tie a testimonial to it in Content → Testimonials',
   similar: 'choose listings in Similar properties',
   enquiry: '',
+};
+
+/** What an automatic section's chip says it is filled from. */
+const AUTOMATIC = {
+  similar: 'Automatic — listings from the same locality and type',
+  testimonials: 'Automatic — testimonials tied to this listing in Content → Testimonials',
 };
 
 /**
@@ -292,7 +311,8 @@ const withheld = (key, property, context) => {
  * counted them promised a section the page then left out.
  *
  * @param {object} values the record, or the property form's values
- * @param {{banksAvailable?: boolean, similarAvailable?: boolean}} [context]
+ * @param {{banksAvailable?: boolean, similarAvailable?: boolean,
+ *   testimonialsAvailable?: boolean}} [context]
  * @returns {Array<{key: string, label: string, description: string, enabled: boolean,
  *   hasData: boolean, automatic: boolean, visible: boolean, hint: string}>}
  */
@@ -307,8 +327,12 @@ export function getSectionHints(values, context = {}) {
     // endpoint fills it from the same locality and type, and only a request
     // could say whether anything matches — which the admin tab does not make.
     // "No data yet — choose listings" contradicted the tab that says so.
+    // Testimonials are the same: they are tied to a listing from Content →
+    // Testimonials, not from this form, so the form cannot say it has none.
     const automatic =
-      section.key === 'similar' && !hasData && context.similarAvailable === undefined;
+      !hasData &&
+      ((section.key === 'similar' && context.similarAvailable === undefined) ||
+        (section.key === 'testimonials' && context.testimonialsAvailable === undefined));
 
     return {
       key: section.key,
@@ -324,7 +348,7 @@ export function getSectionHints(values, context = {}) {
         : hasData
           ? ''
           : automatic
-            ? 'Automatic — listings from the same locality and type'
+            ? AUTOMATIC[section.key]
             : (reason ?? `No data yet — ${SOURCE[section.key] || 'add the fields it needs'}`),
     };
   });
@@ -337,7 +361,7 @@ export function getSectionHints(values, context = {}) {
  */
 export const SECTION_KEYS = SECTION_DEFINITIONS.map((section) => section.key);
 
-/** The enum's own eighteen, for the test that compares the two lists. */
+/** The enum's own nineteen, for the test that compares the two lists. */
 export const CONTRACT_SECTION_KEYS = SECTION_VISIBILITY_KEYS.map((entry) => entry.key);
 
 export default SECTION_DEFINITIONS;

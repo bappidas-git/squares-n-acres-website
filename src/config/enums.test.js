@@ -249,10 +249,11 @@ describe('LEAD_STATUS', () => {
 });
 
 describe('SECTION_VISIBILITY_KEYS', () => {
-  it('lists the 18 property sections in display order with labels', () => {
-    expect(SECTION_VISIBILITY_KEYS).toHaveLength(18);
+  it('lists the 19 property sections in display order with labels', () => {
+    expect(SECTION_VISIBILITY_KEYS).toHaveLength(19);
     expect(SECTION_VISIBILITY_KEYS[0]).toEqual({ key: 'overview', label: 'Overview' });
-    expect(SECTION_VISIBILITY_KEYS[17]).toEqual({ key: 'enquiry', label: 'Enquiry' });
+    expect(SECTION_VISIBILITY_KEYS[16]).toEqual({ key: 'testimonials', label: 'Testimonials' });
+    expect(SECTION_VISIBILITY_KEYS[18]).toEqual({ key: 'enquiry', label: 'Enquiry' });
     const keys = SECTION_VISIBILITY_KEYS.map((entry) => entry.key);
     expect(new Set(keys).size).toBe(keys.length);
     SECTION_VISIBILITY_KEYS.forEach((entry) => expect(entry.label).toBeTruthy());

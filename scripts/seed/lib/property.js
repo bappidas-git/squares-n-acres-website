@@ -807,6 +807,7 @@ function buildProperty(spec, index, ctx) {
     location: true,
     finance: forSale,
     faqs: true,
+    testimonials: true,
     similar: true,
     enquiry: true,
   };

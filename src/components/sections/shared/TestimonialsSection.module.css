@@ -16,7 +16,9 @@
   padding: var(--space-6);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  /* A page that prints the carousel on a tinted band sets this, so the cards
+     do not melt into the band behind them. */
+  background: var(--testimonial-card-bg, var(--color-surface));
 }
 
 .quote {
